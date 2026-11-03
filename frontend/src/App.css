@@ -2450,15 +2450,31 @@
 /* -------------------------------------------------------------------------
    AUTH MODAL STYLES
    ------------------------------------------------------------------------- */
+.modal-backdrop,
+.auth-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(10, 13, 18, 0.78);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
 .auth-modal-card {
   width: 100%;
   max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
   background: #1b202b;
   border: 1px solid #434d63;
   border-radius: 14px;
   padding: 24px;
   color: #f3efe6;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+  animation: pop-in 0.12s ease-out;
 }
 
 .auth-modal-header {

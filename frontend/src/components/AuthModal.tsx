@@ -107,7 +107,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop auth-modal-backdrop" onClick={onClose}>
       <div
         className="auth-modal-card"
         onClick={(e) => e.stopPropagation()}
