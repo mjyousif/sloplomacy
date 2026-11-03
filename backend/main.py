@@ -1,3 +1,6 @@
+import os
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 import uuid
@@ -780,7 +783,6 @@ def load_scenario(req: ScenarioRequest, game_id: Optional[str] = Query(default=N
 # ==========================================
 # ADMINISTRATOR / GAME CREATOR ENDPOINTS
 # ==========================================
-
 @app.get("/api/admin/status", response_model=AdminStatusResponse)
 def get_admin_status(
     game_id: Optional[str] = Query(default=None),
@@ -1074,3 +1076,22 @@ def admin_unfinalize_all(
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
     return game
+# Mount static frontend build when running in production container
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(STATIC_DIR):
+    assets_dir = os.path.join(STATIC_DIR, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api/") or full_path in ("docs", "openapi.json", "redoc"):
+            raise HTTPException(status_code=404, detail="Not Found")
+        file_path = os.path.join(STATIC_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        index_file = os.path.join(STATIC_DIR, "index.html")
+        if os.path.isfile(index_file):
+            return FileResponse(index_file)
+        raise HTTPException(status_code=404, detail="Frontend index.html not found")
+
