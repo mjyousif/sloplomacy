@@ -8,6 +8,13 @@ from pydantic import BaseModel
 from adjudicator import adjudicate_turn
 from map_data import PROVINCES, get_initial_1901_units, get_initial_ownership
 from models import (
+    AdminDestroyUnitRequest,
+    AdminMoveUnitRequest,
+    AdminRollbackRequest,
+    AdminSetOwnershipRequest,
+    AdminSetTurnRequest,
+    AdminSpawnUnitRequest,
+    AdminStatusResponse,
     CreateGameRequest,
     FinalizeRequest,
     FinalizeResponse,
@@ -20,6 +27,7 @@ from models import (
     OrderType,
     Power,
     ProvinceInfo,
+    ProvinceType,
     SaveSandboxRequest,
     ScenarioRequest,
     SimulationResult,
@@ -194,6 +202,9 @@ GAMES: Dict[str, GameState] = {
 SANDBOX_CHECKPOINTS: Dict[str, Optional[GameState]] = {
     DEFAULT_GAME_ID: None
 }
+GAME_HISTORY: Dict[str, List[GameState]] = {
+    DEFAULT_GAME_ID: []
+}
 GAME_SUMMARIES: Dict[str, MultiplayerGameSummary] = {}
 
 
@@ -235,6 +246,7 @@ def seed_initial_multiplayer_lobbies() -> None:
     refresh_diagnostics_and_simulation(g1_state)
     GAMES[g1_id] = g1_state
     SANDBOX_CHECKPOINTS[g1_id] = None
+    GAME_HISTORY[g1_id] = []
     GAME_SUMMARIES[g1_id] = MultiplayerGameSummary(
         game_id=g1_id,
         name="Concert of Europe — Match #104",
@@ -243,6 +255,7 @@ def seed_initial_multiplayer_lobbies() -> None:
         year=g1_state.year,
         phase=g1_state.phase,
         created_by="bismarck@diplomacy.eu",
+        creator_id="bot_bismarck",
         created_at=now_iso,
         participants={
             "GERMANY": GameParticipant(
@@ -269,6 +282,7 @@ def seed_initial_multiplayer_lobbies() -> None:
     g2_state = build_scenario("standard_1901", Power.ENGLAND, g2_id)
     GAMES[g2_id] = g2_state
     SANDBOX_CHECKPOINTS[g2_id] = None
+    GAME_HISTORY[g2_id] = []
     GAME_SUMMARIES[g2_id] = MultiplayerGameSummary(
         game_id=g2_id,
         name="Mediterranean Crisis 1901",
@@ -277,6 +291,7 @@ def seed_initial_multiplayer_lobbies() -> None:
         year=g2_state.year,
         phase=g2_state.phase,
         created_by="cavour@diplomacy.it",
+        creator_id="bot_cavour",
         created_at=now_iso,
         participants={
             "ITALY": GameParticipant(
@@ -312,6 +327,50 @@ def sync_summary(game_id: str) -> None:
         summary.finalized_powers = list(st.finalized_powers)
 
 
+def verify_admin_access(
+    game_id: str,
+    user_id: Optional[str] = None,
+    email: Optional[str] = None,
+) -> None:
+    """Verify that the caller has game creator / administrator permissions for this game."""
+    gid = game_id or DEFAULT_GAME_ID
+    if gid == DEFAULT_GAME_ID:
+        # Solo default sandbox has open admin control
+        return
+
+    summary = GAME_SUMMARIES.get(gid)
+    if not summary:
+        # Untracked standalone game session
+        return
+
+    if summary.is_sandbox:
+        # Saved personal sandbox: allow creator or guest
+        if user_id and summary.creator_id and summary.creator_id == user_id:
+            return
+        if email and summary.created_by and summary.created_by.lower() == email.lower():
+            return
+        if not summary.creator_id and not summary.created_by:
+            return
+        # If user matches, allowed
+        if user_id or email:
+            if (user_id and summary.creator_id == user_id) or (email and summary.created_by.lower() == email.lower()):
+                return
+        return
+
+    # In multiplayer lobby, only the game creator has admin privileges
+    is_creator = False
+    if user_id and summary.creator_id and summary.creator_id == user_id:
+        is_creator = True
+    elif email and summary.created_by and summary.created_by.lower() == email.lower():
+        is_creator = True
+
+    if not is_creator:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Administrator access denied: Only the game creator ({summary.created_by}) can modify game state.",
+        )
+
+
 class GameBootstrapResponse(BaseModel):
     state: GameState
     provinces: Dict[str, ProvinceInfo]
@@ -338,6 +397,7 @@ def create_multiplayer_game(req: CreateGameRequest):
     game_state = build_scenario("standard_1901", req.creator_power, gid)
     GAMES[gid] = game_state
     SANDBOX_CHECKPOINTS[gid] = None
+    GAME_HISTORY[gid] = []
 
     display_name = req.display_name or req.email.split("@")[0]
     participant = GameParticipant(
@@ -355,6 +415,7 @@ def create_multiplayer_game(req: CreateGameRequest):
         year=game_state.year,
         phase=game_state.phase,
         created_by=req.email,
+        creator_id=req.user_id,
         created_at=now_iso,
         participants={req.creator_power.value: participant},
         finalized_powers=[],
@@ -371,12 +432,6 @@ def join_multiplayer_game(game_id: str, req: JoinGameRequest):
     summary = GAME_SUMMARIES.get(game_id)
     if not summary:
         raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
-
-    # Check if user already holds a power in this game
-    for p_key, part in list(summary.participants.items()):
-        if part.user_id == req.user_id and p_key != req.power.value:
-            # Allow user to switch only if target power is unclaimed
-            pass
 
     existing = summary.participants.get(req.power.value)
     if existing and existing.user_id != req.user_id:
@@ -423,6 +478,7 @@ def save_sandbox_to_account(req: SaveSandboxRequest, game_id: Optional[str] = Qu
     cloned_state.game_id = new_gid
     GAMES[new_gid] = cloned_state
     SANDBOX_CHECKPOINTS[new_gid] = None
+    GAME_HISTORY[new_gid] = []
 
     display_name = req.display_name or req.email.split("@")[0]
     summary = MultiplayerGameSummary(
@@ -433,6 +489,7 @@ def save_sandbox_to_account(req: SaveSandboxRequest, game_id: Optional[str] = Qu
         year=cloned_state.year,
         phase=cloned_state.phase,
         created_by=req.email,
+        creator_id=req.user_id,
         created_at=now_iso,
         participants={
             cloned_state.active_power.value: GameParticipant(
@@ -669,6 +726,15 @@ def simulate_current_orders(game_id: Optional[str] = Query(default=None)):
 @app.post("/api/adjudicate", response_model=GameState)
 def adjudicate_and_advance(game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
+    gid = game.game_id
+
+    # Save deep copy snapshot to history before adjudicating so creator can roll back
+    if gid not in GAME_HISTORY:
+        GAME_HISTORY[gid] = []
+    GAME_HISTORY[gid].append(game.model_copy(deep=True))
+    if len(GAME_HISTORY[gid]) > 30:
+        GAME_HISTORY[gid].pop(0)
+
     result = adjudicate_turn(
         game.units,
         game.orders,
@@ -704,7 +770,307 @@ def load_scenario(req: ScenarioRequest, game_id: Optional[str] = Query(default=N
     gid = game_id or DEFAULT_GAME_ID
     current = GAMES.get(gid)
     SANDBOX_CHECKPOINTS[gid] = None
+    GAME_HISTORY[gid] = []
     power = req.active_power or (current.active_power if current else Power.FRANCE)
     GAMES[gid] = build_scenario(req.scenario_id, power, gid)
     sync_summary(gid)
     return GAMES[gid]
+
+
+# ==========================================
+# ADMINISTRATOR / GAME CREATOR ENDPOINTS
+# ==========================================
+
+@app.get("/api/admin/status", response_model=AdminStatusResponse)
+def get_admin_status(
+    game_id: Optional[str] = Query(default=None),
+    x_user_id: Optional[str] = Header(default=None),
+    x_user_email: Optional[str] = Header(default=None),
+):
+    """Check creator/admin privileges and rollback history depth for the given game."""
+    gid = game_id or DEFAULT_GAME_ID
+    summary = GAME_SUMMARIES.get(gid)
+    history_stack = GAME_HISTORY.get(gid, [])
+
+    if gid == DEFAULT_GAME_ID or not summary or summary.is_sandbox:
+        return AdminStatusResponse(
+            is_creator=True,
+            can_rollback=len(history_stack) > 0,
+            history_count=len(history_stack),
+            creator_email=summary.created_by if summary else "commander@diplomacy.local",
+            creator_id=summary.creator_id if summary else "guest",
+        )
+
+    is_creator = False
+    if x_user_id and summary.creator_id and summary.creator_id == x_user_id:
+        is_creator = True
+    elif x_user_email and summary.created_by and summary.created_by.lower() == x_user_email.lower():
+        is_creator = True
+
+    return AdminStatusResponse(
+        is_creator=is_creator,
+        can_rollback=len(history_stack) > 0,
+        history_count=len(history_stack),
+        creator_email=summary.created_by,
+        creator_id=summary.creator_id,
+    )
+
+
+@app.post("/api/admin/rollback", response_model=GameState)
+def admin_rollback_turn(
+    req: Optional[AdminRollbackRequest] = None,
+    game_id: Optional[str] = Query(default=None),
+    x_user_id: Optional[str] = Header(default=None),
+    x_user_email: Optional[str] = Header(default=None),
+):
+    """Roll back to the previous turn snapshot in history (Creator Only)."""
+    gid = game_id or DEFAULT_GAME_ID
+    verify_admin_access(gid, req.user_id if req else x_user_id, req.email if req else x_user_email)
+
+    history_stack = GAME_HISTORY.get(gid, [])
+    if not history_stack:
+        raise HTTPException(status_code=400, detail="No previous turn snapshots in history to roll back to.")
+
+    prev_state = history_stack.pop()
+    prev_state.turn_history.insert(
+        0, f"[ADMIN OVERRIDE] Rolled back turn to {prev_state.season} {prev_state.year} {prev_state.phase} Phase."
+    )
+    GAMES[gid] = prev_state
+    refresh_diagnostics_and_simulation(prev_state)
+    sync_summary(gid)
+    return prev_state
+
+
+@app.post("/api/admin/set-turn", response_model=GameState)
+def admin_set_turn(
+    req: AdminSetTurnRequest,
+    game_id: Optional[str] = Query(default=None),
+    x_user_id: Optional[str] = Header(default=None),
+    x_user_email: Optional[str] = Header(default=None),
+):
+    """Arbitrarily adjust season, year, or phase (Creator Only)."""
+    gid = game_id or DEFAULT_GAME_ID
+    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
+    game = resolve_game(gid)
+
+    valid_seasons = ["Spring", "Fall", "Winter"]
+    valid_phases = ["Movement", "Retreats", "Adjustments"]
+    if req.season not in valid_seasons:
+        raise HTTPException(status_code=400, detail=f"Invalid season '{req.season}'. Must be one of {valid_seasons}.")
+    if req.phase not in valid_phases:
+        raise HTTPException(status_code=400, detail=f"Invalid phase '{req.phase}'. Must be one of {valid_phases}.")
+
+    game.season = req.season
+    game.year = req.year
+    game.phase = req.phase
+    game.turn_history.insert(0, f"[ADMIN OVERRIDE] Adjusted game clock to {req.season} {req.year} {req.phase} Phase.")
+    refresh_diagnostics_and_simulation(game)
+    sync_summary(gid)
+    return game
+
+
+@app.post("/api/admin/unit/move", response_model=GameState)
+def admin_move_unit(
+    req: AdminMoveUnitRequest,
+    game_id: Optional[str] = Query(default=None),
+    x_user_id: Optional[str] = Header(default=None),
+    x_user_email: Optional[str] = Header(default=None),
+):
+    """Arbitrarily teleport/move any unit to any valid province on the map (Creator Only)."""
+    gid = game_id or DEFAULT_GAME_ID
+    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
+    game = resolve_game(gid)
+
+    target_unit = next((u for u in game.units if u.id == req.unit_id), None)
+    if not target_unit:
+        raise HTTPException(status_code=404, detail=f"Unit '{req.unit_id}' not found.")
+
+    prov_id = req.new_province.upper()
+    prov_info = PROVINCES.get(prov_id)
+    if not prov_info:
+        raise HTTPException(status_code=400, detail=f"Province '{req.new_province}' does not exist.")
+
+    if prov_info.type == ProvinceType.IMPASSABLE:
+        raise HTTPException(status_code=400, detail=f"Cannot place units in impassable province {prov_info.name}.")
+
+    if target_unit.unit_type == UnitType.ARMY and prov_info.type == ProvinceType.SEA:
+        raise HTTPException(status_code=400, detail=f"Armies cannot be placed in sea province {prov_info.name}.")
+
+    if target_unit.unit_type == UnitType.FLEET and prov_info.type == ProvinceType.LAND:
+        raise HTTPException(status_code=400, detail=f"Fleets cannot be placed in inland province {prov_info.name}.")
+
+    coast = req.new_coast
+    if prov_info.coasts:
+        if not coast or coast not in prov_info.coasts:
+            coast = prov_info.coasts[0]
+    else:
+        coast = None
+
+    old_prov = target_unit.province
+    # Remove any other unit already occupying the target province
+    game.units = [u for u in game.units if u.id == target_unit.id or u.province != prov_id]
+
+    target_unit.province = prov_id
+    target_unit.coast = coast
+
+    # Reset unit order to hold in its new location
+    game.orders[target_unit.id] = Order(
+        unit_id=target_unit.id,
+        power=target_unit.power,
+        unit_type=target_unit.unit_type,
+        origin=prov_id,
+        origin_coast=coast,
+        order_type=OrderType.HOLD,
+        is_explicit=False,
+    )
+
+    game.turn_history.insert(
+        0, f"[ADMIN OVERRIDE] Relocated {target_unit.power.value} {target_unit.unit_type.value} from {old_prov} to {prov_id}."
+    )
+    refresh_diagnostics_and_simulation(game)
+    sync_summary(gid)
+    return game
+
+
+@app.post("/api/admin/unit/spawn", response_model=GameState)
+def admin_spawn_unit(
+    req: AdminSpawnUnitRequest,
+    game_id: Optional[str] = Query(default=None),
+    x_user_id: Optional[str] = Header(default=None),
+    x_user_email: Optional[str] = Header(default=None),
+):
+    """Arbitrarily spawn a unit anywhere on the board (Creator Only)."""
+    gid = game_id or DEFAULT_GAME_ID
+    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
+    game = resolve_game(gid)
+
+    prov_id = req.province.upper()
+    prov_info = PROVINCES.get(prov_id)
+    if not prov_info:
+        raise HTTPException(status_code=400, detail=f"Province '{req.province}' does not exist.")
+
+    if prov_info.type == ProvinceType.IMPASSABLE:
+        raise HTTPException(status_code=400, detail=f"Cannot place units in impassable province {prov_info.name}.")
+
+    if req.unit_type == UnitType.ARMY and prov_info.type == ProvinceType.SEA:
+        raise HTTPException(status_code=400, detail=f"Armies cannot be placed in sea province {prov_info.name}.")
+
+    if req.unit_type == UnitType.FLEET and prov_info.type == ProvinceType.LAND:
+        raise HTTPException(status_code=400, detail=f"Fleets cannot be placed in inland province {prov_info.name}.")
+
+    coast = req.coast
+    if prov_info.coasts:
+        if not coast or coast not in prov_info.coasts:
+            coast = prov_info.coasts[0]
+    else:
+        coast = None
+
+    # Remove any existing unit in that province
+    game.units = [u for u in game.units if u.province != prov_id]
+
+    base_id = f"{req.power.value[:3]}_{req.unit_type.value}_{prov_id}"
+    if coast:
+        base_id += f"_{coast}"
+    unit_id = base_id
+    existing_ids = {u.id for u in game.units}
+    counter = 1
+    while unit_id in existing_ids:
+        unit_id = f"{base_id}_{counter}"
+        counter += 1
+
+    new_unit = Unit(
+        id=unit_id,
+        power=req.power,
+        unit_type=req.unit_type,
+        province=prov_id,
+        coast=coast,
+    )
+    game.units.append(new_unit)
+    game.orders[unit_id] = Order(
+        unit_id=unit_id,
+        power=req.power,
+        unit_type=req.unit_type,
+        origin=prov_id,
+        origin_coast=coast,
+        order_type=OrderType.HOLD,
+        is_explicit=False,
+    )
+
+    game.turn_history.insert(
+        0, f"[ADMIN OVERRIDE] Spawned {req.power.value} {req.unit_type.value} at {prov_id}."
+    )
+    refresh_diagnostics_and_simulation(game)
+    sync_summary(gid)
+    return game
+
+
+@app.post("/api/admin/unit/destroy", response_model=GameState)
+def admin_destroy_unit(
+    req: AdminDestroyUnitRequest,
+    game_id: Optional[str] = Query(default=None),
+    x_user_id: Optional[str] = Header(default=None),
+    x_user_email: Optional[str] = Header(default=None),
+):
+    """Arbitrarily destroy/disband any unit on the board (Creator Only)."""
+    gid = game_id or DEFAULT_GAME_ID
+    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
+    game = resolve_game(gid)
+
+    target_unit = next((u for u in game.units if u.id == req.unit_id), None)
+    if not target_unit:
+        raise HTTPException(status_code=404, detail=f"Unit '{req.unit_id}' not found.")
+
+    game.units = [u for u in game.units if u.id != req.unit_id]
+    game.orders.pop(req.unit_id, None)
+
+    game.turn_history.insert(
+        0, f"[ADMIN OVERRIDE] Destroyed {target_unit.power.value} {target_unit.unit_type.value} in {target_unit.province}."
+    )
+    refresh_diagnostics_and_simulation(game)
+    sync_summary(gid)
+    return game
+
+
+@app.post("/api/admin/ownership", response_model=GameState)
+def admin_set_ownership(
+    req: AdminSetOwnershipRequest,
+    game_id: Optional[str] = Query(default=None),
+    x_user_id: Optional[str] = Header(default=None),
+    x_user_email: Optional[str] = Header(default=None),
+):
+    """Arbitrarily reassign province/supply center ownership (Creator Only)."""
+    gid = game_id or DEFAULT_GAME_ID
+    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
+    game = resolve_game(gid)
+
+    prov_id = req.province.upper()
+    if prov_id not in PROVINCES:
+        raise HTTPException(status_code=400, detail=f"Province '{req.province}' does not exist.")
+
+    if req.power is not None:
+        game.ownership[prov_id] = req.power
+        game.turn_history.insert(0, f"[ADMIN OVERRIDE] Set ownership of {prov_id} to {req.power.value}.")
+    else:
+        game.ownership.pop(prov_id, None)
+        game.turn_history.insert(0, f"[ADMIN OVERRIDE] Reset ownership of {prov_id} to Neutral.")
+
+    refresh_diagnostics_and_simulation(game)
+    sync_summary(gid)
+    return game
+
+
+@app.post("/api/admin/unfinalize-all", response_model=GameState)
+def admin_unfinalize_all(
+    game_id: Optional[str] = Query(default=None),
+    x_user_id: Optional[str] = Header(default=None),
+    x_user_email: Optional[str] = Header(default=None),
+):
+    """Unlock and unfinalize orders for all Great Powers (Creator Only)."""
+    gid = game_id or DEFAULT_GAME_ID
+    verify_admin_access(gid, x_user_id, x_user_email)
+    game = resolve_game(gid)
+    game.finalized_powers = []
+    game.turn_history.insert(0, "[ADMIN OVERRIDE] Unlocked orders for all Great Powers.")
+    refresh_diagnostics_and_simulation(game)
+    sync_summary(gid)
+    return game

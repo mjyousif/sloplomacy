@@ -27,6 +27,8 @@ import {
   Play,
   RotateCcw,
   Shield,
+  ShieldAlert,
+  Sliders,
   Swords,
   Trash2,
   Unlock,
@@ -50,6 +52,9 @@ interface MacroSidebarProps {
   builds?: Record<Power, { count: number; homes: string[] }> | null;
   retreats?: Record<Power, Record<string, string[]>> | null;
   isMultiplayer?: boolean;
+  isGameCreator?: boolean;
+  onOpenAdminTools?: () => void;
+  adminOverrideActive?: boolean;
   onSelectPower: (power: Power) => void;
   onToggleSandboxMode: () => void;
   onSelectUnit: (unitId: string | null) => void;
@@ -84,6 +89,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   builds = null,
   retreats = null,
   isMultiplayer = false,
+  isGameCreator = false,
+  onOpenAdminTools,
+  adminOverrideActive = false,
   onSelectPower,
   onToggleSandboxMode,
   onSelectUnit,
@@ -949,6 +957,28 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
             </div>
           )}
         </div>
+        {isGameCreator && onOpenAdminTools && (
+          <div className="admin-sidebar-card">
+            <div className="admin-sidebar-header">
+              <div className="admin-sidebar-title">
+                <ShieldAlert size={14} className="section-icon-crimson" />
+                <span>Creator Admin Tools</span>
+              </div>
+              <span className="creator-badge">Creator</span>
+            </div>
+            <p className="admin-sidebar-desc">
+              Arbitrarily edit state, roll back turns, move units anywhere, or spawn/destroy units.
+            </p>
+            <button
+              type="button"
+              className="admin-sidebar-open-btn"
+              onClick={onOpenAdminTools}
+            >
+              <Sliders size={13} />
+              <span>Open Creator Admin Console</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 5. STICKY FOOTER: FINALIZE ORDERS & ADJUDICATE TURN */}

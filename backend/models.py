@@ -187,6 +187,7 @@ class MultiplayerGameSummary(BaseModel):
     year: int = 1901
     phase: str = "Movement"
     created_by: str
+    creator_id: Optional[str] = None
     created_at: str
     participants: Dict[str, GameParticipant] = Field(default_factory=dict)
     finalized_powers: List[Power] = Field(default_factory=list)
@@ -214,3 +215,53 @@ class SaveSandboxRequest(BaseModel):
     email: str = "player@diplomacy.local"
     display_name: Optional[str] = None
 
+
+class AdminRollbackRequest(BaseModel):
+    user_id: Optional[str] = None
+    email: Optional[str] = None
+
+
+class AdminSetTurnRequest(BaseModel):
+    season: str
+    year: int
+    phase: str
+    user_id: Optional[str] = None
+    email: Optional[str] = None
+
+
+class AdminMoveUnitRequest(BaseModel):
+    unit_id: str
+    new_province: str
+    new_coast: Optional[str] = None
+    user_id: Optional[str] = None
+    email: Optional[str] = None
+
+
+class AdminSpawnUnitRequest(BaseModel):
+    power: Power
+    unit_type: UnitType
+    province: str
+    coast: Optional[str] = None
+    user_id: Optional[str] = None
+    email: Optional[str] = None
+
+
+class AdminDestroyUnitRequest(BaseModel):
+    unit_id: str
+    user_id: Optional[str] = None
+    email: Optional[str] = None
+
+
+class AdminSetOwnershipRequest(BaseModel):
+    province: str
+    power: Optional[Power] = None
+    user_id: Optional[str] = None
+    email: Optional[str] = None
+
+
+class AdminStatusResponse(BaseModel):
+    is_creator: bool
+    can_rollback: bool
+    history_count: int
+    creator_email: str
+    creator_id: Optional[str] = None
