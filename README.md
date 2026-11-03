@@ -1,5 +1,14 @@
 # Sloplomacy (1901 Tactical Engine & Atlas)
 
+[![CI](https://github.com/mjyousif/sloplomacy/actions/workflows/ci.yml/badge.svg)](https://github.com/mjyousif/sloplomacy/actions/workflows/ci.yml)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3.0-blue.svg)](LICENSE)
+![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)
+[![Rules: DATC Standard 1901](https://img.shields.io/badge/Rules-DATC_Standard_1901-7952B3)](docs/backend/adjudicator.md)
+
 An interactive web-based tactical adjudicator, move-planner, and map visualizer for standard 1901 Diplomacy.
 
 > **Disclaimer**: *Sloplomacy* is an independent, non-commercial open-source tactical tool. *Diplomacy* is a registered trademark of Hasbro, Inc. This project is not affiliated with, sponsored by, or endorsed by Hasbro, Inc. or Renegade Game Studios. See [ATTRIBUTION.md](ATTRIBUTION.md) for full notices.
@@ -49,6 +58,14 @@ python quickstart.py
 - `python quickstart.py --frontend-only`: Run only the Vite frontend dev server.
 - `python quickstart.py --setup-only`: Install dependencies without starting servers.
 - `python quickstart.py --test`: Run the backend test suite and verify the frontend build.
+
+### Developer Scripts & QoL Tools (`scripts/`)
+Dedicated scripts for development and operations are available under [`scripts/`](scripts/):
+- **Unified Test Suite**: `.\scripts\test.ps1` *(or `./scripts/test.sh`)* — Runs backend pytest, frontend Vitest, typechecks, and bundle builds.
+- **Environment Setup**: `.\scripts\setup.ps1` *(or `./scripts/setup.sh`)* — Bootstraps Python `.venv` and `frontend/node_modules`.
+- **Local Dev Server**: `.\scripts\dev.ps1` *(or `./scripts/dev.sh`)* — Launches FastAPI and Vite dev servers.
+- **Cloud Run Deployment**: `.\scripts\deploy.ps1` *(or `./scripts/deploy.sh`)* — One-click scale-to-zero container deployment.
+- **CI/CD Setup**: `.\scripts\setup-ci-cd.ps1` *(or `./scripts/setup-ci-cd.sh`)* — Configures GCP IAM credentials for GitHub Actions.
 
 ---
 

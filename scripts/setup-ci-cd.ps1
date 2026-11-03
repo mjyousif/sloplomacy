@@ -11,6 +11,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$RepoRoot = Split-Path -Parent $PSScriptRoot
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "  Sloplomacy 1901 - GitHub Actions CI/CD GCP Setup        " -ForegroundColor Cyan
@@ -86,7 +87,7 @@ foreach ($role in $roles) {
 Write-Host "[OK] IAM roles granted successfully." -ForegroundColor Green
 
 # 5. Generate Service Account Key JSON
-$KeyPath = Join-Path $PSScriptRoot "gcp-key.json"
+$KeyPath = Join-Path $RepoRoot "gcp-key.json"
 Write-Host ""
 Write-Host "--> Generating service account key ($KeyPath)..." -ForegroundColor Cyan
 gcloud iam service-accounts keys create "$KeyPath" `
@@ -105,7 +106,7 @@ if (Test-Path $KeyPath) {
     # Detect Supabase env vars if present
     $supabaseUrl = ""
     $supabaseKey = ""
-    $envPath = Join-Path $PSScriptRoot "frontend\.env"
+    $envPath = Join-Path $RepoRoot "frontend\.env"
     if (Test-Path $envPath) {
         Get-Content $envPath | ForEach-Object {
             $line = $_.Trim()
