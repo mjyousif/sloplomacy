@@ -259,6 +259,31 @@ export interface MultiplayerGameSummary {
   finalized_powers: Power[];
   surrendered_powers?: Power[];
   is_sandbox: boolean;
+  is_private?: boolean;
+  has_passcode?: boolean;
+}
+
+export interface CreateGameRequest {
+  name: string;
+  creator_power: Power;
+  user_id?: string;
+  email?: string;
+  display_name?: string | null;
+  is_private?: boolean;
+  passcode?: string | null;
+}
+
+export interface JoinGameRequest {
+  power: Power;
+  user_id?: string;
+  email?: string;
+  display_name?: string | null;
+  passcode?: string | null;
+}
+
+export interface GenerateAIOrdersRequest {
+  powers?: Power[] | null;
+  include_active?: boolean;
 }
 
 export interface AuthUser {

@@ -149,38 +149,44 @@ Summarizes an open lobby, active game, or saved sandbox in the match browser.
 interface MultiplayerGameSummary {
   game_id: string;
   name: string;
-  scenario_id: string;
-  created_by: string;
-  creator_id?: string;
-  is_sandbox: boolean;
-  status: 'lobby' | 'in_progress' | 'completed';
-  phase: string;
+  status: 'waiting' | 'active' | 'completed' | string;
   season: string;
   year: number;
-  claimed_powers: Record<string, string>; // Power -> user_id
-  participants: GameParticipant[];
+  phase: string;
+  created_by: string;
+  creator_id?: string | null;
   created_at: string;
+  participants: Record<string, GameParticipant>;
+  finalized_powers: Power[];
+  surrendered_powers?: Power[];
+  is_sandbox: boolean;
+  is_private?: boolean;
+  has_passcode?: boolean;
 }
 ```
 
 ### `GameParticipant`
-Represents an enrolled player in a multiplayer match.
+Represents an enrolled player commanding a nation in a multiplayer match.
 
 ```typescript
 interface GameParticipant {
   user_id: string;
   email: string;
-  power?: Power;
-  role: 'host' | 'player' | 'spectator';
+  display_name: string;
+  power: Power;
+  joined_at: string;
+  surrendered?: boolean;
+  surrendered_at?: string | null;
 }
 ```
 
 ### Request Models:
-- `CreateGameRequest`: `{ name, scenario_id, is_sandbox, creator_email, creator_id }`
-- `JoinGameRequest`: `{ power, user_id, email }`
-- `LeaveGameRequest`: `{ user_id, email, power? }`
-- `SurrenderRequest`: `{ user_id, email, power, vacate_seat }`
-- `SaveSandboxRequest`: `{ game_id, name, user_id, email }`
+- `CreateGameRequest`: `{ name, creator_power, user_id, email, display_name?, is_private?, passcode? }`
+- `JoinGameRequest`: `{ power, user_id, email, display_name?, passcode? }`
+- `LeaveGameRequest`: `{ user_id, email?, power? }`
+- `SurrenderRequest`: `{ power, user_id, email?, leave: boolean }`
+- `SaveSandboxRequest`: `{ name, user_id, email, display_name? }`
+- `GenerateAIOrdersRequest`: `{ powers?: Power[] | null, include_active?: boolean }`
 
 ---
 

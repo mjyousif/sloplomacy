@@ -39,7 +39,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```bash
   python -m pytest backend/ -v
   ```
-  *(Runs all 6 test suites: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_api_integration.py`, `test_surrender_leave.py`, and `test_validator.py`)*
+  *(Runs all 7 test suites: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_surrender_leave.py`, and `test_validator.py`)*
 
 ### Frontend Commands (`frontend/`)
 - **Install Dependencies**:
@@ -143,7 +143,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   ├── validator.py           # Real-time pre-flight legality and tactical blunder checks
 │   ├── map_data.py            # Complete 76-province graph, dual coasts, 34 SC definitions
 │   ├── requirements.txt       # Python dependencies
-│   └── test_*.py              # Comprehensive pytest test harness (6 test suites)
+│   └── test_*.py              # Comprehensive pytest test harness (7 test suites)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx            # Main state container, viewMode controller & API coordinator
@@ -242,7 +242,7 @@ The game cycles through three standard phases per year:
 px tsc --noEmit before committing frontend modifications.
 
 ### 3. Run Comprehensive Verification
-- **Backend Tests**: Run python -m pytest backend/ -v (must pass all 6 test suites: adjudicator, admin, api_integration, engine, surrender_leave, validator).
+- **Backend Tests**: Run python -m pytest backend/ -v (must pass all 7 test suites: adjudicator, admin, ai_and_private_lobbies, api_integration, engine, surrender_leave, validator).
 - **Frontend Verification**: Run 
 pm test (Vitest) and 
 pm run build (Vite + TypeScript) in rontend/.

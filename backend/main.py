@@ -23,6 +23,7 @@ from models import (
     FinalizeResponse,
     GameParticipant,
     GameState,
+    GenerateAIOrdersRequest,
     JoinGameRequest,
     LeaveGameRequest,
     MultiplayerGameSummary,
@@ -40,6 +41,7 @@ from models import (
     Unit,
     UnitType,
 )
+from ai_engine import generate_tactical_orders
 from validator import validate_orders
 
 app = FastAPI(title="Sloplomacy 1901 Tactical Server", version="1.2.0")
@@ -307,6 +309,7 @@ GAME_HISTORY: Dict[str, List[GameState]] = {
     DEFAULT_GAME_ID: []
 }
 GAME_SUMMARIES: Dict[str, MultiplayerGameSummary] = {}
+GAME_PASSCODES: Dict[str, str] = {}
 
 
 def seed_initial_multiplayer_lobbies() -> None:
@@ -408,7 +411,7 @@ def seed_initial_multiplayer_lobbies() -> None:
     )
 
 
-seed_initial_multiplayer_lobbies()
+# seed_initial_multiplayer_lobbies()  # Disabled by default so no fake/ghost games clutter the lobby
 
 
 def resolve_game(game_id: Optional[str] = None) -> GameState:
@@ -491,15 +494,31 @@ def list_games():
     return list(GAME_SUMMARIES.values())
 
 
+@app.get("/api/games/{game_id}", response_model=MultiplayerGameSummary)
+def get_game_details(game_id: str):
+    """Retrieve details for a single game lobby by its Game ID."""
+    sync_summary(game_id)
+    summary = GAME_SUMMARIES.get(game_id)
+    if not summary:
+        raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
+    return summary
+
+
 @app.post("/api/games", response_model=MultiplayerGameSummary)
 def create_multiplayer_game(req: CreateGameRequest):
     """Create a new multiplayer game and assign creator_power to the user."""
-    gid = f"mp_{uuid.uuid4().hex[:8]}"
+    gid = f"mp_{uuid.uuid4().hex[:6]}"
     now_iso = datetime.now(timezone.utc).isoformat()
     game_state = build_scenario("standard_1901", req.creator_power, gid)
     GAMES[gid] = game_state
     SANDBOX_CHECKPOINTS[gid] = None
     GAME_HISTORY[gid] = []
+
+    is_priv = bool(req.is_private)
+    clean_passcode = req.passcode.strip() if req.passcode else None
+    has_pw = bool(is_priv and clean_passcode)
+    if has_pw:
+        GAME_PASSCODES[gid] = clean_passcode
 
     display_name = req.display_name or req.email.split("@")[0]
     participant = GameParticipant(
@@ -522,6 +541,8 @@ def create_multiplayer_game(req: CreateGameRequest):
         participants={req.creator_power.value: participant},
         finalized_powers=[],
         is_sandbox=False,
+        is_private=is_priv,
+        has_passcode=has_pw,
     )
     GAME_SUMMARIES[gid] = summary
     return summary
@@ -534,6 +555,18 @@ def join_multiplayer_game(game_id: str, req: JoinGameRequest):
     summary = GAME_SUMMARIES.get(game_id)
     if not summary:
         raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
+
+    # Passcode verification for private lobbies
+    if summary.has_passcode:
+        is_already_participant = any(p.user_id == req.user_id for p in summary.participants.values())
+        if not is_already_participant:
+            expected_pw = GAME_PASSCODES.get(game_id)
+            provided_pw = (req.passcode or "").strip()
+            if not expected_pw or provided_pw != expected_pw:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Passcode required or incorrect for this private campaign.",
+                )
 
     existing = summary.participants.get(req.power.value)
     if existing and existing.user_id != req.user_id:
@@ -824,6 +857,64 @@ def clear_foreign_pre_moves(req: SetPowerRequest, game_id: Optional[str] = Query
             game.orders[ord_id] = def_ord
     refresh_diagnostics_and_simulation(game)
     return game
+
+
+@app.post("/api/sandbox/ai-orders", response_model=GameState)
+def generate_sandbox_ai_orders(
+    req: Optional[GenerateAIOrdersRequest] = None,
+    game_id: Optional[str] = Query(default=None),
+):
+    """Generate intelligent tactical orders for specified Great Powers or all foreign powers."""
+    game = resolve_game(game_id)
+    if req and req.powers:
+        target_powers = req.powers
+    elif req and req.include_active:
+        target_powers = list(Power)
+    else:
+        target_powers = [p for p in Power if p != game.active_power]
+
+    ai_orders = generate_tactical_orders(
+        units=game.units,
+        ownership=game.ownership,
+        season=game.season,
+        year=game.year,
+        phase=game.phase,
+        target_powers=target_powers,
+        retreats=game.retreats,
+        builds=game.builds,
+    )
+    for ord_id, ord_obj in ai_orders.items():
+        game.orders[ord_id] = ord_obj
+
+    refresh_diagnostics_and_simulation(game)
+    sync_summary(game.game_id)
+    return game
+
+
+@app.post("/api/sandbox/ai-step", response_model=GameState)
+def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
+    """Auto-plan unassigned foreign powers with tactical AI and advance to next phase."""
+    game = resolve_game(game_id)
+    powers_needing_orders = [
+        p for p in Power
+        if p != game.active_power or not any(
+            o.power == p and o.is_explicit for o in game.orders.values()
+        )
+    ]
+    ai_orders = generate_tactical_orders(
+        units=game.units,
+        ownership=game.ownership,
+        season=game.season,
+        year=game.year,
+        phase=game.phase,
+        target_powers=powers_needing_orders,
+        retreats=game.retreats,
+        builds=game.builds,
+    )
+    for ord_id, ord_obj in ai_orders.items():
+        game.orders[ord_id] = ord_obj
+
+    return adjudicate_and_advance(game_id=game.game_id)
 
 
 @app.post("/api/order", response_model=GameState)

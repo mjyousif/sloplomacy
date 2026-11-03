@@ -13,8 +13,9 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | Method | Endpoint | Description | Request Body | Response Model |
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/games` | List all open lobbies, active matches, and saved sandboxes | *None* | `List[MultiplayerGameSummary]` |
-| `POST` | `/api/games` | Create a new multiplayer room or sandbox session | `CreateGameRequest` | `MultiplayerGameSummary` |
-| `POST` | `/api/games/{game_id}/join` | Claim a sovereign Great Power seat in a game room | `JoinGameRequest` | `GameBootstrapResponse` |
+| `GET` | `/api/games/{game_id}` | Fetch summary metadata and status for a specific game room | *None* | `MultiplayerGameSummary` |
+| `POST` | `/api/games` | Create a new multiplayer room (public or private with passcode) | `CreateGameRequest` | `MultiplayerGameSummary` |
+| `POST` | `/api/games/{game_id}/join` | Claim a sovereign Great Power seat (validating passcode if private) | `JoinGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/leave` | Vacate claimed power in lobby or match, or delete sandbox | `LeaveGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/surrender` | Concede sovereign command into Civil Disorder | `SurrenderRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/save-sandbox` | Save an in-memory solo sandbox to the lobby game list | `SaveSandboxRequest` | `MultiplayerGameSummary` |
@@ -27,6 +28,8 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/sandbox/enter` | Checkpoint real game state and activate Sandbox Mode | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/sandbox/exit` | Revert sandbox checkpoint and clear foreign pre-moves | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/sandbox/clear-foreign` | Reset all foreign hypothetical orders to default HOLD | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/sandbox/ai-orders` | Generate DATC-compliant tactical AI orders for specified/foreign powers | `GenerateAIOrdersRequest` | `GameState` |
+| `POST` | `/api/sandbox/ai-step` | Auto-plan unassigned foreign powers with tactical AI and advance turn | *None* | `GameState` |
 | `POST` | `/api/order` | Submit or update an order for a single military unit | `SingleOrderUpdateRequest` | `GameState` |
 | `POST` | `/api/orders/batch` | Update multiple orders simultaneously | `OrderSubmissionRequest` | `GameState` |
 | `POST` | `/api/orders/confirm-all` | Mark all orders of a given power as explicitly confirmed | `SetPowerRequest` | `GameState` |
@@ -84,31 +87,61 @@ Returns the list of all registered multiplayer game rooms, open lobbies, and sav
 
 ---
 
-### 2. `POST /api/games`
-Creates a new multiplayer game room or dedicated sandbox session.
+### 2. `GET /api/games/{game_id}`
+Returns details and participant metadata for a specific multiplayer match lobby.
 
-#### Request (`CreateGameRequest`):
+#### Response (`MultiplayerGameSummary`):
 ```json
 {
-  "name": "Western Front 1901",
-  "scenario_id": "standard_1901",
+  "game_id": "mp_9f2a4b",
+  "name": "Secret Congress 1901",
+  "status": "waiting",
+  "season": "Spring",
+  "year": 1901,
+  "phase": "Movement",
+  "created_by": "host@slop.eu",
+  "creator_id": "usr_1020",
+  "created_at": "2026-11-03T20:00:00Z",
+  "participants": {},
+  "finalized_powers": [],
+  "surrendered_powers": [],
   "is_sandbox": false,
-  "creator_email": "marshal@slop.eu",
-  "creator_id": "usr_1020"
+  "is_private": true,
+  "has_passcode": true
 }
 ```
 
 ---
 
-### 3. `POST /api/games/{game_id}/join`
-Claims an open Great Power seat for an authenticated user.
+### 3. `POST /api/games`
+Creates a new multiplayer game room (public or private) and automatically assigns the creator's power seat.
+
+#### Request (`CreateGameRequest`):
+```json
+{
+  "name": "Western Front 1901",
+  "creator_power": "FRANCE",
+  "user_id": "usr_1020",
+  "email": "marshal@slop.eu",
+  "display_name": "Napoleon",
+  "is_private": true,
+  "passcode": "Secret1901"
+}
+```
+
+---
+
+### 4. `POST /api/games/{game_id}/join`
+Claims an open Great Power seat for a user. If the campaign is private (`has_passcode: true`), the correct `passcode` must be provided unless the user is already a confirmed participant.
 
 #### Request (`JoinGameRequest`):
 ```json
 {
   "power": "FRANCE",
   "user_id": "usr_1020",
-  "email": "marshal@slop.eu"
+  "email": "marshal@slop.eu",
+  "display_name": "Napoleon",
+  "passcode": "Secret1901"
 }
 ```
 
@@ -201,7 +234,31 @@ Bootstraps the client by returning the full current `GameState` along with the c
 
 ---
 
-### 8. `POST /api/order`
+### 8. `POST /api/sandbox/ai-orders`
+Generates DATC-compliant, intelligent tactical orders for specified Great Powers (or foreign powers by default) using the Chancellery Tactical AI engine. Avoids friendly self-bounces, coordinates multi-power attacks and supports, and prioritizes strategic supply centers.
+
+#### Request (`GenerateAIOrdersRequest`):
+```json
+{
+  "powers": ["ENGLAND", "GERMANY", "RUSSIA", "AUSTRIA", "ITALY", "TURKEY"],
+  "include_active": false
+}
+```
+
+#### Response (`GameState`):
+Returns the updated `GameState` with the AI-assigned orders populated and real-time validation/diagnostics refreshed.
+
+---
+
+### 9. `POST /api/sandbox/ai-step`
+Automatically plans tactical moves for any unassigned foreign powers with the Tactical AI engine and immediately adjudicates and steps the turn forward to the next phase/season.
+
+#### Response (`GameState`):
+Returns the next phase `GameState` with combat resolutions and updated unit positions.
+
+---
+
+### 10. `POST /api/order`
 Submits or modifies a single military instruction. Automatically triggers validation and non-destructive simulation preview.
 
 #### Request (`SingleOrderUpdateRequest`):
