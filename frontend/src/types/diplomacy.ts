@@ -99,6 +99,11 @@ export interface SimulationResult {
   summary: string[];
   new_units: Unit[];
   new_ownership: Record<string, Power>;
+  next_season?: string | null;
+  next_year?: number | null;
+  next_phase?: string | null;
+  builds?: Record<Power, { count: number; homes: string[] }> | null;
+  retreats?: Record<Power, Record<string, string[]>> | null;
 }
 
 export interface GameState {
@@ -244,6 +249,7 @@ export interface MultiplayerGameSummary {
   year: number;
   phase: string;
   created_by: string;
+  creator_id?: string | null;
   created_at: string;
   participants: Record<string, GameParticipant>;
   finalized_powers: Power[];
@@ -257,3 +263,10 @@ export interface AuthUser {
   isLocalDemo?: boolean;
 }
 
+export interface AdminStatusResponse {
+  is_creator: boolean;
+  can_rollback: boolean;
+  history_count: number;
+  creator_email: string;
+  creator_id?: string | null;
+}

@@ -4,7 +4,9 @@ import { AuthModal } from './components/AuthModal';
 import { EuropeMap } from './components/EuropeMap';
 import { LobbyView } from './components/LobbyView';
 import { MacroSidebar } from './components/MacroSidebar';
+import { AdminToolsModal } from './components/AdminToolsModal';
 import { SanityCheckModal } from './components/SanityCheckModal';
+import { checkIsGameCreator } from './utils/adminHelpers';
 import {
   getInitialAuthUser,
   signOutUser,
@@ -34,6 +36,7 @@ import {
   LogIn,
   LogOut,
   Save,
+  ShieldAlert,
   ShieldCheck,
   User as UserIcon,
 } from 'lucide-react';
@@ -71,6 +74,8 @@ export function App() {
   const [sandboxMode, setSandboxMode] = useState<boolean>(false);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [showSimulationOverlay, setShowSimulationOverlay] = useState<boolean>(false);
+  const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
+  const [adminOverrideActive, setAdminOverrideActive] = useState<boolean>(false);
 
   // Sanity Check Modal State
   const [sanityModalOpen, setSanityModalOpen] = useState<boolean>(false);
@@ -298,6 +303,7 @@ export function App() {
       viewMode === 'multiplayer' &&
       lockedPower &&
       !sandboxMode &&
+      !adminOverrideActive &&
       order.power !== lockedPower
     ) {
       triggerToast(
@@ -548,6 +554,8 @@ export function App() {
     );
   }
 
+  const isGameCreator = checkIsGameCreator(activeGameSummary, authUser, viewMode);
+
   const activePowerIssues = gameState.issues.filter(
     (i) => i.power === gameState.active_power
   );
@@ -685,6 +693,17 @@ export function App() {
                   Sandbox Pre-Moves: {sandboxMode ? 'ON (Exit to Clear)' : 'OFF'}
                 </span>
               </button>
+              {isGameCreator && (
+                <button
+                  type="button"
+                  className={`header-btn admin-btn ${adminOverrideActive ? 'admin-override-on' : ''}`}
+                  onClick={() => setAdminModalOpen(true)}
+                  title="Administrator Options: Roll back turn, move units anywhere, spawn/destroy units arbitrarily (Game Creator Only)"
+                >
+                  <ShieldAlert size={14} />
+                  <span>Admin Tools {adminOverrideActive ? '• OVERRIDE' : ''}</span>
+                </button>
+              )}
             </>
           )}
 
@@ -726,6 +745,20 @@ export function App() {
           )}
         </div>
       </header>
+
+      {/* ADMIN DIRECT-EDIT OVERRIDE BANNER */}
+      {isGameCreator && adminOverrideActive && (
+        <div className="admin-override-banner">
+          <span>
+            <ShieldAlert size={16} />
+            <strong>ADMIN DIRECT-EDIT ACTIVE:</strong> You have Game Creator authority to edit any power's moves or state directly on the board.
+          </span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={() => setAdminModalOpen(true)}>Admin Console</button>
+            <button type="button" onClick={() => setAdminOverrideActive(false)}>Disable Direct-Edit</button>
+          </div>
+        </div>
+      )}
 
       {/* TOAST NOTIFICATION */}
       {toastBanner && (
@@ -788,6 +821,9 @@ export function App() {
             builds={gameState.builds}
             retreats={gameState.retreats}
             isMultiplayer={viewMode === 'multiplayer'}
+            isGameCreator={isGameCreator}
+            onOpenAdminTools={() => setAdminModalOpen(true)}
+            adminOverrideActive={adminOverrideActive}
             onSelectPower={handleSelectPower}
             onToggleSandboxMode={handleToggleSandboxMode}
             onSelectUnit={setSelectedUnitId}
@@ -821,6 +857,26 @@ export function App() {
         }}
         onConfirmFinalizeAnyway={() => handleFinalizeClick(true)}
       />
+
+      {/* GAME CREATOR ADMINISTRATOR MODAL */}
+      {isGameCreator && gameState && (
+        <AdminToolsModal
+          isOpen={adminModalOpen}
+          onClose={() => setAdminModalOpen(false)}
+          gameId={activeGameId}
+          gameState={gameState}
+          provinces={provinces}
+          user={authUser}
+          onStateUpdated={(newState) => {
+            applyServerState(newState);
+            fetchGamesList();
+          }}
+          onToast={triggerToast}
+          adminOverrideActive={adminOverrideActive}
+          onToggleAdminOverride={() => setAdminOverrideActive((prev) => !prev)}
+          onResetScenario={() => handleLoadScenario('standard_1901')}
+        />
+      )}
 
       {/* SUPABASE AUTHENTICATION MODAL */}
       <AuthModal

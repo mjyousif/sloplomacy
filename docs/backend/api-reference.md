@@ -229,3 +229,108 @@ Resets the board and seeds a scenario.
   "active_power": "FRANCE"
 }
 ```
+
+---
+
+## Administrator & Game Creator Endpoints
+
+These endpoints are strictly restricted to the game creator (enforced via `creator_id` / `created_by` email validation and 403 Forbidden checks). In solo sandbox mode, full administrator capabilities are permitted by default.
+
+### 11. `GET /api/admin/status`
+Checks administrator privileges and timeline rollback snapshot depth for the specified game.
+
+#### Response (`AdminStatusResponse`):
+```json
+{
+  "is_creator": true,
+  "can_rollback": true,
+  "history_count": 2,
+  "creator_email": "creator@diplomacy.eu",
+  "creator_id": "user_12345"
+}
+```
+
+---
+
+### 12. `POST /api/admin/rollback`
+Reverts the game state to the snapshot taken immediately before the last turn adjudication, restoring previous units, orders, and clock state.
+
+#### Request (`AdminRollbackRequest`):
+```json
+{
+  "user_id": "user_12345",
+  "email": "creator@diplomacy.eu"
+}
+```
+
+---
+
+### 13. `POST /api/admin/unit/move`
+Arbitrarily teleports any unit on the board to any valid province, updating its location, coast, and resetting its order to HOLD. Any unit currently occupying the target province is removed.
+
+#### Request (`AdminMoveUnitRequest`):
+```json
+{
+  "unit_id": "FRA_A_PAR",
+  "new_province": "BUR",
+  "new_coast": null
+}
+```
+
+---
+
+### 14. `POST /api/admin/unit/spawn`
+Arbitrarily creates a new unit for any Great Power in any valid province (with automatic coast assignment for bicoastal provinces).
+
+#### Request (`AdminSpawnUnitRequest`):
+```json
+{
+  "power": "GERMANY",
+  "unit_type": "A",
+  "province": "MUN"
+}
+```
+
+---
+
+### 15. `POST /api/admin/unit/destroy`
+Immediately disbands and removes any unit from the board and orders list.
+
+#### Request (`AdminDestroyUnitRequest`):
+```json
+{
+  "unit_id": "FRA_A_PAR"
+}
+```
+
+---
+
+### 16. `POST /api/admin/set-turn`
+Arbitrarily sets the season, year, or phase.
+
+#### Request (`AdminSetTurnRequest`):
+```json
+{
+  "season": "Spring",
+  "year": 1902,
+  "phase": "Movement"
+}
+```
+
+---
+
+### 17. `POST /api/admin/ownership`
+Reassigns or clears province / supply center ownership.
+
+#### Request (`AdminSetOwnershipRequest`):
+```json
+{
+  "province": "BEL",
+  "power": "FRANCE"
+}
+```
+
+---
+
+### 18. `POST /api/admin/unfinalize-all`
+Unlocks and unfinalizes orders across all 7 Great Powers simultaneously.
