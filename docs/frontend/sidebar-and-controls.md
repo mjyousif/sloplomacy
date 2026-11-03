@@ -41,7 +41,11 @@ Displays build and disband quotas:
 - **Surplus Supply Centers (`buildCount > 0`)**: Displays cards for vacant home supply centers. Commanders select `BUILD ARMY`, `BUILD FLEET` (with coast options for bicoastal home centers like `STP`), or `WAIVE`.
 - **Supply Center Deficit (`buildCount < 0`)**: Prompts commanders to select surplus units to `DISBAND` until the unit count matches the supply center tally.
 
-### 4. Batch Operations & Automation Tools
+### 4. Tactical General Staff AI & Automation Tools
+- **"Plan Opponents"**: Deploys the built-in Diplomacy Tactical AI to formulate intelligent, DATC-compliant, non-conflicting tactical orders for all other 6 nations.
+- **"Plan All 7 Powers"**: Auto-plans tactical orders for every Great Power across the entire board.
+- **"Plan [Nation]"**: Formulates tactical orders specifically for the active power.
+- **"AI Step Phase"**: Auto-plans foreign powers and steps the game clock directly to the next phase with full adjudication.
 - **"Confirm All Holds"**: Marks all unassigned units as explicitly holding, clearing `UNASSIGNED_UNIT` warnings before finalization.
 - **"Clear Foreign Pre-Moves"** (Sandbox Mode): Instantly wipes hypothetical moves assigned to rival nations.
 

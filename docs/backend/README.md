@@ -11,11 +11,13 @@ backend/
 ├── main.py                  # FastAPI app instance, route handlers, multi-room registry & SPA static mount
 ├── models.py                # Pydantic v2 schemas and enumerations
 ├── adjudicator.py           # DATC turn adjudication & simulation wrapper over python 'diplomacy'
+├── ai_engine.py             # Authoritative Diplomacy Tactical AI engine (DATC-compliant heuristics)
 ├── validator.py             # Real-time tactical sanity checker across Movement, Retreats, & Builds
 ├── map_data.py              # Europe 1901 graph topology, province records & coastline rules
 ├── test_engine.py           # Topology symmetry, connectivity, and basic resolution tests
 ├── test_adjudicator.py      # Official DATC adjudication, dislodgements, and retreat paths
 ├── test_admin.py            # Creator privilege enforcement and admin board mutations
+├── test_ai_and_private_lobbies.py # AI orders, auto-step, and private lobby passcode tests
 ├── test_api_integration.py  # Full-stack API endpoint integration tests
 ├── test_surrender_leave.py  # Concession, civil disorder, and seat-vacating tests
 ├── test_validator.py        # Blunder detection, friendly fire, and phase-specific validations

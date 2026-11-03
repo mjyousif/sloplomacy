@@ -160,7 +160,12 @@ export function App() {
     await fetchGame('proto_1901');
   };
 
-  const handleCreateMultiplayerGame = async (name: string, power: Power) => {
+  const handleCreateMultiplayerGame = async (
+    name: string,
+    power: Power,
+    isPrivate?: boolean,
+    passcode?: string
+  ): Promise<MultiplayerGameSummary | void> => {
     if (!authUser) {
       openAuthPrompt('Please sign in to create a multiplayer game.', 'signup');
       return;
@@ -175,6 +180,8 @@ export function App() {
           user_id: authUser.id,
           email: authUser.email,
           display_name: authUser.displayName,
+          is_private: Boolean(isPrivate),
+          passcode: passcode?.trim() || null,
         }),
       });
       if (!res.ok) {
@@ -184,16 +191,23 @@ export function App() {
       }
       const summary: MultiplayerGameSummary = await res.json();
       await fetchGamesList();
-      await handleJoinOrEnterMultiplayerGame(summary.game_id, power);
-      triggerToast(
-        `Created "${summary.name}" — You are commanding ${POWER_METADATA[power].shortName}!`
-      );
+      if (!isPrivate || !passcode) {
+        await handleJoinOrEnterMultiplayerGame(summary.game_id, power);
+        triggerToast(
+          `Created "${summary.name}" — You are commanding ${POWER_METADATA[power].shortName}!`
+        );
+      }
+      return summary;
     } catch (e) {
       console.error(e);
     }
   };
 
-  const handleJoinOrEnterMultiplayerGame = async (gameId: string, power: Power) => {
+  const handleJoinOrEnterMultiplayerGame = async (
+    gameId: string,
+    power: Power,
+    passcode?: string
+  ) => {
     if (!authUser) {
       openAuthPrompt(
         `Sign in to claim ${POWER_METADATA[power].shortName} and play multiplayer.`,
@@ -212,13 +226,15 @@ export function App() {
             user_id: authUser.id,
             email: authUser.email,
             display_name: authUser.displayName,
+            passcode: passcode?.trim() || null,
           }),
         }
       );
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Unable to join power in this match.');
-        return;
+        const msg = err.detail || 'Unable to join power in this match.';
+        triggerToast(msg);
+        throw new Error(msg);
       }
       const data = await res.json();
       setActiveGameId(gameId);
@@ -239,6 +255,73 @@ export function App() {
       await fetchGamesList();
     } catch (e) {
       console.error(e);
+      throw e;
+    }
+  };
+
+  const handleGenerateAIMoves = async (powers?: Power[], includeActive: boolean = false) => {
+    try {
+      setLoading(true);
+      const res = await fetch(
+        `${API_BASE}/sandbox/ai-orders?game_id=${encodeURIComponent(activeGameId)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            powers: powers || null,
+            include_active: includeActive,
+          }),
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        triggerToast(err.detail || 'Failed to generate AI orders.');
+        return;
+      }
+      const updatedState = await res.json();
+      applyServerState(updatedState);
+      triggerToast(
+        includeActive
+          ? 'Tactical AI planned orders for all 7 Great Powers!'
+          : powers && powers.length === 1
+          ? `Tactical AI planned orders for ${POWER_METADATA[powers[0]].shortName}!`
+          : 'Tactical AI planned orders for foreign powers!'
+      );
+    } catch (e: any) {
+      console.error(e);
+      triggerToast('Error generating AI orders.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAIStepTurn = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(
+        `${API_BASE}/sandbox/ai-step?game_id=${encodeURIComponent(activeGameId)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        triggerToast(err.detail || 'Failed to step turn with AI.');
+        return;
+      }
+      const updatedState = await res.json();
+      applyServerState(updatedState);
+      setSelectedUnitId(null);
+      setShowSimulationOverlay(false);
+      triggerToast(
+        `AI advanced game clock to ${updatedState.season} ${updatedState.year} ${updatedState.phase}!`
+      );
+    } catch (e: any) {
+      console.error(e);
+      triggerToast('Error stepping turn with AI.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -955,6 +1038,8 @@ export function App() {
             onAdjudicateTurn={handleAdjudicateTurn}
             onLoadScenario={handleLoadScenario}
             onSaveSandboxClick={handleSaveSandboxToAccount}
+            onGenerateAIMoves={handleGenerateAIMoves}
+            onAIStepTurn={handleAIStepTurn}
             onSurrenderClick={() => {
               if (activeGameSummary && lockedPower) {
                 handleOpenSurrenderModal(activeGameSummary, lockedPower);

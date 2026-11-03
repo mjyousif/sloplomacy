@@ -20,6 +20,7 @@ import {
   AlertCircle,
   AlertTriangle,
   Anchor,
+  Bot,
   CheckCircle2,
   Crosshair,
   Flag,
@@ -32,6 +33,7 @@ import {
   Shield,
   ShieldAlert,
   Sliders,
+  Sparkles,
   Swords,
   Trash2,
   Unlock,
@@ -74,6 +76,8 @@ interface MacroSidebarProps {
   onSaveSandboxClick?: () => void;
   onSurrenderClick?: () => void;
   surrenderedPowers?: Power[];
+  onGenerateAIMoves?: (powers?: Power[], includeActive?: boolean) => void;
+  onAIStepTurn?: () => void;
 }
 
 export const MacroSidebar: React.FC<MacroSidebarProps> = ({
@@ -112,6 +116,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   onLoadScenario,
   onSaveSandboxClick,
   onSurrenderClick,
+  onGenerateAIMoves,
+  onAIStepTurn,
 }) => {
   const powerMeta = POWER_METADATA[activePower];
   const isFinalized = finalizedPowers.includes(activePower);
@@ -483,6 +489,64 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
             </button>
           )}
         </div>
+
+        {/* TACTICAL GENERAL STAFF AI CARD (GUEST SANDBOX & PRE-MOVE STUDY) */}
+        {(!isMultiplayer || sandboxMode) && onGenerateAIMoves && (
+          <div className="sidebar-section ai-command-section">
+            <div className="ai-command-header">
+              <div className="ai-command-title">
+                <Bot size={15} />
+                <span>Tactical General Staff AI</span>
+              </div>
+              <span className="ai-badge-pill">DATC Rulebook AI</span>
+            </div>
+            <p className="ai-command-desc">
+              {!isMultiplayer
+                ? 'Deploy DATC-compliant tactical AI to plan moves for opponents or automate the entire board.'
+                : 'Auto-plot tactical pre-moves for foreign powers based on strategic territorial heuristics.'}
+            </p>
+            <div className="ai-buttons-grid">
+              <button
+                type="button"
+                className="ai-btn primary"
+                onClick={() => onGenerateAIMoves(undefined, false)}
+                title="Generate intelligent tactical orders for all other 6 nations"
+              >
+                <Bot size={13} />
+                <span>Plan Opponents</span>
+              </button>
+              <button
+                type="button"
+                className="ai-btn"
+                onClick={() => onGenerateAIMoves(undefined, true)}
+                title="Generate tactical orders for all 7 Great Powers on the board"
+              >
+                <Sparkles size={13} />
+                <span>Plan All 7 Powers</span>
+              </button>
+              <button
+                type="button"
+                className="ai-btn"
+                onClick={() => onGenerateAIMoves([activePower])}
+                title={`Let Tactical AI plan orders for ${powerMeta.shortName}`}
+              >
+                <Swords size={13} />
+                <span>Plan {powerMeta.shortName}</span>
+              </button>
+              {onAIStepTurn && !isMultiplayer && (
+                <button
+                  type="button"
+                  className="ai-btn step"
+                  onClick={onAIStepTurn}
+                  title="Auto-plan foreign powers and step clock to next phase"
+                >
+                  <Play size={13} />
+                  <span>AI Step Phase</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {isAdjustmentPhase && (
           <div
@@ -1318,6 +1382,21 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
           {sandboxMode ? (
             <div className="sandbox-action-buttons-row">
+              {onGenerateAIMoves && (
+                <button
+                  type="button"
+                  className="sandbox-step-turn-btn"
+                  style={{
+                    background: 'linear-gradient(135deg, #1e3a5f 0%, #172554 100%)',
+                    borderColor: '#3b82f6',
+                  }}
+                  onClick={() => onGenerateAIMoves(undefined, false)}
+                  title="Use Tactical AI to auto-fill hypothetical moves for foreign powers"
+                >
+                  <Bot size={13} />
+                  <span>AI Auto-Plan Foreign</span>
+                </button>
+              )}
               <button className="simulate-outcome-btn" onClick={onToggleSandboxMode}>
                 <FlaskConical size={14} />
                 <span>Done Planning — Exit Sandbox</span>
