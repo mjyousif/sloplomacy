@@ -22,6 +22,7 @@ import {
   Anchor,
   CheckCircle2,
   Crosshair,
+  Flag,
   FlaskConical,
   Lock,
   MoveRight,
@@ -71,6 +72,8 @@ interface MacroSidebarProps {
   onAdjudicateTurn: () => void;
   onLoadScenario: (scenarioId: string) => void;
   onSaveSandboxClick?: () => void;
+  onSurrenderClick?: () => void;
+  surrenderedPowers?: Power[];
 }
 
 export const MacroSidebar: React.FC<MacroSidebarProps> = ({
@@ -80,6 +83,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   ownership,
   activePower,
   finalizedPowers,
+  surrenderedPowers = [],
   sandboxMode,
   selectedUnitId,
   hoveredUnitId,
@@ -107,9 +111,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   onAdjudicateTurn,
   onLoadScenario,
   onSaveSandboxClick,
+  onSurrenderClick,
 }) => {
   const powerMeta = POWER_METADATA[activePower];
   const isFinalized = finalizedPowers.includes(activePower);
+  const isSurrendered = surrenderedPowers.includes(activePower);
 
   const unitsByProv: Record<string, Unit> = {};
   const unitsById: Record<string, Unit> = {};
@@ -420,7 +426,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           </div>
 
           <div className="power-status-badge-wrap">
-            {isFinalized ? (
+            {isSurrendered ? (
+              <span className="status-badge surrendered">
+                <Flag size={12} /> Civil Disorder
+              </span>
+            ) : isFinalized ? (
               <span className="status-badge finalized">
                 <Lock size={12} /> Finalized
               </span>
@@ -444,6 +454,16 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           >
             <CheckCircle2 size={13} /> Confirm All ({confirmedCount}/{totalActionableCount})
           </button>
+          {isMultiplayer && onSurrenderClick && (
+            <button
+              type="button"
+              className="quick-action-btn surrender-btn-sidebar"
+              title="Surrender sovereign command and leave this multiplayer campaign"
+              onClick={onSurrenderClick}
+            >
+              <Flag size={13} /> Surrender &amp; Leave
+            </button>
+          )}
           {!isMultiplayer && (
             <button
               className="quick-action-btn"

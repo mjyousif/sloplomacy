@@ -138,6 +138,7 @@ class GameState(BaseModel):
     orders: Dict[str, Order]  # key: unit_id or order_id
     ownership: Dict[str, Power]  # key: province_id -> Power
     finalized_powers: List[Power] = Field(default_factory=list)
+    surrendered_powers: List[Power] = Field(default_factory=list)
     issues: List[ValidationIssue] = Field(default_factory=list)
     last_resolution: Optional[SimulationResult] = None
     turn_history: List[str] = Field(default_factory=list)
@@ -178,6 +179,8 @@ class GameParticipant(BaseModel):
     display_name: str
     power: Power
     joined_at: str
+    surrendered: bool = False
+    surrendered_at: Optional[str] = None
 
 
 class MultiplayerGameSummary(BaseModel):
@@ -192,6 +195,7 @@ class MultiplayerGameSummary(BaseModel):
     created_at: str
     participants: Dict[str, GameParticipant] = Field(default_factory=dict)
     finalized_powers: List[Power] = Field(default_factory=list)
+    surrendered_powers: List[Power] = Field(default_factory=list)
     is_sandbox: bool = False
 
 
@@ -208,6 +212,19 @@ class JoinGameRequest(BaseModel):
     user_id: str = "guest"
     email: str = "player@diplomacy.local"
     display_name: Optional[str] = None
+
+
+class LeaveGameRequest(BaseModel):
+    user_id: str
+    email: Optional[str] = None
+    power: Optional[Power] = None
+
+
+class SurrenderRequest(BaseModel):
+    power: Power
+    user_id: str
+    email: Optional[str] = None
+    leave: bool = True
 
 
 class SaveSandboxRequest(BaseModel):

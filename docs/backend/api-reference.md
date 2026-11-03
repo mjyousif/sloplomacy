@@ -21,6 +21,8 @@ The backend exposes a JSON REST API under the `/api` prefix on port `8000`. All 
 | `POST` | `/api/simulate` | Execute non-destructive tactical preview resolution | *None* | `SimulationResult` |
 | `POST` | `/api/adjudicate` | Commit orders, resolve combat, advance season | *None* | `GameState` |
 | `POST` | `/api/scenario` | Reset board and load predefined tactical scenario | `ScenarioRequest` | `GameState` |
+| `POST` | `/api/games/{game_id}/leave` | Vacate claimed power in lobby or active match, or remove saved sandbox | `LeaveGameRequest` | `GameBootstrapResponse` |
+| `POST` | `/api/games/{game_id}/surrender` | Concede sovereign command into Civil Disorder (optionally vacate seat) | `SurrenderRequest` | `GameBootstrapResponse` |
 
 ---
 

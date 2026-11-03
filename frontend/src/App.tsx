@@ -6,6 +6,7 @@ import { LobbyView } from './components/LobbyView';
 import { MacroSidebar } from './components/MacroSidebar';
 import { AdminToolsModal } from './components/AdminToolsModal';
 import { SanityCheckModal } from './components/SanityCheckModal';
+import { SurrenderModal } from './components/SurrenderModal';
 import { checkIsGameCreator } from './utils/adminHelpers';
 import {
   getInitialAuthUser,
@@ -31,6 +32,7 @@ import {
   CheckCircle2,
   Compass,
   Crown,
+  Flag,
   FlaskConical,
   Home,
   LogIn,
@@ -81,6 +83,12 @@ export function App() {
   const [sanityModalOpen, setSanityModalOpen] = useState<boolean>(false);
   const [sanityModalIssues, setSanityModalIssues] = useState<ValidationIssue[]>([]);
   const [toastBanner, setToastBanner] = useState<string | null>(null);
+
+  // Surrender & Leave Modal State
+  const [surrenderModalOpen, setSurrenderModalOpen] = useState<boolean>(false);
+  const [surrenderModalGame, setSurrenderModalGame] =
+    useState<MultiplayerGameSummary | null>(null);
+  const [surrenderModalPower, setSurrenderModalPower] = useState<Power | null>(null);
 
   const triggerToast = (msg: string) => {
     setToastBanner(msg);
@@ -265,6 +273,94 @@ export function App() {
         await fetchGamesList();
         triggerToast(`Saved "${saved.name}" to your account!`);
       }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleOpenSurrenderModal = (game: MultiplayerGameSummary, power: Power) => {
+    setSurrenderModalGame(game);
+    setSurrenderModalPower(power);
+    setSurrenderModalOpen(true);
+  };
+
+  const handleSurrenderPower = async (gameId: string, power: Power, leave: boolean) => {
+    if (!authUser) {
+      openAuthPrompt('Please sign in to manage your sovereign position.', 'signin');
+      return;
+    }
+    try {
+      const res = await fetch(
+        `${API_BASE}/games/${encodeURIComponent(gameId)}/surrender`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            power,
+            user_id: authUser.id,
+            email: authUser.email,
+            leave,
+          }),
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        triggerToast(err.detail || 'Could not process surrender action.');
+        return;
+      }
+      const data = await res.json();
+      if (leave) {
+        if (activeGameId === gameId) {
+          setViewMode('lobby');
+          setLockedPower(null);
+          setActiveGameSummary(null);
+        }
+        triggerToast(
+          `Surrendered command of ${POWER_METADATA[power].shortName} and left match.`
+        );
+      } else {
+        applyServerState(data.state);
+        if (data.summary) setActiveGameSummary(data.summary);
+        triggerToast(
+          `Command of ${POWER_METADATA[power].shortName} surrendered. Units stand in Civil Disorder.`
+        );
+      }
+      await fetchGamesList();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleLeaveGame = async (gameId: string, power: Power) => {
+    if (!authUser) {
+      openAuthPrompt('Please sign in to leave this campaign.', 'signin');
+      return;
+    }
+    try {
+      const res = await fetch(
+        `${API_BASE}/games/${encodeURIComponent(gameId)}/leave`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            power,
+            user_id: authUser.id,
+            email: authUser.email,
+          }),
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        triggerToast(err.detail || 'Could not leave match.');
+        return;
+      }
+      if (activeGameId === gameId) {
+        setViewMode('lobby');
+        setLockedPower(null);
+        setActiveGameSummary(null);
+      }
+      triggerToast('Left campaign.');
+      await fetchGamesList();
     } catch (e) {
       console.error(e);
     }
@@ -671,6 +767,21 @@ export function App() {
         <div className="header-right-actions">
           {viewMode !== 'lobby' && (
             <>
+              {viewMode === 'multiplayer' && lockedPower && (
+                <button
+                  type="button"
+                  className="header-btn header-surrender-btn"
+                  onClick={() => {
+                    if (activeGameSummary && lockedPower) {
+                      handleOpenSurrenderModal(activeGameSummary, lockedPower);
+                    }
+                  }}
+                  title={`Surrender sovereign command of ${POWER_METADATA[lockedPower].shortName} and leave campaign`}
+                >
+                  <Flag size={14} />
+                  <span>Surrender &amp; Leave</span>
+                </button>
+              )}
               {viewMode === 'sandbox' && (
                 <button
                   type="button"
@@ -779,6 +890,7 @@ export function App() {
           onOpenAuth={openAuthPrompt}
           onCreateGame={handleCreateMultiplayerGame}
           onJoinOrEnterGame={handleJoinOrEnterMultiplayerGame}
+          onOpenSurrenderModal={handleOpenSurrenderModal}
         />
       ) : (
         /* VIEW 2: INTERACTIVE EUROPE MAP + MACRO SIDEBAR (SANDBOX OR MULTIPLAYER) */
@@ -814,6 +926,7 @@ export function App() {
             ownership={gameState.ownership}
             activePower={gameState.active_power}
             finalizedPowers={gameState.finalized_powers}
+            surrenderedPowers={gameState.surrendered_powers}
             sandboxMode={sandboxMode}
             selectedUnitId={selectedUnitId}
             hoveredUnitId={hoveredUnitId}
@@ -842,6 +955,11 @@ export function App() {
             onAdjudicateTurn={handleAdjudicateTurn}
             onLoadScenario={handleLoadScenario}
             onSaveSandboxClick={handleSaveSandboxToAccount}
+            onSurrenderClick={() => {
+              if (activeGameSummary && lockedPower) {
+                handleOpenSurrenderModal(activeGameSummary, lockedPower);
+              }
+            }}
           />
         </main>
       )}
@@ -860,6 +978,16 @@ export function App() {
           setHighlightedProvinces(issue.provinces);
         }}
         onConfirmFinalizeAnyway={() => handleFinalizeClick(true)}
+      />
+
+      {/* SURRENDER & LEAVE MODAL */}
+      <SurrenderModal
+        isOpen={surrenderModalOpen}
+        onClose={() => setSurrenderModalOpen(false)}
+        game={surrenderModalGame}
+        power={surrenderModalPower}
+        onSurrender={handleSurrenderPower}
+        onLeave={handleLeaveGame}
       />
 
       {/* GAME CREATOR ADMINISTRATOR MODAL */}

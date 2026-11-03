@@ -3332,3 +3332,335 @@
   background: #dc2626;
   color: #ffffff;
 }
+
+/* -------------------------------------------------------------------------
+   6. SURRENDER & LEAVE MATCH CONTROLS & MODAL
+   ------------------------------------------------------------------------- */
+.my-game-action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leave-campaign-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.leave-campaign-btn:hover {
+  background: rgba(239, 68, 68, 0.24);
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.lobby-claim-alert-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lobby-claim-leave-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lobby-claim-leave-btn:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.header-btn.header-surrender-btn {
+  background: rgba(220, 38, 38, 0.16);
+  border: 1px solid rgba(220, 38, 38, 0.45);
+  color: #fca5a5;
+}
+
+.header-btn.header-surrender-btn:hover {
+  background: rgba(220, 38, 38, 0.3);
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.quick-action-btn.surrender-btn-sidebar {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.quick-action-btn.surrender-btn-sidebar:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.status-badge.surrendered {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+}
+
+/* Surrender Modal */
+.surrender-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(10, 13, 18, 0.82);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.surrender-modal-card {
+  width: 100%;
+  max-width: 560px;
+  background: #1c212b;
+  border: 2px solid #ef4444;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.surrender-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 22px;
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.18) 0%, rgba(28, 33, 43, 0) 100%);
+  border-bottom: 1px solid #333b4d;
+}
+
+.surrender-header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.surrender-hazard-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.surrender-hazard-badge.flag {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #f87171;
+}
+
+.surrender-hazard-badge.trash {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+}
+
+.surrender-overline {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #f87171;
+}
+
+.surrender-main-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 3px 0 0 0;
+}
+
+.surrender-close-x {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.surrender-close-x:hover {
+  background: #2d3545;
+  color: #fff;
+}
+
+.surrender-power-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 22px;
+  border-bottom: 1px solid;
+}
+
+.surrender-power-crest {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.surrender-power-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.surrender-power-info strong {
+  font-size: 0.95rem;
+}
+
+.surrender-campaign-name {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.surrender-body-content {
+  padding: 18px 22px;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.surrender-consequences-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.consequence-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid #334155;
+  border-radius: 8px;
+}
+
+.consequence-item .warn-icon {
+  color: #f87171;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.consequence-item strong {
+  color: #f1f5f9;
+  font-size: 0.82rem;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.consequence-item p {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.surrender-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 22px;
+  background: #161a22;
+  border-top: 1px solid #2d3545;
+}
+
+.surrender-cancel-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #64748b;
+  background: #283140;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.surrender-cancel-btn:hover:not(:disabled) {
+  background: #364154;
+}
+
+.surrender-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.surrender-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #94a3b8;
+  background: #334155;
+  color: #f8fafc;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.surrender-secondary-btn:hover:not(:disabled) {
+  background: #475569;
+}
+
+.surrender-danger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid #ef4444;
+  background: linear-gradient(180deg, #dc2626 0%, #991b1b 100%);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.surrender-danger-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.45);
+}
+
+.surrender-danger-btn:disabled,
+.surrender-secondary-btn:disabled,
+.surrender-cancel-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
