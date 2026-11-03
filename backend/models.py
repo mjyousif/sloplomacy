@@ -197,6 +197,8 @@ class MultiplayerGameSummary(BaseModel):
     finalized_powers: List[Power] = Field(default_factory=list)
     surrendered_powers: List[Power] = Field(default_factory=list)
     is_sandbox: bool = False
+    is_private: bool = False
+    has_passcode: bool = False
 
 
 class CreateGameRequest(BaseModel):
@@ -205,6 +207,8 @@ class CreateGameRequest(BaseModel):
     user_id: str = "guest"
     email: str = "player@diplomacy.local"
     display_name: Optional[str] = None
+    is_private: bool = False
+    passcode: Optional[str] = None
 
 
 class JoinGameRequest(BaseModel):
@@ -212,6 +216,12 @@ class JoinGameRequest(BaseModel):
     user_id: str = "guest"
     email: str = "player@diplomacy.local"
     display_name: Optional[str] = None
+    passcode: Optional[str] = None
+
+
+class GenerateAIOrdersRequest(BaseModel):
+    powers: Optional[List[Power]] = None
+    include_active: bool = False
 
 
 class LeaveGameRequest(BaseModel):

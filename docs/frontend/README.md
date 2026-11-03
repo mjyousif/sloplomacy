@@ -46,8 +46,11 @@ frontend/
 App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │
 ├── View 1: LobbyView.tsx (when viewMode === 'lobby')
-│   ├── Match List & Lobbies Browser
-│   ├── Create Game Modal / Drawer
+│   ├── Match List & Lobbies Browser (with Private badge and empty state)
+│   ├── Host Game Form (Public vs Private with Passcode protection)
+│   ├── Join Private Campaign Form (by Game ID & Passcode)
+│   ├── Private Campaign Credentials Modal (Copy Game ID & Passcode)
+│   ├── Private Lobby Passcode Modal Prompt
 │   ├── Seat Claim Controls (7 Great Powers)
 │   ├── Active & Saved Sandboxes Roster
 │   └── User Auth Header & Profile Switcher

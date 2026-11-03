@@ -39,7 +39,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```bash
   python -m pytest backend/ -v
   ```
-  *(Runs all 6 test suites: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_api_integration.py`, `test_surrender_leave.py`, and `test_validator.py`)*
+  *(Runs all 7 test suites: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_surrender_leave.py`, and `test_validator.py`)*
 
 ### Frontend Commands (`frontend/`)
 - **Install Dependencies**:
@@ -143,7 +143,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   ├── validator.py           # Real-time pre-flight legality and tactical blunder checks
 │   ├── map_data.py            # Complete 76-province graph, dual coasts, 34 SC definitions
 │   ├── requirements.txt       # Python dependencies
-│   └── test_*.py              # Comprehensive pytest test harness (6 test suites)
+│   └── test_*.py              # Comprehensive pytest test harness (7 test suites)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx            # Main state container, viewMode controller & API coordinator
@@ -236,17 +236,20 @@ The game cycles through three standard phases per year:
   - **Top-Level Navigation**: Ensure newly added documents are indexed in both [README.md](README.md) and [docs/README.md](docs/README.md).
 
 ### 2. Preserve Type Contracts
-- rontend/src/types/diplomacy.ts must strictly mirror ackend/models.py.
+- `frontend/src/types/diplomacy.ts` must strictly mirror `backend/models.py`.
 - Whenever adding fields or modifying schemas, update both files concurrently.
-- Always run 
-px tsc --noEmit before committing frontend modifications.
+- Always run `npx tsc --noEmit` before committing frontend modifications.
 
 ### 3. Run Comprehensive Verification
-- **Backend Tests**: Run python -m pytest backend/ -v (must pass all 6 test suites: adjudicator, admin, api_integration, engine, surrender_leave, validator).
-- **Frontend Verification**: Run 
-pm test (Vitest) and 
-pm run build (Vite + TypeScript) in rontend/.
+- **Backend Tests**: Run python -m pytest backend/ -v (must pass all 7 test suites: adjudicator, admin, ai_and_private_lobbies, api_integration, engine, surrender_leave, validator).
+- **Frontend Verification**: Run `npm test` (Vitest) and `npm run build` (Vite + TypeScript) in `frontend/`.
 
 ### 4. Preserve Documentation & Code Integrity
 - Retain all existing code comments, docstrings, and architectural explanations unless directly superseded by new logic.
 - Do not produce stale or misleading documentation when authoring or refactoring features.
+
+### 5. Pull Request & Branch Protection Governance
+- **Branch Protection on `main`**: Direct pushes to `main` are prohibited. All modifications must be submitted via pull request.
+- **Mandatory Review**: PRs require at least 1 approving code review before merging (`required_approving_review_count: 1`). Pushing new commits automatically dismisses previous reviews.
+- **CI Quality Gates**: PRs must pass `Backend Tests (Pytest)` and `Frontend Tests & Build Check` before they are eligible for merge.
+- **Squash & Merge & Auto-Delete**: Branches are squash-merged into `main` using PR titles and descriptions, and head branches are automatically deleted upon merge (`delete_branch_on_merge: true`).
