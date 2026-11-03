@@ -1,12 +1,12 @@
 # Local Development & Testing Guide
 
-This guide covers developer workflows, running the local development environment, testing, and debugging the Diplomacy 1901 Tactical Engine.
+This guide covers developer workflows, running the local development environment, testing, and debugging the Diplomacy 1901 Tactical Engine & Atlas.
 
 ---
 
 ## Prerequisites
 
-- **Python**: Version 3.8 or newer (with `pip` and `venv`).
+- **Python**: Version 3.10 or newer (with `pip` and `venv`).
 - **Node.js**: Version 18.0 or newer (with `npm`).
 - **Git** (optional).
 
@@ -81,27 +81,46 @@ npm run dev
 npm run build
 ```
 
+### 3. Configuring Supabase Auth (Optional)
+To test cloud authentication locally rather than default local dev mode:
+1. Create `frontend/.env` (modeled after `frontend/.env.example`):
+   ```env
+   VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
+   VITE_SUPABASE_ANON_KEY=<your-anon-public-key>
+   ```
+2. Restart the frontend dev server. The app will detect the credentials and switch to cloud Supabase authentication.
+
 ---
 
 ## Running the Automated Test Suite
 
 ### Running Backend Tests (`pytest`)
-Backend tests live in `backend/test_engine.py` and cover:
-- 76-province graph symmetry (army and fleet bidirectionality)
-- All 34 supply center declarations
-- Pre-flight validator blunder detection (`SELF_BOUNCE`, `UNMATCHED_SUPPORT`)
-- Adjudicator resolution, support cuts, and supported advances
+The backend includes 6 test suites covering the entire engine:
+- `test_engine.py`: Graph symmetry and connectivity.
+- `test_adjudicator.py`: Official DATC combat scenarios and retreat path mechanics.
+- `test_admin.py`: Administrator privileges and board mutation operations.
+- `test_api_integration.py`: FastAPI endpoints and multi-game room query parameters.
+- `test_surrender_leave.py`: Concessions, civil disorder, and room departures.
+- `test_validator.py`: Pre-flight blunder diagnostics across Movement, Retreats, and Adjustments.
 
-Run tests from the root or backend directory:
+Run all tests from the repository root:
 ```bash
-pytest backend/test_engine.py -v
+python -m pytest backend/ -v
 ```
 
-### Running Frontend Typechecks & Linting
-Ensure no type regression or API contract drift exists:
+### Running Frontend Tests (`Vitest`)
+Run frontend unit tests verifying order reachability and admin utilities:
+```bash
+cd frontend
+npm test
+```
+
+### Running Frontend Typechecks & Build Verification
+Ensure zero type regressions or API model drifts exist:
 ```bash
 cd frontend
 npx tsc --noEmit
+npm run build
 ```
 
 ---
@@ -109,7 +128,7 @@ npx tsc --noEmit
 ## Troubleshooting & FAQ
 
 ### Port 8000 or 5173 Already in Use
-- Terminate any dangling Python or Node processes:
+- Terminate dangling Python or Node processes:
   ```powershell
   # Windows PowerShell
   Get-Process -Name python, node -ErrorAction SilentlyContinue | Stop-Process

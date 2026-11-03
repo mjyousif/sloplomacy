@@ -1,129 +1,143 @@
 # Tactical Adjudication Engine (`adjudicator.py`)
 
-The adjudication engine (`backend/adjudicator.py`) is responsible for resolving tactical movements, combat conflicts, support cuts, maritime convoys, bounces, and dislodgements under standard Diplomacy rules (inspired by the **Diplomacy Adjudicator Test Cases — DATC**).
+The adjudication engine (`backend/adjudicator.py`) evaluates orders, manages phase transitions, and resolves tactical movements, combat conflicts, support cuts, maritime convoys, bounces, dislodgements, retreats, and winter supply center builds/disbands under standard Diplomacy rules.
+
+It interfaces with the authoritative **Python `diplomacy` package** (`diplomacy>=1.1.2`), which implements standard Diplomacy Adjudicator Test Cases (DATC) resolution semantics.
 
 ---
 
-## Core Algorithm Overview
+## 1. Engine Architecture & Integration
 
-Adjudication in Diplomacy is inherently interdependent: whether a support is cut depends on whether the attacker is dislodged; whether a fleet is dislodged depends on whether supporting fleets have their supports cut; and circular movement chains depend on whether any single piece in the cycle fails to vacate.
-
-To solve this deterministically, `adjudicator.py` implements an **iterative fixed-point resolution cycle**:
+Instead of relying on fragile ad-hoc combat heuristics, `adjudicator.py` synchronizes the server's `GameState` with an authoritative `diplomacy.Game` instance:
 
 ```
-+-------------------------------------------------------------------+
-|                  Step 1: Order Normalization                      |
-|  - Check path legality (direct adjacency vs valid convoy chain).   |
-|  - Illegal moves revert to HOLD with reason documented.           |
-+---------------------------------+---------------------------------+
-                                  |
-                                  v
-+-------------------------------------------------------------------+
-|              Step 2: Iterative Fixed-Point Loop                   |
-|  Repeat until no support cuts or convoy disruptions change:       |
-|                                                                   |
-|   a. Convoy Chain Evaluation:                                     |
-|      - Verify that sea convoys are unbroken.                      |
-|      - If a convoying fleet is dislodged, the convoy is disrupted.|
-|                                                                   |
-|   b. Support Cut Detection:                                       |
-|      - Attack on supporter cuts support UNLESS attack comes from   |
-|        the province the supporter is supporting against.          |
-|      - If dislodged by any unit, support is unconditionally cut.  |
-|                                                                   |
-|   c. Attack & Defense Strength Calculation:                       |
-|      - Base strength = 1.                                         |
-|      - Plus 1 for each uncut, legally positioned SUPPORT.         |
-|                                                                   |
-|   d. Head-to-Head & Destination Contention:                       |
-|      - Higher attack strength wins and advances.                  |
-|      - Equal strengths bounce; units remain in origin.            |
-|                                                                   |
-|   e. Circular Movement Resolution:                                |
-|      - Detect loops (e.g. A->B, B->C, C->A).                      |
-|      - If all units in loop move without external dislodgement,    |
-|        the rotation succeeds synchronously.                       |
-+---------------------------------+---------------------------------+
-                                  |
-                                  v
-+-------------------------------------------------------------------+
-|               Step 3: Dislodgements & Results                     |
-|  - Flag dislodged units (attack strength > defense strength).     |
-|  - Enforce self-dislodgement ban (cannot dislodge own unit).      |
-|  - Update unit coordinates and Fall supply center ownership.      |
-+-------------------------------------------------------------------+
++-------------------------------------------------------------------------+
+|                              GameState                                  |
+|  - season: "Spring" | "Fall" | "Winter"                                  |
+|  - year: 1901                                                           |
+|  - phase: "Movement" | "Retreats" | "Adjustments"                       |
+|  - units, orders, ownership, surrendered_powers                         |
++------------------------------------+------------------------------------+
+                                     |
+                                     v
+                  to_diplomacy_phase_code() & create_diplomacy_game()
+                                     |
+                                     v
++-------------------------------------------------------------------------+
+|                  diplomacy.Game(map_name="standard")                    |
+|  - Phase format: "S1901M", "S1901R", "F1901M", "F1901R", "W1901A"       |
+|  - Units and dislodged units populated                                  |
+|  - Supply center ownership mapped                                       |
+|  - Civil disorder rules enforced for surrendered powers                 |
++------------------------------------+------------------------------------+
+                                     |
+                                     v
+                         game.process() / game.step()
+                                     |
+                                     v
++-------------------------------------------------------------------------+
+|                     State Extraction & Synchronization                  |
+|  - Extract unit movements, bounces, cuts, dislodgements                 |
+|  - Parse next phase code via parse_diplomacy_phase()                    |
+|  - Compute build/disband quotas via compute_current_builds()            |
+|  - Calculate valid retreat paths via game.get_retreat_options()         |
+|  - Generate OrderResolution records and SimulationResult                |
++-------------------------------------------------------------------------+
 ```
 
 ---
 
-## Support Resolution & Cutting Rules
+## 2. Phase Resolution Cycle
 
-A unit ordered to `SUPPORT` another unit's move or hold adds 1 to that unit's tactical strength.
+The engine manages standard Diplomacy phase progression:
 
-### 1. Support Hold
 ```
-A BER S A MUN H
+Spring Movement (S<Year>M)
+       │
+       ├─► Dislodgements exist? ──► Spring Retreats (S<Year>R)
+       │                                     │
+       └─────────────────────────────────────┴─► Fall Movement (F<Year>M)
+                                                       │
+       ┌───────────────────────────────────────────────┘
+       │
+       ├─► Dislodgements exist? ──► Fall Retreats (F<Year>R)
+       │                                     │
+       └─────────────────────────────────────┴─► Winter Adjustments (W<Year>A)
+                                                       │
+                                                 Recalculate SCs & Units
+                                                 (Builds / Disbands)
+                                                       │
+       ┌───────────────────────────────────────────────┘
+       ▼
+Spring Movement of Next Year (S<Year+1>M)
 ```
-- Valid if `BER` is adjacent to `MUN`.
-- Increases `A MUN`'s defense strength from 1 to 2.
 
-### 2. Support Move
-```
-F NTH S A BEL -> HOL
-```
-- Valid only if `NTH` can legally reach `HOL` (the destination).
-- Note: The supporting unit does NOT need to be able to reach the *origin* (`BEL`), only the *destination* (`HOL`).
+### 1. Movement Phase (`Movement`)
+- Units execute `HOLD`, `MOVE`, `SUPPORT`, or `CONVOY`.
+- Contested destinations result in bounces (standoffs) unless a unit has superior uncut support.
+- If a defending unit is overpowered by a superior attack force, it is **dislodged** and the engine transitions to **Retreats**.
+- If no dislodgements occur, the Retreats phase is skipped automatically.
 
-### 3. Support Cut Conditions
-A support is **cut** (negated to 0) if:
-1. The supporting unit is attacked by a foreign unit from any province **other than the province into which support is being directed**.
-2. Example:
-   - `FRA F MAO S A SPA -> POR`
-   - `ENG F IRI -> MAO` (Cuts French support in `MAO`!)
-3. Exception (The "Don't Cut via Target" Rule):
-   - If `GER A MUN` attacks `BER`, while `BER` is supporting an attack *into* `MUN`, `BER`'s support is **not** cut by `MUN`'s attack. (However, if `MUN` achieves superior strength and dislodges `BER`, the support is cut upon dislodgement).
+### 2. Retreat Phase (`Retreats`)
+- Only dislodged units receive orders: either `RETREAT` to an eligible adjacent province or `DISBAND`.
+- Valid retreat destinations:
+  - Must be reachable by the unit type (Army vs Fleet / Coast).
+  - Must be unoccupied.
+  - Must **not** be the province from which the dislodging attack originated.
+  - Must **not** have been contested by a standoff (bounce) during the preceding movement phase.
+- If two dislodged units retreat to the same province, both bounce and are disbanded automatically.
+
+### 3. Winter Adjustments Phase (`Adjustments`)
+- Occurs each winter following Fall resolution.
+- Compares each power's controlled Supply Centers (SCs) to its current surviving unit count:
+  - **Surplus SCs (`SC > Units`)**: Power may order `BUILD` (Army or Fleet) in vacant home supply centers up to the difference.
+  - **Deficit SCs (`SC < Units`)**: Power must order `DISBAND` (anywhere on board) until unit count equals SC count.
+  - **Balanced (`SC == Units`)**: No adjustments required.
 
 ---
 
-## Maritime Convoy Chains
+## 3. Order Translation (`order_to_diplomacy_str`)
 
-Armies can travel across multiple contiguous sea zones if friendly or foreign Fleets are ordered to `CONVOY`:
+The internal Pydantic `Order` model is serialized into standard DATC order notation before injection into `diplomacy.Game`:
 
-```
-A LON -> BEL via convoy
-F ENG C A LON -> BEL
-```
-
-### Complex Multi-Sea Chains
-```
-A EDI -> BRE via convoy
-F NTH C A EDI -> BRE
-F ENG C A EDI -> BRE
-```
-The adjudicator executes a Breadth-First Search (BFS) over all fleets ordered to convoy the specific army. If a continuous path of sea zones links the army's starting coastline to the destination coastline, the convoy is deemed **active**.
-
-### Disrupted Convoys
-If an enemy fleet attacks and dislodges any fleet in the required convoy chain, the convoy is **disrupted**, and the army's move fails (the army remains in its origin province).
+| Order Type | Internal Parameters | DATC Notation Example |
+| :--- | :--- | :--- |
+| `HOLD` | `origin: "PAR"` | `A PAR H` |
+| `MOVE` | `origin: "PAR", target: "BUR"` | `A PAR - BUR` |
+| `MOVE` (split coast) | `origin: "BAR", target: "STP", target_coast: "NC"` | `F BAR - STP/NC` |
+| `SUPPORT` (hold) | `origin: "BER", aux_unit_origin: "MUN", target: "MUN"` | `A BER S A MUN` |
+| `SUPPORT` (move) | `origin: "NTH", aux_unit_origin: "BEL", target: "HOL"` | `F NTH S A BEL - HOL` |
+| `CONVOY` | `origin: "ENG", aux_unit_origin: "LON", target: "BEL"` | `F ENG C A LON - BEL` |
+| `RETREAT` | `origin: "LON", target: "WAL"` | `A LON R WAL` |
+| `DISBAND` | `origin: "PAR"` | `A PAR D` |
+| `BUILD` | `target: "BUD", unit_type: "A"` | `A BUD B` |
+| `WAIVE` | `target: "BUD"` | `A BUD WAIVE` |
 
 ---
 
-## Self-Dislodgement Prohibition
+## 4. Simulation Preview vs. Commit Adjudication
 
-Under standard Diplomacy rules:
-> **A player's units may not dislodge another unit of the same nationality.**
+`adjudicator.adjudicate_turn()` operates in two modes:
 
-Even if Power A supports an attack on one of its own units with overwhelming strength (e.g. Strength 3 vs Defense 1), the attack bounces, and the defending unit is **not** dislodged.
-
-However, a player's attack *can* cut support offered by one of their own units if attacking across different provinces.
+1. **Simulation Mode (`is_simulation=True`)**:
+   - Clones current state into a temporary `diplomacy.Game` instance.
+   - Evaluates all orders and extracts tactical outcomes without advancing the live match state.
+   - Returns a `SimulationResult` containing:
+     - `resolutions`: Per-unit outcomes (`succeeded`, `bounced`, `cut`, `dislodged`, `dislodged_by`, `attack_strength`, `defense_strength`, `reason`).
+     - `dislodged_units`: Units needing retreat orders.
+     - `clash_provinces`, `bounce_provinces`, `cut_provinces`.
+     - `next_phase`: Preview of what phase will follow.
+     - `builds` / `retreats`: Available build counts and retreat paths.
+2. **Commit Adjudication (`is_simulation=False`)**:
+   - Commits resolution permanently to authoritative `GameState`.
+   - Advances `season`, `year`, and `phase`.
+   - Updates `ownership` map during Fall movement resolution.
+   - Clears finalized order rosters and updates `turn_history`.
 
 ---
 
-## Circular Movement
+## 5. Standard Tactical Invariants Enforced
 
-When multiple units rotate positions simultaneously:
-```
-A PAR -> BUR
-A BUR -> MAR
-A MAR -> PAR
-```
-If no conflicting external forces enter the chain and each move succeeds, the adjudicator detects the closed loop and permits all units to swap positions synchronously without mutual bouncing.
+1. **Self-Dislodgement Prohibition**: A player cannot dislodge their own unit, even with superior support.
+2. **Support Cutting Exception ("Don't Cut via Target")**: An attack by Province B against Province A does not cut Province A's support into Province B unless Province A is dislodged.
+3. **Civil Disorder for Surrendered Powers**: Units belonging to surrendered powers hold passively, never provide support, and auto-disband if dislodged or down in supply centers.

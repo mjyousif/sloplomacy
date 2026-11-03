@@ -26,6 +26,7 @@ docs/
 │   └── styling-and-themes.md      # Cartographic design system, power palettes & typography
 └── guides/
     ├── development.md             # Setup, local workflows, testing & troubleshooting
+    ├── google-cloud-deployment.md # GCP Cloud Run + Supabase scale-to-zero serverless deployment
     └── rulebook-reference.md      # Standard 1901 Diplomacy rules mapped to engine behavior
 ```
 

@@ -1,6 +1,6 @@
 # System Architecture & Overview
 
-The **Diplomacy 1901 Tactical Engine** is designed as a server-authoritative, real-time tactical workspace for the 7-player strategy game *Diplomacy*. It pairs a lightweight, deterministic Python adjudication backend with an interactive, vectorized React client.
+The **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** is designed as a server-authoritative, real-time tactical workspace for standard 7-player *Diplomacy*. It pairs a lightweight, deterministic Python adjudication backend with an interactive, vectorized React client, an optional Supabase Auth/DB layer, and scale-to-zero Google Cloud Run hosting.
 
 ---
 
@@ -9,65 +9,76 @@ The **Diplomacy 1901 Tactical Engine** is designed as a server-authoritative, re
 1. **Server-Authoritative Game Logic**:
    All spatial adjacency calculations, validation diagnostics, support resolution, and season advancement are executed by the FastAPI server in Python. The client maintains an optimistic local representation for responsive interaction, but continuously synchronizes with authoritative server snapshots.
 2. **Immediate Feedback & "Pre-Flight" Sanity Checking**:
-   Unlike traditional play-by-email (PBEM) adjudicators that evaluate orders only at the turn deadline, this engine continuously runs the order validator (`validator.py`) and non-destructive resolution simulator (`adjudicator.py`) on every single user input. Potential disasters—such as unintentional self-bounces or cut supports—are flagged immediately.
+   Unlike traditional play-by-email (PBEM) adjudicators that evaluate orders only at the turn deadline, this engine continuously runs the order validator (`validator.py`) and non-destructive resolution simulator (`adjudicator.py`) on every single user input across Movement, Retreats, and Adjustments phases.
 3. **Hypothetical Sandbox ("War Room") Mode**:
    Players can toggle into Sandbox mode, allowing them to draft orders for rival Great Powers, simulate various tactical permutations, and step turns forward. When exiting Sandbox mode, all foreign moves are wiped clean and the real game state is restored.
 4. **SVG-First Cartographic Rendering**:
    The game board is rendered via direct SVG vector mathematics, eliminating third-party canvas overhead and allowing custom DOM-level styling, smooth multi-touch/mouse wheel zooming and panning, and fine-grained visual order vectors.
+5. **Scale-to-Zero Serverless Hosting**:
+   Both the React SPA and FastAPI backend are packaged into a single unified Docker container, deployable to Google Cloud Run with scale-to-zero capability ($0 idle cost).
 
 ---
 
 ## High-Level Topology
 
 ```
-+-------------------------------------------------------------------------+
-|                              WEB BROWSER                                |
-|                                                                         |
-|   +-----------------------+              +--------------------------+   |
-|   |    EuropeMap.tsx      |              |     MacroSidebar.tsx     |   |
-|   |  - SVG Path Geometry  |<------------>|  - Unit Order Editors    |   |
-|   |  - Pan / Zoom Matrix  |  Local State |  - Power Selector        |   |
-|   |  - Visual Order Arrows|  (App.tsx)   |  - Validation Warnings   |   |
-|   |  - Battle Indicators  |              |  - Turn & History log    |   |
-|   +-----------------------+              +--------------------------+   |
-|                               ^                                         |
-|                               | JSON REST via fetch()                   |
-+-------------------------------|-----------------------------------------+
++-----------------------------------------------------------------------------------------+
+|                                    BROWSER CLIENT                                       |
+|                                                                                         |
+|   +-----------------------+              +--------------------------+                   |
+|   |    EuropeMap.tsx      |              |     MacroSidebar.tsx     |                   |
+|   |  - SVG Path Geometry  |<------------>|  - Unit Order Editors    |  Modals:          |
+|   |  - Pan / Zoom Matrix  |  Local State |  - Power Selector        |  - AuthModal      |
+|   |  - Visual Order Arrows|  (App.tsx)   |  - Validation Warnings   |  - LobbyView      |
+|   |  - Battle Indicators  |              |  - Turn & History log    |  - AdminToolsModal|
+|   +-----------------------+              +--------------------------+  - SurrenderModal |
+|                               ^                                        - SanityCheck    |
+|                               | JSON REST via fetch() (?game_id=...)                    |
++-------------------------------|---------------------------------------------------------+
                                 v
-+-------------------------------------------------------------------------+
-|                        FASTAPI BACKEND (:8000)                          |
-|                                                                         |
-|                       +----------------------+                          |
-|                       |       main.py        |                          |
-|                       |  REST Route Handlers |                          |
-|                       +----------+-----------+                          |
-|                                  |                                      |
-|                 +----------------+---------------+                      |
-|                 |                                |                      |
-|                 v                                v                      |
-|     +----------------------+        +-----------------------+           |
-|     |     validator.py     |        |    adjudicator.py     |           |
-|     |  - Legality checks   |        |  - Support resolution |           |
-|     |  - Blunder detection |        |  - Fixed-point cuts   |           |
-|     |  - 10 diagnostic codes|       |  - Dislodgement calc  |           |
-|     +----------------------+        +-----------------------+           |
-|                 ^                                ^                      |
-|                 +----------------+---------------+                      |
-|                                  |                                      |
-|                       +----------v-----------+                          |
-|                       |     map_data.py      |                          |
-|                       |  - 76 Provinces      |                          |
-|                       |  - Army/Fleet graph  |                          |
-|                       |  - Coasts & Centers  |                          |
-|                       +----------------------+                          |
-+-------------------------------------------------------------------------+
++-----------------------------------------------------------------------------------------+
+|                             FASTAPI BACKEND (:8000 / Cloud Run)                         |
+|                                                                                         |
+|                       +------------------------------------+                            |
+|                       |              main.py               |                            |
+|                       |  REST Routes, Multi-Game Registry, |                            |
+|                       |  Admin Handlers & Static SPA Mount |                            |
+|                       +-----------------+------------------+                            |
+|                                         |                                               |
+|                 +-----------------------+-----------------------+                       |
+|                 |                                               |                       |
+|                 v                                               v                       |
+|     +----------------------+                       +--------------------------+         |
+|     |     validator.py     |                       |      adjudicator.py      |         |
+|     |  - Legality checks   |                       |  - 'diplomacy' engine    |         |
+|     |  - Blunder detection |                       |  - Movement, Retreats,   |         |
+|     |  - Movement, Retreats|                       |    and Winter Adjustments|         |
+|     |    and Builds checks |                       |  - Non-destructive Sim   |         |
+|     +----------------------+                       +--------------------------+         |
+|                 ^                                               ^                       |
+|                 +-----------------------+-----------------------+                       |
+|                                         |                                               |
+|                              +----------v-----------+                                   |
+|                              |     map_data.py      |                                   |
+|                              |  - 76 Provinces      |                                   |
+|                              |  - Army/Fleet graph  |                                   |
+|                              |  - Coasts & Centers  |                                   |
+|                              +----------------------+                                   |
++-----------------------------------------------------------------------------------------+
+                                          │
+                                          ▼
++-----------------------------------------------------------------------------------------+
+|                              SUPABASE PERSISTENCE (Optional)                            |
+|  - Supabase Auth (Email, Google/Discord OAuth)                                          |
+|  - PostgreSQL Database (Profiles, Multiplayer Matches, RLS Policies)                    |
++-----------------------------------------------------------------------------------------+
 ```
 
 ---
 
 ## State Synchronization Flow
 
-The game client communicates with the server via HTTP JSON endpoints:
+The game client communicates with the server via scoped HTTP JSON endpoints:
 
 ```
 User Action (e.g. Move Unit)
@@ -76,11 +87,11 @@ User Action (e.g. Move Unit)
   App.handleUpdateOrder()
              │
              ▼
-POST /api/order { order: Order }
+POST /api/order?game_id={id} { order: Order }
              │
-             ├──► 1. Update order in memory (CURRENT_GAME.orders)
+             ├──► 1. Update order in GAMES[game_id].orders
              ├──► 2. Execute validator.validate_orders()
-             ├──► 3. Execute adjudicator.adjudicate_turn() [Simulation]
+             ├──► 3. Execute adjudicator.adjudicate_turn(..., is_simulation=True)
              └──► 4. Return updated GameState
              │
              ▼
@@ -97,13 +108,12 @@ App.applyServerState(st)
 
 Sandbox Pre-Move Mode lets commanders play out "what-if" scenarios:
 
-1. **Enter Sandbox (`POST /api/sandbox/enter`)**:
-   - The backend deep-copies `CURRENT_GAME` into `SANDBOX_CHECKPOINT`.
-   - The UI displays an amber warning banner denoting Sandbox Mode.
-2. **Drafting Multi-Power Moves**:
-   - The user can select any power (England, France, Germany, etc.) and issue orders for their units.
-   - The backend validates all moves and recalculates simulation outcomes across all nations.
-3. **Exit Sandbox (`POST /api/sandbox/exit`)**:
-   - If the player stepped turns forward or experimented with rival powers, `SANDBOX_CHECKPOINT` is restored.
-   - The user's active power orders for the current season are preserved.
-   - All foreign hypothetical orders are purged back to default `HOLD`.
+1. **Enter Sandbox (`POST /api/sandbox/enter?game_id={id}`)**:
+   - The backend deep-copies `GAMES[game_id]` to `SANDBOX_CHECKPOINTS[game_id]`.
+2. **Hypothetical Exploration**:
+   - The commander can switch perspectives to any Great Power and draft enemy movements.
+   - Non-destructive simulation projects outcomes immediately onto the board.
+3. **Exit Sandbox (`POST /api/sandbox/exit?game_id={id}`)**:
+   - The checkpoint is restored.
+   - The commander's active-nation orders are preserved and merged back.
+   - All foreign hypothetical orders are purged so they never contaminate the match state.
