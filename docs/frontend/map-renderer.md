@@ -37,6 +37,8 @@ The map is rendered as a layered SVG pipeline:
   │      - Semi-transparent fills colored by owning Great Power
   │      - Hover highlighting for candidate destinations
   │      - Pulsing red highlights for provinces with tactical errors
+  │      - Amber glow on valid retreat destinations during Retreats phase
+  │      - Gold pulsing border on vacant home SCs during Winter Adjustments
   │
   ├── 4. Supply Center Layer:
   │      - Circular markers with gold star / power crest
@@ -47,6 +49,7 @@ The map is rendered as a layered SVG pipeline:
   │      - Teal dashed arrows with target reticles for SUPPORT orders
   │      - Purple wavy arrows for CONVOY paths
   │      - Grey circular shields for HOLD orders
+  │      - Amber arrows for RETREAT orders
   │
   ├── 6. Tactical Simulation & Clash Layer:
   │      - Red crossed swords (⚔) at contested provinces
@@ -56,6 +59,8 @@ The map is rendered as a layered SVG pipeline:
   │
   ├── 7. Unit Token Layer:
   │      - Circular army / fleet tokens with power badges
+  │      - Offset dislodged unit tokens with dashed red border
+  │      - Semi-transparent phantom tokens for pending BUILD orders
   │      - Selection ring and active power indicator
   │
   └── 8. Floating Action Menu / HUD:
@@ -68,8 +73,9 @@ The map is rendered as a layered SVG pipeline:
 
 ## Click-to-Order Interaction Modes
 
-The map supports direct board-level order entry:
+The map supports direct board-level order entry across all phases:
 
+### 1. Movement Phase
 1. **Select Unit**: Clicking an army or fleet sets `selectedUnitId` and displays valid move destinations as highlighted pulses.
 2. **Click Destination (Move)**: Clicking any valid adjacent province immediately dispatches a `MOVE` order. If the destination has split coasts (e.g. `STP`), a coast-selection popup appears.
 3. **Support Mode**:
@@ -80,3 +86,13 @@ The map supports direct board-level order entry:
    - Click a fleet in a sea zone.
    - Click the coastal Army to be transported.
    - Click the destination coastal territory.
+
+### 2. Retreat Phase
+- Dislodged units are rendered with an offset position and pulsating amber badge.
+- Clicking a dislodged unit automatically queries valid retreat destinations (`getValidRetreatDestinations()`) and pulses safe candidate provinces.
+- Clicking an eligible destination province immediately dispatches a `RETREAT` order; clicking the unit's action card disbands it.
+
+### 3. Winter Adjustments Phase
+- Vacant home supply centers pulse with gold recruitment rings when builds are available.
+- Clicking a home center opens a unit recruitment badge (`BUILD A` or `BUILD F`, with coast pickers for `STP`).
+- If in a deficit, clicking existing units marks them for `DISBAND`.

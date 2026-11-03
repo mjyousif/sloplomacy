@@ -1,64 +1,65 @@
 # Pre-Flight Validator & Sanity Checks (`validator.py`)
 
-The validator module (`backend/validator.py`) runs in real time on every order dispatch. It serves two distinct functions:
+The validator module (`backend/validator.py`) runs in real time on every order dispatch and before turn finalization. It serves two distinct functions:
 1. **Rule Legality Checking**: Prevents invalid orders that violate game mechanics.
-2. **Tactical Blunder Detection ("Sanity Checks")**: Proactively warns players when an order is technically legal, but strategically self-destructive or misaligned.
+2. **Tactical Blunder Detection ("Sanity Checks")**: Proactively warns players when an order is technically legal, but strategically self-destructive, mismatched, or incomplete.
+
+The validator is **phase-aware**, adjusting its checks dynamically for **Movement**, **Retreats**, and **Winter Adjustments**.
 
 ---
 
-## Validation Issue Structure
+## 1. Diagnostic Issue Codes & Severities
 
-Every identified issue returns a `ValidationIssue` object:
-```json
-{
-  "id": "self_bounce_BUR",
-  "severity": "warning",
-  "code": "SELF_BOUNCE",
-  "title": "Self-Bounce in Burgundy (BUR)",
-  "message": "Both FRA_A_PAR and FRA_A_MAR are ordered to Burgundy with equal attack strength (1 vs 1). Both units will bounce and fail to move unless one is supported.",
-  "unit_ids": ["FRA_A_PAR", "FRA_A_MAR"],
-  "provinces": ["BUR", "PAR", "MAR"],
-  "power": "FRANCE"
-}
-```
-
----
-
-## Diagnostic Issue Codes & Severities
-
-| Code | Severity | Description | Trigger Condition |
-| :--- | :--- | :--- | :--- |
-| `ILLEGAL_MOVE` | `error` | Movement impossible due to terrain or non-adjacency | Army moving to sea, Fleet moving to inland province, or non-adjacent target without active convoy. |
-| `ILLEGAL_SUPPORT` | `error` | Supporting unit cannot reach the supported destination | Unit ordered to support into a province it could not legally move to itself. |
-| `ILLEGAL_CONVOY` | `error` | Fleet in coastal province or army ordered to convoy | Convoy orders can only be executed by Fleets located in `SEA` provinces. |
-| `SELF_BOUNCE` | `warning` | Two friendly units moving to the same destination | Two or more units belonging to the same power attack the same province with equal strength, causing a standoff. |
-| `SELF_OCCUPIED_BOUNCE`| `warning` | Moving into friendly province whose unit is holding | A unit moves into a province occupied by a friendly unit that is not moving away. |
-| `FRIENDLY_FIRE` | `warning` | Friendly attack on own holding unit | A unit attacks a friendly holding unit with superior support (cannot dislodge own piece). |
-| `UNMATCHED_SUPPORT` | `warning` | Supported action does not match the unit's actual order | Supporter is ordered `S A PAR -> BUR`, but `A PAR` is ordered to `HOLD` or `MOVE GAS`. |
-| `BROKEN_CONVOY` | `warning` | Army ordered via convoy without a functioning convoy fleet | Army ordered `MOVE via convoy`, but the intermediate fleet is holding or supporting elsewhere. |
-| `UNASSIGNED_UNIT` | `warning` | Unit left on default implicit hold | Unit has not had an order manually set or confirmed prior to turn finalization. |
-| `VOID_SUPPORT_SELF` | `error` | Unit attempting to support itself | A unit is ordered to support its own position or move. |
+| Code | Severity | Phase | Description | Trigger Condition |
+| :--- | :--- | :--- | :--- | :--- |
+| `ILLEGAL_MOVE` | `error` | Movement / Retreats | Movement impossible due to terrain, coast, or non-adjacency | Army moving to sea, Fleet moving inland, non-adjacent destination without convoy, or retreating to illegal province. |
+| `ILLEGAL_SUPPORT` | `error` | Movement | Supporting unit cannot reach supported target | Unit ordered to support into a province it could not legally move to itself. |
+| `ILLEGAL_CONVOY` | `error` | Movement | Fleet in coastal province or army ordered to convoy | Convoy orders can only be executed by Fleets located in `SEA` provinces. |
+| `VOID_SUPPORT_SELF` | `error` | Movement | Unit attempting to support itself | A unit ordered to support its own position or move. |
+| `SELF_BOUNCE` | `warning` | Movement / Retreats | Friendly units moving/retreating to the same province | Two friendly units attack or retreat to the same province with equal strength, causing a mutual bounce. |
+| `SELF_OCCUPIED_BOUNCE`| `warning` | Movement | Moving into province occupied by friendly holding unit | Moving into a territory held by a friendly unit that is not vacating. |
+| `FRIENDLY_FIRE` | `warning` | Movement | Friendly attack on own holding unit | Supporting an attack against a friendly unit (cannot dislodge own piece). |
+| `UNMATCHED_SUPPORT` | `warning` | Movement | Supported action differs from unit's actual order | Supporter ordered `S A PAR -> BUR`, but `A PAR` is ordered to `HOLD` or `MOVE GAS`. |
+| `BROKEN_CONVOY` | `warning` | Movement | Army moving via convoy without active convoy fleet | Army ordered `MOVE via convoy`, but the intermediate fleet is holding, supporting, or missing. |
+| `UNASSIGNED_UNIT` | `warning` | All Phases | Unit left on unconfirmed default order | Unit has not had its order manually confirmed, or build/disband quota remains unfulfilled prior to finalization. |
 
 ---
 
-## Pre-Finalization Gatekeeper
+## 2. Phase-Specific Validation Logic
 
-When a commander clicks **Finalize Orders** in the UI, the frontend dispatches:
-```http
-POST /api/finalize
-{
-  "power": "FRANCE",
-  "force": false
-}
-```
+### 1. Movement Phase
+1. **Adjacency & Coast Match**: Fleets must follow coastal reachability; split coasts (e.g., `STP/NC` vs `STP/SC`) are strictly enforced.
+2. **Convoy Path Verification**: Armies moving across sea bodies must have an unbroken theoretical chain of sea territories.
+3. **Friendly Standoffs & Bounces**: Pre-computes attack strength (base 1 + supports) to warn if two units of the same power will bounce each other in the destination.
 
-### Gatekeeper Logic:
+### 2. Retreat Phase
+When units are dislodged during combat resolution:
+1. **Unassigned Retreat**: Dislodged units on unconfirmed retreat trigger an `UNASSIGNED_UNIT` warning.
+2. **Missing Destination**: If ordered to `RETREAT` without specifying an eligible destination.
+3. **Illegal Retreat Destination**: If target province is occupied, was the origin of the dislodging attacker, or was a standoff province in the preceding movement phase.
+4. **Mutual Retreat Clash**: If two dislodged units of the same power are ordered to retreat into the exact same province.
+
+### 3. Winter Adjustments Phase
+Compares supply center count against active units:
+1. **Disband Deficit**: If `units > supply_centers`, the power must order `DISBAND` on `units - supply_centers` units. If fewer disbands are selected, an `UNASSIGNED_UNIT` warning indicates how many more units must be disbanded.
+2. **Build Quota & Location**: If `supply_centers > units`, builds (`BUILD`) are only permitted up to the quota and strictly in the power's vacant **home supply centers**.
+3. **Unconfirmed Builds**: Default builds assigned by the engine trigger `UNASSIGNED_UNIT` warnings until explicitly confirmed.
+
+---
+
+## 3. Pre-Finalization Gatekeeper
+
+When a player clicks **Finalize Orders** (`POST /api/finalize`), the engine verifies all submitted moves for the active nation:
+
 ```python
 power_issues = validate_orders(
-    CURRENT_GAME.units,
-    CURRENT_GAME.orders,
+    game.units,
+    game.orders,
     include_unassigned_warnings=True,
     target_power=req.power,
+    phase=game.phase,
+    builds=game.builds,
+    retreats=game.retreats,
 )
 
 if power_issues and not req.force:
@@ -66,13 +67,13 @@ if power_issues and not req.force:
         finalized=False,
         requires_confirmation=True,
         issues=power_issues,
-        state=CURRENT_GAME,
+        state=game,
     )
 ```
 
-1. If any issues exist (including `UNASSIGNED_UNIT` warnings), finalization is paused.
-2. The client intercepts `requires_confirmation: true` and opens the **Sanity Check Modal** (`SanityCheckModal.tsx`).
+1. If any issues exist (including `UNASSIGNED_UNIT` or tactical warnings), finalization is paused.
+2. The UI intercepts `requires_confirmation: true` and opens **`SanityCheckModal.tsx`**.
 3. The user can either:
-   - Click **"Go Back & Revise Orders"** to fix flagged units.
-   - Click **"Fix Order"** to focus directly on the problematic unit on the map.
-   - Click **"Finalize Anyway (Override)"**, which re-submits `POST /api/finalize` with `force: true`.
+   - Click **"Go Back & Revise Orders"** to modify orders.
+   - Click **"Fix Order"** on an issue card to jump directly to the unit.
+   - Click **"Finalize Anyway (Override)"**, which resubmits `POST /api/finalize` with `force: true`.

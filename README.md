@@ -79,7 +79,9 @@ Comprehensive technical architecture, API references, and guides are organized u
   - [Macro Sidebar & Sanity Modal](docs/frontend/sidebar-and-controls.md)
   - [Styling, Themes & Cartography](docs/frontend/styling-and-themes.md)
 - **Guides & References**:
+  - [Agent & Contributor Operational Guide](AGENTS.md)
   - [Development & Testing Guide](docs/guides/development.md)
+  - [Google Cloud Serverless Deployment Blueprint](docs/guides/google-cloud-deployment.md)
   - [Standard 1901 Diplomacy Rulebook Reference](docs/guides/rulebook-reference.md)
 
 ---
