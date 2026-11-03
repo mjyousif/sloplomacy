@@ -52,6 +52,7 @@ export interface Unit {
   unit_type: UnitType;
   province: string;
   coast?: string | null;
+  is_dislodged?: boolean;
 }
 
 export interface Order {
@@ -262,7 +263,6 @@ export interface AuthUser {
   displayName: string;
   isLocalDemo?: boolean;
 }
-
 export interface AdminStatusResponse {
   is_creator: boolean;
   can_rollback: boolean;

@@ -72,6 +72,7 @@ class Unit(BaseModel):
     unit_type: UnitType
     province: str  # Base 3-letter code e.g. "STP", "LON"
     coast: Optional[str] = None  # e.g. "NC", "SC", "EC"
+    is_dislodged: bool = False
 
 
 class Order(BaseModel):

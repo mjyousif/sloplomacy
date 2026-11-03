@@ -142,3 +142,122 @@ def test_api_clear_foreign_pre_moves():
     assert st["orders"]["FRA_A_PAR"]["target"] == "BUR"
     assert st["orders"]["GER_A_BER"]["order_type"] == "HOLD"
     assert st["orders"]["GER_A_BER"]["is_explicit"] is False
+
+
+def test_api_winter_builds_and_slot_management():
+    """Full API flow into Winter Adjustments preserves game.builds and spawns built units."""
+    client.post("/api/scenario", json={"scenario_id": "standard_1901", "active_power": "FRANCE"})
+
+    # Spring 1901: France moves F BRE -> MAO, A MAR -> SPA, A PAR -> GAS
+    client.post(
+        "/api/order",
+        json={
+            "order": {
+                "unit_id": "FRA_F_BRE",
+                "power": "FRANCE",
+                "unit_type": "F",
+                "origin": "BRE",
+                "order_type": "MOVE",
+                "target": "MAO",
+                "is_explicit": True,
+            }
+        },
+    )
+    client.post(
+        "/api/order",
+        json={
+            "order": {
+                "unit_id": "FRA_A_MAR",
+                "power": "FRANCE",
+                "unit_type": "A",
+                "origin": "MAR",
+                "order_type": "MOVE",
+                "target": "SPA",
+                "is_explicit": True,
+            }
+        },
+    )
+    client.post(
+        "/api/order",
+        json={
+            "order": {
+                "unit_id": "FRA_A_PAR",
+                "power": "FRANCE",
+                "unit_type": "A",
+                "origin": "PAR",
+                "order_type": "MOVE",
+                "target": "BUR",
+                "is_explicit": True,
+            }
+        },
+    )
+    res_s1901 = client.post("/api/adjudicate").json()
+    assert res_s1901["season"] == "Fall"
+    assert res_s1901["phase"] == "Movement"
+
+    # Fall 1901: France moves F MAO -> POR, A SPA Holds, A BUR -> BEL
+    client.post(
+        "/api/order",
+        json={
+            "order": {
+                "unit_id": "FRA_F_BRE",
+                "power": "FRANCE",
+                "unit_type": "F",
+                "origin": "MAO",
+                "order_type": "MOVE",
+                "target": "POR",
+                "is_explicit": True,
+            }
+        },
+    )
+    client.post(
+        "/api/order",
+        json={
+            "order": {
+                "unit_id": "FRA_A_PAR",
+                "power": "FRANCE",
+                "unit_type": "A",
+                "origin": "BUR",
+                "order_type": "MOVE",
+                "target": "BEL",
+                "is_explicit": True,
+            }
+        },
+    )
+    res_f1901 = client.post("/api/adjudicate").json()
+    assert res_f1901["season"] == "Winter"
+    assert res_f1901["phase"] == "Adjustments"
+
+    # France now has 6 SCs (PAR, MAR, BRE, SPA, POR, BEL) and 3 units -> count == 3, 3 open homes
+    assert res_f1901["builds"]["FRANCE"]["count"] == 3
+    assert set(res_f1901["builds"]["FRANCE"]["homes"]) == {"PAR", "MAR", "BRE"}
+
+    # Update BUILD_FRANCE_BRE to build a Fleet
+    upd_bre = client.post(
+        "/api/order",
+        json={
+            "order": {
+                "unit_id": "BUILD_FRANCE_BRE",
+                "power": "FRANCE",
+                "unit_type": "F",
+                "origin": "BRE",
+                "order_type": "BUILD",
+                "is_explicit": True,
+            }
+        },
+    ).json()
+    # Critical regression check: updating an order in Adjustments must NOT wipe game.builds!
+    assert upd_bre["builds"]["FRANCE"]["count"] == 3
+    assert set(upd_bre["builds"]["FRANCE"]["homes"]) == {"PAR", "MAR", "BRE"}
+
+    # Confirm all orders for France and adjudicate Winter 1901 Adjustments -> Spring 1902 Movement
+    client.post("/api/orders/confirm-all", json={"power": "FRANCE"})
+    res_w1901 = client.post("/api/adjudicate").json()
+    assert res_w1901["season"] == "Spring"
+    assert res_w1901["year"] == 1902
+    assert res_w1901["phase"] == "Movement"
+
+    fra_units = [u for u in res_w1901["units"] if u["power"] == "FRANCE"]
+    assert len(fra_units) == 6
+    assert len({u["id"] for u in fra_units}) == 6
+

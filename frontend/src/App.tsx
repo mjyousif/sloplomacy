@@ -500,7 +500,7 @@ export function App() {
         const st: GameState = await res.json();
         applyServerState(st);
         setSelectedUnitId(null);
-        triggerToast(`Turn resolved! Units moved — now in ${st.season} ${st.year}.`);
+        triggerToast(`Turn resolved! Now in ${st.season} ${st.year} (${st.phase} Phase).`);
         fetchGamesList();
       }
     } catch (e) {
@@ -799,6 +799,10 @@ export function App() {
             onSelectUnit={setSelectedUnitId}
             onHoverUnit={setHoveredUnitId}
             onUpdateOrder={handleUpdateOrder}
+            phase={gameState.phase}
+            season={gameState.season}
+            builds={gameState.builds}
+            retreats={gameState.retreats}
             onClearSimulationOverlay={() => setShowSimulationOverlay(false)}
             onAdjudicateTurn={handleAdjudicateTurn}
           />

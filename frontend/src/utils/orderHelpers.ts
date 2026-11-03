@@ -1,4 +1,4 @@
-import { Order, ProvinceInfo, Unit } from '../types/diplomacy';
+import { Order, Power, ProvinceInfo, Unit } from '../types/diplomacy';
 
 export function splitProvinceCode(code: string): { base: string; coast: string | null } {
   if (code.includes('/')) {
@@ -25,6 +25,35 @@ export function getReachableDestinations(
   const byBase: Record<string, string[]> = {};
 
   for (const entry of adjEntries) {
+    const { base, coast } = splitProvinceCode(entry);
+    if (!byBase[base]) byBase[base] = [];
+    if (coast && !byBase[base].includes(coast)) {
+      byBase[base].push(coast);
+    }
+  }
+
+  return Object.entries(byBase).map(([province, coasts]) => ({
+    province,
+    coasts,
+  }));
+}
+
+export function getValidRetreatDestinations(
+  unit: Unit,
+  retreats: Partial<Record<Power, Record<string, string[]>>> | null | undefined,
+  provinces: Record<string, ProvinceInfo>
+): { province: string; coasts: string[] }[] {
+  if (!retreats) {
+    return getReachableDestinations(unit, provinces);
+  }
+  const pwrRetreats = retreats[unit.power] || {};
+  const locKey = unit.coast ? `${unit.province}/${unit.coast}` : unit.province;
+  const fullKey = `${unit.unit_type} ${locKey}`;
+  const fallbackKey = `${unit.unit_type} ${unit.province}`;
+  const rawList = pwrRetreats[fullKey] || pwrRetreats[fallbackKey] || [];
+
+  const byBase: Record<string, string[]> = {};
+  for (const entry of rawList) {
     const { base, coast } = splitProvinceCode(entry);
     if (!byBase[base]) byBase[base] = [];
     if (coast && !byBase[base].includes(coast)) {
@@ -110,7 +139,8 @@ export function formatOrderSummary(
   }
 
   if (order.order_type === 'BUILD') {
-    const coastSuffix = order.target_coast ? ` (${order.target_coast})` : '';
+    const cst = order.origin_coast || order.target_coast;
+    const coastSuffix = order.unit_type === 'F' && cst ? ` (${cst})` : '';
     return {
       verb: 'BUILD',
       targetText: `Build ${order.unit_type === 'A' ? 'Army' : 'Fleet'} in ${pName(order.origin)}${coastSuffix}`,
@@ -122,7 +152,7 @@ export function formatOrderSummary(
   if (order.order_type === 'DISBAND') {
     return {
       verb: 'DISBAND',
-      targetText: `Disband ${order.unit_type} ${pName(order.origin)}`,
+      targetText: `Disband ${order.unit_type === 'A' ? 'Army' : 'Fleet'} in ${pName(order.origin)}`,
       badgeColor: '#dc2626',
       fullSymbolic: `- ${order.unit_type} ${order.origin} DISBAND`,
     };
@@ -141,7 +171,7 @@ export function formatOrderSummary(
     const coastSuffix = order.target_coast ? ` (${order.target_coast})` : '';
     return {
       verb: 'RETREAT',
-      targetText: `Retreat to ${pName(order.target)}${coastSuffix}`,
+      targetText: `Retreat → ${pName(order.target)}${coastSuffix}`,
       badgeColor: '#ea580c',
       fullSymbolic: `RETREAT ${order.unit_type} ${order.origin} ──► ${order.target}${coastSuffix}`,
     };
