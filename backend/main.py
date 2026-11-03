@@ -5,8 +5,8 @@ from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from adjudicator import adjudicate_turn
-from map_data import PROVINCES, get_initial_1901_units, get_initial_ownership
+from adjudicator import adjudicate_turn, compute_current_builds, create_diplomacy_game
+from map_data import PROVINCES, get_initial_1901_units, get_initial_ownership, split_province_code
 from models import (
     CreateGameRequest,
     FinalizeRequest,
@@ -44,8 +44,84 @@ def create_default_orders(
     units: List[Unit],
     phase: str = "Movement",
     builds: Optional[Dict[str, Any]] = None,
+    retreats: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Order]:
     orders: Dict[str, Order] = {}
+    if phase == "Retreats":
+        for u in units:
+            if u.is_dislodged:
+                u_loc = f"{u.province}/{u.coast}" if u.coast else u.province
+                u_key = f"{u.unit_type.value} {u_loc}"
+                p_ret = (retreats or {}).get(u.power.value, {})
+                valid_dests = p_ret.get(u_key, p_ret.get(f"{u.unit_type.value} {u.province}", []))
+                if valid_dests:
+                    first_base, first_coast = split_province_code(valid_dests[0])
+                    orders[u.id] = Order(
+                        unit_id=u.id,
+                        power=u.power,
+                        unit_type=u.unit_type,
+                        origin=u.province,
+                        origin_coast=u.coast,
+                        order_type=OrderType.RETREAT,
+                        target=first_base,
+                        target_coast=first_coast,
+                        is_explicit=False,
+                    )
+                else:
+                    orders[u.id] = Order(
+                        unit_id=u.id,
+                        power=u.power,
+                        unit_type=u.unit_type,
+                        origin=u.province,
+                        origin_coast=u.coast,
+                        order_type=OrderType.DISBAND,
+                        is_explicit=False,
+                    )
+            else:
+                orders[u.id] = Order(
+                    unit_id=u.id,
+                    power=u.power,
+                    unit_type=u.unit_type,
+                    origin=u.province,
+                    origin_coast=u.coast,
+                    order_type=OrderType.HOLD,
+                    is_explicit=True,
+                )
+        return orders
+
+    if phase == "Adjustments":
+        for u in units:
+            p_count = (builds or {}).get(u.power.value, {}).get("count", 0)
+            orders[u.id] = Order(
+                unit_id=u.id,
+                power=u.power,
+                unit_type=u.unit_type,
+                origin=u.province,
+                origin_coast=u.coast,
+                order_type=OrderType.HOLD,
+                is_explicit=(p_count >= 0),
+            )
+        if builds:
+            for p_name, b_info in builds.items():
+                count = b_info.get("count", 0)
+                homes = b_info.get("homes", [])
+                pwr = Power(p_name)
+                if count > 0:
+                    for idx, h in enumerate(homes):
+                        b_id = f"BUILD_{p_name}_{h}"
+                        should_build = idx < count
+                        orders[b_id] = Order(
+                            unit_id=b_id,
+                            power=pwr,
+                            unit_type=UnitType.ARMY,
+                            origin=h,
+                            origin_coast=None,
+                            order_type=OrderType.BUILD if should_build else OrderType.WAIVE,
+                            is_explicit=False,
+                        )
+        return orders
+
+    # Default Movement phase
     for u in units:
         orders[u.id] = Order(
             unit_id=u.id,
@@ -56,37 +132,59 @@ def create_default_orders(
             order_type=OrderType.HOLD,
             is_explicit=False,
         )
-    if phase == "Adjustments" and builds:
-        for p_name, b_info in builds.items():
-            count = b_info.get("count", 0)
-            homes = b_info.get("homes", [])
-            pwr = Power(p_name)
-            if count > 0:
-                for h in homes:
-                    b_id = f"BUILD_{p_name}_{h}"
-                    prov_info = PROVINCES.get(h)
-                    def_ut = UnitType.ARMY
-                    def_coast = prov_info.coasts[0] if (prov_info and prov_info.coasts) else None
-                    orders[b_id] = Order(
-                        unit_id=b_id,
-                        power=pwr,
-                        unit_type=def_ut,
-                        origin=h,
-                        origin_coast=def_coast,
-                        order_type=OrderType.BUILD,
-                        is_explicit=False,
-                    )
     return orders
 
 
 def refresh_diagnostics_and_simulation(game: GameState) -> None:
     """Re-run real-time tactical validation and non-destructive turn simulation."""
-    if game.phase == "Movement":
-        game.issues = validate_orders(
-            game.units, game.orders, include_unassigned_warnings=False
-        )
+    if game.phase == "Adjustments":
+        game.builds = compute_current_builds(game.units, game.ownership, game.year)
+        game.retreats = None
+        for p_name, b_info in game.builds.items():
+            count = b_info.get("count", 0)
+            homes = b_info.get("homes", [])
+            pwr = Power(p_name)
+            if count > 0:
+                existing_builds = sum(
+                    1
+                    for h in homes
+                    if f"BUILD_{p_name}_{h}" in game.orders
+                    and game.orders[f"BUILD_{p_name}_{h}"].order_type == OrderType.BUILD
+                )
+                for h in homes:
+                    b_id = f"BUILD_{p_name}_{h}"
+                    if b_id not in game.orders:
+                        should_build = existing_builds < count
+                        if should_build:
+                            existing_builds += 1
+                        game.orders[b_id] = Order(
+                            unit_id=b_id,
+                            power=pwr,
+                            unit_type=UnitType.ARMY,
+                            origin=h,
+                            origin_coast=None,
+                            order_type=OrderType.BUILD if should_build else OrderType.WAIVE,
+                            is_explicit=False,
+                        )
+    elif game.phase == "Retreats":
+        game.builds = None
+        if not game.retreats:
+            r_game = create_diplomacy_game(
+                game.units, game.ownership, game.season, game.year, "Retreats"
+            )
+            game.retreats = r_game.get_state().get("retreats", {})
     else:
-        game.issues = []
+        game.builds = None
+        game.retreats = None
+
+    game.issues = validate_orders(
+        game.units,
+        game.orders,
+        include_unassigned_warnings=False,
+        phase=game.phase,
+        builds=game.builds,
+        retreats=game.retreats,
+    )
     game.last_resolution = adjudicate_turn(
         game.units,
         game.orders,
@@ -94,10 +192,8 @@ def refresh_diagnostics_and_simulation(game: GameState) -> None:
         game.season,
         game.year,
         game.phase,
+        retreats=game.retreats,
     )
-    if game.last_resolution:
-        game.builds = game.last_resolution.builds
-        game.retreats = game.last_resolution.retreats
 
 
 def build_scenario(
@@ -372,12 +468,6 @@ def join_multiplayer_game(game_id: str, req: JoinGameRequest):
     if not summary:
         raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
 
-    # Check if user already holds a power in this game
-    for p_key, part in list(summary.participants.items()):
-        if part.user_id == req.user_id and p_key != req.power.value:
-            # Allow user to switch only if target power is unclaimed
-            pass
-
     existing = summary.participants.get(req.power.value)
     if existing and existing.user_id != req.user_id:
         raise HTTPException(
@@ -500,6 +590,7 @@ def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(defau
         same_turn = (
             game.season == checkpoint.season
             and game.year == checkpoint.year
+            and game.phase == checkpoint.phase
         )
         saved_own_orders: Dict[str, Order] = {}
         if same_turn:
@@ -515,17 +606,10 @@ def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(defau
         game = restored
         SANDBOX_CHECKPOINTS[gid] = None
 
-    for u in game.units:
-        if u.power != req.power:
-            game.orders[u.id] = Order(
-                unit_id=u.id,
-                power=u.power,
-                unit_type=u.unit_type,
-                origin=u.province,
-                origin_coast=u.coast,
-                order_type=OrderType.HOLD,
-                is_explicit=False,
-            )
+    default_ords = create_default_orders(game.units, game.phase, game.builds, game.retreats)
+    for ord_id, def_ord in default_ords.items():
+        if def_ord.power != req.power:
+            game.orders[ord_id] = def_ord
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
@@ -534,19 +618,12 @@ def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(defau
 
 @app.post("/api/sandbox/clear-foreign", response_model=GameState)
 def clear_foreign_pre_moves(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
-    """Reset all hypothetical orders for powers other than req.power back to default HOLD."""
+    """Reset all hypothetical orders for powers other than req.power back to default."""
     game = resolve_game(game_id)
-    for u in game.units:
-        if u.power != req.power:
-            game.orders[u.id] = Order(
-                unit_id=u.id,
-                power=u.power,
-                unit_type=u.unit_type,
-                origin=u.province,
-                origin_coast=u.coast,
-                order_type=OrderType.HOLD,
-                is_explicit=False,
-            )
+    default_ords = create_default_orders(game.units, game.phase, game.builds, game.retreats)
+    for ord_id, def_ord in default_ords.items():
+        if def_ord.power != req.power:
+            game.orders[ord_id] = def_ord
     refresh_diagnostics_and_simulation(game)
     return game
 
@@ -563,10 +640,60 @@ def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[str] = 
         updated_order.origin = unit.province
         updated_order.origin_coast = unit.coast
         game.orders[unit.id] = updated_order
+
+        # In Winter Adjustments when count < 0, cap DISBAND orders to abs(count)
+        if (
+            game.phase == "Adjustments"
+            and updated_order.order_type == OrderType.DISBAND
+            and game.builds
+        ):
+            b_info = game.builds.get(unit.power.value, {})
+            max_disbands = abs(b_info.get("count", 0)) if b_info.get("count", 0) < 0 else 0
+            if max_disbands > 0:
+                other_disbands = [
+                    game.orders[u.id]
+                    for u in game.units
+                    if u.power == unit.power
+                    and u.id != unit.id
+                    and u.id in game.orders
+                    and game.orders[u.id].order_type == OrderType.DISBAND
+                ]
+                while 1 + len(other_disbands) > max_disbands:
+                    to_keep = other_disbands.pop(0)
+                    to_keep.order_type = OrderType.HOLD
+
         if unit.power in game.finalized_powers:
             game.finalized_powers.remove(unit.power)
     elif req.order.unit_id.startswith("BUILD_"):
-        game.orders[req.order.unit_id] = req.order.model_copy()
+        updated_build = req.order.model_copy()
+        if updated_build.unit_type == UnitType.ARMY:
+            updated_build.origin_coast = None
+        game.orders[req.order.unit_id] = updated_build
+
+        # If user selects BUILD on a home center when max build slots are already full, auto-waive an excess slot
+        if (
+            game.phase == "Adjustments"
+            and updated_build.order_type == OrderType.BUILD
+            and game.builds
+        ):
+            p_name = updated_build.power.value
+            b_info = game.builds.get(p_name, {})
+            homes = b_info.get("homes", [])
+            max_builds = min(b_info.get("count", 0), len(homes))
+            if max_builds > 0:
+                other_builds = [
+                    game.orders[ f"BUILD_{p_name}_{h}" ]
+                    for h in homes
+                    if f"BUILD_{p_name}_{h}" != req.order.unit_id
+                    and f"BUILD_{p_name}_{h}" in game.orders
+                    and game.orders[f"BUILD_{p_name}_{h}"].order_type == OrderType.BUILD
+                ]
+                # Prefer waiving unconfirmed default builds before explicit builds
+                other_builds.sort(key=lambda o: o.is_explicit)
+                while 1 + len(other_builds) > max_builds:
+                    to_waive = other_builds.pop(0)
+                    to_waive.order_type = OrderType.WAIVE
+
         if req.order.power in game.finalized_powers:
             game.finalized_powers.remove(req.order.power)
     else:
@@ -593,6 +720,11 @@ def update_batch_orders(req: OrderSubmissionRequest, game_id: Optional[str] = Qu
             updated.origin = u.province
             updated.origin_coast = u.coast
             game.orders[u.id] = updated
+        elif o.unit_id.startswith("BUILD_"):
+            updated_b = o.model_copy()
+            if updated_b.unit_type == UnitType.ARMY:
+                updated_b.origin_coast = None
+            game.orders[o.unit_id] = updated_b
 
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)
@@ -605,9 +737,9 @@ def update_batch_orders(req: OrderSubmissionRequest, game_id: Optional[str] = Qu
 @app.post("/api/orders/confirm-all", response_model=GameState)
 def confirm_all_power_orders(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
-    for u in game.units:
-        if u.power == req.power and u.id in game.orders:
-            game.orders[u.id].is_explicit = True
+    for ord_id, ord_obj in game.orders.items():
+        if ord_obj.power == req.power:
+            ord_obj.is_explicit = True
     refresh_diagnostics_and_simulation(game)
     return game
 
@@ -620,6 +752,9 @@ def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Query(d
         game.orders,
         include_unassigned_warnings=True,
         target_power=req.power,
+        phase=game.phase,
+        builds=game.builds,
+        retreats=game.retreats,
     )
 
     if power_issues and not req.force:
@@ -631,9 +766,9 @@ def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Query(d
             state=game,
         )
 
-    for u in game.units:
-        if u.power == req.power and u.id in game.orders:
-            game.orders[u.id].is_explicit = True
+    for ord_id, ord_obj in game.orders.items():
+        if ord_obj.power == req.power:
+            ord_obj.is_explicit = True
 
     if req.power not in game.finalized_powers:
         game.finalized_powers.append(req.power)
@@ -676,13 +811,14 @@ def adjudicate_and_advance(game_id: Optional[str] = Query(default=None)):
         game.season,
         game.year,
         game.phase,
+        retreats=game.retreats,
     )
     prev_label = f"{game.season} {game.year} {game.phase}"
     next_season = result.next_season or ("Fall" if game.season == "Spring" else "Spring")
     next_year = result.next_year or (game.year if game.season == "Spring" else game.year + 1)
     next_phase = result.next_phase or "Movement"
 
-    new_orders = create_default_orders(result.new_units, next_phase, result.builds)
+    new_orders = create_default_orders(result.new_units, next_phase, result.builds, result.retreats)
     history_entry = f"Resolved {prev_label}: {len(result.summary)} tactical actions processed."
     game.season = next_season
     game.year = next_year

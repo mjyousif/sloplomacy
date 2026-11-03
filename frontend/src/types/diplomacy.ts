@@ -52,6 +52,7 @@ export interface Unit {
   unit_type: UnitType;
   province: string;
   coast?: string | null;
+  is_dislodged?: boolean;
 }
 
 export interface Order {
@@ -99,6 +100,11 @@ export interface SimulationResult {
   summary: string[];
   new_units: Unit[];
   new_ownership: Record<string, Power>;
+  next_season?: string | null;
+  next_year?: number | null;
+  next_phase?: string | null;
+  builds?: Record<Power, { count: number; homes: string[] }> | null;
+  retreats?: Record<Power, Record<string, string[]>> | null;
 }
 
 export interface GameState {
@@ -256,4 +262,3 @@ export interface AuthUser {
   displayName: string;
   isLocalDemo?: boolean;
 }
-

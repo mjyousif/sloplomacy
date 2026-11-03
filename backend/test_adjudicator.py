@@ -329,3 +329,200 @@ def test_adjudicator_winter_disbands_deficit():
     assert res.builds is not None
     # France has count -1 (must disband 1 unit)
     assert res.builds["FRANCE"]["count"] == -1
+
+
+def test_adjudicator_retreat_phase_execution():
+    """Dislodged units remain in new_units with is_dislodged=True and can retreat or disband in Retreats phase."""
+    units = [
+        Unit(id="FRA_A_PAR", power=Power.FRANCE, unit_type=UnitType.ARMY, province="PAR"),
+        Unit(id="FRA_A_MAR", power=Power.FRANCE, unit_type=UnitType.ARMY, province="MAR"),
+        Unit(id="GER_A_BUR", power=Power.GERMANY, unit_type=UnitType.ARMY, province="BUR"),
+    ]
+    ownership = {"PAR": Power.FRANCE, "MAR": Power.FRANCE, "BUR": Power.GERMANY}
+    orders = {
+        "FRA_A_PAR": Order(
+            unit_id="FRA_A_PAR",
+            power=Power.FRANCE,
+            unit_type=UnitType.ARMY,
+            origin="PAR",
+            order_type=OrderType.MOVE,
+            target="BUR",
+            is_explicit=True,
+        ),
+        "FRA_A_MAR": Order(
+            unit_id="FRA_A_MAR",
+            power=Power.FRANCE,
+            unit_type=UnitType.ARMY,
+            origin="MAR",
+            order_type=OrderType.SUPPORT,
+            aux_unit_origin="PAR",
+            target="BUR",
+            is_explicit=True,
+        ),
+        "GER_A_BUR": Order(
+            unit_id="GER_A_BUR",
+            power=Power.GERMANY,
+            unit_type=UnitType.ARMY,
+            origin="BUR",
+            order_type=OrderType.HOLD,
+            is_explicit=True,
+        ),
+    }
+
+    res_mov = adjudicate_turn(units, orders, ownership, "Spring", 1901, "Movement")
+    assert res_mov.next_phase == "Retreats"
+    dislodged_units = [u for u in res_mov.new_units if u.is_dislodged]
+    assert len(dislodged_units) == 1
+    assert dislodged_units[0].id == "GER_A_BUR"
+    assert dislodged_units[0].province == "BUR"
+
+    # Case 1: Germany retreats GER_A_BUR to MUN
+    retreat_orders = {
+        "GER_A_BUR": Order(
+            unit_id="GER_A_BUR",
+            power=Power.GERMANY,
+            unit_type=UnitType.ARMY,
+            origin="BUR",
+            order_type=OrderType.RETREAT,
+            target="MUN",
+            is_explicit=True,
+        )
+    }
+    res_ret = adjudicate_turn(
+        res_mov.new_units,
+        retreat_orders,
+        res_mov.new_ownership,
+        "Spring",
+        1901,
+        "Retreats",
+        retreats=res_mov.retreats,
+    )
+    assert res_ret.next_season == "Fall"
+    assert res_ret.next_phase == "Movement"
+    assert res_ret.resolutions["GER_A_BUR"].succeeded is True
+    ger_unit = next((u for u in res_ret.new_units if u.id == "GER_A_BUR"), None)
+    assert ger_unit is not None
+    assert ger_unit.province == "MUN"
+    assert ger_unit.is_dislodged is False
+
+    # Case 2: Germany disbands GER_A_BUR during Retreats
+    disband_orders = {
+        "GER_A_BUR": Order(
+            unit_id="GER_A_BUR",
+            power=Power.GERMANY,
+            unit_type=UnitType.ARMY,
+            origin="BUR",
+            order_type=OrderType.DISBAND,
+            is_explicit=True,
+        )
+    }
+    res_dis = adjudicate_turn(
+        res_mov.new_units,
+        disband_orders,
+        res_mov.new_ownership,
+        "Spring",
+        1901,
+        "Retreats",
+        retreats=res_mov.retreats,
+    )
+    assert all(u.id != "GER_A_BUR" for u in res_dis.new_units)
+
+
+def test_adjudicator_winter_builds_and_unique_unit_ids():
+    """Winter builds spawn new units with unique IDs even when original home units moved elsewhere."""
+    # FRA_A_PAR moved to HOL, FRA_A_MAR moved to SPA, FRA_F_BRE moved to POR
+    units = [
+        Unit(id="FRA_A_PAR", power=Power.FRANCE, unit_type=UnitType.ARMY, province="HOL"),
+        Unit(id="FRA_A_MAR", power=Power.FRANCE, unit_type=UnitType.ARMY, province="SPA"),
+        Unit(id="FRA_F_BRE", power=Power.FRANCE, unit_type=UnitType.FLEET, province="POR"),
+        Unit(id="RUS_A_STP", power=Power.RUSSIA, unit_type=UnitType.ARMY, province="FIN"),
+    ]
+    ownership = {
+        "PAR": Power.FRANCE,
+        "MAR": Power.FRANCE,
+        "BRE": Power.FRANCE,
+        "SPA": Power.FRANCE,
+        "POR": Power.FRANCE,
+        "STP": Power.RUSSIA,
+        "MOS": Power.RUSSIA,
+    }
+    orders = {
+        "BUILD_FRANCE_PAR": Order(
+            unit_id="BUILD_FRANCE_PAR",
+            power=Power.FRANCE,
+            unit_type=UnitType.ARMY,
+            origin="PAR",
+            order_type=OrderType.BUILD,
+            is_explicit=True,
+        ),
+        "BUILD_FRANCE_BRE": Order(
+            unit_id="BUILD_FRANCE_BRE",
+            power=Power.FRANCE,
+            unit_type=UnitType.FLEET,
+            origin="BRE",
+            order_type=OrderType.BUILD,
+            is_explicit=True,
+        ),
+        "BUILD_FRANCE_MAR": Order(
+            unit_id="BUILD_FRANCE_MAR",
+            power=Power.FRANCE,
+            unit_type=UnitType.ARMY,
+            origin="MAR",
+            order_type=OrderType.WAIVE,
+            is_explicit=True,
+        ),
+        # Russia builds Fleet on STP/NC
+        "BUILD_RUSSIA_STP": Order(
+            unit_id="BUILD_RUSSIA_STP",
+            power=Power.RUSSIA,
+            unit_type=UnitType.FLEET,
+            origin="STP",
+            origin_coast="NC",
+            order_type=OrderType.BUILD,
+            is_explicit=True,
+        ),
+    }
+
+    res = adjudicate_turn(units, orders, ownership, "Winter", 1901, "Adjustments")
+    assert res.next_season == "Spring"
+    assert res.next_year == 1902
+    assert res.next_phase == "Movement"
+
+    fra_units = [u for u in res.new_units if u.power == Power.FRANCE]
+    assert len(fra_units) == 5
+    # Verify all unit IDs are unique
+    fra_ids = [u.id for u in fra_units]
+    assert len(set(fra_ids)) == 5
+    assert "FRA_A_PAR" in fra_ids
+    assert "FRA_A_PAR_2" in fra_ids
+
+    rus_stp = next((u for u in res.new_units if u.power == Power.RUSSIA and u.province == "STP"), None)
+    assert rus_stp is not None
+    assert rus_stp.unit_type == UnitType.FLEET
+    assert rus_stp.coast == "NC"
+
+
+def test_adjudicator_winter_disbands_execution():
+    """Explicit disband or civil disorder in Winter Adjustments removes the unit from new_units."""
+    units = [
+        Unit(id="FRA_A_PAR", power=Power.FRANCE, unit_type=UnitType.ARMY, province="PAR"),
+        Unit(id="FRA_A_BUR", power=Power.FRANCE, unit_type=UnitType.ARMY, province="BUR"),
+        Unit(id="FRA_F_MAO", power=Power.FRANCE, unit_type=UnitType.FLEET, province="MAO"),
+    ]
+    ownership = {"PAR": Power.FRANCE, "BRE": Power.FRANCE}
+    orders = {
+        "FRA_A_BUR": Order(
+            unit_id="FRA_A_BUR",
+            power=Power.FRANCE,
+            unit_type=UnitType.ARMY,
+            origin="BUR",
+            order_type=OrderType.DISBAND,
+            is_explicit=True,
+        )
+    }
+
+    res = adjudicate_turn(units, orders, ownership, "Winter", 1901, "Adjustments")
+    fra_units = [u for u in res.new_units if u.power == Power.FRANCE]
+    assert len(fra_units) == 2
+    assert all(u.id != "FRA_A_BUR" for u in fra_units)
+

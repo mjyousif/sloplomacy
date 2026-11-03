@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   splitProvinceCode,
   getReachableDestinations,
+  getValidRetreatDestinations,
   canUnitSupportInto,
   formatOrderSummary,
 } from './orderHelpers';
@@ -258,5 +259,21 @@ describe('formatOrderSummary', () => {
       is_explicit: true,
     };
     expect(formatOrderSummary(retreatOrder, mockProvinces, unitsByProv).verb).toBe('RETREAT');
+
+    const unit: Unit = {
+      id: 'GER_A_BUR',
+      power: 'GERMANY',
+      unit_type: 'A',
+      province: 'BUR',
+      coast: null,
+      is_dislodged: true,
+    };
+    const retreats = {
+      GERMANY: {
+        'A BUR': ['MUN', 'RUH', 'GAS'],
+      },
+    };
+    const dests = getValidRetreatDestinations(unit, retreats, mockProvinces);
+    expect(dests.map((d) => d.province)).toEqual(['MUN', 'RUH', 'GAS']);
   });
 });

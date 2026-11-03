@@ -19,7 +19,11 @@ import {
   Unit,
   ValidationIssue,
 } from '../types/diplomacy';
-import { canUnitSupportInto, getReachableDestinations } from '../utils/orderHelpers';
+import {
+  canUnitSupportInto,
+  getReachableDestinations,
+  getValidRetreatDestinations,
+} from '../utils/orderHelpers';
 import {
   AlertTriangle,
   Anchor,
@@ -30,7 +34,10 @@ import {
   Maximize2,
   MoveRight,
   Play,
+  PlusCircle,
   Shield,
+  Swords,
+  Trash2,
   X,
   ZoomIn,
   ZoomOut,
@@ -49,6 +56,10 @@ interface EuropeMapProps {
   issues: ValidationIssue[];
   simulationResult: SimulationResult | null;
   showSimulationOverlay: boolean;
+  phase?: string;
+  season?: string;
+  builds?: Record<Power, { count: number; homes: string[] }> | null;
+  retreats?: Record<Power, Record<string, string[]>> | null;
   onSelectUnit: (unitId: string | null) => void;
   onHoverUnit: (unitId: string | null) => void;
   onUpdateOrder: (order: Order) => void;
@@ -291,7 +302,7 @@ const SupplyCentersLayer = memo<{
   </g>
 ));
 
-function getUnitPoint(unit: Unit): Point {
+function getBaseUnitPoint(unit: Unit): Point {
   const geom = EUROPE_PROVINCE_GEOMETRY[unit.province];
   if (!geom) return { x: 760, y: 680 };
   if (unit.coast && geom.coastPositions && geom.coastPositions[unit.coast]) {
@@ -356,6 +367,10 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
   issues,
   simulationResult,
   showSimulationOverlay,
+  phase = 'Movement',
+  season = 'Spring',
+  builds = null,
+  retreats = null,
   onSelectUnit,
   onHoverUnit,
   onUpdateOrder,
@@ -398,21 +413,58 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
     menuDragOffsetRef.current = { x: 0, y: 0 };
   }, [selectedUnitId]);
 
+  const isAdjustmentPhase = phase === 'Adjustments' || season === 'Winter';
+  const isRetreatPhase = phase === 'Retreats';
+
   const unitsByProv: Record<string, Unit> = {};
+  const dislodgedByProv: Record<string, Unit> = {};
   const unitsById: Record<string, Unit> = {};
   for (const u of units) {
-    unitsByProv[u.province] = u;
+    if (u.is_dislodged) {
+      dislodgedByProv[u.province] = u;
+    } else {
+      unitsByProv[u.province] = u;
+    }
     unitsById[u.id] = u;
   }
 
-  const rawSelectedUnit = selectedUnitId ? unitsById[selectedUnitId] : null;
+  const getUnitPoint = useCallback(
+    (unit: Unit): Point => {
+      const basePt = getBaseUnitPoint(unit);
+      if (unit.is_dislodged && unitsByProv[unit.province]) {
+        return { x: basePt.x + 22, y: basePt.y - 18 };
+      }
+      return basePt;
+    },
+    [unitsByProv]
+  );
+
+  // Check if selectedUnitId refers to a BUILD_ order or an existing Unit
+  const isSelectedBuildOrder = Boolean(
+    isAdjustmentPhase && selectedUnitId && selectedUnitId.startsWith('BUILD_')
+  );
+  const selectedBuildOrder = isSelectedBuildOrder && selectedUnitId ? orders[selectedUnitId] : null;
+  const selectedBuildProv =
+    isSelectedBuildOrder && selectedUnitId
+      ? selectedBuildOrder?.origin || selectedUnitId.split('_')[2] || null
+      : null;
+
+  const rawSelectedUnit = selectedUnitId && !isSelectedBuildOrder ? unitsById[selectedUnitId] : null;
   // Strictly disallow controlling or showing the menu for foreign units when sandboxMode is OFF
   const selectedUnit =
-    rawSelectedUnit && (rawSelectedUnit.power === activePower || sandboxMode)
+    rawSelectedUnit &&
+    (rawSelectedUnit.power === activePower || sandboxMode) &&
+    (!isRetreatPhase || rawSelectedUnit.is_dislodged)
       ? rawSelectedUnit
       : null;
 
-  const reachableList = selectedUnit ? getReachableDestinations(selectedUnit, provinces) : [];
+  const reachableList = selectedUnit
+    ? isRetreatPhase
+      ? getValidRetreatDestinations(selectedUnit, retreats, provinces)
+      : isAdjustmentPhase
+      ? []
+      : getReachableDestinations(selectedUnit, provinces)
+    : [];
   const reachableMap: Record<string, string[]> = {};
   for (const r of reachableList) {
     reachableMap[r.province] = r.coasts;
@@ -437,26 +489,39 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
   }
 
   // Filter which units' orders are visible on the map:
-  // In Normal Mode (sandboxMode === false), ONLY show activePower's orders!
-  // In Sandbox Mode (sandboxMode === true), show all orders (activePower + hypothetical foreign pre-moves).
   const isUnitOrderVisible = (u: Unit) => sandboxMode || u.power === activePower;
+
+  // Build homes map for Adjustments phase
+  const controllableBuildHomes: Record<string, Power> = {};
+  if (isAdjustmentPhase && builds) {
+    for (const [pwrStr, bInfo] of Object.entries(builds)) {
+      const pwr = pwrStr as Power;
+      if (bInfo.count > 0 && (pwr === activePower || sandboxMode)) {
+        for (const h of bInfo.homes) {
+          controllableBuildHomes[h] = pwr;
+        }
+      }
+    }
+  }
 
   // Count how many valid supports each moving/holding unit receives among visible orders
   const supportCountByUnitId: Record<string, number> = {};
-  for (const u of units) {
-    if (!isUnitOrderVisible(u)) continue;
-    const o = orders[u.id];
-    if (o && o.order_type === 'SUPPORT' && o.aux_unit_origin && o.target) {
-      const targetUnit = unitsByProv[o.aux_unit_origin];
-      if (targetUnit && isUnitOrderVisible(targetUnit)) {
-        const targetOrder = orders[targetUnit.id];
-        const isHoldSup = o.aux_unit_origin === o.target;
-        if (
-          (isHoldSup && (!targetOrder || targetOrder.order_type !== 'MOVE')) ||
-          (!isHoldSup && targetOrder?.order_type === 'MOVE' && targetOrder?.target === o.target)
-        ) {
-          if (canUnitSupportInto(u, o.target, provinces)) {
-            supportCountByUnitId[targetUnit.id] = (supportCountByUnitId[targetUnit.id] || 0) + 1;
+  if (!isRetreatPhase && !isAdjustmentPhase) {
+    for (const u of units) {
+      if (!isUnitOrderVisible(u) || u.is_dislodged) continue;
+      const o = orders[u.id];
+      if (o && o.order_type === 'SUPPORT' && o.aux_unit_origin && o.target) {
+        const targetUnit = unitsByProv[o.aux_unit_origin];
+        if (targetUnit && isUnitOrderVisible(targetUnit)) {
+          const targetOrder = orders[targetUnit.id];
+          const isHoldSup = o.aux_unit_origin === o.target;
+          if (
+            (isHoldSup && (!targetOrder || targetOrder.order_type !== 'MOVE')) ||
+            (!isHoldSup && targetOrder?.order_type === 'MOVE' && targetOrder?.target === o.target)
+          ) {
+            if (canUnitSupportInto(u, o.target, provinces)) {
+              supportCountByUnitId[targetUnit.id] = (supportCountByUnitId[targetUnit.id] || 0) + 1;
+            }
           }
         }
       }
@@ -473,6 +538,51 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
   const handleSelectUnitOnMap = (u: Unit, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (dragMovedRef.current) return;
+
+    if (isRetreatPhase) {
+      if (!u.is_dislodged) {
+        // If there is also a dislodged unit in this province, select the dislodged unit!
+        const dis = dislodgedByProv[u.province];
+        if (dis && (dis.power === activePower || sandboxMode)) {
+          onSelectUnit(dis.id);
+          setInteractionMode('MOVE');
+          return;
+        }
+        clearSelection();
+        return;
+      }
+      const canControl = u.power === activePower || sandboxMode;
+      if (!canControl) {
+        clearSelection();
+        return;
+      }
+      if (selectedUnit && u.id === selectedUnit.id) {
+        clearSelection();
+      } else {
+        onSelectUnit(u.id);
+        setInteractionMode('MOVE');
+      }
+      return;
+    }
+
+    if (isAdjustmentPhase) {
+      const canControl = u.power === activePower || sandboxMode;
+      if (!canControl) {
+        clearSelection();
+        return;
+      }
+      const pwrBuildCount = builds?.[u.power]?.count ?? 0;
+      if (pwrBuildCount < 0) {
+        if (selectedUnit && u.id === selectedUnit.id) {
+          clearSelection();
+        } else {
+          onSelectUnit(u.id);
+        }
+      } else {
+        clearSelection();
+      }
+      return;
+    }
 
     // 1. If we are in SUPPORT_PICK_UNIT mode, clicking another unit selects it as the unit to support
     if (selectedUnit && interactionMode === 'SUPPORT_PICK_UNIT' && u.id !== selectedUnit.id) {
@@ -542,12 +652,10 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
     // 6. Check if the clicked unit is controllable (belongs to activePower, OR sandboxMode is ON)
     const canControlClickedUnit = u.power === activePower || sandboxMode;
     if (!canControlClickedUnit) {
-      // If a unit is currently selected and can move into this foreign unit's province, attack it!
       if (selectedUnit && reachableMap[u.province] && interactionMode === 'MOVE') {
         handleProvinceClick(u.province);
         return;
       }
-      // Otherwise, do NOT allow selecting foreign units when sandboxMode is OFF!
       clearSelection();
       return;
     }
@@ -559,11 +667,29 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
     setPendingCoastChoice(null);
   };
 
-  const commitMoveOrder = (
+  const commitMoveOrRetreatOrder = (
     unit: Unit,
     targetProv: string,
     targetCoast: string | null = null
   ) => {
+    if (isRetreatPhase && unit.is_dislodged) {
+      onUpdateOrder({
+        unit_id: unit.id,
+        power: unit.power,
+        unit_type: unit.unit_type,
+        origin: unit.province,
+        origin_coast: unit.coast,
+        order_type: 'RETREAT',
+        target: targetProv,
+        target_coast: targetCoast,
+        aux_unit_origin: null,
+        via_convoy: false,
+        is_explicit: true,
+      });
+      clearSelection();
+      return;
+    }
+
     const isDirect = Boolean(reachableMap[targetProv]);
     const viaConvoy = unit.unit_type === 'A' && !isDirect;
     onUpdateOrder({
@@ -589,9 +715,58 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
       return;
     }
 
+    if (isAdjustmentPhase) {
+      const buildPwr = controllableBuildHomes[provId];
+      if (buildPwr) {
+        const bId = `BUILD_${buildPwr}_${provId}`;
+        onSelectUnit(selectedUnitId === bId ? null : bId);
+        return;
+      }
+      const occ = unitsByProv[provId];
+      if (occ && (occ.power === activePower || sandboxMode) && (builds?.[occ.power]?.count ?? 0) < 0) {
+        onSelectUnit(selectedUnitId === occ.id ? null : occ.id);
+        return;
+      }
+      clearSelection();
+      return;
+    }
+
+    if (isRetreatPhase) {
+      if (!selectedUnit) {
+        const dis = dislodgedByProv[provId];
+        if (dis && (dis.power === activePower || sandboxMode)) {
+          onSelectUnit(dis.id);
+          setInteractionMode('MOVE');
+        }
+        return;
+      }
+      if (reachableMap[provId]) {
+        const coasts = reachableMap[provId] || [];
+        if (selectedUnit.unit_type === 'F' && explicitCoast && coasts.includes(explicitCoast)) {
+          commitMoveOrRetreatOrder(selectedUnit, provId, explicitCoast);
+          return;
+        }
+        if (selectedUnit.unit_type === 'F' && coasts.length > 1) {
+          setPendingCoastChoice({ target: provId, coasts });
+          return;
+        }
+        const singleCoast =
+          selectedUnit.unit_type === 'F' && coasts.length === 1 ? coasts[0] : null;
+        commitMoveOrRetreatOrder(selectedUnit, provId, singleCoast);
+        return;
+      }
+      const dis = dislodgedByProv[provId];
+      if (dis && (dis.power === activePower || sandboxMode)) {
+        onSelectUnit(dis.id);
+        setInteractionMode('MOVE');
+      } else {
+        clearSelection();
+      }
+      return;
+    }
+
     if (!selectedUnit) {
       const occupant = unitsByProv[provId];
-      // Only select occupant if it belongs to activePower or sandboxMode is ON
       if (occupant && (occupant.power === activePower || sandboxMode)) {
         onSelectUnit(occupant.id);
         setInteractionMode('MOVE');
@@ -643,7 +818,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
 
       const coasts = reachableMap[provId] || [];
       if (selectedUnit.unit_type === 'F' && explicitCoast && coasts.includes(explicitCoast)) {
-        commitMoveOrder(selectedUnit, provId, explicitCoast);
+        commitMoveOrRetreatOrder(selectedUnit, provId, explicitCoast);
         return;
       }
       if (selectedUnit.unit_type === 'F' && coasts.length > 1) {
@@ -652,7 +827,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
       }
       const singleCoast =
         selectedUnit.unit_type === 'F' && coasts.length === 1 ? coasts[0] : null;
-      commitMoveOrder(selectedUnit, provId, singleCoast);
+      commitMoveOrRetreatOrder(selectedUnit, provId, singleCoast);
       return;
     }
 
@@ -739,20 +914,26 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
     };
   }, []);
 
-  // Smart placement for the floating menu: picks the quadrant around the unit that has the LEAST overlap with reachable provinces!
+  // Smart placement for the floating menu
   const getSelectedUnitFloatingPosition = useCallback((): {
     left: number;
     top: number;
   } | null => {
-    if (!selectedUnit) return null;
+    const anchorPt = selectedUnit
+      ? getUnitPoint(selectedUnit)
+      : selectedBuildProv
+      ? getProvincePoint(selectedBuildProv)
+      : null;
+    if (!anchorPt) return null;
+
     const W = containerRef.current?.clientWidth || 980;
     const H = containerRef.current?.clientHeight || 860;
-    const unitScreen = svgPointToScreen(getUnitPoint(selectedUnit), W, H);
+    const unitScreen = svgPointToScreen(anchorPt, W, H);
     const neighborScreens = reachableList.map((r) =>
       svgPointToScreen(getProvincePoint(r.province), W, H)
     );
 
-    const menuW = 248;
+    const menuW = 256;
     const menuH = 98;
 
     const candidates: Point[] = [
@@ -792,9 +973,9 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
       left: Math.max(10, Math.min(W - menuW - 10, bestCandidate.x + menuDragOffsetRef.current.x)),
       top: Math.max(10, Math.min(H - menuH - 10, bestCandidate.y + menuDragOffsetRef.current.y)),
     };
-  }, [selectedUnit, reachableList, svgPointToScreen]);
+  }, [selectedUnit, selectedBuildProv, reachableList, svgPointToScreen, getUnitPoint]);
 
-  // Apply camera transform & floating menu position directly to DOM (bypassing React re-renders!)
+  // Apply camera transform & floating menu position directly to DOM
   const syncCameraDOM = useCallback(() => {
     const { x, y, zoom: z } = cameraRef.current;
     if (cameraGroupRef.current) {
@@ -828,7 +1009,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
     };
   }, []);
 
-  // Native non-passive wheel listener for smooth cursor-anchored zooming without React re-renders
+  // Native non-passive wheel listener for smooth cursor-anchored zooming
   useEffect(() => {
     const svgEl = svgRef.current;
     if (!svgEl) return;
@@ -836,7 +1017,6 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const { x: oldPanX, y: oldPanY, zoom: oldZoom } = cameraRef.current;
-      // Smooth multiplicative zoom factor
       const factor = Math.exp(-e.deltaY * 0.0014);
       const newZoom = Math.min(3.0, Math.max(0.75, Number((oldZoom * factor).toFixed(3))));
       if (newZoom === oldZoom) return;
@@ -848,15 +1028,12 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
       const offsetX = (W - 1524 * scale) / 2;
       const offsetY = (H - 1357 * scale) / 2;
 
-      // Cursor in SVG viewBox coordinates
       const cursorSvgX = (e.clientX - rect.left - offsetX) / scale;
       const cursorSvgY = (e.clientY - rect.top - offsetY) / scale;
 
-      // Map point currently under cursor (since transformOrigin is 762, 678)
       const mapPtX = 762 + (cursorSvgX - 762 - oldPanX) / oldZoom;
       const mapPtY = 678 + (cursorSvgY - 678 - oldPanY) / oldZoom;
 
-      // Adjust pan so the map point under the cursor stays stationary while zooming
       const newPanX = cursorSvgX - 762 - (mapPtX - 762) * newZoom;
       const newPanY = cursorSvgY - 678 - (mapPtY - 678) * newZoom;
 
@@ -943,7 +1120,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
   // Precompute Move midpoints so Support arrows point directly to the move arrow they support
   const moveMidpointsByOrigin: Record<string, Point> = {};
   for (const u of units) {
-    if (!isUnitOrderVisible(u)) continue;
+    if (!isUnitOrderVisible(u) || u.is_dislodged) continue;
     const o = orders[u.id];
     if (o && o.order_type === 'MOVE' && o.target && EUROPE_PROVINCE_GEOMETRY[o.target]) {
       const p1 = getUnitPoint(u);
@@ -964,6 +1141,10 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
             <div className="cartouche-subtitle">
               {sandboxMode
                 ? 'SANDBOX MODE: Click any power’s unit to test hypothetical moves'
+                : isAdjustmentPhase
+                ? `WINTER ADJUSTMENTS • Click home centers to Build or units to Disband`
+                : isRetreatPhase
+                ? `RETREATS PHASE • Click dislodged units to Retreat or Disband`
                 : `COMMANDING ${POWER_METADATA[activePower].name.toUpperCase()} • Click your units to assign orders`}
             </div>
           </div>
@@ -1009,19 +1190,13 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
 
       {/* Zoom & Camera Controls */}
       <div className="map-camera-controls">
-        <button
-          title="Zoom In"
-          onClick={() => stepZoom(0.2)}
-        >
+        <button title="Zoom In" onClick={() => stepZoom(0.2)}>
           <ZoomIn size={16} />
         </button>
         <span ref={zoomReadoutRef} className="zoom-readout">
           {Math.round(cameraRef.current.zoom * 100)}%
         </span>
-        <button
-          title="Zoom Out"
-          onClick={() => stepZoom(-0.2)}
-        >
+        <button title="Zoom Out" onClick={() => stepZoom(-0.2)}>
           <ZoomOut size={16} />
         </button>
         <button title="Reset View" onClick={resetCamera}>
@@ -1044,7 +1219,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
               <button
                 key={c}
                 className="coast-btn"
-                onClick={() => commitMoveOrder(selectedUnit, pendingCoastChoice.target, c)}
+                onClick={() => commitMoveOrRetreatOrder(selectedUnit, pendingCoastChoice.target, c)}
               >
                 {pendingCoastChoice.target}/{c} Coast
               </button>
@@ -1056,7 +1231,157 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
         </div>
       )}
 
-      {/* DRAGGABLE COMPACT FLOATING TACTICAL MENU */}
+      {/* DRAGGABLE COMPACT FLOATING TACTICAL MENU (FOR BUILD SLOTS IN WINTER ADJUSTMENTS) */}
+      {selectedBuildProv && selectedUnitId && floatingPos && (
+        <div
+          ref={floatingMenuRef}
+          className="unit-floating-menu"
+          style={{
+            left: floatingPos.left,
+            top: floatingPos.top,
+            borderColor: '#22c55e',
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className="floating-menu-header"
+            title="Drag to move this menu anywhere"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              isDraggingMenuRef.current = true;
+              floatingMenuRef.current?.classList.add('dragging');
+              menuDragStartRef.current = {
+                x: e.clientX - menuDragOffsetRef.current.x,
+                y: e.clientY - menuDragOffsetRef.current.y,
+              };
+            }}
+          >
+            <div className="floating-unit-title">
+              <GripHorizontal size={13} className="floating-drag-grip" />
+              <PlusCircle size={13} style={{ color: '#4ade80' }} />
+              <strong>Build in {provinces[selectedBuildProv]?.name}</strong>
+            </div>
+            <button className="floating-close-btn" onClick={clearSelection} title="Close (Esc)">
+              <X size={14} />
+            </button>
+          </div>
+
+          <div className="floating-menu-buttons">
+            <button
+              className={`tactical-mode-btn ${
+                selectedBuildOrder?.order_type === 'BUILD' && selectedBuildOrder?.unit_type === 'A'
+                  ? 'active-hold'
+                  : ''
+              }`}
+              onClick={() => {
+                const buildPwr = controllableBuildHomes[selectedBuildProv] || activePower;
+                onUpdateOrder({
+                  unit_id: selectedUnitId,
+                  power: buildPwr,
+                  unit_type: 'A',
+                  origin: selectedBuildProv,
+                  origin_coast: null,
+                  order_type: 'BUILD',
+                  via_convoy: false,
+                  is_explicit: true,
+                });
+                clearSelection();
+              }}
+            >
+              <Swords size={13} />
+              + Army
+            </button>
+
+            {provinces[selectedBuildProv]?.type === 'COAST' &&
+              (provinces[selectedBuildProv]?.coasts?.length > 0 ? (
+                provinces[selectedBuildProv].coasts.map((cst) => (
+                  <button
+                    key={cst}
+                    className={`tactical-mode-btn ${
+                      selectedBuildOrder?.order_type === 'BUILD' &&
+                      selectedBuildOrder?.unit_type === 'F' &&
+                      selectedBuildOrder?.origin_coast === cst
+                        ? 'active-hold'
+                        : ''
+                    }`}
+                    onClick={() => {
+                      const buildPwr = controllableBuildHomes[selectedBuildProv] || activePower;
+                      onUpdateOrder({
+                        unit_id: selectedUnitId,
+                        power: buildPwr,
+                        unit_type: 'F',
+                        origin: selectedBuildProv,
+                        origin_coast: cst,
+                        order_type: 'BUILD',
+                        via_convoy: false,
+                        is_explicit: true,
+                      });
+                      clearSelection();
+                    }}
+                  >
+                    <Anchor size={13} />
+                    + F ({cst})
+                  </button>
+                ))
+              ) : (
+                <button
+                  className={`tactical-mode-btn ${
+                    selectedBuildOrder?.order_type === 'BUILD' &&
+                    selectedBuildOrder?.unit_type === 'F'
+                      ? 'active-hold'
+                      : ''
+                  }`}
+                  onClick={() => {
+                    const buildPwr = controllableBuildHomes[selectedBuildProv] || activePower;
+                    onUpdateOrder({
+                      unit_id: selectedUnitId,
+                      power: buildPwr,
+                      unit_type: 'F',
+                      origin: selectedBuildProv,
+                      origin_coast: null,
+                      order_type: 'BUILD',
+                      via_convoy: false,
+                      is_explicit: true,
+                    });
+                    clearSelection();
+                  }}
+                >
+                  <Anchor size={13} />
+                  + Fleet
+                </button>
+              ))}
+
+            <button
+              className={`tactical-mode-btn ${
+                selectedBuildOrder?.order_type === 'WAIVE' ? 'active' : ''
+              }`}
+              onClick={() => {
+                const buildPwr = controllableBuildHomes[selectedBuildProv] || activePower;
+                onUpdateOrder({
+                  unit_id: selectedUnitId,
+                  power: buildPwr,
+                  unit_type: 'A',
+                  origin: selectedBuildProv,
+                  origin_coast: null,
+                  order_type: 'WAIVE',
+                  via_convoy: false,
+                  is_explicit: true,
+                });
+                clearSelection();
+              }}
+            >
+              <X size={13} />
+              Waive
+            </button>
+          </div>
+          <div className="floating-menu-hint">
+            Choose unit type to build in {provinces[selectedBuildProv]?.name} or Waive
+          </div>
+        </div>
+      )}
+
+      {/* DRAGGABLE COMPACT FLOATING TACTICAL MENU (FOR UNITS) */}
       {selectedUnit && floatingPos && (
         <div
           ref={floatingMenuRef}
@@ -1088,6 +1413,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
                 style={{ backgroundColor: POWER_METADATA[selectedUnit.power].color }}
               />
               <strong>
+                {selectedUnit.is_dislodged ? 'Dislodged ' : ''}
                 {selectedUnit.unit_type === 'A' ? 'Army' : 'Fleet'}{' '}
                 {provinces[selectedUnit.province]?.name}
               </strong>
@@ -1101,85 +1427,188 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
             </button>
           </div>
 
-          <div className="floating-menu-buttons">
-            <button
-              className={`tactical-mode-btn ${interactionMode === 'MOVE' ? 'active' : ''}`}
-              onClick={() => {
-                setInteractionMode('MOVE');
-                setPendingAuxOrigin(null);
-              }}
-            >
-              <MoveRight size={13} />
-              Move
-            </button>
-
-            <button
-              className={`tactical-mode-btn ${
-                orders[selectedUnit.id]?.order_type === 'HOLD' &&
-                orders[selectedUnit.id]?.is_explicit
-                  ? 'active-hold'
-                  : ''
-              }`}
-              onClick={() => {
-                onUpdateOrder({
-                  unit_id: selectedUnit.id,
-                  power: selectedUnit.power,
-                  unit_type: selectedUnit.unit_type,
-                  origin: selectedUnit.province,
-                  origin_coast: selectedUnit.coast,
-                  order_type: 'HOLD',
-                  target: null,
-                  target_coast: null,
-                  aux_unit_origin: null,
-                  via_convoy: false,
-                  is_explicit: true,
-                });
-                clearSelection();
-              }}
-            >
-              <Shield size={13} />
-              Hold
-            </button>
-
-            <button
-              className={`tactical-mode-btn ${
-                interactionMode.startsWith('SUPPORT') ? 'active' : ''
-              }`}
-              onClick={() => {
-                setInteractionMode('SUPPORT_PICK_UNIT');
-                setPendingAuxOrigin(null);
-              }}
-            >
-              <Crosshair size={13} />
-              Support
-            </button>
-
-            {selectedUnit.unit_type === 'F' &&
-              provinces[selectedUnit.province]?.type === 'SEA' && (
+          {isRetreatPhase ? (
+            <>
+              <div className="floating-menu-buttons" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 <button
                   className={`tactical-mode-btn ${
-                    interactionMode.startsWith('CONVOY') ? 'active' : ''
+                    orders[selectedUnit.id]?.order_type === 'RETREAT' ? 'active' : ''
+                  }`}
+                  onClick={() => setInteractionMode('MOVE')}
+                >
+                  <MoveRight size={13} />
+                  Retreat
+                </button>
+                <button
+                  className={`tactical-mode-btn ${
+                    orders[selectedUnit.id]?.order_type === 'DISBAND' ? 'active' : ''
+                  }`}
+                  style={{ borderColor: '#ef4444', color: '#fca5a5' }}
+                  onClick={() => {
+                    onUpdateOrder({
+                      unit_id: selectedUnit.id,
+                      power: selectedUnit.power,
+                      unit_type: selectedUnit.unit_type,
+                      origin: selectedUnit.province,
+                      origin_coast: selectedUnit.coast,
+                      order_type: 'DISBAND',
+                      target: null,
+                      target_coast: null,
+                      aux_unit_origin: null,
+                      via_convoy: false,
+                      is_explicit: true,
+                    });
+                    clearSelection();
+                  }}
+                >
+                  <Trash2 size={13} />
+                  Disband
+                </button>
+              </div>
+              <div className="floating-menu-hint">
+                Click a green province on the map to Retreat, or click Disband
+              </div>
+            </>
+          ) : isAdjustmentPhase ? (
+            <>
+              <div className="floating-menu-buttons" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                <button
+                  className={`tactical-mode-btn ${
+                    orders[selectedUnit.id]?.order_type !== 'DISBAND' ? 'active-hold' : ''
                   }`}
                   onClick={() => {
-                    setInteractionMode('CONVOY_PICK_ARMY');
+                    onUpdateOrder({
+                      unit_id: selectedUnit.id,
+                      power: selectedUnit.power,
+                      unit_type: selectedUnit.unit_type,
+                      origin: selectedUnit.province,
+                      origin_coast: selectedUnit.coast,
+                      order_type: 'HOLD',
+                      target: null,
+                      target_coast: null,
+                      aux_unit_origin: null,
+                      via_convoy: false,
+                      is_explicit: true,
+                    });
+                    clearSelection();
+                  }}
+                >
+                  <Shield size={13} />
+                  Keep Unit
+                </button>
+                <button
+                  className={`tactical-mode-btn ${
+                    orders[selectedUnit.id]?.order_type === 'DISBAND' ? 'active' : ''
+                  }`}
+                  style={{ borderColor: '#ef4444', color: '#fca5a5' }}
+                  onClick={() => {
+                    onUpdateOrder({
+                      unit_id: selectedUnit.id,
+                      power: selectedUnit.power,
+                      unit_type: selectedUnit.unit_type,
+                      origin: selectedUnit.province,
+                      origin_coast: selectedUnit.coast,
+                      order_type: 'DISBAND',
+                      target: null,
+                      target_coast: null,
+                      aux_unit_origin: null,
+                      via_convoy: false,
+                      is_explicit: true,
+                    });
+                    clearSelection();
+                  }}
+                >
+                  <Trash2 size={13} />
+                  Disband
+                </button>
+              </div>
+              <div className="floating-menu-hint">
+                Choose whether to Keep or Disband this unit for Winter Adjustments
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="floating-menu-buttons">
+                <button
+                  className={`tactical-mode-btn ${interactionMode === 'MOVE' ? 'active' : ''}`}
+                  onClick={() => {
+                    setInteractionMode('MOVE');
                     setPendingAuxOrigin(null);
                   }}
                 >
-                  <Anchor size={13} />
-                  Convoy
+                  <MoveRight size={13} />
+                  Move
                 </button>
-              )}
-          </div>
 
-          <div className="floating-menu-hint">
-            {interactionMode === 'MOVE' && 'Click a green province to Move • Drag header to move'}
-            {interactionMode === 'SUPPORT_PICK_UNIT' && 'Step 1/2: Click unit to Support'}
-            {interactionMode === 'SUPPORT_PICK_TARGET' &&
-              `Step 2/2: Click destination for ${pendingAuxOrigin} (or click ${pendingAuxOrigin} to Hold)`}
-            {interactionMode === 'CONVOY_PICK_ARMY' && 'Step 1/2: Click coastal Army to Convoy'}
-            {interactionMode === 'CONVOY_PICK_TARGET' &&
-              `Step 2/2: Click destination coast for Army ${pendingAuxOrigin}`}
-          </div>
+                <button
+                  className={`tactical-mode-btn ${
+                    orders[selectedUnit.id]?.order_type === 'HOLD' &&
+                    orders[selectedUnit.id]?.is_explicit
+                      ? 'active-hold'
+                      : ''
+                  }`}
+                  onClick={() => {
+                    onUpdateOrder({
+                      unit_id: selectedUnit.id,
+                      power: selectedUnit.power,
+                      unit_type: selectedUnit.unit_type,
+                      origin: selectedUnit.province,
+                      origin_coast: selectedUnit.coast,
+                      order_type: 'HOLD',
+                      target: null,
+                      target_coast: null,
+                      aux_unit_origin: null,
+                      via_convoy: false,
+                      is_explicit: true,
+                    });
+                    clearSelection();
+                  }}
+                >
+                  <Shield size={13} />
+                  Hold
+                </button>
+
+                <button
+                  className={`tactical-mode-btn ${
+                    interactionMode.startsWith('SUPPORT') ? 'active' : ''
+                  }`}
+                  onClick={() => {
+                    setInteractionMode('SUPPORT_PICK_UNIT');
+                    setPendingAuxOrigin(null);
+                  }}
+                >
+                  <Crosshair size={13} />
+                  Support
+                </button>
+
+                {selectedUnit.unit_type === 'F' &&
+                  provinces[selectedUnit.province]?.type === 'SEA' && (
+                    <button
+                      className={`tactical-mode-btn ${
+                        interactionMode.startsWith('CONVOY') ? 'active' : ''
+                      }`}
+                      onClick={() => {
+                        setInteractionMode('CONVOY_PICK_ARMY');
+                        setPendingAuxOrigin(null);
+                      }}
+                    >
+                      <Anchor size={13} />
+                      Convoy
+                    </button>
+                  )}
+              </div>
+
+              <div className="floating-menu-hint">
+                {interactionMode === 'MOVE' && 'Click a green province to Move • Drag header to move'}
+                {interactionMode === 'SUPPORT_PICK_UNIT' && 'Step 1/2: Click unit to Support'}
+                {interactionMode === 'SUPPORT_PICK_TARGET' &&
+                  `Step 2/2: Click destination for ${pendingAuxOrigin} (or click ${pendingAuxOrigin} to Hold)`}
+                {interactionMode === 'CONVOY_PICK_ARMY' && 'Step 1/2: Click coastal Army to Convoy'}
+                {interactionMode === 'CONVOY_PICK_TARGET' &&
+                  `Step 2/2: Click destination coast for Army ${pendingAuxOrigin}`}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -1274,13 +1703,23 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
 
               const isSea = pInfo.type === 'SEA';
               const owner = ownership[geom.id] || pInfo.home_power || null;
-              const isReachable = Boolean(selectedUnit && reachableMap[geom.id]);
-              const allowedCoastsStr = isReachable ? (reachableMap[geom.id] || []).join(',') : '';
-              const showFleetCoasts = Boolean(selectedUnit && selectedUnit.unit_type === 'F' && isReachable);
-              const showMoveReticle = Boolean(isReachable && interactionMode === 'MOVE');
+              const isBuildableHome = Boolean(isAdjustmentPhase && controllableBuildHomes[geom.id]);
+              const isReachable =
+                Boolean(selectedUnit && reachableMap[geom.id]) || isBuildableHome;
+              const allowedCoastsStr =
+                selectedUnit && reachableMap[geom.id]
+                  ? (reachableMap[geom.id] || []).join(',')
+                  : '';
+              const showFleetCoasts = Boolean(
+                selectedUnit && selectedUnit.unit_type === 'F' && reachableMap[geom.id]
+              );
+              const showMoveReticle = Boolean(
+                selectedUnit && reachableMap[geom.id] && interactionMode === 'MOVE'
+              );
               const hasOccupant = Boolean(unitsByProv[geom.id]);
               const isHovered = hoveredProv === geom.id;
-              const isHighlighted = highlightedProvinces.includes(geom.id);
+              const isHighlighted =
+                highlightedProvinces.includes(geom.id) || selectedBuildProv === geom.id;
               const hasWarning = Boolean(issuesByProvince[geom.id]?.length);
 
               return (
@@ -1313,11 +1752,11 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
           {/* 5. SUPPLY CENTER STAR EMBLEMS (34 Supply Centers) */}
           <SupplyCentersLayer provinces={provinces} ownership={ownership} />
 
-          {/* 6. TACTICAL ORDER VECTORS LAYER (Only activePower when sandboxMode is OFF!) */}
+          {/* 6. TACTICAL ORDER VECTORS LAYER */}
           <g className="tactical-vectors-layer">
             {/* 6A. CONVOY CHAINS */}
             {units.map((u) => {
-              if (!isUnitOrderVisible(u)) return null;
+              if (!isUnitOrderVisible(u) || u.is_dislodged) return null;
               const o = orders[u.id];
               if (!o || o.order_type !== 'CONVOY' || !o.aux_unit_origin || !o.target)
                 return null;
@@ -1350,7 +1789,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
 
             {/* 6B. SUPPORT VECTORS */}
             {units.map((u) => {
-              if (!isUnitOrderVisible(u)) return null;
+              if (!isUnitOrderVisible(u) || u.is_dislodged) return null;
               const o = orders[u.id];
               if (!o || o.order_type !== 'SUPPORT' || !o.aux_unit_origin || !o.target)
                 return null;
@@ -1430,13 +1869,13 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
               );
             })}
 
-            {/* 6C. MOVE ARROWS + GHOST DESTINATION TOKENS IN SANDBOX/SIMULATION */}
+            {/* 6C. MOVE & RETREAT ARROWS + GHOST DESTINATION TOKENS */}
             {units.map((u) => {
               if (!isUnitOrderVisible(u)) return null;
               const o = orders[u.id];
               if (
                 !o ||
-                o.order_type !== 'MOVE' ||
+                (o.order_type !== 'MOVE' && o.order_type !== 'RETREAT') ||
                 !o.target ||
                 !EUROPE_PROVINCE_GEOMETRY[o.target]
               )
@@ -1455,9 +1894,12 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
               const simActive = showSimulationOverlay || sandboxMode;
               const simRes = simActive ? simulationResult?.resolutions[u.id] : null;
 
-              let strokeColor = POWER_METADATA[u.power].color;
-              let markerId = 'url(#arrow-valid)';
-              let dashArray: string | undefined = o.via_convoy ? '10 5' : undefined;
+              let strokeColor =
+                o.order_type === 'RETREAT' ? '#ea580c' : POWER_METADATA[u.power].color;
+              let markerId =
+                o.order_type === 'RETREAT' ? 'url(#arrow-warning)' : 'url(#arrow-valid)';
+              let dashArray: string | undefined =
+                o.order_type === 'RETREAT' ? '8 4' : o.via_convoy ? '10 5' : undefined;
 
               if (hasError) {
                 strokeColor = '#dc2626';
@@ -1590,7 +2032,129 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
             })}
           </g>
 
-          {/* 7. UNITS LAYER (Armies & Fleets + Hold Halos + Warning Badges) */}
+          {/* 6D. WINTER ADJUSTMENTS BUILD TOKENS LAYER */}
+          {isAdjustmentPhase && (
+            <g className="build-tokens-layer">
+              {Object.entries(controllableBuildHomes).map(([homeProv, pwr]) => {
+                const bId = `BUILD_${pwr}_${homeProv}`;
+                const bOrder = orders[bId];
+                const isSelected = selectedUnitId === bId;
+                const isHovered = hoveredUnitId === bId;
+                const isWaived = bOrder?.order_type === 'WAIVE';
+                const uType = bOrder?.unit_type || 'A';
+                const cst = uType === 'F' ? bOrder?.origin_coast : null;
+                const pt = getProvincePoint(homeProv, cst);
+                const meta = POWER_METADATA[pwr];
+
+                return (
+                  <g
+                    key={bId}
+                    transform={`translate(${pt.x}, ${pt.y})`}
+                    className="map-unit-token"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (dragMovedRef.current) return;
+                      onSelectUnit(isSelected ? null : bId);
+                    }}
+                    onMouseEnter={() => onHoverUnit(bId)}
+                    onMouseLeave={() => onHoverUnit(null)}
+                  >
+                    {(isSelected || isHovered) && (
+                      <circle
+                        r="28"
+                        fill="rgba(34, 197, 94, 0.25)"
+                        stroke="#22c55e"
+                        strokeWidth="3.5"
+                      />
+                    )}
+                    <circle
+                      r="23"
+                      fill={isWaived ? 'rgba(100, 116, 139, 0.2)' : 'rgba(22, 163, 74, 0.22)'}
+                      stroke={isWaived ? '#64748b' : '#16a34a'}
+                      strokeWidth="2.6"
+                      strokeDasharray="5 3"
+                    />
+                    {!isWaived ? (
+                      <>
+                        {uType === 'A' ? (
+                          <circle
+                            r="16"
+                            fill={meta.color}
+                            stroke="#4ade80"
+                            strokeWidth="2.8"
+                          />
+                        ) : (
+                          <polygon
+                            points="0,-18 17,-6 13,14 -13,14 -17,-6"
+                            fill={meta.color}
+                            stroke="#4ade80"
+                            strokeWidth="2.8"
+                          />
+                        )}
+                        <text
+                          y="5"
+                          textAnchor="middle"
+                          fill="#ffffff"
+                          fontSize="12.5"
+                          fontWeight="800"
+                          fontFamily="Cinzel, serif"
+                          pointerEvents="none"
+                        >
+                          +{uType}
+                        </text>
+                        <g transform="translate(0, 26)">
+                          <rect
+                            x="-34"
+                            y="-8"
+                            width="68"
+                            height="16"
+                            rx="4"
+                            fill="#15803d"
+                            stroke="#fef3c7"
+                            strokeWidth="1.2"
+                          />
+                          <text
+                            y="3.5"
+                            textAnchor="middle"
+                            fill="#ffffff"
+                            fontSize="8.5"
+                            fontWeight="800"
+                          >
+                            BUILD {uType}
+                            {cst ? `/${cst}` : ''}
+                          </text>
+                        </g>
+                      </>
+                    ) : (
+                      <g transform="translate(0, 26)">
+                        <rect
+                          x="-36"
+                          y="-8"
+                          width="72"
+                          height="16"
+                          rx="4"
+                          fill="#334155"
+                          stroke="#cbd5e1"
+                          strokeWidth="1.2"
+                        />
+                        <text
+                          y="3.5"
+                          textAnchor="middle"
+                          fill="#e2e8f0"
+                          fontSize="8.5"
+                          fontWeight="800"
+                        >
+                          + BUILD HERE
+                        </text>
+                      </g>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
+          )}
+
+          {/* 7. UNITS LAYER (Armies & Fleets + Hold Halos + Warning Badges + Dislodged/Disband Tags) */}
           <g className="units-layer">
             {units.map((u) => {
               const pt = getUnitPoint(u);
@@ -1609,6 +2173,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
                 : null;
 
               const isHold = !order || order.order_type === 'HOLD';
+              const isDisbanding = order?.order_type === 'DISBAND';
               const isExplicitHold = Boolean(
                 isUnitOrderVisible(u) &&
                   order &&
@@ -1653,8 +2218,28 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
                     />
                   )}
 
+                  {u.is_dislodged && (
+                    <circle
+                      r="24"
+                      fill="rgba(234, 88, 12, 0.28)"
+                      stroke="#ea580c"
+                      strokeWidth="3"
+                      strokeDasharray="5 3"
+                    />
+                  )}
+
+                  {isDisbanding && (
+                    <circle
+                      r="24"
+                      fill="rgba(220, 38, 38, 0.28)"
+                      stroke="#dc2626"
+                      strokeWidth="3"
+                      strokeDasharray="4 3"
+                    />
+                  )}
+
                   {/* Active Power Subtle Ring so your own units stand out clearly */}
-                  {u.power === activePower && !isSelected && (
+                  {u.power === activePower && !isSelected && !u.is_dislodged && (
                     <circle
                       r="21"
                       fill="none"
@@ -1664,7 +2249,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
                     />
                   )}
 
-                  {isHold && isUnitOrderVisible(u) && (
+                  {isHold && !u.is_dislodged && isUnitOrderVisible(u) && (
                     <polygon
                       points="0,-22 16,-16 22,0 16,16 0,22 -16,16 -22,0 -16,-16"
                       fill="none"
@@ -1681,7 +2266,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
                       <circle
                         r="17"
                         fill={meta.color}
-                        stroke="#fef3c7"
+                        stroke={u.is_dislodged ? '#fdba74' : isDisbanding ? '#fca5a5' : '#fef3c7'}
                         strokeWidth="2.8"
                       />
                     </g>
@@ -1694,7 +2279,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
                       <polygon
                         points="0,-19 18,-7 14,15 -14,15 -18,-7"
                         fill={meta.color}
-                        stroke="#fef3c7"
+                        stroke={u.is_dislodged ? '#fdba74' : isDisbanding ? '#fca5a5' : '#fef3c7'}
                         strokeWidth="2.8"
                       />
                     </g>
@@ -1741,7 +2326,25 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
                     </g>
                   )}
 
-                  {simActive && simRes?.dislodged && (
+                  {(u.is_dislodged || (simActive && simRes?.dislodged)) && !isDisbanding && (
+                    <g transform="translate(0, 26)">
+                      <rect
+                        x="-38"
+                        y="-8"
+                        width="76"
+                        height="16"
+                        rx="4"
+                        fill="#ea580c"
+                        stroke="#fff"
+                        strokeWidth="1.2"
+                      />
+                      <text y="3.5" textAnchor="middle" fill="#fff" fontSize="8.5" fontWeight="800">
+                        DISLODGED!
+                      </text>
+                    </g>
+                  )}
+
+                  {isDisbanding && (
                     <g transform="translate(0, 26)">
                       <rect
                         x="-36"
@@ -1754,7 +2357,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
                         strokeWidth="1.2"
                       />
                       <text y="3.5" textAnchor="middle" fill="#fff" fontSize="8.5" fontWeight="800">
-                        DISLODGED!
+                        ✕ DISBAND
                       </text>
                     </g>
                   )}

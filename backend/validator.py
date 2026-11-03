@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 from map_data import (
     PROVINCES,
     can_army_be_convoyed_theoretically,
@@ -78,21 +78,16 @@ def validate_orders(
     orders: Dict[str, Order],
     include_unassigned_warnings: bool = False,
     target_power: Optional[Power] = None,
+    phase: str = "Movement",
+    builds: Optional[Dict[str, Any]] = None,
+    retreats: Optional[Dict[str, Any]] = None,
 ) -> List[ValidationIssue]:
     """
     Perform comprehensive legality & tactical sanity checks on all current orders.
-    Detects:
-      - ILLEGAL_MOVE / ILLEGAL_SUPPORT / ILLEGAL_CONVOY (Errors)
-      - SELF_BOUNCE: 2+ friendly units moving to the same province with equal top strength (Warning)
-      - SELF_OCCUPIED_BOUNCE: Friendly unit moving into a province occupied by a friendly unit that isn't moving away (Warning)
-      - FRIENDLY_FIRE: Supporting an attack against a province occupied by a friendly unit (Warning)
-      - UNMATCHED_SUPPORT: Supporting a move/hold that does not match the supported unit's actual order (Warning)
-      - BROKEN_CONVOY: Army moving across water without a matching Fleet convoy chain, or Fleet convoying a non-moving Army (Warning)
-      - UNASSIGNED_UNIT: Unit still has default unconfirmed order when finalizing (Warning)
+    Supports Movement, Retreats, and Winter Adjustments phases.
     """
     issues: List[ValidationIssue] = []
-    unit_by_id: Dict[str, Unit] = {u.id: u for u in units}
-    unit_by_prov: Dict[str, Unit] = {u.province: u for u in units}
+    unit_by_prov: Dict[str, Unit] = {u.province: u for u in units if not u.is_dislodged}
 
     def p_name(code: Optional[str]) -> str:
         if not code:
@@ -127,8 +122,118 @@ def validate_orders(
             )
         )
 
+    # --- RETREATS PHASE VALIDATION ---
+    if phase == "Retreats":
+        retreats_by_power_and_dest: Dict[Power, Dict[str, List[Unit]]] = defaultdict(lambda: defaultdict(list))
+        for unit in units:
+            if not unit.is_dislodged:
+                continue
+            order = orders.get(unit.id)
+            if not order:
+                continue
+
+            if include_unassigned_warnings and not order.is_explicit:
+                add_issue(
+                    severity=IssueSeverity.WARNING,
+                    code=IssueCode.UNASSIGNED_UNIT,
+                    title=f"Unconfirmed Retreat in {p_name(unit.province)}",
+                    message=f"Dislodged {unit.unit_type.value} {p_name(unit.province)} has not been explicitly confirmed to Retreat or Disband.",
+                    unit_ids=[unit.id],
+                    provinces=[unit.province],
+                    power=unit.power,
+                )
+
+            if order.order_type == OrderType.RETREAT:
+                if not order.target or order.target not in PROVINCES:
+                    add_issue(
+                        IssueSeverity.ERROR,
+                        IssueCode.ILLEGAL_MOVE,
+                        "Missing Retreat Destination",
+                        f"Dislodged {unit.unit_type.value} {p_name(unit.province)} must select a valid retreat destination or Disband.",
+                        [unit.id],
+                        [unit.province],
+                        unit.power,
+                    )
+                    continue
+
+                if retreats:
+                    u_loc = f"{unit.province}/{unit.coast}" if unit.coast else unit.province
+                    u_key = f"{unit.unit_type.value} {u_loc}"
+                    p_ret = retreats.get(unit.power.value, {})
+                    valid_locs = p_ret.get(u_key, p_ret.get(f"{unit.unit_type.value} {unit.province}", []))
+                    valid_bases = {split_province_code(loc)[0] for loc in valid_locs}
+                    if order.target not in valid_bases:
+                        add_issue(
+                            IssueSeverity.ERROR,
+                            IssueCode.ILLEGAL_MOVE,
+                            f"Illegal Retreat to {p_name(order.target)}",
+                            f"Dislodged {unit.unit_type.value} {p_name(unit.province)} cannot retreat to {p_name(order.target)} (occupied, attacker origin, or contested bounce).",
+                            [unit.id],
+                            [unit.province, order.target],
+                            unit.power,
+                        )
+                retreats_by_power_and_dest[unit.power][order.target].append(unit)
+
+        for power, dest_map in retreats_by_power_and_dest.items():
+            for dest, ret_units in dest_map.items():
+                if len(ret_units) > 1:
+                    u_names = ", ".join(f"{u.unit_type.value} {p_name(u.province)}" for u in ret_units)
+                    add_issue(
+                        IssueSeverity.WARNING,
+                        IssueCode.SELF_BOUNCE,
+                        f"Retreat Collision in {p_name(dest)}",
+                        f"Multiple dislodged units ({u_names}) are retreating to {p_name(dest)}. In Diplomacy, colliding retreats bounce and BOTH units are disbanded!",
+                        [u.id for u in ret_units],
+                        [dest] + [u.province for u in ret_units],
+                        power,
+                    )
+        return issues
+
+    # --- WINTER ADJUSTMENTS PHASE VALIDATION ---
+    if phase == "Adjustments":
+        if builds:
+            for p_str, b_info in builds.items():
+                pwr = Power(p_str)
+                count = b_info.get("count", 0)
+                homes = b_info.get("homes", [])
+                pwr_units = [u for u in units if u.power == pwr]
+                if count < 0:
+                    needed_disbands = abs(count)
+                    disbanding_units = [
+                        u for u in pwr_units if orders.get(u.id) and orders[u.id].order_type == OrderType.DISBAND
+                    ]
+                    if len(disbanding_units) < needed_disbands:
+                        rem = needed_disbands - len(disbanding_units)
+                        add_issue(
+                            IssueSeverity.WARNING,
+                            IssueCode.UNASSIGNED_UNIT,
+                            f"Select {rem} More Unit{'s' if rem > 1 else ''} to Disband",
+                            f"{p_str.capitalize()} has {len(pwr_units)} units but fewer supply centers and must disband {needed_disbands} unit{'s' if needed_disbands > 1 else ''} ({len(disbanding_units)}/{needed_disbands} selected).",
+                            [u.id for u in pwr_units],
+                            [u.province for u in pwr_units],
+                            pwr,
+                        )
+                elif count > 0 and homes and include_unassigned_warnings:
+                    for h in homes:
+                        b_id = f"BUILD_{p_str}_{h}"
+                        b_ord = orders.get(b_id)
+                        if b_ord and b_ord.order_type == OrderType.BUILD and not b_ord.is_explicit:
+                            add_issue(
+                                IssueSeverity.WARNING,
+                                IssueCode.UNASSIGNED_UNIT,
+                                f"Unconfirmed Build in {p_name(h)}",
+                                f"Default build ({b_ord.unit_type.value} in {p_name(h)}) has not been explicitly confirmed.",
+                                [b_id],
+                                [h],
+                                pwr,
+                            )
+        return issues
+
+    # --- MOVEMENT PHASE VALIDATION ---
     # 1. Per-unit legality & tactical checks
     for unit in units:
+        if unit.is_dislodged:
+            continue
         order = orders.get(unit.id)
         if not order:
             continue
@@ -372,9 +477,10 @@ def validate_orders(
                     )
 
     # 2. Check Friendly Self-Bounces & Friendly Occupied Bounces per Great Power
-    # Calculate valid support counts for moves
     move_support_counts: Dict[str, int] = defaultdict(int)
     for u in units:
+        if u.is_dislodged:
+            continue
         o = orders.get(u.id)
         if o and o.order_type == OrderType.SUPPORT and o.aux_unit_origin and o.target and o.aux_unit_origin != o.target:
             sup_unit = unit_by_prov.get(o.aux_unit_origin)
@@ -385,9 +491,10 @@ def validate_orders(
                     if can_s:
                         move_support_counts[sup_unit.id] += 1
 
-    # Group moving units by (power, target)
     moves_by_power_and_target: Dict[Power, Dict[str, List[Unit]]] = defaultdict(lambda: defaultdict(list))
     for u in units:
+        if u.is_dislodged:
+            continue
         o = orders.get(u.id)
         if o and o.order_type == OrderType.MOVE and o.target and o.target != u.province:
             moves_by_power_and_target[u.power][o.target].append(u)
@@ -395,8 +502,6 @@ def validate_orders(
     for power, target_map in moves_by_power_and_target.items():
         for dest, moving_units in target_map.items():
             if len(moving_units) > 1:
-                # Check if top two friendly units have equal attack strength (causing a guaranteed self-bounce)
-                # Even if one has support, sending two of your own units into the same province wastes at least one unit's move!
                 strengths = sorted(
                     [(1 + move_support_counts[mu.id], mu) for mu in moving_units],
                     key=lambda x: x[0],
@@ -426,11 +531,9 @@ def validate_orders(
                         power,
                     )
 
-            # Check if dest is currently occupied by a friendly unit of the same power
             occupant = unit_by_prov.get(dest)
             if occupant and occupant.power == power:
                 occ_order = orders.get(occupant.id)
-                # Check if occupant is stationary (HOLD, SUPPORT, CONVOY) or swapping places with mover without convoy
                 for mover in moving_units:
                     if not occ_order or occ_order.order_type != OrderType.MOVE:
                         add_issue(
@@ -445,8 +548,7 @@ def validate_orders(
                             power,
                         )
                     elif occ_order.target == mover.province and not occ_order.via_convoy and not orders[mover.id].via_convoy:
-                        # Head-to-head swap between two friendly units without a convoy!
-                        if mover.id < occupant.id:  # Emit once per pair
+                        if mover.id < occupant.id:
                             add_issue(
                                 IssueSeverity.WARNING,
                                 IssueCode.SELF_BOUNCE,
