@@ -93,10 +93,7 @@ jobs:
           IMAGE_TAG="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:${{ github.sha }}"
           LATEST_TAG="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest"
 
-          # 1. Enable required services (safe and idempotent)
-          gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project "$PROJECT_ID"
-
-          # 2. Build and push container with Cloud Build
+          # 1. Build and push container with Cloud Build
           echo "Building container with Google Cloud Build..."
           gcloud builds submit \
             --config=cloudbuild.yaml \
