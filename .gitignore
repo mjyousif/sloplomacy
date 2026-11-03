@@ -39,3 +39,8 @@ crash.*.log
 !terraform.tfvars.example
 .terraform/
 .terraform.lock.hcl
+
+# GCP Service Account Keys
+*.key.json
+*sa-key*.json
+gcp-key*.json
