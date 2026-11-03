@@ -24,6 +24,7 @@ from models import (
     GameParticipant,
     GameState,
     JoinGameRequest,
+    LeaveGameRequest,
     MultiplayerGameSummary,
     Order,
     OrderSubmissionRequest,
@@ -35,6 +36,7 @@ from models import (
     ScenarioRequest,
     SimulationResult,
     SingleOrderUpdateRequest,
+    SurrenderRequest,
     Unit,
     UnitType,
 )
@@ -328,6 +330,7 @@ def sync_summary(game_id: str) -> None:
         summary.year = st.year
         summary.phase = st.phase
         summary.finalized_powers = list(st.finalized_powers)
+        summary.surrendered_powers = list(st.surrendered_powers)
 
 
 def verify_admin_access(
@@ -460,7 +463,136 @@ def join_multiplayer_game(game_id: str, req: JoinGameRequest):
     if len(summary.participants) >= 2 and summary.status == "waiting":
         summary.status = "active"
 
+    if req.power in game_state.surrendered_powers:
+        game_state.surrendered_powers.remove(req.power)
+        game_state.turn_history.append(
+            f"Envoy {display_name} has assumed sovereign command of {req.power.value} from Civil Disorder."
+        )
+
     game_state.active_power = req.power
+    refresh_diagnostics_and_simulation(game_state)
+    sync_summary(game_id)
+    return GameBootstrapResponse(
+        state=game_state,
+        provinces=PROVINCES,
+        summary=summary,
+    )
+
+
+@app.post("/api/games/{game_id}/leave", response_model=GameBootstrapResponse)
+def leave_game(game_id: str, req: LeaveGameRequest):
+    """Leave a multiplayer match (vacating claimed power) or remove a saved sandbox scenario."""
+    game_state = resolve_game(game_id)
+    summary = GAME_SUMMARIES.get(game_id)
+    if not summary:
+        raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
+
+    # Saved sandbox scenario deletion
+    if summary.is_sandbox:
+        if summary.creator_id == req.user_id or summary.created_by == req.email:
+            GAMES.pop(game_id, None)
+            GAME_SUMMARIES.pop(game_id, None)
+            GAME_HISTORY.pop(game_id, None)
+            SANDBOX_CHECKPOINTS.pop(game_id, None)
+            return GameBootstrapResponse(
+                state=game_state,
+                provinces=PROVINCES,
+                summary=None,
+            )
+
+    # Locate participant entries for this user
+    leaving_powers: List[Power] = []
+    for p_key, part in list(summary.participants.items()):
+        if part.user_id == req.user_id and (req.power is None or part.power == req.power):
+            leaving_powers.append(part.power)
+            del summary.participants[p_key]
+
+    if not leaving_powers and req.power:
+        p_val = req.power.value if hasattr(req.power, "value") else str(req.power)
+        if p_val in summary.participants and summary.participants[p_val].user_id == req.user_id:
+            leaving_powers.append(summary.participants[p_val].power)
+            del summary.participants[p_val]
+
+    if not leaving_powers:
+        raise HTTPException(status_code=400, detail="User is not an active participant in this game.")
+
+    for pwr in leaving_powers:
+        if pwr in game_state.finalized_powers:
+            game_state.finalized_powers.remove(pwr)
+
+        # Reset unit orders to default HOLD in civil disorder
+        for u in game_state.units:
+            if u.power == pwr and u.id in game_state.orders:
+                game_state.orders[u.id].order_type = OrderType.HOLD
+                game_state.orders[u.id].target = None
+                game_state.orders[u.id].aux_unit_origin = None
+                game_state.orders[u.id].target_coast = None
+                game_state.orders[u.id].is_explicit = False
+
+        power_label = pwr.value if hasattr(pwr, "value") else str(pwr)
+        game_state.turn_history.append(
+            f"The envoy of {power_label} has vacated their seat and left the campaign. Imperial units stand in Civil Disorder."
+        )
+
+    # If game status was active and fewer than 2 participants remain, revert to waiting
+    if len(summary.participants) < 2 and summary.status == "active":
+        summary.status = "waiting"
+
+    refresh_diagnostics_and_simulation(game_state)
+    sync_summary(game_id)
+    return GameBootstrapResponse(
+        state=game_state,
+        provinces=PROVINCES,
+        summary=summary,
+    )
+
+
+@app.post("/api/games/{game_id}/surrender", response_model=GameBootstrapResponse)
+def surrender_power(game_id: str, req: SurrenderRequest):
+    """Concede defeat/surrender sovereign command of a Great Power into Civil Disorder."""
+    game_state = resolve_game(game_id)
+    summary = GAME_SUMMARIES.get(game_id)
+    if not summary:
+        raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
+
+    p_val = req.power.value if hasattr(req.power, "value") else str(req.power)
+    part = summary.participants.get(p_val)
+    if part and part.user_id != req.user_id:
+        raise HTTPException(
+            status_code=403,
+            detail=f"You do not command {p_val} in this campaign.",
+        )
+
+    if req.power not in game_state.surrendered_powers:
+        game_state.surrendered_powers.append(req.power)
+
+    # Revert all unit orders to HOLD (Civil Disorder)
+    for u in game_state.units:
+        if u.power == req.power and u.id in game_state.orders:
+            game_state.orders[u.id].order_type = OrderType.HOLD
+            game_state.orders[u.id].target = None
+            game_state.orders[u.id].aux_unit_origin = None
+            game_state.orders[u.id].target_coast = None
+            game_state.orders[u.id].is_explicit = False
+
+    if req.power in game_state.finalized_powers:
+        game_state.finalized_powers.remove(req.power)
+
+    disp = part.display_name if part else "Envoy"
+    game_state.turn_history.append(
+        f"{p_val} ({disp}) has formally surrendered! Sovereign forces have entered Civil Disorder."
+    )
+
+    if req.leave:
+        if p_val in summary.participants:
+            del summary.participants[p_val]
+        if len(summary.participants) < 2 and summary.status == "active":
+            summary.status = "waiting"
+    else:
+        if part:
+            part.surrendered = True
+            part.surrendered_at = datetime.now(timezone.utc).isoformat()
+
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
     return GameBootstrapResponse(

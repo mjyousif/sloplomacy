@@ -9,10 +9,12 @@ import {
 import {
   Compass,
   Crown,
+  Flag,
   FlaskConical,
   Globe,
   Lock,
   LogIn,
+  LogOut,
   Play,
   PlusCircle,
   RefreshCw,
@@ -30,6 +32,7 @@ interface LobbyViewProps {
   onOpenAuth: (reason?: string, tab?: 'signin' | 'signup') => void;
   onCreateGame: (name: string, power: Power) => Promise<void>;
   onJoinOrEnterGame: (gameId: string, power: Power) => Promise<void>;
+  onOpenSurrenderModal: (game: MultiplayerGameSummary, power: Power) => void;
 }
 
 export const LobbyView: React.FC<LobbyViewProps> = ({
@@ -41,6 +44,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onOpenAuth,
   onCreateGame,
   onJoinOrEnterGame,
+  onOpenSurrenderModal,
 }) => {
   const [newGameName, setNewGameName] = useState('');
   const [selectedCreatePower, setSelectedCreatePower] =
@@ -274,16 +278,39 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        className="enter-match-btn"
-                        onClick={() =>
-                          handlePowerSlotClick(game, myPower)
-                        }
-                      >
-                        <Play size={14} />
-                        <span>Resume as {pMeta.shortName}</span>
-                      </button>
+                      <div className="my-game-action-group">
+                        <button
+                          type="button"
+                          className="enter-match-btn"
+                          onClick={() =>
+                            handlePowerSlotClick(game, myPower)
+                          }
+                        >
+                          <Play size={14} />
+                          <span>Resume as {pMeta.shortName}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="leave-campaign-btn"
+                          title={
+                            game.is_sandbox
+                              ? 'Delete saved tactical sandbox study'
+                              : game.status === 'active'
+                              ? `Surrender & leave ${game.name}`
+                              : `Leave ${game.name} lobby`
+                          }
+                          onClick={() => onOpenSurrenderModal(game, myPower)}
+                        >
+                          <Flag size={13} />
+                          <span>
+                            {game.is_sandbox
+                              ? 'Delete'
+                              : game.status === 'active'
+                              ? 'Surrender & Leave'
+                              : 'Leave'}
+                          </span>
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -350,15 +377,32 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
                     <div className="lobby-powers-instruction">
                       {myExistingClaim ? (
-                        <span>
-                          You are commanding{' '}
-                          <strong>
-                            {POWER_METADATA[myExistingClaim.power].crest}{' '}
-                            {POWER_METADATA[myExistingClaim.power].shortName}
-                          </strong>{' '}
-                          in this campaign. Click your country below to enter, or
-                          select an unclaimed nation to switch.
-                        </span>
+                        <div className="lobby-claim-alert-flex">
+                          <span>
+                            You are commanding{' '}
+                            <strong>
+                              {POWER_METADATA[myExistingClaim.power].crest}{' '}
+                              {POWER_METADATA[myExistingClaim.power].shortName}
+                            </strong>{' '}
+                            in this campaign. Click your country below to enter, or
+                            select an unclaimed nation to switch.
+                          </span>
+                          <button
+                            type="button"
+                            className="lobby-claim-leave-btn"
+                            title="Surrender command and leave this match"
+                            onClick={() =>
+                              onOpenSurrenderModal(game, myExistingClaim.power)
+                            }
+                          >
+                            <Flag size={12} />
+                            <span>
+                              {game.status === 'active'
+                                ? 'Surrender & Leave'
+                                : 'Leave Match'}
+                            </span>
+                          </button>
+                        </div>
                       ) : (
                         <span>
                           Select an available Great Power below to claim it and

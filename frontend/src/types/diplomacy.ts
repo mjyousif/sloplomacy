@@ -117,6 +117,7 @@ export interface GameState {
   orders: Record<string, Order>;
   ownership: Record<string, Power>;
   finalized_powers: Power[];
+  surrendered_powers?: Power[];
   issues: ValidationIssue[];
   last_resolution?: SimulationResult | null;
   turn_history: string[];
@@ -239,6 +240,8 @@ export interface GameParticipant {
   display_name: string;
   power: Power;
   joined_at: string;
+  surrendered?: boolean;
+  surrendered_at?: string | null;
 }
 
 export interface MultiplayerGameSummary {
@@ -253,6 +256,7 @@ export interface MultiplayerGameSummary {
   created_at: string;
   participants: Record<string, GameParticipant>;
   finalized_powers: Power[];
+  surrendered_powers?: Power[];
   is_sandbox: boolean;
 }
 
