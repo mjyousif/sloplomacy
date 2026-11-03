@@ -1,10 +1,11 @@
-name: CI
+name: CI / CD Pipeline
 
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,6 +13,7 @@ concurrency:
 
 jobs:
   backend-tests:
+    name: Backend Tests (Pytest)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -32,6 +34,7 @@ jobs:
           pytest -v
 
   frontend-tests:
+    name: Frontend Tests & Build Check
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -50,3 +53,78 @@ jobs:
         run: |
           npm test
           npm run build
+
+  deploy:
+    name: Deploy to Google Cloud Run
+    needs: [backend-tests, frontend-tests]
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Deployment Secrets
+        run: |
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            echo "::error::Missing secret 'GCP_PROJECT_ID'. Add it under GitHub Repo Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "::error::Missing secret 'GCP_SA_KEY'. Add it under GitHub Repo Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build & Deploy Unified Container
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          REGION: ${{ secrets.GCP_REGION || 'us-central1' }}
+          SERVICE_NAME: ${{ secrets.GCP_SERVICE_NAME || 'diplomacy-1901' }}
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          echo "Target Project: $PROJECT_ID"
+          echo "Target Region : $REGION"
+          echo "Target Service: $SERVICE_NAME"
+          
+          IMAGE_TAG="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:${{ github.sha }}"
+          LATEST_TAG="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest"
+
+          # 1. Build and push container with Cloud Build
+          echo "Building container with Google Cloud Build..."
+          gcloud builds submit \
+            --config=cloudbuild.yaml \
+            --substitutions="_SUPABASE_URL=${SUPABASE_URL},_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},_IMAGE_TAG=${IMAGE_TAG}" \
+            --project="$PROJECT_ID"
+
+          # Also tag as latest
+          gcloud container images add-tag "$IMAGE_TAG" "$LATEST_TAG" --quiet || true
+
+          # 3. Deploy container revision to Cloud Run
+          echo "Deploying to Cloud Run..."
+          gcloud run deploy "$SERVICE_NAME" \
+            --image "$IMAGE_TAG" \
+            --region "$REGION" \
+            --project "$PROJECT_ID" \
+            --platform managed \
+            --allow-unauthenticated \
+            --min-instances 0 \
+            --max-instances 3 \
+            --memory 512Mi \
+            --port 8080 \
+            --set-env-vars "VITE_SUPABASE_URL=${SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
+
+          # 4. Extract and report public service URL
+          SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format "value(status.url)")
+          echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service Name:** \`$SERVICE_NAME\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Public URL:** [$SERVICE_URL]($SERVICE_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** \`$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
+          echo "Live URL: $SERVICE_URL"
