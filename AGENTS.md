@@ -236,17 +236,20 @@ The game cycles through three standard phases per year:
   - **Top-Level Navigation**: Ensure newly added documents are indexed in both [README.md](README.md) and [docs/README.md](docs/README.md).
 
 ### 2. Preserve Type Contracts
-- rontend/src/types/diplomacy.ts must strictly mirror ackend/models.py.
+- `frontend/src/types/diplomacy.ts` must strictly mirror `backend/models.py`.
 - Whenever adding fields or modifying schemas, update both files concurrently.
-- Always run 
-px tsc --noEmit before committing frontend modifications.
+- Always run `npx tsc --noEmit` before committing frontend modifications.
 
 ### 3. Run Comprehensive Verification
 - **Backend Tests**: Run python -m pytest backend/ -v (must pass all 7 test suites: adjudicator, admin, ai_and_private_lobbies, api_integration, engine, surrender_leave, validator).
-- **Frontend Verification**: Run 
-pm test (Vitest) and 
-pm run build (Vite + TypeScript) in rontend/.
+- **Frontend Verification**: Run `npm test` (Vitest) and `npm run build` (Vite + TypeScript) in `frontend/`.
 
 ### 4. Preserve Documentation & Code Integrity
 - Retain all existing code comments, docstrings, and architectural explanations unless directly superseded by new logic.
 - Do not produce stale or misleading documentation when authoring or refactoring features.
+
+### 5. Pull Request & Branch Protection Governance
+- **Branch Protection on `main`**: Direct pushes to `main` are prohibited. All modifications must be submitted via pull request.
+- **Mandatory Review**: PRs require at least 1 approving code review before merging (`required_approving_review_count: 1`). Pushing new commits automatically dismisses previous reviews.
+- **CI Quality Gates**: PRs must pass `Backend Tests (Pytest)` and `Frontend Tests & Build Check` before they are eligible for merge.
+- **Squash & Merge & Auto-Delete**: Branches are squash-merged into `main` using PR titles and descriptions, and head branches are automatically deleted upon merge (`delete_branch_on_merge: true`).

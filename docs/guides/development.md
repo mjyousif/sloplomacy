@@ -136,6 +136,21 @@ npm run build
 
 ---
 
+## Repository Governance & Branch Protection (`main`)
+
+The `main` branch is protected with automated quality gates and configuration-as-code managed via [`.github/settings.yml`](../../.github/settings.yml):
+
+- **Pull Request Required**: Direct pushes to `main` are blocked; all changes must arrive via a pull request.
+- **Mandatory PR Approvals**: Requires at least 1 approving code review before merging (`required_approving_review_count: 1`).
+- **Dismiss Stale Approvals**: New commits pushed to an open pull request automatically invalidate previous approvals.
+- **Required Status Checks**: Continuous integration checks must pass prior to merge:
+  - `Backend Tests (Pytest)`
+  - `Frontend Tests & Build Check`
+- **Squash and Merge Enforced**: All PRs are squash-merged into clean, single-commit summaries using the PR title and description body. Merge commits and rebase merges are disabled.
+- **Automatic Branch Cleanup**: Head branches are automatically deleted upon PR merge (`delete_branch_on_merge: true`).
+
+---
+
 ## Troubleshooting & FAQ
 
 ### Port 8000 or 5173 Already in Use
