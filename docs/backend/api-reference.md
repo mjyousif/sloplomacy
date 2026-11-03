@@ -1,0 +1,231 @@
+# Backend REST API Reference
+
+The backend exposes a JSON REST API under the `/api` prefix on port `8000`. All requests and responses use standard `application/json` formatting. CORS is configured to accept requests from all origins (`allow_origins=["*"]`) for local web client communication.
+
+---
+
+## Endpoint Summary
+
+| Method | Endpoint | Description | Request Body | Response Model |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/api/game` | Fetch current game state and province topology dictionary | *None* | `GameBootstrapResponse` |
+| `POST` | `/api/power` | Switch active viewing power | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/sandbox/enter` | Checkpoint real game state and activate Sandbox Mode | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/sandbox/exit` | Revert sandbox checkpoint and clear foreign pre-moves | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/sandbox/clear-foreign` | Reset all foreign hypothetical orders to default HOLD | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/order` | Submit or update an order for a single military unit | `SingleOrderUpdateRequest` | `GameState` |
+| `POST` | `/api/orders/batch` | Update multiple orders simultaneously | `OrderSubmissionRequest` | `GameState` |
+| `POST` | `/api/orders/confirm-all` | Mark all orders of a given power as explicitly confirmed | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/finalize` | Pre-flight sanity check and finalize power's orders | `FinalizeRequest` | `FinalizeResponse` |
+| `POST` | `/api/unfinalize` | Unlock finalized orders for subsequent editing | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/simulate` | Execute non-destructive tactical preview resolution | *None* | `SimulationResult` |
+| `POST` | `/api/adjudicate` | Commit orders, resolve combat, advance season | *None* | `GameState` |
+| `POST` | `/api/scenario` | Reset board and load predefined tactical scenario | `ScenarioRequest` | `GameState` |
+
+---
+
+## Detailed Specifications
+
+### 1. `GET /api/game`
+Bootstraps the client by returning the full current `GameState` along with the complete static dictionary of all 76 `PROVINCES` (including coastline and adjacency rules).
+
+#### Response (`GameBootstrapResponse`):
+```json
+{
+  "state": {
+    "game_id": "proto_1901",
+    "season": "Spring",
+    "year": 1901,
+    "phase": "Movement",
+    "scenario_id": "standard_1901",
+    "active_power": "FRANCE",
+    "units": [...],
+    "orders": {...},
+    "ownership": {...},
+    "finalized_powers": [],
+    "issues": [...],
+    "last_resolution": {...},
+    "turn_history": ["Game initialized — Spring 1901 Diplomatic & Movement Phase."]
+  },
+  "provinces": {
+    "PAR": {
+      "id": "PAR",
+      "name": "Paris",
+      "type": "LAND",
+      "is_supply_center": true,
+      "home_power": "FRANCE",
+      "coasts": [],
+      "army_adj": ["BRE", "PIC", "BUR", "GAS"],
+      "fleet_adj": {}
+    },
+    ...
+  }
+}
+```
+
+---
+
+### 2. `POST /api/power`
+Switches the active perspective power. If an unfinalized change occurred, the active power field is updated and diagnostics are re-run against the new perspective.
+
+#### Request (`SetPowerRequest`):
+```json
+{
+  "power": "ENGLAND"
+}
+```
+
+---
+
+### 3. `POST /api/sandbox/enter`
+Saves an in-memory deep copy of `CURRENT_GAME` into `SANDBOX_CHECKPOINT`. Subsequent multi-power commands can be issued freely.
+
+#### Request (`SetPowerRequest`):
+```json
+{
+  "power": "FRANCE"
+}
+```
+
+---
+
+### 4. `POST /api/sandbox/exit`
+Exits hypothetical Sandbox Mode. If turns were simulated or stepped forward, the pre-sandbox turn checkpoint is restored. All orders belonging to foreign powers are reset to `HOLD`. Orders created by the active power during the current turn are preserved.
+
+#### Request (`SetPowerRequest`):
+```json
+{
+  "power": "FRANCE"
+}
+```
+
+---
+
+### 5. `POST /api/sandbox/clear-foreign`
+Resets all orders belonging to other powers back to default unconfirmed `HOLD` without rolling back the player's own hypothetical moves.
+
+#### Request (`SetPowerRequest`):
+```json
+{
+  "power": "FRANCE"
+}
+```
+
+---
+
+### 6. `POST /api/order`
+Creates or updates the order for a single unit. Automatically un-finalizes the owning power if it had previously finalized.
+
+#### Request (`SingleOrderUpdateRequest`):
+```json
+{
+  "order": {
+    "unit_id": "FRA_A_PAR",
+    "power": "FRANCE",
+    "unit_type": "A",
+    "origin": "PAR",
+    "order_type": "MOVE",
+    "target": "BUR",
+    "is_explicit": true
+  },
+  "active_power": "FRANCE"
+}
+```
+
+#### Response:
+Returns the updated `GameState`, including refreshed `issues` and `last_resolution`.
+
+---
+
+### 7. `POST /api/orders/batch`
+Submits an array of orders in a single payload.
+
+#### Request (`OrderSubmissionRequest`):
+```json
+{
+  "power": "FRANCE",
+  "orders": [
+    {
+      "unit_id": "FRA_A_PAR",
+      "power": "FRANCE",
+      "unit_type": "A",
+      "origin": "PAR",
+      "order_type": "MOVE",
+      "target": "BUR",
+      "is_explicit": true
+    },
+    {
+      "unit_id": "FRA_A_MAR",
+      "power": "FRANCE",
+      "unit_type": "A",
+      "origin": "MAR",
+      "order_type": "SUPPORT",
+      "aux_unit_origin": "PAR",
+      "target": "BUR",
+      "is_explicit": true
+    }
+  ]
+}
+```
+
+---
+
+### 8. `POST /api/finalize`
+Performs the pre-finalization tactical sanity check. If severe tactical blunders (such as self-bounces, unmatched supports, or unassigned units) exist, the request returns `requires_confirmation: true` unless `force: true` is supplied.
+
+#### Request (`FinalizeRequest`):
+```json
+{
+  "power": "FRANCE",
+  "force": false
+}
+```
+
+#### Response (`FinalizeResponse`):
+```json
+{
+  "finalized": false,
+  "requires_confirmation": true,
+  "issues": [
+    {
+      "id": "self_bounce_BUR",
+      "severity": "warning",
+      "code": "SELF_BOUNCE",
+      "title": "Self-Bounce in Burgundy (BUR)",
+      "message": "Both FRA_A_PAR and FRA_A_MAR are moving to Burgundy with equal force.",
+      "unit_ids": ["FRA_A_PAR", "FRA_A_MAR"],
+      "provinces": ["BUR", "PAR", "MAR"],
+      "power": "FRANCE"
+    }
+  ],
+  "state": {...}
+}
+```
+
+---
+
+### 9. `POST /api/adjudicate`
+Finalizes the current turn and advances the game clock:
+- Evaluates combat strengths, support cuts, convoys, and dislodgements.
+- Advances `Spring` -> `Fall` of the same year, or `Fall` -> `Spring` of year + 1.
+- In `Fall` turns, updates supply center ownership for newly occupied supply centers.
+- Generates default `HOLD` orders for new unit configurations.
+- Appends an entry to `turn_history`.
+
+#### Response:
+Returns the newly advanced `GameState`.
+
+---
+
+### 10. `POST /api/scenario`
+Resets the board and seeds a scenario.
+- `"standard_1901"`: Standard starting configuration (17 armies, 17 fleets, 34 supply centers).
+- `"tactical_blunders_demo"`: Pre-loads intentional tactical blunders (France self-bouncing in BUR, England unmatched support in NTH) for diagnostic demonstration.
+
+#### Request (`ScenarioRequest`):
+```json
+{
+  "scenario_id": "tactical_blunders_demo",
+  "active_power": "FRANCE"
+}
+```
