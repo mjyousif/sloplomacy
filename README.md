@@ -1,5 +1,14 @@
 # Sloplomacy (1901 Tactical Engine & Atlas)
 
+[![CI](https://github.com/mjyousif/sloplomacy/actions/workflows/ci.yml/badge.svg)](https://github.com/mjyousif/sloplomacy/actions/workflows/ci.yml)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3.0-blue.svg)](LICENSE)
+![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)
+[![Rules: DATC Standard 1901](https://img.shields.io/badge/Rules-DATC_Standard_1901-7952B3)](docs/backend/adjudicator.md)
+
 An interactive web-based tactical adjudicator, move-planner, and map visualizer for standard 1901 Diplomacy.
 
 > **Disclaimer**: *Sloplomacy* is an independent, non-commercial open-source tactical tool. *Diplomacy* is a registered trademark of Hasbro, Inc. This project is not affiliated with, sponsored by, or endorsed by Hasbro, Inc. or Renegade Game Studios. See [ATTRIBUTION.md](ATTRIBUTION.md) for full notices.
