@@ -64,13 +64,13 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   npm run build
   ```
 
-### Cloud Run & Infrastructure (`deploy.*`, `terraform/`)
+### Cloud Run & Infrastructure (`scripts/deploy.*`, `terraform/`)
 - **Automated Scale-to-Zero Deploy**:
   ```powershell
-  .\deploy.ps1 -ProjectId "<gcp-project-id>"
+  .\scripts\deploy.ps1 -ProjectId "<gcp-project-id>"
   ```
   ```bash
-  ./deploy.sh
+  ./scripts/deploy.sh
   ```
 - **Terraform IaC**:
   ```bash
@@ -124,7 +124,12 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 ├── start.ps1 / start.sh       # Native shell runners
 ├── Dockerfile                 # Multi-stage build (Vite build + FastAPI runner)
 ├── cloudbuild.yaml            # Google Cloud Build build & push pipeline
-├── deploy.ps1 / deploy.sh     # Infrastructure deployment automation scripts
+├── scripts/                  # Developer automation & operational QoL scripts
+│   ├── dev.ps1 / dev.sh       # Local fullstack development launcher
+│   ├── test.ps1 / test.sh     # Unified full test suite runner (pytest + vitest + build)
+│   ├── setup.ps1 / setup.sh   # Environment bootstrap (Python venv & npm install)
+│   ├── deploy.ps1 / deploy.sh # Scale-to-zero Cloud Run deployment scripts
+│   └── setup-ci-cd.ps1 / .sh  # GCP IAM & GitHub Actions credentials setup
 ├── terraform/                 # Terraform GCP Cloud Run & Artifact Registry IaC
 │   ├── main.tf
 │   ├── variables.tf

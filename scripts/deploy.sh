@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
+cd "$REPO_ROOT"
+
 echo "=========================================================="
 echo "  Sloplomacy 1901 - Google Cloud Run Automated Deployer   "
 echo "=========================================================="
@@ -49,5 +52,5 @@ SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --
 
 echo "=========================================================="
 echo "  DEPLOYMENT COMPLETE!"
-echo "  Public Live URL: $SERVICE_URL"
 echo "=========================================================="
+echo "Service URL: $SERVICE_URL"

@@ -94,6 +94,17 @@ To test cloud authentication locally rather than default local dev mode:
 
 ## Running the Automated Test Suite
 
+### Unified Test Runner (Single Command)
+Run all backend pytest suites, frontend Vitest unit tests, TypeScript typechecks, and production bundle verification in one shot:
+```powershell
+# Windows
+.\scripts\test.ps1
+```
+```bash
+# Linux / macOS
+./scripts/test.sh
+```
+
 ### Running Backend Tests (`pytest`)
 The backend includes 6 test suites covering the entire engine:
 - `test_engine.py`: Graph symmetry and connectivity.

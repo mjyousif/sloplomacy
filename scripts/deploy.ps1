@@ -15,6 +15,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$RepoRoot = Split-Path -Parent $PSScriptRoot
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "  Sloplomacy 1901 - Google Cloud Run Automated Deployer   " -ForegroundColor Cyan
@@ -46,40 +47,32 @@ Write-Host "[OK] Target GCP Project: $ProjectId" -ForegroundColor Green
 Write-Host "[OK] Target GCP Region : $Region" -ForegroundColor Green
 
 # 2. Resolve Supabase Environment Variables
-$EnvFilePath = Join-Path $PSScriptRoot "frontend\.env"
+$EnvFilePath = Join-Path $RepoRoot "frontend\.env"
 if (Test-Path $EnvFilePath) {
+    Write-Host "[OK] Reading Supabase credentials from $EnvFilePath..." -ForegroundColor Green
     Get-Content $EnvFilePath | ForEach-Object {
         $line = $_.Trim()
-        if ($line -and -not $line.StartsWith("#")) {
-            $parts = $line.Split("=", 2)
-            if ($parts.Length -eq 2) {
-                if ($parts[0] -eq "VITE_SUPABASE_URL" -and -not $SupabaseUrl) {
-                    $SupabaseUrl = $parts[1].Trim()
-                }
-                if ($parts[0] -eq "VITE_SUPABASE_ANON_KEY" -and -not $SupabaseAnonKey) {
-                    $SupabaseAnonKey = $parts[1].Trim()
-                }
+        if ($line -match "^VITE_SUPABASE_URL\s*=\s*(.*)$") {
+            if (-not $SupabaseUrl) {
+                $SupabaseUrl = $matches[1].Trim('"'' ')
+            }
+        }
+        if ($line -match "^VITE_SUPABASE_ANON_KEY\s*=\s*(.*)$") {
+            if (-not $SupabaseAnonKey) {
+                $SupabaseAnonKey = $matches[1].Trim('"'' ')
             }
         }
     }
 }
 
 if (-not $SupabaseUrl -or -not $SupabaseAnonKey) {
-    Write-Host ""
     Write-Host "[!] Notice: Supabase credentials not found in frontend\.env" -ForegroundColor Yellow
-    Write-Host "    If you have a Supabase project, enter the keys below (or press Enter to deploy in local-auth demo mode):" -ForegroundColor Yellow
     if (-not $SupabaseUrl) {
-        $SupabaseUrl = Read-Host "Supabase Project URL (e.g. https://xyz.supabase.co)"
+        $SupabaseUrl = Read-Host "Enter VITE_SUPABASE_URL (press Enter to skip/disable Cloud Auth)"
     }
     if (-not $SupabaseAnonKey -and $SupabaseUrl) {
-        $SupabaseAnonKey = Read-Host "Supabase Anon Key"
+        $SupabaseAnonKey = Read-Host "Enter VITE_SUPABASE_ANON_KEY"
     }
-}
-
-if ($SupabaseUrl) {
-    Write-Host "[OK] Supabase configured: $SupabaseUrl" -ForegroundColor Green
-} else {
-    Write-Host "[i] Continuing in standalone demo mode (Supabase can be added anytime later)." -ForegroundColor DarkGray
 }
 
 # 3. Enable Required Google Cloud Services
@@ -95,10 +88,10 @@ Write-Host "--> Building container on Cloud Build ($ImageTag)..." -ForegroundCol
 $buildSuccess = $false
 try {
     gcloud builds submit `
-        --config="$PSScriptRoot\cloudbuild.yaml" `
+        --config="$RepoRoot\cloudbuild.yaml" `
         --substitutions="_SUPABASE_URL=$SupabaseUrl,_SUPABASE_ANON_KEY=$SupabaseAnonKey,_IMAGE_TAG=$ImageTag" `
         --project $ProjectId `
-        $PSScriptRoot
+        $RepoRoot
     $buildSuccess = ($LASTEXITCODE -eq 0)
 } catch {
     Write-Host "[!] Build failed: $_" -ForegroundColor Red
@@ -114,48 +107,29 @@ if (-not $buildSuccess) {
 Write-Host ""
 Write-Host "--> Deploying service to Google Cloud Run..." -ForegroundColor Cyan
 
-$envList = @()
-if ($SupabaseUrl) {
-    $envList += "VITE_SUPABASE_URL=$SupabaseUrl"
-}
-if ($SupabaseAnonKey) {
-    $envList += "VITE_SUPABASE_ANON_KEY=$SupabaseAnonKey"
-}
+$envVars = "VITE_SUPABASE_URL=$SupabaseUrl,VITE_SUPABASE_ANON_KEY=$SupabaseAnonKey"
 
-if ($envList.Count -gt 0) {
-    $envArg = ($envList -join ",")
-    gcloud run deploy $ServiceName `
-        --image $ImageTag `
-        --region $Region `
-        --project $ProjectId `
-        --platform managed `
-        --allow-unauthenticated `
-        --min-instances 0 `
-        --max-instances 3 `
-        --memory 512Mi `
-        --set-env-vars $envArg
-} else {
-    gcloud run deploy $ServiceName `
-        --image $ImageTag `
-        --region $Region `
-        --project $ProjectId `
-        --platform managed `
-        --allow-unauthenticated `
-        --min-instances 0 `
-        --max-instances 3 `
-        --memory 512Mi
-}
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[!] Cloud Run deployment failed." -ForegroundColor Red
-    exit 1
-}
+gcloud run deploy $ServiceName `
+    --image $ImageTag `
+    --region $Region `
+    --project $ProjectId `
+    --platform managed `
+    --allow-unauthenticated `
+    --min-instances 0 `
+    --max-instances 3 `
+    --memory 512Mi `
+    --port 8080 `
+    --set-env-vars "$envVars"
 
 # 6. Retrieve Service URL
-$ServiceUrl = (gcloud run services describe $ServiceName --region $Region --project $ProjectId --format "value(status.url)")
+$ServiceUrl = (gcloud run services describe $ServiceName --region $Region --project $ProjectId --format "value(status.url)").Trim()
 
 Write-Host ""
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "  SUCCESSFULLY DEPLOYED TO GOOGLE CLOUD RUN!             " -ForegroundColor Green
-Write-Host "  Public Live URL: $ServiceUrl" -ForegroundColor Cyan
+Write-Host "  DEPLOYMENT SUCCESSFUL!                                  " -ForegroundColor Green
+Write-Host "==========================================================" -ForegroundColor Green
+Write-Host "Service URL: $ServiceUrl" -ForegroundColor Cyan
+Write-Host "Live App   : $ServiceUrl" -ForegroundColor Cyan
+Write-Host "API Docs   : $ServiceUrl/docs" -ForegroundColor Cyan
+Write-Host "Scale Mode : Scale-to-Zero (0 idle instances = $0 cost)   " -ForegroundColor DarkGray
 Write-Host "==========================================================" -ForegroundColor Green

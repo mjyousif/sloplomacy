@@ -59,6 +59,14 @@ python quickstart.py
 - `python quickstart.py --setup-only`: Install dependencies without starting servers.
 - `python quickstart.py --test`: Run the backend test suite and verify the frontend build.
 
+### Developer Scripts & QoL Tools (`scripts/`)
+Dedicated scripts for development and operations are available under [`scripts/`](scripts/):
+- **Unified Test Suite**: `.\scripts\test.ps1` *(or `./scripts/test.sh`)* — Runs backend pytest, frontend Vitest, typechecks, and bundle builds.
+- **Environment Setup**: `.\scripts\setup.ps1` *(or `./scripts/setup.sh`)* — Bootstraps Python `.venv` and `frontend/node_modules`.
+- **Local Dev Server**: `.\scripts\dev.ps1` *(or `./scripts/dev.sh`)* — Launches FastAPI and Vite dev servers.
+- **Cloud Run Deployment**: `.\scripts\deploy.ps1` *(or `./scripts/deploy.sh`)* — One-click scale-to-zero container deployment.
+- **CI/CD Setup**: `.\scripts\setup-ci-cd.ps1` *(or `./scripts/setup-ci-cd.sh`)* — Configures GCP IAM credentials for GitHub Actions.
+
 ---
 
 ## Ports & Endpoints

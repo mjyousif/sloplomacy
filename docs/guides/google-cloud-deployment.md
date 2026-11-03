@@ -36,16 +36,16 @@ The repository includes native automated deployment scripts that handle building
 
 ### Windows (PowerShell)
 ```powershell
-.\deploy.ps1 -ProjectId "your-gcp-project-id" -Region "us-central1"
+.\scripts\deploy.ps1 -ProjectId "your-gcp-project-id" -Region "us-central1"
 ```
 Or interactively provide Supabase secrets:
 ```powershell
-.\deploy.ps1 -ProjectId "your-gcp-project-id" -SupabaseUrl "https://<ref>.supabase.co" -SupabaseAnonKey "eyJ..."
+.\scripts\deploy.ps1 -ProjectId "your-gcp-project-id" -SupabaseUrl "https://<ref>.supabase.co" -SupabaseAnonKey "eyJ..."
 ```
 
 ### macOS / Linux / WSL (Bash)
 ```bash
-./deploy.sh
+./scripts/deploy.sh
 ```
 
 ### What the Automated Scripts Do:
@@ -94,9 +94,9 @@ The repository features an automated GitHub Actions pipeline in [`.github/workfl
 ### One-Time CI/CD Setup:
 Run the setup helper script to create the dedicated service account and export credentials:
 ```powershell
-.\setup-ci-cd.ps1
+.\scripts\setup-ci-cd.ps1
 ```
-*(Or on Linux/macOS: `./setup-ci-cd.sh`)*
+*(Or on Linux/macOS: `./scripts/setup-ci-cd.sh`)*
 
 Add the following **Repository Secrets** under **Settings > Secrets and variables > Actions**:
 - `GCP_PROJECT_ID`: Your GCP project ID.
