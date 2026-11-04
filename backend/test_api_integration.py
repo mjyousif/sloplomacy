@@ -563,3 +563,52 @@ def test_reentering_a_saved_sandbox_still_switches_its_power():
     )
 
     assert GAMES[saved].active_power == Power.TURKEY
+
+
+def test_multiplayer_auto_adjudication_on_consensus_finalization():
+    """In multiplayer, resolution automatically executes when all required participants finalize."""
+    # 1. Host creates game as England
+    res_create = client.post(
+        "/api/games",
+        json={"name": "Consensus Test", "creator_power": "ENGLAND", "user_id": "host_george", "email": "king@uk.gov"},
+    )
+    assert res_create.status_code == 200
+    gid = res_create.json()["game_id"]
+
+    # 2. France joins the game
+    res_join = client.post(
+        f"/api/games/{gid}/join",
+        json={"power": "FRANCE", "user_id": "user_napoleon", "email": "napoleon@fr.gov"},
+    )
+    assert res_join.status_code == 200
+    assert res_join.json()["summary"]["status"] == "active"
+
+    # 3. Non-creator France attempts manual adjudication with user credentials -> 403 Forbidden
+    france_headers = {"X-User-Id": "user_napoleon", "X-User-Email": "napoleon@fr.gov"}
+    res_adj_intruder = client.post(f"/api/adjudicate?game_id={gid}", headers=france_headers)
+    assert res_adj_intruder.status_code == 403
+    assert "Administrator access denied" in res_adj_intruder.json()["detail"]
+
+    # 4. France finalizes orders (1 of 2 participants)
+    fin_fra = client.post(
+        f"/api/finalize?game_id={gid}",
+        json={"power": "FRANCE", "force": True},
+    )
+    assert fin_fra.status_code == 200
+    # Still Spring 1901 Movement because England hasn't finalized yet
+    assert fin_fra.json()["state"]["season"] == "Spring"
+    assert fin_fra.json()["state"]["phase"] == "Movement"
+    assert "FRANCE" in fin_fra.json()["state"]["finalized_powers"]
+
+    # 5. England finalizes orders (2 of 2 participants -> consensus reached!)
+    fin_eng = client.post(
+        f"/api/finalize?game_id={gid}",
+        json={"power": "ENGLAND", "force": True},
+    )
+    assert fin_eng.status_code == 200
+    # Phase has automatically resolved and advanced to Fall 1901 Movement!
+    advanced_state = fin_eng.json()["state"]
+    assert advanced_state["season"] == "Fall"
+    assert advanced_state["year"] == 1901
+    assert advanced_state["phase"] == "Movement"
+    assert advanced_state["finalized_powers"] == []

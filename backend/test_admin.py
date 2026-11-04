@@ -81,6 +81,13 @@ def test_admin_security_enforcement():
     )
     assert r6.status_code == 403
 
+    r7 = client.post(
+        f"/api/adjudicate?game_id={game_id}",
+        headers=headers_intruder,
+    )
+    assert r7.status_code == 403
+    assert "Administrator access denied" in r7.json()["detail"]
+
 
 def test_admin_rollback_turn():
     client = TestClient(app)
