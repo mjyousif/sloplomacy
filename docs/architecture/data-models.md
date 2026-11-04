@@ -126,7 +126,7 @@ Complete server snapshot of a game session.
 | `year` | `number` | Game year (e.g., `1901`). |
 | `phase` | `string` | `'Movement'`, `'Retreats'`, or `'Adjustments'`. |
 | `scenario_id` | `string` | Scenario loaded (`'standard_1901'`, etc.). |
-| `active_power` | `Power` | Current user perspective. |
+| `active_power` | `Power` | Selected power in a sandbox game. A multiplayer game is shared by all its players, so this does not identify any of them: each client uses its own claimed seat. |
 | `units` | `Unit[]` | All military units on the board. |
 | `orders` | `Record<string, Order>` | Map of `unit_id` to `Order`. |
 | `ownership` | `Record<string, Power>` | Map of province code to owning Power (supply centers). |
@@ -202,3 +202,30 @@ Used by the match creator to arbitrate games and perform scenario testing:
 - `AdminSpawnUnitRequest`: `{ power, unit_type, province, coast? }`
 - `AdminDestroyUnitRequest`: `{ unit_id }`
 - `AdminSetOwnershipRequest`: `{ province, power? }`
+
+
+---
+
+## Real-Time WebSocket Synchronization Schemas
+
+### `WebSocketGameUpdate`
+Broadcast to connected clients on `/ws/games/{game_id}` whenever orders, finalizations, phase advancements, or player roster changes occur.
+
+```typescript
+interface WebSocketGameUpdate {
+  type: 'game_update';
+  game_id: string;
+  state: GameState;
+  summary: MultiplayerGameSummary | null;
+}
+```
+
+### `WebSocketLobbyUpdate`
+Broadcast to connected clients on `/ws/lobby` whenever a game is created, updated, joined, vacated, or its status changes.
+
+```typescript
+interface WebSocketLobbyUpdate {
+  type: 'lobby_update';
+  games: MultiplayerGameSummary[];
+}
+```

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import './App.css';
 import { AuthModal } from './components/AuthModal';
 import { EuropeMap } from './components/EuropeMap';
@@ -7,7 +7,8 @@ import { MacroSidebar } from './components/MacroSidebar';
 import { AdminToolsModal } from './components/AdminToolsModal';
 import { SanityCheckModal } from './components/SanityCheckModal';
 import { SurrenderModal } from './components/SurrenderModal';
-import { checkIsGameCreator } from './utils/adminHelpers';
+import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
+import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
 import {
   getInitialAuthUser,
   signOutUser,
@@ -24,6 +25,8 @@ import {
   ProvinceInfo,
   SimulationResult,
   ValidationIssue,
+  WebSocketGameUpdate,
+  WebSocketLobbyUpdate,
 } from './types/diplomacy';
 import {
   AlertOctagon,
@@ -90,6 +93,8 @@ export function App() {
     useState<MultiplayerGameSummary | null>(null);
   const [surrenderModalPower, setSurrenderModalPower] = useState<Power | null>(null);
 
+  const playerPower = resolvePlayerPower(viewMode, lockedPower, gameState?.active_power);
+
   const triggerToast = (msg: string) => {
     setToastBanner(msg);
     setTimeout(() => {
@@ -109,6 +114,52 @@ export function App() {
       setSimulationResult(st.last_resolution);
     }
   };
+
+  const handleWsGameUpdate = useCallback(
+    (update: WebSocketGameUpdate) => {
+      if (update.game_id !== activeGameId) return;
+
+      setGameState((prev) => {
+        if (
+          prev &&
+          (prev.season !== update.state.season ||
+            prev.year !== update.state.year ||
+            prev.phase !== update.state.phase)
+        ) {
+          triggerToast(
+            `Phase advanced: ${update.state.season} ${update.state.year} (${update.state.phase})`
+          );
+        }
+        return update.state;
+      });
+
+      if (update.state.last_resolution) {
+        setSimulationResult(update.state.last_resolution);
+      }
+      if (update.summary) {
+        setActiveGameSummary(update.summary);
+      }
+    },
+    [activeGameId]
+  );
+
+  const handleWsLobbyUpdate = useCallback(
+    (update: WebSocketLobbyUpdate) => {
+      setGamesList(update.games);
+      const current = update.games.find((g) => g.game_id === activeGameId);
+      if (current) {
+        setActiveGameSummary(current);
+      }
+    },
+    [activeGameId]
+  );
+
+  const { isConnected: wsConnected } = useDiplomacyWebSocket({
+    activeGameId,
+    viewMode,
+    onGameUpdate: handleWsGameUpdate,
+    onLobbyUpdate: handleWsLobbyUpdate,
+  });
 
   const fetchGamesList = async () => {
     try {
@@ -260,6 +311,7 @@ export function App() {
   };
 
   const handleGenerateAIMoves = async (powers?: Power[], includeActive: boolean = false) => {
+    const foreignPowers = (Object.keys(POWER_METADATA) as Power[]).filter((p) => p !== playerPower);
     try {
       setLoading(true);
       const res = await fetch(
@@ -268,7 +320,7 @@ export function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            powers: powers || null,
+            powers: powers || (includeActive ? null : foreignPowers),
             include_active: includeActive,
           }),
         }
@@ -343,7 +395,7 @@ export function App() {
             name: `${authUser.displayName}'s ${
               gameState?.season || 'Spring'
             } ${gameState?.year || 1901} Study (${
-              POWER_METADATA[gameState?.active_power || 'FRANCE'].shortName
+              POWER_METADATA[playerPower].shortName
             })`,
             user_id: authUser.id,
             email: authUser.email,
@@ -451,10 +503,12 @@ export function App() {
 
   const handleSelectPower = async (power: Power) => {
     // In multiplayer mode, country is locked to the player's claimed power
-    if (viewMode === 'multiplayer' && lockedPower && power !== lockedPower) {
-      triggerToast(
-        `Country locked: You are playing as ${POWER_METADATA[lockedPower].shortName} in this multiplayer campaign.`
-      );
+    if (viewMode === 'multiplayer' && lockedPower) {
+      if (power !== lockedPower) {
+        triggerToast(
+          `Country locked: You are playing as ${POWER_METADATA[lockedPower].shortName} in this multiplayer campaign.`
+        );
+      }
       return;
     }
     try {
@@ -519,14 +573,14 @@ export function App() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: gameState.active_power }),
+          body: JSON.stringify({ power: playerPower }),
         }
       );
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
         triggerToast(
-          `Confirmed all current orders for ${POWER_METADATA[gameState.active_power].shortName}.`
+          `Confirmed all current orders for ${POWER_METADATA[playerPower].shortName}.`
         );
       }
     } catch (e) {
@@ -542,7 +596,7 @@ export function App() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: gameState.active_power }),
+          body: JSON.stringify({ power: playerPower }),
         }
       );
       if (res.ok) {
@@ -565,7 +619,7 @@ export function App() {
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ power: gameState.active_power }),
+            body: JSON.stringify({ power: playerPower }),
           }
         );
         if (res.ok) {
@@ -583,7 +637,7 @@ export function App() {
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ power: gameState.active_power }),
+            body: JSON.stringify({ power: playerPower }),
           }
         );
         if (res.ok) {
@@ -595,7 +649,7 @@ export function App() {
         setSelectedUnitId(null);
         triggerToast(
           `Exited Sandbox Mode — hypothetical foreign moves discarded. Showing only ${
-            POWER_METADATA[gameState.active_power].shortName
+            POWER_METADATA[playerPower].shortName
           }'s real orders.`
         );
       }
@@ -612,7 +666,7 @@ export function App() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: gameState.active_power, force }),
+          body: JSON.stringify({ power: playerPower, force }),
         }
       );
       if (res.ok) {
@@ -624,7 +678,7 @@ export function App() {
         } else {
           setSanityModalOpen(false);
           triggerToast(
-            `${POWER_METADATA[gameState.active_power].name} orders locked & finalized!`
+            `${POWER_METADATA[playerPower].name} orders locked & finalized!`
           );
           fetchGamesList();
         }
@@ -642,7 +696,7 @@ export function App() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: gameState.active_power }),
+          body: JSON.stringify({ power: playerPower }),
         }
       );
       if (res.ok) {
@@ -706,7 +760,7 @@ export function App() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             scenario_id: scenarioId,
-            active_power: gameState?.active_power,
+            active_power: playerPower,
           }),
         }
       );
@@ -746,7 +800,7 @@ export function App() {
   const isGameCreator = checkIsGameCreator(activeGameSummary, authUser, viewMode);
 
   const activePowerIssues = gameState.issues.filter(
-    (i) => i.power === gameState.active_power
+    (i) => i.power === playerPower
   );
   const activeErrors = activePowerIssues.filter((i) => i.severity === 'error');
   const activeWarnings = activePowerIssues.filter((i) => i.severity === 'warning');
@@ -801,7 +855,7 @@ export function App() {
                 <Crown size={13} />
                 <span>
                   {activeGameSummary.name} (
-                  {POWER_METADATA[gameState.active_power].shortName})
+                  {POWER_METADATA[playerPower].shortName})
                 </span>
               </span>
             )}
@@ -865,6 +919,18 @@ export function App() {
 
         {/* Right Header Controls: Board Actions + User Account */}
         <div className="header-right-actions">
+          <div
+            className={`header-ws-badge ${wsConnected ? 'ws-connected' : 'ws-disconnected'}`}
+            title={
+              wsConnected
+                ? `Real-time synchronization connected (${viewMode === 'lobby' ? 'Lobby Feed' : activeGameId})`
+                : 'Connecting to real-time synchronization...'
+            }
+          >
+            <span className={`ws-status-dot ${wsConnected ? 'dot-online' : 'dot-offline'}`} />
+            <span>{wsConnected ? 'Live Sync' : 'Connecting...'}</span>
+          </div>
+
           {viewMode !== 'lobby' && (
             <>
               {viewMode === 'multiplayer' && lockedPower && (
@@ -1000,7 +1066,7 @@ export function App() {
             units={gameState.units}
             orders={gameState.orders}
             ownership={gameState.ownership}
-            activePower={gameState.active_power}
+            activePower={playerPower}
             sandboxMode={sandboxMode}
             selectedUnitId={selectedUnitId}
             hoveredUnitId={hoveredUnitId}
@@ -1024,7 +1090,7 @@ export function App() {
             units={gameState.units}
             orders={gameState.orders}
             ownership={gameState.ownership}
-            activePower={gameState.active_power}
+            activePower={playerPower}
             finalizedPowers={gameState.finalized_powers}
             surrenderedPowers={gameState.surrendered_powers}
             sandboxMode={sandboxMode}
@@ -1070,7 +1136,7 @@ export function App() {
       {/* "ARE YOU SURE?" FINALIZE SANITY CHECK MODAL */}
       <SanityCheckModal
         isOpen={sanityModalOpen}
-        power={gameState.active_power}
+        power={playerPower}
         issues={sanityModalIssues}
         onClose={() => setSanityModalOpen(false)}
         onInspectIssue={(issue) => {

@@ -21,6 +21,7 @@ backend/
 ├── test_api_integration.py  # Full-stack API endpoint integration tests
 ├── test_surrender_leave.py  # Concession, civil disorder, and seat-vacating tests
 ├── test_validator.py        # Blunder detection, friendly fire, and phase-specific validations
+├── test_websocket_sync.py   # Real-time WebSocket room & lobby synchronization tests
 └── requirements.txt         # Python runtime dependencies
 ```
 
@@ -53,6 +54,8 @@ HTTP Request (e.g. POST /api/order?game_id=...)
                ├─► refresh_diagnostics_and_simulation(game)
                │     ├── 1. validator.validate_orders(...) -> list[ValidationIssue]
                │     └── 2. adjudicator.adjudicate_turn(..., is_simulation=True) -> SimulationResult
+               │
+               ├─► ConnectionManager.broadcast_game(...) (WebSocket /ws/games/{id})
                │
                ▼
      Return GameState / Response Model (JSON)

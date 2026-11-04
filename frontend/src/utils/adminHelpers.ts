@@ -1,11 +1,27 @@
 import {
   AuthUser,
   MultiplayerGameSummary,
+  Power,
   ProvinceInfo,
   ProvinceType,
   Unit,
   UnitType,
 } from '../types/diplomacy';
+
+/**
+ * The power this browser is playing. In multiplayer that is the seat the player claimed:
+ * the server's active_power is one field shared by everyone in the game, so it cannot say.
+ */
+export function resolvePlayerPower(
+  viewMode: 'lobby' | 'sandbox' | 'multiplayer',
+  lockedPower: Power | null,
+  serverActivePower: Power | undefined
+): Power {
+  if (viewMode === 'multiplayer' && lockedPower) {
+    return lockedPower;
+  }
+  return serverActivePower ?? 'FRANCE';
+}
 
 export function checkIsGameCreator(
   gameSummary: MultiplayerGameSummary | null,

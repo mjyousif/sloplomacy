@@ -3,9 +3,10 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from collections import defaultdict
+from typing import Any, Dict, List, Optional, Set
 import uuid
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -39,6 +40,8 @@ from models import (
     SimulationResult,
     SingleOrderUpdateRequest,
     SurrenderRequest,
+    WebSocketGameUpdate,
+    WebSocketLobbyUpdate,
     Unit,
     UnitType,
 )
@@ -533,6 +536,102 @@ def verify_admin_access(
         )
 
 
+class ConnectionManager:
+    """Manages active WebSocket connections for game rooms and lobby."""
+
+    def __init__(self) -> None:
+        self.game_connections: Dict[str, Set[WebSocket]] = defaultdict(set)
+        self.lobby_connections: Set[WebSocket] = set()
+
+    async def connect_game(self, game_id: str, websocket: WebSocket) -> None:
+        await websocket.accept()
+        self.game_connections[game_id].add(websocket)
+
+    def disconnect_game(self, game_id: str, websocket: WebSocket) -> None:
+        self.game_connections[game_id].discard(websocket)
+        if not self.game_connections[game_id]:
+            self.game_connections.pop(game_id, None)
+
+    async def connect_lobby(self, websocket: WebSocket) -> None:
+        await websocket.accept()
+        self.lobby_connections.add(websocket)
+
+    def disconnect_lobby(self, websocket: WebSocket) -> None:
+        self.lobby_connections.discard(websocket)
+
+    async def broadcast_game(
+        self,
+        game_id: str,
+        state: Optional[GameState] = None,
+        summary: Optional[MultiplayerGameSummary] = None,
+    ) -> None:
+        connections = self.game_connections.get(game_id)
+        if not connections:
+            return
+
+        if state is None and game_id in GAMES:
+            state = GAMES[game_id]
+        if summary is None and game_id in GAME_SUMMARIES:
+            summary = GAME_SUMMARIES[game_id]
+        if state is None:
+            return
+
+        payload = {
+            "type": "game_update",
+            "game_id": game_id,
+            "state": state.model_dump(mode="json"),
+            "summary": summary.model_dump(mode="json") if summary else None,
+        }
+
+        dead: List[WebSocket] = []
+        for ws in list(connections):
+            try:
+                await ws.send_json(payload)
+            except Exception:
+                dead.append(ws)
+
+        for ws in dead:
+            self.disconnect_game(game_id, ws)
+
+    async def broadcast_lobby(self) -> None:
+        if not self.lobby_connections:
+            return
+
+        for gid in list(GAME_SUMMARIES.keys()):
+            sync_summary(gid)
+
+        payload = {
+            "type": "lobby_update",
+            "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values()],
+        }
+
+        dead: List[WebSocket] = []
+        for ws in list(self.lobby_connections):
+            try:
+                await ws.send_json(payload)
+            except Exception:
+                dead.append(ws)
+
+        for ws in dead:
+            self.disconnect_lobby(ws)
+
+
+manager = ConnectionManager()
+
+
+async def broadcast_game_update(
+    game_id: str,
+    state: Optional[GameState] = None,
+    summary: Optional[MultiplayerGameSummary] = None,
+) -> None:
+    sync_summary(game_id)
+    await manager.broadcast_game(game_id, state=state, summary=summary)
+
+
+async def broadcast_lobby_update() -> None:
+    await manager.broadcast_lobby()
+
+
 class GameBootstrapResponse(BaseModel):
     state: GameState
     provinces: Dict[str, ProvinceInfo]
@@ -562,7 +661,7 @@ def get_game_details(game_id: str):
 
 
 @app.post("/api/games", response_model=MultiplayerGameSummary)
-def create_multiplayer_game(req: CreateGameRequest):
+async def create_multiplayer_game(req: CreateGameRequest):
     """Create a new multiplayer game and assign creator_power to the user."""
     gid = f"mp_{uuid.uuid4().hex[:6]}"
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -602,11 +701,12 @@ def create_multiplayer_game(req: CreateGameRequest):
         has_passcode=has_pw,
     )
     GAME_SUMMARIES[gid] = summary
+    await broadcast_lobby_update()
     return summary
 
 
 @app.post("/api/games/{game_id}/join", response_model=GameBootstrapResponse)
-def join_multiplayer_game(game_id: str, req: JoinGameRequest):
+async def join_multiplayer_game(game_id: str, req: JoinGameRequest):
     """Claim a power in a multiplayer match (or re-enter if already claimed by this user)."""
     game_state = resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
@@ -655,18 +755,23 @@ def join_multiplayer_game(game_id: str, req: JoinGameRequest):
             f"Envoy {display_name} has assumed sovereign command of {req.power.value} from Civil Disorder."
         )
 
-    game_state.active_power = req.power
+    # Everyone in a multiplayer game shares this state, so claiming a seat must not change it:
+    # only the joiner's own response reports their power. A saved sandbox has a single player.
+    if summary.is_sandbox:
+        game_state.active_power = req.power
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
+    await broadcast_game_update(game_id, game_state, summary)
+    await broadcast_lobby_update()
     return GameBootstrapResponse(
-        state=game_state,
+        state=game_state.model_copy(update={"active_power": req.power}),
         provinces=PROVINCES,
         summary=summary,
     )
 
 
 @app.post("/api/games/{game_id}/leave", response_model=GameBootstrapResponse)
-def leave_game(game_id: str, req: LeaveGameRequest):
+async def leave_game(game_id: str, req: LeaveGameRequest):
     """Leave a multiplayer match (vacating claimed power) or remove a saved sandbox scenario."""
     game_state = resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
@@ -680,6 +785,7 @@ def leave_game(game_id: str, req: LeaveGameRequest):
             GAME_SUMMARIES.pop(game_id, None)
             GAME_HISTORY.pop(game_id, None)
             SANDBOX_CHECKPOINTS.pop(game_id, None)
+            await broadcast_lobby_update()
             return GameBootstrapResponse(
                 state=game_state,
                 provinces=PROVINCES,
@@ -726,6 +832,8 @@ def leave_game(game_id: str, req: LeaveGameRequest):
 
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
+    await broadcast_game_update(game_id, game_state, summary)
+    await broadcast_lobby_update()
     return GameBootstrapResponse(
         state=game_state,
         provinces=PROVINCES,
@@ -734,7 +842,7 @@ def leave_game(game_id: str, req: LeaveGameRequest):
 
 
 @app.post("/api/games/{game_id}/surrender", response_model=GameBootstrapResponse)
-def surrender_power(game_id: str, req: SurrenderRequest):
+async def surrender_power(game_id: str, req: SurrenderRequest):
     """Concede defeat/surrender sovereign command of a Great Power into Civil Disorder."""
     game_state = resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
@@ -781,6 +889,8 @@ def surrender_power(game_id: str, req: SurrenderRequest):
 
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
+    await broadcast_game_update(game_id, game_state, summary)
+    await broadcast_lobby_update()
     return GameBootstrapResponse(
         state=game_state,
         provinces=PROVINCES,
@@ -789,7 +899,7 @@ def surrender_power(game_id: str, req: SurrenderRequest):
 
 
 @app.post("/api/games/save-sandbox", response_model=MultiplayerGameSummary)
-def save_sandbox_to_account(req: SaveSandboxRequest, game_id: Optional[str] = Query(default=None)):
+async def save_sandbox_to_account(req: SaveSandboxRequest, game_id: Optional[str] = Query(default=None)):
     """Save the current sandbox game state into the authenticated user's personal games."""
     source_game = resolve_game(game_id)
     new_gid = f"saved_{uuid.uuid4().hex[:8]}"
@@ -825,6 +935,7 @@ def save_sandbox_to_account(req: SaveSandboxRequest, game_id: Optional[str] = Qu
         is_sandbox=True,
     )
     GAME_SUMMARIES[new_gid] = summary
+    await broadcast_lobby_update()
     return summary
 
 
@@ -842,7 +953,7 @@ def get_game(game_id: Optional[str] = Query(default=None)):
 
 
 @app.post("/api/power", response_model=GameState)
-def set_active_power(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
+async def set_active_power(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
     gid = game.game_id
     game.active_power = req.power
@@ -850,22 +961,24 @@ def set_active_power(req: SetPowerRequest, game_id: Optional[str] = Query(defaul
     if checkpoint is not None:
         checkpoint.active_power = req.power
     refresh_diagnostics_and_simulation(game)
+    await broadcast_game_update(gid, game)
     return game
 
 
 @app.post("/api/sandbox/enter", response_model=GameState)
-def enter_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
+async def enter_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
     """Save a checkpoint of the real game state when entering Sandbox Pre-Move Mode."""
     game = resolve_game(game_id)
     gid = game.game_id
     game.active_power = req.power
     SANDBOX_CHECKPOINTS[gid] = game.model_copy(deep=True)
     refresh_diagnostics_and_simulation(game)
+    await broadcast_game_update(gid, game)
     return game
 
 
 @app.post("/api/sandbox/exit", response_model=GameState)
-def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
+async def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
     """
     Exit Sandbox Pre-Move Mode:
     - If the user stepped turns forward in the sandbox, restore the pre-sandbox turn checkpoint.
@@ -901,11 +1014,12 @@ def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(defau
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await broadcast_game_update(gid, game)
     return game
 
 
 @app.post("/api/sandbox/clear-foreign", response_model=GameState)
-def clear_foreign_pre_moves(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
+async def clear_foreign_pre_moves(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
     """Reset all hypothetical orders for powers other than req.power back to default."""
     game = resolve_game(game_id)
     default_ords = create_default_orders(game.units, game.phase, game.builds, game.retreats)
@@ -913,11 +1027,12 @@ def clear_foreign_pre_moves(req: SetPowerRequest, game_id: Optional[str] = Query
         if def_ord.power != req.power:
             game.orders[ord_id] = def_ord
     refresh_diagnostics_and_simulation(game)
+    await broadcast_game_update(game.game_id, game)
     return game
 
 
 @app.post("/api/sandbox/ai-orders", response_model=GameState)
-def generate_sandbox_ai_orders(
+async def generate_sandbox_ai_orders(
     req: Optional[GenerateAIOrdersRequest] = None,
     game_id: Optional[str] = Query(default=None),
 ):
@@ -945,11 +1060,12 @@ def generate_sandbox_ai_orders(
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await broadcast_game_update(game.game_id, game)
     return game
 
 
 @app.post("/api/sandbox/ai-step", response_model=GameState)
-def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
+async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
     """Auto-plan unassigned foreign powers with tactical AI and advance to next phase."""
     game = resolve_game(game_id)
     powers_needing_orders = [
@@ -971,11 +1087,11 @@ def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
     for ord_id, ord_obj in ai_orders.items():
         game.orders[ord_id] = ord_obj
 
-    return adjudicate_and_advance(game_id=game.game_id)
+    return await adjudicate_and_advance(game_id=game.game_id)
 
 
 @app.post("/api/order", response_model=GameState)
-def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[str] = Query(default=None)):
+async def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
     validate_order_references(req.order)
     unit_map = {u.id: u for u in game.units}
@@ -1051,11 +1167,12 @@ def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[str] = 
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await broadcast_game_update(game.game_id, game)
     return game
 
 
 @app.post("/api/orders/batch", response_model=GameState)
-def update_batch_orders(req: OrderSubmissionRequest, game_id: Optional[str] = Query(default=None)):
+async def update_batch_orders(req: OrderSubmissionRequest, game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
     # Check the whole batch first so that one bad order cannot leave it half applied.
     for o in req.orders:
@@ -1081,21 +1198,23 @@ def update_batch_orders(req: OrderSubmissionRequest, game_id: Optional[str] = Qu
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await broadcast_game_update(game.game_id, game)
     return game
 
 
 @app.post("/api/orders/confirm-all", response_model=GameState)
-def confirm_all_power_orders(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
+async def confirm_all_power_orders(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
     for ord_id, ord_obj in game.orders.items():
         if ord_obj.power == req.power:
             ord_obj.is_explicit = True
     refresh_diagnostics_and_simulation(game)
+    await broadcast_game_update(game.game_id, game)
     return game
 
 
 @app.post("/api/finalize", response_model=FinalizeResponse)
-def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Query(default=None)):
+async def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
     power_issues = validate_orders(
         game.units,
@@ -1125,6 +1244,8 @@ def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Query(d
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await broadcast_game_update(game.game_id, game)
+    await broadcast_lobby_update()
     return FinalizeResponse(
         finalized=True,
         requires_confirmation=False,
@@ -1134,12 +1255,14 @@ def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Query(d
 
 
 @app.post("/api/unfinalize", response_model=GameState)
-def unfinalize_power_orders(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
+async def unfinalize_power_orders(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await broadcast_game_update(game.game_id, game)
+    await broadcast_lobby_update()
     return game
 
 
@@ -1152,7 +1275,7 @@ def simulate_current_orders(game_id: Optional[str] = Query(default=None)):
 
 
 @app.post("/api/adjudicate", response_model=GameState)
-def adjudicate_and_advance(game_id: Optional[str] = Query(default=None)):
+async def adjudicate_and_advance(game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
     gid = game.game_id
 
@@ -1198,11 +1321,13 @@ def adjudicate_and_advance(game_id: Optional[str] = Query(default=None)):
         game.turn_history.insert(0, f"{result.winner.value} has won the game in {prev_label}.")
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await broadcast_game_update(game.game_id, game)
+    await broadcast_lobby_update()
     return game
 
 
 @app.post("/api/scenario", response_model=GameState)
-def load_scenario(req: ScenarioRequest, game_id: Optional[str] = Query(default=None)):
+async def load_scenario(req: ScenarioRequest, game_id: Optional[str] = Query(default=None)):
     if req.scenario_id not in SCENARIO_IDS:
         raise HTTPException(status_code=400, detail=f"Unknown scenario '{req.scenario_id}'.")
     current = resolve_game(game_id)
@@ -1212,6 +1337,8 @@ def load_scenario(req: ScenarioRequest, game_id: Optional[str] = Query(default=N
     power = req.active_power or current.active_power
     GAMES[gid] = build_scenario(req.scenario_id, power, gid)
     sync_summary(gid)
+    await broadcast_game_update(gid, GAMES[gid])
+    await broadcast_lobby_update()
     return GAMES[gid]
 
 
@@ -1254,7 +1381,7 @@ def get_admin_status(
 
 
 @app.post("/api/admin/rollback", response_model=GameState)
-def admin_rollback_turn(
+async def admin_rollback_turn(
     req: Optional[AdminRollbackRequest] = None,
     game_id: Optional[str] = Query(default=None),
     x_user_id: Optional[str] = Header(default=None),
@@ -1275,11 +1402,13 @@ def admin_rollback_turn(
     GAMES[gid] = prev_state
     refresh_diagnostics_and_simulation(prev_state)
     sync_summary(gid)
+    await broadcast_game_update(gid, prev_state)
+    await broadcast_lobby_update()
     return prev_state
 
 
 @app.post("/api/admin/set-turn", response_model=GameState)
-def admin_set_turn(
+async def admin_set_turn(
     req: AdminSetTurnRequest,
     game_id: Optional[str] = Query(default=None),
     x_user_id: Optional[str] = Header(default=None),
@@ -1307,11 +1436,13 @@ def admin_set_turn(
     game.turn_history.insert(0, f"[ADMIN OVERRIDE] Adjusted game clock to {req.season} {req.year} {req.phase} Phase.")
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await broadcast_game_update(gid, game)
+    await broadcast_lobby_update()
     return game
 
 
 @app.post("/api/admin/unit/move", response_model=GameState)
-def admin_move_unit(
+async def admin_move_unit(
     req: AdminMoveUnitRequest,
     game_id: Optional[str] = Query(default=None),
     x_user_id: Optional[str] = Header(default=None),
@@ -1370,11 +1501,12 @@ def admin_move_unit(
     )
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await broadcast_game_update(gid, game)
     return game
 
 
 @app.post("/api/admin/unit/spawn", response_model=GameState)
-def admin_spawn_unit(
+async def admin_spawn_unit(
     req: AdminSpawnUnitRequest,
     game_id: Optional[str] = Query(default=None),
     x_user_id: Optional[str] = Header(default=None),
@@ -1442,11 +1574,12 @@ def admin_spawn_unit(
     )
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await broadcast_game_update(gid, game)
     return game
 
 
 @app.post("/api/admin/unit/destroy", response_model=GameState)
-def admin_destroy_unit(
+async def admin_destroy_unit(
     req: AdminDestroyUnitRequest,
     game_id: Optional[str] = Query(default=None),
     x_user_id: Optional[str] = Header(default=None),
@@ -1469,11 +1602,12 @@ def admin_destroy_unit(
     )
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await broadcast_game_update(gid, game)
     return game
 
 
 @app.post("/api/admin/ownership", response_model=GameState)
-def admin_set_ownership(
+async def admin_set_ownership(
     req: AdminSetOwnershipRequest,
     game_id: Optional[str] = Query(default=None),
     x_user_id: Optional[str] = Header(default=None),
@@ -1499,11 +1633,13 @@ def admin_set_ownership(
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await broadcast_game_update(gid, game)
+    await broadcast_lobby_update()
     return game
 
 
 @app.post("/api/admin/unfinalize-all", response_model=GameState)
-def admin_unfinalize_all(
+async def admin_unfinalize_all(
     game_id: Optional[str] = Query(default=None),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
@@ -1516,7 +1652,79 @@ def admin_unfinalize_all(
     game.turn_history.insert(0, "[ADMIN OVERRIDE] Unlocked orders for all Great Powers.")
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await broadcast_game_update(gid, game)
+    await broadcast_lobby_update()
     return game
+
+
+@app.websocket("/ws/games/{game_id}")
+async def ws_game_endpoint(websocket: WebSocket, game_id: str):
+    if game_id not in GAMES:
+        await websocket.close(code=4004)
+        return
+
+    await manager.connect_game(game_id, websocket)
+    sync_summary(game_id)
+    game = GAMES[game_id]
+    summary = GAME_SUMMARIES.get(game_id)
+    try:
+        await websocket.send_json({
+            "type": "game_update",
+            "game_id": game_id,
+            "state": game.model_dump(mode="json"),
+            "summary": summary.model_dump(mode="json") if summary else None,
+        })
+        while True:
+            data = await websocket.receive_json()
+            if isinstance(data, dict):
+                msg_type = data.get("type")
+                if msg_type == "ping":
+                    await websocket.send_json({"type": "pong"})
+                elif msg_type == "refresh":
+                    g = GAMES.get(game_id)
+                    s = GAME_SUMMARIES.get(game_id)
+                    if g:
+                        await websocket.send_json({
+                            "type": "game_update",
+                            "game_id": game_id,
+                            "state": g.model_dump(mode="json"),
+                            "summary": s.model_dump(mode="json") if s else None,
+                        })
+    except WebSocketDisconnect:
+        manager.disconnect_game(game_id, websocket)
+    except Exception:
+        manager.disconnect_game(game_id, websocket)
+
+
+@app.websocket("/ws/lobby")
+async def ws_lobby_endpoint(websocket: WebSocket):
+    await manager.connect_lobby(websocket)
+    try:
+        for gid in list(GAME_SUMMARIES.keys()):
+            sync_summary(gid)
+        await websocket.send_json({
+            "type": "lobby_update",
+            "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values()],
+        })
+        while True:
+            data = await websocket.receive_json()
+            if isinstance(data, dict):
+                msg_type = data.get("type")
+                if msg_type == "ping":
+                    await websocket.send_json({"type": "pong"})
+                elif msg_type == "refresh":
+                    for gid in list(GAME_SUMMARIES.keys()):
+                        sync_summary(gid)
+                    await websocket.send_json({
+                        "type": "lobby_update",
+                        "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values()],
+                    })
+    except WebSocketDisconnect:
+        manager.disconnect_lobby(websocket)
+    except Exception:
+        manager.disconnect_lobby(websocket)
+
+
 # Mount static frontend build when running in production container
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(STATIC_DIR):
@@ -1526,7 +1734,7 @@ if os.path.exists(STATIC_DIR):
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        if full_path.startswith("api/") or full_path in ("docs", "openapi.json", "redoc"):
+        if full_path.startswith("api/") or full_path.startswith("ws/") or full_path in ("docs", "openapi.json", "redoc"):
             raise HTTPException(status_code=404, detail="Not Found")
         file_path = resolve_static_path(STATIC_DIR, full_path)
         if file_path:

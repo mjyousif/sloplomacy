@@ -11,7 +11,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `viewMode` | `'lobby' \| 'sandbox' \| 'multiplayer'` | Router | High-level application mode (match browser vs tactical board). |
 | `activeGameId` | `string` | Scoping | ID of the active game session (default: `'proto_1901'`). |
 | `currentGameSummary`| `MultiplayerGameSummary \| null` | Room | Metadata for current multiplayer match or saved sandbox. |
-| `lockedPower` | `Power \| null` | Match | Claimed sovereign power for active player in multiplayer matches. |
+| `lockedPower` | `Power \| null` | Match | Claimed sovereign power for active player in multiplayer matches. `playerPower`, derived by `resolvePlayerPower`, is what the app uses as the player's power: this seat in multiplayer, `gameState.active_power` in a sandbox. |
 | `authUser` | `AuthUser \| null` | Auth | Authenticated user profile from Supabase (or local dev mode). |
 | `authModalOpen` | `boolean` | Modal | Controls visibility of Supabase auth dialogue. |
 | `gamesList` | `MultiplayerGameSummary[]` | Lobby | Roster of public matches, lobbies, and sandboxes. |
@@ -29,6 +29,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `sanityModalOpen` | `boolean` | Modal | Controls visibility of pre-finalization warning modal. |
 | `sanityModalIssues` | `ValidationIssue[]` | Modal | Issues displayed inside the Sanity Check modal. |
 | `toastBanner` | `string \| null` | Banner | Auto-expiring toast message for user notifications. |
+| `wsConnected` | `boolean` | Network | Active real-time WebSocket connection to room feed or lobby. |
 
 ---
 
@@ -46,7 +47,7 @@ EuropeMap.tsx or MacroSidebar.tsx
 App.handleUpdateOrder(order)
          │
          ├──► HTTP POST /api/order?game_id={activeGameId}
-         │      Payload: { order: Order, active_power: Power }
+         │      Payload: { order: Order }
          │
          ├──► HTTP 200 OK: Returns refreshed authoritative GameState
          │
@@ -68,6 +69,7 @@ App.applyServerState(st)
    - Users create custom rooms or isolated sandboxes.
 3. **Joining & Claiming Seats (`POST /api/games/{id}/join`)**:
    - Claims an available Great Power for the user, setting `lockedPower` so moves cannot be submitted for rival nations.
+   - Joining never changes what other players see: the server leaves the shared game's `active_power` alone in multiplayer.
 4. **Surrender & Civil Disorder (`POST /api/games/{id}/surrender`)**:
    - When a player concedes, the power enters Civil Disorder, defaulting to passive hold without player command.
 5. **Leaving / Vacating (`POST /api/games/{id}/leave`)**:
@@ -95,3 +97,38 @@ When a user enables **Sandbox Mode** in the header:
 4. **Clearing Foreign Orders**:
    - Dispatches `POST /api/sandbox/clear-foreign?game_id={activeGameId}`.
    - Cleans all hypothetical enemy orders while remaining in Sandbox mode.
+
+
+---
+
+## Real-Time WebSocket Synchronization (`useDiplomacyWebSocket`)
+
+To guarantee seamless multiplayer coordination, the frontend maintains a persistent WebSocket connection via the custom hook `useDiplomacyWebSocket`:
+
+```
+                           CLIENT BROWSER (App.tsx)
+                                      │
+            ┌─────────────────────────┴─────────────────────────┐
+            │ viewMode === 'lobby'                              │ viewMode !== 'lobby'
+            ▼                                                   ▼
+     ws://.../ws/lobby                                   ws://.../ws/games/{activeGameId}
+            │                                                   │
+            ▼                                                   ▼
+  handleWsLobbyUpdate                                  handleWsGameUpdate
+  - Update gamesList                                   - Update gameState
+  - Update participant counts                          - Update activeGameSummary
+                                                       - Trigger phase-advance toast
+```
+
+### Key Capabilities:
+1. **Live Room State Synchronization**:
+   - Order submissions, finalizations, adjudications, and admin overrides by other players are immediately pushed to all connected clients without page reloads.
+2. **Phase Advance Alerts**:
+   - Automatically detects when `season`, `year`, or `phase` transitions occur and triggers a persistent toast announcement to notify the commander.
+3. **Connection Resilience**:
+   - Sends a `{ type: 'ping' }` heartbeat every 25 seconds to keep proxies and serverless Cloud Run instances active.
+   - Automatically reconnects with exponential backoff on unexpected connection drops.
+4. **Visual Telemetry**:
+   - The header displays a real-time badge (`.header-ws-badge`):
+     - `Live Sync` with a pulsating green indicator when actively connected.
+     - `Connecting...` with amber indicator during connection attempts or fallbacks.
