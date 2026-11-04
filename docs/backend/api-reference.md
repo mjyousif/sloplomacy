@@ -442,6 +442,7 @@ Establishes a persistent, low-latency WebSocket connection scoped to a specific 
   - Whenever an order is submitted or changed (`/api/order`, `/api/orders/batch`, `/api/orders/confirm-all`).
   - Whenever a power finalizes or unfinalizes (`/api/finalize`, `/api/unfinalize`).
   - Whenever a turn is adjudicated (`/api/adjudicate`, `/api/sandbox/ai-step`).
+  - Whenever a scenario is reset (`/api/scenario`).
   - Whenever a player joins, leaves, or surrenders a sovereign power (`/api/games/{id}/join`, `/api/games/{id}/leave`, `/api/games/{id}/surrender`).
   - Whenever an administrator modifies game state (rollback, teleport, spawn, destroy, turn jump).
 
