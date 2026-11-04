@@ -1244,6 +1244,8 @@ async def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Q
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await broadcast_game_update(game.game_id, game)
+    await broadcast_lobby_update()
     return FinalizeResponse(
         finalized=True,
         requires_confirmation=False,
@@ -1259,6 +1261,8 @@ async def unfinalize_power_orders(req: SetPowerRequest, game_id: Optional[str] =
         game.finalized_powers.remove(req.power)
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await broadcast_game_update(game.game_id, game)
+    await broadcast_lobby_update()
     return game
 
 
@@ -1317,6 +1321,8 @@ async def adjudicate_and_advance(game_id: Optional[str] = Query(default=None)):
         game.turn_history.insert(0, f"{result.winner.value} has won the game in {prev_label}.")
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await broadcast_game_update(game.game_id, game)
+    await broadcast_lobby_update()
     return game
 
 
@@ -1331,6 +1337,8 @@ async def load_scenario(req: ScenarioRequest, game_id: Optional[str] = Query(def
     power = req.active_power or current.active_power
     GAMES[gid] = build_scenario(req.scenario_id, power, gid)
     sync_summary(gid)
+    await broadcast_game_update(gid, GAMES[gid])
+    await broadcast_lobby_update()
     return GAMES[gid]
 
 
