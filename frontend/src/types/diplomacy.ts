@@ -301,3 +301,21 @@ export interface AdminStatusResponse {
   creator_email: string;
   creator_id?: string | null;
 }
+
+
+export interface WebSocketGameUpdate {
+  type: 'game_update';
+  game_id: string;
+  state: GameState;
+  summary: MultiplayerGameSummary | null;
+}
+
+export interface WebSocketLobbyUpdate {
+  type: 'lobby_update';
+  games: MultiplayerGameSummary[];
+}
+
+export type WebSocketMessage =
+  | WebSocketGameUpdate
+  | WebSocketLobbyUpdate
+  | { type: 'pong' };

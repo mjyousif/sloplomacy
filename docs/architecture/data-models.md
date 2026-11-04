@@ -202,3 +202,30 @@ Used by the match creator to arbitrate games and perform scenario testing:
 - `AdminSpawnUnitRequest`: `{ power, unit_type, province, coast? }`
 - `AdminDestroyUnitRequest`: `{ unit_id }`
 - `AdminSetOwnershipRequest`: `{ province, power? }`
+
+
+---
+
+## Real-Time WebSocket Synchronization Schemas
+
+### `WebSocketGameUpdate`
+Broadcast to connected clients on `/ws/games/{game_id}` whenever orders, finalizations, phase advancements, or player roster changes occur.
+
+```typescript
+interface WebSocketGameUpdate {
+  type: 'game_update';
+  game_id: string;
+  state: GameState;
+  summary: MultiplayerGameSummary | null;
+}
+```
+
+### `WebSocketLobbyUpdate`
+Broadcast to connected clients on `/ws/lobby` whenever a game is created, updated, joined, vacated, or its status changes.
+
+```typescript
+interface WebSocketLobbyUpdate {
+  type: 'lobby_update';
+  games: MultiplayerGameSummary[];
+}
+```

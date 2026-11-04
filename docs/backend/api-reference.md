@@ -51,6 +51,12 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/admin/ownership` | Reassign province / supply center ownership | `AdminSetOwnershipRequest` | `GameState` |
 | `POST` | `/api/admin/unfinalize-all` | Unlock and unfinalize orders for all 7 powers | *None* | `GameState` |
 
+### Real-Time WebSocket Synchronization
+| Protocol | Endpoint | Description | Client Messages | Server Broadcasts |
+| :--- | :--- | :--- | :--- | :--- |
+| `WS` | `/ws/games/{game_id}` | Live room state sync (orders, finalization, adjudication, participants) | `{"type": "ping"}` / `{"type": "refresh"}` | `WebSocketGameUpdate` |
+| `WS` | `/ws/lobby` | Live multiplayer game browser sync | `{"type": "ping"}` / `{"type": "refresh"}` | `WebSocketLobbyUpdate` |
+
 ---
 
 ## Detailed Specifications: Lobby & Multiplayer Management
@@ -417,3 +423,80 @@ Reassigns supply center ownership to any Great Power or clears it to neutral. Re
 
 ### 18. `POST /api/admin/unfinalize-all`
 Unlocks and unfinalizes order submissions across all 7 Great Powers simultaneously.
+
+
+---
+
+## Detailed Specifications: Real-Time WebSocket Synchronization
+
+### 19. `WS /ws/games/{game_id}`
+Establishes a persistent, low-latency WebSocket connection scoped to a specific game room (`game_id`).
+
+- **Connection Handshake**:
+  - Validates that `game_id` exists. If the game is missing, closes with code `4004`.
+  - Immediately transmits the current authoritative `game_update` payload upon connecting.
+- **Client Heartbeats & Refresh**:
+  - Send `{"type": "ping"}` -> Server replies `{"type": "pong"}` to maintain Cloud Run & proxy connections.
+  - Send `{"type": "refresh"}` -> Server resends the latest authoritative `game_update`.
+- **Automatic Broadcast Triggers**:
+  - Whenever an order is submitted or changed (`/api/order`, `/api/orders/batch`, `/api/orders/confirm-all`).
+  - Whenever a power finalizes or unfinalizes (`/api/finalize`, `/api/unfinalize`).
+  - Whenever a turn is adjudicated (`/api/adjudicate`, `/api/sandbox/ai-step`).
+  - Whenever a player joins, leaves, or surrenders a sovereign power (`/api/games/{id}/join`, `/api/games/{id}/leave`, `/api/games/{id}/surrender`).
+  - Whenever an administrator modifies game state (rollback, teleport, spawn, destroy, turn jump).
+
+#### Server Broadcast (`WebSocketGameUpdate`):
+```json
+{
+  "type": "game_update",
+  "game_id": "proto_1901",
+  "state": {
+    "game_id": "proto_1901",
+    "season": "Spring",
+    "year": 1901,
+    "phase": "Movement",
+    "active_power": "FRANCE",
+    "units": [...],
+    "orders": {...},
+    "ownership": {...},
+    "finalized_powers": ["FRANCE"],
+    "surrendered_powers": [],
+    "issues": []
+  },
+  "summary": {
+    "game_id": "proto_1901",
+    "name": "Standard 1901 Theater",
+    "status": "active",
+    "participants": {...}
+  }
+}
+```
+
+---
+
+### 20. `WS /ws/lobby`
+Establishes a persistent WebSocket feed for the multiplayer match browser.
+
+- **Connection Handshake**:
+  - Immediately transmits a `lobby_update` payload containing all current games and their live participant statuses.
+- **Automatic Broadcast Triggers**:
+  - Whenever any multiplayer game is created, joined, left, surrendered, or adjudicated.
+
+#### Server Broadcast (`WebSocketLobbyUpdate`):
+```json
+{
+  "type": "lobby_update",
+  "games": [
+    {
+      "game_id": "mp_concert_104",
+      "name": "Concert of Europe — Match #104",
+      "status": "active",
+      "season": "Spring",
+      "year": 1901,
+      "phase": "Movement",
+      "participants": {...},
+      "finalized_powers": ["GERMANY"]
+    }
+  ]
+}
+```
