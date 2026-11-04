@@ -4,6 +4,7 @@ import {
   checkIsGameCreator,
   filterUnitsForDisband,
   getAvailableCoasts,
+  resolvePlayerPower,
 } from './adminHelpers';
 import { AuthUser, MultiplayerGameSummary, ProvinceInfo, Unit } from '../types/diplomacy';
 
@@ -110,5 +111,28 @@ describe('adminHelpers', () => {
       expect(germanUnits).toHaveLength(2);
       expect(germanUnits.every((u) => u.power === 'GERMANY')).toBe(true);
     });
+  });
+});
+
+describe('resolvePlayerPower', () => {
+  it('uses the claimed seat in multiplayer, whatever the shared game says', () => {
+    expect(resolvePlayerPower('multiplayer', 'ENGLAND', 'RUSSIA')).toBe('ENGLAND');
+  });
+
+  it('follows the game in the sandbox, where the player can switch powers', () => {
+    expect(resolvePlayerPower('sandbox', null, 'TURKEY')).toBe('TURKEY');
+  });
+
+  it('ignores a seat left over from a multiplayer game', () => {
+    expect(resolvePlayerPower('sandbox', 'ENGLAND', 'TURKEY')).toBe('TURKEY');
+    expect(resolvePlayerPower('lobby', 'ENGLAND', 'TURKEY')).toBe('TURKEY');
+  });
+
+  it('falls back to the game when multiplayer has no seat yet', () => {
+    expect(resolvePlayerPower('multiplayer', null, 'ITALY')).toBe('ITALY');
+  });
+
+  it('has a default before any game has loaded', () => {
+    expect(resolvePlayerPower('lobby', null, undefined)).toBe('FRANCE');
   });
 });
