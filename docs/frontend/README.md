@@ -132,4 +132,4 @@ This triggers `tsc && vite build`, ensuring zero TypeScript type discrepancies w
 ```bash
 npm test
 ```
-Runs the Vitest test suites (`orderHelpers.test.ts`, `adminHelpers.test.ts`, `supabase.test.ts` and `europeMapGeometry.test.ts`), verifying order reachability algorithms, retreat validation, and administrative permission checks.
+Runs the Vitest test suites (`orderHelpers.test.ts`, `adminHelpers.test.ts`, `supabase.test.ts`, `europeMapGeometry.test.ts` and `useDiplomacyWebSocket.test.ts`), verifying order reachability algorithms, retreat validation, and administrative permission checks.
