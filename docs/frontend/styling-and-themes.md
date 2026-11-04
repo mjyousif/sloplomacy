@@ -30,12 +30,12 @@ Each Great Power has an authentic historical color token used for province fills
 
 | Power | Adjective | Primary Color | Fill Color | Border Color | Light Background |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **England** | British | `#183668` (Royal Navy Navy) | `#35588a` | `#0e2244` | `rgba(24, 54, 104, 0.18)` |
+| **England** | British | `#183668` (Royal Navy Navy) | `#1e3e73` | `#0e2244` | `rgba(24, 54, 104, 0.18)` |
 | **France** | French | `#34789e` (Sky Blue) | `#6aa9c9` | `#215473` | `rgba(52, 120, 158, 0.16)` |
 | **Germany** | German | `#404040` (Prussian Slate) | `#737373` | `#262626` | `rgba(64, 64, 64, 0.16)` |
 | **Italy** | Italian | `#2e7d32` (Alpine Green) | `#5b9e5f` | `#1b5e20` | `rgba(46, 125, 50, 0.16)` |
 | **Austria** | Austrian | `#b91c1c` (Habsburg Crimson)| `#dc2626` | `#7f1d1d` | `rgba(185, 28, 28, 0.16)` |
-| **Russia** | Russian | `#6b21a8` (Imperial Purple)| `#9333ea` | `#4c1d95` | `rgba(107, 33, 168, 0.16)` |
+| **Russia** | Russian | `#67387e` (Imperial Purple)| `#754e85` | `#431d56` | `rgba(103, 56, 126, 0.16)` |
 | **Turkey** | Ottoman | `#c2410c` (Ottoman Ochre) | `#ea580c` | `#7c2d12` | `rgba(194, 65, 12, 0.16)` |
 
 ---

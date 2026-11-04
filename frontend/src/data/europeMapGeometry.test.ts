@@ -8,23 +8,41 @@ import {
 } from './europeMapGeometry';
 import { POWER_METADATA } from '../types/diplomacy';
 
-describe('Map Cartography & Aesthetics (Issue #21)', () => {
-  it('defines England with a deeper, darker Royal Navy blue', () => {
+describe('Map Cartography & Aesthetics (Issues #42-#48)', () => {
+  it('defines England with darker navy blue matching Wales (#46)', () => {
     const england = POWER_METADATA.ENGLAND;
     expect(england.color).toBe('#183668');
-    expect(england.fillColor).toBe('#35588a');
+    expect(england.fillColor).toBe('#1e3e73');
     expect(england.borderColor).toBe('#0e2244');
     expect(england.lightBg).toContain('rgba(24, 54, 104');
   });
 
-  it('defines water wave texture pattern in AUTHENTIC_DEFS_SVG', () => {
-    expect(AUTHENTIC_DEFS_SVG).toContain('id="waterWaves"');
-    expect(AUTHENTIC_DEFS_SVG).toContain('patternUnits="userSpaceOnUse"');
+  it('defines Russia with authentic deep imperial purple matching Moscow badge (#45)', () => {
+    const russia = POWER_METADATA.RUSSIA;
+    expect(russia.color).toBe('#67387e');
+    expect(russia.fillColor).toBe('#754e85');
+    expect(russia.borderColor).toBe('#431d56');
+    expect(russia.lightBg).toContain('rgba(103, 56, 126');
   });
 
-  it('applies water wave texture overlay across ocean in AUTHENTIC_BACKGROUND_SVG', () => {
-    expect(AUTHENTIC_BACKGROUND_SVG).toContain('id="water-wave-texture"');
-    expect(AUTHENTIC_BACKGROUND_SVG).toContain('fill="url(#waterWaves)"');
+  it('removes wave overlay lines from ocean sections to eliminate UI artifacts (#47)', () => {
+    expect(AUTHENTIC_BACKGROUND_SVG).not.toContain('id="water-wave-texture"');
+  });
+
+  it('removes the water pond cutout between Finland and St. Petersburg and fills it with purple (#48)', () => {
+    expect(AUTHENTIC_BACKGROUND_SVG).not.toContain('m 654.27195,-72.10929');
+    expect(EUROPE_PROVINCE_GEOMETRY.STP.path).toContain('M 1013.88,376.35');
+  });
+
+  it('scales down water location font sizes by 20% (#43)', () => {
+    const maxSeaSize = Math.max(...seaLabels.map((l) => parseFloat(l.size || '0')));
+    expect(maxSeaSize).toBe(16); // reduced from 20px
+    const standardSeaLabels = seaLabels.filter((l) => l.size === '12.8px');
+    expect(standardSeaLabels.length).toBeGreaterThanOrEqual(10); // reduced from 16px
+  });
+
+  it('centers the Helgoland Bight text within the dashed boundary lines (#42)', () => {
+    expect(AUTHENTIC_NAMES_SVG).toContain('transform="translate(-7 8) rotate(-8)" id="Helgoland-Bight"');
   });
 });
 
