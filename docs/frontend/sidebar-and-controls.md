@@ -55,7 +55,7 @@ Displays build and disband quotas:
 
 ### 6. Turn Finalization & Adjudication
 - **"Finalize Orders" (`POST /api/finalize`)**: Initiates pre-finalization checks. If warnings or unassigned units exist, opens `SanityCheckModal.tsx`.
-- **"Adjudicate Turn & Advance" (`POST /api/adjudicate`)**: Commits all finalized moves, advances phase (Movement -> Retreats -> Movement -> Adjustments), updates supply center ownership in Fall, and records turn history.
+- **"Adjudicate Turn & Advance" (`POST /api/adjudicate`)**: Commits all finalized moves, advances phase (Movement -> Retreats -> Movement -> Adjustments), updates supply center ownership in Fall, and records turn history. Once a power has won, the button is disabled and reads "Game Over", and the header shows a pill naming the winner.
 
 ### 7. Historical Turn Log
 - Reverse-chronological audit log detailing tactical outcomes of previous seasons.

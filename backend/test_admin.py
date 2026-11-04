@@ -224,3 +224,73 @@ def test_admin_set_turn_and_ownership():
     )
     assert clear_res.status_code == 200
     assert "BEL" not in clear_res.json()["ownership"]
+
+
+@pytest.mark.parametrize(
+    "season, year, phase",
+    [
+        ("Spring", 1902, "Adjustments"),
+        ("Fall", 1902, "Adjustments"),
+        ("Winter", 1902, "Movement"),
+        ("Winter", 1902, "Retreats"),
+        ("Spring", 1900, "Movement"),
+        ("Spring", -5, "Movement"),
+    ],
+)
+def test_set_turn_refuses_impossible_turns_and_leaves_the_game_readable(season, year, phase):
+    client = TestClient(app)
+    game_before = GAMES["proto_1901"].model_copy(deep=True)
+
+    res = client.post(
+        "/api/admin/set-turn?game_id=proto_1901",
+        json={"season": season, "year": year, "phase": phase},
+    )
+
+    assert res.status_code == 400
+    assert client.get("/api/game?game_id=proto_1901").status_code == 200
+    current = GAMES["proto_1901"]
+    assert (current.season, current.year, current.phase) == (
+        game_before.season,
+        game_before.year,
+        game_before.phase,
+    )
+
+
+@pytest.mark.parametrize(
+    "season, phase",
+    [
+        ("Spring", "Movement"),
+        ("Spring", "Retreats"),
+        ("Fall", "Movement"),
+        ("Fall", "Retreats"),
+        ("Winter", "Adjustments"),
+    ],
+)
+def test_set_turn_accepts_every_real_turn(season, phase):
+    client = TestClient(app)
+    res = client.post(
+        "/api/scenario?game_id=proto_1901", json={"scenario_id": "standard_1901"}
+    )
+    assert res.status_code == 200
+
+    res = client.post(
+        "/api/admin/set-turn?game_id=proto_1901",
+        json={"season": season, "year": 1902, "phase": phase},
+    )
+
+    assert res.status_code == 200
+    assert client.get("/api/game?game_id=proto_1901").status_code == 200
+    client.post("/api/scenario?game_id=proto_1901", json={"scenario_id": "standard_1901"})
+
+
+@pytest.mark.parametrize("province", ["BUR", "NTH", "SWI"])
+def test_ownership_is_only_for_supply_centers(province):
+    client = TestClient(app)
+
+    res = client.post(
+        "/api/admin/ownership?game_id=proto_1901",
+        json={"province": province, "power": "FRANCE"},
+    )
+
+    assert res.status_code == 400
+    assert province not in GAMES["proto_1901"].ownership

@@ -31,13 +31,13 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/sandbox/ai-orders` | Generate DATC-compliant tactical AI orders for specified/foreign powers | `GenerateAIOrdersRequest` | `GameState` |
 | `POST` | `/api/sandbox/ai-step` | Auto-plan unassigned foreign powers with tactical AI and advance turn | *None* | `GameState` |
 | `POST` | `/api/order` | Submit or update an order for a single military unit | `SingleOrderUpdateRequest` | `GameState` |
-| `POST` | `/api/orders/batch` | Update multiple orders simultaneously | `OrderSubmissionRequest` | `GameState` |
+| `POST` | `/api/orders/batch` | Update multiple orders simultaneously (all or nothing: one invalid order rejects the batch with `400`) | `OrderSubmissionRequest` | `GameState` |
 | `POST` | `/api/orders/confirm-all` | Mark all orders of a given power as explicitly confirmed | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/finalize` | Pre-flight sanity check and finalize power's orders | `FinalizeRequest` | `FinalizeResponse` |
 | `POST` | `/api/unfinalize` | Unlock finalized orders for subsequent editing | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/simulate` | Execute non-destructive tactical preview resolution | *None* | `SimulationResult` |
 | `POST` | `/api/adjudicate` | Commit orders, resolve combat, advance season/phase | *None* | `GameState` |
-| `POST` | `/api/scenario` | Reset board and load predefined tactical scenario | `ScenarioRequest` | `GameState` |
+| `POST` | `/api/scenario` | Reset board and load predefined tactical scenario (`400` for an unknown scenario, `404` for an unknown game) | `ScenarioRequest` | `GameState` |
 
 ### Administrator & Game Creator Controls
 | Method | Endpoint | Description | Request Body | Response Model |
@@ -281,6 +281,8 @@ Submits or modifies a single military instruction. Automatically triggers valida
 }
 ```
 
+Returns `400` if the order names a province or coast that does not exist. A real but illegal move is accepted: the validator flags it, and the engine refuses it at adjudication.
+
 ---
 
 ### 9. `POST /api/finalize`
@@ -320,6 +322,8 @@ Attempts to lock in orders for the active power. If errors or unassigned warning
 ### 10. `POST /api/adjudicate`
 Permanently commits all submitted moves, resolves conflicts using the DATC `diplomacy` engine, advances phase (Movement -> Retreats -> Movement -> Adjustments), updates supply center ownership in Fall, and records turn history.
 
+A unit whose order the engine rejects holds in place. When a power reaches 18 supply centers the response carries `winner`, the clock stays on the deciding phase, and further calls return `409`.
+
 ---
 
 ## Detailed Specifications: Administrator Controls
@@ -345,7 +349,7 @@ Rolls back match state to the snapshot taken immediately prior to the latest tur
 ---
 
 ### 13. `POST /api/admin/set-turn`
-Jumps the game directly to an arbitrary season, year, or phase.
+Jumps the game directly to an arbitrary season, year, or phase. The turn must be a real one: Spring or Fall with `Movement` or `Retreats`, or Winter with `Adjustments`, in 1901 or later. Anything else returns `400` and changes nothing.
 
 #### Request (`AdminSetTurnRequest`):
 ```json
@@ -399,7 +403,7 @@ Immediately disbands and removes a unit from the board.
 ---
 
 ### 17. `POST /api/admin/ownership`
-Reassigns supply center / province ownership to any Great Power or clears it to neutral.
+Reassigns supply center ownership to any Great Power or clears it to neutral. Returns `400` for a province that is not a supply center.
 
 #### Request (`AdminSetOwnershipRequest`):
 ```json

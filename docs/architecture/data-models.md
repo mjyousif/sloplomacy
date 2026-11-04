@@ -137,6 +137,7 @@ Complete server snapshot of a game session.
 | `turn_history` | `string[]` | Historical log of turn outcomes. |
 | `builds` | `Record<string, Any>?`| Build quotas and available home SCs during Winter Adjustments. |
 | `retreats` | `Record<string, Any>?`| Valid retreat provinces per dislodged unit during Retreats. |
+| `winner` | `Power?` | Set once a power has won. The clock stays on the deciding phase and no further turns resolve. |
 
 ---
 

@@ -128,6 +128,7 @@ The internal Pydantic `Order` model is serialized into standard DATC order notat
      - `clash_provinces`, `bounce_provinces`, `cut_provinces`.
      - `next_phase`: Preview of what phase will follow.
      - `builds` / `retreats`: Available build counts and retreat paths.
+     - `winner`: The power these orders would make the winner, if any. Only a commit ends the game.
 2. **Commit Adjudication (`is_simulation=False`)**:
    - Commits resolution permanently to authoritative `GameState`.
    - Advances `season`, `year`, and `phase`.
@@ -141,3 +142,6 @@ The internal Pydantic `Order` model is serialized into standard DATC order notat
 1. **Self-Dislodgement Prohibition**: A player cannot dislodge their own unit, even with superior support.
 2. **Support Cutting Exception ("Don't Cut via Target")**: An attack by Province B against Province A does not cut Province A's support into Province B unless Province A is dislodged.
 3. **Civil Disorder for Surrendered Powers**: Units belonging to surrendered powers hold passively, never provide support, and auto-disband if dislodged or down in supply centers.
+4. **The Engine Owns the Board**: The engine silently drops orders it finds illegal, with no result code, and the unit holds. `adjudicate_turn` checks each order against `game.get_orders()`, so a dropped order is reported with `succeeded: false` and a "rejected" reason and is never applied. `test_final_positions_always_match_the_engine` compares final positions against the bare engine over random turns.
+5. **Incomplete Orders**: `order_to_diplomacy_str` returns `None` for a move with no target, or a support or convoy with no subject, because the engine raises on those. They follow the same rejected path, so drafting one cannot break a game.
+6. **Game End**: When a power reaches 18 supply centers the engine's phase becomes the bare word `COMPLETED`, which is not a real phase. `adjudicate_turn` sets `winner` and keeps `next_season`, `next_year` and `next_phase` on the deciding phase. Committing it sets `GameState.winner`, after which `POST /api/adjudicate` returns `409`. A rollback or scenario reset reopens the game.

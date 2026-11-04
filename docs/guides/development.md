@@ -27,7 +27,6 @@ Launch both the FastAPI backend (`:8000`) and the Vite React frontend (`:5173`) 
 
 ### macOS / Linux / WSL / Git Bash
 ```bash
-chmod +x start.sh
 ./start.sh
 ```
 

@@ -71,8 +71,8 @@ def check_prerequisites():
 
     # Check python
     python_version = sys.version_info
-    if python_version < (3, 8):
-        print_colored(f"Error: Python 3.8+ is required (found {python_version.major}.{python_version.minor})", Colors.RED)
+    if python_version < (3, 10):
+        print_colored(f"Error: Python 3.10+ is required (found {python_version.major}.{python_version.minor})", Colors.RED)
         sys.exit(1)
     print_colored(f"  [OK] Python {python_version.major}.{python_version.minor}.{python_version.micro}", Colors.GREEN)
 
