@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import { AuthModal } from './components/AuthModal';
-import { EuropeMap } from './components/EuropeMap';
+import { EuropeMap, EuropeMapHandle } from './components/EuropeMap';
 import { LobbyView } from './components/LobbyView';
 import { MacroSidebar } from './components/MacroSidebar';
+import { ToolsSidebar } from './components/ToolsSidebar';
 import { AdminToolsModal } from './components/AdminToolsModal';
 import { SanityCheckModal } from './components/SanityCheckModal';
 import { SurrenderModal } from './components/SurrenderModal';
@@ -50,7 +51,15 @@ const API_BASE = '/api';
 
 export function App() {
   // Navigation & Mode State
-  const [viewMode, setViewMode] = useState<'lobby' | 'sandbox' | 'multiplayer'>('lobby');
+  const [viewMode, setViewMode] = useState<'lobby' | 'sandbox' | 'multiplayer'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('view') === 'sandbox' || window.location.hash === '#sandbox') {
+        return 'sandbox';
+      }
+    }
+    return 'lobby';
+  });
   const [activeGameId, setActiveGameId] = useState<string>('proto_1901');
   const [activeGameSummary, setActiveGameSummary] =
     useState<MultiplayerGameSummary | null>(null);
@@ -81,6 +90,10 @@ export function App() {
   const [showSimulationOverlay, setShowSimulationOverlay] = useState<boolean>(false);
   const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
   const [adminOverrideActive, setAdminOverrideActive] = useState<boolean>(false);
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState<boolean>(false);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState<boolean>(false);
+  const [zoomPercent, setZoomPercent] = useState<number>(105);
+  const mapRef = useRef<EuropeMapHandle | null>(null);
 
   // Sanity Check Modal State
   const [sanityModalOpen, setSanityModalOpen] = useState<boolean>(false);
@@ -931,57 +944,26 @@ export function App() {
             <span>{wsConnected ? 'Live Sync' : 'Connecting...'}</span>
           </div>
 
+          {/* Sidebars toggle helper pills when viewing map */}
           {viewMode !== 'lobby' && (
-            <>
-              {viewMode === 'multiplayer' && lockedPower && (
-                <button
-                  type="button"
-                  className="header-btn header-surrender-btn"
-                  onClick={() => {
-                    if (activeGameSummary && lockedPower) {
-                      handleOpenSurrenderModal(activeGameSummary, lockedPower);
-                    }
-                  }}
-                  title={`Surrender sovereign command of ${POWER_METADATA[lockedPower].shortName} and leave campaign`}
-                >
-                  <Flag size={14} />
-                  <span>Surrender &amp; Leave</span>
-                </button>
-              )}
-              {viewMode === 'sandbox' && (
-                <button
-                  type="button"
-                  className="header-btn"
-                  onClick={handleSaveSandboxToAccount}
-                  title="Save current sandbox scenario to your account"
-                >
-                  <Save size={14} />
-                  <span>Save Sandbox</span>
-                </button>
-              )}
+            <div className="header-sidebar-toggles">
               <button
                 type="button"
-                className={`header-btn ${sandboxMode ? 'sandbox-active' : ''}`}
-                onClick={handleToggleSandboxMode}
-                title="Enter Sandbox Mode to guess & test foreign moves. Exiting Sandbox discards foreign guesses."
+                className={`header-sidebar-pill-btn ${!leftSidebarCollapsed ? 'active' : ''}`}
+                onClick={() => setLeftSidebarCollapsed((prev) => !prev)}
+                title="Toggle Left Tools Sidebar (Legend, Zoom, Sandbox, Admin)"
               >
-                <FlaskConical size={15} />
-                <span>
-                  Sandbox Pre-Moves: {sandboxMode ? 'ON (Exit to Clear)' : 'OFF'}
-                </span>
+                <span>Tools Sidebar</span>
               </button>
-              {isGameCreator && (
-                <button
-                  type="button"
-                  className={`header-btn admin-btn ${adminOverrideActive ? 'admin-override-on' : ''}`}
-                  onClick={() => setAdminModalOpen(true)}
-                  title="Administrator Options: Roll back turn, move units anywhere, spawn/destroy units arbitrarily (Game Creator Only)"
-                >
-                  <ShieldAlert size={14} />
-                  <span>Admin Tools {adminOverrideActive ? '• OVERRIDE' : ''}</span>
-                </button>
-              )}
-            </>
+              <button
+                type="button"
+                className={`header-sidebar-pill-btn ${!rightSidebarCollapsed ? 'active' : ''}`}
+                onClick={() => setRightSidebarCollapsed((prev) => !prev)}
+                title="Toggle Right Tactical Sidebar (Orders & Unit Command)"
+              >
+                <span>Tactical Sidebar</span>
+              </button>
+            </div>
           )}
 
           {/* User Authentication Controls */}
@@ -1061,7 +1043,47 @@ export function App() {
       ) : (
         /* VIEW 2: INTERACTIVE EUROPE MAP + MACRO SIDEBAR (SANDBOX OR MULTIPLAYER) */
         <main className="war-room-workspace">
+          {/* LEFT SIDEBAR: Tools, Legend, Zoom, Standing, Sandbox & Admin */}
+          <ToolsSidebar
+            collapsed={leftSidebarCollapsed}
+            onToggleCollapse={() => setLeftSidebarCollapsed((prev) => !prev)}
+            zoomPercent={zoomPercent}
+            onZoomIn={() => mapRef.current?.stepZoom(0.2)}
+            onZoomOut={() => mapRef.current?.stepZoom(-0.2)}
+            onResetCamera={() => mapRef.current?.resetCamera()}
+            activePower={playerPower}
+            onSelectPower={handleSelectPower}
+            ownership={gameState.ownership}
+            units={gameState.units}
+            finalizedPowers={gameState.finalized_powers}
+            surrenderedPowers={gameState.surrendered_powers}
+            issues={gameState.issues}
+            isMultiplayer={viewMode === 'multiplayer'}
+            sandboxMode={sandboxMode}
+            onToggleSandboxMode={handleToggleSandboxMode}
+            onClearForeignPreMoves={handleClearForeignPreMoves}
+            foreignModifiedOrdersCount={
+              gameState.units
+                .filter((u) => u.power !== playerPower)
+                .filter((u) => {
+                  const o = gameState.orders[u.id];
+                  return o && (o.order_type !== 'HOLD' || o.is_explicit);
+                }).length
+            }
+            onGenerateAIMoves={handleGenerateAIMoves}
+            onAIStepTurn={handleAIStepTurn}
+            onLoadScenario={handleLoadScenario}
+            onSaveSandboxClick={handleSaveSandboxToAccount}
+            isGameCreator={isGameCreator}
+            onOpenAdminTools={() => setAdminModalOpen(true)}
+            adminOverrideActive={adminOverrideActive}
+            onToggleAdminOverride={() => setAdminOverrideActive((prev) => !prev)}
+          />
+
+          {/* CENTER: Europe Map */}
           <EuropeMap
+            ref={mapRef}
+            onZoomChange={setZoomPercent}
             provinces={provinces}
             units={gameState.units}
             orders={gameState.orders}
@@ -1085,7 +1107,10 @@ export function App() {
             onAdjudicateTurn={handleAdjudicateTurn}
           />
 
+          {/* RIGHT SIDEBAR: Core Gameplay Orders & Unit Command */}
           <MacroSidebar
+            collapsed={rightSidebarCollapsed}
+            onToggleCollapse={() => setRightSidebarCollapsed((prev) => !prev)}
             provinces={provinces}
             units={gameState.units}
             orders={gameState.orders}
@@ -1106,24 +1131,14 @@ export function App() {
             isMultiplayer={viewMode === 'multiplayer'}
             isGameCreator={isGameCreator}
             gameOver={Boolean(gameState.winner)}
-            onOpenAdminTools={() => setAdminModalOpen(true)}
-            adminOverrideActive={adminOverrideActive}
-            onSelectPower={handleSelectPower}
-            onToggleSandboxMode={handleToggleSandboxMode}
             onSelectUnit={setSelectedUnitId}
             onHoverUnit={setHoveredUnitId}
             onHighlightProvinces={setHighlightedProvinces}
             onUpdateOrder={handleUpdateOrder}
             onConfirmAllHolds={handleConfirmAllHolds}
-            onClearForeignPreMoves={handleClearForeignPreMoves}
             onFinalizeClick={() => handleFinalizeClick(false)}
             onUnfinalizeClick={handleUnfinalizeClick}
-            onSimulatePreMoves={handleSimulatePreMoves}
             onAdjudicateTurn={handleAdjudicateTurn}
-            onLoadScenario={handleLoadScenario}
-            onSaveSandboxClick={handleSaveSandboxToAccount}
-            onGenerateAIMoves={handleGenerateAIMoves}
-            onAIStepTurn={handleAIStepTurn}
             onSurrenderClick={() => {
               if (activeGameSummary && lockedPower) {
                 handleOpenSurrenderModal(activeGameSummary, lockedPower);

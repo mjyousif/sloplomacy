@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  ALL_POWERS,
   Order,
   OrderType,
   POWER_METADATA,
@@ -20,26 +19,24 @@ import {
   AlertCircle,
   AlertTriangle,
   Anchor,
-  Bot,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Crosshair,
   Flag,
-  FlaskConical,
   Lock,
   MoveRight,
+  PanelRightClose,
+  PanelRightOpen,
   Play,
   PlusCircle,
-  RotateCcw,
   Shield,
-  ShieldAlert,
-  Sliders,
-  Sparkles,
   Swords,
   Trash2,
   Unlock,
 } from 'lucide-react';
 
-interface MacroSidebarProps {
+export interface MacroSidebarProps {
   provinces: Record<string, ProvinceInfo>;
   units: Unit[];
   orders: Record<string, Order>;
@@ -61,24 +58,27 @@ interface MacroSidebarProps {
   gameOver?: boolean;
   onOpenAdminTools?: () => void;
   adminOverrideActive?: boolean;
-  onSelectPower: (power: Power) => void;
-  onToggleSandboxMode: () => void;
+  onSelectPower?: (power: Power) => void;
+  onToggleSandboxMode?: () => void;
   onSelectUnit: (unitId: string | null) => void;
   onHoverUnit: (unitId: string | null) => void;
   onHighlightProvinces: (provinces: string[]) => void;
   onUpdateOrder: (order: Order) => void;
   onConfirmAllHolds: () => void;
-  onClearForeignPreMoves: () => void;
+  onClearForeignPreMoves?: () => void;
   onFinalizeClick: () => void;
   onUnfinalizeClick: () => void;
-  onSimulatePreMoves: () => void;
+  onSimulatePreMoves?: () => void;
   onAdjudicateTurn: () => void;
-  onLoadScenario: (scenarioId: string) => void;
+  onLoadScenario?: (scenarioId: string) => void;
   onSaveSandboxClick?: () => void;
   onSurrenderClick?: () => void;
   surrenderedPowers?: Power[];
   onGenerateAIMoves?: (powers?: Power[], includeActive?: boolean) => void;
   onAIStepTurn?: () => void;
+  // Collapsible Props
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export const MacroSidebar: React.FC<MacroSidebarProps> = ({
@@ -100,26 +100,18 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   builds = null,
   retreats = null,
   isMultiplayer = false,
-  isGameCreator = false,
   gameOver = false,
-  onOpenAdminTools,
-  adminOverrideActive = false,
-  onSelectPower,
-  onToggleSandboxMode,
   onSelectUnit,
   onHoverUnit,
   onHighlightProvinces,
   onUpdateOrder,
   onConfirmAllHolds,
-  onClearForeignPreMoves,
   onFinalizeClick,
   onUnfinalizeClick,
   onAdjudicateTurn,
-  onLoadScenario,
-  onSaveSandboxClick,
   onSurrenderClick,
-  onGenerateAIMoves,
-  onAIStepTurn,
+  collapsed = false,
+  onToggleCollapse,
 }) => {
   const powerMeta = POWER_METADATA[activePower];
   const isFinalized = finalizedPowers.includes(activePower);
@@ -143,14 +135,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     : rawMyUnits;
   const myDislodgedUnits = myUnits.filter((u) => u.is_dislodged);
   const myActiveFieldUnits = myUnits.filter((u) => !u.is_dislodged);
-
-  const selectedUnit = selectedUnitId ? unitsById[selectedUnitId] : null;
-  const isForeignUnitSelected = Boolean(selectedUnit && selectedUnit.power !== activePower);
-
-  const foreignModifiedOrders = units
-    .filter((u) => u.power !== activePower)
-    .map((u) => ({ unit: u, order: orders[u.id] }))
-    .filter(({ order }) => order && (order.order_type !== 'HOLD' || order.is_explicit));
 
   const myIssues = issues.filter((i) => i.power === activePower);
 
@@ -347,282 +331,170 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     }
   };
 
+  // Collapsed Rail View
+  if (collapsed) {
+    return (
+      <aside className="macro-sidebar macro-sidebar-collapsed" aria-label="Tactical Orders Collapsed">
+        {onToggleCollapse && (
+          <button
+            type="button"
+            className="sidebar-rail-btn rail-toggle-btn"
+            onClick={onToggleCollapse}
+            title="Expand Tactical Command & Orders"
+          >
+            <PanelRightOpen size={16} />
+          </button>
+        )}
+
+        <div className="rail-divider" />
+
+        <div
+          className="rail-power-crest"
+          title={`Commanding ${powerMeta.name} (${myActiveFieldUnits.length} Units, ${scCountByPower[activePower]} SC)`}
+          style={{ borderColor: powerMeta.color }}
+        >
+          <span>{powerMeta.crest}</span>
+        </div>
+
+        <div className="rail-counter-badge" title={`${unconfirmedCount} unconfirmed orders`}>
+          {unconfirmedCount > 0 ? (
+            <span className="rail-badge-unconfirmed">{unconfirmedCount}</span>
+          ) : (
+            <span className="rail-badge-clean">✓</span>
+          )}
+        </div>
+
+        {myIssues.length > 0 && (
+          <div className="rail-warn-badge" title={`${myIssues.length} tactical issues`}>
+            <AlertTriangle size={14} />
+          </div>
+        )}
+
+        <div className="rail-spacer" />
+
+        {onToggleCollapse && (
+          <button
+            type="button"
+            className="sidebar-rail-btn rail-expand-chevron"
+            onClick={onToggleCollapse}
+            title="Expand Tactical Orders"
+          >
+            <ChevronLeft size={16} />
+          </button>
+        )}
+      </aside>
+    );
+  }
+
+  // Expanded Core-Gameplay Sidebar
   return (
-    <aside className="macro-sidebar">
-      {/* 1. GREAT POWER SELECTOR STRIP (SANDBOX) OR SOVEREIGN LOCK (MULTIPLAYER) */}
-      {isMultiplayer ? (
-        <div className="sidebar-section power-selector-section mp-locked-section">
-          <div className="section-overline">
-            <Lock size={11} style={{ marginRight: 4, verticalAlign: 'middle' }} />
-            MULTIPLAYER SOVEREIGN NATION (COUNTRY LOCKED)
-          </div>
-          <div className="mp-diplomatic-status-row">
-            {ALL_POWERS.map((pwr) => {
-              const meta = POWER_METADATA[pwr];
-              const pwrFinalized = finalizedPowers.includes(pwr);
-              const isMe = pwr === activePower;
-              return (
-                <div
-                  key={pwr}
-                  className={`mp-status-chip ${isMe ? 'mine' : ''}`}
-                  title={`${meta.name}: ${pwrFinalized ? 'Orders Finalized' : 'Orders Pending'}`}
-                  style={{
-                    borderColor: isMe ? meta.color : undefined,
-                    backgroundColor: isMe ? meta.lightBg : undefined,
-                  }}
-                >
-                  <span className="power-dot" style={{ backgroundColor: meta.color }} />
-                  <span className="mp-chip-code">{pwr.slice(0, 3)}</span>
-                  {pwrFinalized && (
-                    <CheckCircle2 size={11} className="power-finalized-icon" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        <div className="sidebar-section power-selector-section">
-          <div className="section-overline">SELECT GREAT POWER COMMAND</div>
-          <div className="power-pills-grid">
-            {ALL_POWERS.map((pwr) => {
-              const meta = POWER_METADATA[pwr];
-              const pwrIssues = issues.filter((i) => i.power === pwr);
-              const pwrFinalized = finalizedPowers.includes(pwr);
-              const isActive = pwr === activePower;
-
-              return (
-                <button
-                  key={pwr}
-                  className={`power-pill-btn ${isActive ? 'active' : ''}`}
-                  style={{
-                    borderColor: isActive ? meta.color : undefined,
-                    backgroundColor: isActive ? meta.lightBg : undefined,
-                  }}
-                  onClick={() => onSelectPower(pwr)}
-                >
-                  <span className="power-dot" style={{ backgroundColor: meta.color }} />
-                  <span className="power-pill-name">{meta.shortName}</span>
-                  {pwrFinalized && (
-                    <CheckCircle2 size={12} className="power-finalized-icon" />
-                  )}
-                  {!pwrFinalized && pwrIssues.length > 0 && (
-                    <span className="power-warn-count">{pwrIssues.length}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 2. ACTIVE POWER MACRO HEADER & TELEMETRY */}
+    <aside className="macro-sidebar macro-sidebar-expanded" aria-label="Tactical Command & Orders">
+      {/* 1. ACTIVE POWER HEADER & TELEMETRY */}
       <div
         className="active-power-banner"
         style={{ borderLeft: `4px solid ${powerMeta.color}` }}
       >
         <div className="power-banner-top">
-          <div>
+          <div className="power-banner-main-col">
             <div className="power-banner-title">
-              <span>{powerMeta.crest}</span> {powerMeta.name}
+              <span className="power-crest-icon">{powerMeta.crest}</span>
+              <span className="power-name-text">{powerMeta.name}</span>
             </div>
             <div className="power-banner-sub">
-              {myActiveFieldUnits.length} Active Units
+              {myActiveFieldUnits.length} Units
               {myDislodgedUnits.length > 0 ? ` (+${myDislodgedUnits.length} Dislodged)` : ''} •{' '}
-              {scCountByPower[activePower]} Supply Centers
+              {scCountByPower[activePower]} SCs
             </div>
           </div>
 
-          <div className="power-status-badge-wrap">
-            {isSurrendered ? (
-              <span className="status-badge surrendered">
-                <Flag size={12} /> Civil Disorder
-              </span>
-            ) : isFinalized ? (
-              <span className="status-badge finalized">
-                <Lock size={12} /> Finalized
-              </span>
-            ) : myIssues.length > 0 ? (
-              <span className="status-badge has-warnings">
-                <AlertTriangle size={12} /> {myIssues.length} Issue
-                {myIssues.length > 1 ? 's' : ''}
-              </span>
-            ) : (
-              <span className="status-badge drafting">Drafting Orders</span>
+          <div className="power-banner-actions-right">
+            <div className="power-status-badge-wrap">
+              {isSurrendered ? (
+                <span className="status-badge surrendered">
+                  <Flag size={11} /> Civil Disorder
+                </span>
+              ) : isFinalized ? (
+                <span className="status-badge finalized">
+                  <Lock size={11} /> Finalized
+                </span>
+              ) : myIssues.length > 0 ? (
+                <span className="status-badge has-warnings">
+                  <AlertTriangle size={11} /> {myIssues.length} Issue{myIssues.length > 1 ? 's' : ''}
+                </span>
+              ) : (
+                <span className="status-badge drafting">Drafting</span>
+              )}
+            </div>
+
+            {onToggleCollapse && (
+              <button
+                type="button"
+                className="sidebar-collapse-toggle-btn"
+                onClick={onToggleCollapse}
+                title="Collapse Tactical Orders"
+              >
+                <PanelRightClose size={15} />
+              </button>
             )}
           </div>
         </div>
 
-        {/* Quick Toolbar for Presets & Confirm All */}
+        {/* Quick Command Bar */}
         <div className="macro-quick-actions">
           <button
+            type="button"
             className="quick-action-btn"
             title="Mark all current orders as confirmed"
             onClick={onConfirmAllHolds}
           >
-            <CheckCircle2 size={13} /> Confirm All ({confirmedCount}/{totalActionableCount})
+            <CheckCircle2 size={12} /> Confirm All ({confirmedCount}/{totalActionableCount})
           </button>
           {isMultiplayer && onSurrenderClick && (
             <button
               type="button"
               className="quick-action-btn surrender-btn-sidebar"
-              title="Surrender sovereign command and leave this multiplayer campaign"
+              title="Surrender sovereign command and leave this campaign"
               onClick={onSurrenderClick}
             >
-              <Flag size={13} /> Surrender &amp; Leave
-            </button>
-          )}
-          {!isMultiplayer && (
-            <button
-              className="quick-action-btn"
-              title="Reset to clean Spring 1901 start"
-              onClick={() => onLoadScenario('standard_1901')}
-            >
-              <RotateCcw size={13} /> Reset
-            </button>
-          )}
-          {!isMultiplayer && onSaveSandboxClick && (
-            <button
-              className="quick-action-btn"
-              title="Save this sandbox scenario to your account"
-              onClick={onSaveSandboxClick}
-            >
-              <Shield size={13} /> Save
+              <Flag size={12} /> Surrender
             </button>
           )}
         </div>
 
-        {/* TACTICAL GENERAL STAFF AI CARD (GUEST SANDBOX & PRE-MOVE STUDY) */}
-        {(!isMultiplayer || sandboxMode) && onGenerateAIMoves && (
-          <div className="sidebar-section ai-command-section">
-            <div className="ai-command-header">
-              <div className="ai-command-title">
-                <Bot size={15} />
-                <span>Tactical General Staff AI</span>
-              </div>
-              <span className="ai-badge-pill">DATC Rulebook AI</span>
-            </div>
-            <p className="ai-command-desc">
-              {!isMultiplayer
-                ? 'Deploy DATC-compliant tactical AI to plan moves for opponents or automate the entire board.'
-                : 'Auto-plot tactical pre-moves for foreign powers based on strategic territorial heuristics.'}
-            </p>
-            <div className="ai-buttons-grid">
-              <button
-                type="button"
-                className="ai-btn primary"
-                onClick={() => onGenerateAIMoves(undefined, false)}
-                title="Generate intelligent tactical orders for all other 6 nations"
-              >
-                <Bot size={13} />
-                <span>Plan Opponents</span>
-              </button>
-              <button
-                type="button"
-                className="ai-btn"
-                onClick={() => onGenerateAIMoves(undefined, true)}
-                title="Generate tactical orders for all 7 Great Powers on the board"
-              >
-                <Sparkles size={13} />
-                <span>Plan All 7 Powers</span>
-              </button>
-              <button
-                type="button"
-                className="ai-btn"
-                onClick={() => onGenerateAIMoves([activePower])}
-                title={`Let Tactical AI plan orders for ${powerMeta.shortName}`}
-              >
-                <Swords size={13} />
-                <span>Plan {powerMeta.shortName}</span>
-              </button>
-              {onAIStepTurn && !isMultiplayer && (
-                <button
-                  type="button"
-                  className="ai-btn step"
-                  onClick={onAIStepTurn}
-                  title="Auto-plan foreign powers and step clock to next phase"
-                >
-                  <Play size={13} />
-                  <span>AI Step Phase</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
+        {/* Phase Context Notification */}
         {isAdjustmentPhase && (
-          <div
-            style={{
-              marginTop: '10px',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              backgroundColor:
-                buildCount > 0 && buildHomes.length > 0
-                  ? 'rgba(22, 163, 74, 0.16)'
-                  : buildCount < 0
-                  ? 'rgba(220, 38, 38, 0.16)'
-                  : 'rgba(100, 116, 139, 0.16)',
-              border: `1px solid ${
-                buildCount > 0 && buildHomes.length > 0
-                  ? '#16a34a'
-                  : buildCount < 0
-                  ? '#dc2626'
-                  : '#64748b'
-              }`,
-              fontSize: '12px',
-              lineHeight: '1.4',
-            }}
-          >
-            <strong>WINTER ADJUSTMENT PHASE:</strong>{' '}
+          <div className="macro-phase-context-box adjustment">
+            <strong>WINTER ADJUSTMENTS:</strong>{' '}
             {buildCount > 0 && buildHomes.length > 0
-              ? `${powerMeta.shortName} may build up to ${maxAllowedBuilds} unit${
-                  maxAllowedBuilds > 1 ? 's' : ''
-                } in open home centers (${assignedBuildsCount}/${maxAllowedBuilds} assigned). Click below or on the map to choose Army, Fleet, or Waive.`
+              ? `Build up to ${maxAllowedBuilds} unit${maxAllowedBuilds > 1 ? 's' : ''} in open home centers (${assignedBuildsCount}/${maxAllowedBuilds} assigned).`
               : buildCount > 0 && buildHomes.length === 0
-              ? `${powerMeta.shortName} has +${buildCount} supply center surplus, but all home supply centers are currently occupied or unavailable — no builds can be placed.`
+              ? `+${buildCount} surplus, but home centers are occupied.`
               : buildCount < 0
-              ? `${powerMeta.shortName} must disband ${neededDisbands} unit${
-                  neededDisbands > 1 ? 's' : ''
-                } (${assignedDisbandsCount}/${neededDisbands} selected to disband). Select unit(s) below or on the map.`
-              : `${powerMeta.shortName} is in equilibrium (${myActiveFieldUnits.length} units = ${scCountByPower[activePower]} supply centers).`}
+              ? `Disband ${neededDisbands} unit${neededDisbands > 1 ? 's' : ''} (${assignedDisbandsCount}/${neededDisbands} selected).`
+              : `Forces in equilibrium (${myActiveFieldUnits.length} units = ${scCountByPower[activePower]} SCs).`}
           </div>
         )}
 
         {isRetreatPhase && (
-          <div
-            style={{
-              marginTop: '10px',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              backgroundColor:
-                myDislodgedUnits.length > 0
-                  ? 'rgba(234, 88, 12, 0.18)'
-                  : 'rgba(100, 116, 139, 0.16)',
-              border: `1px solid ${myDislodgedUnits.length > 0 ? '#ea580c' : '#64748b'}`,
-              fontSize: '12px',
-              lineHeight: '1.4',
-            }}
-          >
+          <div className="macro-phase-context-box retreat">
             <strong>RETREAT PHASE:</strong>{' '}
             {myDislodgedUnits.length > 0
-              ? `${powerMeta.shortName} has ${myDislodgedUnits.length} dislodged unit${
-                  myDislodgedUnits.length > 1 ? 's' : ''
-                } that must Retreat to an open province or Disband.`
-              : `${powerMeta.shortName} has no dislodged units. Awaiting retreats from other powers.`}
+              ? `${myDislodgedUnits.length} dislodged unit${myDislodgedUnits.length > 1 ? 's' : ''} must Retreat or Disband.`
+              : 'No dislodged units. Awaiting other powers.'}
           </div>
         )}
       </div>
 
-      {/* 3. MACRO UNIT COMMAND OVERVIEW LIST */}
+      {/* 2. UNIT ORDERS LIST (BUILDS + FIELD UNITS) */}
       <div className="macro-units-scroll-area">
-        {/* UNOCCUPIED HOME CENTERS (BUILDS) — DISPLAYED AT TOP IN WINTER ADJUSTMENTS */}
+        {/* Winter Builds */}
         {isAdjustmentPhase && buildCount > 0 && buildHomes.length > 0 && (
-          <div style={{ marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="macro-builds-wrapper">
             <div className="macro-list-header">
               <span>
-                HOME SUPPLY CENTERS — BUILDS ({assignedBuildsCount}/{maxAllowedBuilds} ASSIGNED)
+                HOME BUILDS ({assignedBuildsCount}/{maxAllowedBuilds} ASSIGNED)
               </span>
-              <span className="macro-hint">Click card or map to build</span>
+              <span className="macro-hint">Click card or map</span>
             </div>
             {buildHomes.map((homeProv) => {
               const bId = `BUILD_${activePower}_${homeProv}`;
@@ -658,7 +530,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         className="unit-type-badge"
                         style={{ backgroundColor: isWaived ? '#64748b' : '#16a34a' }}
                       >
-                        <PlusCircle size={12} />
+                        <PlusCircle size={11} />
                         {isWaived ? '—' : buildOrder?.unit_type || 'A'}
                       </span>
                       <div>
@@ -676,7 +548,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         <span className="unit-mini-pill unconfirmed">Waived</span>
                       ) : (
                         <span className="unit-mini-pill confirmed">
-                          <CheckCircle2 size={12} /> Build {buildOrder?.unit_type === 'F' ? 'Fleet' : 'Army'}
+                          <CheckCircle2 size={11} /> Build {buildOrder?.unit_type === 'F' ? 'Fleet' : 'Army'}
                         </span>
                       )}
                     </div>
@@ -695,6 +567,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                   <div className="unit-inline-controls" onClick={(e) => e.stopPropagation()}>
                     <div className="order-type-tabs">
                       <button
+                        type="button"
                         className={`order-tab-btn ${isArmy ? 'active' : ''}`}
                         style={
                           isArmy
@@ -724,6 +597,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                             return (
                               <button
                                 key={cst}
+                                type="button"
                                 className={`order-tab-btn ${isThisCoastFleet ? 'active' : ''}`}
                                 style={
                                   isThisCoastFleet
@@ -753,6 +627,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                           })
                         ) : (
                           <button
+                            type="button"
                             className={`order-tab-btn ${isFleet ? 'active' : ''}`}
                             style={
                               isFleet
@@ -781,6 +656,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         ))}
 
                       <button
+                        type="button"
                         className={`order-tab-btn ${isWaived ? 'active' : ''}`}
                         onClick={() =>
                           onUpdateOrder({
@@ -808,10 +684,10 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         <div className="macro-list-header">
           <span>
             {isAdjustmentPhase && buildCount < 0
-              ? `SELECT UNITS TO DISBAND (${assignedDisbandsCount}/${neededDisbands} DISBANDING)`
-              : `MACRO FORCE OVERVIEW (${myUnits.length} UNITS)`}
+              ? `DISBAND UNITS (${assignedDisbandsCount}/${neededDisbands} SELECTED)`
+              : `ACTIVE FORCE ORDERS (${myUnits.length} UNITS)`}
           </span>
-          <span className="macro-hint">Click card or map to edit</span>
+          <span className="macro-hint">Click card or map</span>
         </div>
 
         {myUnits.map((unit) => {
@@ -868,7 +744,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         : powerMeta.color,
                     }}
                   >
-                    {unit.unit_type === 'A' ? <Swords size={12} /> : <Anchor size={12} />}
+                    {unit.unit_type === 'A' ? <Swords size={11} /> : <Anchor size={11} />}
                     {unit.unit_type}
                   </span>
                   <div>
@@ -882,39 +758,38 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                   </div>
                 </div>
 
-                {/* Right-side status icon */}
                 <div className="unit-status-pill-wrap">
                   {unit.is_dislodged ? (
                     <span className="unit-mini-pill error">
-                      <AlertTriangle size={12} /> Dislodged
+                      <AlertTriangle size={11} /> Dislodged
                     </span>
                   ) : isDisbanding ? (
                     <span className="unit-mini-pill error">
-                      <Trash2 size={12} /> Disbanding
+                      <Trash2 size={11} /> Disbanding
                     </span>
                   ) : hasError ? (
                     <span className="unit-mini-pill error">
-                      <AlertCircle size={12} /> Illegal
+                      <AlertCircle size={11} /> Illegal
                     </span>
                   ) : hasWarn ? (
                     <span className="unit-mini-pill warning">
-                      <AlertTriangle size={12} /> Warning
+                      <AlertTriangle size={11} /> Warning
                     </span>
                   ) : isAdjustmentPhase || (isRetreatPhase && !unit.is_dislodged) ? (
                     <span className="unit-mini-pill confirmed">
-                      <CheckCircle2 size={12} /> Retained
+                      <CheckCircle2 size={11} /> Retained
                     </span>
                   ) : order?.is_explicit ? (
                     <span className="unit-mini-pill confirmed">
-                      <CheckCircle2 size={12} /> Ready
+                      <CheckCircle2 size={11} /> Ready
                     </span>
                   ) : (
-                    <span className="unit-mini-pill unconfirmed">Default Hold</span>
+                    <span className="unit-mini-pill unconfirmed">Hold</span>
                   )}
                 </div>
               </div>
 
-              {/* Visual Tactical Behavior Bar */}
+              {/* Behavior Bar */}
               <div className="unit-behavior-visualizer">
                 <span
                   className="behavior-verb-tag"
@@ -924,12 +799,12 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                 </span>
                 <span className="behavior-target-text">
                   {isAdjustmentPhase && !isDisbanding
-                    ? `Retained in ${provinces[unit.province]?.name} for Spring`
+                    ? `Retained in ${provinces[unit.province]?.name}`
                     : summary.targetText}
                 </span>
               </div>
 
-              {/* Inline Order Mode Buttons — Phase-Aware */}
+              {/* Order Controls */}
               <div className="unit-inline-controls" onClick={(e) => e.stopPropagation()}>
                 {isRetreatPhase ? (
                   unit.is_dislodged ? (
@@ -937,16 +812,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                       <div className="order-type-tabs">
                         {validRetreats.length > 0 && (
                           <button
-                            className={`order-tab-btn ${
-                              order?.order_type === 'RETREAT' ? 'active' : ''
-                            }`}
+                            type="button"
+                            className={`order-tab-btn ${order?.order_type === 'RETREAT' ? 'active' : ''}`}
                             style={
                               order?.order_type === 'RETREAT'
-                                ? {
-                                    backgroundColor: '#ea580c',
-                                    borderColor: '#fdba74',
-                                    color: '#fff',
-                                  }
+                                ? { backgroundColor: '#ea580c', borderColor: '#fdba74', color: '#fff' }
                                 : undefined
                             }
                             onClick={() => handleOrderTypeChange(unit, 'RETREAT')}
@@ -955,16 +825,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                           </button>
                         )}
                         <button
-                          className={`order-tab-btn ${
-                            order?.order_type === 'DISBAND' ? 'active' : ''
-                          }`}
+                          type="button"
+                          className={`order-tab-btn ${order?.order_type === 'DISBAND' ? 'active' : ''}`}
                           style={
                             order?.order_type === 'DISBAND'
-                              ? {
-                                  backgroundColor: '#dc2626',
-                                  borderColor: '#fca5a5',
-                                  color: '#fff',
-                                }
+                              ? { backgroundColor: '#dc2626', borderColor: '#fca5a5', color: '#fff' }
                               : undefined
                           }
                           onClick={() => handleOrderTypeChange(unit, 'DISBAND')}
@@ -979,9 +844,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                           <select
                             value={
                               order.target
-                                ? `${order.target}${
-                                    order.target_coast ? `/${order.target_coast}` : ''
-                                  }`
+                                ? `${order.target}${order.target_coast ? `/${order.target_coast}` : ''}`
                                 : ''
                             }
                             onChange={(e) => {
@@ -1019,20 +882,18 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                   buildCount < 0 ? (
                     <div className="order-type-tabs">
                       <button
+                        type="button"
                         className={`order-tab-btn ${!isDisbanding ? 'active' : ''}`}
                         onClick={() => handleOrderTypeChange(unit, 'HOLD')}
                       >
                         <Shield size={11} /> KEEP UNIT
                       </button>
                       <button
+                        type="button"
                         className={`order-tab-btn ${isDisbanding ? 'active' : ''}`}
                         style={
                           isDisbanding
-                            ? {
-                                backgroundColor: '#dc2626',
-                                borderColor: '#fca5a5',
-                                color: '#fff',
-                              }
+                            ? { backgroundColor: '#dc2626', borderColor: '#fca5a5', color: '#fff' }
                             : undefined
                         }
                         onClick={() => handleOrderTypeChange(unit, 'DISBAND')}
@@ -1055,6 +916,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         return (
                           <button
                             key={oType}
+                            type="button"
                             className={`order-tab-btn ${active ? 'active' : ''}`}
                             onClick={() => handleOrderTypeChange(unit, oType)}
                           >
@@ -1068,16 +930,13 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                       })}
                     </div>
 
-                    {/* Contextual Selectors for MOVE, SUPPORT, CONVOY */}
                     {order?.order_type === 'MOVE' && (
                       <div className="order-param-row">
                         <label>Destination:</label>
                         <select
                           value={
                             order.target
-                              ? `${order.target}${
-                                  order.target_coast ? `/${order.target_coast}` : ''
-                                }`
+                              ? `${order.target}${order.target_coast ? `/${order.target_coast}` : ''}`
                               : ''
                           }
                           onChange={(e) => {
@@ -1094,7 +953,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                             });
                           }}
                         >
-                          <optgroup label="Adjacent Reachable Provinces">
+                          <optgroup label="Reachable Provinces">
                             {reachable.flatMap((r) => {
                               if (r.coasts.length > 0 && unit.unit_type === 'F') {
                                 return r.coasts.map((c) => (
@@ -1111,7 +970,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                             })}
                           </optgroup>
                           {unit.unit_type === 'A' && (
-                            <optgroup label="Coastal Provinces (via Fleet Convoy)">
+                            <optgroup label="Coastal (via Convoy)">
                               {Object.values(provinces)
                                 .filter(
                                   (p) =>
@@ -1133,7 +992,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                     {order?.order_type === 'SUPPORT' && (
                       <div className="order-param-grid">
                         <div className="order-param-row">
-                          <label>Support Unit:</label>
+                          <label>Unit:</label>
                           <select
                             value={order.aux_unit_origin || ''}
                             onChange={(e) => {
@@ -1163,7 +1022,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                           </select>
                         </div>
                         <div className="order-param-row">
-                          <label>Into / Hold:</label>
+                          <label>Into:</label>
                           <select
                             value={order.target || ''}
                             onChange={(e) => {
@@ -1176,8 +1035,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                           >
                             {order.aux_unit_origin && (
                               <option value={order.aux_unit_origin}>
-                                HOLD in {provinces[order.aux_unit_origin]?.name} (
-                                {order.aux_unit_origin})
+                                HOLD in {provinces[order.aux_unit_origin]?.name} ({order.aux_unit_origin})
                               </option>
                             )}
                             <optgroup label="Support Move Into:">
@@ -1244,17 +1102,17 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                 )}
               </div>
 
-              {/* Real-time Warning / Sanity Diagnostic Banner inside Unit Card */}
+              {/* Diagnostic Alerts */}
               {unitIssues.map((iss) => (
                 <div key={iss.id} className={`unit-diagnostic-alert ${iss.severity}`}>
-                  <AlertTriangle size={14} className="diag-icon" />
+                  <AlertTriangle size={13} className="diag-icon" />
                   <div>
                     <strong>{iss.title}:</strong> {iss.message}
                   </div>
                 </div>
               ))}
 
-              {/* Simulation Result Banner if Preview or Sandbox is Active */}
+              {/* Simulation Result */}
               {simRes && (
                 <div
                   className={`unit-sim-result-strip ${
@@ -1268,187 +1126,13 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
             </div>
           );
         })}
-
-        {/* 4. SANDBOX / PRE-MOVE FOREIGN UNITS SECTION */}
-        <div className={`sandbox-panel-card ${sandboxMode ? 'sandbox-card-active' : ''}`}>
-          <div className="sandbox-header-row">
-            <div className="sandbox-title">
-              <FlaskConical size={15} />
-              <span>Sandbox &amp; Pre-Move Testing</span>
-            </div>
-            <button
-              className={`sandbox-toggle-pill ${sandboxMode ? 'active' : ''}`}
-              onClick={onToggleSandboxMode}
-            >
-              {sandboxMode ? 'Exit Sandbox (Clear Guesses)' : 'Enter Sandbox Mode'}
-            </button>
-          </div>
-          <p className="sandbox-desc">
-            {sandboxMode
-              ? 'Sandbox Mode is ACTIVE: Click any foreign unit on the map to guess/plan what they might do. Exiting Sandbox discards all foreign guesses and restores your real view!'
-              : `You are commanding ${powerMeta.shortName}. Enter Sandbox Mode to guess foreign moves and test what-if scenarios without affecting the real board.`}
-          </p>
-
-          {sandboxMode && isForeignUnitSelected && selectedUnit && (
-            <div className="sandbox-selected-foreign-banner">
-              <span>
-                Guessing Foreign Move:{' '}
-                <strong>
-                  {POWER_METADATA[selectedUnit.power].shortName} {selectedUnit.unit_type}{' '}
-                  {provinces[selectedUnit.province]?.name}
-                </strong>
-              </span>
-              <button
-                className="switch-power-mini-btn"
-                onClick={() => onSelectPower(selectedUnit.power)}
-              >
-                Play as {POWER_METADATA[selectedUnit.power].shortName}
-              </button>
-            </div>
-          )}
-
-          {sandboxMode && foreignModifiedOrders.length > 0 && (
-            <div className="foreign-orders-mini-list">
-              <div className="foreign-list-header-row">
-                <span className="foreign-list-label">
-                  Hypothetical Foreign Moves ({foreignModifiedOrders.length}):
-                </span>
-                <button
-                  className="clear-foreign-btn"
-                  onClick={onClearForeignPreMoves}
-                  title="Reset all foreign units back to Hold"
-                >
-                  <Trash2 size={11} /> Clear All
-                </button>
-              </div>
-              {foreignModifiedOrders.map(({ unit, order }) => {
-                const sum = formatOrderSummary(order, provinces, unitsByProv);
-                const fSim = simulationResult?.resolutions[unit.id];
-                const fIssues = issuesByUnit[unit.id] || [];
-                return (
-                  <div
-                    key={unit.id}
-                    className={`foreign-order-chip ${
-                      unit.id === selectedUnitId ? 'chip-selected' : ''
-                    }`}
-                    onClick={() => onSelectUnit(unit.id)}
-                  >
-                    <span
-                      className="foreign-chip-dot"
-                      style={{ backgroundColor: POWER_METADATA[unit.power].color }}
-                    />
-                    <div className="foreign-chip-main">
-                      <div>
-                        <strong>{POWER_METADATA[unit.power].shortName}:</strong> {sum.fullSymbolic}
-                      </div>
-                      {fSim && (
-                        <div
-                          className={`foreign-chip-sim ${
-                            fSim.succeeded ? 'sim-pass' : 'sim-bounce'
-                          }`}
-                        >
-                          {fSim.succeeded ? '✓ Advances' : '✕ Bounced'} — {fSim.reason}
-                        </div>
-                      )}
-                      {fIssues.length > 0 && (
-                        <div className="foreign-chip-warn">⚠ {fIssues[0].title}</div>
-                      )}
-                    </div>
-                    <button
-                      className="foreign-chip-reset"
-                      title="Reset this unit to Hold"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onUpdateOrder({
-                          unit_id: unit.id,
-                          power: unit.power,
-                          unit_type: unit.unit_type,
-                          origin: unit.province,
-                          origin_coast: unit.coast,
-                          order_type: 'HOLD',
-                          target: null,
-                          target_coast: null,
-                          aux_unit_origin: null,
-                          via_convoy: false,
-                          is_explicit: false,
-                        });
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {sandboxMode ? (
-            <div className="sandbox-action-buttons-row">
-              {onGenerateAIMoves && (
-                <button
-                  type="button"
-                  className="sandbox-step-turn-btn"
-                  style={{
-                    background: 'linear-gradient(135deg, #1e3a5f 0%, #172554 100%)',
-                    borderColor: '#3b82f6',
-                  }}
-                  onClick={() => onGenerateAIMoves(undefined, false)}
-                  title="Use Tactical AI to auto-fill hypothetical moves for foreign powers"
-                >
-                  <Bot size={13} />
-                  <span>AI Auto-Plan Foreign</span>
-                </button>
-              )}
-              <button className="simulate-outcome-btn" onClick={onToggleSandboxMode}>
-                <FlaskConical size={14} />
-                <span>Done Planning — Exit Sandbox</span>
-              </button>
-              <button
-                className="sandbox-step-turn-btn"
-                onClick={onAdjudicateTurn}
-                title="Step forward to the next season in Sandbox to plan follow-up turns"
-              >
-                <Play size={13} />
-                <span>Step Turn Forward</span>
-              </button>
-            </div>
-          ) : (
-            <div className="sandbox-action-buttons-row">
-              <button className="simulate-outcome-btn" onClick={onToggleSandboxMode}>
-                <FlaskConical size={14} />
-                <span>Open Pre-Move Sandbox (Plan &amp; Test Guesses)</span>
-              </button>
-            </div>
-          )}
-        </div>
-        {isGameCreator && onOpenAdminTools && (
-          <div className="admin-sidebar-card">
-            <div className="admin-sidebar-header">
-              <div className="admin-sidebar-title">
-                <ShieldAlert size={14} className="section-icon-crimson" />
-                <span>Creator Admin Tools</span>
-              </div>
-              <span className="creator-badge">Creator</span>
-            </div>
-            <p className="admin-sidebar-desc">
-              Arbitrarily edit state, roll back turns, move units anywhere, or spawn/destroy units.
-            </p>
-            <button
-              type="button"
-              className="admin-sidebar-open-btn"
-              onClick={onOpenAdminTools}
-            >
-              <Sliders size={13} />
-              <span>Open Creator Admin Console</span>
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* 5. STICKY FOOTER: FINALIZE ORDERS & ADJUDICATE TURN */}
+      {/* 3. STICKY FOOTER: FINALIZE & ADJUDICATE */}
       <div className="sidebar-footer-actions">
         {!isFinalized ? (
           <button
+            type="button"
             className={`finalize-primary-btn ${
               myIssues.length > 0 ? 'has-warning-state' : ''
             }`}
@@ -1456,15 +1140,14 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           >
             {myIssues.length > 0 ? (
               <>
-                <AlertTriangle size={16} />
+                <AlertTriangle size={15} />
                 <span>
-                  Finalize {powerMeta.shortName} Orders ({myIssues.length} Warning
-                  {myIssues.length > 1 ? 's' : ''})
+                  Finalize {powerMeta.shortName} ({myIssues.length} Warning{myIssues.length > 1 ? 's' : ''})
                 </span>
               </>
             ) : (
               <>
-                <Lock size={16} />
+                <Lock size={15} />
                 <span>
                   Finalize {powerMeta.shortName} Orders
                   {unconfirmedCount > 0 ? ` (${unconfirmedCount} Unconfirmed)` : ''}
@@ -1473,24 +1156,25 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
             )}
           </button>
         ) : (
-          <button className="unfinalize-btn" onClick={onUnfinalizeClick}>
-            <Unlock size={16} />
-            <span>Orders Finalized — Click to Unlock &amp; Edit</span>
+          <button type="button" className="unfinalize-btn" onClick={onUnfinalizeClick}>
+            <Unlock size={15} />
+            <span>Orders Finalized — Click to Unlock</span>
           </button>
         )}
 
         <button
+          type="button"
           className="adjudicate-turn-btn"
           title="Execute turn adjudication and advance to the next season"
           onClick={onAdjudicateTurn}
           disabled={gameOver}
         >
-          <Play size={15} />
+          <Play size={14} />
           <span>
             {gameOver
               ? 'Game Over'
               : isAdjustmentPhase
-              ? 'Resolve Adjustments & Advance to Spring'
+              ? 'Resolve Adjustments & Advance'
               : isRetreatPhase
               ? 'Resolve Retreats & Advance'
               : 'Resolve Phase'}

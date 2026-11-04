@@ -1,61 +1,89 @@
-# Macro Sidebar & Controls (`MacroSidebar.tsx`)
+# Dual Collapsible Sidebars & Tactical Controls
 
-The **Macro Sidebar** (`frontend/src/components/MacroSidebar.tsx`) sits alongside the map, providing a complete roster of all military units, phase-aware order builders, diagnostic warnings, surrender status, and turn progression controls.
+The tactical workspace divides user controls into two specialized, independently collapsible sidebars flanking the interactive European map:
+
+1. **Left Sidebar (`ToolsSidebar.tsx`)**: Dedicated to general tools, cartographic legend, map camera & zoom options, Great Powers standing, Pre-Move Sandbox testing, and creator admin tools.
+2. **Right Sidebar (`MacroSidebar.tsx`)**: Dedicated strictly to core gameplay: active sovereign command, phase instructions, unit order drafting, home builds, and turn finalization/adjudication.
+
+Both sidebars feature smooth, 44px collapsed rail views with quick tool icons and status badges, maximizing map screen estate while keeping all critical functions accessible.
 
 ---
 
-## Layout Sections
+## Left Sidebar: Chancellery Tools & Intel (`ToolsSidebar.tsx`)
 
-### 1. Active Nation Header & Supply Center Tally
-- Displays the currently commanded Great Power, national crest, and color bar.
-- Shows total controlled Supply Centers and active unit count.
-- **Seat Lock Indicator**: In multiplayer matches, locks to the player's claimed nation; in sandbox mode, enables quick-switching across all 7 nations.
-- **Civil Disorder Banner**: If the power has surrendered, displays an amber banner indicating units are operating in autonomous defense (holding, no support).
-- **Admin Tools & Surrender Buttons**: Quick-action buttons to open `AdminToolsModal.tsx` (for room creators/sandbox) and `SurrenderModal.tsx` (for claimed active seats).
+### 1. Map View & Camera Controls
+- **Zoom In (`+`) & Zoom Out (`-`)**: Stepped zooming across the SVG canvas.
+- **Current Zoom Readout**: Real-time percentage indicator (e.g., `105%`).
+- **Fit Map / Reset Camera**: Instantly realigns camera to the default center framing at 105% zoom.
 
-### 2. Real-Time Diagnostics & Blunder Alert Strip
-- Evaluates `issues` returned by the backend validator.
-- Groups issues by severity (`error`, `warning`, `info`).
-- Clicking an issue card zooms the map directly to the implicated provinces and selects the unit.
+### 2. Tactical Map Cartographic Legend
+- Displays symbolic explanations for all map vector overlays:
+  - **Move / Attack Vector**: Blue curved arrow indicating unit repositioning.
+  - **Support Link**: Teal dashed line with target reticle indicating defensive or offensive support.
+  - **Fleet Convoy**: Purple wavy line representing naval troop transport.
+  - **Tactical Warning / Dislodgement**: Red/amber alert indicating illegal orders, cut supports, or retreats.
+- Reference notes for bicoastal provinces (`STP`, `SPA`, `BUL`) and impassable terrain (`SWI`).
 
-### 3. Phase-Aware Order Roster
+### 3. Great Powers Diplomatic Standing & Command Selector
+- Lists all 7 Great Powers (Austria, England, France, Germany, Italy, Russia, Turkey) with their heraldic crests, national colors, controlled Supply Centers, and active field units.
+- **Sandbox Mode**: Clicking any power immediately switches active command to that nation for hypothetical experimentation.
+- **Multiplayer Mode**: Displays diplomatic status (Orders Finalized, Drafting, or Civil Disorder).
 
-#### A. Movement Phase (`Movement`)
-Each active unit is presented as an interactive card:
-- **Unit Badge**: Army (`A`) or Fleet (`F`) icon + province name.
-- **Current Order Summary**: Formatted symbolic syntax (e.g. `A PAR ──► BUR`, `F LON HOLD`).
-- **Interactive Action Buttons**:
-  - `HOLD`: Sets unit to hold position.
-  - `MOVE`: Expands destination dropdown listing reachable provinces (with coast picker for split-coast destinations like `STP`, `SPA`, `BUL`).
-  - `SUPPORT`: Configures supported unit and target destination.
-  - `CONVOY`: Configures fleet sea transport bridge for an Army.
+### 4. War Room & Pre-Move Sandbox Tools
+- **"Enter Pre-Move Sandbox" / "Exit Sandbox"**: Toggles isolated hypothetical planning. In sandbox mode, foreign moves can be freely drafted; exiting wipes foreign moves and restores the authoritative state.
+- **Tactical General Staff AI**:
+  - **"Plan Opponents"**: Generates DATC-compliant, heuristic moves for all 6 other nations.
+  - **"Plan All 7 Powers"**: Auto-generates orders for every nation across Europe.
+  - **"AI Step Turn"**: Auto-plans foreign powers and steps the game clock directly to the next phase with full adjudication.
+- **Foreign Pre-Moves Counter & Clear**: Displays count of drafted foreign guesses with a one-click "Clear" button.
+- **Scenario Management**: One-click "Reset 1901" scenario start and "Save Sandbox" to player account.
 
-#### B. Retreat Phase (`Retreats`)
-Only dislodged units requiring orders appear in the roster:
-- **Dislodged Badge**: Highlights province and the dislodging attacker origin.
-- **Eligible Retreat Options**: Dropdown populated strictly with valid retreat destinations (unoccupied, non-attacker, non-standoff provinces).
-- **Disband Option**: Disbands the unit immediately if no safe retreats exist or by choice.
+### 5. Creator Administrator Controls (Game Creator Only)
+- Visible exclusively to room creators.
+- **"Open Admin Console"**: Launches `AdminToolsModal.tsx` for timeline rollbacks, unit teleportation, and arbitrary unit spawning/destruction.
+- **"Direct-Edit Board Override"**: Toggles on-the-fly administrator direct board manipulation.
 
-#### C. Winter Adjustments Phase (`Adjustments`)
-Displays build and disband quotas:
-- **Surplus Supply Centers (`buildCount > 0`)**: Displays cards for vacant home supply centers. Commanders select `BUILD ARMY`, `BUILD FLEET` (with coast options for bicoastal home centers like `STP`), or `WAIVE`.
-- **Supply Center Deficit (`buildCount < 0`)**: Prompts commanders to select surplus units to `DISBAND` until the unit count matches the supply center tally.
+---
 
-### 4. Tactical General Staff AI & Automation Tools
-- **"Plan Opponents"**: Deploys the built-in Diplomacy Tactical AI to formulate intelligent, DATC-compliant, non-conflicting tactical orders for all other 6 nations.
-- **"Plan All 7 Powers"**: Auto-plans tactical orders for every Great Power across the entire board.
-- **"Plan [Nation]"**: Formulates tactical orders specifically for the active power.
-- **"AI Step Phase"**: Auto-plans foreign powers and steps the game clock directly to the next phase with full adjudication.
-- **"Confirm All Holds"**: Marks all unassigned units as explicitly holding, clearing `UNASSIGNED_UNIT` warnings before finalization.
-- **"Clear Foreign Pre-Moves"** (Sandbox Mode): Instantly wipes hypothetical moves assigned to rival nations.
+## Right Sidebar: Tactical Command & Orders (`MacroSidebar.tsx`)
 
-### 5. Turn Simulation & Resolution Preview
-- **"Simulate Turn" (`POST /api/simulate`)**: Runs non-destructive adjudication. Projects battle clashes, cut supports, bounces, and successful maneuvers directly onto the map.
-- **"Clear Simulation Overlay"**: Hides the simulation preview to resume order drafting.
+### 1. Active Sovereign Command Header & Telemetry
+- Displays active nation crest, name, controlled Supply Centers, and active/dislodged unit counts.
+- Real-time status badge: `Drafting Orders`, `Finalized`, `Civil Disorder`, or `X Issues`.
+- Top-right collapse button for quick toggling into a compact 44px rail.
 
-### 6. Turn Finalization & Adjudication
-- **"Finalize Orders" (`POST /api/finalize`)**: Initiates pre-finalization checks. If warnings or unassigned units exist, opens `SanityCheckModal.tsx`.
-- **"Adjudicate Turn & Advance" (`POST /api/adjudicate`)**: Commits all finalized moves, advances phase (Movement -> Retreats -> Movement -> Adjustments), updates supply center ownership in Fall, and records turn history. Once a power has won, the button is disabled and reads "Game Over", and the header shows a pill naming the winner.
+### 2. Phase-Aware Instructions & Quotas
+- **Winter Adjustments**: Summarizes build allowances (`+X` home builds allowed, `Y/X` assigned) or disband requirements (`-X` units required to disband).
+- **Retreats**: Prompts commanders on dislodged units requiring retreat destinations or disband orders.
 
-### 7. Historical Turn Log
-- Reverse-chronological audit log detailing tactical outcomes of previous seasons.
+### 3. Quick Action Toolbar
+- **"Confirm All (X/Y)"**: Marks all unassigned units as explicitly holding, clearing `UNASSIGNED_UNIT` warnings.
+- **"Surrender & Leave"** (Multiplayer): Accessible button to surrender sovereign command and place units in Civil Disorder.
+
+### 4. Macro Force Orders Roster
+
+#### A. Home Supply Center Builds (Winter Adjustments)
+- Displays vacant home supply centers for surplus powers.
+- Inline controls to toggle `+ Army`, `+ Fleet` (with coastal options for split coasts), or `Waive`.
+
+#### B. Active Field Units & Dislodged Units
+- **Unit Badge**: Army (`A`) or Fleet (`F`) with national color.
+- **Province Code & Title**: Name and code (with coastal notation, e.g. `STP/SC`).
+- **Behavior Visualizer**: Symbolic action summary (e.g. `MOVE -> BUR`, `HOLD Defending Paris`).
+- **Order Mode Tabs**: `HOLD`, `MOVE`, `SUPPORT`, `CONVOY`, `RETREAT`, `DISBAND`.
+- **Target & Auxiliary Selectors**: Clean, contextual dropdown menus populated strictly with valid reachable provinces and convoy routes.
+- **Real-Time Diagnostics**: Inline error/warning alerts explaining DATC violations.
+- **Simulation Preview Results**: Instant visual feedback on simulated advances, bounces, or cut supports.
+
+### 5. Sticky Action Footer
+- **"Finalize Orders" (`POST /api/finalize`)**: Submits orders. Opens `SanityCheckModal.tsx` if warnings or unconfirmed moves exist.
+- **"Resolve Phase / Adjudicate Turn" (`POST /api/adjudicate`)**: Commits finalized moves, resolves combat via DATC rules, advances the season clock, and updates SC ownership.
+
+---
+
+## Collapsible Sidebar Rails
+
+When either sidebar is collapsed:
+- **Left Tools Rail (44px)**: Houses collapse toggle, mini Zoom In / Out / Fit buttons, Sandbox active glow indicator, and Admin icon.
+- **Right Tactical Rail (44px)**: Houses collapse toggle, active nation crest, unconfirmed orders counter pill (or green checkmark when complete), and warning badge.
+- **Header Toggle Pills**: Quick pill buttons in the top bar ("Tools Sidebar", "Tactical Sidebar") let users toggle either panel from anywhere.
