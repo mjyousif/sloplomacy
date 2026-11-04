@@ -121,3 +121,41 @@ def test_ws_lobby_live_sync():
         assert lobby_update["type"] == "lobby_update"
         game_ids = [g["game_id"] for g in lobby_update["games"]]
         assert new_game["game_id"] in game_ids
+
+
+def test_ws_unfinalize_and_scenario_reset_broadcast():
+    client = TestClient(app)
+    GAMES["proto_1901"] = build_scenario("standard_1901", Power.FRANCE, "proto_1901")
+
+    with client.websocket_connect("/ws/games/proto_1901") as ws:
+        _ = ws.receive_json()  # Initial state
+
+        client.post("/api/finalize?game_id=proto_1901", json={"power": "FRANCE", "force": True})
+        assert "FRANCE" in ws.receive_json()["state"]["finalized_powers"]
+
+        client.post("/api/unfinalize?game_id=proto_1901", json={"power": "FRANCE"})
+        assert ws.receive_json()["state"]["finalized_powers"] == []
+
+        client.post("/api/adjudicate?game_id=proto_1901")
+        assert ws.receive_json()["state"]["season"] == "Fall"
+
+        client.post("/api/scenario?game_id=proto_1901", json={"scenario_id": "standard_1901"})
+        assert ws.receive_json()["state"]["season"] == "Spring"
+
+
+def test_ws_lobby_hears_about_resolved_turns():
+    client = TestClient(app)
+    created = client.post(
+        "/api/games",
+        json={"name": "Lobby Turn", "creator_power": "FRANCE", "user_id": "host", "email": "host@test.com"},
+    )
+    game_id = created.json()["game_id"]
+
+    with client.websocket_connect("/ws/lobby") as ws:
+        _ = ws.receive_json()  # Initial lobby
+
+        client.post(f"/api/adjudicate?game_id={game_id}")
+
+        update = ws.receive_json()
+        assert update["type"] == "lobby_update"
+        assert next(g for g in update["games"] if g["game_id"] == game_id)["season"] == "Fall"
