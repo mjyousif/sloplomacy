@@ -55,7 +55,10 @@ Displays build and disband quotas:
 
 ### 6. Turn Finalization & Adjudication
 - **"Finalize Orders" (`POST /api/finalize`)**: Initiates pre-finalization checks. If warnings or unassigned units exist, opens `SanityCheckModal.tsx`.
-- **"Adjudicate Turn & Advance" (`POST /api/adjudicate`)**: Commits all finalized moves, advances phase (Movement -> Retreats -> Movement -> Adjustments), updates supply center ownership in Fall, and records turn history. Once a power has won, the button is disabled and reads "Game Over", and the header shows a pill naming the winner.
+- **Consensus Auto-Adjudication (Multiplayer)**: In multiplayer matches, turns advance automatically once all required active powers finalize their orders. Non-creator players see a real-time consensus status card (`"Resolution Progress: X/Y Ready"`, `"Waiting on: [Powers]"`) rather than a manual button. Connected clients poll state in the background to seamlessly receive phase transitions.
+- **"Adjudicate Turn & Advance" (`POST /api/adjudicate`)**:
+  - In Solo / Sandbox Mode: Commits moves and advances the season/phase.
+  - In Multiplayer Mode: Restricted to the **Game Creator** as `"Force Adjudicate Phase (Host Override)"` to bypass stalled or AFK players. Unauthorized non-creator calls return `403 Forbidden`. Once a power has won, the button is disabled and reads "Game Over".
 
 ### 7. Historical Turn Log
 - Reverse-chronological audit log detailing tactical outcomes of previous seasons.
