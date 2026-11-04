@@ -29,6 +29,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `sanityModalOpen` | `boolean` | Modal | Controls visibility of pre-finalization warning modal. |
 | `sanityModalIssues` | `ValidationIssue[]` | Modal | Issues displayed inside the Sanity Check modal. |
 | `toastBanner` | `string \| null` | Banner | Auto-expiring toast message for user notifications. |
+| `wsConnected` | `boolean` | Network | Active real-time WebSocket connection to room feed or lobby. |
 
 ---
 
@@ -96,3 +97,38 @@ When a user enables **Sandbox Mode** in the header:
 4. **Clearing Foreign Orders**:
    - Dispatches `POST /api/sandbox/clear-foreign?game_id={activeGameId}`.
    - Cleans all hypothetical enemy orders while remaining in Sandbox mode.
+
+
+---
+
+## Real-Time WebSocket Synchronization (`useDiplomacyWebSocket`)
+
+To guarantee seamless multiplayer coordination, the frontend maintains a persistent WebSocket connection via the custom hook `useDiplomacyWebSocket`:
+
+```
+                           CLIENT BROWSER (App.tsx)
+                                      │
+            ┌─────────────────────────┴─────────────────────────┐
+            │ viewMode === 'lobby'                              │ viewMode !== 'lobby'
+            ▼                                                   ▼
+     ws://.../ws/lobby                                   ws://.../ws/games/{activeGameId}
+            │                                                   │
+            ▼                                                   ▼
+  handleWsLobbyUpdate                                  handleWsGameUpdate
+  - Update gamesList                                   - Update gameState
+  - Update participant counts                          - Update activeGameSummary
+                                                       - Trigger phase-advance toast
+```
+
+### Key Capabilities:
+1. **Live Room State Synchronization**:
+   - Order submissions, finalizations, adjudications, and admin overrides by other players are immediately pushed to all connected clients without page reloads.
+2. **Phase Advance Alerts**:
+   - Automatically detects when `season`, `year`, or `phase` transitions occur and triggers a persistent toast announcement to notify the commander.
+3. **Connection Resilience**:
+   - Sends a `{ type: 'ping' }` heartbeat every 25 seconds to keep proxies and serverless Cloud Run instances active.
+   - Automatically reconnects with exponential backoff on unexpected connection drops.
+4. **Visual Telemetry**:
+   - The header displays a real-time badge (`.header-ws-badge`):
+     - `Live Sync` with a pulsating green indicator when actively connected.
+     - `Connecting...` with amber indicator during connection attempts or fallbacks.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import './App.css';
 import { AuthModal } from './components/AuthModal';
 import { EuropeMap } from './components/EuropeMap';
@@ -8,6 +8,7 @@ import { AdminToolsModal } from './components/AdminToolsModal';
 import { SanityCheckModal } from './components/SanityCheckModal';
 import { SurrenderModal } from './components/SurrenderModal';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
+import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
 import {
   getInitialAuthUser,
   signOutUser,
@@ -24,6 +25,8 @@ import {
   ProvinceInfo,
   SimulationResult,
   ValidationIssue,
+  WebSocketGameUpdate,
+  WebSocketLobbyUpdate,
 } from './types/diplomacy';
 import {
   AlertOctagon,
@@ -111,6 +114,52 @@ export function App() {
       setSimulationResult(st.last_resolution);
     }
   };
+
+  const handleWsGameUpdate = useCallback(
+    (update: WebSocketGameUpdate) => {
+      if (update.game_id !== activeGameId) return;
+
+      setGameState((prev) => {
+        if (
+          prev &&
+          (prev.season !== update.state.season ||
+            prev.year !== update.state.year ||
+            prev.phase !== update.state.phase)
+        ) {
+          triggerToast(
+            `Phase advanced: ${update.state.season} ${update.state.year} (${update.state.phase})`
+          );
+        }
+        return update.state;
+      });
+
+      if (update.state.last_resolution) {
+        setSimulationResult(update.state.last_resolution);
+      }
+      if (update.summary) {
+        setActiveGameSummary(update.summary);
+      }
+    },
+    [activeGameId]
+  );
+
+  const handleWsLobbyUpdate = useCallback(
+    (update: WebSocketLobbyUpdate) => {
+      setGamesList(update.games);
+      const current = update.games.find((g) => g.game_id === activeGameId);
+      if (current) {
+        setActiveGameSummary(current);
+      }
+    },
+    [activeGameId]
+  );
+
+  const { isConnected: wsConnected } = useDiplomacyWebSocket({
+    activeGameId,
+    viewMode,
+    onGameUpdate: handleWsGameUpdate,
+    onLobbyUpdate: handleWsLobbyUpdate,
+  });
 
   const fetchGamesList = async () => {
     try {
@@ -870,6 +919,18 @@ export function App() {
 
         {/* Right Header Controls: Board Actions + User Account */}
         <div className="header-right-actions">
+          <div
+            className={`header-ws-badge ${wsConnected ? 'ws-connected' : 'ws-disconnected'}`}
+            title={
+              wsConnected
+                ? `Real-time synchronization connected (${viewMode === 'lobby' ? 'Lobby Feed' : activeGameId})`
+                : 'Connecting to real-time synchronization...'
+            }
+          >
+            <span className={`ws-status-dot ${wsConnected ? 'dot-online' : 'dot-offline'}`} />
+            <span>{wsConnected ? 'Live Sync' : 'Connecting...'}</span>
+          </div>
+
           {viewMode !== 'lobby' && (
             <>
               {viewMode === 'multiplayer' && lockedPower && (

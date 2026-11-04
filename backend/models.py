@@ -295,3 +295,15 @@ class AdminStatusResponse(BaseModel):
     history_count: int
     creator_email: str
     creator_id: Optional[str] = None
+
+
+class WebSocketGameUpdate(BaseModel):
+    type: str = "game_update"
+    game_id: str
+    state: GameState
+    summary: Optional[MultiplayerGameSummary] = None
+
+
+class WebSocketLobbyUpdate(BaseModel):
+    type: str = "lobby_update"
+    games: List[MultiplayerGameSummary]
