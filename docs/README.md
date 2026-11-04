@@ -62,7 +62,7 @@ docs/
 
 | Layer | Technologies | Purpose |
 | :--- | :--- | :--- |
-| **Backend API** | Python 3.8+, FastAPI, Pydantic v2, Uvicorn | Authoritative state, validation engine, and DATC adjudicator |
+| **Backend API** | Python 3.10+, FastAPI, Pydantic v2, Uvicorn | Authoritative state, validation engine, and DATC adjudicator |
 | **Frontend UI** | React 19, TypeScript, Vite, Lucide React | High-performance cartographic SVG map, reactive sidebar & sanity checks |
 | **Data Protocol** | JSON REST over HTTP with CORS | Full state hydration and real-time diagnostic push/pull |
 | **Testing** | Pytest (Backend engine tests), TypeScript (`tsc` check) | Verifies topology symmetry, bounce resolutions, and syntax contracts |

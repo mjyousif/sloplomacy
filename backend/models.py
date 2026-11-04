@@ -125,6 +125,7 @@ class SimulationResult(BaseModel):
     next_phase: Optional[str] = None
     builds: Optional[Dict[str, Any]] = None
     retreats: Optional[Dict[str, Any]] = None
+    winner: Optional[Power] = None  # Set when these orders would end the game
 
 
 class GameState(BaseModel):
@@ -144,6 +145,7 @@ class GameState(BaseModel):
     turn_history: List[str] = Field(default_factory=list)
     builds: Optional[Dict[str, Any]] = None
     retreats: Optional[Dict[str, Any]] = None
+    winner: Optional[Power] = None  # Set once the game has been won; no further turns resolve
 
 
 class OrderSubmissionRequest(BaseModel):

@@ -3,10 +3,10 @@
 [![CI](https://github.com/mjyousif/sloplomacy/actions/workflows/ci.yml/badge.svg)](https://github.com/mjyousif/sloplomacy/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3.0-blue.svg)](LICENSE)
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.162+-009688?logo=fastapi&logoColor=white)
 ![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?logo=vite&logoColor=white)
 [![Rules: DATC Standard 1901](https://img.shields.io/badge/Rules-DATC_Standard_1901-7952B3)](docs/backend/adjudicator.md)
 
 An interactive web-based tactical adjudicator, move-planner, and map visualizer for standard 1901 Diplomacy.
@@ -33,7 +33,6 @@ start.bat
 
 ### macOS / Linux / WSL / Git Bash
 ```bash
-chmod +x start.sh
 ./start.sh
 ```
 
@@ -45,7 +44,7 @@ python quickstart.py
 ---
 
 ## What the Quick Start Script Does
-1. **Prerequisite Check**: Verifies that Python 3.8+ and Node.js/npm are available.
+1. **Prerequisite Check**: Verifies that Python 3.10+ and Node.js/npm are available.
 2. **Backend Setup**: Initializes `backend/.venv` and installs dependencies from `backend/requirements.txt` if needed.
 3. **Frontend Setup**: Installs `frontend/node_modules` if needed.
 4. **Concurrent Execution**: Launches both the FastAPI server (`:8000`) and Vite dev server (`:5173`).

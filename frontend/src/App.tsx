@@ -502,6 +502,9 @@ export function App() {
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        triggerToast(err.detail || 'That order was not accepted.');
       }
     } catch (e) {
       console.error(e);
@@ -679,8 +682,15 @@ export function App() {
         const st: GameState = await res.json();
         applyServerState(st);
         setSelectedUnitId(null);
-        triggerToast(`Turn resolved! Now in ${st.season} ${st.year} (${st.phase} Phase).`);
+        triggerToast(
+          st.winner
+            ? `${POWER_METADATA[st.winner].name} has won the game!`
+            : `Turn resolved! Now in ${st.season} ${st.year} (${st.phase} Phase).`
+        );
         fetchGamesList();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        triggerToast(err.detail || 'Could not resolve the turn.');
       }
     } catch (e) {
       console.error(e);
@@ -811,6 +821,13 @@ export function App() {
                 {gameState.phase.toUpperCase()} PHASE
               </span>
             </div>
+
+            {gameState.winner && (
+              <span className="game-over-pill">
+                <Crown size={14} />
+                <span>{POWER_METADATA[gameState.winner].shortName.toUpperCase()} WINS</span>
+              </span>
+            )}
 
             <div className="header-sanity-readout">
               {activeErrors.length > 0 ? (
@@ -1022,6 +1039,7 @@ export function App() {
             retreats={gameState.retreats}
             isMultiplayer={viewMode === 'multiplayer'}
             isGameCreator={isGameCreator}
+            gameOver={Boolean(gameState.winner)}
             onOpenAdminTools={() => setAdminModalOpen(true)}
             adminOverrideActive={adminOverrideActive}
             onSelectPower={handleSelectPower}

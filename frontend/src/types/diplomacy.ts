@@ -105,6 +105,7 @@ export interface SimulationResult {
   next_phase?: string | null;
   builds?: Record<Power, { count: number; homes: string[] }> | null;
   retreats?: Record<Power, Record<string, string[]>> | null;
+  winner?: Power | null;
 }
 
 export interface GameState {
@@ -124,6 +125,7 @@ export interface GameState {
   turn_history: string[];
   builds?: Record<Power, { count: number; homes: string[] }> | null;
   retreats?: Record<Power, Record<string, string[]>> | null;
+  winner?: Power | null;
 }
 
 export interface FinalizeResponse {

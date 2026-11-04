@@ -41,18 +41,23 @@ def parse_diplomacy_phase(phase_str: str) -> Tuple[str, int, str]:
 
 
 def order_to_diplomacy_str(order: Order, units_by_prov: Dict[str, Unit]) -> Optional[str]:
+    """Translate an order for the engine, or return None if it is incomplete and cannot be."""
     u_type = order.unit_type.value if hasattr(order.unit_type, "value") else str(order.unit_type)
     orig = f"{order.origin}/{order.origin_coast}" if order.origin_coast else order.origin
 
     if order.order_type == OrderType.HOLD:
         return f"{u_type} {orig} H"
     elif order.order_type == OrderType.MOVE:
-        dest = f"{order.target}/{order.target_coast}" if order.target_coast else (order.target or "")
+        if not order.target:
+            return None
+        dest = f"{order.target}/{order.target_coast}" if order.target_coast else order.target
         if order.via_convoy:
             return f"{u_type} {orig} - {dest} VIA"
         return f"{u_type} {orig} - {dest}"
     elif order.order_type == OrderType.SUPPORT:
-        aux_prov = order.aux_unit_origin or ""
+        if not order.aux_unit_origin:
+            return None
+        aux_prov = order.aux_unit_origin
         aux_unit = units_by_prov.get(aux_prov)
         aux_type = aux_unit.unit_type.value if (aux_unit and hasattr(aux_unit.unit_type, "value")) else "A"
         aux_orig = f"{aux_prov}/{aux_unit.coast}" if (aux_unit and aux_unit.coast) else aux_prov
@@ -62,11 +67,12 @@ def order_to_diplomacy_str(order: Order, units_by_prov: Dict[str, Unit]) -> Opti
         else:
             return f"{u_type} {orig} S {aux_type} {aux_orig} - {target_prov}"
     elif order.order_type == OrderType.CONVOY:
-        aux_prov = order.aux_unit_origin or ""
+        if not order.aux_unit_origin or not order.target:
+            return None
+        aux_prov = order.aux_unit_origin
         aux_unit = units_by_prov.get(aux_prov)
         aux_type = aux_unit.unit_type.value if (aux_unit and hasattr(aux_unit.unit_type, "value")) else "A"
-        target_prov = order.target or ""
-        return f"{u_type} {orig} C {aux_type} {aux_prov} - {target_prov}"
+        return f"{u_type} {orig} C {aux_type} {aux_prov} - {order.target}"
     elif order.order_type == OrderType.BUILD:
         if u_type == "A":
             return f"A {order.origin} B"
@@ -252,6 +258,19 @@ def adjudicate_turn(
     for p_name, ord_list in power_orders.items():
         game.set_orders(p_name, ord_list)
 
+    # The engine silently drops orders it finds illegal and the unit simply holds, with no
+    # result code to show for it. Record what it kept, so that a dropped order is never
+    # applied or reported as a success.
+    kept_orders: Set[Tuple[str, str, str]] = set()
+    for p_name in power_orders:
+        for kept in game.get_orders(p_name):
+            parts = kept.split()
+            if len(parts) >= 2:
+                kept_orders.add((p_name, parts[0], split_province_code(parts[1])[0]))
+
+    def engine_kept_order(u: Unit) -> bool:
+        return (u.power.value, u.unit_type.value, u.province) in kept_orders
+
     # Process adjudication
     game.process()
 
@@ -295,7 +314,13 @@ def adjudicate_turn(
             if u.is_dislodged:
                 continue
             ord_obj = orders.get(u.id)
-            if ord_obj and ord_obj.order_type == OrderType.SUPPORT and ord_obj.aux_unit_origin and ord_obj.target:
+            if (
+                ord_obj
+                and ord_obj.order_type == OrderType.SUPPORT
+                and ord_obj.aux_unit_origin
+                and ord_obj.target
+                and engine_kept_order(u)
+            ):
                 u_loc = f"{u.province}/{u.coast}" if u.coast else u.province
                 u_key = f"{u.unit_type.value} {u_loc}"
                 u_res = results_for_phase.get(u_key, [])
@@ -322,7 +347,6 @@ def adjudicate_turn(
             dislodged = any(r.code == 10005 or "dislodged" in str(r).lower() for r in res_list)
             voided = any(r.code == 10003 or "void" in str(r).lower() for r in res_list)
             disrupted = any(r.code == 10006 or "disrupted" in str(r).lower() for r in res_list)
-            succeeded = not no_convoy and not bounced and not cut and not dislodged and not voided and not disrupted
 
             attack_strength = 1
             defense_strength = 1
@@ -330,7 +354,19 @@ def adjudicate_turn(
             otype = ord_obj.order_type if ord_obj else OrderType.HOLD
             target = ord_obj.target if ord_obj else None
 
-            if otype == OrderType.MOVE and target:
+            rejected = otype != OrderType.HOLD and not engine_kept_order(u)
+            succeeded = not (no_convoy or bounced or cut or dislodged or voided or disrupted or rejected)
+
+            if rejected:
+                defense_strength = 1 + uncut_supports_for_hold.get(u.province, 0)
+                reason = f"Illegal {otype.value} order rejected; unit held in {p_name_fn(u.province)}."
+                summary.append(
+                    f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} held: illegal {otype.value} order rejected."
+                )
+                if dislodged:
+                    reason += " Dislodged by superior force."
+                    summary.append(f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} dislodged.")
+            elif otype == OrderType.MOVE and target:
                 attack_strength = 1 + uncut_supports_for_move.get((u.province, target), 0)
                 if no_convoy:
                     reason = f"Convoy path missing or disrupted moving to {p_name_fn(target)}."
@@ -647,8 +683,15 @@ def adjudicate_turn(
                         reason=f"Waived build in {p_name_fn(ord_obj.origin)}.",
                     )
 
-    # Next phase info from diplomacy game
-    next_season, next_year, next_phase = parse_diplomacy_phase(game.phase)
+    # Next phase info from diplomacy game. A finished game has no next phase (its phase is the
+    # bare word "COMPLETED"), so the clock stays on the phase that decided it.
+    winner: Optional[Power] = None
+    if game.is_game_done:
+        next_season, next_year, next_phase = season, year, phase
+        if len(game.outcome) > 1:
+            winner = Power(game.outcome[1])
+    else:
+        next_season, next_year, next_phase = parse_diplomacy_phase(game.phase)
 
     # Supply center ownership from diplomacy engine
     new_ownership: Dict[str, Power] = {}
@@ -660,8 +703,8 @@ def adjudicate_turn(
 
     # Extract builds and retreats status for the NEXT phase
     game_state_data = game.get_state()
-    builds_data = game_state_data.get("builds")
-    retreats_data = game_state_data.get("retreats")
+    builds_data = None if game.is_game_done else game_state_data.get("builds")
+    retreats_data = None if game.is_game_done else game_state_data.get("retreats")
 
     return SimulationResult(
         resolutions=resolutions,
@@ -673,4 +716,5 @@ def adjudicate_turn(
         next_phase=next_phase,
         builds=builds_data,
         retreats=retreats_data,
+        winner=winner,
     )

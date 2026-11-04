@@ -141,6 +141,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   ├── models.py              # Pydantic v2 models (GameState, Order, Issues, Admin schemas)
 │   ├── adjudicator.py         # Official DATC adjudication wrapper over `diplomacy` package
 │   ├── validator.py           # Real-time pre-flight legality and tactical blunder checks
+│   ├── ai_engine.py           # Heuristic order generation for sandbox AI planning
 │   ├── map_data.py            # Complete 76-province graph, dual coasts, 34 SC definitions
 │   ├── requirements.txt       # Python dependencies
 │   └── test_*.py              # Comprehensive pytest test harness (7 test suites)

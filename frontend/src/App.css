@@ -1432,6 +1432,27 @@
   background: #354052;
 }
 
+.adjudicate-turn-btn:disabled {
+  background: #28303e;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.game-over-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid #d4af37;
+  background: rgba(212, 175, 55, 0.14);
+  color: #f5e6b3;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
 /* -------------------------------------------------------------------------
    5. "ARE YOU SURE?" SANITY CHECK MODAL
    ------------------------------------------------------------------------- */

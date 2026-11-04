@@ -66,3 +66,9 @@ In 1901, seven Great Powers contest Europe with 22 initial units:
 - In `Fall`, any unit occupying a supply center at the conclusion of the movement/retreat phase claims ownership for its Great Power.
 - **Engine Behavior**:
   - `POST /api/adjudicate` checks `if CURRENT_GAME.season == "Fall":` and updates `CURRENT_GAME.ownership` for all occupied supply centers.
+
+---
+
+## Winning the Game
+
+The game ends as soon as one power controls 18 of the 34 supply centers. This is checked after Fall resolves, including any Fall retreats, and the Winter adjustments for that year are not played.

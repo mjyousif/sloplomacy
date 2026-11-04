@@ -58,6 +58,7 @@ interface MacroSidebarProps {
   retreats?: Record<Power, Record<string, string[]>> | null;
   isMultiplayer?: boolean;
   isGameCreator?: boolean;
+  gameOver?: boolean;
   onOpenAdminTools?: () => void;
   adminOverrideActive?: boolean;
   onSelectPower: (power: Power) => void;
@@ -100,6 +101,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   retreats = null,
   isMultiplayer = false,
   isGameCreator = false,
+  gameOver = false,
   onOpenAdminTools,
   adminOverrideActive = false,
   onSelectPower,
@@ -1481,10 +1483,13 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           className="adjudicate-turn-btn"
           title="Execute turn adjudication and advance to the next season"
           onClick={onAdjudicateTurn}
+          disabled={gameOver}
         >
           <Play size={15} />
           <span>
-            {isAdjustmentPhase
+            {gameOver
+              ? 'Game Over'
+              : isAdjustmentPhase
               ? 'Resolve Adjustments & Advance to Spring'
               : isRetreatPhase
               ? 'Resolve Retreats & Advance'

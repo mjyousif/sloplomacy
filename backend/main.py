@@ -2,6 +2,7 @@ import os
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 import uuid
 from fastapi import FastAPI, Header, HTTPException, Query
@@ -53,6 +54,50 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+SCENARIO_IDS = {"standard_1901", "tactical_blunders_demo"}
+FIRST_YEAR = 1901
+PHASES_BY_SEASON = {
+    "Spring": {"Movement", "Retreats"},
+    "Fall": {"Movement", "Retreats"},
+    "Winter": {"Adjustments"},
+}
+
+
+def validate_order_references(order: Order) -> None:
+    """
+    Refuse orders naming provinces or coasts that do not exist.
+
+    Real but illegal moves are still accepted: drafting one is allowed, the validator flags it,
+    and the engine refuses it at adjudication.
+    """
+    named_provinces = [order.target, order.aux_unit_origin]
+    if order.unit_id.startswith("BUILD_"):
+        named_provinces.append(order.origin)
+    for code in named_provinces:
+        if code and code not in PROVINCES:
+            raise HTTPException(status_code=400, detail=f"Unknown province '{code}'.")
+
+    # Builds carry their coast on the unit being built, not on a target.
+    if order.target_coast and order.order_type != OrderType.BUILD:
+        target_coasts = PROVINCES[order.target].coasts if order.target else []
+        if order.target_coast not in target_coasts:
+            raise HTTPException(
+                status_code=400,
+                detail=f"'{order.target}' has no coast '{order.target_coast}'.",
+            )
+
+
+def resolve_static_path(static_root: str, requested: str) -> Optional[str]:
+    """Return the file `requested` names inside static_root, or None if it is missing or outside it."""
+    root = Path(static_root).resolve()
+    try:
+        candidate = (root / requested).resolve()
+        if candidate.is_relative_to(root) and candidate.is_file():
+            return str(candidate)
+    except (OSError, ValueError):  # ValueError: the path contains a NUL byte
+        pass
+    return None
 
 
 def create_default_orders(
@@ -152,6 +197,13 @@ def create_default_orders(
 
 def refresh_diagnostics_and_simulation(game: GameState) -> None:
     """Re-run real-time tactical validation and non-destructive turn simulation."""
+    if game.winner:
+        # Nothing is left to validate or preview; last_resolution keeps the deciding turn.
+        game.builds = None
+        game.retreats = None
+        game.issues = []
+        return
+
     if game.phase == "Adjustments":
         game.builds = compute_current_builds(game.units, game.ownership, game.year)
         game.retreats = None
@@ -430,6 +482,11 @@ def sync_summary(game_id: str) -> None:
         summary.phase = st.phase
         summary.finalized_powers = list(st.finalized_powers)
         summary.surrendered_powers = list(st.surrendered_powers)
+        if st.winner:
+            summary.status = "completed"
+        elif summary.status == "completed":
+            # A rollback or scenario reset reopened a finished game.
+            summary.status = "active" if len(summary.participants) >= 2 else "waiting"
 
 
 def verify_admin_access(
@@ -920,6 +977,7 @@ def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
 @app.post("/api/order", response_model=GameState)
 def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
+    validate_order_references(req.order)
     unit_map = {u.id: u for u in game.units}
     if req.order.unit_id in unit_map:
         unit = unit_map[req.order.unit_id]
@@ -999,6 +1057,9 @@ def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[str] = 
 @app.post("/api/orders/batch", response_model=GameState)
 def update_batch_orders(req: OrderSubmissionRequest, game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
+    # Check the whole batch first so that one bad order cannot leave it half applied.
+    for o in req.orders:
+        validate_order_references(o)
     unit_map = {u.id: u for u in game.units}
     for o in req.orders:
         if o.unit_id in unit_map:
@@ -1095,6 +1156,9 @@ def adjudicate_and_advance(game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
     gid = game.game_id
 
+    if game.winner:
+        raise HTTPException(status_code=409, detail=f"Game over: {game.winner.value} has already won.")
+
     # Save deep copy snapshot to history before adjudicating so creator can roll back
     if gid not in GAME_HISTORY:
         GAME_HISTORY[gid] = []
@@ -1128,6 +1192,10 @@ def adjudicate_and_advance(game_id: Optional[str] = Query(default=None)):
     game.retreats = result.retreats
     game.finalized_powers = []
     game.turn_history.insert(0, history_entry)
+    if result.winner:
+        game.winner = result.winner
+        game.last_resolution = result
+        game.turn_history.insert(0, f"{result.winner.value} has won the game in {prev_label}.")
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
     return game
@@ -1135,11 +1203,13 @@ def adjudicate_and_advance(game_id: Optional[str] = Query(default=None)):
 
 @app.post("/api/scenario", response_model=GameState)
 def load_scenario(req: ScenarioRequest, game_id: Optional[str] = Query(default=None)):
-    gid = game_id or DEFAULT_GAME_ID
-    current = GAMES.get(gid)
+    if req.scenario_id not in SCENARIO_IDS:
+        raise HTTPException(status_code=400, detail=f"Unknown scenario '{req.scenario_id}'.")
+    current = resolve_game(game_id)
+    gid = current.game_id
     SANDBOX_CHECKPOINTS[gid] = None
     GAME_HISTORY[gid] = []
-    power = req.active_power or (current.active_power if current else Power.FRANCE)
+    power = req.active_power or current.active_power
     GAMES[gid] = build_scenario(req.scenario_id, power, gid)
     sync_summary(gid)
     return GAMES[gid]
@@ -1226,6 +1296,10 @@ def admin_set_turn(
         raise HTTPException(status_code=400, detail=f"Invalid season '{req.season}'. Must be one of {valid_seasons}.")
     if req.phase not in valid_phases:
         raise HTTPException(status_code=400, detail=f"Invalid phase '{req.phase}'. Must be one of {valid_phases}.")
+    if req.phase not in PHASES_BY_SEASON[req.season]:
+        raise HTTPException(status_code=400, detail=f"{req.season} has no {req.phase} phase.")
+    if req.year < FIRST_YEAR:
+        raise HTTPException(status_code=400, detail=f"Year must be {FIRST_YEAR} or later.")
 
     game.season = req.season
     game.year = req.year
@@ -1413,6 +1487,8 @@ def admin_set_ownership(
     prov_id = req.province.upper()
     if prov_id not in PROVINCES:
         raise HTTPException(status_code=400, detail=f"Province '{req.province}' does not exist.")
+    if not PROVINCES[prov_id].is_supply_center:
+        raise HTTPException(status_code=400, detail=f"{PROVINCES[prov_id].name} is not a supply center.")
 
     if req.power is not None:
         game.ownership[prov_id] = req.power
@@ -1452,8 +1528,8 @@ if os.path.exists(STATIC_DIR):
     async def serve_spa(full_path: str):
         if full_path.startswith("api/") or full_path in ("docs", "openapi.json", "redoc"):
             raise HTTPException(status_code=404, detail="Not Found")
-        file_path = os.path.join(STATIC_DIR, full_path)
-        if os.path.isfile(file_path):
+        file_path = resolve_static_path(STATIC_DIR, full_path)
+        if file_path:
             return FileResponse(file_path)
         index_file = os.path.join(STATIC_DIR, "index.html")
         if os.path.isfile(index_file):

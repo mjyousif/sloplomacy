@@ -874,11 +874,11 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
                       value={territoryProvince}
                       onChange={(e) => setTerritoryProvince(e.target.value)}
                     >
-                      {sortedProvinces.map((p) => {
+                      {sortedProvinces.filter((p) => p.is_supply_center).map((p) => {
                         const currentOwner = gameState.ownership[p.id];
                         return (
                           <option key={p.id} value={p.id}>
-                            {p.id} — {p.name} {p.is_supply_center ? '⭐ (Supply Center)' : ''} [
+                            {p.id} — {p.name} [
                             {currentOwner ? POWER_METADATA[currentOwner].shortName : 'Neutral'}]
                           </option>
                         );
