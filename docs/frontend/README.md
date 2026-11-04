@@ -26,7 +26,8 @@ frontend/
     │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
     │   └── SanityCheckModal.tsx # Pre-finalization tactical blunder warning dialogue
     ├── data/
-    │   └── europeMapGeometry.ts # Authentic SVG vector paths, province centers & defs
+    │   ├── europeMapGeometry.ts # Authentic SVG vector paths, province centers & defs
+    │   └── europeMapGeometry.test.ts # Vitest suite for map label typography
     ├── lib/
     │   └── supabase.ts          # Supabase client singleton & auth helpers
     ├── types/
@@ -131,4 +132,4 @@ This triggers `tsc && vite build`, ensuring zero TypeScript type discrepancies w
 ```bash
 npm test
 ```
-Runs the Vitest test suites (`orderHelpers.test.ts` and `adminHelpers.test.ts`), verifying order reachability algorithms, retreat validation, and administrative permission checks.
+Runs the Vitest test suites (`orderHelpers.test.ts`, `adminHelpers.test.ts`, `supabase.test.ts` and `europeMapGeometry.test.ts`), verifying order reachability algorithms, retreat validation, and administrative permission checks.
