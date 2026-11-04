@@ -30,7 +30,7 @@ Each Great Power has an authentic historical color token used for province fills
 
 | Power | Adjective | Primary Color | Fill Color | Border Color | Light Background |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **England** | British | `#23477d` (Royal Navy Navy) | `#4c72a8` | `#19335c` | `rgba(35, 71, 125, 0.16)` |
+| **England** | British | `#183668` (Royal Navy Navy) | `#35588a` | `#0e2244` | `rgba(24, 54, 104, 0.18)` |
 | **France** | French | `#34789e` (Sky Blue) | `#6aa9c9` | `#215473` | `rgba(52, 120, 158, 0.16)` |
 | **Germany** | German | `#404040` (Prussian Slate) | `#737373` | `#262626` | `rgba(64, 64, 64, 0.16)` |
 | **Italy** | Italian | `#2e7d32` (Alpine Green) | `#5b9e5f` | `#1b5e20` | `rgba(46, 125, 50, 0.16)` |
