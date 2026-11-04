@@ -534,3 +534,32 @@ def test_static_lookup_finds_real_files(tmp_path):
 
     assert resolve_static_path(str(root), "favicon.svg") == str((root / "favicon.svg").resolve())
     assert resolve_static_path(str(root), "assets/app.js") == str((root / "assets" / "app.js").resolve())
+
+
+def test_joining_does_not_change_the_power_other_players_see():
+    game_id = _new_game("ENGLAND")
+
+    joined = client.post(
+        f"/api/games/{game_id}/join",
+        json={"power": "RUSSIA", "user_id": "friend", "email": "friend@test.com"},
+    )
+
+    assert joined.status_code == 200
+    assert joined.json()["state"]["active_power"] == "RUSSIA"
+    assert GAMES[game_id].active_power == Power.ENGLAND
+    assert client.get(f"/api/game?game_id={game_id}").json()["state"]["active_power"] == "ENGLAND"
+
+
+def test_reentering_a_saved_sandbox_still_switches_its_power():
+    game_id = _new_game("ENGLAND")
+    saved = client.post(
+        f"/api/games/save-sandbox?game_id={game_id}",
+        json={"name": "Study", "user_id": "host", "email": "host@test.com"},
+    ).json()["game_id"]
+
+    client.post(
+        f"/api/games/{saved}/join",
+        json={"power": "TURKEY", "user_id": "host", "email": "host@test.com"},
+    )
+
+    assert GAMES[saved].active_power == Power.TURKEY

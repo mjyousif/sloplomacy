@@ -655,11 +655,14 @@ def join_multiplayer_game(game_id: str, req: JoinGameRequest):
             f"Envoy {display_name} has assumed sovereign command of {req.power.value} from Civil Disorder."
         )
 
-    game_state.active_power = req.power
+    # Everyone in a multiplayer game shares this state, so claiming a seat must not change it:
+    # only the joiner's own response reports their power. A saved sandbox has a single player.
+    if summary.is_sandbox:
+        game_state.active_power = req.power
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
     return GameBootstrapResponse(
-        state=game_state,
+        state=game_state.model_copy(update={"active_power": req.power}),
         provinces=PROVINCES,
         summary=summary,
     )

@@ -126,7 +126,7 @@ Complete server snapshot of a game session.
 | `year` | `number` | Game year (e.g., `1901`). |
 | `phase` | `string` | `'Movement'`, `'Retreats'`, or `'Adjustments'`. |
 | `scenario_id` | `string` | Scenario loaded (`'standard_1901'`, etc.). |
-| `active_power` | `Power` | Current user perspective. |
+| `active_power` | `Power` | Selected power in a sandbox game. A multiplayer game is shared by all its players, so this does not identify any of them: each client uses its own claimed seat. |
 | `units` | `Unit[]` | All military units on the board. |
 | `orders` | `Record<string, Order>` | Map of `unit_id` to `Order`. |
 | `ownership` | `Record<string, Power>` | Map of province code to owning Power (supply centers). |

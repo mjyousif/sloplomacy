@@ -132,7 +132,7 @@ Creates a new multiplayer game room (public or private) and automatically assign
 ---
 
 ### 4. `POST /api/games/{game_id}/join`
-Claims an open Great Power seat for a user. If the campaign is private (`has_passcode: true`), the correct `passcode` must be provided unless the user is already a confirmed participant.
+Claims an open Great Power seat for a user. In the response, `state.active_power` is the power the caller just claimed; the shared game is not changed, so other players are unaffected. If the campaign is private (`has_passcode: true`), the correct `passcode` must be provided unless the user is already a confirmed participant.
 
 #### Request (`JoinGameRequest`):
 ```json

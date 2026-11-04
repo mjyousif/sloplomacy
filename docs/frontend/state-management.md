@@ -11,7 +11,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `viewMode` | `'lobby' \| 'sandbox' \| 'multiplayer'` | Router | High-level application mode (match browser vs tactical board). |
 | `activeGameId` | `string` | Scoping | ID of the active game session (default: `'proto_1901'`). |
 | `currentGameSummary`| `MultiplayerGameSummary \| null` | Room | Metadata for current multiplayer match or saved sandbox. |
-| `lockedPower` | `Power \| null` | Match | Claimed sovereign power for active player in multiplayer matches. |
+| `lockedPower` | `Power \| null` | Match | Claimed sovereign power for active player in multiplayer matches. `playerPower`, derived by `resolvePlayerPower`, is what the app uses as the player's power: this seat in multiplayer, `gameState.active_power` in a sandbox. |
 | `authUser` | `AuthUser \| null` | Auth | Authenticated user profile from Supabase (or local dev mode). |
 | `authModalOpen` | `boolean` | Modal | Controls visibility of Supabase auth dialogue. |
 | `gamesList` | `MultiplayerGameSummary[]` | Lobby | Roster of public matches, lobbies, and sandboxes. |
@@ -46,7 +46,7 @@ EuropeMap.tsx or MacroSidebar.tsx
 App.handleUpdateOrder(order)
          │
          ├──► HTTP POST /api/order?game_id={activeGameId}
-         │      Payload: { order: Order, active_power: Power }
+         │      Payload: { order: Order }
          │
          ├──► HTTP 200 OK: Returns refreshed authoritative GameState
          │
@@ -68,6 +68,7 @@ App.applyServerState(st)
    - Users create custom rooms or isolated sandboxes.
 3. **Joining & Claiming Seats (`POST /api/games/{id}/join`)**:
    - Claims an available Great Power for the user, setting `lockedPower` so moves cannot be submitted for rival nations.
+   - Joining never changes what other players see: the server leaves the shared game's `active_power` alone in multiplayer.
 4. **Surrender & Civil Disorder (`POST /api/games/{id}/surrender`)**:
    - When a player concedes, the power enters Civil Disorder, defaulting to passive hold without player command.
 5. **Leaving / Vacating (`POST /api/games/{id}/leave`)**:
