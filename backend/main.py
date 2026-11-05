@@ -6,7 +6,8 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set
 import uuid
-from fastapi import FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from auth import AuthUser, get_current_user
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -554,8 +555,7 @@ def sync_summary(game_id: str) -> None:
 
 def verify_admin_access(
     game_id: str,
-    user_id: Optional[str] = None,
-    email: Optional[str] = None,
+    user: Optional[AuthUser] = None,
 ) -> None:
     """Verify that the caller has game creator / administrator permissions for this game."""
     gid = game_id or DEFAULT_GAME_ID
@@ -564,34 +564,26 @@ def verify_admin_access(
         return
 
     summary = GAME_SUMMARIES.get(gid)
-    if not summary:
-        # Untracked standalone game session
+    if not summary or summary.is_sandbox:
+        # Standalone or sandbox games allow local play
         return
 
-    if summary.is_sandbox:
-        # Saved personal sandbox: allow creator or guest
-        if user_id and summary.creator_id and summary.creator_id == user_id:
-            return
-        if email and summary.created_by and summary.created_by.lower() == email.lower():
-            return
-        if not summary.creator_id and not summary.created_by:
-            return
-        # If user matches, allowed
-        if user_id or email:
-            if (user_id and summary.creator_id == user_id) or (email and summary.created_by.lower() == email.lower()):
-                return
-        return
+    # Multiplayer game: require authenticated creator
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required: Provide a valid Supabase Bearer token to modify multiplayer games.",
+        )
 
-    # In multiplayer lobby, only the game creator has admin privileges
     is_creator = False
-    if user_id and summary.creator_id and summary.creator_id == user_id:
+    if summary.creator_id and summary.creator_id == user.user_id:
         is_creator = True
-    elif email and summary.created_by and summary.created_by.lower() == email.lower():
+    elif summary.created_by and user.email and summary.created_by.lower() == user.email.lower():
         is_creator = True
 
     if not is_creator:
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Administrator access denied: Only the game creator ({summary.created_by}) can modify game state.",
         )
 
@@ -1469,19 +1461,18 @@ async def _execute_adjudication(game: GameState) -> GameState:
 @app.post("/api/adjudicate", response_model=GameState)
 async def adjudicate_and_advance(
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     game = await resolve_game(game_id)
     gid = game.game_id
 
-    # In multiplayer matches, verify that the caller is the game creator if credentials passed
-    uid = x_user_id if isinstance(x_user_id, str) else None
-    uemail = x_user_email if isinstance(x_user_email, str) else None
-    if gid != DEFAULT_GAME_ID and (uid or uemail):
+    # In multiplayer matches, verify that the caller is the game creator
+    if gid != DEFAULT_GAME_ID:
         summary = GAME_SUMMARIES.get(gid)
         if summary and not summary.is_sandbox:
-            verify_admin_access(gid, uid, uemail)
+            verify_admin_access(gid, current_user)
 
     return await _execute_adjudication(game)
 
@@ -1509,6 +1500,7 @@ async def load_scenario(req: ScenarioRequest, game_id: Optional[str] = Query(def
 @app.get("/api/admin/status", response_model=AdminStatusResponse)
 def get_admin_status(
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
@@ -1526,10 +1518,13 @@ def get_admin_status(
             creator_id=summary.creator_id if summary else "guest",
         )
 
+    user_id = current_user.user_id if current_user else x_user_id
+    email = current_user.email if current_user else x_user_email
+
     is_creator = False
-    if x_user_id and summary.creator_id and summary.creator_id == x_user_id:
+    if user_id and summary.creator_id and summary.creator_id == user_id:
         is_creator = True
-    elif x_user_email and summary.created_by and summary.created_by.lower() == x_user_email.lower():
+    elif email and summary.created_by and summary.created_by.lower() == email.lower():
         is_creator = True
 
     return AdminStatusResponse(
@@ -1545,12 +1540,13 @@ def get_admin_status(
 async def admin_rollback_turn(
     req: Optional[AdminRollbackRequest] = None,
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Roll back to the previous turn snapshot in history (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, req.user_id if req else x_user_id, req.email if req else x_user_email)
+    verify_admin_access(gid, current_user)
 
     history_stack = GAME_HISTORY.get(gid, [])
     if not history_stack:
@@ -1573,12 +1569,13 @@ async def admin_rollback_turn(
 async def admin_set_turn(
     req: AdminSetTurnRequest,
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Arbitrarily adjust season, year, or phase (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
+    verify_admin_access(gid, current_user)
     game = await resolve_game(gid)
 
     valid_seasons = ["Spring", "Fall", "Winter"]
@@ -1608,12 +1605,13 @@ async def admin_set_turn(
 async def admin_move_unit(
     req: AdminMoveUnitRequest,
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Arbitrarily teleport/move any unit to any valid province on the map (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
+    verify_admin_access(gid, current_user)
     game = await resolve_game(gid)
 
     target_unit = next((u for u in game.units if u.id == req.unit_id), None)
@@ -1674,12 +1672,13 @@ async def admin_move_unit(
 async def admin_spawn_unit(
     req: AdminSpawnUnitRequest,
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Arbitrarily spawn a unit anywhere on the board (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
+    verify_admin_access(gid, current_user)
     game = await resolve_game(gid)
 
     prov_id = req.province.upper()
@@ -1749,12 +1748,13 @@ async def admin_spawn_unit(
 async def admin_destroy_unit(
     req: AdminDestroyUnitRequest,
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Arbitrarily destroy/disband any unit on the board (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
+    verify_admin_access(gid, current_user)
     game = await resolve_game(gid)
 
     target_unit = next((u for u in game.units if u.id == req.unit_id), None)
@@ -1779,12 +1779,13 @@ async def admin_destroy_unit(
 async def admin_set_ownership(
     req: AdminSetOwnershipRequest,
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Arbitrarily reassign province/supply center ownership (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
+    verify_admin_access(gid, current_user)
     game = await resolve_game(gid)
 
     prov_id = req.province.upper()
@@ -1811,12 +1812,13 @@ async def admin_set_ownership(
 @app.post("/api/admin/unfinalize-all", response_model=GameState)
 async def admin_unfinalize_all(
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Unlock and unfinalize orders for all Great Powers (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, x_user_id, x_user_email)
+    verify_admin_access(gid, current_user)
     game = await resolve_game(gid)
     game.finalized_powers = []
     game.turn_history.insert(0, "[ADMIN OVERRIDE] Unlocked orders for all Great Powers.")

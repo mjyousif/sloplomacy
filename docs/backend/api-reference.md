@@ -330,14 +330,19 @@ In active multiplayer campaigns (`status == "active"`), if all required active p
 ### 10. `POST /api/adjudicate`
 Permanently commits all submitted moves, resolves conflicts using the DATC `diplomacy` engine, advances phase (Movement -> Retreats -> Movement -> Adjustments), updates supply center ownership in Fall, and records turn history.
 
-- **Multiplayer Security**: In multiplayer campaigns (`!is_sandbox`), manual adjudication requires game creator credentials (`X-User-Id` / `X-User-Email`). Unauthorized callers receive `403 Forbidden`. In normal multiplayer play, turns advance automatically upon consensus finalization; this endpoint acts as an administrative host override.
+- **Multiplayer Security**: In multiplayer campaigns (`!is_sandbox`), manual adjudication requires authentic game creator authorization via a cryptographically signed Supabase JSON Web Token (`Authorization: Bearer <token>`). Missing, invalid, or expired tokens receive `401 Unauthorized`. Authenticated users who are not the game creator receive `403 Forbidden`. In normal multiplayer play, turns advance automatically upon consensus finalization; this endpoint acts as an administrative host override. Solo sandbox mode (`proto_1901`) and personal sandboxes retain zero-friction anonymous access.
 - A unit whose order the engine rejects holds in place. When a power reaches 18 supply centers the response carries `winner`, the clock stays on the deciding phase, and further calls return `409`.
 
 ---
 
 ## Detailed Specifications: Administrator Controls
 
-Strictly restricted to the creator/host of the room (checked via `creator_id` and `creator_email`).
+Strictly restricted to the creator/host of the room in multiplayer matches. Authentication is cryptographically enforced via Supabase JWT Bearer tokens passed in the `Authorization: Bearer <token>` header:
+- **Solo Sandbox Bypass**: The default local sandbox (`proto_1901`) and saved personal sandboxes (`is_sandbox=True`) permit anonymous local access without authentication headers.
+- **Cryptographic JWT Verification**: In multiplayer matches, requests must supply a valid Supabase JWT signed with `SUPABASE_JWT_SECRET` (HS256). Claims (`exp`, `sub`, `email`) are validated before trusting identity.
+- **Error Codes**:
+  - `401 Unauthorized`: Token missing, expired, or invalid signature when accessing multiplayer admin actions.
+  - `403 Forbidden`: Authenticated caller's `sub` or `email` does not match the room creator (`creator_id` / `created_by`).
 
 ### 11. `GET /api/admin/status`
 Checks creator authorization and available timeline rollback snapshots.

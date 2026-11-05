@@ -52,10 +52,33 @@ function mapSupabaseUser(sbUser: any): AuthUser {
     email.split('@')[0];
   return {
     id: sbUser.id,
+    user_id: sbUser.id,
     email,
     displayName,
     isLocalDemo: false,
   };
+}
+
+export async function getAuthHeaders(): Promise<Record<string, string>> {
+  if (supabase) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      return {
+        Authorization: `Bearer ${session.access_token}`,
+      };
+    }
+    return {};
+  }
+  // Local dev mode fallback when Supabase is not configured
+  const localUser = getLocalStoredUser();
+  if (localUser) {
+    const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
+    const payload = btoa(JSON.stringify({ sub: localUser.id, email: localUser.email }));
+    return {
+      Authorization: `Bearer ${header}.${payload}.`,
+    };
+  }
+  return {};
 }
 
 export async function getInitialAuthUser(): Promise<AuthUser | null> {

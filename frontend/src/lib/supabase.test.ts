@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 import {
   isSupabaseConfigured,
+  getAuthHeaders,
   signInWithEmailPassword,
   signUpWithEmailPassword,
   signOutUser,
@@ -79,5 +80,19 @@ describe('supabase auth & local fallback helper', () => {
     expect(received.length).toBeGreaterThanOrEqual(2);
     expect(received[0]?.email).toBe('clemenceau@france.gov');
     expect(received[1]).toBeNull();
+  });
+
+  it('returns empty headers when unauthenticated and bearer token when signed in', async () => {
+    const unauthHeaders = await getAuthHeaders();
+    expect(unauthHeaders).toEqual({});
+
+    await signInWithEmailPassword('napoleon@france.gov', 'password123');
+    const authHeaders = await getAuthHeaders();
+    expect(authHeaders.Authorization).toBeDefined();
+    expect(authHeaders.Authorization.startsWith('Bearer ')).toBe(true);
+
+    await signOutUser();
+    const afterSignOut = await getAuthHeaders();
+    expect(afterSignOut).toEqual({});
   });
 });
