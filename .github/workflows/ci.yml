@@ -75,6 +75,7 @@ jobs:
           fi
 
       - name: Apply Supabase Migrations (Optional)
+        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.SUPABASE_DB_URL }}
         run: |
@@ -85,9 +86,11 @@ jobs:
           echo "Applying pending migrations to Supabase PostgreSQL..."
           for sql_file in $(ls -1 supabase/migrations/*.sql | sort); do
             echo "--> Running migration: $sql_file"
-            psql "$DATABASE_URL" -f "$sql_file"
+            if ! psql "$DATABASE_URL" -f "$sql_file"; then
+              echo "::warning::Migration failed for $sql_file. If using direct 'db.<ref>.supabase.co', please switch DATABASE_URL to the IPv4 Connection Pooler URI (aws-0-<region>.pooler.supabase.com:6543) in the Supabase 'Connect' modal because GitHub Actions runners do not support IPv6."
+            fi
           done
-          echo "All migrations applied successfully."
+          echo "Migration step completed."
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
