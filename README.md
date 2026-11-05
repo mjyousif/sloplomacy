@@ -1,6 +1,7 @@
 # Sloplomacy (1901 Tactical Engine & Atlas)
 
 [![CI](https://github.com/mjyousif/sloplomacy/actions/workflows/ci.yml/badge.svg)](https://github.com/mjyousif/sloplomacy/actions/workflows/ci.yml)
+[![Live Demo](https://img.shields.io/badge/Demo-Cloud_Run-4285F4?logo=googlecloud&logoColor=white)](https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3.0-blue.svg)](LICENSE)
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.162+-009688?logo=fastapi&logoColor=white)
@@ -10,6 +11,8 @@
 [![Rules: DATC Standard 1901](https://img.shields.io/badge/Rules-DATC_Standard_1901-7952B3)](docs/backend/adjudicator.md)
 
 An interactive web-based tactical adjudicator, move-planner, and map visualizer for standard 1901 Diplomacy.
+
+> 🌐 **Live Demo**: Play and test the engine online at **[https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app](https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app)** (hosted serverless on Google Cloud Run with scale-to-zero).
 
 > **Disclaimer**: *Sloplomacy* is an independent, non-commercial open-source tactical tool. *Diplomacy* is a registered trademark of Hasbro, Inc. This project is not affiliated with, sponsored by, or endorsed by Hasbro, Inc. or Renegade Game Studios. See [ATTRIBUTION.md](ATTRIBUTION.md) for full notices.
 
@@ -69,9 +72,10 @@ Dedicated scripts for development and operations are available under [`scripts/`
 ---
 
 ## Ports & Endpoints
-- **Frontend App**: [http://localhost:5173](http://localhost:5173)
-- **Backend API**: [http://127.0.0.1:8000](http://127.0.0.1:8000)
-- **Interactive Swagger Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **Live Cloud Deployment**: [https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app](https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app)
+- **Frontend App (Local Dev)**: [http://localhost:5173](http://localhost:5173)
+- **Backend API (Local Dev)**: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- **Interactive Swagger Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) *(or [/docs on Cloud Run](https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app/docs))*
 
 ---
 
