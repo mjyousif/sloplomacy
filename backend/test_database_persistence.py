@@ -248,3 +248,66 @@ def test_cold_start_container_recovery_integration():
             # Check that container 2's L1 RAM cache is now warmed
             assert gid in GAMES
             assert gid in GAME_SUMMARIES
+
+
+def test_list_games_evicts_games_deleted_from_supabase():
+    """When a game is deleted directly from Supabase, list_games() purges it from in-memory cache."""
+    gid = "mp_deleted_external"
+    saved_summary = MultiplayerGameSummary(
+        game_id=gid,
+        name="Externally Deleted Match",
+        status="waiting",
+        season="Spring",
+        year=1901,
+        phase="Movement",
+        created_by="user@diplomacy.com",
+        created_at="2026-11-05T00:00:00Z",
+    )
+    GAME_SUMMARIES[gid] = saved_summary
+    GAMES[gid] = build_scenario("standard_1901", Power.ENGLAND, gid)
+
+    async def mock_load_empty(client=None):
+        return {}
+
+    with patch.dict(
+        os.environ,
+        {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"},
+    ):
+        with patch("main.load_all_summaries_from_db", side_effect=mock_load_empty):
+            res = client.get("/api/games")
+            assert res.status_code == 200
+            returned_ids = [g["game_id"] for g in res.json()]
+            assert gid not in returned_ids
+            assert gid not in GAME_SUMMARIES
+            assert gid not in GAMES
+
+
+def test_delete_game_api_endpoint():
+    """DELETE /api/games/{game_id} purges cache and invokes DB delete."""
+    gid = "mp_to_delete"
+    GAME_SUMMARIES[gid] = MultiplayerGameSummary(
+        game_id=gid,
+        name="Lobby To Delete",
+        status="waiting",
+        season="Spring",
+        year=1901,
+        phase="Movement",
+        created_by="guest@diplomacy.local",
+        creator_id="guest",
+        created_at="2026-11-05T00:00:00Z",
+    )
+    GAMES[gid] = build_scenario("standard_1901", Power.TURKEY, gid)
+
+    async def mock_delete(game_id, client=None):
+        return True
+
+    with patch.dict(
+        os.environ,
+        {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"},
+    ):
+        with patch("main.delete_game_from_db", side_effect=mock_delete):
+            res = client.delete(f"/api/games/{gid}")
+            assert res.status_code == 200
+            assert res.json()["status"] == "deleted"
+            assert gid not in GAME_SUMMARIES
+            assert gid not in GAMES
