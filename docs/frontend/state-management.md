@@ -25,6 +25,9 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `showSimulationOverlay`| `boolean` | UI | Whether combat resolutions (arrows, bounces, cuts) are projected on the map. |
 | `adminModalOpen` | `boolean` | Modal | Controls visibility of the game creator's Admin Tools modal. |
 | `adminOverrideActive`| `boolean` | Admin | Indicates whether admin modifications are active on the current turn. |
+| `leftSidebarCollapsed`| `boolean` | UI | Whether the Left Tools Sidebar is collapsed into a 44px rail. |
+| `rightSidebarCollapsed`| `boolean` | UI | Whether the Right Tactical Sidebar is collapsed into a 44px rail. |
+| `zoomPercent` | `number` | UI | Real-time map zoom percentage (default: `105`). |
 | `surrenderModalOpen` | `boolean` | Modal | Controls visibility of the Surrender / Civil Disorder confirmation modal. |
 | `sanityModalOpen` | `boolean` | Modal | Controls visibility of pre-finalization warning modal. |
 | `sanityModalIssues` | `ValidationIssue[]` | Modal | Issues displayed inside the Sanity Check modal. |

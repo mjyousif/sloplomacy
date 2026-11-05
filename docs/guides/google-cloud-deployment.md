@@ -90,6 +90,7 @@ The repository features an automated GitHub Actions pipeline in [`.github/workfl
 2. **Conditional Deployment**: Only runs when commits hit `main` (not unmerged PRs) and both test suites succeed.
 3. **Cloud Build & Cloud Run**: Builds the container on GCP Cloud Build with production environment arguments and deploys a new revision to Google Cloud Run.
 4. **Summary**: Posts the verified public live URL to the GitHub Actions job summary.
+   - **Production Endpoint**: [https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app](https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app)
 
 ### One-Time CI/CD Setup:
 Run the setup helper script to create the dedicated service account and export credentials:
