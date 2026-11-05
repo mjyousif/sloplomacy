@@ -154,7 +154,9 @@ def test_ws_lobby_hears_about_resolved_turns():
     with client.websocket_connect("/ws/lobby") as ws:
         _ = ws.receive_json()  # Initial lobby
 
-        client.post(f"/api/adjudicate?game_id={game_id}")
+        import jwt
+        token = jwt.encode({"sub": "host", "email": "host@test.com"}, "test-jwt-secret-at-least-32-chars-long-12345", algorithm="HS256")
+        client.post(f"/api/adjudicate?game_id={game_id}", headers={"Authorization": f"Bearer {token}"})
 
         update = ws.receive_json()
         assert update["type"] == "lobby_update"

@@ -290,6 +290,7 @@ export interface GenerateAIOrdersRequest {
 
 export interface AuthUser {
   id: string;
+  user_id?: string;
   email: string;
   displayName: string;
   isLocalDemo?: boolean;
