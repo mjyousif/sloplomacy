@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { VersionBadge } from './VersionBadge';
 import {
   GameParticipant,
   Order,
@@ -1281,6 +1282,10 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           </div>
         )}
       </div>
+        <div className="sidebar-version-footer">
+          <VersionBadge />
+        </div>
+
     </aside>
   );
 };

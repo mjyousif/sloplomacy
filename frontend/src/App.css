@@ -4850,3 +4850,93 @@
   flex-direction: column;
   gap: 6px;
 }
+/* -------------------------------------------------------------------------
+   VERSION BADGE & FOOTER STYLES
+   ------------------------------------------------------------------------- */
+.version-badge-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  transition: all 0.15s ease-in-out;
+}
+
+.version-badge-container:hover {
+  border-color: rgba(148, 163, 184, 0.45);
+  background: rgba(30, 41, 59, 0.85);
+}
+
+.version-badge-copy-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.version-badge-copy-btn:hover {
+  color: #f1f5f9;
+}
+
+.version-badge-commit-icon {
+  color: #64748b;
+}
+
+.version-badge-check-icon {
+  color: #34d399;
+}
+
+.version-badge-text {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.version-badge-link {
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  padding-left: 2px;
+  transition: color 0.15s ease;
+}
+
+.version-badge-link:hover {
+  color: #38bdf8;
+}
+
+.lobby-footer-bar {
+  max-width: 1280px;
+  margin: 32px auto 0;
+  padding-top: 16px;
+  border-top: 1px solid rgba(51, 65, 85, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.lobby-footer-tagline {
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.sidebar-version-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 6px;
+  padding-top: 4px;
+}

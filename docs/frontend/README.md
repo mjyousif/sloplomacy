@@ -26,7 +26,8 @@ frontend/
     │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
     │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
     │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
-    │   └── SanityCheckModal.tsx # Pre-finalization tactical blunder warning dialogue
+    │   ├── SanityCheckModal.tsx # Pre-finalization tactical blunder warning dialogue
+│   └── VersionBadge.tsx     # Git commit short SHA indicator, clipboard copy & GitHub commit link
     ├── data/
     │   ├── europeMapGeometry.ts # Authentic SVG vector paths, province centers & defs
     │   └── europeMapGeometry.test.ts # Vitest suite for map label typography

@@ -94,9 +94,11 @@ Write-Host "--> Building container on Cloud Build ($ImageTag)..." -ForegroundCol
 
 $buildSuccess = $false
 try {
+    $ShortSha = (git rev-parse --short HEAD 2>$null)
+    if (-not $ShortSha) { $ShortSha = "dev" }
     gcloud builds submit `
         --config="$RepoRoot\cloudbuild.yaml" `
-        --substitutions="_SUPABASE_URL=$SupabaseUrl,_SUPABASE_ANON_KEY=$SupabaseAnonKey,_IMAGE_TAG=$ImageTag" `
+        --substitutions="_SUPABASE_URL=$SupabaseUrl,_SUPABASE_ANON_KEY=$SupabaseAnonKey,_SHORT_SHA=$ShortSha,_IMAGE_TAG=$ImageTag" `
         --project $ProjectId `
         $RepoRoot
     $buildSuccess = ($LASTEXITCODE -eq 0)
