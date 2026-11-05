@@ -112,7 +112,6 @@ interface ProvincePolygonProps {
   allowedCoastsStr: string;
   showFleetCoasts: boolean;
   showMoveReticle: boolean;
-  hasOccupant: boolean;
   isHovered: boolean;
   isHighlighted: boolean;
   hasWarning: boolean;
@@ -129,7 +128,6 @@ const ProvincePolygon = memo<ProvincePolygonProps>(
     allowedCoastsStr,
     showFleetCoasts,
     showMoveReticle,
-    hasOccupant,
     isHovered,
     isHighlighted,
     hasWarning,
@@ -242,29 +240,6 @@ const ProvincePolygon = memo<ProvincePolygonProps>(
               strokeWidth="2.8"
               strokeDasharray="6 3"
             />
-            {hasOccupant && (
-              <g transform={`translate(${geom.unitPos.x}, ${geom.unitPos.y + 30})`}>
-                <rect
-                  x="-36"
-                  y="-9"
-                  width="72"
-                  height="18"
-                  rx="9"
-                  fill="#15803d"
-                  stroke="#fef3c7"
-                  strokeWidth="1.5"
-                />
-                <text
-                  y="3.5"
-                  textAnchor="middle"
-                  fill="#ffffff"
-                  fontSize="9.5"
-                  fontWeight="800"
-                >
-                  MOVE HERE
-                </text>
-              </g>
-            )}
           </g>
         )}
       </g>
@@ -1716,7 +1691,6 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
               const showMoveReticle = Boolean(
                 selectedUnit && reachableMap[geom.id] && interactionMode === 'MOVE'
               );
-              const hasOccupant = Boolean(unitsByProv[geom.id]);
               const isHovered = hoveredProv === geom.id;
               const isHighlighted =
                 highlightedProvinces.includes(geom.id) || selectedBuildProv === geom.id;
@@ -1732,7 +1706,6 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
                   allowedCoastsStr={allowedCoastsStr}
                   showFleetCoasts={showFleetCoasts}
                   showMoveReticle={showMoveReticle}
-                  hasOccupant={hasOccupant}
                   isHovered={isHovered}
                   isHighlighted={isHighlighted}
                   hasWarning={hasWarning}
