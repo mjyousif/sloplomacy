@@ -699,9 +699,22 @@ async def list_games():
     """Return all multiplayer games and saved sessions."""
     if is_persistence_enabled():
         db_summaries = await load_all_summaries_from_db()
+        evicted = False
+        # Evict any multiplayer games that were deleted directly from Supabase
+        for gid in list(GAME_SUMMARIES.keys()):
+            if gid.startswith("mp_") and gid not in db_summaries:
+                GAME_SUMMARIES.pop(gid, None)
+                GAMES.pop(gid, None)
+                GAME_HISTORY.pop(gid, None)
+                GAME_PASSCODES.pop(gid, None)
+                SANDBOX_CHECKPOINTS.pop(gid, None)
+                evicted = True
+        # Synchronize in-memory summaries with database
         for gid, summary in db_summaries.items():
-            if gid not in GAME_SUMMARIES:
-                GAME_SUMMARIES[gid] = summary
+            GAME_SUMMARIES[gid] = summary
+
+        if evicted:
+            await manager.broadcast_lobby()
 
     for gid in list(GAME_SUMMARIES.keys()):
         sync_summary(gid)
@@ -711,7 +724,25 @@ async def list_games():
 @app.get("/api/games/{game_id}", response_model=MultiplayerGameSummary)
 async def get_game_details(game_id: str):
     """Retrieve details for a single game lobby by its Game ID."""
-    if game_id not in GAME_SUMMARIES and is_persistence_enabled():
+    if is_persistence_enabled() and game_id.startswith("mp_"):
+        loaded = await load_game_from_db(game_id)
+        if loaded is None:
+            GAME_SUMMARIES.pop(game_id, None)
+            GAMES.pop(game_id, None)
+            GAME_HISTORY.pop(game_id, None)
+            GAME_PASSCODES.pop(game_id, None)
+            SANDBOX_CHECKPOINTS.pop(game_id, None)
+            raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
+        state, summary, history, passcode = loaded
+        GAMES[game_id] = state
+        if summary:
+            GAME_SUMMARIES[game_id] = summary
+        if history:
+            GAME_HISTORY[game_id] = history
+        if passcode:
+            GAME_PASSCODES[game_id] = passcode
+        SANDBOX_CHECKPOINTS[game_id] = None
+    elif game_id not in GAME_SUMMARIES and is_persistence_enabled():
         loaded = await load_game_from_db(game_id)
         if loaded is not None:
             state, summary, history, passcode = loaded
@@ -729,6 +760,40 @@ async def get_game_details(game_id: str):
     if not summary:
         raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
     return summary
+
+
+@app.delete("/api/games/{game_id}")
+async def delete_game(
+    game_id: str,
+    user: Optional[AuthUser] = Depends(get_current_user),
+):
+    """Delete a game lobby and its persisted state in Supabase."""
+    summary = GAME_SUMMARIES.get(game_id)
+    if not summary and is_persistence_enabled():
+        loaded = await load_game_from_db(game_id)
+        if loaded:
+            _, summary, _, _ = loaded
+
+    if not summary and game_id not in GAMES:
+        if is_persistence_enabled():
+            await delete_game_from_db(game_id)
+        return {"status": "deleted", "game_id": game_id}
+
+    if summary and not summary.is_sandbox:
+        if summary.creator_id and summary.creator_id != "guest":
+            if not user or (user.user_id != summary.creator_id and user.email != summary.created_by):
+                raise HTTPException(status_code=403, detail="Only the host can delete this campaign.")
+
+    GAMES.pop(game_id, None)
+    GAME_SUMMARIES.pop(game_id, None)
+    GAME_HISTORY.pop(game_id, None)
+    GAME_PASSCODES.pop(game_id, None)
+    SANDBOX_CHECKPOINTS.pop(game_id, None)
+    if is_persistence_enabled():
+        await delete_game_from_db(game_id)
+
+    await manager.broadcast_lobby()
+    return {"status": "deleted", "game_id": game_id}
 
 
 @app.post("/api/games", response_model=MultiplayerGameSummary)
@@ -857,6 +922,8 @@ async def leave_game(game_id: str, req: LeaveGameRequest):
             GAME_SUMMARIES.pop(game_id, None)
             GAME_HISTORY.pop(game_id, None)
             SANDBOX_CHECKPOINTS.pop(game_id, None)
+            if is_persistence_enabled():
+                await delete_game_from_db(game_id)
             await broadcast_lobby_update()
             return GameBootstrapResponse(
                 state=game_state,
@@ -898,12 +965,29 @@ async def leave_game(game_id: str, req: LeaveGameRequest):
             f"The envoy of {power_label} has vacated their seat and left the campaign. Imperial units stand in Civil Disorder."
         )
 
+    # If all participants left or waiting lobby emptied, delete match
+    if len(summary.participants) == 0:
+        GAMES.pop(game_id, None)
+        GAME_SUMMARIES.pop(game_id, None)
+        GAME_HISTORY.pop(game_id, None)
+        GAME_PASSCODES.pop(game_id, None)
+        SANDBOX_CHECKPOINTS.pop(game_id, None)
+        if is_persistence_enabled():
+            await delete_game_from_db(game_id)
+        await broadcast_lobby_update()
+        return GameBootstrapResponse(
+            state=game_state,
+            provinces=PROVINCES,
+            summary=None,
+        )
+
     # If game status was active and fewer than 2 participants remain, revert to waiting
     if len(summary.participants) < 2 and summary.status == "active":
         summary.status = "waiting"
 
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
+    await persist_game(game_id)
     await broadcast_game_update(game_id, game_state, summary)
     await broadcast_lobby_update()
     return GameBootstrapResponse(

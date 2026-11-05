@@ -15,6 +15,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `GET` | `/api/games` | List all open lobbies, active matches, and saved sandboxes | *None* | `List[MultiplayerGameSummary]` |
 | `GET` | `/api/games/{game_id}` | Fetch summary metadata and status for a specific game room | *None* | `MultiplayerGameSummary` |
 | `POST` | `/api/games` | Create a new multiplayer room (public or private with passcode) | `CreateGameRequest` | `MultiplayerGameSummary` |
+| `DELETE` | `/api/games/{game_id}` | Delete a match lobby and remove its state from Supabase | *None* | `Dict[str, str]` |
 | `POST` | `/api/games/{game_id}/join` | Claim a sovereign Great Power seat (validating passcode if private) | `JoinGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/leave` | Vacate claimed power in lobby or match, or delete sandbox | `LeaveGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/surrender` | Concede sovereign command into Civil Disorder | `SurrenderRequest` | `GameBootstrapResponse` |
@@ -137,7 +138,7 @@ Creates a new multiplayer game room (public or private) and automatically assign
 
 ---
 
-### 4. `POST /api/games/{game_id}/join`
+### 5. `POST /api/games/{game_id}/join`
 Claims an open Great Power seat for a user. In the response, `state.active_power` is the power the caller just claimed; the shared game is not changed, so other players are unaffected. If the campaign is private (`has_passcode: true`), the correct `passcode` must be provided unless the user is already a confirmed participant.
 
 #### Request (`JoinGameRequest`):
@@ -153,7 +154,7 @@ Claims an open Great Power seat for a user. In the response, `state.active_power
 
 ---
 
-### 4. `POST /api/games/{game_id}/leave`
+### 6. `POST /api/games/{game_id}/leave`
 Vacates a claimed power seat in a lobby or active match, or deletes a saved sandbox if called by its owner.
 
 #### Request (`LeaveGameRequest`):
@@ -167,7 +168,7 @@ Vacates a claimed power seat in a lobby or active match, or deletes a saved sand
 
 ---
 
-### 5. `POST /api/games/{game_id}/surrender`
+### 7. `POST /api/games/{game_id}/surrender`
 Concedes command of a Great Power into **Civil Disorder**. Surrendered units hold passively, never provide support, and auto-disband if forced to retreat or down in supply centers. If `vacate_seat: true`, the user's claim on the seat is relinquished.
 
 #### Request (`SurrenderRequest`):
@@ -182,7 +183,7 @@ Concedes command of a Great Power into **Civil Disorder**. Surrendered units hol
 
 ---
 
-### 6. `POST /api/games/save-sandbox`
+### 8. `POST /api/games/save-sandbox`
 Saves an active solo sandbox into the persistent game summary registry.
 
 #### Request (`SaveSandboxRequest`):
