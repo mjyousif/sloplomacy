@@ -215,7 +215,7 @@ async def load_all_summaries_from_db(
         if isinstance(rows, list):
             for row in rows:
                 room_code = row.get("room_code")
-                if room_code:
+                if room_code and room_code not in ("proto_1901", "default"):
                     summaries[room_code] = build_summary_from_row(row)
         return summaries
 
@@ -237,6 +237,8 @@ async def save_game_to_db(
     Uses PostgREST upsert on room_code.
     """
     if not is_persistence_enabled():
+        return False
+    if game_id in ("proto_1901", "default"):
         return False
 
     url = f"{get_supabase_url()}/rest/v1/multiplayer_games?on_conflict=room_code"
