@@ -15,6 +15,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `GET` | `/api/games` | List all open lobbies, active matches, and saved sandboxes | *None* | `List[MultiplayerGameSummary]` |
 | `GET` | `/api/games/{game_id}` | Fetch summary metadata and status for a specific game room | *None* | `MultiplayerGameSummary` |
 | `POST` | `/api/games` | Create a new multiplayer room (public or private with passcode) | `CreateGameRequest` | `MultiplayerGameSummary` |
+| `DELETE` | `/api/games/{game_id}` | Delete a match lobby and remove its state from Supabase | *None* | `Dict[str, str]` |
 | `POST` | `/api/games/{game_id}/join` | Claim a sovereign Great Power seat (validating passcode if private) | `JoinGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/leave` | Vacate claimed power in lobby or match, or delete sandbox | `LeaveGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/surrender` | Concede sovereign command into Civil Disorder | `SurrenderRequest` | `GameBootstrapResponse` |
@@ -137,7 +138,7 @@ Creates a new multiplayer game room (public or private) and automatically assign
 
 ---
 
-### 4. `POST /api/games/{game_id}/join`
+### 5. `POST /api/games/{game_id}/join`
 Claims an open Great Power seat for a user. In the response, `state.active_power` is the power the caller just claimed; the shared game is not changed, so other players are unaffected. If the campaign is private (`has_passcode: true`), the correct `passcode` must be provided unless the user is already a confirmed participant.
 
 #### Request (`JoinGameRequest`):
@@ -153,7 +154,7 @@ Claims an open Great Power seat for a user. In the response, `state.active_power
 
 ---
 
-### 4. `POST /api/games/{game_id}/leave`
+### 6. `POST /api/games/{game_id}/leave`
 Vacates a claimed power seat in a lobby or active match, or deletes a saved sandbox if called by its owner.
 
 #### Request (`LeaveGameRequest`):
@@ -167,7 +168,7 @@ Vacates a claimed power seat in a lobby or active match, or deletes a saved sand
 
 ---
 
-### 5. `POST /api/games/{game_id}/surrender`
+### 7. `POST /api/games/{game_id}/surrender`
 Concedes command of a Great Power into **Civil Disorder**. Surrendered units hold passively, never provide support, and auto-disband if forced to retreat or down in supply centers. If `vacate_seat: true`, the user's claim on the seat is relinquished.
 
 #### Request (`SurrenderRequest`):
@@ -182,7 +183,7 @@ Concedes command of a Great Power into **Civil Disorder**. Surrendered units hol
 
 ---
 
-### 6. `POST /api/games/save-sandbox`
+### 8. `POST /api/games/save-sandbox`
 Saves an active solo sandbox into the persistent game summary registry.
 
 #### Request (`SaveSandboxRequest`):
@@ -330,14 +331,19 @@ In active multiplayer campaigns (`status == "active"`), if all required active p
 ### 10. `POST /api/adjudicate`
 Permanently commits all submitted moves, resolves conflicts using the DATC `diplomacy` engine, advances phase (Movement -> Retreats -> Movement -> Adjustments), updates supply center ownership in Fall, and records turn history.
 
-- **Multiplayer Security**: In multiplayer campaigns (`!is_sandbox`), manual adjudication requires game creator credentials (`X-User-Id` / `X-User-Email`). Unauthorized callers receive `403 Forbidden`. In normal multiplayer play, turns advance automatically upon consensus finalization; this endpoint acts as an administrative host override.
+- **Multiplayer Security**: In multiplayer campaigns (`!is_sandbox`), manual adjudication requires authentic game creator authorization via a cryptographically signed Supabase JSON Web Token (`Authorization: Bearer <token>`). Missing, invalid, or expired tokens receive `401 Unauthorized`. Authenticated users who are not the game creator receive `403 Forbidden`. In normal multiplayer play, turns advance automatically upon consensus finalization; this endpoint acts as an administrative host override. Solo sandbox mode (`proto_1901`) and personal sandboxes retain zero-friction anonymous access.
 - A unit whose order the engine rejects holds in place. When a power reaches 18 supply centers the response carries `winner`, the clock stays on the deciding phase, and further calls return `409`.
 
 ---
 
 ## Detailed Specifications: Administrator Controls
 
-Strictly restricted to the creator/host of the room (checked via `creator_id` and `creator_email`).
+Strictly restricted to the creator/host of the room in multiplayer matches. Authentication is cryptographically enforced via Supabase JWT Bearer tokens passed in the `Authorization: Bearer <token>` header:
+- **Solo Sandbox Bypass**: The default local sandbox (`proto_1901`) and saved personal sandboxes (`is_sandbox=True`) permit anonymous local access without authentication headers.
+- **Cryptographic JWT Verification**: In multiplayer matches, requests must supply a valid Supabase JWT signed with `SUPABASE_JWT_SECRET` (HS256). Claims (`exp`, `sub`, `email`) are validated before trusting identity.
+- **Error Codes**:
+  - `401 Unauthorized`: Token missing, expired, or invalid signature when accessing multiplayer admin actions.
+  - `403 Forbidden`: Authenticated caller's `sub` or `email` does not match the room creator (`creator_id` / `created_by`).
 
 ### 11. `GET /api/admin/status`
 Checks creator authorization and available timeline rollback snapshots.

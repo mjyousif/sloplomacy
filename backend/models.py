@@ -246,6 +246,12 @@ class SaveSandboxRequest(BaseModel):
     display_name: Optional[str] = None
 
 
+class AuthUser(BaseModel):
+    user_id: str
+    email: Optional[str] = None
+    is_authenticated: bool = True
+
+
 class AdminRollbackRequest(BaseModel):
     user_id: Optional[str] = None
     email: Optional[str] = None

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { VersionBadge } from './VersionBadge';
 import {
   ALL_POWERS,
   AuthUser,
@@ -841,6 +842,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           </div>
         </aside>
       </div>
+
+      {/* FOOTER BAR */}
+      <footer className="lobby-footer-bar">
+        <span className="lobby-footer-tagline">Sloplomacy &bull; 1901 Tactical Engine</span>
+        <VersionBadge />
+      </footer>
 
       {/* CONFIRMATION MODAL: PRIVATE CAMPAIGN CREATED */}
       {createdPrivateModal && (

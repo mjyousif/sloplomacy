@@ -255,3 +255,11 @@ The game cycles through three standard phases per year:
 - **Mandatory Review**: PRs require at least 1 approving code review before merging (`required_approving_review_count: 1`). Pushing new commits automatically dismisses previous reviews.
 - **CI Quality Gates**: PRs must pass `Backend Tests (Pytest)` and `Frontend Tests & Build Check` before they are eligible for merge.
 - **Squash & Merge & Auto-Delete**: Branches are squash-merged into `main` using PR titles and descriptions, and head branches are automatically deleted upon merge (`delete_branch_on_merge: true`).
+- **PR Creation & Body Formatting Invariant (No Inline `--body`)**:
+  - **NEVER** use inline `--body "..."` with multi-line or rich markdown in PowerShell. PowerShell interprets the backtick (`` ` ``) as an escape character (e.g., `` `b `` -> `\x08`, `` `f `` -> `\x0c`, `` `v `` -> `\x0b`) and expands `$variables`, corrupting code spans, file paths, and environment variable references into broken replacement characters and backslashes.
+  - **ALWAYS** write the full PR description to a temporary file (e.g. `.pr_body.md` or a scratch markdown file) and dispatch GitHub CLI commands using `--body-file`:
+    ```powershell
+    gh pr create --title "<title>" --body-file "<path_to_body.md>"
+    gh pr edit <pr-number> --body-file "<path_to_body.md>"
+    ```
+  - Clean up any local temporary body file immediately after execution.

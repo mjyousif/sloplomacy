@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { getAuthHeaders } from '../lib/supabase';
 import {
   ALL_POWERS,
   AuthUser,
@@ -89,17 +90,21 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
   const [territoryProvince, setTerritoryProvince] = useState<string>('BEL');
   const [territoryOwner, setTerritoryOwner] = useState<string>('NEUTRAL');
 
-  const getHeaders = () => ({
-    'Content-Type': 'application/json',
-    ...(user?.id ? { 'X-User-Id': user.id } : {}),
-    ...(user?.email ? { 'X-User-Email': user.email } : {}),
-  });
+  const getHeaders = async () => {
+    const authHeaders = await getAuthHeaders();
+    return {
+      'Content-Type': 'application/json',
+      ...authHeaders,
+      ...(user?.id ? { 'X-User-Id': user.id } : {}),
+      ...(user?.email ? { 'X-User-Email': user.email } : {}),
+    };
+  };
 
   const fetchAdminStatus = async () => {
     try {
       const res = await fetch(
         `${API_BASE}/admin/status?game_id=${encodeURIComponent(gameId)}`,
-        { headers: getHeaders() }
+        { headers: await getHeaders() }
       );
       if (res.ok) {
         const data = await res.json();
@@ -150,7 +155,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
         `${API_BASE}/admin/rollback?game_id=${encodeURIComponent(gameId)}`,
         {
           method: 'POST',
-          headers: getHeaders(),
+          headers: await getHeaders(),
           body: JSON.stringify({ user_id: user?.id, email: user?.email }),
         }
       );
@@ -178,7 +183,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
         `${API_BASE}/admin/set-turn?game_id=${encodeURIComponent(gameId)}`,
         {
           method: 'POST',
-          headers: getHeaders(),
+          headers: await getHeaders(),
           body: JSON.stringify({
             season: selectedSeason,
             year: selectedYear,
@@ -211,7 +216,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
         `${API_BASE}/admin/unfinalize-all?game_id=${encodeURIComponent(gameId)}`,
         {
           method: 'POST',
-          headers: getHeaders(),
+          headers: await getHeaders(),
           body: JSON.stringify({ user_id: user?.id, email: user?.email }),
         }
       );
@@ -239,7 +244,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
         `${API_BASE}/admin/unit/move?game_id=${encodeURIComponent(gameId)}`,
         {
           method: 'POST',
-          headers: getHeaders(),
+          headers: await getHeaders(),
           body: JSON.stringify({
             unit_id: moveUnitId,
             new_province: moveTargetProvince,
@@ -272,7 +277,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
         `${API_BASE}/admin/unit/spawn?game_id=${encodeURIComponent(gameId)}`,
         {
           method: 'POST',
-          headers: getHeaders(),
+          headers: await getHeaders(),
           body: JSON.stringify({
             power: spawnPower,
             unit_type: spawnUnitType,
@@ -315,7 +320,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
         `${API_BASE}/admin/unit/destroy?game_id=${encodeURIComponent(gameId)}`,
         {
           method: 'POST',
-          headers: getHeaders(),
+          headers: await getHeaders(),
           body: JSON.stringify({
             unit_id: unit.id,
             user_id: user?.id,
@@ -347,7 +352,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
         `${API_BASE}/admin/ownership?game_id=${encodeURIComponent(gameId)}`,
         {
           method: 'POST',
-          headers: getHeaders(),
+          headers: await getHeaders(),
           body: JSON.stringify({
             province: territoryProvince,
             power: pwr,

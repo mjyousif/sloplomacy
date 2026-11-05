@@ -6,7 +6,8 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set
 import uuid
-from fastapi import FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from auth import AuthUser, get_current_user
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -47,6 +48,16 @@ from models import (
 )
 from ai_engine import generate_tactical_orders
 from validator import validate_orders
+import logging
+from database import (
+    delete_game_from_db,
+    is_persistence_enabled,
+    load_all_summaries_from_db,
+    load_game_from_db,
+    save_game_to_db,
+)
+
+logger = logging.getLogger("diplomacy.server")
 
 app = FastAPI(title="Sloplomacy 1901 Tactical Server", version="1.2.0")
 
@@ -469,11 +480,61 @@ def seed_initial_multiplayer_lobbies() -> None:
 # seed_initial_multiplayer_lobbies()  # Disabled by default so no fake/ghost games clutter the lobby
 
 
-def resolve_game(game_id: Optional[str] = None) -> GameState:
+
+
+async def persist_game(game_id: str) -> None:
+    """Persist the specified game to Supabase PostgreSQL if configured."""
+    if not is_persistence_enabled():
+        return
+    state = GAMES.get(game_id)
+    if not state:
+        return
+    sync_summary(game_id)
+    summary = GAME_SUMMARIES.get(game_id)
+    history = GAME_HISTORY.get(game_id, [])
+    passcode = GAME_PASSCODES.get(game_id)
+    await save_game_to_db(
+        game_id=game_id,
+        state=state,
+        summary=summary,
+        history=history,
+        passcode=passcode,
+    )
+
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    if is_persistence_enabled():
+        logger.info("Supabase database persistence enabled. Synchronizing active games...")
+        try:
+            summaries = await load_all_summaries_from_db()
+            for gid, summary in summaries.items():
+                if gid not in GAME_SUMMARIES:
+                    GAME_SUMMARIES[gid] = summary
+            logger.info("Loaded %d game summaries from Supabase on startup.", len(summaries))
+        except Exception as ex:
+            logger.warning("Could not synchronize games on startup: %s", ex)
+
+async def resolve_game(game_id: Optional[str] = None) -> GameState:
     gid = game_id or DEFAULT_GAME_ID
-    if gid not in GAMES:
-        raise HTTPException(status_code=404, detail=f"Game '{gid}' not found.")
-    return GAMES[gid]
+    if gid in GAMES:
+        return GAMES[gid]
+
+    if is_persistence_enabled():
+        loaded = await load_game_from_db(gid)
+        if loaded is not None:
+            state, summary, history, passcode = loaded
+            GAMES[gid] = state
+            if summary:
+                GAME_SUMMARIES[gid] = summary
+            if history:
+                GAME_HISTORY[gid] = history
+            if passcode:
+                GAME_PASSCODES[gid] = passcode
+            SANDBOX_CHECKPOINTS[gid] = None
+            return GAMES[gid]
+
+    raise HTTPException(status_code=404, detail=f"Game '{gid}' not found.")
 
 
 def sync_summary(game_id: str) -> None:
@@ -494,8 +555,7 @@ def sync_summary(game_id: str) -> None:
 
 def verify_admin_access(
     game_id: str,
-    user_id: Optional[str] = None,
-    email: Optional[str] = None,
+    user: Optional[AuthUser] = None,
 ) -> None:
     """Verify that the caller has game creator / administrator permissions for this game."""
     gid = game_id or DEFAULT_GAME_ID
@@ -504,34 +564,26 @@ def verify_admin_access(
         return
 
     summary = GAME_SUMMARIES.get(gid)
-    if not summary:
-        # Untracked standalone game session
+    if not summary or summary.is_sandbox:
+        # Standalone or sandbox games allow local play
         return
 
-    if summary.is_sandbox:
-        # Saved personal sandbox: allow creator or guest
-        if user_id and summary.creator_id and summary.creator_id == user_id:
-            return
-        if email and summary.created_by and summary.created_by.lower() == email.lower():
-            return
-        if not summary.creator_id and not summary.created_by:
-            return
-        # If user matches, allowed
-        if user_id or email:
-            if (user_id and summary.creator_id == user_id) or (email and summary.created_by.lower() == email.lower()):
-                return
-        return
+    # Multiplayer game: require authenticated creator
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required: Provide a valid Supabase Bearer token to modify multiplayer games.",
+        )
 
-    # In multiplayer lobby, only the game creator has admin privileges
     is_creator = False
-    if user_id and summary.creator_id and summary.creator_id == user_id:
+    if summary.creator_id and summary.creator_id == user.user_id:
         is_creator = True
-    elif email and summary.created_by and summary.created_by.lower() == email.lower():
+    elif summary.created_by and user.email and summary.created_by.lower() == user.email.lower():
         is_creator = True
 
     if not is_creator:
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Administrator access denied: Only the game creator ({summary.created_by}) can modify game state.",
         )
 
@@ -643,21 +695,105 @@ class SetPowerRequest(BaseModel):
 
 
 @app.get("/api/games", response_model=List[MultiplayerGameSummary])
-def list_games():
+async def list_games():
     """Return all multiplayer games and saved sessions."""
+    if is_persistence_enabled():
+        db_summaries = await load_all_summaries_from_db()
+        evicted = False
+        # Evict any multiplayer games that were deleted directly from Supabase
+        for gid in list(GAME_SUMMARIES.keys()):
+            if gid.startswith("mp_") and gid not in db_summaries:
+                GAME_SUMMARIES.pop(gid, None)
+                GAMES.pop(gid, None)
+                GAME_HISTORY.pop(gid, None)
+                GAME_PASSCODES.pop(gid, None)
+                SANDBOX_CHECKPOINTS.pop(gid, None)
+                evicted = True
+        # Synchronize in-memory summaries with database
+        for gid, summary in db_summaries.items():
+            GAME_SUMMARIES[gid] = summary
+
+        if evicted:
+            await manager.broadcast_lobby()
+
     for gid in list(GAME_SUMMARIES.keys()):
         sync_summary(gid)
     return list(GAME_SUMMARIES.values())
 
 
 @app.get("/api/games/{game_id}", response_model=MultiplayerGameSummary)
-def get_game_details(game_id: str):
+async def get_game_details(game_id: str):
     """Retrieve details for a single game lobby by its Game ID."""
+    if is_persistence_enabled() and game_id.startswith("mp_"):
+        loaded = await load_game_from_db(game_id)
+        if loaded is None:
+            GAME_SUMMARIES.pop(game_id, None)
+            GAMES.pop(game_id, None)
+            GAME_HISTORY.pop(game_id, None)
+            GAME_PASSCODES.pop(game_id, None)
+            SANDBOX_CHECKPOINTS.pop(game_id, None)
+            raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
+        state, summary, history, passcode = loaded
+        GAMES[game_id] = state
+        if summary:
+            GAME_SUMMARIES[game_id] = summary
+        if history:
+            GAME_HISTORY[game_id] = history
+        if passcode:
+            GAME_PASSCODES[game_id] = passcode
+        SANDBOX_CHECKPOINTS[game_id] = None
+    elif game_id not in GAME_SUMMARIES and is_persistence_enabled():
+        loaded = await load_game_from_db(game_id)
+        if loaded is not None:
+            state, summary, history, passcode = loaded
+            GAMES[game_id] = state
+            if summary:
+                GAME_SUMMARIES[game_id] = summary
+            if history:
+                GAME_HISTORY[game_id] = history
+            if passcode:
+                GAME_PASSCODES[game_id] = passcode
+            SANDBOX_CHECKPOINTS[game_id] = None
+
     sync_summary(game_id)
     summary = GAME_SUMMARIES.get(game_id)
     if not summary:
         raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
     return summary
+
+
+@app.delete("/api/games/{game_id}")
+async def delete_game(
+    game_id: str,
+    user: Optional[AuthUser] = Depends(get_current_user),
+):
+    """Delete a game lobby and its persisted state in Supabase."""
+    summary = GAME_SUMMARIES.get(game_id)
+    if not summary and is_persistence_enabled():
+        loaded = await load_game_from_db(game_id)
+        if loaded:
+            _, summary, _, _ = loaded
+
+    if not summary and game_id not in GAMES:
+        if is_persistence_enabled():
+            await delete_game_from_db(game_id)
+        return {"status": "deleted", "game_id": game_id}
+
+    if summary and not summary.is_sandbox:
+        if summary.creator_id and summary.creator_id != "guest":
+            if not user or (user.user_id != summary.creator_id and user.email != summary.created_by):
+                raise HTTPException(status_code=403, detail="Only the host can delete this campaign.")
+
+    GAMES.pop(game_id, None)
+    GAME_SUMMARIES.pop(game_id, None)
+    GAME_HISTORY.pop(game_id, None)
+    GAME_PASSCODES.pop(game_id, None)
+    SANDBOX_CHECKPOINTS.pop(game_id, None)
+    if is_persistence_enabled():
+        await delete_game_from_db(game_id)
+
+    await manager.broadcast_lobby()
+    return {"status": "deleted", "game_id": game_id}
 
 
 @app.post("/api/games", response_model=MultiplayerGameSummary)
@@ -701,6 +837,7 @@ async def create_multiplayer_game(req: CreateGameRequest):
         has_passcode=has_pw,
     )
     GAME_SUMMARIES[gid] = summary
+    await persist_game(gid)
     await broadcast_lobby_update()
     return summary
 
@@ -708,7 +845,7 @@ async def create_multiplayer_game(req: CreateGameRequest):
 @app.post("/api/games/{game_id}/join", response_model=GameBootstrapResponse)
 async def join_multiplayer_game(game_id: str, req: JoinGameRequest):
     """Claim a power in a multiplayer match (or re-enter if already claimed by this user)."""
-    game_state = resolve_game(game_id)
+    game_state = await resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
     if not summary:
         raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
@@ -773,7 +910,7 @@ async def join_multiplayer_game(game_id: str, req: JoinGameRequest):
 @app.post("/api/games/{game_id}/leave", response_model=GameBootstrapResponse)
 async def leave_game(game_id: str, req: LeaveGameRequest):
     """Leave a multiplayer match (vacating claimed power) or remove a saved sandbox scenario."""
-    game_state = resolve_game(game_id)
+    game_state = await resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
     if not summary:
         raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
@@ -785,6 +922,8 @@ async def leave_game(game_id: str, req: LeaveGameRequest):
             GAME_SUMMARIES.pop(game_id, None)
             GAME_HISTORY.pop(game_id, None)
             SANDBOX_CHECKPOINTS.pop(game_id, None)
+            if is_persistence_enabled():
+                await delete_game_from_db(game_id)
             await broadcast_lobby_update()
             return GameBootstrapResponse(
                 state=game_state,
@@ -826,12 +965,29 @@ async def leave_game(game_id: str, req: LeaveGameRequest):
             f"The envoy of {power_label} has vacated their seat and left the campaign. Imperial units stand in Civil Disorder."
         )
 
+    # If all participants left or waiting lobby emptied, delete match
+    if len(summary.participants) == 0:
+        GAMES.pop(game_id, None)
+        GAME_SUMMARIES.pop(game_id, None)
+        GAME_HISTORY.pop(game_id, None)
+        GAME_PASSCODES.pop(game_id, None)
+        SANDBOX_CHECKPOINTS.pop(game_id, None)
+        if is_persistence_enabled():
+            await delete_game_from_db(game_id)
+        await broadcast_lobby_update()
+        return GameBootstrapResponse(
+            state=game_state,
+            provinces=PROVINCES,
+            summary=None,
+        )
+
     # If game status was active and fewer than 2 participants remain, revert to waiting
     if len(summary.participants) < 2 and summary.status == "active":
         summary.status = "waiting"
 
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
+    await persist_game(game_id)
     await broadcast_game_update(game_id, game_state, summary)
     await broadcast_lobby_update()
     return GameBootstrapResponse(
@@ -844,7 +1000,7 @@ async def leave_game(game_id: str, req: LeaveGameRequest):
 @app.post("/api/games/{game_id}/surrender", response_model=GameBootstrapResponse)
 async def surrender_power(game_id: str, req: SurrenderRequest):
     """Concede defeat/surrender sovereign command of a Great Power into Civil Disorder."""
-    game_state = resolve_game(game_id)
+    game_state = await resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
     if not summary:
         raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
@@ -901,7 +1057,7 @@ async def surrender_power(game_id: str, req: SurrenderRequest):
 @app.post("/api/games/save-sandbox", response_model=MultiplayerGameSummary)
 async def save_sandbox_to_account(req: SaveSandboxRequest, game_id: Optional[str] = Query(default=None)):
     """Save the current sandbox game state into the authenticated user's personal games."""
-    source_game = resolve_game(game_id)
+    source_game = await resolve_game(game_id)
     new_gid = f"saved_{uuid.uuid4().hex[:8]}"
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -935,13 +1091,14 @@ async def save_sandbox_to_account(req: SaveSandboxRequest, game_id: Optional[str
         is_sandbox=True,
     )
     GAME_SUMMARIES[new_gid] = summary
+    await persist_game(new_gid)
     await broadcast_lobby_update()
     return summary
 
 
 @app.get("/api/game", response_model=GameBootstrapResponse)
-def get_game(game_id: Optional[str] = Query(default=None)):
-    game = resolve_game(game_id)
+async def get_game(game_id: Optional[str] = Query(default=None)):
+    game = await resolve_game(game_id)
     refresh_diagnostics_and_simulation(game)
     gid = game.game_id
     sync_summary(gid)
@@ -954,7 +1111,7 @@ def get_game(game_id: Optional[str] = Query(default=None)):
 
 @app.post("/api/power", response_model=GameState)
 async def set_active_power(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
-    game = resolve_game(game_id)
+    game = await resolve_game(game_id)
     gid = game.game_id
     game.active_power = req.power
     checkpoint = SANDBOX_CHECKPOINTS.get(gid)
@@ -968,7 +1125,7 @@ async def set_active_power(req: SetPowerRequest, game_id: Optional[str] = Query(
 @app.post("/api/sandbox/enter", response_model=GameState)
 async def enter_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
     """Save a checkpoint of the real game state when entering Sandbox Pre-Move Mode."""
-    game = resolve_game(game_id)
+    game = await resolve_game(game_id)
     gid = game.game_id
     game.active_power = req.power
     SANDBOX_CHECKPOINTS[gid] = game.model_copy(deep=True)
@@ -984,7 +1141,7 @@ async def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query
     - If the user stepped turns forward in the sandbox, restore the pre-sandbox turn checkpoint.
     - Discard all hypothetical foreign orders so only the active power's own orders remain.
     """
-    game = resolve_game(game_id)
+    game = await resolve_game(game_id)
     gid = game.game_id
     checkpoint = SANDBOX_CHECKPOINTS.get(gid)
     if checkpoint is not None:
@@ -1014,14 +1171,16 @@ async def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await persist_game(gid)
     await broadcast_game_update(gid, game)
+    await broadcast_lobby_update()
     return game
 
 
 @app.post("/api/sandbox/clear-foreign", response_model=GameState)
 async def clear_foreign_pre_moves(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
     """Reset all hypothetical orders for powers other than req.power back to default."""
-    game = resolve_game(game_id)
+    game = await resolve_game(game_id)
     default_ords = create_default_orders(game.units, game.phase, game.builds, game.retreats)
     for ord_id, def_ord in default_ords.items():
         if def_ord.power != req.power:
@@ -1037,7 +1196,7 @@ async def generate_sandbox_ai_orders(
     game_id: Optional[str] = Query(default=None),
 ):
     """Generate intelligent tactical orders for specified Great Powers or all foreign powers."""
-    game = resolve_game(game_id)
+    game = await resolve_game(game_id)
     if req and req.powers:
         target_powers = req.powers
     elif req and req.include_active:
@@ -1060,6 +1219,7 @@ async def generate_sandbox_ai_orders(
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
     return game
 
@@ -1067,7 +1227,7 @@ async def generate_sandbox_ai_orders(
 @app.post("/api/sandbox/ai-step", response_model=GameState)
 async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
     """Auto-plan unassigned foreign powers with tactical AI and advance to next phase."""
-    game = resolve_game(game_id)
+    game = await resolve_game(game_id)
     powers_needing_orders = [
         p for p in Power
         if p != game.active_power or not any(
@@ -1092,7 +1252,7 @@ async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
 
 @app.post("/api/order", response_model=GameState)
 async def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[str] = Query(default=None)):
-    game = resolve_game(game_id)
+    game = await resolve_game(game_id)
     validate_order_references(req.order)
     unit_map = {u.id: u for u in game.units}
     if req.order.unit_id in unit_map:
@@ -1173,7 +1333,7 @@ async def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[s
 
 @app.post("/api/orders/batch", response_model=GameState)
 async def update_batch_orders(req: OrderSubmissionRequest, game_id: Optional[str] = Query(default=None)):
-    game = resolve_game(game_id)
+    game = await resolve_game(game_id)
     # Check the whole batch first so that one bad order cannot leave it half applied.
     for o in req.orders:
         validate_order_references(o)
@@ -1198,17 +1358,20 @@ async def update_batch_orders(req: OrderSubmissionRequest, game_id: Optional[str
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
+    await broadcast_lobby_update()
     return game
 
 
 @app.post("/api/orders/confirm-all", response_model=GameState)
 async def confirm_all_power_orders(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
-    game = resolve_game(game_id)
+    game = await resolve_game(game_id)
     for ord_id, ord_obj in game.orders.items():
         if ord_obj.power == req.power:
             ord_obj.is_explicit = True
     refresh_diagnostics_and_simulation(game)
+    await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
     return game
 
@@ -1257,7 +1420,7 @@ def get_required_finalizing_powers(game: GameState, summary: Optional[Multiplaye
 
 @app.post("/api/finalize", response_model=FinalizeResponse)
 async def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Query(default=None)):
-    game = resolve_game(game_id)
+    game = await resolve_game(game_id)
     power_issues = validate_orders(
         game.units,
         game.orders,
@@ -1295,6 +1458,10 @@ async def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Q
         required = get_required_finalizing_powers(game, summary)
         if required and all(p in game.finalized_powers for p in required):
             await _execute_adjudication(game)
+        else:
+            await persist_game(game.game_id)
+    else:
+        await persist_game(game.game_id)
     return FinalizeResponse(
         finalized=True,
         requires_confirmation=False,
@@ -1305,19 +1472,20 @@ async def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Q
 
 @app.post("/api/unfinalize", response_model=GameState)
 async def unfinalize_power_orders(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
-    game = resolve_game(game_id)
+    game = await resolve_game(game_id)
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
     await broadcast_lobby_update()
     return game
 
 
 @app.post("/api/simulate", response_model=SimulationResult)
-def simulate_current_orders(game_id: Optional[str] = Query(default=None)):
-    game = resolve_game(game_id)
+async def simulate_current_orders(game_id: Optional[str] = Query(default=None)):
+    game = await resolve_game(game_id)
     refresh_diagnostics_and_simulation(game)
     assert game.last_resolution is not None
     return game.last_resolution
@@ -1368,6 +1536,7 @@ async def _execute_adjudication(game: GameState) -> GameState:
         game.turn_history.insert(0, f"{result.winner.value} has won the game in {prev_label}.")
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
     await broadcast_lobby_update()
     return game
@@ -1376,19 +1545,18 @@ async def _execute_adjudication(game: GameState) -> GameState:
 @app.post("/api/adjudicate", response_model=GameState)
 async def adjudicate_and_advance(
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
-    game = resolve_game(game_id)
+    game = await resolve_game(game_id)
     gid = game.game_id
 
-    # In multiplayer matches, verify that the caller is the game creator if credentials passed
-    uid = x_user_id if isinstance(x_user_id, str) else None
-    uemail = x_user_email if isinstance(x_user_email, str) else None
-    if gid != DEFAULT_GAME_ID and (uid or uemail):
+    # In multiplayer matches, verify that the caller is the game creator
+    if gid != DEFAULT_GAME_ID:
         summary = GAME_SUMMARIES.get(gid)
         if summary and not summary.is_sandbox:
-            verify_admin_access(gid, uid, uemail)
+            verify_admin_access(gid, current_user)
 
     return await _execute_adjudication(game)
 
@@ -1397,13 +1565,14 @@ async def adjudicate_and_advance(
 async def load_scenario(req: ScenarioRequest, game_id: Optional[str] = Query(default=None)):
     if req.scenario_id not in SCENARIO_IDS:
         raise HTTPException(status_code=400, detail=f"Unknown scenario '{req.scenario_id}'.")
-    current = resolve_game(game_id)
+    current = await resolve_game(game_id)
     gid = current.game_id
     SANDBOX_CHECKPOINTS[gid] = None
     GAME_HISTORY[gid] = []
     power = req.active_power or current.active_power
     GAMES[gid] = build_scenario(req.scenario_id, power, gid)
     sync_summary(gid)
+    await persist_game(gid)
     await broadcast_game_update(gid, GAMES[gid])
     await broadcast_lobby_update()
     return GAMES[gid]
@@ -1415,6 +1584,7 @@ async def load_scenario(req: ScenarioRequest, game_id: Optional[str] = Query(def
 @app.get("/api/admin/status", response_model=AdminStatusResponse)
 def get_admin_status(
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
@@ -1432,10 +1602,13 @@ def get_admin_status(
             creator_id=summary.creator_id if summary else "guest",
         )
 
+    user_id = current_user.user_id if current_user else x_user_id
+    email = current_user.email if current_user else x_user_email
+
     is_creator = False
-    if x_user_id and summary.creator_id and summary.creator_id == x_user_id:
+    if user_id and summary.creator_id and summary.creator_id == user_id:
         is_creator = True
-    elif x_user_email and summary.created_by and summary.created_by.lower() == x_user_email.lower():
+    elif email and summary.created_by and summary.created_by.lower() == email.lower():
         is_creator = True
 
     return AdminStatusResponse(
@@ -1451,12 +1624,13 @@ def get_admin_status(
 async def admin_rollback_turn(
     req: Optional[AdminRollbackRequest] = None,
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Roll back to the previous turn snapshot in history (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, req.user_id if req else x_user_id, req.email if req else x_user_email)
+    verify_admin_access(gid, current_user)
 
     history_stack = GAME_HISTORY.get(gid, [])
     if not history_stack:
@@ -1469,6 +1643,7 @@ async def admin_rollback_turn(
     GAMES[gid] = prev_state
     refresh_diagnostics_and_simulation(prev_state)
     sync_summary(gid)
+    await persist_game(gid)
     await broadcast_game_update(gid, prev_state)
     await broadcast_lobby_update()
     return prev_state
@@ -1478,13 +1653,14 @@ async def admin_rollback_turn(
 async def admin_set_turn(
     req: AdminSetTurnRequest,
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Arbitrarily adjust season, year, or phase (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
-    game = resolve_game(gid)
+    verify_admin_access(gid, current_user)
+    game = await resolve_game(gid)
 
     valid_seasons = ["Spring", "Fall", "Winter"]
     valid_phases = ["Movement", "Retreats", "Adjustments"]
@@ -1503,6 +1679,7 @@ async def admin_set_turn(
     game.turn_history.insert(0, f"[ADMIN OVERRIDE] Adjusted game clock to {req.season} {req.year} {req.phase} Phase.")
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await persist_game(gid)
     await broadcast_game_update(gid, game)
     await broadcast_lobby_update()
     return game
@@ -1512,13 +1689,14 @@ async def admin_set_turn(
 async def admin_move_unit(
     req: AdminMoveUnitRequest,
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Arbitrarily teleport/move any unit to any valid province on the map (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
-    game = resolve_game(gid)
+    verify_admin_access(gid, current_user)
+    game = await resolve_game(gid)
 
     target_unit = next((u for u in game.units if u.id == req.unit_id), None)
     if not target_unit:
@@ -1568,7 +1746,9 @@ async def admin_move_unit(
     )
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await persist_game(gid)
     await broadcast_game_update(gid, game)
+    await broadcast_lobby_update()
     return game
 
 
@@ -1576,13 +1756,14 @@ async def admin_move_unit(
 async def admin_spawn_unit(
     req: AdminSpawnUnitRequest,
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Arbitrarily spawn a unit anywhere on the board (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
-    game = resolve_game(gid)
+    verify_admin_access(gid, current_user)
+    game = await resolve_game(gid)
 
     prov_id = req.province.upper()
     prov_info = PROVINCES.get(prov_id)
@@ -1641,7 +1822,9 @@ async def admin_spawn_unit(
     )
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await persist_game(gid)
     await broadcast_game_update(gid, game)
+    await broadcast_lobby_update()
     return game
 
 
@@ -1649,13 +1832,14 @@ async def admin_spawn_unit(
 async def admin_destroy_unit(
     req: AdminDestroyUnitRequest,
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Arbitrarily destroy/disband any unit on the board (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
-    game = resolve_game(gid)
+    verify_admin_access(gid, current_user)
+    game = await resolve_game(gid)
 
     target_unit = next((u for u in game.units if u.id == req.unit_id), None)
     if not target_unit:
@@ -1669,7 +1853,9 @@ async def admin_destroy_unit(
     )
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await persist_game(gid)
     await broadcast_game_update(gid, game)
+    await broadcast_lobby_update()
     return game
 
 
@@ -1677,13 +1863,14 @@ async def admin_destroy_unit(
 async def admin_set_ownership(
     req: AdminSetOwnershipRequest,
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Arbitrarily reassign province/supply center ownership (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, req.user_id or x_user_id, req.email or x_user_email)
-    game = resolve_game(gid)
+    verify_admin_access(gid, current_user)
+    game = await resolve_game(gid)
 
     prov_id = req.province.upper()
     if prov_id not in PROVINCES:
@@ -1700,6 +1887,7 @@ async def admin_set_ownership(
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await persist_game(gid)
     await broadcast_game_update(gid, game)
     await broadcast_lobby_update()
     return game
@@ -1708,17 +1896,19 @@ async def admin_set_ownership(
 @app.post("/api/admin/unfinalize-all", response_model=GameState)
 async def admin_unfinalize_all(
     game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
     x_user_id: Optional[str] = Header(default=None),
     x_user_email: Optional[str] = Header(default=None),
 ):
     """Unlock and unfinalize orders for all Great Powers (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, x_user_id, x_user_email)
-    game = resolve_game(gid)
+    verify_admin_access(gid, current_user)
+    game = await resolve_game(gid)
     game.finalized_powers = []
     game.turn_history.insert(0, "[ADMIN OVERRIDE] Unlocked orders for all Great Powers.")
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
+    await persist_game(gid)
     await broadcast_game_update(gid, game)
     await broadcast_lobby_update()
     return game
@@ -1726,6 +1916,19 @@ async def admin_unfinalize_all(
 
 @app.websocket("/ws/games/{game_id}")
 async def ws_game_endpoint(websocket: WebSocket, game_id: str):
+    if game_id not in GAMES and is_persistence_enabled():
+        loaded = await load_game_from_db(game_id)
+        if loaded is not None:
+            state, summary, history, passcode = loaded
+            GAMES[game_id] = state
+            if summary:
+                GAME_SUMMARIES[game_id] = summary
+            if history:
+                GAME_HISTORY[game_id] = history
+            if passcode:
+                GAME_PASSCODES[game_id] = passcode
+            SANDBOX_CHECKPOINTS[game_id] = None
+
     if game_id not in GAMES:
         await websocket.close(code=4004)
         return

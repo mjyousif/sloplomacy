@@ -274,6 +274,12 @@ def _new_game(power="FRANCE"):
     return res.json()["game_id"]
 
 
+def _auth_headers(user_id="host", email="host@test.com"):
+    import jwt
+    token = jwt.encode({"sub": user_id, "email": email}, "test-secret-at-least-32-chars-long", algorithm="HS256")
+    return {"Authorization": f"Bearer {token}"}
+
+
 def _order_payload(**overrides):
     order = {
         "unit_id": "FRA_A_PAR",
@@ -346,7 +352,7 @@ def test_incomplete_support_does_not_break_the_game():
     assert drafted.status_code == 200
     assert any(i["code"] == "ILLEGAL_SUPPORT" for i in drafted.json()["issues"])
     assert client.get(f"/api/game?game_id={game_id}").status_code == 200
-    assert client.post(f"/api/adjudicate?game_id={game_id}").status_code == 200
+    assert client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).status_code == 200
 
 
 def test_batch_with_one_bad_order_changes_nothing():
@@ -370,7 +376,7 @@ def test_illegal_move_does_not_teleport_through_the_full_turn_cycle():
     game_id = _new_game()
     client.post(f"/api/order?game_id={game_id}", json={"order": _order_payload(target="MOS")})
 
-    state = client.post(f"/api/adjudicate?game_id={game_id}").json()
+    state = client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).json()
 
     assert next(u for u in state["units"] if u["id"] == "FRA_A_PAR")["province"] == "PAR"
 
@@ -415,7 +421,7 @@ def test_game_ends_when_a_power_reaches_eighteen_centers():
     game_id = _new_game()
     _put_game_one_center_from_a_solo(game_id)
 
-    state = client.post(f"/api/adjudicate?game_id={game_id}").json()
+    state = client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).json()
 
     assert state["winner"] == "FRANCE"
     assert (state["season"], state["year"], state["phase"]) == ("Fall", 1907, "Movement")
@@ -427,7 +433,7 @@ def test_game_ends_when_a_power_reaches_eighteen_centers():
     reread = client.get(f"/api/game?game_id={game_id}")
     assert reread.status_code == 200
     assert reread.json()["state"]["winner"] == "FRANCE"
-    assert client.post(f"/api/adjudicate?game_id={game_id}").status_code == 409
+    assert client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).status_code == 409
     assert client.post(f"/api/sandbox/ai-step?game_id={game_id}").status_code == 409
 
 
@@ -449,17 +455,17 @@ def test_game_ends_only_after_the_retreat_of_the_deciding_turn():
         is_explicit=True,
     )
 
-    movement = client.post(f"/api/adjudicate?game_id={game_id}").json()
+    movement = client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).json()
 
     assert movement["winner"] is None
     assert (movement["season"], movement["phase"]) == ("Fall", "Retreats")
 
-    retreat = client.post(f"/api/adjudicate?game_id={game_id}").json()
+    retreat = client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).json()
 
     assert retreat["winner"] == "FRANCE"
     assert (retreat["season"], retreat["year"], retreat["phase"]) == ("Fall", 1907, "Retreats")
     assert client.get(f"/api/game?game_id={game_id}").status_code == 200
-    assert client.post(f"/api/adjudicate?game_id={game_id}").status_code == 409
+    assert client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).status_code == 409
 
 
 def test_previewing_a_winning_turn_does_not_end_the_game():
@@ -480,15 +486,17 @@ def test_rollback_reopens_a_finished_game():
         json={"power": "GERMANY", "user_id": "guest2", "email": "guest2@test.com"},
     )
     _put_game_one_center_from_a_solo(game_id)
-    client.post(f"/api/adjudicate?game_id={game_id}")
+    client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers())
 
     state = client.post(
-        f"/api/admin/rollback?game_id={game_id}", json={"user_id": "host", "email": "host@test.com"}
+        f"/api/admin/rollback?game_id={game_id}",
+        headers=_auth_headers(),
+        json={"user_id": "host", "email": "host@test.com"},
     ).json()
 
     assert state["winner"] is None
     assert client.get(f"/api/games/{game_id}").json()["status"] == "active"
-    assert client.post(f"/api/adjudicate?game_id={game_id}").json()["winner"] == "FRANCE"
+    assert client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).json()["winner"] == "FRANCE"
 
 
 @pytest.mark.parametrize(
@@ -584,10 +592,14 @@ def test_multiplayer_auto_adjudication_on_consensus_finalization():
     assert res_join.json()["summary"]["status"] == "active"
 
     # 3. Non-creator France attempts manual adjudication with user credentials -> 403 Forbidden
-    france_headers = {"X-User-Id": "user_napoleon", "X-User-Email": "napoleon@fr.gov"}
+    france_headers = _auth_headers("user_napoleon", "napoleon@fr.gov")
     res_adj_intruder = client.post(f"/api/adjudicate?game_id={gid}", headers=france_headers)
     assert res_adj_intruder.status_code == 403
     assert "Administrator access denied" in res_adj_intruder.json()["detail"]
+
+    # Unauthenticated request fails with 401
+    res_adj_unauth = client.post(f"/api/adjudicate?game_id={gid}")
+    assert res_adj_unauth.status_code == 401
 
     # 4. France finalizes orders (1 of 2 participants)
     fin_fra = client.post(

@@ -191,17 +191,41 @@ interface GameParticipant {
 
 ---
 
+## Authentication & Identity Schemas
+
+### `AuthUser`
+Represents an authenticated Supabase user whose token signature has been cryptographically validated:
+
+```typescript
+interface AuthUser {
+  id: string;
+  email: string;
+  displayName: string;
+  isLocalDemo?: boolean;
+}
+```
+
+Backend (`backend/auth.py`):
+```python
+class AuthUser(BaseModel):
+    user_id: str
+    email: Optional[str] = None
+    is_authenticated: bool = True
+```
+
+---
+
 ## Administrator Schemas
 
-Used by the match creator to arbitrate games and perform scenario testing:
+Used by the match creator to arbitrate games and perform scenario testing. In multiplayer games, all mutating admin actions require cryptographic Supabase JWT verification (`Authorization: Bearer <token>`):
 
 - `AdminStatusResponse`: `{ is_creator, can_rollback, history_count, creator_email, creator_id }`
-- `AdminRollbackRequest`: `{ user_id, email }`
-- `AdminSetTurnRequest`: `{ season?, year?, phase? }`
-- `AdminMoveUnitRequest`: `{ unit_id, new_province, new_coast? }`
-- `AdminSpawnUnitRequest`: `{ power, unit_type, province, coast? }`
-- `AdminDestroyUnitRequest`: `{ unit_id }`
-- `AdminSetOwnershipRequest`: `{ province, power? }`
+- `AdminRollbackRequest`: `{ user_id?, email? }` *(Identity verified via JWT Bearer token)*
+- `AdminSetTurnRequest`: `{ season, year, phase, user_id?, email? }`
+- `AdminMoveUnitRequest`: `{ unit_id, new_province, new_coast?, user_id?, email? }`
+- `AdminSpawnUnitRequest`: `{ power, unit_type, province, coast?, user_id?, email? }`
+- `AdminDestroyUnitRequest`: `{ unit_id, user_id?, email? }`
+- `AdminSetOwnershipRequest`: `{ province, power?, user_id?, email? }`
 
 
 ---
