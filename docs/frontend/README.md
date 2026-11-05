@@ -19,7 +19,9 @@ frontend/
     ├── index.css                # Base reset & typography
     ├── components/
     │   ├── EuropeMap.tsx        # High-performance interactive SVG game board & order arrows
-    │   ├── MacroSidebar.tsx     # Order roster, phase controls, diagnostics, admin/surrender
+    │   ├── ToolsSidebar.tsx     # Left collapsible sidebar: legend, zoom options, powers, sandbox & admin
+    │   ├── MacroSidebar.tsx     # Right collapsible sidebar: core gameplay orders, builds, finalize & adjudicate
+    │   ├── sidebars.test.ts     # Vitest suite for ToolsSidebar and MacroSidebar collapsible views
     │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
     │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
     │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
@@ -57,15 +59,24 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   └── User Auth Header & Profile Switcher
 │
 ├── View 2: Tactical Workspace (when viewMode === 'multiplayer' | 'sandbox')
-│   ├── Header Bar
-│   │   ├── Back to Lobby Navigation Button
-│   │   ├── Active Nation Crest & Power Selector (with seat locking)
-│   │   ├── Phase / Season / Year Badge
-│   │   ├── Sandbox "War Room" Toggle
-│   │   ├── Admin Tools Button (creator only)
-│   │   └── Surrender Button (active player seat)
+│   ├── Imperial Header Bar
+│   │   ├── Back to Lobby Navigation Button & Main Page Switcher
+│   │   ├── Turn Chronicle Pill (Season, Year, Phase & Winner)
+│   │   ├── Sanity Check Diagnostics Warning Pill
+│   │   ├── Real-Time WebSocket Synchronization Badge
+│   │   ├── Sidebar Visibility Pill Toggles ("Tools Sidebar", "Tactical Sidebar")
+│   │   └── User Auth Profile / Guest Mode
 │   │
-│   ├── EuropeMap.tsx (Interactive SVG Board)
+│   ├── ToolsSidebar.tsx (Left Collapsible Tools & Intel Panel)
+│   │   ├── Collapse / Expand Rail Toggle (44px collapsed rail)
+│   │   ├── Map View & Camera Controls (Zoom In, Zoom Out, Fit Map 105%)
+│   │   ├── Tactical Map Legend (Move, Support, Convoy, Conflict vectors & dual coasts)
+│   │   ├── Great Powers Standing & Command Selector (SC & Unit tallies)
+│   │   ├── Pre-Move Sandbox Mode & Tactical General Staff AI (Opponents, All 7, AI Step)
+│   │   ├── Foreign Pre-Moves Count & Discard Actions
+│   │   └── Creator Admin Console & Direct-Edit Override Trigger
+│   │
+│   ├── EuropeMap.tsx (Center Interactive SVG Board)
 │   │   ├── Authentic Cartographic Background Layer
 │   │   ├── Province Fill & Ownership Borders
 │   │   ├── Supply Center Markers
@@ -73,16 +84,18 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   │   ├── Dislodged Unit Retreat Badges
 │   │   ├── Dynamic SVG Order Vectors & Bezier Arrows
 │   │   ├── Combat Clashes, Bounces & Cut Indicators
-│   │   └── Floating Map Overlay HUD & Controls
+│   │   ├── Interactive Unit Radial Menu & Coast Picker
+│   │   └── Imperative Camera Control Handle (`EuropeMapHandle`)
 │   │
-│   └── MacroSidebar.tsx (Tactical Control Panel)
-│       ├── Active Nation Header & Supply Center Counter
-│       ├── Pre-Flight Diagnostics Warning Banner
-│       ├── Unit Order Cards (Hold, Move, Support, Convoy, Retreat, Disband, Build)
-│       ├── Batch Operations ("Confirm All Holds")
-│       ├── Turn Simulation Preview Button
-│       ├── Adjudicate & Advance Phase Button
-│       └── Chronological Turn History Feed
+│   └── MacroSidebar.tsx (Right Collapsible Tactical Command Panel)
+│       ├── Collapse / Expand Rail Toggle (44px collapsed rail)
+│       ├── Active Sovereign Command Header & Supply Center Telemetry
+│       ├── Phase Context Alerts (Winter Adjustments Quota, Retreats Dislodgements)
+│       ├── Quick Command Actions ("Confirm All", "Surrender & Leave")
+│       ├── Home Supply Center Builds (Army / Fleet / Waive)
+│       ├── Unit Order Cards (Hold, Move, Support, Convoy, Retreat, Disband)
+│       ├── Inline Validation Diagnostics & Combat Simulation Badges
+│       └── Sticky Footer: Order Finalization & Phase Adjudication Actions
 │
 ├── Modals & Overlays
 │   ├── AuthModal.tsx (Supabase login/signup & local dev auth toggle)
