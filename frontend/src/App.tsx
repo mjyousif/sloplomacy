@@ -216,6 +216,24 @@ export function App() {
     return () => unsub();
   }, []);
 
+  // Auto-poll game state in multiplayer mode so turn advancements are received automatically
+  useEffect(() => {
+    if (viewMode !== 'multiplayer' || !activeGameId) return;
+    const interval = setInterval(() => {
+      fetch(`${API_BASE}/game?game_id=${encodeURIComponent(activeGameId)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.state) {
+            applyServerState(data.state);
+            if (data.summary) setActiveGameSummary(data.summary);
+          }
+        })
+        .catch(() => {});
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [viewMode, activeGameId]);
+
+
   const handleEnterSoloSandbox = async () => {
     setActiveGameId('proto_1901');
     setActiveGameSummary(null);
@@ -741,9 +759,13 @@ export function App() {
 
   const handleAdjudicateTurn = async () => {
     try {
+      const headers: Record<string, string> = {
+        ...(authUser?.id ? { 'X-User-Id': authUser.id } : {}),
+        ...(authUser?.email ? { 'X-User-Email': authUser.email } : {}),
+      };
       const res = await fetch(
         `${API_BASE}/adjudicate?game_id=${encodeURIComponent(activeGameId)}`,
-        { method: 'POST' }
+        { method: 'POST', headers }
       );
       if (res.ok) {
         const st: GameState = await res.json();
@@ -1131,6 +1153,7 @@ export function App() {
             isMultiplayer={viewMode === 'multiplayer'}
             isGameCreator={isGameCreator}
             gameOver={Boolean(gameState.winner)}
+            participants={activeGameSummary?.participants}
             onSelectUnit={setSelectedUnitId}
             onHoverUnit={setHoveredUnitId}
             onHighlightProvinces={setHighlightedProvinces}

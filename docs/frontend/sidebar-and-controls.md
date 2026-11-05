@@ -75,9 +75,12 @@ Both sidebars feature smooth, 44px collapsed rail views with quick tool icons an
 - **Real-Time Diagnostics**: Inline error/warning alerts explaining DATC violations.
 - **Simulation Preview Results**: Instant visual feedback on simulated advances, bounces, or cut supports.
 
-### 5. Sticky Action Footer
+### 5. Sticky Action Footer & Consensus Resolution
 - **"Finalize Orders" (`POST /api/finalize`)**: Submits orders. Opens `SanityCheckModal.tsx` if warnings or unconfirmed moves exist.
-- **"Resolve Phase / Adjudicate Turn" (`POST /api/adjudicate`)**: Commits finalized moves, resolves combat via DATC rules, advances the season clock, and updates SC ownership.
+- **Consensus Auto-Adjudication (Multiplayer)**: In multiplayer matches, turns advance automatically once all required active powers finalize their orders. Non-creator players see a real-time consensus status card (`"Resolution Progress: X/Y Ready"`, `"Waiting on: [Powers]"`) rather than a manual button. Connected clients poll state in the background to seamlessly receive phase transitions.
+- **"Adjudicate Turn & Advance" (`POST /api/adjudicate`)**:
+  - In Solo / Sandbox Mode: Commits moves and advances the season/phase.
+  - In Multiplayer Mode: Restricted to the **Game Creator** as `"Force Adjudicate Phase (Host Override)"` to bypass stalled or AFK players. Unauthorized non-creator calls return `403 Forbidden`. Once a power has won, the button is disabled and reads "Game Over".
 
 ---
 

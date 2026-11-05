@@ -294,6 +294,8 @@ Returns `400` if the order names a province or coast that does not exist. A real
 ### 9. `POST /api/finalize`
 Attempts to lock in orders for the active power. If errors or unassigned warnings exist, finalization is halted (`requires_confirmation: true`) unless `force: true`.
 
+In active multiplayer campaigns (`status == "active"`), if all required active powers (commanded by participants and having pending phase actions) have finalized, the engine automatically executes turn adjudication, advances season and phase, resets `finalized_powers`, and returns the newly resolved `GameState`.
+
 #### Request (`FinalizeRequest`):
 ```json
 {
@@ -328,7 +330,8 @@ Attempts to lock in orders for the active power. If errors or unassigned warning
 ### 10. `POST /api/adjudicate`
 Permanently commits all submitted moves, resolves conflicts using the DATC `diplomacy` engine, advances phase (Movement -> Retreats -> Movement -> Adjustments), updates supply center ownership in Fall, and records turn history.
 
-A unit whose order the engine rejects holds in place. When a power reaches 18 supply centers the response carries `winner`, the clock stays on the deciding phase, and further calls return `409`.
+- **Multiplayer Security**: In multiplayer campaigns (`!is_sandbox`), manual adjudication requires game creator credentials (`X-User-Id` / `X-User-Email`). Unauthorized callers receive `403 Forbidden`. In normal multiplayer play, turns advance automatically upon consensus finalization; this endpoint acts as an administrative host override.
+- A unit whose order the engine rejects holds in place. When a power reaches 18 supply centers the response carries `winner`, the clock stays on the deciding phase, and further calls return `409`.
 
 ---
 

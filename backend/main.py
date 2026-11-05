@@ -401,7 +401,7 @@ def seed_initial_multiplayer_lobbies() -> None:
         target="RUH",
         is_explicit=True,
     )
-    g1_state.finalized_powers = [Power.GERMANY]
+    g1_state.finalized_powers = []
     refresh_diagnostics_and_simulation(g1_state)
     GAMES[g1_id] = g1_state
     SANDBOX_CHECKPOINTS[g1_id] = None
@@ -1087,7 +1087,7 @@ async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
     for ord_id, ord_obj in ai_orders.items():
         game.orders[ord_id] = ord_obj
 
-    return await adjudicate_and_advance(game_id=game.game_id)
+    return await _execute_adjudication(game)
 
 
 @app.post("/api/order", response_model=GameState)
@@ -1213,6 +1213,48 @@ async def confirm_all_power_orders(req: SetPowerRequest, game_id: Optional[str] 
     return game
 
 
+def get_required_finalizing_powers(game: GameState, summary: Optional[MultiplayerGameSummary] = None) -> List[Power]:
+    """Determine which powers must finalize before auto-adjudication occurs in multiplayer."""
+    if not summary or summary.is_sandbox:
+        return []
+
+    claimed_powers: List[Power] = []
+    for p_key, part in summary.participants.items():
+        if not part.surrendered and part.power not in game.surrendered_powers:
+            claimed_powers.append(part.power)
+
+    if not claimed_powers:
+        return []
+
+    if game.phase == "Movement":
+        powers_with_units = {u.power for u in game.units}
+        return [p for p in claimed_powers if p in powers_with_units]
+
+    elif game.phase == "Retreats":
+        dislodged_powers = {u.power for u in game.units if getattr(u, "dislodged", False)}
+        if game.retreats:
+            for p_str, r_opts in game.retreats.items():
+                if r_opts:
+                    try:
+                        dislodged_powers.add(Power(p_str))
+                    except ValueError:
+                        pass
+        return [p for p in claimed_powers if p in dislodged_powers]
+
+    elif game.phase == "Adjustments":
+        adj_powers: Set[Power] = set()
+        if game.builds:
+            for p_str, b_dict in game.builds.items():
+                if isinstance(b_dict, dict) and b_dict.get("count", 0) != 0:
+                    try:
+                        adj_powers.add(Power(p_str))
+                    except ValueError:
+                        pass
+        return [p for p in claimed_powers if p in adj_powers]
+
+    return claimed_powers
+
+
 @app.post("/api/finalize", response_model=FinalizeResponse)
 async def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Query(default=None)):
     game = resolve_game(game_id)
@@ -1246,6 +1288,13 @@ async def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Q
     sync_summary(game.game_id)
     await broadcast_game_update(game.game_id, game)
     await broadcast_lobby_update()
+
+    # In active multiplayer matches, auto-adjudicate if all required participants have finalized
+    summary = GAME_SUMMARIES.get(game.game_id)
+    if summary and not summary.is_sandbox and summary.status == "active" and not game.winner:
+        required = get_required_finalizing_powers(game, summary)
+        if required and all(p in game.finalized_powers for p in required):
+            await _execute_adjudication(game)
     return FinalizeResponse(
         finalized=True,
         requires_confirmation=False,
@@ -1274,9 +1323,7 @@ def simulate_current_orders(game_id: Optional[str] = Query(default=None)):
     return game.last_resolution
 
 
-@app.post("/api/adjudicate", response_model=GameState)
-async def adjudicate_and_advance(game_id: Optional[str] = Query(default=None)):
-    game = resolve_game(game_id)
+async def _execute_adjudication(game: GameState) -> GameState:
     gid = game.game_id
 
     if game.winner:
@@ -1324,6 +1371,26 @@ async def adjudicate_and_advance(game_id: Optional[str] = Query(default=None)):
     await broadcast_game_update(game.game_id, game)
     await broadcast_lobby_update()
     return game
+
+
+@app.post("/api/adjudicate", response_model=GameState)
+async def adjudicate_and_advance(
+    game_id: Optional[str] = Query(default=None),
+    x_user_id: Optional[str] = Header(default=None),
+    x_user_email: Optional[str] = Header(default=None),
+):
+    game = resolve_game(game_id)
+    gid = game.game_id
+
+    # In multiplayer matches, verify that the caller is the game creator if credentials passed
+    uid = x_user_id if isinstance(x_user_id, str) else None
+    uemail = x_user_email if isinstance(x_user_email, str) else None
+    if gid != DEFAULT_GAME_ID and (uid or uemail):
+        summary = GAME_SUMMARIES.get(gid)
+        if summary and not summary.is_sandbox:
+            verify_admin_access(gid, uid, uemail)
+
+    return await _execute_adjudication(game)
 
 
 @app.post("/api/scenario", response_model=GameState)

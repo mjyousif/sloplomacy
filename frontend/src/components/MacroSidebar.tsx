@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
+  GameParticipant,
   Order,
   OrderType,
   POWER_METADATA,
@@ -22,6 +23,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Crosshair,
   Flag,
   Lock,
@@ -76,6 +78,7 @@ export interface MacroSidebarProps {
   surrenderedPowers?: Power[];
   onGenerateAIMoves?: (powers?: Power[], includeActive?: boolean) => void;
   onAIStepTurn?: () => void;
+  participants?: Record<string, GameParticipant>;
   // Collapsible Props
   collapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -100,6 +103,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   builds = null,
   retreats = null,
   isMultiplayer = false,
+  isGameCreator = false,
   gameOver = false,
   onSelectUnit,
   onHoverUnit,
@@ -110,6 +114,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   onUnfinalizeClick,
   onAdjudicateTurn,
   onSurrenderClick,
+  participants,
   collapsed = false,
   onToggleCollapse,
 }) => {
@@ -128,6 +133,62 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
   const isAdjustmentPhase = phase === 'Adjustments' || season === 'Winter';
   const isRetreatPhase = phase === 'Retreats';
+
+  const requiredPowersInMatch = useMemo(() => {
+    if (!isMultiplayer || !participants) return [];
+    const activeParticipants = Object.values(participants).filter(
+      (p) => !p.surrendered && !surrenderedPowers.includes(p.power)
+    );
+    if (activeParticipants.length === 0) return [];
+
+    if (isAdjustmentPhase) {
+      if (!builds) return activeParticipants.map((p) => p.power);
+      return activeParticipants
+        .filter((p) => {
+          const b = builds[p.power];
+          return b && typeof b === 'object' && b.count !== 0;
+        })
+        .map((p) => p.power);
+    }
+
+    if (isRetreatPhase) {
+      const dislodgedPowers = new Set(
+        units.filter((u) => u.is_dislodged).map((u) => u.power)
+      );
+      if (retreats) {
+        Object.keys(retreats).forEach((pStr) => {
+          if (retreats[pStr as Power] && Object.keys(retreats[pStr as Power]).length > 0) {
+            dislodgedPowers.add(pStr as Power);
+          }
+        });
+      }
+      return activeParticipants
+        .filter((p) => dislodgedPowers.has(p.power))
+        .map((p) => p.power);
+    }
+
+    const powersWithUnits = new Set(units.map((u) => u.power));
+    return activeParticipants
+      .filter((p) => powersWithUnits.has(p.power))
+      .map((p) => p.power);
+  }, [
+    isMultiplayer,
+    participants,
+    surrenderedPowers,
+    isAdjustmentPhase,
+    isRetreatPhase,
+    builds,
+    retreats,
+    units,
+  ]);
+
+  const requiredFinalizedCount = requiredPowersInMatch.filter((p) =>
+    finalizedPowers.includes(p)
+  ).length;
+  const totalRequiredCount = requiredPowersInMatch.length;
+  const missingPowers = requiredPowersInMatch.filter(
+    (p) => !finalizedPowers.includes(p)
+  );
 
   const rawMyUnits = units.filter((u) => u.power === activePower);
   const myUnits = isRetreatPhase
@@ -1162,24 +1223,63 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           </button>
         )}
 
-        <button
-          type="button"
-          className="adjudicate-turn-btn"
-          title="Execute turn adjudication and advance to the next season"
-          onClick={onAdjudicateTurn}
-          disabled={gameOver}
-        >
-          <Play size={14} />
-          <span>
-            {gameOver
-              ? 'Game Over'
-              : isAdjustmentPhase
-              ? 'Resolve Adjustments & Advance'
-              : isRetreatPhase
-              ? 'Resolve Retreats & Advance'
-              : 'Resolve Phase'}
-          </span>
-        </button>
+        {!isMultiplayer ? (
+          <button
+            type="button"
+            className="adjudicate-turn-btn"
+            title="Execute turn adjudication and advance to the next season"
+            onClick={onAdjudicateTurn}
+            disabled={gameOver}
+          >
+            <Play size={14} />
+            <span>
+              {gameOver
+                ? 'Game Over'
+                : isAdjustmentPhase
+                ? 'Resolve Adjustments & Advance'
+                : isRetreatPhase
+                ? 'Resolve Retreats & Advance'
+                : 'Resolve Phase'}
+            </span>
+          </button>
+        ) : (
+          <div className="mp-resolution-controls">
+            <div className="mp-consensus-status-card">
+              <div className="mp-consensus-header">
+                <Clock size={13} className="consensus-icon" />
+                <span className="consensus-title">
+                  {gameOver
+                    ? 'Campaign Finished'
+                    : totalRequiredCount === 0
+                    ? 'Waiting for Players'
+                    : `Resolution Progress: ${requiredFinalizedCount}/${totalRequiredCount} Ready`}
+                </span>
+              </div>
+              {!gameOver && totalRequiredCount > 0 && (
+                <div className="mp-consensus-desc">
+                  {missingPowers.length > 0
+                    ? `Waiting on: ${missingPowers.map((p) => POWER_METADATA[p].shortName).join(', ')}`
+                    : 'All powers finalized! Resolving phase...'}
+                </div>
+              )}
+            </div>
+
+            {isGameCreator && (
+              <button
+                type="button"
+                className="adjudicate-turn-btn creator-override-btn"
+                title="Host Admin Override: Force advance to the next season immediately"
+                onClick={onAdjudicateTurn}
+                disabled={gameOver}
+              >
+                <Play size={14} />
+                <span>
+                  {gameOver ? 'Game Over' : 'Force Adjudicate Phase (Host Override)'}
+                </span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </aside>
   );
