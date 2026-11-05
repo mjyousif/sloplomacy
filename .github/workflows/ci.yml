@@ -116,11 +116,13 @@ jobs:
           IMAGE_TAG="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:${{ github.sha }}"
           LATEST_TAG="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest"
 
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
           # 1. Build and push container with Cloud Build
-          echo "Building container with Google Cloud Build..."
+          echo "Building container with Google Cloud Build (revision: $SHORT_SHA)..."
           gcloud builds submit \
             --config=cloudbuild.yaml \
-            --substitutions="_SUPABASE_URL=${SUPABASE_URL},_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},_IMAGE_TAG=${IMAGE_TAG}" \
+            --substitutions="_SUPABASE_URL=${SUPABASE_URL},_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},_SHORT_SHA=${SHORT_SHA},_IMAGE_TAG=${IMAGE_TAG}" \
             --project="$PROJECT_ID"
 
           # 2. Also tag as latest

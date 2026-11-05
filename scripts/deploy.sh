@@ -37,7 +37,8 @@ echo "--> Enabling Google Cloud APIs..."
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project "$PROJECT_ID"
 
 echo "--> Building container with Google Cloud Build..."
-gcloud builds submit --tag "$IMAGE_TAG" --project "$PROJECT_ID" .
+SHORT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
+gcloud builds submit --config=cloudbuild.yaml --substitutions="_SUPABASE_URL=${SUPABASE_URL},_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},_SHORT_SHA=${SHORT_SHA},_IMAGE_TAG=${IMAGE_TAG}" --project "$PROJECT_ID" .
 
 echo "--> Deploying to Google Cloud Run (Scale-to-zero with Supabase Persistence)..."
 gcloud run deploy "$SERVICE_NAME" \
