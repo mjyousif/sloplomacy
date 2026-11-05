@@ -39,3 +39,10 @@ variable "supabase_anon_key" {
   default     = ""
   sensitive   = true
 }
+
+variable "supabase_service_role_key" {
+  description = "Supabase service_role API key for authoritative backend persistence"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
