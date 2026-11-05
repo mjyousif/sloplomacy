@@ -23,11 +23,15 @@ echo "[✓] Target GCP Region : $REGION"
 
 SUPABASE_URL=""
 SUPABASE_ANON_KEY=""
+SUPABASE_SERVICE_ROLE_KEY=""
 
 if [ -f "frontend/.env" ]; then
-  SUPABASE_URL=$(grep -E '^VITE_SUPABASE_URL=' frontend/.env | cut -d '=' -f2- | tr -d ' "' || true)
-  SUPABASE_ANON_KEY=$(grep -E '^VITE_SUPABASE_ANON_KEY=' frontend/.env | cut -d '=' -f2- | tr -d ' "' || true)
+  SUPABASE_URL=$(grep -E '^(VITE_)?SUPABASE_URL=' frontend/.env | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
+  SUPABASE_ANON_KEY=$(grep -E '^(VITE_)?SUPABASE_ANON_KEY=' frontend/.env | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
+  SUPABASE_SERVICE_ROLE_KEY=$(grep -E '^SUPABASE_SERVICE_ROLE_KEY=' frontend/.env | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
 fi
+
+BACKEND_KEY="${SUPABASE_SERVICE_ROLE_KEY:-$SUPABASE_ANON_KEY}"
 
 echo "--> Enabling Google Cloud APIs..."
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project "$PROJECT_ID"
@@ -35,7 +39,7 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregi
 echo "--> Building container with Google Cloud Build..."
 gcloud builds submit --tag "$IMAGE_TAG" --project "$PROJECT_ID" .
 
-echo "--> Deploying to Google Cloud Run (Scale-to-zero)..."
+echo "--> Deploying to Google Cloud Run (Scale-to-zero with Supabase Persistence)..."
 gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_TAG" \
   --region "$REGION" \
@@ -46,7 +50,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances 3 \
   --memory 512Mi \
   --port 8080 \
-  --set-env-vars "VITE_SUPABASE_URL=${SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
+  --set-env-vars "VITE_SUPABASE_URL=${SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_KEY=${BACKEND_KEY},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}"
 
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format "value(status.url)")
 

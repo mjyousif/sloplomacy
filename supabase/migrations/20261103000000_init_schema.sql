@@ -46,11 +46,16 @@ create table if not exists public.multiplayer_games (
   room_code text unique not null,
   name text not null,
   host_user_id uuid references auth.users(id) on delete set null,
-  status text not null check (status in ('lobby', 'in_progress', 'completed')),
+  status text not null check (status in ('waiting', 'active', 'completed', 'lobby', 'in_progress')),
   phase text not null default 'Movement',
   season text not null default 'Spring',
   year integer not null default 1901,
   game_state jsonb not null default '{}'::jsonb,
+  summary jsonb default '{}'::jsonb,
+  history jsonb default '[]'::jsonb,
+  passcode text,
+  is_sandbox boolean not null default false,
+  is_private boolean not null default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -60,6 +65,11 @@ alter table public.multiplayer_games enable row level security;
 create policy "Games are viewable by all logged-in players"
   on public.multiplayer_games for select
   using (true);
+
+create policy "Backend and service role game management"
+  on public.multiplayer_games for all
+  using (true)
+  with check (true);
 
 create policy "Authenticated users can create games"
   on public.multiplayer_games for insert

@@ -1,6 +1,6 @@
 # Backend Architecture (FastAPI)
 
-The backend service is located in the `backend/` directory. It is built with **FastAPI** and **Pydantic**, providing a stateless-capable, high-speed tactical evaluation, DATC adjudication, and multiplayer lobby management engine for Diplomacy 1901.
+The backend service is located in the `backend/` directory. It is built with **FastAPI** and **Pydantic**, providing a stateless-capable, high-speed tactical evaluation, DATC adjudication, Supabase PostgreSQL persistence, and multiplayer lobby management engine for Diplomacy 1901.
 
 ---
 
@@ -10,6 +10,7 @@ The backend service is located in the `backend/` directory. It is built with **F
 backend/
 ├── main.py                  # FastAPI app instance, route handlers, multi-room registry & SPA static mount
 ├── models.py                # Pydantic v2 schemas and enumerations
+├── database.py              # Supabase PostgreSQL persistence layer (PostgREST upsert & read-through cache)
 ├── adjudicator.py           # DATC turn adjudication & simulation wrapper over python 'diplomacy'
 ├── ai_engine.py             # Authoritative Diplomacy Tactical AI engine (DATC-compliant heuristics)
 ├── validator.py             # Real-time tactical sanity checker across Movement, Retreats, & Builds
@@ -19,6 +20,7 @@ backend/
 ├── test_admin.py            # Creator privilege enforcement and admin board mutations
 ├── test_ai_and_private_lobbies.py # AI orders, auto-step, and private lobby passcode tests
 ├── test_api_integration.py  # Full-stack API endpoint integration tests
+├── test_database_persistence.py # Supabase database persistence & cold-start recovery tests
 ├── test_surrender_leave.py  # Concession, civil disorder, and seat-vacating tests
 ├── test_validator.py        # Blunder detection, friendly fire, and phase-specific validations
 ├── test_websocket_sync.py   # Real-time WebSocket room & lobby synchronization tests
@@ -55,19 +57,26 @@ HTTP Request (e.g. POST /api/order?game_id=...)
                │     ├── 1. validator.validate_orders(...) -> list[ValidationIssue]
                │     └── 2. adjudicator.adjudicate_turn(..., is_simulation=True) -> SimulationResult
                │
+               ├─► persist_game(game_id) -> database.py (Supabase PostgreSQL JSONB upsert)
+               │
                ├─► ConnectionManager.broadcast_game(...) (WebSocket /ws/games/{id})
                │
                ▼
      Return GameState / Response Model (JSON)
 ```
 
-### In-Memory State & Multi-Room Registry
+### In-Memory State & Supabase Persistence
 
-The backend maintains active match sessions in scoped memory dictionaries:
+The backend maintains active match sessions in scoped memory dictionaries acting as an L1 fast-access cache:
 - `GAMES: Dict[str, GameState]`: Live game states keyed by `game_id`.
 - `SANDBOX_CHECKPOINTS: Dict[str, Optional[GameState]]`: Checkpoints stored when entering Sandbox mode.
 - `GAME_HISTORY: Dict[str, List[GameState]]`: Historical snapshots preserved for creator rollback operations.
 - `GAME_SUMMARIES: Dict[str, MultiplayerGameSummary]`: Room registry for match browser and lobby display.
+
+When `SUPABASE_URL` and `SUPABASE_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`) are configured, the backend automatically operates a **read-through / write-through** persistence layer via [`database.py`](database.py):
+- On state mutation, the game state, summary, history, and passcodes are serialized to JSONB and persisted to Supabase's `public.multiplayer_games` table.
+- On container cold start (such as Google Cloud Run scale-to-zero wakeups), any request for a game absent from RAM is transparently fetched and restored from Supabase.
+- If credentials are not supplied (e.g. offline local development), the server gracefully falls back to ephemeral in-memory mode.
 
 ---
 
@@ -97,13 +106,16 @@ Once running, OpenAPI documentation is automatically served by Swagger UI at:
 
 ## Running Backend Tests
 
-The backend includes 6 comprehensive pytest suites:
+The backend includes 9 comprehensive pytest suites:
 - `test_engine.py`: 76-province graph symmetry, split coasts, and adjacency.
 - `test_adjudicator.py`: Official DATC combat scenarios, dislodgements, and retreat paths.
 - `test_admin.py`: Creator authorization, timeline rollback, and board editing.
+- `test_ai_and_private_lobbies.py`: Heuristic AI orders, auto-step, and private lobby passcode tests.
 - `test_api_integration.py`: Route contracts, query parameter scoping, and state persistence.
+- `test_database_persistence.py`: Supabase database persistence & cold-start recovery tests.
 - `test_surrender_leave.py`: Seat vacating, player surrender, and civil disorder mechanics.
 - `test_validator.py`: Pre-flight blunder diagnostics across all three game phases.
+- `test_websocket_sync.py`: Real-time WebSocket room & lobby synchronization tests.
 
 Run all tests from the repository root:
 ```bash
