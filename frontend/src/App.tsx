@@ -10,6 +10,7 @@ import { SurrenderModal } from './components/SurrenderModal';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
 import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
 import {
+  getAuthHeaders,
   getInitialAuthUser,
   signOutUser,
   subscribeToAuthChanges,
@@ -746,7 +747,9 @@ export function App() {
 
   const handleAdjudicateTurn = async () => {
     try {
+      const authHeaders = await getAuthHeaders();
       const headers: Record<string, string> = {
+        ...authHeaders,
         ...(authUser?.id ? { 'X-User-Id': authUser.id } : {}),
         ...(authUser?.email ? { 'X-User-Email': authUser.email } : {}),
       };

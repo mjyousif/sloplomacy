@@ -1,12 +1,29 @@
+import time
+import jwt
 import pytest
 from fastapi.testclient import TestClient
 
 from main import app, GAMES, GAME_HISTORY, GAME_SUMMARIES, seed_initial_multiplayer_lobbies
 from models import Power, UnitType
 
+TEST_JWT_SECRET = "test-secret-at-least-32-chars-long-12345"
+
+
+def make_token(user_id: str, email: str, secret: str = TEST_JWT_SECRET, exp_offset: int = 3600) -> str:
+    return jwt.encode(
+        {"sub": user_id, "email": email, "exp": int(time.time()) + exp_offset},
+        secret,
+        algorithm="HS256",
+    )
+
+
+def make_auth_headers(user_id: str, email: str, secret: str = TEST_JWT_SECRET, exp_offset: int = 3600) -> dict:
+    return {"Authorization": f"Bearer {make_token(user_id, email, secret, exp_offset)}"}
+
 
 @pytest.fixture(autouse=True)
-def reset_server_state():
+def reset_server_state(monkeypatch):
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", TEST_JWT_SECRET)
     seed_initial_multiplayer_lobbies()
 
 
@@ -20,17 +37,26 @@ def test_admin_status_solo_and_multiplayer():
     assert data["is_creator"] is True
 
     # 2. Multiplayer Match #104: Creator is bismarck@diplomacy.eu / bot_bismarck
+    # Test with verified JWT
     res_bismarck = client.get(
         "/api/admin/status?game_id=mp_concert_104",
-        headers={"X-User-Id": "bot_bismarck", "X-User-Email": "bismarck@diplomacy.eu"},
+        headers=make_auth_headers("bot_bismarck", "bismarck@diplomacy.eu"),
     )
     assert res_bismarck.status_code == 200
     assert res_bismarck.json()["is_creator"] is True
 
+    # Test with legacy headers fallback on GET status
+    res_bismarck_legacy = client.get(
+        "/api/admin/status?game_id=mp_concert_104",
+        headers={"X-User-Id": "bot_bismarck", "X-User-Email": "bismarck@diplomacy.eu"},
+    )
+    assert res_bismarck_legacy.status_code == 200
+    assert res_bismarck_legacy.json()["is_creator"] is True
+
     # Non-creator (Tsar Nicholas / bot_romanov)
     res_romanov = client.get(
         "/api/admin/status?game_id=mp_concert_104",
-        headers={"X-User-Id": "bot_romanov", "X-User-Email": "tsar@diplomacy.eu"},
+        headers=make_auth_headers("bot_romanov", "tsar@diplomacy.eu"),
     )
     assert res_romanov.status_code == 200
     assert res_romanov.json()["is_creator"] is False
@@ -38,10 +64,17 @@ def test_admin_status_solo_and_multiplayer():
 
 def test_admin_security_enforcement():
     client = TestClient(app)
-    headers_intruder = {"X-User-Id": "random_intruder", "X-User-Email": "intruder@evil.org"}
     game_id = "mp_concert_104"
 
-    # Non-creator calls should all fail with 403 Forbidden
+    # 1. Unauthenticated calls without a valid Bearer token fail with 401 Unauthorized
+    unauth_headers = {"X-User-Id": "random_intruder", "X-User-Email": "intruder@evil.org"}
+    r_unauth = client.post(f"/api/admin/rollback?game_id={game_id}", headers=unauth_headers)
+    assert r_unauth.status_code == 401
+    assert "Authentication required" in r_unauth.json()["detail"]
+
+    # 2. Authenticated non-creator calls must fail with 403 Forbidden
+    headers_intruder = make_auth_headers("random_intruder", "intruder@evil.org")
+
     r1 = client.post(f"/api/admin/rollback?game_id={game_id}", headers=headers_intruder)
     assert r1.status_code == 403
     assert "Administrator access denied" in r1.json()["detail"]
@@ -88,10 +121,16 @@ def test_admin_security_enforcement():
     assert r7.status_code == 403
     assert "Administrator access denied" in r7.json()["detail"]
 
+    r8 = client.post(
+        f"/api/admin/unfinalize-all?game_id={game_id}",
+        headers=headers_intruder,
+    )
+    assert r8.status_code == 403
+
 
 def test_admin_rollback_turn():
     client = TestClient(app)
-    creator_headers = {"X-User-Id": "bot_bismarck", "X-User-Email": "bismarck@diplomacy.eu"}
+    creator_headers = make_auth_headers("bot_bismarck", "bismarck@diplomacy.eu")
     game_id = "mp_concert_104"
 
     # Initially at Spring 1901 Movement
@@ -104,7 +143,7 @@ def test_admin_rollback_turn():
     assert rb_fail.status_code == 400
 
     # Adjudicate turn to advance to Fall 1901
-    adj_res = client.post(f"/api/adjudicate?game_id={game_id}")
+    adj_res = client.post(f"/api/adjudicate?game_id={game_id}", headers=creator_headers)
     assert adj_res.status_code == 200
     assert adj_res.json()["season"] == "Fall"
     assert adj_res.json()["year"] == 1901
@@ -125,7 +164,7 @@ def test_admin_rollback_turn():
 
 def test_admin_move_unit():
     client = TestClient(app)
-    creator_headers = {"X-User-Id": "bot_bismarck", "X-User-Email": "bismarck@diplomacy.eu"}
+    creator_headers = make_auth_headers("bot_bismarck", "bismarck@diplomacy.eu")
     game_id = "mp_concert_104"
 
     # Move GER_A_BER to SIL
@@ -171,7 +210,7 @@ def test_admin_move_unit():
 
 def test_admin_spawn_and_destroy_units():
     client = TestClient(app)
-    creator_headers = {"X-User-Id": "bot_bismarck", "X-User-Email": "bismarck@diplomacy.eu"}
+    creator_headers = make_auth_headers("bot_bismarck", "bismarck@diplomacy.eu")
     game_id = "mp_concert_104"
 
     # Spawn Austrian Army in TYR
@@ -200,7 +239,7 @@ def test_admin_spawn_and_destroy_units():
 
 def test_admin_set_turn_and_ownership():
     client = TestClient(app)
-    creator_headers = {"X-User-Id": "bot_bismarck", "X-User-Email": "bismarck@diplomacy.eu"}
+    creator_headers = make_auth_headers("bot_bismarck", "bismarck@diplomacy.eu")
     game_id = "mp_concert_104"
 
     # Set clock
@@ -231,6 +270,121 @@ def test_admin_set_turn_and_ownership():
     )
     assert clear_res.status_code == 200
     assert "BEL" not in clear_res.json()["ownership"]
+
+
+# -------------------------------------------------------------
+# Cryptographic Supabase JWT Authorization Tests
+# -------------------------------------------------------------
+def test_admin_jwt_valid_creator():
+    client = TestClient(app)
+    game_id = "mp_concert_104"
+    token = make_token("bot_bismarck", "bismarck@diplomacy.eu")
+    res = client.post(
+        f"/api/admin/unit/move?game_id={game_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"unit_id": "GER_A_BER", "new_province": "SIL"},
+    )
+    assert res.status_code == 200
+    assert any(u["id"] == "GER_A_BER" and u["province"] == "SIL" for u in res.json()["units"])
+
+
+def test_admin_jwt_non_creator_forbidden():
+    client = TestClient(app)
+    game_id = "mp_concert_104"
+    token = make_token("bot_romanov", "tsar@diplomacy.eu")
+    res = client.post(
+        f"/api/admin/unit/move?game_id={game_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"unit_id": "GER_A_BER", "new_province": "SIL"},
+    )
+    assert res.status_code == 403
+    assert "Administrator access denied" in res.json()["detail"]
+
+
+def test_admin_jwt_expired():
+    client = TestClient(app)
+    game_id = "mp_concert_104"
+    token = make_token("bot_bismarck", "bismarck@diplomacy.eu", exp_offset=-3600)
+    res = client.post(
+        f"/api/admin/unit/move?game_id={game_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"unit_id": "GER_A_BER", "new_province": "SIL"},
+    )
+    assert res.status_code == 401
+    assert "Authentication token has expired" in res.json()["detail"]
+
+
+def test_admin_jwt_tampered_signature():
+    client = TestClient(app)
+    game_id = "mp_concert_104"
+    token = make_token("bot_bismarck", "bismarck@diplomacy.eu")
+    parts = token.split(".")
+    tampered_sig = parts[2][:-4] + ("AAAA" if not parts[2].endswith("AAAA") else "BBBB")
+    tampered_token = f"{parts[0]}.{parts[1]}.{tampered_sig}"
+    res = client.post(
+        f"/api/admin/unit/move?game_id={game_id}",
+        headers={"Authorization": f"Bearer {tampered_token}"},
+        json={"unit_id": "GER_A_BER", "new_province": "SIL"},
+    )
+    assert res.status_code == 401
+    assert "Invalid authentication token" in res.json()["detail"]
+
+
+def test_admin_solo_sandbox_unauthenticated():
+    client = TestClient(app)
+    res = client.post(
+        "/api/admin/unit/move?game_id=proto_1901",
+        json={"unit_id": "FRA_A_PAR", "new_province": "BUR"},
+    )
+    assert res.status_code == 200
+    assert any(u["id"] == "FRA_A_PAR" and u["province"] == "BUR" for u in res.json()["units"])
+
+
+def test_admin_multiplayer_lobby_lifecycle_with_jwt():
+    client = TestClient(app)
+    # 1. Create a multiplayer lobby with User A
+    res_create = client.post(
+        "/api/games",
+        json={"name": "Lifecycle Room", "creator_power": "ENGLAND", "user_id": "user_a", "email": "a@uk.gov"},
+    )
+    assert res_create.status_code == 200
+    gid = res_create.json()["game_id"]
+
+    token_a = make_token("user_a", "a@uk.gov")
+    token_b = make_token("user_b", "b@france.gov")
+
+    # User B joins as France
+    res_join = client.post(
+        f"/api/games/{gid}/join",
+        json={"power": "FRANCE", "user_id": "user_b", "email": "b@france.gov"},
+    )
+    assert res_join.status_code == 200
+
+    # 2. Attempt admin action as User B -> rejected with 403 Forbidden
+    res_b_admin = client.post(
+        f"/api/admin/set-turn?game_id={gid}",
+        headers={"Authorization": f"Bearer {token_b}"},
+        json={"season": "Fall", "year": 1901, "phase": "Movement"},
+    )
+    assert res_b_admin.status_code == 403
+    assert "Administrator access denied" in res_b_admin.json()["detail"]
+
+    # 3. Perform admin action as User A -> succeeds and broadcasts WebSocket event to room
+    with client.websocket_connect(f"/ws/games/{gid}") as ws:
+        init_event = ws.receive_json()
+        assert init_event["type"] == "game_update"
+
+        res_a_admin = client.post(
+            f"/api/admin/set-turn?game_id={gid}",
+            headers={"Authorization": f"Bearer {token_a}"},
+            json={"season": "Fall", "year": 1901, "phase": "Movement"},
+        )
+        assert res_a_admin.status_code == 200
+        assert res_a_admin.json()["season"] == "Fall"
+
+        ws_event = ws.receive_json()
+        assert ws_event["type"] == "game_update"
+        assert ws_event["state"]["season"] == "Fall"
 
 
 @pytest.mark.parametrize(
