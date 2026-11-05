@@ -74,6 +74,18 @@ jobs:
             exit 1
           fi
 
+      - name: Apply Supabase Migrations (Optional)
+        if: env.DATABASE_URL != ''
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.SUPABASE_DB_URL }}
+        run: |
+          echo "Applying pending migrations to Supabase PostgreSQL..."
+          for sql_file in $(ls -1 supabase/migrations/*.sql | sort); do
+            echo "--> Running migration: $sql_file"
+            psql "$DATABASE_URL" -f "$sql_file"
+          done
+          echo "All migrations applied successfully."
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
@@ -89,6 +101,7 @@ jobs:
           SERVICE_NAME: ${{ secrets.GCP_SERVICE_NAME || 'diplomacy-1901' }}
           SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           echo "Target Project: $PROJECT_ID"
           echo "Target Region : $REGION"
@@ -104,11 +117,12 @@ jobs:
             --substitutions="_SUPABASE_URL=${SUPABASE_URL},_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},_IMAGE_TAG=${IMAGE_TAG}" \
             --project="$PROJECT_ID"
 
-          # Also tag as latest
+          # 2. Also tag as latest
           gcloud container images add-tag "$IMAGE_TAG" "$LATEST_TAG" --quiet || true
 
           # 3. Deploy container revision to Cloud Run
-          echo "Deploying to Cloud Run..."
+          BACKEND_KEY="${SUPABASE_SERVICE_ROLE_KEY:-$SUPABASE_ANON_KEY}"
+          echo "Deploying to Cloud Run with Supabase state persistence..."
           gcloud run deploy "$SERVICE_NAME" \
             --image "$IMAGE_TAG" \
             --region "$REGION" \
@@ -119,7 +133,7 @@ jobs:
             --max-instances 3 \
             --memory 512Mi \
             --port 8080 \
-            --set-env-vars "VITE_SUPABASE_URL=${SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
+            --set-env-vars "VITE_SUPABASE_URL=${SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_KEY=${BACKEND_KEY},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}"
 
           # 4. Extract and report public service URL
           SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format "value(status.url)")
