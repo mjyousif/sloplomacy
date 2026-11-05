@@ -486,6 +486,8 @@ async def persist_game(game_id: str) -> None:
     """Persist the specified game to Supabase PostgreSQL if configured."""
     if not is_persistence_enabled():
         return
+    if game_id in (DEFAULT_GAME_ID, "proto_1901"):
+        return
     state = GAMES.get(game_id)
     if not state:
         return
@@ -697,12 +699,14 @@ class SetPowerRequest(BaseModel):
 @app.get("/api/games", response_model=List[MultiplayerGameSummary])
 async def list_games():
     """Return all multiplayer games and saved sessions."""
+    GAME_SUMMARIES.pop(DEFAULT_GAME_ID, None)
+    GAME_SUMMARIES.pop("proto_1901", None)
     if is_persistence_enabled():
         db_summaries = await load_all_summaries_from_db()
         evicted = False
         # Evict any multiplayer games that were deleted directly from Supabase
         for gid in list(GAME_SUMMARIES.keys()):
-            if gid.startswith("mp_") and gid not in db_summaries:
+            if gid not in (DEFAULT_GAME_ID, "proto_1901") and gid not in db_summaries:
                 GAME_SUMMARIES.pop(gid, None)
                 GAMES.pop(gid, None)
                 GAME_HISTORY.pop(gid, None)
@@ -711,14 +715,16 @@ async def list_games():
                 evicted = True
         # Synchronize in-memory summaries with database
         for gid, summary in db_summaries.items():
-            GAME_SUMMARIES[gid] = summary
+            if gid not in (DEFAULT_GAME_ID, "proto_1901"):
+                GAME_SUMMARIES[gid] = summary
 
         if evicted:
             await manager.broadcast_lobby()
 
     for gid in list(GAME_SUMMARIES.keys()):
-        sync_summary(gid)
-    return list(GAME_SUMMARIES.values())
+        if gid not in (DEFAULT_GAME_ID, "proto_1901"):
+            sync_summary(gid)
+    return [s for gid, s in GAME_SUMMARIES.items() if gid not in (DEFAULT_GAME_ID, "proto_1901")]
 
 
 @app.get("/api/games/{game_id}", response_model=MultiplayerGameSummary)

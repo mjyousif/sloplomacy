@@ -20,6 +20,13 @@ from database import (
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def restore_seeded_lobbies():
+    from main import seed_initial_multiplayer_lobbies
+    yield
+    seed_initial_multiplayer_lobbies()
+
+
 def test_persistence_enabled_flag():
     # 1. When env vars are missing
     with patch.dict(os.environ, {}, clear=True):
@@ -311,3 +318,44 @@ def test_delete_game_api_endpoint():
             assert res.json()["status"] == "deleted"
             assert gid not in GAME_SUMMARIES
             assert gid not in GAMES
+
+
+def test_proto_1901_never_persisted_or_listed_in_lobbies():
+    """Verify proto_1901 solo sandbox is rejected by save_game_to_db and excluded from list_games."""
+    # 1. save_game_to_db rejects proto_1901
+    async def run_save_test():
+        state = build_scenario("standard_1901", Power.FRANCE, "proto_1901")
+        with patch.dict(
+            os.environ,
+            {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"},
+        ):
+            ok = await save_game_to_db("proto_1901", state)
+            assert ok is False
+
+    asyncio.run(run_save_test())
+
+    # 2. list_games never returns proto_1901 even if row existed
+    async def mock_load_with_proto(client=None):
+        return {
+            "proto_1901": MultiplayerGameSummary(
+                game_id="proto_1901",
+                name="Accidental Proto",
+                status="waiting",
+                season="Spring",
+                year=1901,
+                phase="Movement",
+                created_by="test@test.com",
+                created_at="2026-11-05T00:00:00Z",
+            )
+        }
+
+    with patch.dict(
+        os.environ,
+        {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"},
+    ):
+        with patch("main.load_all_summaries_from_db", side_effect=mock_load_with_proto):
+            res = client.get("/api/games")
+            assert res.status_code == 200
+            ids = [g["game_id"] for g in res.json()]
+            assert "proto_1901" not in ids
+            assert "proto_1901" not in GAME_SUMMARIES
