@@ -15,6 +15,12 @@ from models import Order, OrderType, Power, Unit, UnitType
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def setup_jwt_secret(monkeypatch):
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", "test-secret-at-least-32-chars-long-12345")
+
+
+
 def test_api_404_error_handling():
     """Verify that invalid game IDs or unknown unit IDs return 404 status codes."""
     # Unknown game lookup
@@ -300,7 +306,11 @@ def _new_game(power="FRANCE"):
 
 def _auth_headers(user_id="host", email="host@test.com"):
     import jwt
-    token = jwt.encode({"sub": user_id, "email": email}, "test-secret-at-least-32-chars-long", algorithm="HS256")
+    token = jwt.encode(
+        {"sub": user_id, "email": email, "aud": "authenticated"},
+        "test-secret-at-least-32-chars-long-12345",
+        algorithm="HS256",
+    )
     return {"Authorization": f"Bearer {token}"}
 
 

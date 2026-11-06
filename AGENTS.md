@@ -39,7 +39,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```bash
   python -m pytest backend/ -v
   ```
-  *(Runs all 10 test suites: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_database_persistence.py`, `test_phase_timer.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
+  *(Runs all 11 test suites: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_database_persistence.py`, `test_phase_timer.py`, `test_security.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
 
 ### Frontend Commands (`frontend/`)
 - **Install Dependencies**:
@@ -145,7 +145,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   ├── ai_engine.py           # Heuristic order generation for sandbox AI planning
 │   ├── map_data.py            # Complete 76-province graph, dual coasts, 34 SC definitions
 │   ├── requirements.txt       # Python dependencies
-│   └── test_*.py              # Comprehensive pytest test harness (10 test suites)
+│   └── test_*.py              # Comprehensive pytest test harness (11 test suites)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx            # Main state container, viewMode controller & API coordinator
@@ -259,7 +259,7 @@ The game cycles through three standard phases per year:
 - Always run `npx tsc --noEmit` before committing frontend modifications.
 
 ### 3. Run Comprehensive Verification
-- **Backend Tests**: Run python -m pytest backend/ -v (must pass all 10 test suites: adjudicator, admin, ai_and_private_lobbies, api_integration, database_persistence, engine, phase_timer, surrender_leave, validator, websocket_sync).
+- **Backend Tests**: Run python -m pytest backend/ -v (must pass all 11 test suites: adjudicator, admin, ai_and_private_lobbies, api_integration, database_persistence, engine, phase_timer, security, surrender_leave, validator, websocket_sync).
 - **Frontend Verification**: Run `npm test` (Vitest) and `npm run build` (Vite + TypeScript) in `frontend/`.
 
 ### 4. Preserve Documentation & Code Integrity

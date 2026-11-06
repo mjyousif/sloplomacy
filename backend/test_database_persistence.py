@@ -761,8 +761,16 @@ def _resolve_turn(game_id):
 
 def _rollback_headers():
     import jwt
-
-    return {"Authorization": "Bearer " + jwt.encode({"sub": HOST["user_id"], "email": HOST["email"]}, "k" * 32)}
+    import os
+    secret = os.getenv("SUPABASE_JWT_SECRET", "k" * 32)
+    return {
+        "Authorization": "Bearer "
+        + jwt.encode(
+            {"sub": HOST["user_id"], "email": HOST["email"], "aud": "authenticated"},
+            secret,
+            algorithm="HS256",
+        )
+    }
 
 
 def test_an_order_click_leaves_the_saved_history_alone(supabase):

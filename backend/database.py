@@ -1,14 +1,25 @@
 import logging
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import quote
 
 import httpx
 
 from models import GameParticipant, GameState, MultiplayerGameSummary, Power
 
 logger = logging.getLogger("diplomacy.database")
+
+ROOM_CODE_REGEX = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
+
+
+def is_valid_room_code(code: Optional[str]) -> bool:
+    """Verify that a game_id / room_code conforms to safe alphanumeric syntax."""
+    if not code:
+        return False
+    return bool(ROOM_CODE_REGEX.match(code))
 
 
 class SupabaseUnavailable(Exception):
@@ -143,8 +154,11 @@ async def load_game_from_db(
     """
     if not is_persistence_enabled():
         return None
+    if not is_valid_room_code(game_id):
+        return None
 
-    url = f"{get_supabase_url()}/rest/v1/multiplayer_games?room_code=eq.{game_id}&select=*"
+    safe_gid = quote(game_id, safe="")
+    url = f"{get_supabase_url()}/rest/v1/multiplayer_games?room_code=eq.{safe_gid}&select=*"
     headers = get_headers()
 
     try:
@@ -263,6 +277,8 @@ async def save_game_to_db(
         return False
     if game_id in ("proto_1901", "default"):
         return False
+    if not is_valid_room_code(game_id):
+        return False
 
     url = f"{get_supabase_url()}/rest/v1/multiplayer_games?on_conflict=room_code"
     headers = get_headers()
@@ -323,8 +339,11 @@ async def delete_game_from_db(
     """Delete a game room from Supabase PostgreSQL."""
     if not is_persistence_enabled():
         return False
+    if not is_valid_room_code(game_id):
+        return False
 
-    url = f"{get_supabase_url()}/rest/v1/multiplayer_games?room_code=eq.{game_id}"
+    safe_gid = quote(game_id, safe="")
+    url = f"{get_supabase_url()}/rest/v1/multiplayer_games?room_code=eq.{safe_gid}"
     headers = get_headers()
 
     try:

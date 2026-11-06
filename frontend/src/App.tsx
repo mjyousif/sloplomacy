@@ -196,6 +196,7 @@ export function App() {
   const { isConnected: wsConnected } = useDiplomacyWebSocket({
     activeGameId,
     viewMode,
+    power: playerPower,
     onGameUpdate: handleWsGameUpdate,
     onLobbyUpdate: handleWsLobbyUpdate,
   });
@@ -215,10 +216,18 @@ export function App() {
     }
   };
 
-  const fetchGame = async (gid: string = activeGameId) => {
+  const fetchGame = async (gid: string = activeGameId, targetPower?: Power | null) => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/game?game_id=${encodeURIComponent(gid)}`);
+      const effectivePower = targetPower !== undefined ? targetPower : playerPower;
+      const params = new URLSearchParams({ game_id: gid });
+      if (effectivePower) {
+        params.set('power', effectivePower);
+      }
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
+        headers: { ...authHeaders },
+      });
       if (!res.ok) throw new Error(`Backend returned ${res.status}`);
       const data = await res.json();
       applyServerState(data.state);
@@ -307,9 +316,10 @@ export function App() {
       return;
     }
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/games`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           name,
           creator_power: power,
@@ -352,11 +362,12 @@ export function App() {
       return;
     }
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE}/games/${encodeURIComponent(gameId)}/join`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({
             power,
             user_id: authUser.id,
@@ -471,11 +482,12 @@ export function App() {
       return;
     }
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE}/games/save-sandbox?game_id=${encodeURIComponent(activeGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({
             name: `${authUser.displayName}'s ${
               gameState?.season || 'Spring'
@@ -511,11 +523,12 @@ export function App() {
       return;
     }
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE}/games/${encodeURIComponent(gameId)}/surrender`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({
             power,
             user_id: authUser.id,
@@ -558,11 +571,12 @@ export function App() {
       return;
     }
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE}/games/${encodeURIComponent(gameId)}/leave`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({
             power,
             user_id: authUser.id,
@@ -631,11 +645,12 @@ export function App() {
       return;
     }
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE}/order?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ order, turn: gameState ? turnLabel(gameState) : undefined }),
         }
       );
@@ -654,11 +669,12 @@ export function App() {
   const handleConfirmAllHolds = async () => {
     if (!gameState) return;
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE}/orders/confirm-all?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ power: playerPower }),
         }
       );
@@ -677,11 +693,12 @@ export function App() {
   const handleClearForeignPreMoves = async () => {
     if (!gameState) return;
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE}/sandbox/clear-foreign?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ power: playerPower }),
         }
       );
@@ -763,11 +780,12 @@ export function App() {
   const handleFinalizeClick = async (force = false) => {
     if (!gameState || !requireRealBoard('finalize your real orders')) return;
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE}/finalize?game_id=${encodeURIComponent(activeGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ power: playerPower, force, turn: turnLabel(gameState) }),
         }
       );
@@ -798,11 +816,12 @@ export function App() {
   const handleUnfinalizeClick = async () => {
     if (!gameState || !requireRealBoard('unlock your real orders')) return;
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE}/unfinalize?game_id=${encodeURIComponent(activeGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ power: playerPower }),
         }
       );
@@ -838,7 +857,7 @@ export function App() {
     body: Record<string, unknown> = {}
   ) => {
     try {
-      const authHeaders = action === 'start' ? await getAuthHeaders() : {};
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE}/games/${encodeURIComponent(activeGameId)}/timer/${action}`,
         {

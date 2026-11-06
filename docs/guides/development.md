@@ -105,7 +105,7 @@ Run all backend pytest suites, frontend Vitest unit tests, TypeScript typechecks
 ```
 
 ### Running Backend Tests (`pytest`)
-The backend includes 10 test suites covering the entire engine:
+The backend includes 11 test suites covering the entire engine:
 - `test_engine.py`: Graph symmetry and connectivity.
 - `test_adjudicator.py`: Official DATC combat scenarios and retreat path mechanics.
 - `test_admin.py`: Administrator privileges and board mutation operations.
@@ -113,6 +113,7 @@ The backend includes 10 test suites covering the entire engine:
 - `test_api_integration.py`: FastAPI endpoints, multi-game room query parameters, and private multiplayer sandboxes.
 - `test_database_persistence.py`: Supabase saving, restarts, outages, and what the lobby keeps from memory.
 - `test_phase_timer.py`: Turn clock votes, pauses, extensions, deadlines and late requests.
+- `test_security.py`: JWT cryptographic validation, seat authorization, Fog of War secrecy, and IDOR protection.
 - `test_surrender_leave.py`: Concessions, civil disorder, and room departures.
 - `test_validator.py`: Pre-flight blunder diagnostics across Movement, Retreats, and Adjustments.
 - `test_websocket_sync.py`: Live game and lobby broadcasts.
