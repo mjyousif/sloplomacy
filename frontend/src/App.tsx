@@ -42,7 +42,6 @@ import {
   Crown,
   Flag,
   FlaskConical,
-  Home,
   LogIn,
   LogOut,
   Save,
@@ -985,17 +984,6 @@ export function App() {
           <nav className="top-view-nav">
             <button
               type="button"
-              className={`nav-tab-btn ${viewMode === 'lobby' ? 'active' : ''}`}
-              onClick={() => {
-                setViewMode('lobby');
-                fetchGamesList();
-              }}
-            >
-              <Home size={14} />
-              <span>Main Page</span>
-            </button>
-            <button
-              type="button"
               className={`nav-tab-btn ${viewMode === 'sandbox' ? 'active' : ''}`}
               onClick={handleEnterSoloSandbox}
               title="Open standalone 7-power practice laboratory"
@@ -1084,27 +1072,6 @@ export function App() {
             <span>{wsConnected ? 'Live Sync' : 'Connecting...'}</span>
           </div>
 
-          {/* Sidebars toggle helper pills when viewing map */}
-          {viewMode !== 'lobby' && (
-            <div className="header-sidebar-toggles">
-              <button
-                type="button"
-                className={`header-sidebar-pill-btn ${!leftSidebarCollapsed ? 'active' : ''}`}
-                onClick={() => setLeftSidebarCollapsed((prev) => !prev)}
-                title="Toggle Left Tools Sidebar (Legend, Zoom, Sandbox, Admin)"
-              >
-                <span>Tools Sidebar</span>
-              </button>
-              <button
-                type="button"
-                className={`header-sidebar-pill-btn ${!rightSidebarCollapsed ? 'active' : ''}`}
-                onClick={() => setRightSidebarCollapsed((prev) => !prev)}
-                title="Toggle Right Tactical Sidebar (Orders & Unit Command)"
-              >
-                <span>Tactical Sidebar</span>
-              </button>
-            </div>
-          )}
 
           {/* User Authentication Controls */}
           {authUser ? (

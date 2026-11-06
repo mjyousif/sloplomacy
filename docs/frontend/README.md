@@ -62,17 +62,16 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │
 ├── View 2: Tactical Workspace (when viewMode === 'multiplayer' | 'sandbox')
 │   ├── Imperial Header Bar
-│   │   ├── Back to Lobby Navigation Button & Solo Sandbox Switcher
+│   │   ├── Return to Lobby (Clickable Brand Emblem & Title)
 │   │   ├── Turn Chronicle Pill (Season, Year, Phase & Winner)
 │   │   ├── Sanity Check Diagnostics Warning Pill
 │   │   ├── Real-Time WebSocket Synchronization Badge
-│   │   ├── Sidebar Visibility Pill Toggles ("Tools Sidebar", "Tactical Sidebar")
 │   │   └── User Auth Profile / Guest Mode
 │   │
 │   ├── ToolsSidebar.tsx (Left Collapsible Tools & Intel Panel)
 │   │   ├── Collapse / Expand Rail Toggle (44px collapsed rail)
 │   │   ├── Map View & Camera Controls (Zoom In, Zoom Out, Fit Map 105%)
-│   │   ├── Tactical Map Legend (Move, Support, Convoy, Conflict vectors & dual coasts)
+│   │   ├── Tactical Map Legend (Move, Support, Convoy, Conflict vectors)
 │   │   ├── Great Powers Standing & Command Selector (SC & Unit tallies)
 │   │   ├── Hypothetical Mode (What-If Opponent Guesses) & Tactical General Staff AI
 │   │   ├── Foreign Guesses Count & Discard Actions

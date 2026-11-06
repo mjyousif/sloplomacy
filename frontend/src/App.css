@@ -413,46 +413,6 @@
   color: #fbbf24;
 }
 
-/* Map Camera Controls */
-.map-camera-controls {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: linear-gradient(180deg, rgba(31, 18, 12, 0.94) 0%, rgba(20, 11, 7, 0.96) 100%);
-  border: 1px solid #785322;
-  padding: 5px;
-  border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
-}
-
-.map-camera-controls button {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
-  border: 1px solid rgba(212, 163, 73, 0.25);
-  background: #2b1810;
-  color: #f3e5c8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.map-camera-controls button:hover {
-  background: #3d2216;
-  border-color: #d4a349;
-}
-
-.zoom-readout {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  padding: 0 6px;
-  color: #cbd5e1;
-}
 
 /* Floating Tactical Menu Anchored Next to the Selected Troop */
 .unit-floating-menu {
@@ -4179,39 +4139,6 @@
    TWO-SIDEBAR LAYOUT: CHANCELLERY TOOLS (LEFT) & TACTICAL ORDERS (RIGHT)
    ========================================================================= */
 
-/* Header Sidebar Quick Toggles */
-.header-sidebar-toggles {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-right: 6px;
-}
-
-.header-sidebar-pill-btn {
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid #333d4d;
-  background: rgba(30, 38, 51, 0.7);
-  color: #94a3b8;
-  font-size: 0.7rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
-}
-
-.header-sidebar-pill-btn:hover {
-  background: #283344;
-  color: #e2e8f0;
-  border-color: #4b586e;
-}
-
-.header-sidebar-pill-btn.active {
-  background: rgba(37, 99, 235, 0.18);
-  border-color: #3b82f6;
-  color: #93c5fd;
-  font-weight: 700;
-}
 
 /* TOOLS SIDEBAR (LEFT SIDEBAR: Intel, Legend, Zoom, Powers, Sandbox, Admin) */
 .tools-sidebar {
@@ -4424,14 +4351,6 @@
   font-weight: 500;
 }
 
-.legend-meta-note {
-  font-size: 0.64rem;
-  color: #8391a3;
-  margin-top: 6px;
-  line-height: 1.35;
-  padding-top: 5px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.08);
-}
 
 /* Powers Standing List */
 .powers-standing-list {
