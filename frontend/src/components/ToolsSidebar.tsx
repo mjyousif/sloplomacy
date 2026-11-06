@@ -14,8 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Crosshair,
+  Eye,
   Flag,
-  FlaskConical,
   HelpCircle,
   Maximize2,
   MoveRight,
@@ -172,9 +172,9 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           type="button"
           className={`sidebar-rail-btn ${sandboxMode ? 'rail-active-glow' : ''}`}
           onClick={onToggleSandboxMode}
-          title={sandboxMode ? 'Sandbox Mode ACTIVE (Click to toggle)' : 'Enter Pre-Move Sandbox'}
+          title={sandboxMode ? 'Hypothetical Mode ACTIVE (Click to toggle)' : 'Enter Hypothetical Mode'}
         >
-          <FlaskConical size={16} />
+          <Eye size={16} />
         </button>
 
         {isGameCreator && onOpenAdminTools && (
@@ -372,10 +372,10 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           </div>
         </section>
 
-        {/* 5. PRE-MOVE SANDBOX & TACTICAL AI GENERAL STAFF */}
+        {/* 5. HYPOTHETICAL MODE & TACTICAL AI GENERAL STAFF */}
         <section className="tools-section">
           <div className="tools-section-overline">
-            <span>WAR ROOM &amp; PRE-MOVES</span>
+            <span>HYPOTHETICAL MODE &amp; PRE-MOVES</span>
             {sandboxMode && <span className="sandbox-live-pill">ACTIVE</span>}
           </div>
 
@@ -384,16 +384,16 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
             className={`tools-sandbox-toggle-btn ${sandboxMode ? 'active' : ''}`}
             onClick={onToggleSandboxMode}
           >
-            <FlaskConical size={14} />
+            <Eye size={14} />
             <span>
-              {sandboxMode ? 'Exit Sandbox Mode (Clear Guesses)' : 'Enter Pre-Move Sandbox'}
+              {sandboxMode ? 'Exit Mode (Discard Guesses)' : 'Enter Hypothetical Mode'}
             </span>
           </button>
 
           <p className="tools-micro-desc">
             {sandboxMode
-              ? 'Sandbox active: Test hypothetical moves for any power on the board. Exiting clears foreign guesses.'
-              : 'Enter Sandbox to test what-if scenarios and auto-plan moves with the General Staff AI.'}
+              ? 'Hypothetical Mode active: Test moves for foreign units on the board. Exiting discards foreign guesses.'
+              : 'Enter Hypothetical Mode to guess enemy moves and test what-if scenarios with the General Staff AI.'}
           </p>
 
           {/* AI General Staff Quick Tools */}

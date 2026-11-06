@@ -252,12 +252,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               <>
                 Welcome back, Envoy <strong>{user.displayName}</strong>. Command
                 your nation in power-locked multiplayer campaigns, or open the
-                tactical sandbox with automated General Staff AI to test multi-power maneuvers.
+                solo sandbox with automated General Staff AI to test multi-power maneuvers.
               </>
             ) : (
               <>
                 Experiment freely with the full 7-power tactical engine in{' '}
-                <strong>Guest Sandbox Mode</strong>—now powered with intelligent tactical AI—or
+                <strong>Guest Solo Sandbox</strong>—now powered with intelligent tactical AI—or
                 sign in to claim your own nation, save scenarios, and wage multiplayer campaigns.
               </>
             )}
@@ -272,8 +272,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               <FlaskConical size={18} />
               <span>
                 {user
-                  ? 'Launch Solo Tactical Sandbox'
-                  : 'Launch Tactical Engine (Guest Sandbox)'}
+                  ? 'Launch Solo Sandbox'
+                  : 'Launch Solo Sandbox (Guest)'}
               </span>
             </button>
 
@@ -295,7 +295,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           <div className="mode-card sandbox-card">
             <div className="mode-card-header">
               <FlaskConical size={16} />
-              <span>Tactical Sandbox (Guest or Solo)</span>
+              <span>Solo Sandbox (Guest or Practice)</span>
             </div>
             <ul>
               <li>Switch freely between all 7 Great Powers</li>
@@ -420,7 +420,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                           className="leave-campaign-btn"
                           title={
                             game.is_sandbox
-                              ? 'Delete saved tactical sandbox study'
+                              ? 'Delete saved solo sandbox scenario'
                               : game.status === 'active'
                               ? `Surrender & leave ${game.name}`
                               : `Leave ${game.name} lobby`
