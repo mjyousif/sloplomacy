@@ -26,9 +26,9 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/game` | Fetch current game state and province topology dictionary | *None* | `GameBootstrapResponse` |
 | `POST` | `/api/power` | Switch active viewing power | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/sandbox/enter` | Checkpoint real game state and activate Sandbox Mode | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/sandbox/exit` | Revert sandbox checkpoint and clear foreign pre-moves | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/sandbox/clear-foreign` | Reset all foreign hypothetical orders to default HOLD | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/sandbox/enter` | Activate Sandbox Mode: a private copy for a multiplayer match, or a checkpoint of a solo game | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/sandbox/exit` | Leave Sandbox Mode and return the real game state (`409` on a live match: call it on the sandbox id) | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/sandbox/clear-foreign` | Reset all foreign hypothetical orders to default HOLD (`409` on a live match) | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/sandbox/ai-orders` | Generate DATC-compliant tactical AI orders for specified/foreign powers | `GenerateAIOrdersRequest` | `GameState` |
 | `POST` | `/api/sandbox/ai-step` | Auto-plan unassigned foreign powers with tactical AI and advance turn | *None* | `GameState` |
 | `POST` | `/api/order` | Submit or update an order for a single military unit | `SingleOrderUpdateRequest` | `GameState` |
@@ -63,7 +63,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 ## Detailed Specifications: Lobby & Multiplayer Management
 
 ### 1. `GET /api/games`
-Returns the list of all registered multiplayer game rooms, open lobbies, and saved sandboxes.
+Returns the list of all registered multiplayer game rooms, open lobbies, and saved sandboxes. If Supabase cannot be read, the list comes from memory and the call still succeeds.
 
 #### Response (`List[MultiplayerGameSummary]`):
 ```json
@@ -95,7 +95,7 @@ Returns the list of all registered multiplayer game rooms, open lobbies, and sav
 ---
 
 ### 2. `GET /api/games/{game_id}`
-Returns details and participant metadata for a specific multiplayer match lobby.
+Returns details and participant metadata for a specific multiplayer match lobby. Answers `404` if the game was deleted from Supabase, and `503` if it is not in memory and Supabase cannot be read.
 
 #### Response (`MultiplayerGameSummary`):
 ```json
@@ -135,6 +135,11 @@ Creates a new multiplayer game room (public or private) and automatically assign
   "passcode": "Secret1901"
 }
 ```
+
+---
+
+### 4. `DELETE /api/games/{game_id}`
+Deletes a game from memory and Supabase. Only the host can delete a multiplayer match. Answers `403` for anyone else, and for the shared default game `proto_1901`, which can never be deleted. Answers `503` if the game is not in memory and Supabase cannot be read, because the host cannot be checked.
 
 ---
 
@@ -241,8 +246,17 @@ Bootstraps the client by returning the full current `GameState` along with the c
 
 ---
 
+### `POST /api/sandbox/enter`
+Starts a what-if session for `power`.
+
+- **Multiplayer match**: the match is not touched. The response is a private copy with its own `sbx_` `game_id`, in which every other power is on default orders. Use that id for all later calls in the session. Entering again replaces the same player's previous copy. The copy is held only in memory, so it is lost if the server restarts, and calls using its id then answer `404`.
+- **Solo or saved sandbox**: the response keeps the game's own `game_id`, and a checkpoint of the real state is stored.
+
+### `POST /api/sandbox/exit`
+Ends the session. On a private copy, pass its `sbx_` id: the copy is discarded and the real match is returned. The player's own orders carry over only if the match is still on the same turn and the player still holds the seat, and changing them drops that player's finalization, as any other edit does. Calling this on a live match itself answers `409`.
+
 ### 8. `POST /api/sandbox/ai-orders`
-Generates DATC-compliant, intelligent tactical orders for specified Great Powers (or foreign powers by default) using the Chancellery Tactical AI engine. Avoids friendly self-bounces, coordinates multi-power attacks and supports, and prioritizes strategic supply centers.
+Generates DATC-compliant, intelligent tactical orders for specified Great Powers (or foreign powers by default) using the Chancellery Tactical AI engine. Answers `409` on a live multiplayer match, where it must be called on a private sandbox id. Avoids friendly self-bounces, coordinates multi-power attacks and supports, and prioritizes strategic supply centers.
 
 #### Request (`GenerateAIOrdersRequest`):
 ```json
@@ -258,7 +272,7 @@ Returns the updated `GameState` with the AI-assigned orders populated and real-t
 ---
 
 ### 9. `POST /api/sandbox/ai-step`
-Automatically plans tactical moves for any unassigned foreign powers with the Tactical AI engine and immediately adjudicates and steps the turn forward to the next phase/season.
+Automatically plans tactical moves for any unassigned foreign powers with the Tactical AI engine and immediately adjudicates and steps the turn forward to the next phase/season. Answers `409` on a live multiplayer match.
 
 #### Response (`GameState`):
 Returns the next phase `GameState` with combat resolutions and updated unit positions.

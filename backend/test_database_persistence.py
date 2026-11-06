@@ -5,9 +5,22 @@ import pytest
 from fastapi.testclient import TestClient
 import httpx
 
-from main import app, GAMES, GAME_SUMMARIES, GAME_HISTORY, GAME_PASSCODES, DEFAULT_GAME_ID, build_scenario
+from main import (
+    app,
+    GAMES,
+    GAME_SUMMARIES,
+    GAME_HISTORY,
+    GAME_PASSCODES,
+    DEFAULT_GAME_ID,
+    SAVES_RUNNING,
+    UNSAVED_GAMES,
+    build_scenario,
+    cache_loaded_game,
+    persist_game,
+)
 from models import GameState, MultiplayerGameSummary, GameParticipant, Power, UnitType
 from database import (
+    SupabaseUnavailable,
     is_persistence_enabled,
     to_db_status,
     to_app_status,
@@ -359,3 +372,376 @@ def test_proto_1901_never_persisted_or_listed_in_lobbies():
             ids = [g["game_id"] for g in res.json()]
             assert "proto_1901" not in ids
             assert "proto_1901" not in GAME_SUMMARIES
+
+
+class FakeSupabase:
+    """Stands in for Supabase behind main.py, holding each game as a serialized row."""
+
+    def __init__(self):
+        self.rows = {}
+        self.reads_fail = False
+        self.writes_fail = False
+
+    def _require_reads(self):
+        if self.reads_fail:
+            raise SupabaseUnavailable("HTTP 503 upstream unavailable")
+
+    async def save(self, game_id, state, summary=None, history=None, passcode=None, client=None):
+        if self.writes_fail:
+            return False
+        self.rows[game_id] = {
+            "state": state.model_dump(mode="json"),
+            "summary": summary.model_dump(mode="json") if summary else None,
+            "history": [h.model_dump(mode="json") for h in (history or [])],
+            "passcode": passcode,
+        }
+        return True
+
+    async def load(self, game_id, client=None):
+        self._require_reads()
+        row = self.rows.get(game_id)
+        if row is None:
+            return None
+        return (
+            GameState.model_validate(row["state"]),
+            MultiplayerGameSummary.model_validate(row["summary"]),
+            [GameState.model_validate(h) for h in row["history"]],
+            row["passcode"],
+        )
+
+    async def load_all(self, client=None):
+        self._require_reads()
+        return {
+            gid: MultiplayerGameSummary.model_validate(row["summary"])
+            for gid, row in self.rows.items()
+        }
+
+    async def delete(self, game_id, client=None):
+        self.rows.pop(game_id, None)
+        return True
+
+
+@pytest.fixture
+def supabase():
+    db = FakeSupabase()
+    env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+    with patch.dict(os.environ, env), patch("main.save_game_to_db", side_effect=db.save), patch(
+        "main.load_game_from_db", side_effect=db.load
+    ), patch("main.load_all_summaries_from_db", side_effect=db.load_all), patch(
+        "main.delete_game_from_db", side_effect=db.delete
+    ):
+        yield db
+    UNSAVED_GAMES.clear()
+
+
+HOST = {"user_id": "host", "email": "host@test.com", "display_name": "Host"}
+BOB = {"user_id": "bob", "email": "bob@test.com", "display_name": "Bob"}
+CAL = {"user_id": "cal", "email": "cal@test.com", "display_name": "Cal"}
+ARMY_PARIS_TO_BURGUNDY = {
+    "unit_id": "FRA_A_PAR",
+    "power": "FRANCE",
+    "unit_type": "A",
+    "origin": "PAR",
+    "order_type": "MOVE",
+    "target": "BUR",
+    "is_explicit": True,
+}
+
+
+def _create_game(power="FRANCE"):
+    res = client.post("/api/games", json={"name": "Friends", "creator_power": power, **HOST})
+    assert res.status_code == 200
+    return res.json()["game_id"]
+
+
+def _join(game_id, power, player):
+    """Claim a seat the way the client does: it refreshes the lobby straight after joining."""
+    res = client.post(f"/api/games/{game_id}/join", json={"power": power, **player})
+    assert res.status_code == 200
+    assert client.get("/api/games").status_code == 200
+
+
+def _restart_container(game_id):
+    """Wipe what a Cloud Run instance held in memory, as scaling to zero does."""
+    GAMES.pop(game_id, None)
+    GAME_SUMMARIES.pop(game_id, None)
+    GAME_HISTORY.pop(game_id, None)
+    GAME_PASSCODES.pop(game_id, None)
+
+
+def test_seat_survives_the_joiners_own_lobby_refresh(supabase):
+    game_id = _create_game()
+    _join(game_id, "GERMANY", BOB)
+
+    summary = GAME_SUMMARIES[game_id]
+    assert sorted(summary.participants) == ["FRANCE", "GERMANY"]
+    assert summary.status == "active"
+
+    # The turn still resolves once both players are ready.
+    for power in ("FRANCE", "GERMANY"):
+        res = client.post(f"/api/finalize?game_id={game_id}", json={"power": power, "force": True})
+        assert res.status_code == 200
+    assert GAMES[game_id].season == "Fall"
+
+    # And nobody else can take the seat.
+    res = client.post(f"/api/games/{game_id}/join", json={"power": "GERMANY", **CAL})
+    assert res.status_code == 409
+
+
+def test_seat_survives_a_restart(supabase):
+    game_id = _create_game()
+    _join(game_id, "GERMANY", BOB)
+
+    _restart_container(game_id)
+
+    state = client.get(f"/api/game?game_id={game_id}").json()
+    assert sorted(state["summary"]["participants"]) == ["FRANCE", "GERMANY"]
+    assert state["summary"]["status"] == "active"
+
+
+def test_surrender_and_leave_stays_gone_after_lobby_refresh(supabase):
+    game_id = _create_game()
+    _join(game_id, "GERMANY", BOB)
+    _join(game_id, "RUSSIA", CAL)
+
+    res = client.post(
+        f"/api/games/{game_id}/surrender", json={"power": "GERMANY", "leave": True, **BOB}
+    )
+    assert res.status_code == 200
+
+    listed = {g["game_id"]: g for g in client.get("/api/games").json()}
+    assert sorted(listed[game_id]["participants"]) == ["FRANCE", "RUSSIA"]
+    assert "GERMANY" not in supabase.rows[game_id]["summary"]["participants"]
+
+
+def test_drafted_order_survives_a_restart(supabase):
+    game_id = _create_game()
+    res = client.post(f"/api/order?game_id={game_id}", json={"order": ARMY_PARIS_TO_BURGUNDY})
+    assert res.status_code == 200
+
+    _restart_container(game_id)
+
+    orders = client.get(f"/api/game?game_id={game_id}").json()["state"]["orders"]
+    assert orders["FRA_A_PAR"]["target"] == "BUR"
+
+
+def test_failed_lobby_read_changes_nothing(supabase):
+    game_id = _create_game()
+    client.post(f"/api/order?game_id={game_id}", json={"order": ARMY_PARIS_TO_BURGUNDY})
+    live_state = GAMES[game_id]
+
+    supabase.reads_fail = True
+    res = client.get("/api/games")
+
+    assert res.status_code == 200
+    assert game_id in [g["game_id"] for g in res.json()]
+    assert GAMES[game_id] is live_state
+    assert GAMES[game_id].orders["FRA_A_PAR"].target == "BUR"
+
+
+def test_game_survives_failed_first_save_and_saves_on_next_change(supabase):
+    supabase.writes_fail = True
+    game_id = _create_game()
+    assert game_id not in supabase.rows
+    supabase.writes_fail = False
+
+    # The read works and the game has no row, but it was never saved, so it was not deleted.
+    assert game_id in [g["game_id"] for g in client.get("/api/games").json()]
+    assert client.get(f"/api/games/{game_id}").status_code == 200
+    assert client.get(f"/api/game?game_id={game_id}").status_code == 200
+
+    client.post(f"/api/order?game_id={game_id}", json={"order": ARMY_PARIS_TO_BURGUNDY})
+    assert game_id in supabase.rows
+    assert game_id not in UNSAVED_GAMES
+
+
+def test_lobby_read_overlapping_a_first_save_does_not_evict_the_game(supabase):
+    game_id = _create_game()
+    UNSAVED_GAMES.add(game_id)
+    read_all = supabase.load_all
+
+    async def save_finishes_during_read(client=None):
+        rows_seen_by_read = await read_all()
+        UNSAVED_GAMES.discard(game_id)
+        rows_seen_by_read.pop(game_id, None)
+        return rows_seen_by_read
+
+    with patch("main.load_all_summaries_from_db", side_effect=save_finishes_during_read):
+        client.get("/api/games")
+
+    assert game_id in GAMES
+
+
+def test_game_deleted_from_supabase_is_still_evicted(supabase):
+    game_id = _create_game()
+    del supabase.rows[game_id]
+
+    assert game_id not in [g["game_id"] for g in client.get("/api/games").json()]
+    assert game_id not in GAMES
+
+
+def test_game_details_read_leaves_the_live_game_alone(supabase):
+    game_id = _create_game()
+    supabase.writes_fail = True
+    client.post(f"/api/order?game_id={game_id}", json={"order": ARMY_PARIS_TO_BURGUNDY})
+    supabase.writes_fail = False
+    live_state = GAMES[game_id]
+
+    assert client.get(f"/api/games/{game_id}").status_code == 200
+
+    assert GAMES[game_id] is live_state
+    assert GAMES[game_id].orders["FRA_A_PAR"].target == "BUR"
+
+
+def test_game_details_survive_a_failed_read(supabase):
+    game_id = _create_game()
+    supabase.reads_fail = True
+
+    assert client.get(f"/api/games/{game_id}").status_code == 200
+    assert game_id in GAMES
+
+
+def test_game_details_evict_a_game_deleted_from_supabase(supabase):
+    game_id = _create_game()
+    del supabase.rows[game_id]
+
+    assert client.get(f"/api/games/{game_id}").status_code == 404
+    assert game_id not in GAMES
+
+
+def test_failed_read_of_an_unloaded_game_is_not_reported_as_missing(supabase):
+    game_id = _create_game()
+    _restart_container(game_id)
+    supabase.reads_fail = True
+
+    assert client.get(f"/api/game?game_id={game_id}").status_code == 503
+    assert client.get(f"/api/games/{game_id}").status_code == 503
+
+    supabase.reads_fail = False
+    assert client.get(f"/api/game?game_id={game_id}").status_code == 200
+
+
+def test_delete_is_refused_when_the_owner_cannot_be_checked(supabase):
+    game_id = _create_game()
+    _restart_container(game_id)
+    supabase.reads_fail = True
+
+    assert client.delete(f"/api/games/{game_id}").status_code == 503
+    assert game_id in supabase.rows
+
+
+def test_overlapping_cold_start_reads_share_one_game_object(supabase):
+    game_id = _create_game()
+    first = supabase.rows[game_id]
+    _restart_container(game_id)
+    state = GameState.model_validate(first["state"])
+    summary = MultiplayerGameSummary.model_validate(first["summary"])
+
+    winner = cache_loaded_game(game_id, (state, summary, [], None))
+    later = cache_loaded_game(game_id, (state.model_copy(deep=True), summary, [], None))
+
+    assert later is winner
+    assert GAMES[game_id] is winner
+
+
+def test_saves_never_overlap_and_the_last_one_has_the_newest_state():
+    async def run_test():
+        game_id = "overlapping_saves"
+        GAMES[game_id] = build_scenario("standard_1901", Power.FRANCE, game_id)
+        running = 0
+        most_running = 0
+        saved_targets = []
+        first_save_started = asyncio.Event()
+        finish_first_save = asyncio.Event()
+
+        async def slow_save(game_id, state, summary=None, history=None, passcode=None):
+            nonlocal running, most_running
+            running += 1
+            most_running = max(most_running, running)
+            target = state.orders["FRA_A_PAR"].target
+            first_save_started.set()
+            await finish_first_save.wait()
+            saved_targets.append(target)
+            running -= 1
+            return True
+
+        env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+        with patch.dict(os.environ, env), patch("main.save_game_to_db", side_effect=slow_save):
+            first = asyncio.create_task(persist_game(game_id))
+            await first_save_started.wait()
+            # These return at once, as the running save picks them up. The timeout turns a
+            # regression, where they would wait on that save, into a failure and not a hang.
+            GAMES[game_id].orders["FRA_A_PAR"].target = "BUR"
+            await asyncio.wait_for(persist_game(game_id), timeout=1)
+            GAMES[game_id].orders["FRA_A_PAR"].target = "PIC"
+            await asyncio.wait_for(persist_game(game_id), timeout=1)
+            finish_first_save.set()
+            await asyncio.wait_for(first, timeout=1)
+
+        assert most_running == 1
+        assert saved_targets == [None, "PIC"]
+        assert game_id not in UNSAVED_GAMES
+        assert game_id not in SAVES_RUNNING
+        GAMES.pop(game_id, None)
+
+    asyncio.run(run_test())
+
+
+def test_database_failures_are_not_reported_as_empty_results():
+    async def run_test():
+        env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+        with patch.dict(os.environ, env):
+            failing = AsyncMock(spec=httpx.AsyncClient)
+            failing.get.return_value = httpx.Response(status_code=503, text="down")
+            with pytest.raises(SupabaseUnavailable):
+                await load_all_summaries_from_db(client=failing)
+            with pytest.raises(SupabaseUnavailable):
+                await load_game_from_db("some_game", client=failing)
+
+            unreachable = AsyncMock(spec=httpx.AsyncClient)
+            unreachable.get.side_effect = httpx.ConnectError("no route")
+            with pytest.raises(SupabaseUnavailable):
+                await load_all_summaries_from_db(client=unreachable)
+            with pytest.raises(SupabaseUnavailable):
+                await load_game_from_db("some_game", client=unreachable)
+
+            malformed = AsyncMock(spec=httpx.AsyncClient)
+            malformed.get.return_value = httpx.Response(status_code=200, json={"message": "?"})
+            with pytest.raises(SupabaseUnavailable):
+                await load_all_summaries_from_db(client=malformed)
+
+            unusable_row = AsyncMock(spec=httpx.AsyncClient)
+            unusable_row.get.return_value = httpx.Response(
+                status_code=200, json=[{"room_code": "x", "game_state": {"state": {"bad": 1}}}]
+            )
+            with pytest.raises(SupabaseUnavailable):
+                await load_game_from_db("x", client=unusable_row)
+
+            empty = AsyncMock(spec=httpx.AsyncClient)
+            empty.get.return_value = httpx.Response(status_code=200, json=[])
+            assert await load_game_from_db("some_game", client=empty) is None
+            assert await load_all_summaries_from_db(client=empty) == {}
+
+    asyncio.run(run_test())
+
+
+def test_private_sandbox_is_never_saved_or_listed(supabase):
+    game_id = _create_game()
+    _join(game_id, "GERMANY", BOB)
+
+    sandbox = client.post(f"/api/sandbox/enter?game_id={game_id}", json={"power": "FRANCE"}).json()
+    sandbox_id = sandbox["game_id"]
+    client.post(
+        f"/api/order?game_id={sandbox_id}",
+        json={"order": {**ARMY_PARIS_TO_BURGUNDY, "unit_id": "FRA_A_MAR", "origin": "MAR"}},
+    )
+
+    assert sandbox_id not in supabase.rows
+    assert sandbox_id not in [g["game_id"] for g in client.get("/api/games").json()]
+    # Lobby syncing leaves it alone: it has no row and that does not mean it was deleted.
+    assert sandbox_id in GAMES
+
+
+def test_shared_default_board_survives_lookup_of_a_missing_row(supabase):
+    assert client.get("/api/games/proto_1901").status_code == 404
+    assert client.get("/api/game?game_id=proto_1901").status_code == 200

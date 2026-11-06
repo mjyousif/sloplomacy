@@ -10,6 +10,11 @@ from models import GameParticipant, GameState, MultiplayerGameSummary, Power
 
 logger = logging.getLogger("diplomacy.database")
 
+
+class SupabaseUnavailable(Exception):
+    """Supabase gave no usable answer, so nothing can be concluded about what it holds."""
+
+
 # Status mapping between Application and Database check constraint
 APP_TO_DB_STATUS = {
     "waiting": "lobby",
@@ -126,7 +131,8 @@ async def load_game_from_db(
 ) -> Optional[Tuple[GameState, Optional[MultiplayerGameSummary], List[GameState], Optional[str]]]:
     """
     Load a game from Supabase PostgreSQL by room_code.
-    Returns (state, summary, history, passcode) or None.
+    Returns (state, summary, history, passcode), or None if Supabase has no such game.
+    Raises SupabaseUnavailable if the read fails, which says nothing about whether the game exists.
     """
     if not is_persistence_enabled():
         return None
@@ -142,11 +148,12 @@ async def load_game_from_db(
                 resp = await c.get(url, headers=headers, timeout=10.0)
 
         if resp.status_code != 200:
-            logger.warning("Supabase load error for '%s': HTTP %d %s", game_id, resp.status_code, resp.text)
-            return None
+            raise SupabaseUnavailable(f"HTTP {resp.status_code} {resp.text}")
 
         rows = resp.json()
-        if not rows or not isinstance(rows, list):
+        if not isinstance(rows, list):
+            raise SupabaseUnavailable(f"Unexpected response: {rows!r}")
+        if not rows:
             return None
 
         row = rows[0]
@@ -186,13 +193,16 @@ async def load_game_from_db(
 
     except Exception as ex:
         logger.warning("Supabase exception loading game '%s': %s", game_id, ex)
-        return None
+        raise SupabaseUnavailable(str(ex)) from ex
 
 
 async def load_all_summaries_from_db(
     client: Optional[httpx.AsyncClient] = None,
 ) -> Dict[str, MultiplayerGameSummary]:
-    """Fetch all games from Supabase to warm up or synchronize lobby listings."""
+    """
+    Fetch all games from Supabase to warm up or synchronize lobby listings.
+    Raises SupabaseUnavailable if the read fails: an empty result always means Supabase has no games.
+    """
     if not is_persistence_enabled():
         return {}
 
@@ -208,20 +218,20 @@ async def load_all_summaries_from_db(
                 resp = await c.get(url, headers=headers, timeout=10.0)
 
         if resp.status_code != 200:
-            logger.warning("Supabase load_all_summaries error: HTTP %d %s", resp.status_code, resp.text)
-            return {}
+            raise SupabaseUnavailable(f"HTTP {resp.status_code} {resp.text}")
 
         rows = resp.json()
-        if isinstance(rows, list):
-            for row in rows:
-                room_code = row.get("room_code")
-                if room_code and room_code not in ("proto_1901", "default"):
-                    summaries[room_code] = build_summary_from_row(row)
+        if not isinstance(rows, list):
+            raise SupabaseUnavailable(f"Unexpected response: {rows!r}")
+        for row in rows:
+            room_code = row.get("room_code")
+            if room_code and room_code not in ("proto_1901", "default"):
+                summaries[room_code] = build_summary_from_row(row)
         return summaries
 
     except Exception as ex:
         logger.warning("Supabase exception loading summaries: %s", ex)
-        return {}
+        raise SupabaseUnavailable(str(ex)) from ex
 
 
 async def save_game_to_db(

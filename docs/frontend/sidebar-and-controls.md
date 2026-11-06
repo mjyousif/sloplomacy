@@ -30,7 +30,7 @@ Both sidebars feature smooth, 44px collapsed rail views with quick tool icons an
 - **Multiplayer Mode**: Displays diplomatic status (Orders Finalized, Drafting, or Civil Disorder).
 
 ### 4. War Room & Pre-Move Sandbox Tools
-- **"Enter Pre-Move Sandbox" / "Exit Sandbox"**: Toggles isolated hypothetical planning. In sandbox mode, foreign moves can be freely drafted; exiting wipes foreign moves and restores the authoritative state.
+- **"Enter Pre-Move Sandbox" / "Exit Sandbox"**: Toggles isolated hypothetical planning. In sandbox mode, foreign moves can be freely drafted; exiting wipes foreign moves and restores the authoritative state. In a multiplayer match the sandbox is a private copy: other players cannot see it, it does not show their real orders, and Finalize, Resolve, Surrender and the Admin Console wait until you exit.
 - **Tactical General Staff AI**:
   - **"Plan Opponents"**: Generates DATC-compliant, heuristic moves for all 6 other nations.
   - **"Plan All 7 Powers"**: Auto-generates orders for every nation across Europe.
