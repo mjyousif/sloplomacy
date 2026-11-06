@@ -61,7 +61,7 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │
 ├── View 2: Tactical Workspace (when viewMode === 'multiplayer' | 'sandbox')
 │   ├── Imperial Header Bar
-│   │   ├── Back to Lobby Navigation Button & Main Page Switcher
+│   │   ├── Back to Lobby Navigation Button & Solo Sandbox Switcher
 │   │   ├── Turn Chronicle Pill (Season, Year, Phase & Winner)
 │   │   ├── Sanity Check Diagnostics Warning Pill
 │   │   ├── Real-Time WebSocket Synchronization Badge
@@ -73,8 +73,8 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   │   ├── Map View & Camera Controls (Zoom In, Zoom Out, Fit Map 105%)
 │   │   ├── Tactical Map Legend (Move, Support, Convoy, Conflict vectors & dual coasts)
 │   │   ├── Great Powers Standing & Command Selector (SC & Unit tallies)
-│   │   ├── Pre-Move Sandbox Mode & Tactical General Staff AI (Opponents, All 7, AI Step)
-│   │   ├── Foreign Pre-Moves Count & Discard Actions
+│   │   ├── Hypothetical Mode (What-If Opponent Guesses) & Tactical General Staff AI
+│   │   ├── Foreign Guesses Count & Discard Actions
 │   │   └── Creator Admin Console & Direct-Edit Override Trigger
 │   │
 │   ├── EuropeMap.tsx (Center Interactive SVG Board)

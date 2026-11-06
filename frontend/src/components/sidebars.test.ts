@@ -115,8 +115,8 @@ describe('ToolsSidebar', () => {
     expect(html).toContain('France');
     expect(html).toContain('England');
     expect(html).toContain('Germany');
-    expect(html).toContain('WAR ROOM &amp; PRE-MOVES');
-    expect(html).toContain('Enter Pre-Move Sandbox');
+    expect(html).toContain('HYPOTHETICAL MODE &amp; PRE-MOVES');
+    expect(html).toContain('Enter Hypothetical Mode');
     expect(html).not.toContain('CREATOR ADMIN TOOLS');
   });
 

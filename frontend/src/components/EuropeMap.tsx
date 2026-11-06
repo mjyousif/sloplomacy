@@ -1135,13 +1135,12 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
 
   return (
     <div ref={containerRef} className="map-viewport-container">
-      {/* Live Sandbox / Simulation Active Banner */}
+      {/* Live Hypothetical / Simulation Active Banner */}
       {(showSimulationOverlay || sandboxMode) && simulationResult && (
         <div className="simulation-map-banner">
           <Eye size={16} />
           <span>
-            <strong>SANDBOX PLANNING &amp; OUTCOME PREVIEW</strong> — Hypothetical moves clear when
-            you exit Sandbox
+            <strong>HYPOTHETICAL PLANNING &amp; OUTCOME PREVIEW</strong> — Foreign guesses are discarded upon exit
           </span>
           <button
             className="sim-advance-btn"

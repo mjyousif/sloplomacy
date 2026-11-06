@@ -30,12 +30,12 @@ Both sidebars feature smooth, 44px collapsed rail views with quick tool icons an
 - **Multiplayer Mode**: Displays diplomatic status (Orders Finalized, Drafting, or Civil Disorder).
 
 ### 4. War Room & Pre-Move Sandbox Tools
-- **"Enter Pre-Move Sandbox" / "Exit Sandbox"**: Toggles isolated hypothetical planning. In sandbox mode, foreign moves can be freely drafted; exiting wipes foreign moves and restores the authoritative state. In a multiplayer match the sandbox is a private copy: other players cannot see it, it does not show their real orders, and Finalize, Resolve, Surrender and the Admin Console wait until you exit.
+- **"Enter Hypothetical Mode" / "Exit Mode"**: Toggles isolated hypothetical planning (with the Eye icon). In hypothetical mode, foreign moves can be freely drafted; exiting discards foreign guesses and restores the authoritative state. In a multiplayer match the sandbox is a private copy: other players cannot see it, it does not show their real orders, and Finalize, Resolve, Surrender and the Admin Console wait until you exit.
 - **Tactical General Staff AI**:
   - **"Plan Opponents"**: Generates DATC-compliant, heuristic moves for all 6 other nations.
   - **"Plan All 7 Powers"**: Auto-generates orders for every nation across Europe.
   - **"AI Step Turn"**: Auto-plans foreign powers and steps the game clock directly to the next phase with full adjudication.
-- **Foreign Pre-Moves Counter & Clear**: Displays count of drafted foreign guesses with a one-click "Clear" button.
+- **Foreign Guesses Counter & Clear**: Displays count of drafted foreign guesses with a one-click "Clear" button.
 - **Scenario Management**: One-click "Reset 1901" scenario start and "Save Sandbox" to player account.
 
 ### 5. Creator Administrator Controls (Game Creator Only)
