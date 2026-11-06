@@ -56,6 +56,7 @@ export interface EuropeMapProps {
   ownership: Record<string, Power>;
   activePower: Power;
   sandboxMode: boolean;
+  directEditActive?: boolean;
   selectedUnitId: string | null;
   hoveredUnitId: string | null;
   highlightedProvinces: string[];
@@ -344,6 +345,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     ownership,
     activePower,
     sandboxMode,
+    directEditActive = false,
     selectedUnitId,
     hoveredUnitId,
     highlightedProvinces,
@@ -436,10 +438,12 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
       : null;
 
   const rawSelectedUnit = selectedUnitId && !isSelectedBuildOrder ? unitsById[selectedUnitId] : null;
-  // Strictly disallow controlling or showing the menu for foreign units when sandboxMode is OFF
+  // A player may only command foreign units in the sandbox, or as host with Direct-Edit on
+  const canEditAnyPower = sandboxMode || directEditActive;
+  // Strictly disallow controlling or showing the menu for foreign units otherwise
   const selectedUnit =
     rawSelectedUnit &&
-    (rawSelectedUnit.power === activePower || sandboxMode) &&
+    (rawSelectedUnit.power === activePower || canEditAnyPower) &&
     (!isRetreatPhase || rawSelectedUnit.is_dislodged)
       ? rawSelectedUnit
       : null;
@@ -456,8 +460,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     reachableMap[r.province] = r.coasts;
   }
 
-  // Only show issues for activePower when sandboxMode is OFF; show all in sandboxMode
-  const visibleIssues = sandboxMode
+  // Only show issues for activePower unless foreign units can be edited
+  const visibleIssues = canEditAnyPower
     ? issues
     : issues.filter((i) => i.power === activePower);
 
@@ -475,14 +479,14 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
   }
 
   // Filter which units' orders are visible on the map:
-  const isUnitOrderVisible = (u: Unit) => sandboxMode || u.power === activePower;
+  const isUnitOrderVisible = (u: Unit) => canEditAnyPower || u.power === activePower;
 
   // Build homes map for Adjustments phase
   const controllableBuildHomes: Record<string, Power> = {};
   if (isAdjustmentPhase && builds) {
     for (const [pwrStr, bInfo] of Object.entries(builds)) {
       const pwr = pwrStr as Power;
-      if (bInfo.count > 0 && (pwr === activePower || sandboxMode)) {
+      if (bInfo.count > 0 && (pwr === activePower || canEditAnyPower)) {
         for (const h of bInfo.homes) {
           controllableBuildHomes[h] = pwr;
         }
@@ -529,7 +533,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
       if (!u.is_dislodged) {
         // If there is also a dislodged unit in this province, select the dislodged unit!
         const dis = dislodgedByProv[u.province];
-        if (dis && (dis.power === activePower || sandboxMode)) {
+        if (dis && (dis.power === activePower || canEditAnyPower)) {
           onSelectUnit(dis.id);
           setInteractionMode('MOVE');
           return;
@@ -537,7 +541,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
         clearSelection();
         return;
       }
-      const canControl = u.power === activePower || sandboxMode;
+      const canControl = u.power === activePower || canEditAnyPower;
       if (!canControl) {
         clearSelection();
         return;
@@ -552,7 +556,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     }
 
     if (isAdjustmentPhase) {
-      const canControl = u.power === activePower || sandboxMode;
+      const canControl = u.power === activePower || canEditAnyPower;
       if (!canControl) {
         clearSelection();
         return;
@@ -635,8 +639,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
       return;
     }
 
-    // 6. Check if the clicked unit is controllable (belongs to activePower, OR sandboxMode is ON)
-    const canControlClickedUnit = u.power === activePower || sandboxMode;
+    // 6. Check if the clicked unit is controllable (belongs to activePower, OR foreign units can be edited)
+    const canControlClickedUnit = u.power === activePower || canEditAnyPower;
     if (!canControlClickedUnit) {
       if (selectedUnit && reachableMap[u.province] && interactionMode === 'MOVE') {
         handleProvinceClick(u.province);
@@ -709,7 +713,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
         return;
       }
       const occ = unitsByProv[provId];
-      if (occ && (occ.power === activePower || sandboxMode) && (builds?.[occ.power]?.count ?? 0) < 0) {
+      if (occ && (occ.power === activePower || canEditAnyPower) && (builds?.[occ.power]?.count ?? 0) < 0) {
         onSelectUnit(selectedUnitId === occ.id ? null : occ.id);
         return;
       }
@@ -720,7 +724,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     if (isRetreatPhase) {
       if (!selectedUnit) {
         const dis = dislodgedByProv[provId];
-        if (dis && (dis.power === activePower || sandboxMode)) {
+        if (dis && (dis.power === activePower || canEditAnyPower)) {
           onSelectUnit(dis.id);
           setInteractionMode('MOVE');
         }
@@ -742,7 +746,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
         return;
       }
       const dis = dislodgedByProv[provId];
-      if (dis && (dis.power === activePower || sandboxMode)) {
+      if (dis && (dis.power === activePower || canEditAnyPower)) {
         onSelectUnit(dis.id);
         setInteractionMode('MOVE');
       } else {
@@ -753,7 +757,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
 
     if (!selectedUnit) {
       const occupant = unitsByProv[provId];
-      if (occupant && (occupant.power === activePower || sandboxMode)) {
+      if (occupant && (occupant.power === activePower || canEditAnyPower)) {
         onSelectUnit(occupant.id);
         setInteractionMode('MOVE');
       }
@@ -791,7 +795,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
 
       if (!isReachable && !canConvoyMove) {
         const occupant = unitsByProv[provId];
-        if (occupant && (occupant.power === activePower || sandboxMode)) {
+        if (occupant && (occupant.power === activePower || canEditAnyPower)) {
           onSelectUnit(occupant.id);
           setInteractionMode('MOVE');
           setPendingAuxOrigin(null);
@@ -2127,7 +2131,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
               const pt = getUnitPoint(u);
               const meta = POWER_METADATA[u.power];
               const order = orders[u.id];
-              const isControllable = u.power === activePower || sandboxMode;
+              const isControllable = u.power === activePower || canEditAnyPower;
               const isSelected = Boolean(selectedUnit && u.id === selectedUnit.id);
               const isHovered = u.id === hoveredUnitId && isControllable;
               const unitIssues = isUnitOrderVisible(u) ? issuesByUnit[u.id] || [] : [];

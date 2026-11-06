@@ -110,6 +110,9 @@ export function App() {
   const [surrenderModalPower, setSurrenderModalPower] = useState<Power | null>(null);
 
   const playerPower = resolvePlayerPower(viewMode, lockedPower, gameState?.active_power);
+  const isGameCreator = checkIsGameCreator(activeGameSummary, authUser, viewMode);
+  // Direct-Edit stays on when the host moves to another game, where it must not apply.
+  const directEditActive = isGameCreator && adminOverrideActive;
   // Drafts, AI plans and previews go to the private copy while there is one.
   const draftGameId = sandboxGameId ?? activeGameId;
 
@@ -123,7 +126,7 @@ export function App() {
   // The board in a private sandbox is hypothetical, so nothing real can be done from it.
   const requireRealBoard = (action: string): boolean => {
     if (!sandboxGameId) return true;
-    triggerToast(`Exit Sandbox Mode to ${action}.`);
+    triggerToast(`Exit Hypothetical Mode to ${action}.`);
     return false;
   };
 
@@ -607,7 +610,7 @@ export function App() {
       viewMode === 'multiplayer' &&
       lockedPower &&
       !sandboxMode &&
-      !adminOverrideActive &&
+      !directEditActive &&
       order.power !== lockedPower
     ) {
       triggerToast(
@@ -846,11 +849,12 @@ export function App() {
 
   const handleLoadScenario = async (scenarioId: string) => {
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE}/scenario?game_id=${encodeURIComponent(activeGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({
             scenario_id: scenarioId,
             active_power: playerPower,
@@ -865,6 +869,9 @@ export function App() {
         setShowSimulationOverlay(false);
         setSelectedUnitId(null);
         triggerToast('Reset to Standard Spring 1901.');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        triggerToast(err.detail || 'Could not reset the scenario.');
       }
     } catch (e) {
       console.error(e);
@@ -890,8 +897,6 @@ export function App() {
       </div>
     );
   }
-
-  const isGameCreator = checkIsGameCreator(activeGameSummary, authUser, viewMode);
 
   const openAdminTools = () => {
     if (requireRealBoard('use the admin tools')) setAdminModalOpen(true);
@@ -1092,7 +1097,7 @@ export function App() {
       </header>
 
       {/* ADMIN DIRECT-EDIT OVERRIDE BANNER */}
-      {isGameCreator && adminOverrideActive && (
+      {directEditActive && (
         <div className="admin-override-banner">
           <span>
             <ShieldAlert size={16} />
@@ -1176,6 +1181,7 @@ export function App() {
             ownership={gameState.ownership}
             activePower={playerPower}
             sandboxMode={sandboxMode}
+            directEditActive={directEditActive}
             selectedUnitId={selectedUnitId}
             hoveredUnitId={hoveredUnitId}
             highlightedProvinces={highlightedProvinces}

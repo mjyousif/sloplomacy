@@ -34,11 +34,11 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/order` | Submit or update an order for a single military unit | `SingleOrderUpdateRequest` | `GameState` |
 | `POST` | `/api/orders/batch` | Update multiple orders simultaneously (all or nothing: one invalid order rejects the batch with `400`) | `OrderSubmissionRequest` | `GameState` |
 | `POST` | `/api/orders/confirm-all` | Mark all orders of a given power as explicitly confirmed | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/finalize` | Pre-flight sanity check and finalize power's orders | `FinalizeRequest` | `FinalizeResponse` |
+| `POST` | `/api/finalize` | Pre-flight sanity check and finalize power's orders; resolves the turn in a live match once nobody is left to wait for | `FinalizeRequest` | `FinalizeResponse` |
 | `POST` | `/api/unfinalize` | Unlock finalized orders for subsequent editing | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/simulate` | Execute non-destructive tactical preview resolution | *None* | `SimulationResult` |
 | `POST` | `/api/adjudicate` | Commit orders, resolve combat, advance season/phase | *None* | `GameState` |
-| `POST` | `/api/scenario` | Reset board and load predefined tactical scenario (`400` for an unknown scenario, `404` for an unknown game) | `ScenarioRequest` | `GameState` |
+| `POST` | `/api/scenario` | Reset board and load predefined tactical scenario (host only on a live match: `401` or `403`; `400` for an unknown scenario, `404` for an unknown game) | `ScenarioRequest` | `GameState` |
 
 ### Administrator & Game Creator Controls
 | Method | Endpoint | Description | Request Body | Response Model |
@@ -280,6 +280,8 @@ Returns the next phase `GameState` with combat resolutions and updated unit posi
 ---
 
 ### 10. `POST /api/order`
+Any `target_coast` on an army's order is ignored, because only fleets use coasts.
+
 Submits or modifies a single military instruction. Automatically triggers validation and non-destructive simulation preview.
 
 #### Request (`SingleOrderUpdateRequest`):
@@ -345,6 +347,8 @@ In active multiplayer campaigns (`status == "active"`), if all required active p
 ### 10. `POST /api/adjudicate`
 Permanently commits all submitted moves, resolves conflicts using the DATC `diplomacy` engine, advances phase (Movement -> Retreats -> Movement -> Adjustments), updates supply center ownership in Fall, and records turn history.
 
+In a live match, a retreat or adjustment phase that no player is involved in then plays out at once, so the response may be one or two phases further on. Movement phases always wait for the players. The same happens when `/api/finalize`, `/leave` or `/surrender` completes the set of players being waited for, so a match never stalls on a player who has gone.
+
 - **Multiplayer Security**: In multiplayer campaigns (`!is_sandbox`), manual adjudication requires authentic game creator authorization via a cryptographically signed Supabase JSON Web Token (`Authorization: Bearer <token>`). Missing, invalid, or expired tokens receive `401 Unauthorized`. Authenticated users who are not the game creator receive `403 Forbidden`. In normal multiplayer play, turns advance automatically upon consensus finalization; this endpoint acts as an administrative host override. Solo sandbox mode (`proto_1901`) and personal sandboxes retain zero-friction anonymous access.
 - A unit whose order the engine rejects holds in place. When a power reaches 18 supply centers the response carries `winner`, the clock stays on the deciding phase, and further calls return `409`.
 
@@ -392,7 +396,7 @@ Jumps the game directly to an arbitrary season, year, or phase. The turn must be
 ---
 
 ### 14. `POST /api/admin/unit/move`
-Teleports any unit to any province, evicting any previous occupant and resetting the unit's order to HOLD.
+Teleports any unit to any province, evicting any previous occupant and resetting the unit's order to HOLD. Only a fleet on a split-coast province takes a coast: `new_coast` if valid, otherwise the first coast. An army never has one.
 
 #### Request (`AdminMoveUnitRequest`):
 ```json

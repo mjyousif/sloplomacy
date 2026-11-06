@@ -41,7 +41,7 @@ Both sidebars feature smooth, 44px collapsed rail views with quick tool icons an
 ### 5. Creator Administrator Controls (Game Creator Only)
 - Visible exclusively to room creators.
 - **"Open Admin Console"**: Launches `AdminToolsModal.tsx` for timeline rollbacks, unit teleportation, and arbitrary unit spawning/destruction.
-- **"Direct-Edit Board Override"**: Toggles on-the-fly administrator direct board manipulation.
+- **"Direct-Edit Board Override"**: While on, the host can select and order any power's units on the map, and sees all their orders. Other players are unaffected, and the toggle has no effect in a game the player does not host.
 
 ---
 
@@ -64,7 +64,7 @@ Both sidebars feature smooth, 44px collapsed rail views with quick tool icons an
 
 #### A. Home Supply Center Builds (Winter Adjustments)
 - Displays vacant home supply centers for surplus powers.
-- Inline controls to toggle `+ Army`, `+ Fleet` (with coastal options for split coasts), or `Waive`.
+- Inline controls to toggle `+ Army`, `+ Fleet` (with coastal options for split coasts), or `Waive`. Every slot starts waived, because a build only happens if it is ordered.
 
 #### B. Active Field Units & Dislodged Units
 - **Unit Badge**: Army (`A`) or Fleet (`F`) with national color.
@@ -77,7 +77,7 @@ Both sidebars feature smooth, 44px collapsed rail views with quick tool icons an
 
 ### 5. Sticky Action Footer & Consensus Resolution
 - **"Finalize Orders" (`POST /api/finalize`)**: Submits orders. Opens `SanityCheckModal.tsx` if warnings or unconfirmed moves exist.
-- **Consensus Auto-Adjudication (Multiplayer)**: In multiplayer matches, turns advance automatically once all required active powers finalize their orders. Non-creator players see a real-time consensus status card rather than a manual button. Connected clients poll state in the background to seamlessly receive phase transitions:
+- **Consensus Auto-Adjudication (Multiplayer)**: In multiplayer matches, turns advance automatically once all required active powers finalize their orders. A power with no decision to make, such as one owed builds with every home center occupied, is not waited for, and a retreat or adjustment phase no player is involved in passes by itself. Non-creator players see a real-time consensus status card rather than a manual button. Connected clients poll state in the background to seamlessly receive phase transitions:
   - **Waiting Lobby Mode (< 2 Players)**: Multiplayer matches require a minimum of 2 players to auto-resolve turns. When a single player prepares and finalizes their orders, the status card clearly indicates `"Orders Locked • Waiting for Players (1/2 min)"` and explains that automatic resolution begins once opponents join.
   - **Active Match Mode (>= 2 Players)**: Displays `"Resolution Progress: X/Y Ready"` and `"Waiting on: [Powers]"`, transitioning to `"Consensus Reached (Y/Y)"` when all required powers finalize.
 - **"Adjudicate Turn & Advance" (`POST /api/adjudicate`)**:

@@ -151,7 +151,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       return activeParticipants
         .filter((p) => {
           const b = builds[p.power];
-          return b && typeof b === 'object' && b.count !== 0;
+          // A power owed builds with every home center occupied has no decision to make.
+          return b && typeof b === 'object' && (b.count < 0 || (b.count > 0 && b.homes.length > 0));
         })
         .map((p) => p.power);
     }

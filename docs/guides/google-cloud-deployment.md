@@ -8,7 +8,8 @@ This guide outlines how to deploy the **Diplomacy 1901 Tactical Engine & Multipl
 
 | Component | Service | Cost Profile & Configuration |
 | :--- | :--- | :--- |
-| **Web & API Host** | **Google Cloud Run** | **Scale-to-zero ($0 idle cost)**. Uses Google Cloud Run's free tier (2M requests/month, 360,000 vCPU-seconds). Automatically spins down when no games are active. |
+| **Compute Runtime** | **Google Cloud Run** | **Scale-to-zero ( idle cost)**. Uses Google Cloud Run's free tier (2M requests/month, 360,000 vCPU-seconds). Configured with --min-instances 0 and --max-instances 1, because games live in one process and a second instance would overwrite them. The container completely shuts down during idle periods, incurring 0 compute or memory cost. |
+| **Container Registry**| **GCP Artifact Registry** | Standard Docker image storage (~.10/GB/month). |
 | **Adjudication Engine**| **FastAPI + DATC Adjudicator** | Runs inside Cloud Run container. Adjudicates official DATC turns deterministically in under 5ms. |
 | **Authentication** | **Supabase Auth** | **Free up to 50,000 Monthly Active Users (MAU)**. Handles Email/Password, Google/Discord OAuth, Magic Links, and ES256 / HS256 JWT validation. |
 | **Database & Persistence** | **Supabase PostgreSQL** | **Free 500 MB database** with Row-Level Security (RLS) and JSONB game state tracking. Automatically persists match state and turn histories across container cold starts. |
@@ -57,7 +58,7 @@ Or interactively provide Supabase secrets:
 2. Ensures required GCP APIs are enabled (`run.googleapis.com`, `cloudbuild.googleapis.com`, `artifactregistry.googleapis.com`).
 3. Provisions an Artifact Registry repository (`sloplomacy-repo`) if it doesn't already exist.
 4. Triggers **Google Cloud Build** using [`cloudbuild.yaml`](../../cloudbuild.yaml) to build the multi-stage [`Dockerfile`](../../Dockerfile).
-5. Deploys the image to **Google Cloud Run** with `--min-instances 0` (scale-to-zero), `--max-instances 3` (budget protection), and injects Supabase persistence and auth credentials into the container runtime.
+5. Deploys the image to **Google Cloud Run** with --min-instances 0 (scale-to-zero), --max-instances 1 (games live in one process, which also protects the budget), and injects Supabase persistence and auth credentials into the container runtime.
 
 ---
 

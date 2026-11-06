@@ -46,7 +46,7 @@ resource "google_cloud_run_v2_service" "diplomacy_service" {
   template {
     scaling {
       min_instance_count = 0  # Scales to zero when idle ($0 idle cost)
-      max_instance_count = 3  # Protects your GCP credits from runaway traffic
+      max_instance_count = 1  # Games live in this one process: a second instance would overwrite them
     }
 
     containers {

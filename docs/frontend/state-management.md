@@ -25,7 +25,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `simulationResult` | `SimulationResult \| null`| UI | Cached non-destructive simulation preview from the server. |
 | `showSimulationOverlay`| `boolean` | UI | Whether combat resolutions (arrows, bounces, cuts) are projected on the map. |
 | `adminModalOpen` | `boolean` | Modal | Controls visibility of the game creator's Admin Tools modal. |
-| `adminOverrideActive`| `boolean` | Admin | Indicates whether admin modifications are active on the current turn. |
+| `adminOverrideActive`| `boolean` | Admin | The host's Direct-Edit toggle. It only takes effect through the derived `directEditActive`, which also requires `isGameCreator`, so it does nothing in a game the player does not host. |
 | `leftSidebarCollapsed`| `boolean` | UI | Whether the Left Tools Sidebar is collapsed into a 44px rail. |
 | `rightSidebarCollapsed`| `boolean` | UI | Whether the Right Tactical Sidebar is collapsed into a 44px rail. |
 | `zoomPercent` | `number` | UI | Real-time map zoom percentage (default: `105`). |

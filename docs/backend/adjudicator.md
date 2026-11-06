@@ -137,11 +137,22 @@ The internal Pydantic `Order` model is serialized into standard DATC order notat
 
 ---
 
+## Orders Nobody Gave
+
+`create_default_orders` in `main.py` decides what happens to anything left unordered, and it follows the rulebook. Empty seats, surrendered powers and players who run out of time all get the same result:
+
+| Phase | Left unordered | Result |
+| :--- | :--- | :--- |
+| Movement | Any unit | Holds |
+| Retreats | A dislodged unit | Disbands, even if it had somewhere to go |
+| Adjustments | A build | Waived, so nothing is built |
+| Adjustments | A required disband | The engine removes a unit by its civil disorder rules |
+
 ## 5. Standard Tactical Invariants Enforced
 
 1. **Self-Dislodgement Prohibition**: A player cannot dislodge their own unit, even with superior support.
 2. **Support Cutting Exception ("Don't Cut via Target")**: An attack by Province B against Province A does not cut Province A's support into Province B unless Province A is dislodged.
-3. **Civil Disorder for Surrendered Powers**: Units belonging to surrendered powers hold passively, never provide support, and auto-disband if dislodged or down in supply centers.
+3. **Civil Disorder for Surrendered Powers**: Units belonging to surrendered powers hold passively, never provide support, build nothing, and auto-disband if dislodged or down in supply centers. Any retreat or build chosen before surrendering is dropped.
 4. **The Engine Owns the Board**: The engine silently drops orders it finds illegal, with no result code, and the unit holds. `adjudicate_turn` checks each order against `game.get_orders()`, so a dropped order is reported with `succeeded: false` and a "rejected" reason and is never applied. `test_final_positions_always_match_the_engine` compares final positions against the bare engine over random turns.
 5. **Incomplete Orders**: `order_to_diplomacy_str` returns `None` for a move with no target, or a support or convoy with no subject, because the engine raises on those. They follow the same rejected path, so drafting one cannot break a game.
 6. **Game End**: When a power reaches 18 supply centers the engine's phase becomes the bare word `COMPLETED`, which is not a real phase. `adjudicate_turn` sets `winner` and keeps `next_season`, `next_year` and `next_phase` on the deciding phase. Committing it sets `GameState.winner`, after which `POST /api/adjudicate` returns `409`. A rollback or scenario reset reopens the game.

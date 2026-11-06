@@ -457,6 +457,73 @@ def test_ownership_is_only_for_supply_centers(province):
     assert province not in GAMES["proto_1901"].ownership
 
 
+client = TestClient(app)
+
+
+def _armies_and_fleets_at(game_id, province):
+    return [(u.unit_type, u.coast) for u in GAMES[game_id].units if u.province == province]
+
+
+@pytest.mark.parametrize("province", ["SPA", "STP", "BUL"])
+def test_army_placed_by_admin_on_a_split_coast_province_has_no_coast(province):
+    game_id = "mp_concert_104"
+    headers = make_auth_headers("bot_bismarck", "bismarck@diplomacy.eu")
+
+    moved = client.post(
+        f"/api/admin/unit/move?game_id={game_id}",
+        json={"unit_id": "GER_A_MUN", "new_province": province},
+        headers=headers,
+    )
+    assert moved.status_code == 200
+    assert _armies_and_fleets_at(game_id, province) == [(UnitType.ARMY, None)]
+
+    GAMES[game_id].units = [u for u in GAMES[game_id].units if u.province != province]
+    spawned = client.post(
+        f"/api/admin/unit/spawn?game_id={game_id}",
+        json={"power": "FRANCE", "unit_type": "A", "province": province, "coast": "SC"},
+        headers=headers,
+    )
+    assert spawned.status_code == 200
+    assert _armies_and_fleets_at(game_id, province) == [(UnitType.ARMY, None)]
+
+
+def test_fleet_placed_by_admin_keeps_its_coast():
+    game_id = "mp_concert_104"
+    headers = make_auth_headers("bot_bismarck", "bismarck@diplomacy.eu")
+
+    chosen = client.post(
+        f"/api/admin/unit/spawn?game_id={game_id}",
+        json={"power": "FRANCE", "unit_type": "F", "province": "SPA", "coast": "SC"},
+        headers=headers,
+    )
+    assert chosen.status_code == 200
+    assert _armies_and_fleets_at(game_id, "SPA") == [(UnitType.FLEET, "SC")]
+
+    defaulted = client.post(
+        f"/api/admin/unit/move?game_id={game_id}",
+        json={"unit_id": "GER_F_KIE", "new_province": "BUL"},
+        headers=headers,
+    )
+    assert defaulted.status_code == 200
+    assert _armies_and_fleets_at(game_id, "BUL") == [(UnitType.FLEET, "EC")]
+
+
+def test_army_placed_by_admin_is_a_real_unit_that_captures_its_province():
+    game_id = "mp_concert_104"
+    headers = make_auth_headers("bot_bismarck", "bismarck@diplomacy.eu")
+    client.post(
+        f"/api/admin/unit/move?game_id={game_id}",
+        json={"unit_id": "FRA_A_MAR", "new_province": "SPA"},
+        headers=headers,
+    )
+    game = GAMES[game_id]
+    game.season = "Fall"
+
+    resolved = client.post(f"/api/adjudicate?game_id={game_id}", headers=headers).json()
+
+    assert resolved["ownership"]["SPA"] == "FRANCE"
+    assert [u["province"] for u in resolved["units"] if u["id"] == "FRA_A_MAR"] == ["SPA"]
+
 def test_admin_es256_asymmetric_jwt_verification(monkeypatch):
     """Verify that ES256 tokens signed with ECC (P-256) are cryptographically validated."""
     import time
