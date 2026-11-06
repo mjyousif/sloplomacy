@@ -110,7 +110,13 @@ App.applyServerState(st)
 
 ## Sandbox Checkpointing Workflow
 
-Sandbox Pre-Move Mode lets commanders play out "what-if" scenarios:
+Sandbox Pre-Move Mode lets commanders play out "what-if" scenarios. A multiplayer match is shared, so its players each work on a private copy:
+
+1. **Enter**: `POST /api/sandbox/enter?game_id={match}` returns a copy under its own `sbx_` game id, with every other power on default orders so it cannot reveal their plans. The match is not touched.
+2. **Explore**: Drafts, AI plans and previews use the `sbx_` id. The copy is never saved, listed or shown to other players, and the real match carries on without it.
+3. **Exit**: `POST /api/sandbox/exit?game_id={sbx id}` discards the copy and returns the real match. The player's own changed orders carry over if the match is still on the same turn and they still hold the seat.
+
+A solo or saved sandbox has one player, so it stays on its own game:
 
 1. **Enter Sandbox (`POST /api/sandbox/enter?game_id={id}`)**:
    - The backend deep-copies `GAMES[game_id]` to `SANDBOX_CHECKPOINTS[game_id]`.

@@ -87,6 +87,8 @@ export function App() {
   const [hoveredUnitId, setHoveredUnitId] = useState<string | null>(null);
   const [highlightedProvinces, setHighlightedProvinces] = useState<string[]>([]);
   const [sandboxMode, setSandboxMode] = useState<boolean>(false);
+  // A multiplayer sandbox runs on a private server-side copy of the match under its own game id.
+  const [sandboxGameId, setSandboxGameId] = useState<string | null>(null);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [showSimulationOverlay, setShowSimulationOverlay] = useState<boolean>(false);
   const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
@@ -108,12 +110,21 @@ export function App() {
   const [surrenderModalPower, setSurrenderModalPower] = useState<Power | null>(null);
 
   const playerPower = resolvePlayerPower(viewMode, lockedPower, gameState?.active_power);
+  // Drafts, AI plans and previews go to the private copy while there is one.
+  const draftGameId = sandboxGameId ?? activeGameId;
 
   const triggerToast = (msg: string) => {
     setToastBanner(msg);
     setTimeout(() => {
       setToastBanner((prev) => (prev === msg ? null : prev));
     }, 4500);
+  };
+
+  // The board in a private sandbox is hypothetical, so nothing real can be done from it.
+  const requireRealBoard = (action: string): boolean => {
+    if (!sandboxGameId) return true;
+    triggerToast(`Exit Sandbox Mode to ${action}.`);
+    return false;
   };
 
   const openAuthPrompt = (reason?: string, tab: 'signin' | 'signup' = 'signin') => {
@@ -133,6 +144,12 @@ export function App() {
     (update: WebSocketGameUpdate) => {
       if (update.game_id !== activeGameId) return;
 
+      if (update.summary) {
+        setActiveGameSummary(update.summary);
+      }
+      // The real match keeps moving behind a private sandbox; exiting catches the board up.
+      if (sandboxGameId) return;
+
       setGameState((prev) => {
         if (
           prev &&
@@ -150,11 +167,8 @@ export function App() {
       if (update.state.last_resolution) {
         setSimulationResult(update.state.last_resolution);
       }
-      if (update.summary) {
-        setActiveGameSummary(update.summary);
-      }
     },
-    [activeGameId]
+    [activeGameId, sandboxGameId]
   );
 
   const handleWsLobbyUpdate = useCallback(
@@ -219,20 +233,38 @@ export function App() {
 
   // Auto-poll game state in multiplayer mode so turn advancements are received automatically
   useEffect(() => {
-    if (viewMode !== 'multiplayer' || !activeGameId) return;
+    if (viewMode !== 'multiplayer' || !activeGameId || sandboxGameId) return;
+    let abandoned = false;
     const interval = setInterval(() => {
       fetch(`${API_BASE}/game?game_id=${encodeURIComponent(activeGameId)}`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
-          if (data?.state) {
+          // A reply still in flight must not repaint a board the player has since left.
+          if (!abandoned && data?.state) {
             applyServerState(data.state);
             if (data.summary) setActiveGameSummary(data.summary);
           }
         })
         .catch(() => {});
     }, 3000);
-    return () => clearInterval(interval);
-  }, [viewMode, activeGameId]);
+    return () => {
+      abandoned = true;
+      clearInterval(interval);
+    };
+  }, [viewMode, activeGameId, sandboxGameId]);
+
+  // Leaving the match board by any route closes its private sandbox.
+  useEffect(() => {
+    if (!sandboxGameId || viewMode === 'multiplayer') return;
+    fetch(`${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(sandboxGameId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ power: playerPower }),
+    }).catch(() => {});
+    setSandboxGameId(null);
+    setSandboxMode(false);
+    setShowSimulationOverlay(false);
+  }, [viewMode, sandboxGameId]);
 
 
   const handleEnterSoloSandbox = async () => {
@@ -347,7 +379,7 @@ export function App() {
     try {
       setLoading(true);
       const res = await fetch(
-        `${API_BASE}/sandbox/ai-orders?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/sandbox/ai-orders?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -383,7 +415,7 @@ export function App() {
     try {
       setLoading(true);
       const res = await fetch(
-        `${API_BASE}/sandbox/ai-step?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/sandbox/ai-step?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -446,6 +478,7 @@ export function App() {
   };
 
   const handleOpenSurrenderModal = (game: MultiplayerGameSummary, power: Power) => {
+    if (!requireRealBoard('surrender')) return;
     setSurrenderModalGame(game);
     setSurrenderModalPower(power);
     setSurrenderModalOpen(true);
@@ -578,7 +611,7 @@ export function App() {
     }
     try {
       const res = await fetch(
-        `${API_BASE}/order?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/order?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -601,7 +634,7 @@ export function App() {
     if (!gameState) return;
     try {
       const res = await fetch(
-        `${API_BASE}/orders/confirm-all?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/orders/confirm-all?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -624,7 +657,7 @@ export function App() {
     if (!gameState) return;
     try {
       const res = await fetch(
-        `${API_BASE}/sandbox/clear-foreign?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/sandbox/clear-foreign?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -654,10 +687,14 @@ export function App() {
             body: JSON.stringify({ power: playerPower }),
           }
         );
-        if (res.ok) {
-          const st: GameState = await res.json();
-          applyServerState(st);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          triggerToast(err.detail || 'Could not open the sandbox.');
+          return;
         }
+        const st: GameState = await res.json();
+        applyServerState(st);
+        setSandboxGameId(st.game_id === activeGameId ? null : st.game_id);
         setSandboxMode(true);
         setShowSimulationOverlay(true);
         triggerToast(
@@ -665,24 +702,35 @@ export function App() {
         );
       } else {
         const res = await fetch(
-          `${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(activeGameId)}`,
+          `${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(draftGameId)}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ power: playerPower }),
           }
         );
+        let turnMovedOn = false;
         if (res.ok) {
           const st: GameState = await res.json();
+          turnMovedOn =
+            st.season !== gameState.season ||
+            st.year !== gameState.year ||
+            st.phase !== gameState.phase;
           applyServerState(st);
+        } else if (sandboxGameId) {
+          // The private copy is gone, for example after a server restart: show the real match.
+          await fetchGame(activeGameId);
         }
+        setSandboxGameId(null);
         setSandboxMode(false);
         setShowSimulationOverlay(false);
         setSelectedUnitId(null);
         triggerToast(
-          `Exited Sandbox Mode — hypothetical foreign moves discarded. Showing only ${
-            POWER_METADATA[playerPower].shortName
-          }'s real orders.`
+          sandboxGameId && turnMovedOn
+            ? 'The match moved on while you were in the sandbox, so your sandbox orders were not kept.'
+            : `Exited Sandbox Mode — hypothetical foreign moves discarded. Showing only ${
+                POWER_METADATA[playerPower].shortName
+              }'s real orders.`
         );
       }
     } catch (e) {
@@ -691,7 +739,7 @@ export function App() {
   };
 
   const handleFinalizeClick = async (force = false) => {
-    if (!gameState) return;
+    if (!gameState || !requireRealBoard('finalize your real orders')) return;
     try {
       const res = await fetch(
         `${API_BASE}/finalize?game_id=${encodeURIComponent(activeGameId)}`,
@@ -721,7 +769,7 @@ export function App() {
   };
 
   const handleUnfinalizeClick = async () => {
-    if (!gameState) return;
+    if (!gameState || !requireRealBoard('unlock your real orders')) return;
     try {
       const res = await fetch(
         `${API_BASE}/unfinalize?game_id=${encodeURIComponent(activeGameId)}`,
@@ -745,7 +793,7 @@ export function App() {
   const handleSimulatePreMoves = async () => {
     try {
       const res = await fetch(
-        `${API_BASE}/simulate?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/simulate?game_id=${encodeURIComponent(draftGameId)}`,
         { method: 'POST' }
       );
       if (res.ok) {
@@ -759,6 +807,7 @@ export function App() {
   };
 
   const handleAdjudicateTurn = async () => {
+    if (!requireRealBoard('resolve the real turn')) return;
     try {
       const authHeaders = await getAuthHeaders();
       const headers: Record<string, string> = {
@@ -805,6 +854,7 @@ export function App() {
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
+        setSandboxGameId(null);
         setSandboxMode(false);
         setShowSimulationOverlay(false);
         setSelectedUnitId(null);
@@ -836,6 +886,10 @@ export function App() {
   }
 
   const isGameCreator = checkIsGameCreator(activeGameSummary, authUser, viewMode);
+
+  const openAdminTools = () => {
+    if (requireRealBoard('use the admin tools')) setAdminModalOpen(true);
+  };
 
   const activePowerIssues = gameState.issues.filter(
     (i) => i.power === playerPower
@@ -1038,7 +1092,7 @@ export function App() {
             <strong>ADMIN DIRECT-EDIT ACTIVE:</strong> You have Game Creator authority to edit any power's moves or state directly on the board.
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" onClick={() => setAdminModalOpen(true)}>Admin Console</button>
+            <button type="button" onClick={openAdminTools}>Admin Console</button>
             <button type="button" onClick={() => setAdminOverrideActive(false)}>Disable Direct-Edit</button>
           </div>
         </div>
@@ -1100,7 +1154,7 @@ export function App() {
             onLoadScenario={handleLoadScenario}
             onSaveSandboxClick={handleSaveSandboxToAccount}
             isGameCreator={isGameCreator}
-            onOpenAdminTools={() => setAdminModalOpen(true)}
+            onOpenAdminTools={openAdminTools}
             adminOverrideActive={adminOverrideActive}
             onToggleAdminOverride={() => setAdminOverrideActive((prev) => !prev)}
           />

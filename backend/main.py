@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
 from pathlib import Path
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 import uuid
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from auth import AuthUser, get_current_user
@@ -50,6 +50,7 @@ from ai_engine import generate_tactical_orders
 from validator import validate_orders
 import logging
 from database import (
+    SupabaseUnavailable,
     delete_game_from_db,
     is_persistence_enabled,
     load_all_summaries_from_db,
@@ -376,6 +377,13 @@ GAME_HISTORY: Dict[str, List[GameState]] = {
 }
 GAME_SUMMARIES: Dict[str, MultiplayerGameSummary] = {}
 GAME_PASSCODES: Dict[str, str] = {}
+# Games whose newest state is not confirmed saved, so Supabase may not even have a row for them.
+UNSAVED_GAMES: Set[str] = set()
+# Games with a save running. The value turns True if the game changes during it, so it repeats.
+SAVES_RUNNING: Dict[str, bool] = {}
+# Private what-if copies of multiplayer matches: sandbox id -> (match id, the player's power).
+# They exist only in this process and are never saved, listed or shown to other players.
+PRIVATE_SANDBOXES: Dict[str, Tuple[str, Power]] = {}
 
 
 def seed_initial_multiplayer_lobbies() -> None:
@@ -482,26 +490,62 @@ def seed_initial_multiplayer_lobbies() -> None:
 
 
 
+def evict_game(game_id: str) -> None:
+    """Forget everything held in memory for a game, including any private sandboxes of it."""
+    if game_id == DEFAULT_GAME_ID:
+        return
+    GAMES.pop(game_id, None)
+    GAME_SUMMARIES.pop(game_id, None)
+    GAME_HISTORY.pop(game_id, None)
+    GAME_PASSCODES.pop(game_id, None)
+    SANDBOX_CHECKPOINTS.pop(game_id, None)
+    UNSAVED_GAMES.discard(game_id)
+    PRIVATE_SANDBOXES.pop(game_id, None)
+    for sandbox_id, (match_id, _) in list(PRIVATE_SANDBOXES.items()):
+        if match_id == game_id:
+            evict_game(sandbox_id)
+
+
 async def persist_game(game_id: str) -> None:
-    """Persist the specified game to Supabase PostgreSQL if configured."""
+    """
+    Persist the specified game to Supabase PostgreSQL if configured.
+
+    Only one save runs per game, so an older write can never land after a newer one. A change
+    made during a save is written when that save repeats with the newest state.
+    """
     if not is_persistence_enabled():
         return
-    if game_id in (DEFAULT_GAME_ID, "proto_1901"):
+    if game_id in (DEFAULT_GAME_ID, "proto_1901") or game_id in PRIVATE_SANDBOXES:
         return
-    state = GAMES.get(game_id)
-    if not state:
+    if game_id not in GAMES:
         return
-    sync_summary(game_id)
-    summary = GAME_SUMMARIES.get(game_id)
-    history = GAME_HISTORY.get(game_id, [])
-    passcode = GAME_PASSCODES.get(game_id)
-    await save_game_to_db(
-        game_id=game_id,
-        state=state,
-        summary=summary,
-        history=history,
-        passcode=passcode,
-    )
+
+    UNSAVED_GAMES.add(game_id)
+    if game_id in SAVES_RUNNING:
+        SAVES_RUNNING[game_id] = True
+        return
+
+    saved = False
+    try:
+        repeat = True
+        while repeat:
+            SAVES_RUNNING[game_id] = False
+            state = GAMES.get(game_id)
+            if not state:
+                return
+            sync_summary(game_id)
+            saved = await save_game_to_db(
+                game_id=game_id,
+                state=state,
+                summary=GAME_SUMMARIES.get(game_id),
+                history=GAME_HISTORY.get(game_id, []),
+                passcode=GAME_PASSCODES.get(game_id),
+            )
+            repeat = SAVES_RUNNING[game_id]
+    finally:
+        SAVES_RUNNING.pop(game_id, None)
+    if saved:
+        UNSAVED_GAMES.discard(game_id)
 
 
 @app.on_event("startup")
@@ -517,24 +561,48 @@ async def startup_event() -> None:
         except Exception as ex:
             logger.warning("Could not synchronize games on startup: %s", ex)
 
+
+async def load_saved_game(game_id: str) -> Optional[tuple]:
+    """Read a game from Supabase, answering 503 rather than treating a failed read as no game."""
+    try:
+        return await load_game_from_db(game_id)
+    except SupabaseUnavailable as ex:
+        raise HTTPException(
+            status_code=503,
+            detail="Saved games are unavailable right now. Please try again shortly.",
+        ) from ex
+
+
+def cache_loaded_game(game_id: str, loaded: tuple) -> GameState:
+    """
+    Hold a game read from Supabase in memory and return the copy every request must share.
+
+    Requests overlap on a cold start, so the first copy wins: replacing it would leave a request
+    changing a state object that nothing reads any more.
+    """
+    if game_id in GAMES:
+        return GAMES[game_id]
+    state, summary, history, passcode = loaded
+    GAMES[game_id] = state
+    if summary:
+        GAME_SUMMARIES[game_id] = summary
+    if history:
+        GAME_HISTORY[game_id] = history
+    if passcode:
+        GAME_PASSCODES[game_id] = passcode
+    SANDBOX_CHECKPOINTS[game_id] = None
+    return state
+
+
 async def resolve_game(game_id: Optional[str] = None) -> GameState:
     gid = game_id or DEFAULT_GAME_ID
     if gid in GAMES:
         return GAMES[gid]
 
     if is_persistence_enabled():
-        loaded = await load_game_from_db(gid)
+        loaded = await load_saved_game(gid)
         if loaded is not None:
-            state, summary, history, passcode = loaded
-            GAMES[gid] = state
-            if summary:
-                GAME_SUMMARIES[gid] = summary
-            if history:
-                GAME_HISTORY[gid] = history
-            if passcode:
-                GAME_PASSCODES[gid] = passcode
-            SANDBOX_CHECKPOINTS[gid] = None
-            return GAMES[gid]
+            return cache_loaded_game(gid, loaded)
 
     raise HTTPException(status_code=404, detail=f"Game '{gid}' not found.")
 
@@ -696,30 +764,42 @@ class SetPowerRequest(BaseModel):
     power: Power
 
 
+async def sync_lobby_with_db() -> None:
+    """
+    Pick up games this process has not loaded and drop games deleted from Supabase.
+
+    Memory holds the newest state of a loaded game, so a database copy never replaces it here.
+    A game is only taken as deleted when the read succeeded and the game was already saved.
+    """
+    # A first save can finish while this read runs, so also spare games unsaved when it began.
+    unsaved_at_read = set(UNSAVED_GAMES)
+    try:
+        db_summaries = await load_all_summaries_from_db()
+    except SupabaseUnavailable as ex:
+        logger.warning("Showing the lobby from memory: %s", ex)
+        return
+
+    evicted = False
+    for gid in list(GAME_SUMMARIES.keys()):
+        if gid not in db_summaries and gid not in unsaved_at_read and gid not in UNSAVED_GAMES:
+            evict_game(gid)
+            evicted = True
+
+    for gid, summary in db_summaries.items():
+        if gid not in GAMES:
+            GAME_SUMMARIES[gid] = summary
+
+    if evicted:
+        await manager.broadcast_lobby()
+
+
 @app.get("/api/games", response_model=List[MultiplayerGameSummary])
 async def list_games():
     """Return all multiplayer games and saved sessions."""
     GAME_SUMMARIES.pop(DEFAULT_GAME_ID, None)
     GAME_SUMMARIES.pop("proto_1901", None)
     if is_persistence_enabled():
-        db_summaries = await load_all_summaries_from_db()
-        evicted = False
-        # Evict any multiplayer games that were deleted directly from Supabase
-        for gid in list(GAME_SUMMARIES.keys()):
-            if gid not in (DEFAULT_GAME_ID, "proto_1901") and gid not in db_summaries:
-                GAME_SUMMARIES.pop(gid, None)
-                GAMES.pop(gid, None)
-                GAME_HISTORY.pop(gid, None)
-                GAME_PASSCODES.pop(gid, None)
-                SANDBOX_CHECKPOINTS.pop(gid, None)
-                evicted = True
-        # Synchronize in-memory summaries with database
-        for gid, summary in db_summaries.items():
-            if gid not in (DEFAULT_GAME_ID, "proto_1901"):
-                GAME_SUMMARIES[gid] = summary
-
-        if evicted:
-            await manager.broadcast_lobby()
+        await sync_lobby_with_db()
 
     for gid in list(GAME_SUMMARIES.keys()):
         if gid not in (DEFAULT_GAME_ID, "proto_1901"):
@@ -730,36 +810,22 @@ async def list_games():
 @app.get("/api/games/{game_id}", response_model=MultiplayerGameSummary)
 async def get_game_details(game_id: str):
     """Retrieve details for a single game lobby by its Game ID."""
-    if is_persistence_enabled() and game_id.startswith("mp_"):
-        loaded = await load_game_from_db(game_id)
-        if loaded is None:
-            GAME_SUMMARIES.pop(game_id, None)
-            GAMES.pop(game_id, None)
-            GAME_HISTORY.pop(game_id, None)
-            GAME_PASSCODES.pop(game_id, None)
-            SANDBOX_CHECKPOINTS.pop(game_id, None)
-            raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
-        state, summary, history, passcode = loaded
-        GAMES[game_id] = state
-        if summary:
-            GAME_SUMMARIES[game_id] = summary
-        if history:
-            GAME_HISTORY[game_id] = history
-        if passcode:
-            GAME_PASSCODES[game_id] = passcode
-        SANDBOX_CHECKPOINTS[game_id] = None
-    elif game_id not in GAME_SUMMARIES and is_persistence_enabled():
-        loaded = await load_game_from_db(game_id)
-        if loaded is not None:
-            state, summary, history, passcode = loaded
-            GAMES[game_id] = state
-            if summary:
-                GAME_SUMMARIES[game_id] = summary
-            if history:
-                GAME_HISTORY[game_id] = history
-            if passcode:
-                GAME_PASSCODES[game_id] = passcode
-            SANDBOX_CHECKPOINTS[game_id] = None
+    if is_persistence_enabled():
+        unsaved_at_read = game_id in UNSAVED_GAMES
+        try:
+            loaded = await load_game_from_db(game_id)
+        except SupabaseUnavailable:
+            # Whatever is in memory is still good; only a game known nowhere is unanswerable.
+            if game_id not in GAME_SUMMARIES:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Saved games are unavailable right now. Please try again shortly.",
+                )
+        else:
+            if loaded is not None:
+                cache_loaded_game(game_id, loaded)
+            elif not unsaved_at_read and game_id not in UNSAVED_GAMES:
+                evict_game(game_id)
 
     sync_summary(game_id)
     summary = GAME_SUMMARIES.get(game_id)
@@ -774,15 +840,16 @@ async def delete_game(
     user: Optional[AuthUser] = Depends(get_current_user),
 ):
     """Delete a game lobby and its persisted state in Supabase."""
+    if game_id == DEFAULT_GAME_ID:
+        raise HTTPException(status_code=403, detail="The shared sandbox board cannot be deleted.")
+
     summary = GAME_SUMMARIES.get(game_id)
     if not summary and is_persistence_enabled():
-        loaded = await load_game_from_db(game_id)
+        loaded = await load_saved_game(game_id)
         if loaded:
             _, summary, _, _ = loaded
 
     if not summary and game_id not in GAMES:
-        if is_persistence_enabled():
-            await delete_game_from_db(game_id)
         return {"status": "deleted", "game_id": game_id}
 
     if summary and not summary.is_sandbox:
@@ -790,11 +857,7 @@ async def delete_game(
             if not user or (user.user_id != summary.creator_id and user.email != summary.created_by):
                 raise HTTPException(status_code=403, detail="Only the host can delete this campaign.")
 
-    GAMES.pop(game_id, None)
-    GAME_SUMMARIES.pop(game_id, None)
-    GAME_HISTORY.pop(game_id, None)
-    GAME_PASSCODES.pop(game_id, None)
-    SANDBOX_CHECKPOINTS.pop(game_id, None)
+    evict_game(game_id)
     if is_persistence_enabled():
         await delete_game_from_db(game_id)
 
@@ -904,6 +967,7 @@ async def join_multiplayer_game(game_id: str, req: JoinGameRequest):
         game_state.active_power = req.power
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
+    await persist_game(game_id)
     await broadcast_game_update(game_id, game_state, summary)
     await broadcast_lobby_update()
     return GameBootstrapResponse(
@@ -924,10 +988,7 @@ async def leave_game(game_id: str, req: LeaveGameRequest):
     # Saved sandbox scenario deletion
     if summary.is_sandbox:
         if summary.creator_id == req.user_id or summary.created_by == req.email:
-            GAMES.pop(game_id, None)
-            GAME_SUMMARIES.pop(game_id, None)
-            GAME_HISTORY.pop(game_id, None)
-            SANDBOX_CHECKPOINTS.pop(game_id, None)
+            evict_game(game_id)
             if is_persistence_enabled():
                 await delete_game_from_db(game_id)
             await broadcast_lobby_update()
@@ -973,11 +1034,7 @@ async def leave_game(game_id: str, req: LeaveGameRequest):
 
     # If all participants left or waiting lobby emptied, delete match
     if len(summary.participants) == 0:
-        GAMES.pop(game_id, None)
-        GAME_SUMMARIES.pop(game_id, None)
-        GAME_HISTORY.pop(game_id, None)
-        GAME_PASSCODES.pop(game_id, None)
-        SANDBOX_CHECKPOINTS.pop(game_id, None)
+        evict_game(game_id)
         if is_persistence_enabled():
             await delete_game_from_db(game_id)
         await broadcast_lobby_update()
@@ -1051,6 +1108,7 @@ async def surrender_power(game_id: str, req: SurrenderRequest):
 
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
+    await persist_game(game_id)
     await broadcast_game_update(game_id, game_state, summary)
     await broadcast_lobby_update()
     return GameBootstrapResponse(
@@ -1128,11 +1186,102 @@ async def set_active_power(req: SetPowerRequest, game_id: Optional[str] = Query(
     return game
 
 
+def is_multiplayer_match(game_id: str) -> bool:
+    """True for a game shared by several players, as opposed to a solo or saved sandbox."""
+    summary = GAME_SUMMARIES.get(game_id)
+    return bool(summary and not summary.is_sandbox)
+
+
+def reject_on_multiplayer_match(game_id: str) -> None:
+    """Refuse hypothetical work on a shared match: it belongs on a private sandbox copy."""
+    if is_multiplayer_match(game_id):
+        raise HTTPException(
+            status_code=409,
+            detail="This is a live match. Hypothetical orders belong in a private sandbox.",
+        )
+
+
+def reset_foreign_orders(game: GameState, power: Power) -> None:
+    """Put every power except `power` back on its default orders."""
+    defaults = create_default_orders(game.units, game.phase, game.builds, game.retreats)
+    own_orders = {ord_id: o for ord_id, o in game.orders.items() if o.power == power}
+    foreign_orders = {ord_id: o for ord_id, o in defaults.items() if o.power != power}
+    game.orders = {**foreign_orders, **own_orders}
+
+
+def open_private_sandbox(match: GameState, power: Power) -> GameState:
+    """
+    Copy a multiplayer match for one player to experiment on.
+
+    The match itself is untouched, and the copy starts with default orders for every other power
+    so that opening it cannot reveal what they have planned.
+    """
+    for sandbox_id, owner in list(PRIVATE_SANDBOXES.items()):
+        if owner == (match.game_id, power):
+            evict_game(sandbox_id)
+
+    sandbox_id = f"sbx_{uuid.uuid4().hex[:8]}"
+    sandbox = match.model_copy(deep=True)
+    sandbox.game_id = sandbox_id
+    sandbox.active_power = power
+    reset_foreign_orders(sandbox, power)
+    GAMES[sandbox_id] = sandbox
+    SANDBOX_CHECKPOINTS[sandbox_id] = None
+    PRIVATE_SANDBOXES[sandbox_id] = (match.game_id, power)
+    refresh_diagnostics_and_simulation(sandbox)
+    return sandbox
+
+
+async def close_private_sandbox(sandbox: GameState) -> GameState:
+    """
+    Discard a private sandbox and return the real match.
+
+    The player's own orders are carried over if the match is still on the same turn and they
+    still hold the seat. Nothing else reaches the match, and a player who changed nothing keeps
+    their finalization.
+    """
+    match_id, power = PRIVATE_SANDBOXES[sandbox.game_id]
+    evict_game(sandbox.game_id)
+    match = await resolve_game(match_id)
+
+    summary = GAME_SUMMARIES.get(match_id)
+    holds_seat = bool(
+        summary and power.value in summary.participants and power not in match.surrendered_powers
+    )
+    same_turn = (match.season, match.year, match.phase) == (sandbox.season, sandbox.year, sandbox.phase)
+    changed_orders = {
+        ord_id: o
+        for ord_id, o in sandbox.orders.items()
+        if o.power == power and match.orders.get(ord_id) != o
+    }
+    if not (holds_seat and same_turn and changed_orders):
+        return match
+
+    match.orders.update(changed_orders)
+    if power in match.finalized_powers:
+        match.finalized_powers.remove(power)
+    refresh_diagnostics_and_simulation(match)
+    sync_summary(match_id)
+    await persist_game(match_id)
+    await broadcast_game_update(match_id, match)
+    await broadcast_lobby_update()
+    return match
+
+
 @app.post("/api/sandbox/enter", response_model=GameState)
 async def enter_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
-    """Save a checkpoint of the real game state when entering Sandbox Pre-Move Mode."""
+    """
+    Enter Sandbox Pre-Move Mode.
+
+    A multiplayer match is shared, so its player gets a private copy: the returned state carries
+    that copy's game_id, which every later sandbox call must use. A solo or saved sandbox has one
+    player, so it stays on its own game and a checkpoint of the real state is saved.
+    """
     game = await resolve_game(game_id)
     gid = game.game_id
+    if is_multiplayer_match(gid):
+        return open_private_sandbox(game, req.power)
+
     game.active_power = req.power
     SANDBOX_CHECKPOINTS[gid] = game.model_copy(deep=True)
     refresh_diagnostics_and_simulation(game)
@@ -1144,11 +1293,16 @@ async def enter_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Quer
 async def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
     """
     Exit Sandbox Pre-Move Mode:
+    - A private sandbox of a multiplayer match is discarded and the real match is returned.
     - If the user stepped turns forward in the sandbox, restore the pre-sandbox turn checkpoint.
     - Discard all hypothetical foreign orders so only the active power's own orders remain.
     """
     game = await resolve_game(game_id)
     gid = game.game_id
+    if gid in PRIVATE_SANDBOXES:
+        return await close_private_sandbox(game)
+    reject_on_multiplayer_match(gid)
+
     checkpoint = SANDBOX_CHECKPOINTS.get(gid)
     if checkpoint is not None:
         same_turn = (
@@ -1170,10 +1324,7 @@ async def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query
         game = restored
         SANDBOX_CHECKPOINTS[gid] = None
 
-    default_ords = create_default_orders(game.units, game.phase, game.builds, game.retreats)
-    for ord_id, def_ord in default_ords.items():
-        if def_ord.power != req.power:
-            game.orders[ord_id] = def_ord
+    reset_foreign_orders(game, req.power)
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
@@ -1187,11 +1338,10 @@ async def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query
 async def clear_foreign_pre_moves(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
     """Reset all hypothetical orders for powers other than req.power back to default."""
     game = await resolve_game(game_id)
-    default_ords = create_default_orders(game.units, game.phase, game.builds, game.retreats)
-    for ord_id, def_ord in default_ords.items():
-        if def_ord.power != req.power:
-            game.orders[ord_id] = def_ord
+    reject_on_multiplayer_match(game.game_id)
+    reset_foreign_orders(game, req.power)
     refresh_diagnostics_and_simulation(game)
+    await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
     return game
 
@@ -1203,6 +1353,7 @@ async def generate_sandbox_ai_orders(
 ):
     """Generate intelligent tactical orders for specified Great Powers or all foreign powers."""
     game = await resolve_game(game_id)
+    reject_on_multiplayer_match(game.game_id)
     if req and req.powers:
         target_powers = req.powers
     elif req and req.include_active:
@@ -1234,6 +1385,7 @@ async def generate_sandbox_ai_orders(
 async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
     """Auto-plan unassigned foreign powers with tactical AI and advance to next phase."""
     game = await resolve_game(game_id)
+    reject_on_multiplayer_match(game.game_id)
     powers_needing_orders = [
         p for p in Power
         if p != game.active_power or not any(
@@ -1333,6 +1485,7 @@ async def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[s
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
+    await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
     return game
 
@@ -1923,17 +2076,13 @@ async def admin_unfinalize_all(
 @app.websocket("/ws/games/{game_id}")
 async def ws_game_endpoint(websocket: WebSocket, game_id: str):
     if game_id not in GAMES and is_persistence_enabled():
-        loaded = await load_game_from_db(game_id)
+        try:
+            loaded = await load_game_from_db(game_id)
+        except SupabaseUnavailable:
+            await websocket.close(code=1013)  # Try again later: the client reconnects by itself
+            return
         if loaded is not None:
-            state, summary, history, passcode = loaded
-            GAMES[game_id] = state
-            if summary:
-                GAME_SUMMARIES[game_id] = summary
-            if history:
-                GAME_HISTORY[game_id] = history
-            if passcode:
-                GAME_PASSCODES[game_id] = passcode
-            SANDBOX_CHECKPOINTS[game_id] = None
+            cache_loaded_game(game_id, loaded)
 
     if game_id not in GAMES:
         await websocket.close(code=4004)
