@@ -293,9 +293,6 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               <span className="legend-label">Warning / Dislodgement</span>
             </div>
           </div>
-          <div className="legend-meta-note">
-            Dual Coasts: <strong>STP</strong>, <strong>SPA</strong>, <strong>BUL</strong> (NC / SC / EC) • <strong>SWI</strong> Impassable
-          </div>
         </section>
 
         {/* 4. GREAT POWERS STANDING & SELECTION */}

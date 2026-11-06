@@ -91,7 +91,6 @@ Both sidebars feature smooth, 44px collapsed rail views with quick tool icons an
 When either sidebar is collapsed:
 - **Left Tools Rail (44px)**: Houses collapse toggle, mini Zoom In / Out / Fit buttons, Sandbox active glow indicator, and Admin icon.
 - **Right Tactical Rail (44px)**: Houses collapse toggle, active nation crest, unconfirmed orders counter pill (or green checkmark when complete), and warning badge.
-- **Header Toggle Pills**: Quick pill buttons in the top bar ("Tools Sidebar", "Tactical Sidebar") let users toggle either panel from anywhere.
 ### 7. Version Revision Badge (`VersionBadge.tsx`)
 - Sits at the sticky footer bottom of the sidebar.
 - Displays the current build revision short SHA (`rev <sha>`) with one-click clipboard copy and direct link to the commit on GitHub.
