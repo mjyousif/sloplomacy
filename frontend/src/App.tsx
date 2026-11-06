@@ -268,6 +268,12 @@ export function App() {
 
 
   const handleEnterSoloSandbox = async () => {
+    if (viewMode === 'multiplayer' && activeGameSummary) {
+      const confirmLeave = window.confirm(
+        `Switch from match "${activeGameSummary.name}" to the Solo Sandbox board? Your submitted orders remain safe on the server.`
+      );
+      if (!confirmLeave) return;
+    }
     setActiveGameId('proto_1901');
     setActiveGameSummary(null);
     setLockedPower(null);
@@ -698,7 +704,7 @@ export function App() {
         setSandboxMode(true);
         setShowSimulationOverlay(true);
         triggerToast(
-          'Entered Sandbox Mode: Plot hypothetical foreign moves to test outcomes. Exiting Sandbox will clear foreign guesses!'
+          'Entered Hypothetical Mode: Plot hypothetical foreign moves to test outcomes. Exiting will discard foreign guesses!'
         );
       } else {
         const res = await fetch(
@@ -727,8 +733,8 @@ export function App() {
         setSelectedUnitId(null);
         triggerToast(
           sandboxGameId && turnMovedOn
-            ? 'The match moved on while you were in the sandbox, so your sandbox orders were not kept.'
-            : `Exited Sandbox Mode — hypothetical foreign moves discarded. Showing only ${
+            ? 'The match moved on while in Hypothetical Mode, so hypothetical orders were not kept.'
+            : `Exited Hypothetical Mode — foreign guesses discarded. Showing only ${
                 POWER_METADATA[playerPower].shortName
               }'s real orders.`
         );
@@ -938,9 +944,10 @@ export function App() {
               type="button"
               className={`nav-tab-btn ${viewMode === 'sandbox' ? 'active' : ''}`}
               onClick={handleEnterSoloSandbox}
+              title="Open standalone 7-power practice laboratory"
             >
               <FlaskConical size={14} />
-              <span>Tactical Sandbox</span>
+              <span>Solo Sandbox</span>
             </button>
             {viewMode === 'multiplayer' && activeGameSummary && (
               <span className="nav-active-match-pill">
