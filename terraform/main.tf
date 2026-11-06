@@ -89,6 +89,11 @@ resource "google_cloud_run_v2_service" "diplomacy_service" {
         name  = "SUPABASE_SERVICE_ROLE_KEY"
         value = var.supabase_service_role_key
       }
+
+      env {
+        name  = "SUPABASE_JWT_SECRET"
+        value = var.supabase_jwt_secret
+      }
     }
   }
 }

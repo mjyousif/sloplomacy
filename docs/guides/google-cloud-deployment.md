@@ -1,19 +1,16 @@
 # Google Cloud Serverless Deployment Blueprint (Cloud Run + Supabase)
 
-This guide outlines how to deploy the **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** using **Google Cloud Platform (GCP)** with a true **scale-to-zero serverless architecture**, paired with **Supabase** for Authentication and persistent PostgreSQL state tracking.
+This guide outlines how to deploy the **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** using **Google Cloud Platform (GCP)** with a true **scale-to-zero serverless architecture**, paired with **Supabase** for Authentication, cryptographically authorized host controls, and persistent PostgreSQL state tracking.
 
 ---
 
-## 1. Architectural Strategy & Cost Profile
+## 1. Architectural Highlights & Zero-Cost Tier
 
-The deployment utilizes a unified single-container design running on **Google Cloud Run (v2)**:
-
-| Component | Provider | Cost Profile & Scale Characteristics |
+| Component | Service | Cost Profile & Configuration |
 | :--- | :--- | :--- |
-| **Compute Runtime** | **Google Cloud Run** | **Scale-to-zero ($0/month idle)**. Configured with `--min-instances 0` and `--max-instances 3`. The container completely shuts down during idle periods, incurring 0 compute or memory cost. |
-| **Container Registry**| **GCP Artifact Registry** | Standard Docker image storage (~$0.10/GB/month). |
+| **Web & API Host** | **Google Cloud Run** | **Scale-to-zero ($0 idle cost)**. Uses Google Cloud Run's free tier (2M requests/month, 360,000 vCPU-seconds). Automatically spins down when no games are active. |
 | **Adjudication Engine**| **FastAPI + DATC Adjudicator** | Runs inside Cloud Run container. Adjudicates official DATC turns deterministically in under 5ms. |
-| **Authentication** | **Supabase Auth** | **Free up to 50,000 Monthly Active Users (MAU)**. Handles Email/Password, Google/Discord OAuth, and Magic Links. |
+| **Authentication** | **Supabase Auth** | **Free up to 50,000 Monthly Active Users (MAU)**. Handles Email/Password, Google/Discord OAuth, Magic Links, and ES256 / HS256 JWT validation. |
 | **Database & Persistence** | **Supabase PostgreSQL** | **Free 500 MB database** with Row-Level Security (RLS) and JSONB game state tracking. Automatically persists match state and turn histories across container cold starts. |
 | **Infrastructure as Code**| **Terraform** | Declaratively provisions Cloud Run v2 services and Artifact Registry Docker repositories. |
 
@@ -26,11 +23,13 @@ The deployment utilizes a unified single-container design running on **Google Cl
    - **Project URL** (`https://<project-ref>.supabase.co`)
    - **Anon Public Key** (`eyJ...`)
    - **service_role Key** (`eyJ...` under Project API Keys, for server-side persistence)
+   - **JWT Secret** (under JWT Settings, if using HS256)
 3. Execute database migrations in order:
    - Navigate to the Supabase **SQL Editor**.
    - Paste and run the schema file located at [`supabase/migrations/20261103000000_init_schema.sql`](../../supabase/migrations/20261103000000_init_schema.sql).
    - Paste and run the persistence migration located at [`supabase/migrations/20261105000000_game_state_persistence.sql`](../../supabase/migrations/20261105000000_game_state_persistence.sql).
-   - This provisions the `profiles` and `multiplayer_games` tables with JSONB state tracking, auxiliary columns, and backend management policies.
+   - Once the backend is running with `SUPABASE_SERVICE_ROLE_KEY`, paste and run the security lockdown migration at [`supabase/migrations/20261106023059_lock_down_multiplayer_games_rls.sql`](../../supabase/migrations/20261106023059_lock_down_multiplayer_games_rls.sql).
+   - This provisions the `profiles` and `multiplayer_games` tables with JSONB state tracking, auxiliary columns, and locked-down backend management policies (`TO service_role`).
 4. (Optional) In **Authentication → Providers**, enable **Google** or **Discord** OAuth for 1-click login.
 
 ---
@@ -45,7 +44,7 @@ The repository includes native automated deployment scripts that handle building
 ```
 Or interactively provide Supabase secrets:
 ```powershell
-.\scripts\deploy.ps1 -ProjectId "your-gcp-project-id" -SupabaseUrl "https://<ref>.supabase.co" -SupabaseAnonKey "eyJ..." -SupabaseServiceRoleKey "eyJ..."
+.\scripts\deploy.ps1 -ProjectId "your-gcp-project-id" -SupabaseUrl "https://<ref>.supabase.co" -SupabaseAnonKey "eyJ..." -SupabaseServiceRoleKey "eyJ..." -SupabaseJwtSecret "your-secret"
 ```
 
 ### macOS / Linux / WSL (Bash)
@@ -58,7 +57,7 @@ Or interactively provide Supabase secrets:
 2. Ensures required GCP APIs are enabled (`run.googleapis.com`, `cloudbuild.googleapis.com`, `artifactregistry.googleapis.com`).
 3. Provisions an Artifact Registry repository (`sloplomacy-repo`) if it doesn't already exist.
 4. Triggers **Google Cloud Build** using [`cloudbuild.yaml`](../../cloudbuild.yaml) to build the multi-stage [`Dockerfile`](../../Dockerfile).
-5. Deploys the image to **Google Cloud Run** with `--min-instances 0` (scale-to-zero), `--max-instances 3` (budget protection), and injects Supabase persistence credentials into the container runtime.
+5. Deploys the image to **Google Cloud Run** with `--min-instances 0` (scale-to-zero), `--max-instances 3` (budget protection), and injects Supabase persistence and auth credentials into the container runtime.
 
 ---
 
@@ -81,7 +80,7 @@ terraform apply -var="project_id=your-gcp-project-id"
 
 ### Terraform Manifests:
 - [`terraform/main.tf`](../../terraform/main.tf): Enables Cloud APIs, provisions Artifact Registry Docker repository, and configures Cloud Run v2 service with scale-to-zero and persistence settings.
-- [`terraform/variables.tf`](../../terraform/variables.tf): Configurable parameters (`project_id`, `region`, `service_name`, container image, Supabase URL, anon key, service role key).
+- [`terraform/variables.tf`](../../terraform/variables.tf): Configurable parameters (`project_id`, `region`, `service_name`, container image, Supabase URL, anon key, service role key, JWT secret).
 - [`terraform/outputs.tf`](../../terraform/outputs.tf): Emits the live Cloud Run service URL and Artifact Registry endpoint.
 
 ---
@@ -110,6 +109,7 @@ Add the following **Repository Secrets** under **Settings > Secrets and variable
 - `VITE_SUPABASE_URL`: *(Optional)* Supabase project URL.
 - `VITE_SUPABASE_ANON_KEY`: *(Optional)* Supabase anon public key.
 - `SUPABASE_SERVICE_ROLE_KEY`: *(Optional)* Supabase service role key for backend state persistence.
+- `SUPABASE_JWT_SECRET`: *(Optional)* Supabase JWT secret for cryptographic admin token authorization.
 - `GCP_REGION`: *(Optional, defaults to `us-central1`)*
 
 ---
@@ -117,5 +117,5 @@ Add the following **Repository Secrets** under **Settings > Secrets and variable
 ## 6. Single-Container Multi-Stage Dockerfile
 
 The root [`Dockerfile`](../../Dockerfile) uses a multi-stage build:
-1. **Stage 1 (Frontend Builder)**: Node.js 20 builds the React 19 application via `npm run build`, baking in Supabase environment arguments (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
-2. **Stage 2 (FastAPI Runner)**: Python 3.11-slim installs `backend/requirements.txt`, copies backend Python modules (`main.py`, `database.py`, `adjudicator.py`, etc.), mounts the compiled React bundle into `./static`, and launches Uvicorn on `${PORT}`.
+1. **Stage 1 (Frontend Builder)**: Node.js 22 builds the React 19 application via `npm run build`, baking in Supabase environment arguments (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
+2. **Stage 2 (FastAPI Runner)**: Python 3.11-slim installs `backend/requirements.txt`, copies backend Python modules (`main.py`, `database.py`, `adjudicator.py`, `auth.py`, etc.), mounts the compiled React bundle into `./static`, and launches Uvicorn on `${PORT}`.

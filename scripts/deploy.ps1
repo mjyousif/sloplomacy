@@ -13,7 +13,8 @@ param(
     [string]$ServiceName = "diplomacy-1901",
     [string]$SupabaseUrl = "",
     [string]$SupabaseAnonKey = "",
-    [string]$SupabaseServiceRoleKey = ""
+    [string]$SupabaseServiceRoleKey = "",
+    [string]$SupabaseJwtSecret = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -69,6 +70,11 @@ if (Test-Path $EnvFilePath) {
                 $SupabaseServiceRoleKey = $matches[1].Trim('"'' ')
             }
         }
+        if ($line -match "^SUPABASE_JWT_SECRET\s*=\s*(.*)$") {
+            if (-not $SupabaseJwtSecret) {
+                $SupabaseJwtSecret = $matches[1].Trim('"'' ')
+            }
+        }
     }
 }
 
@@ -84,8 +90,12 @@ if (-not $SupabaseUrl -or -not $SupabaseAnonKey) {
 
 # 3. Enable Required Google Cloud Services
 Write-Host ""
-Write-Host "--> Enabling required Google Cloud APIs (Cloud Run, Cloud Build, Artifact Registry)..." -ForegroundColor Cyan
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project $ProjectId
+Write-Host "--> Enabling required Google Cloud APIs..." -ForegroundColor Cyan
+gcloud services enable `
+    run.googleapis.com `
+    cloudbuild.googleapis.com `
+    artifactregistry.googleapis.com `
+    --project $ProjectId
 
 # 4. Build Container Image with Google Cloud Build
 $ImageTag = "gcr.io/$ProjectId/${ServiceName}:latest"
@@ -117,7 +127,7 @@ Write-Host ""
 Write-Host "--> Deploying service to Google Cloud Run with Supabase Database Persistence..." -ForegroundColor Cyan
 
 $backendKey = if ($SupabaseServiceRoleKey) { $SupabaseServiceRoleKey } else { $SupabaseAnonKey }
-$envVars = "VITE_SUPABASE_URL=$SupabaseUrl,VITE_SUPABASE_ANON_KEY=$SupabaseAnonKey,SUPABASE_URL=$SupabaseUrl,SUPABASE_KEY=$backendKey,SUPABASE_SERVICE_ROLE_KEY=$SupabaseServiceRoleKey"
+$envVars = "VITE_SUPABASE_URL=$SupabaseUrl,VITE_SUPABASE_ANON_KEY=$SupabaseAnonKey,SUPABASE_URL=$SupabaseUrl,SUPABASE_KEY=$backendKey,SUPABASE_SERVICE_ROLE_KEY=$SupabaseServiceRoleKey,SUPABASE_JWT_SECRET=$SupabaseJwtSecret"
 
 gcloud run deploy $ServiceName `
     --image $ImageTag `
