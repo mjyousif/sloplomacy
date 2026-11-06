@@ -37,7 +37,6 @@ import {
   Crosshair,
   Eye,
   GripHorizontal,
-  Maximize2,
   MoveRight,
   Play,
   PlusCircle,
@@ -45,8 +44,6 @@ import {
   Swords,
   Trash2,
   X,
-  ZoomIn,
-  ZoomOut,
 } from 'lucide-react';
 
 export interface EuropeMapHandle {
@@ -376,7 +373,6 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
   const containerRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const cameraGroupRef = useRef<SVGGElement | null>(null);
-  const zoomReadoutRef = useRef<HTMLSpanElement | null>(null);
   const floatingMenuRef = useRef<HTMLDivElement | null>(null);
 
   // Camera state stored in a mutable ref for zero-re-render 60fps+ pan & zoom via requestAnimationFrame
@@ -977,9 +973,6 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     if (cameraGroupRef.current) {
       cameraGroupRef.current.setAttribute('transform', `translate(${x}, ${y}) scale(${z})`);
     }
-    if (zoomReadoutRef.current) {
-      zoomReadoutRef.current.textContent = `${Math.round(z * 100)}%`;
-    }
     if (floatingMenuRef.current) {
       const pos = getSelectedUnitFloatingPosition();
       if (pos) {
@@ -1187,22 +1180,6 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
       )}
 
       {overlay}
-
-      {/* Zoom & Camera Controls */}
-      <div className="map-camera-controls">
-        <button title="Zoom In" onClick={() => stepZoom(0.2)}>
-          <ZoomIn size={16} />
-        </button>
-        <span ref={zoomReadoutRef} className="zoom-readout">
-          {Math.round(cameraRef.current.zoom * 100)}%
-        </span>
-        <button title="Zoom Out" onClick={() => stepZoom(-0.2)}>
-          <ZoomOut size={16} />
-        </button>
-        <button title="Reset View" onClick={resetCamera}>
-          <Maximize2 size={16} />
-        </button>
-      </div>
 
       {/* Coast Disambiguation Popup */}
       {selectedUnit && pendingCoastChoice && (

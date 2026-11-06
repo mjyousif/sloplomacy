@@ -9,6 +9,18 @@ Both sidebars feature smooth, 44px collapsed rail views with quick tool icons an
 
 ---
 
+## Layout Principles & Anti-Redundancy Rules
+
+To prevent interface bloat and preserve a clean, focused tactical workspace, adhere to these UI design invariants:
+
+1. **Authoritative Lobby Navigation**: The clickable brand emblem and title (`SLOPLOMACY 1901`) in the top command header is the single authoritative control to return to the match lobby; never add separate "Main Page" or "Home" tab buttons to the header.
+2. **Sidebar Collapse & Rail Ownership**: Sidebar expand and collapse actions belong exclusively on the sidebars themselves (in their headers when expanded, and on their 44px slim rails when collapsed). Do not introduce top navigation header pill buttons to toggle sidebars.
+3. **Unobstructed Map Canvas**: The interactive SVG European map viewport must remain free of floating camera/zoom overlay boxes. All stepped zooming, percentage readout, and camera reset/fit actions belong in the Left Tools Sidebar (`ToolsSidebar.tsx`), accessible both in full view and via rail icons.
+4. **Tactical Map Legend Purity**: The Tactical Map Legend is strictly a visual guide for map symbology (movement vectors, support reticles, convoy anchors, and warning/dislodgement markers). Never embed rulebook mechanics or geography text footnotes (e.g. dual coasts or impassable terrain); interactive modal dialogs and cartographic text handle these directly.
+
+
+---
+
 ## Left Sidebar: Chancellery Tools & Intel (`ToolsSidebar.tsx`)
 
 ### 1. Map View & Camera Controls
@@ -22,7 +34,6 @@ Both sidebars feature smooth, 44px collapsed rail views with quick tool icons an
   - **Support Link**: Teal dashed line with target reticle indicating defensive or offensive support.
   - **Fleet Convoy**: Purple wavy line representing naval troop transport.
   - **Tactical Warning / Dislodgement**: Red/amber alert indicating illegal orders, cut supports, or retreats.
-- Reference notes for bicoastal provinces (`STP`, `SPA`, `BUL`) and impassable terrain (`SWI`).
 
 ### 3. Great Powers Diplomatic Standing & Command Selector
 - Lists all 7 Great Powers (Austria, England, France, Germany, Italy, Russia, Turkey) with their heraldic crests, national colors, controlled Supply Centers, and active field units.
@@ -91,7 +102,6 @@ Both sidebars feature smooth, 44px collapsed rail views with quick tool icons an
 When either sidebar is collapsed:
 - **Left Tools Rail (44px)**: Houses collapse toggle, mini Zoom In / Out / Fit buttons, Sandbox active glow indicator, and Admin icon.
 - **Right Tactical Rail (44px)**: Houses collapse toggle, active nation crest, unconfirmed orders counter pill (or green checkmark when complete), and warning badge.
-- **Header Toggle Pills**: Quick pill buttons in the top bar ("Tools Sidebar", "Tactical Sidebar") let users toggle either panel from anywhere.
 ### 7. Version Revision Badge (`VersionBadge.tsx`)
 - Sits at the sticky footer bottom of the sidebar.
 - Displays the current build revision short SHA (`rev <sha>`) with one-click clipboard copy and direct link to the commit on GitHub.
