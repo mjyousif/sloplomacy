@@ -104,7 +104,7 @@ When a user enables **Hypothetical Mode** (`Eye` icon in tools sidebar):
 
 While `sandboxGameId` is set, the board shows the private copy and is kept apart from the real match:
 
-- Polling and WebSocket updates for the match only update `activeGameSummary` and `hypotheticalMatchTimer`. Polling continues because it also runs the clock. A deadline can pass here, and orders in the copy reach the match only on exit, so the timer widget warns the player. Exiting brings the board back up to date.
+- WebSocket updates (and fallback polling when disconnected) for the match update `activeGameSummary` and `hypotheticalMatchTimer`. The clock continues to run via WebSocket heartbeats or fallback polling. A deadline can pass here, and orders in the copy reach the match only on exit, so the timer widget warns the player. Exiting brings the board back up to date.
 - Finalize, Unlock, Resolve, Surrender and the Admin Console are refused with a toast (`requireRealBoard`), because they act on the real match and the player would be looking at a hypothetical board.
 - Leaving the match view by any route closes the sandbox through the effect that watches `viewMode`.
 

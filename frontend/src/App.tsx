@@ -193,7 +193,7 @@ export function App() {
     [activeGameId]
   );
 
-  const { isConnected: wsConnected } = useDiplomacyWebSocket({
+  const { isConnected: wsConnected, sendPing: sendWsPing } = useDiplomacyWebSocket({
     activeGameId,
     viewMode,
     power: playerPower,
@@ -251,31 +251,53 @@ export function App() {
     return () => unsub();
   }, []);
 
-  // Auto-poll game state in multiplayer mode so turn advancements are received automatically
+  const handleTimerExpired = useCallback(() => {
+    if (wsConnected) {
+      sendWsPing();
+    } else if (activeGameId) {
+      fetchGame(activeGameId);
+    }
+  }, [wsConnected, sendWsPing, activeGameId]);
+
+  // Fallback poll game state in multiplayer mode ONLY when WebSocket is disconnected,
+  // so turn advancements and timers continue to work if a network drops WS connections.
   useEffect(() => {
     if (viewMode !== 'multiplayer' || !activeGameId) return;
+    if (wsConnected) return; // Real-time WebSocket is active; avoid redundant HTTP polling and state races
+
     let abandoned = false;
-    const interval = setInterval(() => {
-      fetch(`${API_BASE}/game?game_id=${encodeURIComponent(activeGameId)}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          // A reply still in flight must not repaint a board the player has since left.
-          if (abandoned || !data?.state) return;
-          if (sandboxGameId) {
-            // The poll also runs the clock, so it continues behind a private sandbox.
-            setHypotheticalMatchTimer(data.state.timer ?? null);
-          } else {
-            applyServerState(data.state);
-          }
-          if (data.summary) setActiveGameSummary(data.summary);
-        })
-        .catch(() => {});
-    }, 3000);
+    const interval = setInterval(async () => {
+      try {
+        const effectivePower = playerPower;
+        const params = new URLSearchParams({ game_id: activeGameId });
+        if (effectivePower) {
+          params.set('power', effectivePower);
+        }
+        const authHeaders = await getAuthHeaders();
+        const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
+          headers: { ...authHeaders },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        // A reply still in flight must not repaint a board the player has since left.
+        if (abandoned || !data?.state) return;
+        if (sandboxGameId) {
+          // The poll also runs the clock, so it continues behind a private sandbox.
+          setHypotheticalMatchTimer(data.state.timer ?? null);
+        } else {
+          applyServerState(data.state);
+        }
+        if (data.summary) setActiveGameSummary(data.summary);
+      } catch {
+        // Fallback polling network errors are silently ignored
+      }
+    }, 4000);
+
     return () => {
       abandoned = true;
       clearInterval(interval);
     };
-  }, [viewMode, activeGameId, sandboxGameId]);
+  }, [viewMode, activeGameId, sandboxGameId, wsConnected, playerPower]);
 
   // Leaving the match board by any route closes its private sandbox.
   useEffect(() => {
@@ -1245,6 +1267,7 @@ export function App() {
                   onVote={(choice) => postTimerAction('vote', { power: lockedPower, choice })}
                   onExtend={(active) => postTimerAction('extend', { power: lockedPower, active })}
                   onReady={(active) => postTimerAction('ready', { power: lockedPower, active })}
+                  onExpire={handleTimerExpired}
                 />
               )
             }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   WebSocketGameUpdate,
   WebSocketLobbyUpdate,
@@ -158,5 +158,11 @@ export function useDiplomacyWebSocket({
     };
   }, [viewMode, activeGameId, power, passcode]);
 
-  return { isConnected };
+  const sendPing = useCallback(() => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'ping' }));
+    }
+  }, []);
+
+  return { isConnected, sendPing };
 }

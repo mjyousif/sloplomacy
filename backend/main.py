@@ -1359,7 +1359,9 @@ async def get_game(
     viewer_power = power
     if not viewer_power and current_user and summary:
         for p_key, part in summary.participants.items():
-            if part.user_id == current_user.user_id:
+            if (part.user_id and part.user_id == current_user.user_id) or (
+                part.email and current_user.email and part.email.lower() == current_user.email.lower()
+            ):
                 try:
                     viewer_power = Power(p_key)
                     break
