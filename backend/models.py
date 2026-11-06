@@ -1,6 +1,8 @@
 from enum import Enum
+import math
+import time
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class Power(str, Enum):
@@ -53,6 +55,19 @@ class IssueCode(str, Enum):
     BROKEN_CONVOY = "BROKEN_CONVOY"
     UNASSIGNED_UNIT = "UNASSIGNED_UNIT"
     VOID_SUPPORT_SELF = "VOID_SUPPORT_SELF"
+
+
+class TimerStage(str, Enum):
+    VOTING = "voting"  # Players choose how long this phase lasts
+    RUNNING = "running"  # The phase clock is counting down
+    PAUSED = "paused"  # No clock: players ready up to open a new vote
+
+
+class TimerChoice(str, Enum):
+    MIN_15 = "15"
+    MIN_20 = "20"
+    MIN_30 = "30"
+    PAUSE = "pause"
 
 
 class ProvinceInfo(BaseModel):
@@ -128,6 +143,36 @@ class SimulationResult(BaseModel):
     winner: Optional[Power] = None  # Set when these orders would end the game
 
 
+class PhaseTimer(BaseModel):
+    """
+    The clock of a live multiplayer match. The rules that change it are in phase_timer.py.
+
+    Everything is stored as absolute time, so a restart or an idle server loses nothing.
+    """
+
+    stage: TimerStage
+    deadline: Optional[float] = None  # Unix time the vote or phase ends; None while paused
+    minutes: Optional[int] = None  # Length the running phase was given
+    players: List[Power] = Field(default_factory=list)  # Who votes, readies up and extends
+    votes: Dict[Power, TimerChoice] = Field(default_factory=dict)
+    extend_requests: List[Power] = Field(default_factory=list)
+    ready_powers: List[Power] = Field(default_factory=list)
+
+    @computed_field
+    @property
+    def remaining_seconds(self) -> Optional[float]:
+        """Time left when this was sent, which lets clients count down without trusting their own clock."""
+        if self.deadline is None:
+            return None
+        return round(max(0.0, self.deadline - time.time()), 1)
+
+    @computed_field
+    @property
+    def extensions_needed(self) -> int:
+        """Players needed to add time: 5 of 7, scaled to however many are playing."""
+        return max(1, math.ceil(len(self.players) * 5 / 7))
+
+
 class GameState(BaseModel):
     game_id: str
     season: str  # "Spring", "Fall", or "Winter"
@@ -146,6 +191,7 @@ class GameState(BaseModel):
     builds: Optional[Dict[str, Any]] = None
     retreats: Optional[Dict[str, Any]] = None
     winner: Optional[Power] = None  # Set once the game has been won; no further turns resolve
+    timer: Optional[PhaseTimer] = None  # None until the host starts the clock
 
 
 class OrderSubmissionRequest(BaseModel):
@@ -156,11 +202,27 @@ class OrderSubmissionRequest(BaseModel):
 class SingleOrderUpdateRequest(BaseModel):
     order: Order
     active_power: Optional[Power] = None
+    # The turn the player was looking at, e.g. "Spring 1901 Movement". A request for an older
+    # turn is refused, because a clock can resolve the phase while it is on its way.
+    turn: Optional[str] = None
 
 
 class FinalizeRequest(BaseModel):
     power: Power
     force: bool = False
+    turn: Optional[str] = None  # See SingleOrderUpdateRequest.turn
+
+
+class TimerVoteRequest(BaseModel):
+    power: Power
+    choice: TimerChoice
+
+
+class TimerToggleRequest(BaseModel):
+    """Ready up for a paused game, or ask for more time. `active=False` takes it back."""
+
+    power: Power
+    active: bool = True
 
 
 class FinalizeResponse(BaseModel):

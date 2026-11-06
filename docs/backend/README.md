@@ -13,6 +13,7 @@ backend/
 ├── database.py              # Supabase PostgreSQL persistence layer (PostgREST upsert & read-through cache)
 ├── adjudicator.py           # DATC turn adjudication & simulation wrapper over python 'diplomacy'
 ├── ai_engine.py             # Authoritative Diplomacy Tactical AI engine (DATC-compliant heuristics)
+├── phase_timer.py           # Multiplayer turn clock rules: votes, pausing, extensions & deadlines
 ├── validator.py             # Real-time tactical sanity checker across Movement, Retreats, & Builds
 ├── map_data.py              # Europe 1901 graph topology, province records & coastline rules
 ├── test_engine.py           # Topology symmetry, connectivity, and basic resolution tests
@@ -21,6 +22,7 @@ backend/
 ├── test_ai_and_private_lobbies.py # AI orders, auto-step, and private lobby passcode tests
 ├── test_api_integration.py  # Full-stack API endpoint integration tests
 ├── test_database_persistence.py # Supabase database persistence & cold-start recovery tests
+├── test_phase_timer.py      # Turn clock votes, pauses, extensions, deadlines and late requests
 ├── test_surrender_leave.py  # Concession, civil disorder, and seat-vacating tests
 ├── test_validator.py        # Blunder detection, friendly fire, and phase-specific validations
 ├── test_websocket_sync.py   # Real-time WebSocket room & lobby synchronization tests
@@ -115,13 +117,14 @@ Once running, OpenAPI documentation is automatically served by Swagger UI at:
 
 ## Running Backend Tests
 
-The backend includes 9 comprehensive pytest suites:
+The backend includes 10 comprehensive pytest suites:
 - `test_engine.py`: 76-province graph symmetry, split coasts, and adjacency.
 - `test_adjudicator.py`: Official DATC combat scenarios, dislodgements, and retreat paths.
 - `test_admin.py`: Creator authorization, timeline rollback, and board editing.
 - `test_ai_and_private_lobbies.py`: Heuristic AI orders, auto-step, and private lobby passcode tests.
 - `test_api_integration.py`: Route contracts, query parameter scoping, and state persistence.
 - `test_database_persistence.py`: Supabase database persistence & cold-start recovery tests.
+- `test_phase_timer.py`: Turn clock votes, pauses, extensions, deadlines and late requests.
 - `test_surrender_leave.py`: Seat vacating, player surrender, and civil disorder mechanics.
 - `test_validator.py`: Pre-flight blunder diagnostics across all three game phases.
 - `test_websocket_sync.py`: Real-time WebSocket room & lobby synchronization tests.

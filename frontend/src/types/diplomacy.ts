@@ -108,6 +108,22 @@ export interface SimulationResult {
   winner?: Power | null;
 }
 
+export type TimerStage = 'voting' | 'running' | 'paused';
+
+export type TimerChoice = '15' | '20' | '30' | 'pause';
+
+export interface PhaseTimer {
+  stage: TimerStage;
+  deadline: number | null; // Unix seconds; count down from remaining_seconds instead
+  minutes: number | null;
+  players: Power[];
+  votes: Partial<Record<Power, TimerChoice>>;
+  extend_requests: Power[];
+  ready_powers: Power[];
+  remaining_seconds: number | null;
+  extensions_needed: number;
+}
+
 export interface GameState {
   game_id: string;
   season: string;
@@ -126,6 +142,7 @@ export interface GameState {
   builds?: Record<Power, { count: number; homes: string[] }> | null;
   retreats?: Record<Power, Record<string, string[]>> | null;
   winner?: Power | null;
+  timer?: PhaseTimer | null;
 }
 
 export interface FinalizeResponse {

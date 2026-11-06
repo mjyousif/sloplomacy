@@ -1,0 +1,175 @@
+import React, { useEffect, useState } from 'react';
+import { Clock, Pause, Play, Plus } from 'lucide-react';
+import { PhaseTimer, Power, TimerChoice } from '../types/diplomacy';
+import {
+  countVotes,
+  formatClock,
+  powerNames,
+  powersNotReady,
+  powersYetToVote,
+  TIMER_OPTIONS,
+} from '../utils/timerHelpers';
+
+export interface PhaseTimerWidgetProps {
+  timer: PhaseTimer | null;
+  seatPower: Power | null; // The claimed seat; null for someone only watching
+  isHost: boolean;
+  hypothetical: boolean;
+  onStart: () => void;
+  onVote: (choice: TimerChoice) => void;
+  onExtend: (active: boolean) => void;
+  onReady: (active: boolean) => void;
+}
+
+const LOW_TIME_SECONDS = 60;
+
+/** Counts down from what the server last reported, so a wrong device clock cannot matter. */
+function useCountdown(remainingSeconds: number | null | undefined): number | null {
+  const [seconds, setSeconds] = useState<number | null>(remainingSeconds ?? null);
+
+  useEffect(() => {
+    if (remainingSeconds === null || remainingSeconds === undefined) {
+      setSeconds(null);
+      return;
+    }
+    const receivedAt = performance.now();
+    const tick = () =>
+      setSeconds(Math.max(0, remainingSeconds - (performance.now() - receivedAt) / 1000));
+    tick();
+    const interval = window.setInterval(tick, 250);
+    return () => window.clearInterval(interval);
+  }, [remainingSeconds]);
+
+  return seconds;
+}
+
+export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
+  timer,
+  seatPower,
+  isHost,
+  hypothetical,
+  onStart,
+  onVote,
+  onExtend,
+  onReady,
+}) => {
+  const seconds = useCountdown(timer?.remaining_seconds);
+  const isPlayer = !!timer && !!seatPower && timer.players.includes(seatPower);
+  // The whole vote is shorter than this, so only a phase clock can run low.
+  const lowTime = timer?.stage === 'running' && seconds !== null && seconds <= LOW_TIME_SECONDS;
+
+  const renderClock = () => (
+    <div className={`phase-timer-clock ${lowTime ? 'phase-timer-low' : ''}`} role="timer">
+      {seconds === null ? '--:--' : formatClock(seconds)}
+    </div>
+  );
+
+  const renderBody = () => {
+    if (!timer) {
+      return (
+        <>
+          <div className="phase-timer-title">
+            <Clock size={14} /> Turn Clock
+          </div>
+          {isHost ? (
+            <button type="button" className="phase-timer-primary" onClick={onStart}>
+              <Play size={13} /> Start First Vote
+            </button>
+          ) : (
+            <p className="phase-timer-note">Waiting for the host to start the clock.</p>
+          )}
+        </>
+      );
+    }
+
+    if (timer.stage === 'voting') {
+      const pending = powersYetToVote(timer);
+      const myVote = seatPower ? timer.votes[seatPower] : undefined;
+      return (
+        <>
+          <div className="phase-timer-title">
+            <Clock size={14} /> Vote: Phase Length
+          </div>
+          {renderClock()}
+          <div className="phase-timer-options">
+            {TIMER_OPTIONS.map(({ choice, label }) => (
+              <button
+                key={choice}
+                type="button"
+                className={myVote === choice ? 'selected' : ''}
+                aria-pressed={myVote === choice}
+                disabled={!isPlayer}
+                onClick={() => onVote(choice)}
+              >
+                <span>{label}</span>
+                <strong>{countVotes(timer, choice)}</strong>
+              </button>
+            ))}
+          </div>
+          <p className="phase-timer-note">
+            <strong>Yet to vote:</strong> {powerNames(pending)}
+          </p>
+        </>
+      );
+    }
+
+    if (timer.stage === 'paused') {
+      const pending = powersNotReady(timer);
+      const amReady = !!seatPower && timer.ready_powers.includes(seatPower);
+      return (
+        <>
+          <div className="phase-timer-title">
+            <Pause size={14} /> Game Paused
+          </div>
+          {isPlayer && (
+            <button
+              type="button"
+              className={`phase-timer-primary ${amReady ? 'selected' : ''}`}
+              aria-pressed={amReady}
+              onClick={() => onReady(!amReady)}
+            >
+              {amReady ? 'Ready: Click to Undo' : 'Ready Up'}
+            </button>
+          )}
+          <p className="phase-timer-note">
+            <strong>
+              Ready {timer.ready_powers.length}/{timer.players.length}.
+            </strong>{' '}
+            Waiting on: {powerNames(pending)}. A new vote opens once everyone is ready.
+          </p>
+        </>
+      );
+    }
+
+    const askedForMore = !!seatPower && timer.extend_requests.includes(seatPower);
+    return (
+      <>
+        <div className="phase-timer-title">
+          <Clock size={14} /> Time Left
+        </div>
+        {renderClock()}
+        {isPlayer && (
+          <button
+            type="button"
+            className={`phase-timer-extend ${askedForMore ? 'selected' : ''}`}
+            aria-pressed={askedForMore}
+            onClick={() => onExtend(!askedForMore)}
+          >
+            <Plus size={13} /> 5 Minutes ({timer.extend_requests.length}/{timer.extensions_needed})
+          </button>
+        )}
+      </>
+    );
+  };
+
+  return (
+    <aside className="phase-timer-widget" aria-label="Turn clock">
+      {renderBody()}
+      {hypothetical && timer && (
+        <p className="phase-timer-note phase-timer-warning">
+          The real clock is still running. Exit Hypothetical Mode before it ends to keep your orders.
+        </p>
+      )}
+    </aside>
+  );
+};

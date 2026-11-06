@@ -32,6 +32,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `surrenderModalOpen` | `boolean` | Modal | Controls visibility of the Surrender / Civil Disorder confirmation modal. |
 | `sanityModalOpen` | `boolean` | Modal | Controls visibility of pre-finalization warning modal. |
 | `sanityModalIssues` | `ValidationIssue[]` | Modal | Issues displayed inside the Sanity Check modal. |
+| `hypotheticalMatchTimer` | `PhaseTimer \| null` | Multiplayer | The real match's clock while `sandboxGameId` is set, because the private copy has none. Components read the derived `matchTimer`. |
 | `toastBanner` | `string \| null` | Banner | Auto-expiring toast message for user notifications. |
 | `wsConnected` | `boolean` | Network | Active real-time WebSocket connection to room feed or lobby. |
 
@@ -51,7 +52,7 @@ EuropeMap.tsx or MacroSidebar.tsx
 App.handleUpdateOrder(order)
          │
          ├──► HTTP POST /api/order?game_id={activeGameId}
-         │      Payload: { order: Order }
+         │      Payload: { order: Order, turn: "Spring 1901 Movement" }
          │
          ├──► HTTP 200 OK: Returns refreshed authoritative GameState
          │
@@ -103,7 +104,7 @@ When a user enables **Hypothetical Mode** (`Eye` icon in tools sidebar):
 
 While `sandboxGameId` is set, the board shows the private copy and is kept apart from the real match:
 
-- Polling stops and WebSocket updates for the match update only `activeGameSummary`. Exiting brings the board back up to date.
+- Polling and WebSocket updates for the match only update `activeGameSummary` and `hypotheticalMatchTimer`. Polling continues because it also runs the clock. A deadline can pass here, and orders in the copy reach the match only on exit, so the timer widget warns the player. Exiting brings the board back up to date.
 - Finalize, Unlock, Resolve, Surrender and the Admin Console are refused with a toast (`requireRealBoard`), because they act on the real match and the player would be looking at a hypothetical board.
 - Leaving the match view by any route closes the sandbox through the effect that watches `viewMode`.
 

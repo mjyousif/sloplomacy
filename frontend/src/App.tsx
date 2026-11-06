@@ -8,7 +8,9 @@ import { ToolsSidebar } from './components/ToolsSidebar';
 import { AdminToolsModal } from './components/AdminToolsModal';
 import { SanityCheckModal } from './components/SanityCheckModal';
 import { SurrenderModal } from './components/SurrenderModal';
+import { PhaseTimerWidget } from './components/PhaseTimerWidget';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
+import { turnLabel } from './utils/timerHelpers';
 import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
 import {
   getAuthHeaders,
@@ -24,6 +26,7 @@ import {
   Order,
   POWER_METADATA,
   Power,
+  PhaseTimer,
   ProvinceInfo,
   SimulationResult,
   ValidationIssue,
@@ -89,6 +92,8 @@ export function App() {
   const [sandboxMode, setSandboxMode] = useState<boolean>(false);
   // A multiplayer sandbox runs on a private server-side copy of the match under its own game id.
   const [sandboxGameId, setSandboxGameId] = useState<string | null>(null);
+  // The private copy has no clock, so this follows the real match while the player is in it.
+  const [hypotheticalMatchTimer, setHypotheticalMatchTimer] = useState<PhaseTimer | null>(null);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [showSimulationOverlay, setShowSimulationOverlay] = useState<boolean>(false);
   const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
@@ -115,6 +120,7 @@ export function App() {
   const directEditActive = isGameCreator && adminOverrideActive;
   // Drafts, AI plans and previews go to the private copy while there is one.
   const draftGameId = sandboxGameId ?? activeGameId;
+  const matchTimer = sandboxGameId ? hypotheticalMatchTimer : (gameState?.timer ?? null);
 
   const triggerToast = (msg: string) => {
     setToastBanner(msg);
@@ -151,7 +157,10 @@ export function App() {
         setActiveGameSummary(update.summary);
       }
       // The real match keeps moving behind a private sandbox; exiting catches the board up.
-      if (sandboxGameId) return;
+      if (sandboxGameId) {
+        setHypotheticalMatchTimer(update.state.timer ?? null);
+        return;
+      }
 
       setGameState((prev) => {
         if (
@@ -236,17 +245,21 @@ export function App() {
 
   // Auto-poll game state in multiplayer mode so turn advancements are received automatically
   useEffect(() => {
-    if (viewMode !== 'multiplayer' || !activeGameId || sandboxGameId) return;
+    if (viewMode !== 'multiplayer' || !activeGameId) return;
     let abandoned = false;
     const interval = setInterval(() => {
       fetch(`${API_BASE}/game?game_id=${encodeURIComponent(activeGameId)}`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           // A reply still in flight must not repaint a board the player has since left.
-          if (!abandoned && data?.state) {
+          if (abandoned || !data?.state) return;
+          if (sandboxGameId) {
+            // The poll also runs the clock, so it continues behind a private sandbox.
+            setHypotheticalMatchTimer(data.state.timer ?? null);
+          } else {
             applyServerState(data.state);
-            if (data.summary) setActiveGameSummary(data.summary);
           }
+          if (data.summary) setActiveGameSummary(data.summary);
         })
         .catch(() => {});
     }, 3000);
@@ -624,7 +637,7 @@ export function App() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ order }),
+          body: JSON.stringify({ order, turn: gameState ? turnLabel(gameState) : undefined }),
         }
       );
       if (res.ok) {
@@ -702,6 +715,7 @@ export function App() {
           return;
         }
         const st: GameState = await res.json();
+        setHypotheticalMatchTimer(gameState.timer ?? null);
         applyServerState(st);
         setSandboxGameId(st.game_id === activeGameId ? null : st.game_id);
         setSandboxMode(true);
@@ -755,7 +769,7 @@ export function App() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: playerPower, force }),
+          body: JSON.stringify({ power: playerPower, force, turn: turnLabel(gameState) }),
         }
       );
       if (res.ok) {
@@ -771,6 +785,11 @@ export function App() {
           );
           fetchGamesList();
         }
+      } else {
+        // The clock can resolve the phase while the request is on its way.
+        const err = await res.json().catch(() => ({}));
+        setSanityModalOpen(false);
+        triggerToast(err.detail || 'Could not finalize your orders.');
       }
     } catch (e) {
       console.error(e);
@@ -809,6 +828,36 @@ export function App() {
         const sim: SimulationResult = await res.json();
         setSimulationResult(sim);
         setShowSimulationOverlay((prev) => !prev);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const postTimerAction = async (
+    action: 'start' | 'vote' | 'extend' | 'ready',
+    body: Record<string, unknown> = {}
+  ) => {
+    try {
+      const authHeaders = action === 'start' ? await getAuthHeaders() : {};
+      const res = await fetch(
+        `${API_BASE}/games/${encodeURIComponent(activeGameId)}/timer/${action}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify(body),
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        triggerToast(err.detail || 'The clock did not accept that.');
+        return;
+      }
+      const st: GameState = await res.json();
+      if (sandboxGameId) {
+        setHypotheticalMatchTimer(st.timer ?? null);
+      } else {
+        applyServerState(st);
       }
     } catch (e) {
       console.error(e);
@@ -1197,6 +1246,22 @@ export function App() {
             retreats={gameState.retreats}
             onClearSimulationOverlay={() => setShowSimulationOverlay(false)}
             onAdjudicateTurn={handleAdjudicateTurn}
+            overlay={
+              viewMode === 'multiplayer' &&
+              activeGameSummary?.status === 'active' &&
+              !gameState.winner && (
+                <PhaseTimerWidget
+                  timer={matchTimer}
+                  seatPower={lockedPower}
+                  isHost={isGameCreator}
+                  hypothetical={!!sandboxGameId}
+                  onStart={() => postTimerAction('start')}
+                  onVote={(choice) => postTimerAction('vote', { power: lockedPower, choice })}
+                  onExtend={(active) => postTimerAction('extend', { power: lockedPower, active })}
+                  onReady={(active) => postTimerAction('ready', { power: lockedPower, active })}
+                />
+              )
+            }
           />
 
           {/* RIGHT SIDEBAR: Core Gameplay Orders & Unit Command */}

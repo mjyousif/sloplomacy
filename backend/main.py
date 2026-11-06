@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
 from pathlib import Path
 from collections import defaultdict
+import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 import uuid
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect, status
@@ -41,12 +42,16 @@ from models import (
     SimulationResult,
     SingleOrderUpdateRequest,
     SurrenderRequest,
+    TimerStage,
+    TimerToggleRequest,
+    TimerVoteRequest,
     WebSocketGameUpdate,
     WebSocketLobbyUpdate,
     Unit,
     UnitType,
 )
 from ai_engine import generate_tactical_orders
+from phase_timer import close_vote, has_expired, settle_timer, start_phase_clock
 from validator import validate_orders
 import logging
 from database import (
@@ -931,6 +936,7 @@ async def join_multiplayer_game(game_id: str, req: JoinGameRequest):
     )
     if len(summary.participants) >= 2 and summary.status == "waiting":
         summary.status = "active"
+    refresh_timer(game_state)
 
     if req.power in game_state.surrendered_powers:
         game_state.surrendered_powers.remove(req.power)
@@ -1018,6 +1024,7 @@ async def leave_game(game_id: str, req: LeaveGameRequest):
     if len(summary.participants) < 2 and summary.status == "active":
         summary.status = "waiting"
 
+    refresh_timer(game_state)
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
     await persist_game(game_id)
@@ -1072,6 +1079,7 @@ async def surrender_power(game_id: str, req: SurrenderRequest):
             part.surrendered = True
             part.surrendered_at = datetime.now(timezone.utc).isoformat()
 
+    refresh_timer(game_state)
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
     await persist_game(game_id)
@@ -1132,6 +1140,7 @@ async def save_sandbox_to_account(req: SaveSandboxRequest, game_id: Optional[str
 @app.get("/api/game", response_model=GameBootstrapResponse)
 async def get_game(game_id: Optional[str] = Query(default=None)):
     game = await resolve_game(game_id)
+    await tick_timer(game)
     refresh_diagnostics_and_simulation(game)
     gid = game.game_id
     sync_summary(gid)
@@ -1201,6 +1210,7 @@ def open_private_sandbox(match: GameState, power: Power) -> GameState:
     sandbox = match.model_copy(deep=True)
     sandbox.game_id = sandbox_id
     sandbox.active_power = power
+    sandbox.timer = None  # The match keeps the real clock, and a copy must never run out
     reset_foreign_orders(sandbox, power)
     GAMES[sandbox_id] = sandbox
     SANDBOX_CHECKPOINTS[sandbox_id] = None
@@ -1390,6 +1400,7 @@ async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
 @app.post("/api/order", response_model=GameState)
 async def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[str] = Query(default=None)):
     game = await resolve_game(game_id)
+    reject_stale_turn(game, req.turn)
     validate_order_references(req.order)
     unit_map = {u.id: u for u in game.units}
     if req.order.unit_id in unit_map:
@@ -1565,6 +1576,7 @@ def get_required_finalizing_powers(game: GameState, summary: Optional[Multiplaye
 @app.post("/api/finalize", response_model=FinalizeResponse)
 async def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Query(default=None)):
     game = await resolve_game(game_id)
+    reject_stale_turn(game, req.turn)
     power_issues = validate_orders(
         game.units,
         game.orders,
@@ -1653,7 +1665,7 @@ async def _execute_adjudication(game: GameState) -> GameState:
     # Rollback recomputes the previews and diagnostics, so the snapshot does not carry them.
     if gid not in GAME_HISTORY:
         GAME_HISTORY[gid] = []
-    GAME_HISTORY[gid].append(game.model_copy(deep=True, update={"last_resolution": None, "issues": []}))
+    GAME_HISTORY[gid].append(game.model_copy(deep=True, update={"last_resolution": None, "issues": [], "timer": None}))
     if len(GAME_HISTORY[gid]) > 30:
         GAME_HISTORY[gid].pop(0)
     HISTORY_UNSAVED.add(gid)
@@ -1688,6 +1700,9 @@ async def _execute_adjudication(game: GameState) -> GameState:
         game.winner = result.winner
         game.last_resolution = result
         game.turn_history.insert(0, f"{result.winner.value} has won the game in {prev_label}.")
+    # Before the first await below, so that two polls can never both resolve one deadline.
+    if game.timer:
+        start_phase_clock(game, timer_players(game), time.time())
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
     await persist_game(game.game_id)
@@ -1716,6 +1731,133 @@ async def adjudicate_and_advance(
             verify_admin_access(gid, current_user)
 
     return await _execute_adjudication(game)
+
+
+def timer_players(game: GameState) -> List[Power]:
+    """The powers that vote on and share the clock: everyone seated and still in the game."""
+    summary = GAME_SUMMARIES.get(game.game_id)
+    if not summary or summary.is_sandbox or summary.status != "active":
+        return []
+    in_game = {u.power for u in game.units} | set(game.ownership.values())
+    return [
+        part.power
+        for part in summary.participants.values()
+        if not part.surrendered and part.power not in game.surrendered_powers and part.power in in_game
+    ]
+
+
+def refresh_timer(game: GameState) -> None:
+    """
+    Bring the clock up to date after players join or go.
+
+    The clock stops with nobody left playing, or a match with nobody in it would run on by itself.
+    """
+    if game.timer is None:
+        return
+    players = timer_players(game)
+    if players:
+        settle_timer(game, players, time.time())
+    else:
+        game.timer = None
+
+
+async def tick_timer(game: GameState) -> None:
+    """
+    Act on a deadline that has passed.
+
+    Called from the requests clients make every few seconds, so nothing happens while everyone is
+    away, and the game resolves once when someone comes back. Stale orders and finalizes are
+    refused by `reject_stale_turn`, so a request that arrives after this cannot land on the next
+    phase.
+    """
+    timer = game.timer
+    if not has_expired(timer, time.time()):
+        return
+    if timer.stage == TimerStage.RUNNING:
+        try:
+            await _execute_adjudication(game)
+        except Exception:
+            # Every poll would fail the same way, so stop the clock and leave it to the host.
+            logger.exception("Could not resolve %s when its clock ran out.", game.game_id)
+            timer.stage = TimerStage.PAUSED
+            timer.deadline = None
+        return
+    close_vote(timer, time.time())
+    await publish_timer(game)
+
+
+async def publish_timer(game: GameState) -> GameState:
+    await persist_game(game.game_id)
+    await broadcast_game_update(game.game_id, game)
+    return game
+
+
+def reject_stale_turn(game: GameState, turn: Optional[str]) -> None:
+    """Refuse a request made for a turn that has since resolved."""
+    current = f"{game.season} {game.year} {game.phase}"
+    if turn and turn != current:
+        raise HTTPException(status_code=409, detail=f"Too late: the game has moved on to {current}.")
+
+
+async def require_timer_player(game_id: str, power: Power, stage: TimerStage) -> GameState:
+    """Load a game for a player's action on the clock, which must be in the given stage."""
+    game = await resolve_game(game_id)
+    if game.timer is None:
+        raise HTTPException(status_code=409, detail="This match has no clock running.")
+    if power not in game.timer.players:
+        raise HTTPException(status_code=403, detail=f"{power.value} is not playing in this match.")
+    if game.timer.stage != stage:
+        raise HTTPException(status_code=409, detail=f"The clock is not {stage.value} any more.")
+    return game
+
+
+@app.post("/api/games/{game_id}/timer/start", response_model=GameState)
+async def start_timer(game_id: str, current_user: Optional[AuthUser] = Depends(get_current_user)):
+    """Start the clock for a match (Creator Only). From here on it runs by itself."""
+    game = await resolve_game(game_id)
+    verify_admin_access(game.game_id, current_user)
+    if game.timer:
+        raise HTTPException(status_code=409, detail="The clock is already running.")
+    players = timer_players(game)
+    if not players or game.winner:
+        raise HTTPException(status_code=409, detail="The clock can only start in a match being played.")
+    start_phase_clock(game, players, time.time())
+    return await publish_timer(game)
+
+
+@app.post("/api/games/{game_id}/timer/vote", response_model=GameState)
+async def vote_on_timer(game_id: str, req: TimerVoteRequest):
+    """Choose this phase's length. The vote closes early once every player has voted."""
+    game = await require_timer_player(game_id, req.power, TimerStage.VOTING)
+    game.timer.votes[req.power] = req.choice
+    settle_timer(game, timer_players(game), time.time())
+    return await publish_timer(game)
+
+
+@app.post("/api/games/{game_id}/timer/extend", response_model=GameState)
+async def request_timer_extension(game_id: str, req: TimerToggleRequest):
+    """Ask for 5 more minutes, which are added once 5 of 7 players have asked."""
+    game = await require_timer_player(game_id, req.power, TimerStage.RUNNING)
+    requests = game.timer.extend_requests
+    if req.active and req.power not in requests:
+        requests.append(req.power)
+    elif not req.active and req.power in requests:
+        requests.remove(req.power)
+    settle_timer(game, timer_players(game), time.time())
+    return await publish_timer(game)
+
+
+@app.post("/api/games/{game_id}/timer/ready", response_model=GameState)
+async def ready_up_timer(game_id: str, req: TimerToggleRequest):
+    """Ready up in a paused game. Once every player is ready a new vote opens."""
+    game = await require_timer_player(game_id, req.power, TimerStage.PAUSED)
+    ready = game.timer.ready_powers
+    if req.active and req.power not in ready:
+        ready.append(req.power)
+    elif not req.active and req.power in ready:
+        ready.remove(req.power)
+    settle_timer(game, timer_players(game), time.time())
+    return await publish_timer(game)
 
 
 @app.post("/api/scenario", response_model=GameState)
@@ -1804,6 +1946,11 @@ async def admin_rollback_turn(
     # The snapshot was taken at the moment of resolving, when everyone had finalized. Rolling back
     # exists so that the turn can be replayed, so every player gets their orders back to edit.
     prev_state.finalized_powers = []
+    # A snapshot holds no clock. A running match stays timed, starting over on the replayed turn.
+    current = GAMES.get(gid)
+    if current and current.timer:
+        prev_state.timer = current.timer
+        start_phase_clock(prev_state, timer_players(prev_state), time.time())
     prev_state.turn_history.insert(
         0, f"[ADMIN OVERRIDE] Rolled back turn to {prev_state.season} {prev_state.year} {prev_state.phase} Phase."
     )
@@ -1843,6 +1990,8 @@ async def admin_set_turn(
     game.season = req.season
     game.year = req.year
     game.phase = req.phase
+    if game.timer:
+        start_phase_clock(game, timer_players(game), time.time())
     game.turn_history.insert(0, f"[ADMIN OVERRIDE] Adjusted game clock to {req.season} {req.year} {req.phase} Phase.")
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
@@ -2089,6 +2238,7 @@ async def ws_game_endpoint(websocket: WebSocket, game_id: str):
     await manager.connect_game(game_id, websocket)
     sync_summary(game_id)
     game = GAMES[game_id]
+    await tick_timer(game)
     summary = GAME_SUMMARIES.get(game_id)
     try:
         await websocket.send_json({
@@ -2107,6 +2257,7 @@ async def ws_game_endpoint(websocket: WebSocket, game_id: str):
                     g = GAMES.get(game_id)
                     s = GAME_SUMMARIES.get(game_id)
                     if g:
+                        await tick_timer(g)
                         await websocket.send_json({
                             "type": "game_update",
                             "game_id": game_id,

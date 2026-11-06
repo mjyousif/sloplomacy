@@ -22,6 +22,7 @@ frontend/
     │   ├── ToolsSidebar.tsx     # Left collapsible sidebar: legend, zoom options, powers, sandbox & admin
     │   ├── MacroSidebar.tsx     # Right collapsible sidebar: core gameplay orders, builds, finalize & adjudicate
     │   ├── sidebars.test.ts     # Vitest suite for ToolsSidebar and MacroSidebar collapsible views
+    │   ├── PhaseTimerWidget.tsx # Bottom-left map widget: turn clock, votes, ready-up & +5 button
     │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
     │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
     │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
@@ -102,7 +103,8 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   ├── AuthModal.tsx (Supabase login/signup & local dev auth toggle)
 │   ├── AdminToolsModal.tsx (Creator unit teleport, spawn, destroy, turn jump, rollback)
 │   ├── SurrenderModal.tsx (Civil Disorder concession dialogue)
-│   └── SanityCheckModal.tsx (Tactical Blunder Gatekeeper before order finalization)
+│   ├── SanityCheckModal.tsx (Tactical Blunder Gatekeeper before order finalization)
+│   └── PhaseTimerWidget.tsx (Turn clock over the bottom left of the map, via EuropeMap's overlay prop)
 ```
 
 ---
