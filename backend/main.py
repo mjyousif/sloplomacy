@@ -58,22 +58,40 @@ from database import (
     SupabaseUnavailable,
     delete_game_from_db,
     is_persistence_enabled,
+    is_valid_uuid,
     load_all_summaries_from_db,
     load_game_from_db,
     save_game_to_db,
 )
+import hmac
 
 logger = logging.getLogger("diplomacy.server")
 
 app = FastAPI(title="Sloplomacy 1901 Tactical Server", version="1.2.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_env.strip():
+    cors_origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 SCENARIO_IDS = {"standard_1901", "tactical_blunders_demo"}
 FIRST_YEAR = 1901
@@ -640,19 +658,131 @@ def verify_admin_access(
         )
 
 
+def is_multiplayer_match(game_id: str) -> bool:
+    """True for a game shared by several players, as opposed to a solo or saved sandbox."""
+    summary = GAME_SUMMARIES.get(game_id)
+    return bool(summary and not summary.is_sandbox)
+
+
+def verify_power_authorization(
+    game_id: str,
+    power: Power,
+    current_user: Optional[AuthUser] = None,
+) -> None:
+    """
+    Verify that the caller is authorized to command `power` in this match.
+    In solo / saved sandboxes, any power can be ordered.
+    In multiplayer matches, only the participant who claimed the seat (or game creator) may issue orders.
+    """
+    if not is_multiplayer_match(game_id):
+        return
+
+    summary = GAME_SUMMARIES.get(game_id)
+    if not summary:
+        return
+
+    is_creator = False
+    if current_user:
+        if summary.creator_id and summary.creator_id == current_user.user_id:
+            is_creator = True
+        elif summary.created_by and current_user.email and summary.created_by.lower() == current_user.email.lower():
+            is_creator = True
+
+    if is_creator:
+        return
+
+    part = summary.participants.get(power.value)
+    if not part:
+        if current_user:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"{power.value} has no active envoy in this match.",
+            )
+        return
+
+    if current_user:
+        if part.user_id == current_user.user_id:
+            return
+        if part.email and current_user.email and part.email.lower() == current_user.email.lower():
+            return
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Authorization denied: You do not command {power.value} in this match.",
+        )
+
+    # Unauthenticated caller: if seat was claimed by an authenticated user with a UUID, reject
+    if part.user_id and is_valid_uuid(part.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Authentication required: Provide a valid Bearer token to command {power.value}.",
+        )
+
+
+def sanitize_game_state_for_viewer(
+    game: GameState,
+    viewer_power: Optional[Power] = None,
+) -> GameState:
+    """
+    Preserve simultaneous move secrecy (Fog of War) in active multiplayer matches.
+    Foreign unadjudicated orders are masked to default HOLDs.
+    Solo sandboxes and saved single-player sandboxes are not masked.
+    """
+    if not is_multiplayer_match(game.game_id) or game.winner:
+        return game
+
+    summary = GAME_SUMMARIES.get(game.game_id)
+    if summary and summary.status == "waiting":
+        return game
+
+    masked_game = game.model_copy()
+    defaults = create_default_orders(game.units, game.phase, game.builds)
+
+    if viewer_power:
+        own_orders = {
+            uid: o for uid, o in game.orders.items() if o.power == viewer_power
+        }
+        foreign_defaults = {
+            uid: o for uid, o in defaults.items() if o.power != viewer_power
+        }
+        masked_game.orders = {**foreign_defaults, **own_orders}
+        masked_game.issues = [
+            issue for issue in game.issues if issue.power == viewer_power
+        ]
+    else:
+        masked_game.orders = defaults
+        masked_game.issues = []
+
+    return masked_game
+
+
+MAX_ACTIVE_GAMES = 250
+
+
+def check_game_capacity() -> None:
+    """Protect against resource exhaustion and unbounded room creation."""
+    if len(GAMES) >= MAX_ACTIVE_GAMES:
+        for sbx_id in list(PRIVATE_SANDBOXES.keys()):
+            evict_game(sbx_id)
+        if len(GAMES) >= MAX_ACTIVE_GAMES:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Server game capacity reached. Please try again later.",
+            )
+
+
 class ConnectionManager:
     """Manages active WebSocket connections for game rooms and lobby."""
 
     def __init__(self) -> None:
-        self.game_connections: Dict[str, Set[WebSocket]] = defaultdict(set)
+        self.game_connections: Dict[str, Dict[WebSocket, Optional[Power]]] = defaultdict(dict)
         self.lobby_connections: Set[WebSocket] = set()
 
-    async def connect_game(self, game_id: str, websocket: WebSocket) -> None:
+    async def connect_game(self, game_id: str, websocket: WebSocket, power: Optional[Power] = None) -> None:
         await websocket.accept()
-        self.game_connections[game_id].add(websocket)
+        self.game_connections[game_id][websocket] = power
 
     def disconnect_game(self, game_id: str, websocket: WebSocket) -> None:
-        self.game_connections[game_id].discard(websocket)
+        self.game_connections[game_id].pop(websocket, None)
         if not self.game_connections[game_id]:
             self.game_connections.pop(game_id, None)
 
@@ -680,15 +810,15 @@ class ConnectionManager:
         if state is None:
             return
 
-        payload = {
-            "type": "game_update",
-            "game_id": game_id,
-            "state": state.model_dump(mode="json"),
-            "summary": summary.model_dump(mode="json") if summary else None,
-        }
-
         dead: List[WebSocket] = []
-        for ws in list(connections):
+        for ws, ws_power in list(connections.items()):
+            ws_state = sanitize_game_state_for_viewer(state, ws_power)
+            payload = {
+                "type": "game_update",
+                "game_id": game_id,
+                "state": ws_state.model_dump(mode="json"),
+                "summary": summary.model_dump(mode="json") if summary else None,
+            }
             try:
                 await ws.send_json(payload)
             except Exception:
@@ -848,8 +978,12 @@ async def delete_game(
 
 
 @app.post("/api/games", response_model=MultiplayerGameSummary)
-async def create_multiplayer_game(req: CreateGameRequest):
+async def create_multiplayer_game(
+    req: CreateGameRequest,
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     """Create a new multiplayer game and assign creator_power to the user."""
+    check_game_capacity()
     gid = f"mp_{uuid.uuid4().hex[:6]}"
     now_iso = datetime.now(timezone.utc).isoformat()
     game_state = build_scenario("standard_1901", req.creator_power, gid)
@@ -863,10 +997,12 @@ async def create_multiplayer_game(req: CreateGameRequest):
     if has_pw:
         GAME_PASSCODES[gid] = clean_passcode
 
-    display_name = req.display_name or req.email.split("@")[0]
+    effective_user_id = current_user.user_id if current_user else req.user_id
+    effective_email = (current_user.email or req.email) if current_user else req.email
+    display_name = req.display_name or effective_email.split("@")[0]
     participant = GameParticipant(
-        user_id=req.user_id,
-        email=req.email,
+        user_id=effective_user_id,
+        email=effective_email,
         display_name=display_name,
         power=req.creator_power,
         joined_at=now_iso,
@@ -878,8 +1014,8 @@ async def create_multiplayer_game(req: CreateGameRequest):
         season=game_state.season,
         year=game_state.year,
         phase=game_state.phase,
-        created_by=req.email,
-        creator_id=req.user_id,
+        created_by=effective_email,
+        creator_id=effective_user_id,
         created_at=now_iso,
         participants={req.creator_power.value: participant},
         finalized_powers=[],
@@ -894,42 +1030,55 @@ async def create_multiplayer_game(req: CreateGameRequest):
 
 
 @app.post("/api/games/{game_id}/join", response_model=GameBootstrapResponse)
-async def join_multiplayer_game(game_id: str, req: JoinGameRequest):
+async def join_multiplayer_game(
+    game_id: str,
+    req: JoinGameRequest,
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     """Claim a power in a multiplayer match (or re-enter if already claimed by this user)."""
     game_state = await resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
     if not summary:
         raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
 
+    effective_user_id = current_user.user_id if current_user else req.user_id
+    effective_email = (current_user.email or req.email) if current_user else req.email
+
     # Passcode verification for private lobbies
     if summary.has_passcode:
-        is_already_participant = any(p.user_id == req.user_id for p in summary.participants.values())
+        is_already_participant = any(p.user_id == effective_user_id for p in summary.participants.values())
         if not is_already_participant:
             expected_pw = GAME_PASSCODES.get(game_id)
             provided_pw = (req.passcode or "").strip()
-            if not expected_pw or provided_pw != expected_pw:
+            if not expected_pw or not hmac.compare_digest(provided_pw, expected_pw):
                 raise HTTPException(
                     status_code=403,
                     detail="Passcode required or incorrect for this private campaign.",
                 )
 
     existing = summary.participants.get(req.power.value)
-    if existing and existing.user_id != req.user_id:
+    if existing and existing.user_id != effective_user_id:
         raise HTTPException(
             status_code=409,
             detail=f"{req.power.value} is already claimed by {existing.display_name}.",
         )
+    if existing and existing.user_id == effective_user_id:
+        if is_valid_uuid(existing.user_id) and not current_user:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required to re-enter this claimed seat.",
+            )
 
     # Remove previous power claim by this same user in this game so 1 user = 1 power per multiplayer match
     for p_key, part in list(summary.participants.items()):
-        if part.user_id == req.user_id and p_key != req.power.value:
+        if part.user_id == effective_user_id and p_key != req.power.value:
             del summary.participants[p_key]
 
     now_iso = datetime.now(timezone.utc).isoformat()
-    display_name = req.display_name or req.email.split("@")[0]
+    display_name = req.display_name or effective_email.split("@")[0]
     summary.participants[req.power.value] = GameParticipant(
-        user_id=req.user_id,
-        email=req.email,
+        user_id=effective_user_id,
+        email=effective_email,
         display_name=display_name,
         power=req.power,
         joined_at=now_iso,
@@ -954,23 +1103,42 @@ async def join_multiplayer_game(game_id: str, req: JoinGameRequest):
     await broadcast_game_update(game_id, game_state, summary)
     await broadcast_lobby_update()
     return GameBootstrapResponse(
-        state=game_state.model_copy(update={"active_power": req.power}),
+        state=sanitize_game_state_for_viewer(
+            game_state.model_copy(update={"active_power": req.power}),
+            req.power,
+        ),
         provinces=PROVINCES,
         summary=summary,
     )
 
 
 @app.post("/api/games/{game_id}/leave", response_model=GameBootstrapResponse)
-async def leave_game(game_id: str, req: LeaveGameRequest):
+async def leave_game(
+    game_id: str,
+    req: LeaveGameRequest,
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     """Leave a multiplayer match (vacating claimed power) or remove a saved sandbox scenario."""
     game_state = await resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
     if not summary:
         raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
 
+    effective_user_id = current_user.user_id if current_user else req.user_id
+    if current_user and req.user_id and req.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Cannot vacate a seat claimed by another player.")
+    if not current_user and is_valid_uuid(req.user_id):
+        raise HTTPException(status_code=401, detail="Authentication required to vacate this seat.")
+
+    if req.power:
+        p_val = req.power.value if hasattr(req.power, "value") else str(req.power)
+        part = summary.participants.get(p_val)
+        if part and part.user_id != effective_user_id:
+            raise HTTPException(status_code=403, detail=f"You do not command {p_val} in this campaign.")
+
     # Saved sandbox scenario deletion
     if summary.is_sandbox:
-        if summary.creator_id == req.user_id or summary.created_by == req.email:
+        if summary.creator_id == effective_user_id or summary.created_by == (current_user.email if current_user else req.email):
             evict_game(game_id)
             if is_persistence_enabled():
                 await delete_game_from_db(game_id)
@@ -984,13 +1152,13 @@ async def leave_game(game_id: str, req: LeaveGameRequest):
     # Locate participant entries for this user
     leaving_powers: List[Power] = []
     for p_key, part in list(summary.participants.items()):
-        if part.user_id == req.user_id and (req.power is None or part.power == req.power):
+        if part.user_id == effective_user_id and (req.power is None or part.power == req.power):
             leaving_powers.append(part.power)
             del summary.participants[p_key]
 
     if not leaving_powers and req.power:
         p_val = req.power.value if hasattr(req.power, "value") else str(req.power)
-        if p_val in summary.participants and summary.participants[p_val].user_id == req.user_id:
+        if p_val in summary.participants and summary.participants[p_val].user_id == effective_user_id:
             leaving_powers.append(summary.participants[p_val].power)
             del summary.participants[p_val]
 
@@ -1034,14 +1202,18 @@ async def leave_game(game_id: str, req: LeaveGameRequest):
     if everyone_is_ready(game_state):
         await _execute_adjudication(game_state)
     return GameBootstrapResponse(
-        state=game_state,
+        state=sanitize_game_state_for_viewer(game_state),
         provinces=PROVINCES,
         summary=summary,
     )
 
 
 @app.post("/api/games/{game_id}/surrender", response_model=GameBootstrapResponse)
-async def surrender_power(game_id: str, req: SurrenderRequest):
+async def surrender_power(
+    game_id: str,
+    req: SurrenderRequest,
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     """Concede defeat/surrender sovereign command of a Great Power into Civil Disorder."""
     game_state = await resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
@@ -1050,11 +1222,24 @@ async def surrender_power(game_id: str, req: SurrenderRequest):
 
     p_val = req.power.value if hasattr(req.power, "value") else str(req.power)
     part = summary.participants.get(p_val)
-    if part and part.user_id != req.user_id:
-        raise HTTPException(
-            status_code=403,
-            detail=f"You do not command {p_val} in this campaign.",
-        )
+    effective_user_id = current_user.user_id if current_user else req.user_id
+    if part:
+        if current_user:
+            if part.user_id != current_user.user_id and (not current_user.email or current_user.email.lower() != (part.email or "").lower()):
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"You do not command {p_val} in this campaign.",
+                )
+        elif is_valid_uuid(part.user_id):
+            raise HTTPException(
+                status_code=401,
+                detail=f"Authentication required to surrender command of {p_val}.",
+            )
+        elif part.user_id != req.user_id:
+            raise HTTPException(
+                status_code=403,
+                detail=f"You do not command {p_val} in this campaign.",
+            )
 
     if req.power not in game_state.surrendered_powers:
         game_state.surrendered_powers.append(req.power)
@@ -1089,15 +1274,20 @@ async def surrender_power(game_id: str, req: SurrenderRequest):
     if everyone_is_ready(game_state):
         await _execute_adjudication(game_state)
     return GameBootstrapResponse(
-        state=game_state,
+        state=sanitize_game_state_for_viewer(game_state),
         provinces=PROVINCES,
         summary=summary,
     )
 
 
 @app.post("/api/games/save-sandbox", response_model=MultiplayerGameSummary)
-async def save_sandbox_to_account(req: SaveSandboxRequest, game_id: Optional[str] = Query(default=None)):
+async def save_sandbox_to_account(
+    req: SaveSandboxRequest,
+    game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     """Save the current sandbox game state into the authenticated user's personal games."""
+    check_game_capacity()
     source_game = await resolve_game(game_id)
     new_gid = f"saved_{uuid.uuid4().hex[:8]}"
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -1108,7 +1298,9 @@ async def save_sandbox_to_account(req: SaveSandboxRequest, game_id: Optional[str
     SANDBOX_CHECKPOINTS[new_gid] = None
     GAME_HISTORY[new_gid] = []
 
-    display_name = req.display_name or req.email.split("@")[0]
+    effective_user_id = current_user.user_id if current_user else req.user_id
+    effective_email = (current_user.email or req.email) if current_user else req.email
+    display_name = req.display_name or effective_email.split("@")[0]
     summary = MultiplayerGameSummary(
         game_id=new_gid,
         name=req.name.strip() or f"Saved Tactical Sandbox ({cloned_state.season} {cloned_state.year})",
@@ -1116,13 +1308,13 @@ async def save_sandbox_to_account(req: SaveSandboxRequest, game_id: Optional[str
         season=cloned_state.season,
         year=cloned_state.year,
         phase=cloned_state.phase,
-        created_by=req.email,
-        creator_id=req.user_id,
+        created_by=effective_email,
+        creator_id=effective_user_id,
         created_at=now_iso,
         participants={
             cloned_state.active_power.value: GameParticipant(
-                user_id=req.user_id,
-                email=req.email,
+                user_id=effective_user_id,
+                email=effective_email,
                 display_name=display_name,
                 power=cloned_state.active_power,
                 joined_at=now_iso,
@@ -1138,16 +1330,46 @@ async def save_sandbox_to_account(req: SaveSandboxRequest, game_id: Optional[str
 
 
 @app.get("/api/game", response_model=GameBootstrapResponse)
-async def get_game(game_id: Optional[str] = Query(default=None)):
+async def get_game(
+    game_id: Optional[str] = Query(default=None),
+    power: Optional[Power] = Query(default=None),
+    passcode: Optional[str] = Query(default=None),
+    x_passcode: Optional[str] = Header(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     game = await resolve_game(game_id)
     await tick_timer(game)
     refresh_diagnostics_and_simulation(game)
     gid = game.game_id
     sync_summary(gid)
+    summary = GAME_SUMMARIES.get(gid)
+
+    if summary and summary.has_passcode and is_multiplayer_match(gid):
+        expected_pw = GAME_PASSCODES.get(gid, "")
+        provided_pw = (passcode or x_passcode or "").strip()
+        is_participant = False
+        if current_user and any(p.user_id == current_user.user_id for p in summary.participants.values()):
+            is_participant = True
+        if not is_participant and (not expected_pw or not hmac.compare_digest(provided_pw, expected_pw)):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Passcode required or incorrect for this private campaign.",
+            )
+
+    viewer_power = power
+    if not viewer_power and current_user and summary:
+        for p_key, part in summary.participants.items():
+            if part.user_id == current_user.user_id:
+                try:
+                    viewer_power = Power(p_key)
+                    break
+                except ValueError:
+                    pass
+
     return GameBootstrapResponse(
-        state=game,
+        state=sanitize_game_state_for_viewer(game, viewer_power),
         provinces=PROVINCES,
-        summary=GAME_SUMMARIES.get(gid),
+        summary=summary,
     )
 
 
@@ -1170,12 +1392,6 @@ def put_into_civil_disorder(game: GameState, power: Power) -> None:
     kept_orders = {ord_id: o for ord_id, o in game.orders.items() if o.power != power}
     own_defaults = {ord_id: o for ord_id, o in defaults.items() if o.power == power}
     game.orders = {**kept_orders, **own_defaults}
-
-
-def is_multiplayer_match(game_id: str) -> bool:
-    """True for a game shared by several players, as opposed to a solo or saved sandbox."""
-    summary = GAME_SUMMARIES.get(game_id)
-    return bool(summary and not summary.is_sandbox)
 
 
 def reject_on_multiplayer_match(game_id: str) -> None:
@@ -1264,6 +1480,7 @@ async def enter_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Quer
     that copy's game_id, which every later sandbox call must use. A solo or saved sandbox has one
     player, so it stays on its own game and a checkpoint of the real state is saved.
     """
+    check_game_capacity()
     game = await resolve_game(game_id)
     gid = game.game_id
     if is_multiplayer_match(gid):
@@ -1398,11 +1615,22 @@ async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
 
 
 @app.post("/api/order", response_model=GameState)
-async def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[str] = Query(default=None)):
+async def update_single_order(
+    req: SingleOrderUpdateRequest,
+    game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     game = await resolve_game(game_id)
     reject_stale_turn(game, req.turn)
     validate_order_references(req.order)
     unit_map = {u.id: u for u in game.units}
+    target_power = req.order.power
+    if req.order.unit_id in unit_map:
+        target_power = unit_map[req.order.unit_id].power
+    elif req.order.unit_id.startswith("BUILD_"):
+        target_power = req.order.power
+    verify_power_authorization(game.game_id, target_power, current_user)
+
     if req.order.unit_id in unit_map:
         unit = unit_map[req.order.unit_id]
         updated_order = req.order.model_copy()
@@ -1479,12 +1707,17 @@ async def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[s
     sync_summary(game.game_id)
     await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
-    return game
+    return sanitize_game_state_for_viewer(game, target_power)
 
 
 @app.post("/api/orders/batch", response_model=GameState)
-async def update_batch_orders(req: OrderSubmissionRequest, game_id: Optional[str] = Query(default=None)):
+async def update_batch_orders(
+    req: OrderSubmissionRequest,
+    game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     game = await resolve_game(game_id)
+    verify_power_authorization(game.game_id, req.power, current_user)
     # Check the whole batch first so that one bad order cannot leave it half applied.
     for o in req.orders:
         validate_order_references(o)
@@ -1514,19 +1747,24 @@ async def update_batch_orders(req: OrderSubmissionRequest, game_id: Optional[str
     await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
     await broadcast_lobby_update()
-    return game
+    return sanitize_game_state_for_viewer(game, req.power)
 
 
 @app.post("/api/orders/confirm-all", response_model=GameState)
-async def confirm_all_power_orders(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
+async def confirm_all_power_orders(
+    req: SetPowerRequest,
+    game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     game = await resolve_game(game_id)
+    verify_power_authorization(game.game_id, req.power, current_user)
     for ord_id, ord_obj in game.orders.items():
         if ord_obj.power == req.power:
             ord_obj.is_explicit = True
     refresh_diagnostics_and_simulation(game)
     await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
-    return game
+    return sanitize_game_state_for_viewer(game, req.power)
 
 
 def get_required_finalizing_powers(game: GameState, summary: Optional[MultiplayerGameSummary] = None) -> List[Power]:
@@ -1574,9 +1812,14 @@ def get_required_finalizing_powers(game: GameState, summary: Optional[Multiplaye
 
 
 @app.post("/api/finalize", response_model=FinalizeResponse)
-async def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Query(default=None)):
+async def finalize_power_orders(
+    req: FinalizeRequest,
+    game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     game = await resolve_game(game_id)
     reject_stale_turn(game, req.turn)
+    verify_power_authorization(game.game_id, req.power, current_user)
     power_issues = validate_orders(
         game.units,
         game.orders,
@@ -1593,7 +1836,7 @@ async def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Q
             finalized=False,
             requires_confirmation=True,
             issues=power_issues,
-            state=game,
+            state=sanitize_game_state_for_viewer(game, req.power),
         )
 
     for ord_id, ord_obj in game.orders.items():
@@ -1617,13 +1860,18 @@ async def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Q
         finalized=True,
         requires_confirmation=False,
         issues=power_issues,
-        state=game,
+        state=sanitize_game_state_for_viewer(game, req.power),
     )
 
 
 @app.post("/api/unfinalize", response_model=GameState)
-async def unfinalize_power_orders(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
+async def unfinalize_power_orders(
+    req: SetPowerRequest,
+    game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     game = await resolve_game(game_id)
+    verify_power_authorization(game.game_id, req.power, current_user)
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)
     refresh_diagnostics_and_simulation(game)
@@ -1631,7 +1879,7 @@ async def unfinalize_power_orders(req: SetPowerRequest, game_id: Optional[str] =
     await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
     await broadcast_lobby_update()
-    return game
+    return sanitize_game_state_for_viewer(game, req.power)
 
 
 @app.post("/api/simulate", response_model=SimulationResult)
@@ -1799,7 +2047,12 @@ def reject_stale_turn(game: GameState, turn: Optional[str]) -> None:
         raise HTTPException(status_code=409, detail=f"Too late: the game has moved on to {current}.")
 
 
-async def require_timer_player(game_id: str, power: Power, stage: TimerStage) -> GameState:
+async def require_timer_player(
+    game_id: str,
+    power: Power,
+    stage: TimerStage,
+    current_user: Optional[AuthUser] = None,
+) -> GameState:
     """Load a game for a player's action on the clock, which must be in the given stage."""
     game = await resolve_game(game_id)
     if game.timer is None:
@@ -1808,6 +2061,18 @@ async def require_timer_player(game_id: str, power: Power, stage: TimerStage) ->
         raise HTTPException(status_code=403, detail=f"{power.value} is not playing in this match.")
     if game.timer.stage != stage:
         raise HTTPException(status_code=409, detail=f"The clock is not {stage.value} any more.")
+
+    # In multiplayer matches, verify player authorization for clock actions
+    summary = GAME_SUMMARIES.get(game_id)
+    if summary and not summary.is_sandbox:
+        part = summary.participants.get(power.value)
+        if part:
+            if current_user:
+                if part.user_id != current_user.user_id and (not current_user.email or current_user.email.lower() != (part.email or "").lower()):
+                    raise HTTPException(status_code=403, detail=f"You do not command {power.value} in this match.")
+            elif is_valid_uuid(part.user_id):
+                raise HTTPException(status_code=401, detail=f"Authentication required to act for {power.value}.")
+
     return game
 
 
@@ -1826,18 +2091,26 @@ async def start_timer(game_id: str, current_user: Optional[AuthUser] = Depends(g
 
 
 @app.post("/api/games/{game_id}/timer/vote", response_model=GameState)
-async def vote_on_timer(game_id: str, req: TimerVoteRequest):
+async def vote_on_timer(
+    game_id: str,
+    req: TimerVoteRequest,
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     """Choose this phase's length. The vote closes early once every player has voted."""
-    game = await require_timer_player(game_id, req.power, TimerStage.VOTING)
+    game = await require_timer_player(game_id, req.power, TimerStage.VOTING, current_user)
     game.timer.votes[req.power] = req.choice
     settle_timer(game, timer_players(game), time.time())
     return await publish_timer(game)
 
 
 @app.post("/api/games/{game_id}/timer/extend", response_model=GameState)
-async def request_timer_extension(game_id: str, req: TimerToggleRequest):
+async def request_timer_extension(
+    game_id: str,
+    req: TimerToggleRequest,
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     """Ask for 5 more minutes, which are added once 5 of 7 players have asked."""
-    game = await require_timer_player(game_id, req.power, TimerStage.RUNNING)
+    game = await require_timer_player(game_id, req.power, TimerStage.RUNNING, current_user)
     requests = game.timer.extend_requests
     if req.active and req.power not in requests:
         requests.append(req.power)
@@ -1848,9 +2121,13 @@ async def request_timer_extension(game_id: str, req: TimerToggleRequest):
 
 
 @app.post("/api/games/{game_id}/timer/ready", response_model=GameState)
-async def ready_up_timer(game_id: str, req: TimerToggleRequest):
+async def ready_up_timer(
+    game_id: str,
+    req: TimerToggleRequest,
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     """Ready up in a paused game. Once every player is ready a new vote opens."""
-    game = await require_timer_player(game_id, req.power, TimerStage.PAUSED)
+    game = await require_timer_player(game_id, req.power, TimerStage.PAUSED, current_user)
     ready = game.timer.ready_powers
     if req.active and req.power not in ready:
         ready.append(req.power)
@@ -2221,7 +2498,12 @@ async def admin_unfinalize_all(
 
 
 @app.websocket("/ws/games/{game_id}")
-async def ws_game_endpoint(websocket: WebSocket, game_id: str):
+async def ws_game_endpoint(
+    websocket: WebSocket,
+    game_id: str,
+    power: Optional[str] = Query(default=None),
+    passcode: Optional[str] = Query(default=None),
+):
     if game_id not in GAMES and is_persistence_enabled():
         try:
             loaded = await load_game_from_db(game_id)
@@ -2235,16 +2517,32 @@ async def ws_game_endpoint(websocket: WebSocket, game_id: str):
         await websocket.close(code=4004)
         return
 
-    await manager.connect_game(game_id, websocket)
+    summary = GAME_SUMMARIES.get(game_id)
+    if summary and summary.has_passcode and is_multiplayer_match(game_id):
+        expected_pw = GAME_PASSCODES.get(game_id, "")
+        provided_pw = (passcode or "").strip()
+        if not expected_pw or not hmac.compare_digest(provided_pw, expected_pw):
+            await websocket.close(code=4403)
+            return
+
+    power_enum: Optional[Power] = None
+    if power:
+        try:
+            power_enum = Power(power.upper())
+        except ValueError:
+            pass
+
+    await manager.connect_game(game_id, websocket, power=power_enum)
     sync_summary(game_id)
     game = GAMES[game_id]
     await tick_timer(game)
     summary = GAME_SUMMARIES.get(game_id)
     try:
+        sanitized = sanitize_game_state_for_viewer(game, power_enum)
         await websocket.send_json({
             "type": "game_update",
             "game_id": game_id,
-            "state": game.model_dump(mode="json"),
+            "state": sanitized.model_dump(mode="json"),
             "summary": summary.model_dump(mode="json") if summary else None,
         })
         while True:
@@ -2258,10 +2556,11 @@ async def ws_game_endpoint(websocket: WebSocket, game_id: str):
                     s = GAME_SUMMARIES.get(game_id)
                     if g:
                         await tick_timer(g)
+                        g_sanitized = sanitize_game_state_for_viewer(g, power_enum)
                         await websocket.send_json({
                             "type": "game_update",
                             "game_id": game_id,
-                            "state": g.model_dump(mode="json"),
+                            "state": g_sanitized.model_dump(mode="json"),
                             "summary": s.model_dump(mode="json") if s else None,
                         })
     except WebSocketDisconnect:

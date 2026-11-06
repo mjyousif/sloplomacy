@@ -2,7 +2,7 @@
 """
 Cryptographic Supabase JWT Authorization & Identity Extraction
 Validates tokens signed by Supabase Auth (both ES256 asymmetric and HS256 symmetric)
-for multiplayer admin operations.
+for multiplayer admin operations and player action authentication.
 """
 
 import logging
@@ -40,6 +40,14 @@ def get_supabase_url() -> str:
     return url.rstrip("/")
 
 
+def is_insecure_dev_auth_allowed() -> bool:
+    """Determine whether unverified development auth fallback is permitted."""
+    return (
+        os.getenv("ALLOW_INSECURE_DEV_AUTH", "false").lower() == "true"
+        or os.getenv("ENVIRONMENT", "").lower() in ("test", "development")
+    )
+
+
 def get_jwks_client(supabase_url: str) -> Optional[jwt.PyJWKClient]:
     """Return a cached PyJWKClient for the given Supabase URL."""
     if not supabase_url:
@@ -61,25 +69,53 @@ def get_current_user(
     jwt_secret = get_jwt_secret()
     jwt_pub_key = get_jwt_public_key()
     sb_url = get_supabase_url()
+    dev_allowed = is_insecure_dev_auth_allowed()
 
     # Determine algorithm from token header
     try:
         header = jwt.get_unverified_header(token)
         alg = header.get("alg", "HS256")
     except Exception:
-        alg = "HS256"
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Malformed token header.",
+        )
+
+    if alg.lower() == "none":
+        if dev_allowed:
+            try:
+                unverified = jwt.decode(token, options={"verify_signature": False})
+                return AuthUser(
+                    user_id=unverified.get("sub", "dev_user"),
+                    email=unverified.get("email"),
+                    is_authenticated=True,
+                )
+            except Exception:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token payload.",
+                )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Insecure 'none' algorithm token rejected in production.",
+        )
 
     # Dev fallback when neither secrets nor Supabase URL are configured in local environment
     if not jwt_secret and not jwt_pub_key and not sb_url:
-        try:
-            unverified = jwt.decode(token, options={"verify_signature": False})
-            return AuthUser(
-                user_id=unverified.get("sub", "dev_user"),
-                email=unverified.get("email"),
-                is_authenticated=True,
-            )
-        except Exception:
-            return None
+        if dev_allowed:
+            try:
+                unverified = jwt.decode(token, options={"verify_signature": False})
+                return AuthUser(
+                    user_id=unverified.get("sub", "dev_user"),
+                    email=unverified.get("email"),
+                    is_authenticated=True,
+                )
+            except Exception:
+                return None
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Supabase authentication provider is not configured on this server.",
+        )
 
     try:
         if alg == "ES256":
@@ -105,33 +141,42 @@ def get_current_user(
                     algorithms=["ES256"],
                     options={"verify_aud": False},
                 )
-            elif not jwt_secret:
-                # Local dev fallback when no public key or Supabase URL is available
-                unverified = jwt.decode(token, options={"verify_signature": False})
-                return AuthUser(
-                    user_id=unverified.get("sub", "dev_user"),
-                    email=unverified.get("email"),
-                    is_authenticated=True,
-                )
             else:
+                if dev_allowed:
+                    unverified = jwt.decode(token, options={"verify_signature": False})
+                    return AuthUser(
+                        user_id=unverified.get("sub", "dev_user"),
+                        email=unverified.get("email"),
+                        is_authenticated=True,
+                    )
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Token signed with ES256, but no public key or Supabase URL configured.",
                 )
-        else:
+        elif alg == "HS256":
             # Symmetric HS256 verification
             if not jwt_secret:
-                unverified = jwt.decode(token, options={"verify_signature": False})
-                return AuthUser(
-                    user_id=unverified.get("sub", "dev_user"),
-                    email=unverified.get("email"),
-                    is_authenticated=True,
+                if dev_allowed:
+                    unverified = jwt.decode(token, options={"verify_signature": False})
+                    return AuthUser(
+                        user_id=unverified.get("sub", "dev_user"),
+                        email=unverified.get("email"),
+                        is_authenticated=True,
+                    )
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token signed with HS256, but no symmetric JWT secret configured on server.",
                 )
             payload = jwt.decode(
                 token,
                 jwt_secret,
                 algorithms=["HS256"],
                 options={"verify_aud": False},
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Unsupported signing algorithm: {alg}",
             )
 
         user_id = payload.get("sub")
@@ -141,6 +186,14 @@ def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token payload: missing subject ('sub').",
             )
+
+        aud = payload.get("aud")
+        if aud and aud != "authenticated":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid token audience: {aud}",
+            )
+
         return AuthUser(user_id=user_id, email=email, is_authenticated=True)
     except jwt.ExpiredSignatureError:
         raise HTTPException(

@@ -155,8 +155,11 @@ def test_ws_lobby_hears_about_resolved_turns():
         _ = ws.receive_json()  # Initial lobby
 
         import jwt
-        token = jwt.encode({"sub": "host", "email": "host@test.com"}, "test-jwt-secret-at-least-32-chars-long-12345", algorithm="HS256")
-        client.post(f"/api/adjudicate?game_id={game_id}", headers={"Authorization": f"Bearer {token}"})
+        import os
+        secret = os.getenv("SUPABASE_JWT_SECRET", "test-secret-at-least-32-chars-long-12345")
+        token = jwt.encode({"sub": "host", "email": "host@test.com", "aud": "authenticated"}, secret, algorithm="HS256")
+        res = client.post(f"/api/adjudicate?game_id={game_id}", headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 200
 
         update = ws.receive_json()
         assert update["type"] == "lobby_update"

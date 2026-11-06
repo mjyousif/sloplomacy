@@ -16,13 +16,19 @@ export function getWebSocketUrl(path: string): string {
 
 export function resolveWebSocketPath(
   viewMode: 'lobby' | 'sandbox' | 'multiplayer',
-  activeGameId: string | null
+  activeGameId: string | null,
+  power?: string | null,
+  passcode?: string | null
 ): string | null {
   if (viewMode === 'lobby') {
     return '/ws/lobby';
   }
   if (activeGameId) {
-    return `/ws/games/${encodeURIComponent(activeGameId)}`;
+    const params = new URLSearchParams();
+    if (power) params.set('power', power);
+    if (passcode) params.set('passcode', passcode);
+    const qs = params.toString();
+    return `/ws/games/${encodeURIComponent(activeGameId)}${qs ? `?${qs}` : ''}`;
   }
   return null;
 }
@@ -30,6 +36,8 @@ export function resolveWebSocketPath(
 interface UseDiplomacyWebSocketProps {
   activeGameId: string | null;
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
+  power?: string | null;
+  passcode?: string | null;
   onGameUpdate: (update: WebSocketGameUpdate) => void;
   onLobbyUpdate: (update: WebSocketLobbyUpdate) => void;
 }
@@ -37,6 +45,8 @@ interface UseDiplomacyWebSocketProps {
 export function useDiplomacyWebSocket({
   activeGameId,
   viewMode,
+  power,
+  passcode,
   onGameUpdate,
   onLobbyUpdate,
 }: UseDiplomacyWebSocketProps) {
@@ -55,7 +65,7 @@ export function useDiplomacyWebSocket({
     let isCancelled = false;
 
     // Determine target WS endpoint based on current viewMode & activeGameId
-    const targetPath = resolveWebSocketPath(viewMode, activeGameId);
+    const targetPath = resolveWebSocketPath(viewMode, activeGameId, power, passcode);
 
     if (!targetPath) {
       setIsConnected(false);
@@ -146,7 +156,7 @@ export function useDiplomacyWebSocket({
       }
       setIsConnected(false);
     };
-  }, [viewMode, activeGameId]);
+  }, [viewMode, activeGameId, power, passcode]);
 
   return { isConnected };
 }

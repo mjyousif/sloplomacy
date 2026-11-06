@@ -1,6 +1,6 @@
 # Backend REST API Reference
 
-The backend exposes a JSON REST API under the `/api` prefix on port `8000`. All requests and responses use standard `application/json` formatting. CORS is configured to accept requests from all origins (`allow_origins=["*"]`) for local web client communication.
+The backend exposes a JSON REST API under the `/api` prefix on port `8000`. All requests and responses use standard `application/json` formatting. CORS is configured with an explicit origin whitelist via `ALLOWED_ORIGINS` (defaulting to `http://localhost:5173`, `http://127.0.0.1:5173`, `http://localhost:8000`, `http://127.0.0.1:8000`) with credentials enabled.
 
 ### Multi-Game Room Scoping (`?game_id=...`)
 All operational endpoints accept an optional query parameter `?game_id=<id>`. When omitted, endpoints operate on the default match room (`proto_1901`). Sandbox sessions and concurrent multiplayer lobbies pass their scoped `game_id` with every request.
@@ -223,7 +223,15 @@ Nothing runs in the background. `GET /api/game` and the game WebSocket check the
 ## Detailed Specifications: Match & Tactical Operations
 
 ### 7. `GET /api/game`
-Bootstraps the client by returning the full current `GameState` along with the complete static dictionary of all 76 `PROVINCES` (including coastline and adjacency rules).
+Bootstraps the client by returning the current `GameState` along with the complete static dictionary of all 76 `PROVINCES` (including coastline and adjacency rules).
+
+- **Query Parameters**:
+  - `game_id` *(optional, string)*: Scoped match identifier (defaults to `proto_1901`).
+  - `power` *(optional, Power)*: The viewer's claimed Great Power. In active multiplayer matches (`status: "active"`), foreign unadjudicated moves are masked to default `HOLD`s and foreign diagnostic issues are excluded to preserve simultaneous turn secrecy (Fog of War).
+  - `passcode` *(optional, string)*: Passcode for private campaigns (compared using timing-safe `hmac.compare_digest`).
+- **Headers**:
+  - `X-Passcode` *(optional, string)*: Header alternative for campaign passcode.
+  - `Authorization: Bearer <token>` *(optional)*: Authenticated user token; automatically determines viewer's claimed seat if `power` query parameter is omitted.
 
 #### Response (`GameBootstrapResponse`):
 ```json
@@ -324,6 +332,8 @@ Submits or modifies a single military instruction. Automatically triggers valida
 ```
 
 Returns `400` if the order names a province or coast that does not exist. A real but illegal move is accepted: the validator flags it, and the engine refuses it at adjudication.
+
+In multiplayer matches, callers must supply a valid `Authorization: Bearer <token>` matching the participant who claimed the Great Power (or game creator). Attempts by opponents or unauthenticated callers to issue orders for claimed powers return `403 Forbidden` or `401 Unauthorized`. Returned `GameState` is sanitized for the commanding power to preserve Fog of War.
 
 ---
 
@@ -481,9 +491,13 @@ Unlocks and unfinalizes order submissions across all 7 Great Powers simultaneous
 ### 19. `WS /ws/games/{game_id}`
 Establishes a persistent, low-latency WebSocket connection scoped to a specific game room (`game_id`).
 
+- **Query Parameters**:
+  - `power` *(optional, Power)*: The viewer's claimed Great Power. When set, WebSocket broadcasts mask foreign unadjudicated moves to default `HOLD`s and hide foreign issues (Fog of War).
+  - `passcode` *(optional, string)*: Passcode for private campaigns. Connections with incorrect or missing passcodes are closed immediately with code `4403`.
 - **Connection Handshake**:
   - Validates that `game_id` exists. If the game is missing, closes with code `4004`.
-  - Immediately transmits the current authoritative `game_update` payload upon connecting.
+  - For private campaigns, verifies the provided passcode in constant time; if mismatched, closes with code `4403`.
+  - Immediately transmits the sanitized `game_update` payload tailored to the connected viewer's power.
 - **Client Heartbeats & Refresh**:
   - Send `{"type": "ping"}` -> Server replies `{"type": "pong"}` to maintain Cloud Run & proxy connections.
   - Send `{"type": "refresh"}` -> Server resends the latest authoritative `game_update`.
