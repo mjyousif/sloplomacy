@@ -5,8 +5,9 @@ import {
   getValidRetreatDestinations,
   canUnitSupportInto,
   formatOrderSummary,
+  getConsensusStatusInfo,
 } from './orderHelpers';
-import { Order, ProvinceInfo, Unit } from '../types/diplomacy';
+import { GameParticipant, Order, Power, ProvinceInfo, Unit } from '../types/diplomacy';
 
 describe('splitProvinceCode', () => {
   it('parses base province without coast', () => {
@@ -275,5 +276,109 @@ describe('formatOrderSummary', () => {
     };
     const dests = getValidRetreatDestinations(unit, retreats, mockProvinces);
     expect(dests.map((d) => d.province)).toEqual(['MUN', 'RUH', 'GAS']);
+  });
+});
+
+describe('getConsensusStatusInfo', () => {
+  const francePart: GameParticipant = {
+    user_id: 'usr_fra',
+    email: 'fra@diplomacy.eu',
+    display_name: 'Napoleon',
+    power: 'FRANCE' as Power,
+    joined_at: '2026-01-01T00:00:00Z',
+  };
+
+  const englandPart: GameParticipant = {
+    user_id: 'usr_eng',
+    email: 'eng@diplomacy.eu',
+    display_name: 'Churchill',
+    power: 'ENGLAND' as Power,
+    joined_at: '2026-01-01T00:00:00Z',
+  };
+
+  it('shows waiting lobby state when single player has not finalized orders', () => {
+    const info = getConsensusStatusInfo({
+      isMultiplayer: true,
+      lobbyStatus: 'waiting',
+      participants: { FRANCE: francePart },
+      requiredPowers: ['FRANCE' as Power],
+      finalizedPowers: [],
+      isGameCreator: true,
+      gameOver: false,
+    });
+
+    expect(info.isWaitingForPlayers).toBe(true);
+    expect(info.title).toContain('Lobby: Waiting for Players');
+    expect(info.title).toContain('1/2 min');
+    expect(info.isSoloAdvanceReady).toBe(false);
+    expect(info.buttonLabel).toBe('Advance Phase Solo (Host Override)');
+  });
+
+  it('shows orders locked and host solo advance guidance when single player has finalized', () => {
+    const info = getConsensusStatusInfo({
+      isMultiplayer: true,
+      lobbyStatus: 'waiting',
+      participants: { FRANCE: francePart },
+      requiredPowers: ['FRANCE' as Power],
+      finalizedPowers: ['FRANCE' as Power],
+      isGameCreator: true,
+      gameOver: false,
+    });
+
+    expect(info.isWaitingForPlayers).toBe(true);
+    expect(info.title).toBe('Orders Locked • Waiting for Players (1/2 min)');
+    expect(info.description).toContain('Advance Phase Solo');
+    expect(info.buttonLabel).toBe('Advance Phase Solo (Host Override)');
+    expect(info.isSoloAdvanceReady).toBe(true);
+  });
+
+  it('displays waiting on missing powers in active multiplayer match', () => {
+    const info = getConsensusStatusInfo({
+      isMultiplayer: true,
+      lobbyStatus: 'active',
+      participants: { FRANCE: francePart, ENGLAND: englandPart },
+      requiredPowers: ['FRANCE' as Power, 'ENGLAND' as Power],
+      finalizedPowers: ['FRANCE' as Power],
+      isGameCreator: false,
+      gameOver: false,
+    });
+
+    expect(info.isWaitingForPlayers).toBe(false);
+    expect(info.title).toBe('Resolution Progress: 1/2 Ready');
+    expect(info.description).toContain('England');
+    expect(info.isSoloAdvanceReady).toBe(false);
+    expect(info.buttonLabel).toBe('Force Adjudicate Phase (Host Override)');
+  });
+
+  it('displays consensus reached when all required powers finalize in active match', () => {
+    const info = getConsensusStatusInfo({
+      isMultiplayer: true,
+      lobbyStatus: 'active',
+      participants: { FRANCE: francePart, ENGLAND: englandPart },
+      requiredPowers: ['FRANCE' as Power, 'ENGLAND' as Power],
+      finalizedPowers: ['FRANCE' as Power, 'ENGLAND' as Power],
+      isGameCreator: true,
+      gameOver: false,
+    });
+
+    expect(info.isWaitingForPlayers).toBe(false);
+    expect(info.title).toBe('Consensus Reached (2/2)');
+    expect(info.description).toContain('Resolving phase...');
+    expect(info.isSoloAdvanceReady).toBe(false);
+  });
+
+  it('handles game over state', () => {
+    const info = getConsensusStatusInfo({
+      isMultiplayer: true,
+      lobbyStatus: 'active',
+      participants: { FRANCE: francePart, ENGLAND: englandPart },
+      requiredPowers: ['FRANCE' as Power, 'ENGLAND' as Power],
+      finalizedPowers: ['FRANCE' as Power, 'ENGLAND' as Power],
+      isGameCreator: true,
+      gameOver: true,
+    });
+
+    expect(info.title).toBe('Campaign Finished');
+    expect(info.buttonLabel).toBe('Game Over');
   });
 });

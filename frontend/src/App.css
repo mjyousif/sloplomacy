@@ -1429,6 +1429,26 @@
   color: #f8fafc;
 }
 
+.mp-consensus-status-card.waiting-mode {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.creator-override-btn.solo-advance-ready {
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+.creator-override-btn.solo-advance-ready:hover {
+  background: #1e293b;
+  border-color: #7dd3fc;
+  color: #f0f9ff;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+}
+
 
 .finalize-primary-btn {
   flex: 1;

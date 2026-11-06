@@ -1211,6 +1211,7 @@ export function App() {
             isGameCreator={isGameCreator}
             gameOver={Boolean(gameState.winner)}
             participants={activeGameSummary?.participants}
+            lobbyStatus={activeGameSummary?.status}
             onSelectUnit={setSelectedUnitId}
             onHoverUnit={setHoveredUnitId}
             onHighlightProvinces={setHighlightedProvinces}
