@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   AUTHENTIC_BACKGROUND_SVG,
   AUTHENTIC_DEFS_SVG,
@@ -43,7 +43,13 @@ import {
   ZoomOut,
 } from 'lucide-react';
 
-interface EuropeMapProps {
+export interface EuropeMapHandle {
+  stepZoom: (delta: number) => void;
+  resetCamera: () => void;
+  getZoom: () => number;
+}
+
+export interface EuropeMapProps {
   provinces: Record<string, ProvinceInfo>;
   units: Unit[];
   orders: Record<string, Order>;
@@ -65,6 +71,7 @@ interface EuropeMapProps {
   onUpdateOrder: (order: Order) => void;
   onClearSimulationOverlay: () => void;
   onAdjudicateTurn: () => void;
+  onZoomChange?: (zoomPercent: number) => void;
 }
 
 type MapInteractionMode =
@@ -112,7 +119,6 @@ interface ProvincePolygonProps {
   allowedCoastsStr: string;
   showFleetCoasts: boolean;
   showMoveReticle: boolean;
-  hasOccupant: boolean;
   isHovered: boolean;
   isHighlighted: boolean;
   hasWarning: boolean;
@@ -129,7 +135,6 @@ const ProvincePolygon = memo<ProvincePolygonProps>(
     allowedCoastsStr,
     showFleetCoasts,
     showMoveReticle,
-    hasOccupant,
     isHovered,
     isHighlighted,
     hasWarning,
@@ -242,29 +247,6 @@ const ProvincePolygon = memo<ProvincePolygonProps>(
               strokeWidth="2.8"
               strokeDasharray="6 3"
             />
-            {hasOccupant && (
-              <g transform={`translate(${geom.unitPos.x}, ${geom.unitPos.y + 30})`}>
-                <rect
-                  x="-36"
-                  y="-9"
-                  width="72"
-                  height="18"
-                  rx="9"
-                  fill="#15803d"
-                  stroke="#fef3c7"
-                  strokeWidth="1.5"
-                />
-                <text
-                  y="3.5"
-                  textAnchor="middle"
-                  fill="#ffffff"
-                  fontSize="9.5"
-                  fontWeight="800"
-                >
-                  MOVE HERE
-                </text>
-              </g>
-            )}
           </g>
         )}
       </g>
@@ -354,29 +336,33 @@ function computeQuadraticCurve(
   };
 }
 
-export const EuropeMap: React.FC<EuropeMapProps> = ({
-  provinces,
-  units,
-  orders,
-  ownership,
-  activePower,
-  sandboxMode,
-  selectedUnitId,
-  hoveredUnitId,
-  highlightedProvinces,
-  issues,
-  simulationResult,
-  showSimulationOverlay,
-  phase = 'Movement',
-  season = 'Spring',
-  builds = null,
-  retreats = null,
-  onSelectUnit,
-  onHoverUnit,
-  onUpdateOrder,
-  onClearSimulationOverlay,
-  onAdjudicateTurn,
-}) => {
+export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function EuropeMap(
+  {
+    provinces,
+    units,
+    orders,
+    ownership,
+    activePower,
+    sandboxMode,
+    selectedUnitId,
+    hoveredUnitId,
+    highlightedProvinces,
+    issues,
+    simulationResult,
+    showSimulationOverlay,
+    phase = 'Movement',
+    season = 'Spring',
+    builds = null,
+    retreats = null,
+    onSelectUnit,
+    onHoverUnit,
+    onUpdateOrder,
+    onClearSimulationOverlay,
+    onAdjudicateTurn,
+    onZoomChange,
+  },
+  ref
+) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const cameraGroupRef = useRef<SVGGElement | null>(null);
@@ -1039,6 +1025,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
 
       cameraRef.current = { x: newPanX, y: newPanY, zoom: newZoom };
       scheduleCameraSync();
+      onZoomChange?.(Math.round(newZoom * 100));
     };
 
     svgEl.addEventListener('wheel', onWheel, { passive: false });
@@ -1103,17 +1090,33 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
     }
   };
 
-  const stepZoom = (delta: number) => {
+  const stepZoom = useCallback((delta: number) => {
     const oldZoom = cameraRef.current.zoom;
     const newZoom = Math.min(3.0, Math.max(0.75, Number((oldZoom + delta).toFixed(2))));
     cameraRef.current.zoom = newZoom;
     syncCameraDOM();
-  };
+    onZoomChange?.(Math.round(newZoom * 100));
+  }, [syncCameraDOM, onZoomChange]);
 
-  const resetCamera = () => {
+  const resetCamera = useCallback(() => {
     cameraRef.current = { x: 0, y: -35, zoom: 1.05 };
     syncCameraDOM();
-  };
+    onZoomChange?.(105);
+  }, [syncCameraDOM, onZoomChange]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      stepZoom,
+      resetCamera,
+      getZoom: () => cameraRef.current.zoom,
+    }),
+    [stepZoom, resetCamera]
+  );
+
+  useEffect(() => {
+    onZoomChange?.(Math.round(cameraRef.current.zoom * 100));
+  }, [onZoomChange]);
 
   const floatingPos = getSelectedUnitFloatingPosition();
 
@@ -1132,39 +1135,6 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
 
   return (
     <div ref={containerRef} className="map-viewport-container">
-      {/* Top-Left Map Cartouche & Legend Overlay */}
-      <div className="map-cartouche-overlay">
-        <div className="cartouche-title-row">
-          <Compass className="cartouche-icon" size={18} />
-          <div>
-            <div className="cartouche-title">IMPERIAL WAR ATLAS — EUROPE 1901</div>
-            <div className="cartouche-subtitle">
-              {sandboxMode
-                ? 'SANDBOX MODE: Click any power’s unit to test hypothetical moves'
-                : isAdjustmentPhase
-                ? `WINTER ADJUSTMENTS • Click home centers to Build or units to Disband`
-                : isRetreatPhase
-                ? `RETREATS PHASE • Click dislodged units to Retreat or Disband`
-                : `COMMANDING ${POWER_METADATA[activePower].name.toUpperCase()} • Click your units to assign orders`}
-            </div>
-          </div>
-        </div>
-        <div className="map-legend-pills">
-          <span className="legend-pill">
-            <span className="legend-line legend-move" /> Move Vector
-          </span>
-          <span className="legend-pill">
-            <span className="legend-line legend-support" /> Support Link
-          </span>
-          <span className="legend-pill">
-            <span className="legend-line legend-convoy" /> Fleet Convoy
-          </span>
-          <span className="legend-pill legend-warn-pill">
-            <AlertTriangle size={12} /> Tactical Warning
-          </span>
-        </div>
-      </div>
-
       {/* Live Sandbox / Simulation Active Banner */}
       {(showSimulationOverlay || sandboxMode) && simulationResult && (
         <div className="simulation-map-banner">
@@ -1716,7 +1686,6 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
               const showMoveReticle = Boolean(
                 selectedUnit && reachableMap[geom.id] && interactionMode === 'MOVE'
               );
-              const hasOccupant = Boolean(unitsByProv[geom.id]);
               const isHovered = hoveredProv === geom.id;
               const isHighlighted =
                 highlightedProvinces.includes(geom.id) || selectedBuildProv === geom.id;
@@ -1732,7 +1701,6 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
                   allowedCoastsStr={allowedCoastsStr}
                   showFleetCoasts={showFleetCoasts}
                   showMoveReticle={showMoveReticle}
-                  hasOccupant={hasOccupant}
                   isHovered={isHovered}
                   isHighlighted={isHighlighted}
                   hasWarning={hasWarning}
@@ -2369,4 +2337,4 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
       </svg>
     </div>
   );
-};
+});

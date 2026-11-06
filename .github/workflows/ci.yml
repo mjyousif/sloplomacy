@@ -74,6 +74,24 @@ jobs:
             exit 1
           fi
 
+      - name: Apply Supabase Migrations (Optional)
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL not configured. Skipping migrations."
+            exit 0
+          fi
+          echo "Applying pending migrations to Supabase PostgreSQL..."
+          for sql_file in $(ls -1 supabase/migrations/*.sql | sort); do
+            echo "--> Running migration: $sql_file"
+            if ! psql "$DATABASE_URL" -f "$sql_file"; then
+              echo "::warning::Migration failed for $sql_file. If using direct 'db.<ref>.supabase.co', please switch DATABASE_URL to the IPv4 Connection Pooler URI (aws-0-<region>.pooler.supabase.com:6543) in the Supabase 'Connect' modal because GitHub Actions runners do not support IPv6."
+            fi
+          done
+          echo "Migration step completed."
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
@@ -89,6 +107,7 @@ jobs:
           SERVICE_NAME: ${{ secrets.GCP_SERVICE_NAME || 'diplomacy-1901' }}
           SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           echo "Target Project: $PROJECT_ID"
           echo "Target Region : $REGION"
@@ -97,18 +116,21 @@ jobs:
           IMAGE_TAG="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:${{ github.sha }}"
           LATEST_TAG="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest"
 
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
           # 1. Build and push container with Cloud Build
-          echo "Building container with Google Cloud Build..."
+          echo "Building container with Google Cloud Build (revision: $SHORT_SHA)..."
           gcloud builds submit \
             --config=cloudbuild.yaml \
-            --substitutions="_SUPABASE_URL=${SUPABASE_URL},_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},_IMAGE_TAG=${IMAGE_TAG}" \
+            --substitutions="_SUPABASE_URL=${SUPABASE_URL},_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},_SHORT_SHA=${SHORT_SHA},_IMAGE_TAG=${IMAGE_TAG}" \
             --project="$PROJECT_ID"
 
-          # Also tag as latest
+          # 2. Also tag as latest
           gcloud container images add-tag "$IMAGE_TAG" "$LATEST_TAG" --quiet || true
 
           # 3. Deploy container revision to Cloud Run
-          echo "Deploying to Cloud Run..."
+          BACKEND_KEY="${SUPABASE_SERVICE_ROLE_KEY:-$SUPABASE_ANON_KEY}"
+          echo "Deploying to Cloud Run with Supabase state persistence..."
           gcloud run deploy "$SERVICE_NAME" \
             --image "$IMAGE_TAG" \
             --region "$REGION" \
@@ -119,7 +141,7 @@ jobs:
             --max-instances 3 \
             --memory 512Mi \
             --port 8080 \
-            --set-env-vars "VITE_SUPABASE_URL=${SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
+            --set-env-vars "VITE_SUPABASE_URL=${SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_KEY=${BACKEND_KEY},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}"
 
           # 4. Extract and report public service URL
           SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format "value(status.url)")

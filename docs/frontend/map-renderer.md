@@ -19,8 +19,9 @@ The map features smooth multi-modal navigation without external library bloat:
    ```css
    transform: translate(${pan.x}px, ${pan.y}px) scale(${zoom})
    ```
-2. **Wheel Zoom**: Smooth zoom centered around the cursor position with configurable clamping (min `0.6x`, max `3.5x`).
-3. **HUD Controls**: On-screen buttons for Zoom In (`+`), Zoom Out (`-`), and Reset Viewport.
+2. **Wheel Zoom**: Smooth zoom centered around the cursor position with configurable clamping (min `0.75x`, max `3.0x`), notifying external toolbars via `onZoomChange`.
+3. **Imperative Handle (`EuropeMapHandle`)**: Exposes `stepZoom(delta)`, `resetCamera()`, and `getZoom()` via React `forwardRef`, enabling seamless zoom and fit control from the Left Tools Sidebar without SVG re-renders.
+4. **On-Screen Camera Controls**: Sleek floating camera pill in the top-right corner of the map for quick adjustments when sidebars are collapsed.
 
 ---
 

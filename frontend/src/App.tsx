@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import { AuthModal } from './components/AuthModal';
-import { EuropeMap } from './components/EuropeMap';
+import { EuropeMap, EuropeMapHandle } from './components/EuropeMap';
 import { LobbyView } from './components/LobbyView';
 import { MacroSidebar } from './components/MacroSidebar';
+import { ToolsSidebar } from './components/ToolsSidebar';
 import { AdminToolsModal } from './components/AdminToolsModal';
 import { SanityCheckModal } from './components/SanityCheckModal';
 import { SurrenderModal } from './components/SurrenderModal';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
 import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
 import {
+  getAuthHeaders,
   getInitialAuthUser,
   signOutUser,
   subscribeToAuthChanges,
@@ -50,7 +52,15 @@ const API_BASE = '/api';
 
 export function App() {
   // Navigation & Mode State
-  const [viewMode, setViewMode] = useState<'lobby' | 'sandbox' | 'multiplayer'>('lobby');
+  const [viewMode, setViewMode] = useState<'lobby' | 'sandbox' | 'multiplayer'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('view') === 'sandbox' || window.location.hash === '#sandbox') {
+        return 'sandbox';
+      }
+    }
+    return 'lobby';
+  });
   const [activeGameId, setActiveGameId] = useState<string>('proto_1901');
   const [activeGameSummary, setActiveGameSummary] =
     useState<MultiplayerGameSummary | null>(null);
@@ -77,10 +87,16 @@ export function App() {
   const [hoveredUnitId, setHoveredUnitId] = useState<string | null>(null);
   const [highlightedProvinces, setHighlightedProvinces] = useState<string[]>([]);
   const [sandboxMode, setSandboxMode] = useState<boolean>(false);
+  // A multiplayer sandbox runs on a private server-side copy of the match under its own game id.
+  const [sandboxGameId, setSandboxGameId] = useState<string | null>(null);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [showSimulationOverlay, setShowSimulationOverlay] = useState<boolean>(false);
   const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
   const [adminOverrideActive, setAdminOverrideActive] = useState<boolean>(false);
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState<boolean>(false);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState<boolean>(false);
+  const [zoomPercent, setZoomPercent] = useState<number>(105);
+  const mapRef = useRef<EuropeMapHandle | null>(null);
 
   // Sanity Check Modal State
   const [sanityModalOpen, setSanityModalOpen] = useState<boolean>(false);
@@ -94,12 +110,21 @@ export function App() {
   const [surrenderModalPower, setSurrenderModalPower] = useState<Power | null>(null);
 
   const playerPower = resolvePlayerPower(viewMode, lockedPower, gameState?.active_power);
+  // Drafts, AI plans and previews go to the private copy while there is one.
+  const draftGameId = sandboxGameId ?? activeGameId;
 
   const triggerToast = (msg: string) => {
     setToastBanner(msg);
     setTimeout(() => {
       setToastBanner((prev) => (prev === msg ? null : prev));
     }, 4500);
+  };
+
+  // The board in a private sandbox is hypothetical, so nothing real can be done from it.
+  const requireRealBoard = (action: string): boolean => {
+    if (!sandboxGameId) return true;
+    triggerToast(`Exit Sandbox Mode to ${action}.`);
+    return false;
   };
 
   const openAuthPrompt = (reason?: string, tab: 'signin' | 'signup' = 'signin') => {
@@ -119,6 +144,12 @@ export function App() {
     (update: WebSocketGameUpdate) => {
       if (update.game_id !== activeGameId) return;
 
+      if (update.summary) {
+        setActiveGameSummary(update.summary);
+      }
+      // The real match keeps moving behind a private sandbox; exiting catches the board up.
+      if (sandboxGameId) return;
+
       setGameState((prev) => {
         if (
           prev &&
@@ -136,11 +167,8 @@ export function App() {
       if (update.state.last_resolution) {
         setSimulationResult(update.state.last_resolution);
       }
-      if (update.summary) {
-        setActiveGameSummary(update.summary);
-      }
     },
-    [activeGameId]
+    [activeGameId, sandboxGameId]
   );
 
   const handleWsLobbyUpdate = useCallback(
@@ -205,20 +233,38 @@ export function App() {
 
   // Auto-poll game state in multiplayer mode so turn advancements are received automatically
   useEffect(() => {
-    if (viewMode !== 'multiplayer' || !activeGameId) return;
+    if (viewMode !== 'multiplayer' || !activeGameId || sandboxGameId) return;
+    let abandoned = false;
     const interval = setInterval(() => {
       fetch(`${API_BASE}/game?game_id=${encodeURIComponent(activeGameId)}`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
-          if (data?.state) {
+          // A reply still in flight must not repaint a board the player has since left.
+          if (!abandoned && data?.state) {
             applyServerState(data.state);
             if (data.summary) setActiveGameSummary(data.summary);
           }
         })
         .catch(() => {});
     }, 3000);
-    return () => clearInterval(interval);
-  }, [viewMode, activeGameId]);
+    return () => {
+      abandoned = true;
+      clearInterval(interval);
+    };
+  }, [viewMode, activeGameId, sandboxGameId]);
+
+  // Leaving the match board by any route closes its private sandbox.
+  useEffect(() => {
+    if (!sandboxGameId || viewMode === 'multiplayer') return;
+    fetch(`${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(sandboxGameId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ power: playerPower }),
+    }).catch(() => {});
+    setSandboxGameId(null);
+    setSandboxMode(false);
+    setShowSimulationOverlay(false);
+  }, [viewMode, sandboxGameId]);
 
 
   const handleEnterSoloSandbox = async () => {
@@ -333,7 +379,7 @@ export function App() {
     try {
       setLoading(true);
       const res = await fetch(
-        `${API_BASE}/sandbox/ai-orders?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/sandbox/ai-orders?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -369,7 +415,7 @@ export function App() {
     try {
       setLoading(true);
       const res = await fetch(
-        `${API_BASE}/sandbox/ai-step?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/sandbox/ai-step?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -432,6 +478,7 @@ export function App() {
   };
 
   const handleOpenSurrenderModal = (game: MultiplayerGameSummary, power: Power) => {
+    if (!requireRealBoard('surrender')) return;
     setSurrenderModalGame(game);
     setSurrenderModalPower(power);
     setSurrenderModalOpen(true);
@@ -564,7 +611,7 @@ export function App() {
     }
     try {
       const res = await fetch(
-        `${API_BASE}/order?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/order?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -587,7 +634,7 @@ export function App() {
     if (!gameState) return;
     try {
       const res = await fetch(
-        `${API_BASE}/orders/confirm-all?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/orders/confirm-all?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -610,7 +657,7 @@ export function App() {
     if (!gameState) return;
     try {
       const res = await fetch(
-        `${API_BASE}/sandbox/clear-foreign?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/sandbox/clear-foreign?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -640,10 +687,14 @@ export function App() {
             body: JSON.stringify({ power: playerPower }),
           }
         );
-        if (res.ok) {
-          const st: GameState = await res.json();
-          applyServerState(st);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          triggerToast(err.detail || 'Could not open the sandbox.');
+          return;
         }
+        const st: GameState = await res.json();
+        applyServerState(st);
+        setSandboxGameId(st.game_id === activeGameId ? null : st.game_id);
         setSandboxMode(true);
         setShowSimulationOverlay(true);
         triggerToast(
@@ -651,24 +702,35 @@ export function App() {
         );
       } else {
         const res = await fetch(
-          `${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(activeGameId)}`,
+          `${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(draftGameId)}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ power: playerPower }),
           }
         );
+        let turnMovedOn = false;
         if (res.ok) {
           const st: GameState = await res.json();
+          turnMovedOn =
+            st.season !== gameState.season ||
+            st.year !== gameState.year ||
+            st.phase !== gameState.phase;
           applyServerState(st);
+        } else if (sandboxGameId) {
+          // The private copy is gone, for example after a server restart: show the real match.
+          await fetchGame(activeGameId);
         }
+        setSandboxGameId(null);
         setSandboxMode(false);
         setShowSimulationOverlay(false);
         setSelectedUnitId(null);
         triggerToast(
-          `Exited Sandbox Mode — hypothetical foreign moves discarded. Showing only ${
-            POWER_METADATA[playerPower].shortName
-          }'s real orders.`
+          sandboxGameId && turnMovedOn
+            ? 'The match moved on while you were in the sandbox, so your sandbox orders were not kept.'
+            : `Exited Sandbox Mode — hypothetical foreign moves discarded. Showing only ${
+                POWER_METADATA[playerPower].shortName
+              }'s real orders.`
         );
       }
     } catch (e) {
@@ -677,7 +739,7 @@ export function App() {
   };
 
   const handleFinalizeClick = async (force = false) => {
-    if (!gameState) return;
+    if (!gameState || !requireRealBoard('finalize your real orders')) return;
     try {
       const res = await fetch(
         `${API_BASE}/finalize?game_id=${encodeURIComponent(activeGameId)}`,
@@ -707,7 +769,7 @@ export function App() {
   };
 
   const handleUnfinalizeClick = async () => {
-    if (!gameState) return;
+    if (!gameState || !requireRealBoard('unlock your real orders')) return;
     try {
       const res = await fetch(
         `${API_BASE}/unfinalize?game_id=${encodeURIComponent(activeGameId)}`,
@@ -731,7 +793,7 @@ export function App() {
   const handleSimulatePreMoves = async () => {
     try {
       const res = await fetch(
-        `${API_BASE}/simulate?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/simulate?game_id=${encodeURIComponent(draftGameId)}`,
         { method: 'POST' }
       );
       if (res.ok) {
@@ -745,8 +807,11 @@ export function App() {
   };
 
   const handleAdjudicateTurn = async () => {
+    if (!requireRealBoard('resolve the real turn')) return;
     try {
+      const authHeaders = await getAuthHeaders();
       const headers: Record<string, string> = {
+        ...authHeaders,
         ...(authUser?.id ? { 'X-User-Id': authUser.id } : {}),
         ...(authUser?.email ? { 'X-User-Email': authUser.email } : {}),
       };
@@ -789,6 +854,7 @@ export function App() {
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
+        setSandboxGameId(null);
         setSandboxMode(false);
         setShowSimulationOverlay(false);
         setSelectedUnitId(null);
@@ -820,6 +886,10 @@ export function App() {
   }
 
   const isGameCreator = checkIsGameCreator(activeGameSummary, authUser, viewMode);
+
+  const openAdminTools = () => {
+    if (requireRealBoard('use the admin tools')) setAdminModalOpen(true);
+  };
 
   const activePowerIssues = gameState.issues.filter(
     (i) => i.power === playerPower
@@ -953,57 +1023,26 @@ export function App() {
             <span>{wsConnected ? 'Live Sync' : 'Connecting...'}</span>
           </div>
 
+          {/* Sidebars toggle helper pills when viewing map */}
           {viewMode !== 'lobby' && (
-            <>
-              {viewMode === 'multiplayer' && lockedPower && (
-                <button
-                  type="button"
-                  className="header-btn header-surrender-btn"
-                  onClick={() => {
-                    if (activeGameSummary && lockedPower) {
-                      handleOpenSurrenderModal(activeGameSummary, lockedPower);
-                    }
-                  }}
-                  title={`Surrender sovereign command of ${POWER_METADATA[lockedPower].shortName} and leave campaign`}
-                >
-                  <Flag size={14} />
-                  <span>Surrender &amp; Leave</span>
-                </button>
-              )}
-              {viewMode === 'sandbox' && (
-                <button
-                  type="button"
-                  className="header-btn"
-                  onClick={handleSaveSandboxToAccount}
-                  title="Save current sandbox scenario to your account"
-                >
-                  <Save size={14} />
-                  <span>Save Sandbox</span>
-                </button>
-              )}
+            <div className="header-sidebar-toggles">
               <button
                 type="button"
-                className={`header-btn ${sandboxMode ? 'sandbox-active' : ''}`}
-                onClick={handleToggleSandboxMode}
-                title="Enter Sandbox Mode to guess & test foreign moves. Exiting Sandbox discards foreign guesses."
+                className={`header-sidebar-pill-btn ${!leftSidebarCollapsed ? 'active' : ''}`}
+                onClick={() => setLeftSidebarCollapsed((prev) => !prev)}
+                title="Toggle Left Tools Sidebar (Legend, Zoom, Sandbox, Admin)"
               >
-                <FlaskConical size={15} />
-                <span>
-                  Sandbox Pre-Moves: {sandboxMode ? 'ON (Exit to Clear)' : 'OFF'}
-                </span>
+                <span>Tools Sidebar</span>
               </button>
-              {isGameCreator && (
-                <button
-                  type="button"
-                  className={`header-btn admin-btn ${adminOverrideActive ? 'admin-override-on' : ''}`}
-                  onClick={() => setAdminModalOpen(true)}
-                  title="Administrator Options: Roll back turn, move units anywhere, spawn/destroy units arbitrarily (Game Creator Only)"
-                >
-                  <ShieldAlert size={14} />
-                  <span>Admin Tools {adminOverrideActive ? '• OVERRIDE' : ''}</span>
-                </button>
-              )}
-            </>
+              <button
+                type="button"
+                className={`header-sidebar-pill-btn ${!rightSidebarCollapsed ? 'active' : ''}`}
+                onClick={() => setRightSidebarCollapsed((prev) => !prev)}
+                title="Toggle Right Tactical Sidebar (Orders & Unit Command)"
+              >
+                <span>Tactical Sidebar</span>
+              </button>
+            </div>
           )}
 
           {/* User Authentication Controls */}
@@ -1053,7 +1092,7 @@ export function App() {
             <strong>ADMIN DIRECT-EDIT ACTIVE:</strong> You have Game Creator authority to edit any power's moves or state directly on the board.
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" onClick={() => setAdminModalOpen(true)}>Admin Console</button>
+            <button type="button" onClick={openAdminTools}>Admin Console</button>
             <button type="button" onClick={() => setAdminOverrideActive(false)}>Disable Direct-Edit</button>
           </div>
         </div>
@@ -1083,7 +1122,47 @@ export function App() {
       ) : (
         /* VIEW 2: INTERACTIVE EUROPE MAP + MACRO SIDEBAR (SANDBOX OR MULTIPLAYER) */
         <main className="war-room-workspace">
+          {/* LEFT SIDEBAR: Tools, Legend, Zoom, Standing, Sandbox & Admin */}
+          <ToolsSidebar
+            collapsed={leftSidebarCollapsed}
+            onToggleCollapse={() => setLeftSidebarCollapsed((prev) => !prev)}
+            zoomPercent={zoomPercent}
+            onZoomIn={() => mapRef.current?.stepZoom(0.2)}
+            onZoomOut={() => mapRef.current?.stepZoom(-0.2)}
+            onResetCamera={() => mapRef.current?.resetCamera()}
+            activePower={playerPower}
+            onSelectPower={handleSelectPower}
+            ownership={gameState.ownership}
+            units={gameState.units}
+            finalizedPowers={gameState.finalized_powers}
+            surrenderedPowers={gameState.surrendered_powers}
+            issues={gameState.issues}
+            isMultiplayer={viewMode === 'multiplayer'}
+            sandboxMode={sandboxMode}
+            onToggleSandboxMode={handleToggleSandboxMode}
+            onClearForeignPreMoves={handleClearForeignPreMoves}
+            foreignModifiedOrdersCount={
+              gameState.units
+                .filter((u) => u.power !== playerPower)
+                .filter((u) => {
+                  const o = gameState.orders[u.id];
+                  return o && (o.order_type !== 'HOLD' || o.is_explicit);
+                }).length
+            }
+            onGenerateAIMoves={handleGenerateAIMoves}
+            onAIStepTurn={handleAIStepTurn}
+            onLoadScenario={handleLoadScenario}
+            onSaveSandboxClick={handleSaveSandboxToAccount}
+            isGameCreator={isGameCreator}
+            onOpenAdminTools={openAdminTools}
+            adminOverrideActive={adminOverrideActive}
+            onToggleAdminOverride={() => setAdminOverrideActive((prev) => !prev)}
+          />
+
+          {/* CENTER: Europe Map */}
           <EuropeMap
+            ref={mapRef}
+            onZoomChange={setZoomPercent}
             provinces={provinces}
             units={gameState.units}
             orders={gameState.orders}
@@ -1107,7 +1186,10 @@ export function App() {
             onAdjudicateTurn={handleAdjudicateTurn}
           />
 
+          {/* RIGHT SIDEBAR: Core Gameplay Orders & Unit Command */}
           <MacroSidebar
+            collapsed={rightSidebarCollapsed}
+            onToggleCollapse={() => setRightSidebarCollapsed((prev) => !prev)}
             provinces={provinces}
             units={gameState.units}
             orders={gameState.orders}
@@ -1130,24 +1212,14 @@ export function App() {
             gameOver={Boolean(gameState.winner)}
             participants={activeGameSummary?.participants}
             lobbyStatus={activeGameSummary?.status}
-            onOpenAdminTools={() => setAdminModalOpen(true)}
-            adminOverrideActive={adminOverrideActive}
-            onSelectPower={handleSelectPower}
-            onToggleSandboxMode={handleToggleSandboxMode}
             onSelectUnit={setSelectedUnitId}
             onHoverUnit={setHoveredUnitId}
             onHighlightProvinces={setHighlightedProvinces}
             onUpdateOrder={handleUpdateOrder}
             onConfirmAllHolds={handleConfirmAllHolds}
-            onClearForeignPreMoves={handleClearForeignPreMoves}
             onFinalizeClick={() => handleFinalizeClick(false)}
             onUnfinalizeClick={handleUnfinalizeClick}
-            onSimulatePreMoves={handleSimulatePreMoves}
             onAdjudicateTurn={handleAdjudicateTurn}
-            onLoadScenario={handleLoadScenario}
-            onSaveSandboxClick={handleSaveSandboxToAccount}
-            onGenerateAIMoves={handleGenerateAIMoves}
-            onAIStepTurn={handleAIStepTurn}
             onSurrenderClick={() => {
               if (activeGameSummary && lockedPower) {
                 handleOpenSurrenderModal(activeGameSummary, lockedPower);

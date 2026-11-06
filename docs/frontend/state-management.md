@@ -21,10 +21,14 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `hoveredUnitId` | `string \| null` | UI | Unit hovered for cross-component highlighting. |
 | `highlightedProvinces`| `string[]` | UI | Provinces highlighted during targeting or diagnostic inspection. |
 | `sandboxMode` | `boolean` | Mode | True when user is in hypothetical "War Room" Sandbox mode. |
+| `sandboxGameId` | `string \| null` | Mode | Id of the private server-side copy used by a multiplayer sandbox, or `null`. Drafts, AI plans and previews go to `draftGameId`, which is this id when set and `activeGameId` otherwise. |
 | `simulationResult` | `SimulationResult \| null`| UI | Cached non-destructive simulation preview from the server. |
 | `showSimulationOverlay`| `boolean` | UI | Whether combat resolutions (arrows, bounces, cuts) are projected on the map. |
 | `adminModalOpen` | `boolean` | Modal | Controls visibility of the game creator's Admin Tools modal. |
 | `adminOverrideActive`| `boolean` | Admin | Indicates whether admin modifications are active on the current turn. |
+| `leftSidebarCollapsed`| `boolean` | UI | Whether the Left Tools Sidebar is collapsed into a 44px rail. |
+| `rightSidebarCollapsed`| `boolean` | UI | Whether the Right Tactical Sidebar is collapsed into a 44px rail. |
+| `zoomPercent` | `number` | UI | Real-time map zoom percentage (default: `105`). |
 | `surrenderModalOpen` | `boolean` | Modal | Controls visibility of the Surrender / Civil Disorder confirmation modal. |
 | `sanityModalOpen` | `boolean` | Modal | Controls visibility of pre-finalization warning modal. |
 | `sanityModalIssues` | `ValidationIssue[]` | Modal | Issues displayed inside the Sanity Check modal. |
@@ -83,20 +87,26 @@ When a user enables **Sandbox Mode** in the header:
 
 1. **Entering Sandbox (`handleToggleSandboxMode`)**:
    - Dispatches `POST /api/sandbox/enter?game_id={activeGameId}`.
-   - The backend creates an in-memory clone (`SANDBOX_CHECKPOINTS[game_id]`).
+   - In a multiplayer match the backend returns a private copy with its own `game_id`, stored in `sandboxGameId`. Elsewhere it creates an in-memory clone (`SANDBOX_CHECKPOINTS[game_id]`).
    - The UI displays an amber indicator banner: `"WAR ROOM SANDBOX MODE ACTIVE"`.
 2. **Multi-Power Operations**:
    - The player can switch across all 7 Great Powers without losing their current orders.
    - Orders for foreign units can be drafted to test theoretical defense combinations.
    - Clicking **"Simulate Turn"** displays how all hypothetical forces interact.
 3. **Exiting Sandbox**:
-   - Dispatches `POST /api/sandbox/exit?game_id={activeGameId}`.
-   - The backend restores the pre-sandbox checkpoint.
-   - The player's own active-power orders are merged back.
+   - Dispatches `POST /api/sandbox/exit?game_id={draftGameId}`.
+   - The backend restores the pre-sandbox checkpoint, or discards the private copy and returns the real match.
+   - The player's own active-power orders are merged back. In a multiplayer match that needs the match to still be on the same turn; if it moved on, a toast says the sandbox orders were not kept.
    - All foreign hypothetical orders are purged to prevent accidental submission.
 4. **Clearing Foreign Orders**:
-   - Dispatches `POST /api/sandbox/clear-foreign?game_id={activeGameId}`.
+   - Dispatches `POST /api/sandbox/clear-foreign?game_id={draftGameId}`.
    - Cleans all hypothetical enemy orders while remaining in Sandbox mode.
+
+While `sandboxGameId` is set, the board shows the private copy and is kept apart from the real match:
+
+- Polling stops and WebSocket updates for the match update only `activeGameSummary`. Exiting brings the board back up to date.
+- Finalize, Unlock, Resolve, Surrender and the Admin Console are refused with a toast (`requireRealBoard`), because they act on the real match and the player would be looking at a hypothetical board.
+- Leaving the match view by any route closes the sandbox through the effect that watches `viewMode`.
 
 
 ---

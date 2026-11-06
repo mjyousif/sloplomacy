@@ -39,7 +39,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```bash
   python -m pytest backend/ -v
   ```
-  *(Runs all 8 test suites: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
+  *(Runs all 9 test suites: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_database_persistence.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
 
 ### Frontend Commands (`frontend/`)
 - **Install Dependencies**:
@@ -144,7 +144,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   ├── ai_engine.py           # Heuristic order generation for sandbox AI planning
 │   ├── map_data.py            # Complete 76-province graph, dual coasts, 34 SC definitions
 │   ├── requirements.txt       # Python dependencies
-│   └── test_*.py              # Comprehensive pytest test harness (8 test suites)
+│   └── test_*.py              # Comprehensive pytest test harness (9 test suites)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx            # Main state container, viewMode controller & API coordinator
@@ -200,12 +200,15 @@ The game cycles through three standard phases per year:
 - All mutation endpoints (`/api/order`, `/api/finalize`, `/api/adjudicate`, etc.) accept an optional `?game_id=<id>` query parameter (defaults to `'proto_1901'`).
 - Always pass `activeGameId` in frontend API requests.
 - **Invariant**: `GameState.active_power` is shared by everyone in a game, so it never identifies a multiplayer player. The client takes the player's power from `resolvePlayerPower` (their claimed seat), and `join` reports the joiner's power only in its own response.
+- **Invariant**: Memory is authoritative for a loaded game. Supabase only supplies games this process has not loaded, so never replace `GAMES` or `GAME_SUMMARIES` entries for a loaded game with a database copy. Call `persist_game` after every change to a game.
+- **Invariant**: A failed Supabase read raises `SupabaseUnavailable`, and must never be treated as "no such game". Only a successful read that lacks an already saved game means it was deleted; `UNSAVED_GAMES` marks the games that may have no row yet.
+- The default game `proto_1901` is shared by all visitors and the app loads it on startup, so it can never be deleted or evicted.
 
 ### 4. Sandbox ("War Room") Mode Isolation
 - Sandbox mode allows a player to test orders for all 7 Great Powers without submitting real moves.
-- When entering sandbox (`POST /api/sandbox/enter`), an in-memory clone is checkpointed in `SANDBOX_CHECKPOINTS[game_id]`.
-- When exiting sandbox (`POST /api/sandbox/exit`), the checkpoint is restored, foreign hypothetical moves are stripped, and only the active power's orders are merged back.
-- **Invariant**: Never write foreign sandbox moves into authoritative non-sandbox match state.
+- **Multiplayer matches** are shared, so `POST /api/sandbox/enter` gives the player a private copy under its own `sbx_` game id, recorded in `PRIVATE_SANDBOXES`. Other powers start on default orders so the copy cannot reveal their plans, and it is never saved, listed or shown to other players. Later sandbox calls use that id. `POST /api/sandbox/exit` discards the copy and carries over the player's own changed orders if the match is still on the same turn and they still hold the seat.
+- **Solo and saved sandboxes** have one player. Entering checkpoints an in-memory clone in `SANDBOX_CHECKPOINTS[game_id]`; exiting restores it, strips foreign hypothetical moves, and merges back only the active power's orders.
+- **Invariant**: Never write foreign sandbox moves into authoritative non-sandbox match state. The sandbox write endpoints answer `409` when called on a live multiplayer match.
 
 ### 5. Surrender & Civil Disorder
 - A player can surrender an active seat (`POST /api/games/{game_id}/surrender`).
@@ -243,7 +246,7 @@ The game cycles through three standard phases per year:
 - Always run `npx tsc --noEmit` before committing frontend modifications.
 
 ### 3. Run Comprehensive Verification
-- **Backend Tests**: Run python -m pytest backend/ -v (must pass all 8 test suites: adjudicator, admin, ai_and_private_lobbies, api_integration, engine, surrender_leave, validator, websocket_sync).
+- **Backend Tests**: Run python -m pytest backend/ -v (must pass all 9 test suites: adjudicator, admin, ai_and_private_lobbies, api_integration, database_persistence, engine, surrender_leave, validator, websocket_sync).
 - **Frontend Verification**: Run `npm test` (Vitest) and `npm run build` (Vite + TypeScript) in `frontend/`.
 
 ### 4. Preserve Documentation & Code Integrity
@@ -255,3 +258,11 @@ The game cycles through three standard phases per year:
 - **Mandatory Review**: PRs require at least 1 approving code review before merging (`required_approving_review_count: 1`). Pushing new commits automatically dismisses previous reviews.
 - **CI Quality Gates**: PRs must pass `Backend Tests (Pytest)` and `Frontend Tests & Build Check` before they are eligible for merge.
 - **Squash & Merge & Auto-Delete**: Branches are squash-merged into `main` using PR titles and descriptions, and head branches are automatically deleted upon merge (`delete_branch_on_merge: true`).
+- **PR Creation & Body Formatting Invariant (No Inline `--body`)**:
+  - **NEVER** use inline `--body "..."` with multi-line or rich markdown in PowerShell. PowerShell interprets the backtick (`` ` ``) as an escape character (e.g., `` `b `` -> `\x08`, `` `f `` -> `\x0c`, `` `v `` -> `\x0b`) and expands `$variables`, corrupting code spans, file paths, and environment variable references into broken replacement characters and backslashes.
+  - **ALWAYS** write the full PR description to a temporary file (e.g. `.pr_body.md` or a scratch markdown file) and dispatch GitHub CLI commands using `--body-file`:
+    ```powershell
+    gh pr create --title "<title>" --body-file "<path_to_body.md>"
+    gh pr edit <pr-number> --body-file "<path_to_body.md>"
+    ```
+  - Clean up any local temporary body file immediately after execution.

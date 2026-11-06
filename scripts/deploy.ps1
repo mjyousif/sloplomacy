@@ -3,7 +3,8 @@
   Automated Infrastructure-as-Code Build & Deploy Script for Google Cloud Run + Supabase.
 .DESCRIPTION
   Builds the unified single-container image (React + FastAPI) using Google Cloud Build
-  and deploys it to Google Cloud Run with true Scale-to-Zero ($0 idle cost).
+  and deploys it to Google Cloud Run with true Scale-to-Zero ($0 idle cost) and persistent
+  Supabase PostgreSQL state tracking.
 #>
 
 param(
@@ -11,7 +12,8 @@ param(
     [string]$Region = "us-central1",
     [string]$ServiceName = "diplomacy-1901",
     [string]$SupabaseUrl = "",
-    [string]$SupabaseAnonKey = ""
+    [string]$SupabaseAnonKey = "",
+    [string]$SupabaseServiceRoleKey = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -52,14 +54,19 @@ if (Test-Path $EnvFilePath) {
     Write-Host "[OK] Reading Supabase credentials from $EnvFilePath..." -ForegroundColor Green
     Get-Content $EnvFilePath | ForEach-Object {
         $line = $_.Trim()
-        if ($line -match "^VITE_SUPABASE_URL\s*=\s*(.*)$") {
+        if ($line -match "^VITE_SUPABASE_URL\s*=\s*(.*)$" -or $line -match "^SUPABASE_URL\s*=\s*(.*)$") {
             if (-not $SupabaseUrl) {
                 $SupabaseUrl = $matches[1].Trim('"'' ')
             }
         }
-        if ($line -match "^VITE_SUPABASE_ANON_KEY\s*=\s*(.*)$") {
+        if ($line -match "^VITE_SUPABASE_ANON_KEY\s*=\s*(.*)$" -or $line -match "^SUPABASE_ANON_KEY\s*=\s*(.*)$") {
             if (-not $SupabaseAnonKey) {
                 $SupabaseAnonKey = $matches[1].Trim('"'' ')
+            }
+        }
+        if ($line -match "^SUPABASE_SERVICE_ROLE_KEY\s*=\s*(.*)$" -or $line -match "^SUPABASE_KEY\s*=\s*(.*)$") {
+            if (-not $SupabaseServiceRoleKey) {
+                $SupabaseServiceRoleKey = $matches[1].Trim('"'' ')
             }
         }
     }
@@ -87,9 +94,11 @@ Write-Host "--> Building container on Cloud Build ($ImageTag)..." -ForegroundCol
 
 $buildSuccess = $false
 try {
+    $ShortSha = (git rev-parse --short HEAD 2>$null)
+    if (-not $ShortSha) { $ShortSha = "dev" }
     gcloud builds submit `
         --config="$RepoRoot\cloudbuild.yaml" `
-        --substitutions="_SUPABASE_URL=$SupabaseUrl,_SUPABASE_ANON_KEY=$SupabaseAnonKey,_IMAGE_TAG=$ImageTag" `
+        --substitutions="_SUPABASE_URL=$SupabaseUrl,_SUPABASE_ANON_KEY=$SupabaseAnonKey,_SHORT_SHA=$ShortSha,_IMAGE_TAG=$ImageTag" `
         --project $ProjectId `
         $RepoRoot
     $buildSuccess = ($LASTEXITCODE -eq 0)
@@ -105,9 +114,10 @@ if (-not $buildSuccess) {
 
 # 5. Deploy to Google Cloud Run (Scale-to-zero)
 Write-Host ""
-Write-Host "--> Deploying service to Google Cloud Run..." -ForegroundColor Cyan
+Write-Host "--> Deploying service to Google Cloud Run with Supabase Database Persistence..." -ForegroundColor Cyan
 
-$envVars = "VITE_SUPABASE_URL=$SupabaseUrl,VITE_SUPABASE_ANON_KEY=$SupabaseAnonKey"
+$backendKey = if ($SupabaseServiceRoleKey) { $SupabaseServiceRoleKey } else { $SupabaseAnonKey }
+$envVars = "VITE_SUPABASE_URL=$SupabaseUrl,VITE_SUPABASE_ANON_KEY=$SupabaseAnonKey,SUPABASE_URL=$SupabaseUrl,SUPABASE_KEY=$backendKey,SUPABASE_SERVICE_ROLE_KEY=$SupabaseServiceRoleKey"
 
 gcloud run deploy $ServiceName `
     --image $ImageTag `
@@ -132,4 +142,5 @@ Write-Host "Service URL: $ServiceUrl" -ForegroundColor Cyan
 Write-Host "Live App   : $ServiceUrl" -ForegroundColor Cyan
 Write-Host "API Docs   : $ServiceUrl/docs" -ForegroundColor Cyan
 Write-Host "Scale Mode : Scale-to-Zero (0 idle instances = $0 cost)   " -ForegroundColor DarkGray
+Write-Host "Persistence: Supabase PostgreSQL JSONB State Tracking    " -ForegroundColor DarkGray
 Write-Host "==========================================================" -ForegroundColor Green
