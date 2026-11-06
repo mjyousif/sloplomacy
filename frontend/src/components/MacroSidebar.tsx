@@ -14,6 +14,7 @@ import {
 import {
   canUnitSupportInto,
   formatOrderSummary,
+  getConsensusStatusInfo,
   getReachableDestinations,
   getValidRetreatDestinations,
 } from '../utils/orderHelpers';
@@ -39,6 +40,7 @@ import {
   Swords,
   Trash2,
   Unlock,
+  Users,
 } from 'lucide-react';
 
 interface MacroSidebarProps {
@@ -82,6 +84,7 @@ interface MacroSidebarProps {
   onGenerateAIMoves?: (powers?: Power[], includeActive?: boolean) => void;
   onAIStepTurn?: () => void;
   participants?: Record<string, GameParticipant>;
+  lobbyStatus?: string;
 }
 
 export const MacroSidebar: React.FC<MacroSidebarProps> = ({
@@ -124,6 +127,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   onGenerateAIMoves,
   onAIStepTurn,
   participants,
+  lobbyStatus,
 }) => {
   const powerMeta = POWER_METADATA[activePower];
   const isFinalized = finalizedPowers.includes(activePower);
@@ -181,6 +185,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   }, [
     isMultiplayer,
     participants,
+  lobbyStatus,
     surrenderedPowers,
     isAdjustmentPhase,
     isRetreatPhase,
@@ -196,6 +201,31 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   const missingPowers = requiredPowersInMatch.filter(
     (p) => !finalizedPowers.includes(p)
   );
+
+  const consensusInfo = useMemo(
+    () =>
+      getConsensusStatusInfo({
+        isMultiplayer,
+        lobbyStatus,
+        participants,
+        surrenderedPowers,
+        requiredPowers: requiredPowersInMatch,
+        finalizedPowers,
+        isGameCreator,
+        gameOver,
+      }),
+    [
+      isMultiplayer,
+      lobbyStatus,
+      participants,
+      surrenderedPowers,
+      requiredPowersInMatch,
+      finalizedPowers,
+      isGameCreator,
+      gameOver,
+    ]
+  );
+
 
   const rawMyUnits = units.filter((u) => u.power === activePower);
   const myUnits = isRetreatPhase
@@ -1559,37 +1589,30 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           </button>
         ) : (
           <div className="mp-resolution-controls">
-            <div className="mp-consensus-status-card">
+            <div className={`mp-consensus-status-card ${consensusInfo.isWaitingForPlayers ? 'waiting-mode' : ''}`}>
               <div className="mp-consensus-header">
-                <Clock size={14} className="consensus-icon" />
-                <span className="consensus-title">
-                  {gameOver
-                    ? 'Campaign Finished'
-                    : totalRequiredCount === 0
-                    ? 'Waiting for Players'
-                    : `Resolution Progress: ${requiredFinalizedCount}/${totalRequiredCount} Ready`}
-                </span>
+                {consensusInfo.isWaitingForPlayers ? (
+                  <Users size={14} className="consensus-icon" />
+                ) : (
+                  <Clock size={14} className="consensus-icon" />
+                )}
+                <span className="consensus-title">{consensusInfo.title}</span>
               </div>
-              {!gameOver && totalRequiredCount > 0 && (
-                <div className="mp-consensus-desc">
-                  {missingPowers.length > 0
-                    ? `Waiting on: ${missingPowers.map((p) => POWER_METADATA[p].shortName).join(', ')}`
-                    : 'All powers finalized! Resolving phase...'}
-                </div>
-              )}
+              <div className="mp-consensus-desc">{consensusInfo.description}</div>
             </div>
 
             {isGameCreator && (
               <button
-                className="adjudicate-turn-btn creator-override-btn"
-                title="Host Admin Override: Force advance to the next season immediately"
+                type="button"
+                className={`adjudicate-turn-btn creator-override-btn ${
+                  consensusInfo.isSoloAdvanceReady ? 'solo-advance-ready' : ''
+                }`}
+                title={consensusInfo.buttonTitle}
                 onClick={onAdjudicateTurn}
                 disabled={gameOver}
               >
                 <Play size={14} />
-                <span>
-                  {gameOver ? 'Game Over' : 'Force Adjudicate Phase (Host Override)'}
-                </span>
+                <span>{consensusInfo.buttonLabel}</span>
               </button>
             )}
           </div>

@@ -1129,6 +1129,7 @@ export function App() {
             isGameCreator={isGameCreator}
             gameOver={Boolean(gameState.winner)}
             participants={activeGameSummary?.participants}
+            lobbyStatus={activeGameSummary?.status}
             onOpenAdminTools={() => setAdminModalOpen(true)}
             adminOverrideActive={adminOverrideActive}
             onSelectPower={handleSelectPower}

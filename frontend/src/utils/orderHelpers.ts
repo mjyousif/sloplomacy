@@ -1,4 +1,4 @@
-import { Order, Power, ProvinceInfo, Unit } from '../types/diplomacy';
+import { GameParticipant, Order, POWER_METADATA, Power, ProvinceInfo, Unit } from '../types/diplomacy';
 
 export function splitProvinceCode(code: string): { base: string; coast: string | null } {
   if (code.includes('/')) {
@@ -182,5 +182,125 @@ export function formatOrderSummary(
     targetText: 'Holding',
     badgeColor: '#64748b',
     fullSymbolic: 'HOLD',
+  };
+}
+
+
+export interface ConsensusStatusInfo {
+  isWaitingForPlayers: boolean;
+  title: string;
+  description: string;
+  buttonLabel: string;
+  buttonTitle: string;
+  isSoloAdvanceReady: boolean;
+}
+
+export function getConsensusStatusInfo({
+  isMultiplayer,
+  lobbyStatus,
+  participants,
+  surrenderedPowers = [],
+  requiredPowers,
+  finalizedPowers,
+  isGameCreator,
+  gameOver,
+}: {
+  isMultiplayer: boolean;
+  lobbyStatus?: string;
+  participants?: Record<string, GameParticipant>;
+  surrenderedPowers?: Power[];
+  requiredPowers: Power[];
+  finalizedPowers: Power[];
+  isGameCreator: boolean;
+  gameOver: boolean;
+}): ConsensusStatusInfo {
+  const activeEnvoys = participants
+    ? Object.values(participants).filter(
+        (p) => !p.surrendered && !surrenderedPowers.includes(p.power)
+      )
+    : [];
+
+  const isWaitingForPlayers =
+    isMultiplayer && (lobbyStatus === 'waiting' || activeEnvoys.length < 2);
+
+  const totalRequiredCount = requiredPowers.length;
+  const finalizedCount = requiredPowers.filter((p) =>
+    finalizedPowers.includes(p)
+  ).length;
+  const missingPowers = requiredPowers.filter(
+    (p) => !finalizedPowers.includes(p)
+  );
+
+  if (gameOver) {
+    return {
+      isWaitingForPlayers,
+      title: 'Campaign Finished',
+      description: 'Hostilities concluded.',
+      buttonLabel: 'Game Over',
+      buttonTitle: 'Campaign Finished',
+      isSoloAdvanceReady: false,
+    };
+  }
+
+  if (totalRequiredCount === 0) {
+    return {
+      isWaitingForPlayers,
+      title: 'Waiting for Players',
+      description: 'No active envoys have claimed powers with active units yet.',
+      buttonLabel: isWaitingForPlayers
+        ? 'Advance Phase Solo (Host Override)'
+        : 'Force Adjudicate Phase (Host Override)',
+      buttonTitle: isWaitingForPlayers
+        ? 'Host Admin Override: Advance immediately solo without waiting for other players to join'
+        : 'Host Admin Override: Force advance to the next season immediately',
+      isSoloAdvanceReady: false,
+    };
+  }
+
+  if (isWaitingForPlayers) {
+    const isReady = missingPowers.length === 0;
+    const title = isReady
+      ? 'Orders Locked • Waiting for Players (1/2 min)'
+      : `Lobby: Waiting for Players (${totalRequiredCount}/2 min)`;
+    const description = !isReady
+      ? 'Multiplayer campaigns require at least 2 players to auto-resolve turns. Orders can be prepared and finalized while waiting for opponents.'
+      : isGameCreator
+      ? 'Your orders are locked. Auto-resolution begins once 2+ players join. As host, you can click "Advance Phase Solo" below to resolve now without waiting.'
+      : 'Your orders are locked. Auto-resolution begins once 2+ players join. Waiting for opponents to join or the host to advance.';
+
+    return {
+      isWaitingForPlayers: true,
+      title,
+      description,
+      buttonLabel: 'Advance Phase Solo (Host Override)',
+      buttonTitle:
+        'Host Admin Override: Advance immediately solo without waiting for other players to join',
+      isSoloAdvanceReady: isReady,
+    };
+  }
+
+  // Active multiplayer match (2+ players)
+  if (missingPowers.length > 0) {
+    return {
+      isWaitingForPlayers: false,
+      title: `Resolution Progress: ${finalizedCount}/${totalRequiredCount} Ready`,
+      description: `Waiting on: ${missingPowers
+        .map((p) => POWER_METADATA[p]?.shortName || p)
+        .join(', ')}`,
+      buttonLabel: 'Force Adjudicate Phase (Host Override)',
+      buttonTitle:
+        'Host Admin Override: Force advance to the next season immediately',
+      isSoloAdvanceReady: false,
+    };
+  }
+
+  return {
+    isWaitingForPlayers: false,
+    title: `Consensus Reached (${totalRequiredCount}/${totalRequiredCount})`,
+    description: 'All required powers finalized! Resolving phase...',
+    buttonLabel: 'Force Adjudicate Phase (Host Override)',
+    buttonTitle:
+      'Host Admin Override: Force advance to the next season immediately',
+    isSoloAdvanceReady: false,
   };
 }
