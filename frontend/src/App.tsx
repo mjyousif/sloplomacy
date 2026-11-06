@@ -126,7 +126,7 @@ export function App() {
   // The board in a private sandbox is hypothetical, so nothing real can be done from it.
   const requireRealBoard = (action: string): boolean => {
     if (!sandboxGameId) return true;
-    triggerToast(`Exit Sandbox Mode to ${action}.`);
+    triggerToast(`Exit Hypothetical Mode to ${action}.`);
     return false;
   };
 
