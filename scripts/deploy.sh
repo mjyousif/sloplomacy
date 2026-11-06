@@ -24,11 +24,13 @@ echo "[✓] Target GCP Region : $REGION"
 SUPABASE_URL=""
 SUPABASE_ANON_KEY=""
 SUPABASE_SERVICE_ROLE_KEY=""
+SUPABASE_JWT_SECRET=""
 
 if [ -f "frontend/.env" ]; then
   SUPABASE_URL=$(grep -E '^(VITE_)?SUPABASE_URL=' frontend/.env | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
   SUPABASE_ANON_KEY=$(grep -E '^(VITE_)?SUPABASE_ANON_KEY=' frontend/.env | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
   SUPABASE_SERVICE_ROLE_KEY=$(grep -E '^SUPABASE_SERVICE_ROLE_KEY=' frontend/.env | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
+  SUPABASE_JWT_SECRET=$(grep -E '^SUPABASE_JWT_SECRET=' frontend/.env | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
 fi
 
 BACKEND_KEY="${SUPABASE_SERVICE_ROLE_KEY:-$SUPABASE_ANON_KEY}"
@@ -51,7 +53,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances 3 \
   --memory 512Mi \
   --port 8080 \
-  --set-env-vars "VITE_SUPABASE_URL=${SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_KEY=${BACKEND_KEY},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}"
+  --set-env-vars "VITE_SUPABASE_URL=${SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_KEY=${BACKEND_KEY},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY},SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}"
 
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format "value(status.url)")
 
