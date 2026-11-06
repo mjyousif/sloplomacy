@@ -216,7 +216,7 @@ The rules are in [the rulebook reference](../guides/rulebook-reference.md#9-turn
 
 Each answers `403` for a power that is not playing, and `409` if the clock is in a different stage.
 
-Nothing runs in the background. `GET /api/game` and the game WebSocket check the deadline, and clients poll every 3 seconds, so a deadline is acted on within a few seconds while anyone is connected. A game nobody is connected to does not advance until someone returns.
+Nothing runs in the background. The game WebSocket and `GET /api/game` check the deadline (with clients sending an immediate WebSocket ping or fallback HTTP fetch on countdown expiry), so a deadline is acted on within seconds while anyone is connected. A game nobody is connected to does not advance until someone returns.
 
 ---
 

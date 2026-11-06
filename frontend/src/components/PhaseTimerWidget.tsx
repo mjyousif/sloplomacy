@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Clock, Pause, Play, Plus } from 'lucide-react';
 import { PhaseTimer, Power, TimerChoice } from '../types/diplomacy';
 import {
@@ -19,26 +19,38 @@ export interface PhaseTimerWidgetProps {
   onVote: (choice: TimerChoice) => void;
   onExtend: (active: boolean) => void;
   onReady: (active: boolean) => void;
+  onExpire?: () => void;
 }
 
 const LOW_TIME_SECONDS = 60;
 
 /** Counts down from what the server last reported, so a wrong device clock cannot matter. */
-function useCountdown(remainingSeconds: number | null | undefined): number | null {
+function useCountdown(
+  remainingSeconds: number | null | undefined,
+  onExpire?: () => void
+): number | null {
   const [seconds, setSeconds] = useState<number | null>(remainingSeconds ?? null);
+  const expiredRef = useRef(false);
 
   useEffect(() => {
+    expiredRef.current = false;
     if (remainingSeconds === null || remainingSeconds === undefined) {
       setSeconds(null);
       return;
     }
     const receivedAt = performance.now();
-    const tick = () =>
-      setSeconds(Math.max(0, remainingSeconds - (performance.now() - receivedAt) / 1000));
+    const tick = () => {
+      const rem = Math.max(0, remainingSeconds - (performance.now() - receivedAt) / 1000);
+      setSeconds(rem);
+      if (rem <= 0 && !expiredRef.current) {
+        expiredRef.current = true;
+        onExpire?.();
+      }
+    };
     tick();
     const interval = window.setInterval(tick, 250);
     return () => window.clearInterval(interval);
-  }, [remainingSeconds]);
+  }, [remainingSeconds, onExpire]);
 
   return seconds;
 }
@@ -52,8 +64,9 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
   onVote,
   onExtend,
   onReady,
+  onExpire,
 }) => {
-  const seconds = useCountdown(timer?.remaining_seconds);
+  const seconds = useCountdown(timer?.remaining_seconds, onExpire);
   const isPlayer = !!timer && !!seatPower && timer.players.includes(seatPower);
   // The whole vote is shorter than this, so only a phase clock can run low.
   const lowTime = timer?.stage === 'running' && seconds !== null && seconds <= LOW_TIME_SECONDS;
