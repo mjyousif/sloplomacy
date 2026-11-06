@@ -15,6 +15,13 @@ class SupabaseUnavailable(Exception):
     """Supabase gave no usable answer, so nothing can be concluded about what it holds."""
 
 
+# What the lobby reads for each game. Leaving out the state and history keeps a refresh small, and
+# the packed summary arrives as the row's `summary`, which build_summary_from_row accepts.
+LOBBY_COLUMNS = (
+    "room_code,name,status,phase,season,year,created_at,host_user_id,is_sandbox,is_private,"
+    "summary:game_state->summary"
+)
+
 # Status mapping between Application and Database check constraint
 APP_TO_DB_STATUS = {
     "waiting": "lobby",
@@ -162,7 +169,7 @@ async def load_game_from_db(
         if isinstance(raw_game_state, dict) and "state" in raw_game_state:
             state_data = raw_game_state["state"]
             summary_data = raw_game_state.get("summary") or row.get("summary")
-            history_data = raw_game_state.get("history") or row.get("history") or []
+            history_data = row.get("history") or raw_game_state.get("history") or []
             passcode = raw_game_state.get("passcode") or row.get("passcode")
         else:
             state_data = raw_game_state
@@ -206,16 +213,22 @@ async def load_all_summaries_from_db(
     if not is_persistence_enabled():
         return {}
 
-    url = f"{get_supabase_url()}/rest/v1/multiplayer_games?select=*"
     headers = get_headers()
     summaries: Dict[str, MultiplayerGameSummary] = {}
 
-    try:
+    async def read_rows(columns: str) -> httpx.Response:
+        url = f"{get_supabase_url()}/rest/v1/multiplayer_games?select={columns}"
         if client:
-            resp = await client.get(url, headers=headers, timeout=10.0)
-        else:
-            async with httpx.AsyncClient() as c:
-                resp = await c.get(url, headers=headers, timeout=10.0)
+            return await client.get(url, headers=headers, timeout=10.0)
+        async with httpx.AsyncClient() as c:
+            return await c.get(url, headers=headers, timeout=10.0)
+
+    try:
+        resp = await read_rows(LOBBY_COLUMNS)
+        if resp.status_code == 400:
+            # A slow lobby is better than an empty one if Supabase refuses the narrower query.
+            logger.warning("Supabase refused the lobby columns, reading whole rows: %s", resp.text)
+            resp = await read_rows("*")
 
         if resp.status_code != 200:
             raise SupabaseUnavailable(f"HTTP {resp.status_code} {resp.text}")
@@ -244,7 +257,7 @@ async def save_game_to_db(
 ) -> bool:
     """
     Persist game state, metadata, and history into Supabase PostgreSQL.
-    Uses PostgREST upsert on room_code.
+    Uses PostgREST upsert on room_code, so with history=None the saved history stays as it is.
     """
     if not is_persistence_enabled():
         return False
@@ -269,11 +282,12 @@ async def save_game_to_db(
         "game_state": {
             "state": state.model_dump(mode="json"),
             "summary": summary.model_dump(mode="json") if summary else None,
-            "history": [h.model_dump(mode="json") for h in (history or [])],
             "passcode": passcode,
         },
         "updated_at": now_iso,
     }
+    if history is not None:
+        payload["history"] = [h.model_dump(mode="json") for h in history]
 
     if summary and is_valid_uuid(summary.creator_id):
         payload["host_user_id"] = summary.creator_id

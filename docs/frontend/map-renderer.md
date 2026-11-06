@@ -74,6 +74,8 @@ The map is rendered as a layered SVG pipeline:
 
 ## Click-to-Order Interaction Modes
 
+A player can only control their own units, and other powers' units are marked `foreign-locked`. Every control check goes through `canEditAnyPower`, which is true in the sandbox and for a host with Direct-Edit on (`directEditActive`). That also decides whose orders and diagnostics are drawn.
+
 The map supports direct board-level order entry across all phases:
 
 ### 1. Movement Phase

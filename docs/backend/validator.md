@@ -21,7 +21,7 @@ The validator is **phase-aware**, adjusting its checks dynamically for **Movemen
 | `FRIENDLY_FIRE` | `warning` | Movement | Friendly attack on own holding unit | Supporting an attack against a friendly unit (cannot dislodge own piece). |
 | `UNMATCHED_SUPPORT` | `warning` | Movement | Supported action differs from unit's actual order | Supporter ordered `S A PAR -> BUR`, but `A PAR` is ordered to `HOLD` or `MOVE GAS`. |
 | `BROKEN_CONVOY` | `warning` | Movement | Army moving via convoy without active convoy fleet | Army ordered `MOVE via convoy`, but the intermediate fleet is holding, supporting, or missing. |
-| `UNASSIGNED_UNIT` | `warning` | All Phases | Unit left on unconfirmed default order | Unit has not had its order manually confirmed, or build/disband quota remains unfulfilled prior to finalization. |
+| `UNASSIGNED_UNIT` | `warning` | All Phases | Unit left on unconfirmed default order | Unit has not had its order manually confirmed, a dislodged unit would disband, or build/disband quota remains unfulfilled prior to finalization. |
 
 ---
 
@@ -34,7 +34,7 @@ The validator is **phase-aware**, adjusting its checks dynamically for **Movemen
 
 ### 2. Retreat Phase
 When units are dislodged during combat resolution:
-1. **Unassigned Retreat**: Dislodged units on unconfirmed retreat trigger an `UNASSIGNED_UNIT` warning.
+1. **Unassigned Retreat**: A dislodged unit starts on a default `DISBAND`, so until it is confirmed an `UNASSIGNED_UNIT` warning says it will disband unless ordered to retreat.
 2. **Missing Destination**: If ordered to `RETREAT` without specifying an eligible destination.
 3. **Illegal Retreat Destination**: If target province is occupied, was the origin of the dislodging attacker, or was a standoff province in the preceding movement phase.
 4. **Mutual Retreat Clash**: If two dislodged units of the same power are ordered to retreat into the exact same province.
@@ -43,7 +43,7 @@ When units are dislodged during combat resolution:
 Compares supply center count against active units:
 1. **Disband Deficit**: If `units > supply_centers`, the power must order `DISBAND` on `units - supply_centers` units. If fewer disbands are selected, an `UNASSIGNED_UNIT` warning indicates how many more units must be disbanded.
 2. **Build Quota & Location**: If `supply_centers > units`, builds (`BUILD`) are only permitted up to the quota and strictly in the power's vacant **home supply centers**.
-3. **Unconfirmed Builds**: Default builds assigned by the engine trigger `UNASSIGNED_UNIT` warnings until explicitly confirmed.
+3. **Unused Builds**: Every build slot starts on a default `WAIVE`. While a power has unused builds and at least one slot it has not decided on, an `UNASSIGNED_UNIT` warning says how many would be lost. Ordering the builds, or choosing `Waive` on purpose, clears it.
 
 ---
 

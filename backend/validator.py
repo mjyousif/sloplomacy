@@ -136,8 +136,8 @@ def validate_orders(
                 add_issue(
                     severity=IssueSeverity.WARNING,
                     code=IssueCode.UNASSIGNED_UNIT,
-                    title=f"Unconfirmed Retreat in {p_name(unit.province)}",
-                    message=f"Dislodged {unit.unit_type.value} {p_name(unit.province)} has not been explicitly confirmed to Retreat or Disband.",
+                    title=f"No Retreat Ordered in {p_name(unit.province)}",
+                    message=f"Dislodged {unit.unit_type.value} {p_name(unit.province)} will disband unless it is ordered to retreat.",
                     unit_ids=[unit.id],
                     provinces=[unit.province],
                     power=unit.power,
@@ -214,19 +214,29 @@ def validate_orders(
                             pwr,
                         )
                 elif count > 0 and homes and include_unassigned_warnings:
-                    for h in homes:
-                        b_id = f"BUILD_{p_str}_{h}"
-                        b_ord = orders.get(b_id)
-                        if b_ord and b_ord.order_type == OrderType.BUILD and not b_ord.is_explicit:
-                            add_issue(
-                                IssueSeverity.WARNING,
-                                IssueCode.UNASSIGNED_UNIT,
-                                f"Unconfirmed Build in {p_name(h)}",
-                                f"Default build ({b_ord.unit_type.value} in {p_name(h)}) has not been explicitly confirmed.",
-                                [b_id],
-                                [h],
-                                pwr,
-                            )
+                    slots = min(count, len(homes))
+                    chosen = [
+                        h for h in homes
+                        if orders.get(f"BUILD_{p_str}_{h}")
+                        and orders[f"BUILD_{p_str}_{h}"].order_type == OrderType.BUILD
+                    ]
+                    undecided = [
+                        h for h in homes
+                        if orders.get(f"BUILD_{p_str}_{h}")
+                        and orders[f"BUILD_{p_str}_{h}"].order_type == OrderType.WAIVE
+                        and not orders[f"BUILD_{p_str}_{h}"].is_explicit
+                    ]
+                    unused = slots - len(chosen)
+                    if unused > 0 and undecided:
+                        add_issue(
+                            IssueSeverity.WARNING,
+                            IssueCode.UNASSIGNED_UNIT,
+                            f"{unused} Unused Build{'s' if unused > 1 else ''}",
+                            f"{p_str.capitalize()} may build {slots} unit{'s' if slots > 1 else ''} ({len(chosen)}/{slots} chosen). Builds not ordered are waived.",
+                            [f"BUILD_{p_str}_{h}" for h in undecided],
+                            undecided,
+                            pwr,
+                        )
         return issues
 
     # --- MOVEMENT PHASE VALIDATION ---

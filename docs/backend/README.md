@@ -75,13 +75,16 @@ The backend maintains active match sessions in scoped memory dictionaries acting
 - `PRIVATE_SANDBOXES: Dict[str, Tuple[str, Power]]`: Private what-if copies of multiplayer matches, as sandbox id -> (match id, the player's power). The copies themselves live in `GAMES`.
 - `UNSAVED_GAMES: Set[str]`: Games whose newest state is not confirmed saved, so Supabase may have no row for them yet.
 - `SAVES_RUNNING: Dict[str, bool]`: Games with a save running, and whether that save must repeat because the game changed during it.
+- `HISTORY_UNSAVED: Set[str]`: Games whose rollback history differs from what is saved.
 
 When `SUPABASE_URL` and `SUPABASE_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`) are configured, the backend automatically operates a **read-through / write-through** persistence layer via [`database.py`](database.py):
 - On state mutation, the game state, summary, history, and passcodes are serialized to JSONB and persisted to Supabase's `public.multiplayer_games` table. Only one save runs per game, so an older write cannot land after a newer one, and a change made during a save is written when that save repeats.
 - On container cold start (such as Google Cloud Run scale-to-zero wakeups), any request for a game absent from RAM is transparently fetched and restored from Supabase.
 - Memory is authoritative for a loaded game. `GET /api/games` uses Supabase only to pick up games this process has not loaded and to drop games deleted from Supabase, never to replace a loaded game.
 - A failed read raises `SupabaseUnavailable`, so it is never mistaken for a missing game. The lobby falls back to memory, and a game that cannot be loaded answers `503`, not `404`. A game is only treated as deleted when a read succeeded without it and it is not in `UNSAVED_GAMES`.
-- Each process keeps its own copy of a loaded game, so running several instances against one database lets them overwrite each other's turns. One instance is the safe configuration.
+- Rollback history is stored in the row's `history` column and only sent when it changes, which is when a turn resolves, rolls back or resets. Every other save leaves it out, so an order click writes about 26 KB rather than the whole history. Snapshots leave out previews and diagnostics, which rollback recomputes.
+- The lobby reads only `LOBBY_COLUMNS`, so a refresh downloads about 1 KB per game and no game states. If Supabase answers `400` to those columns, it falls back to whole rows.
+- Each process keeps its own copy of a loaded game, so running several instances against one database lets them overwrite each other's turns. Every deploy path therefore sets a maximum of one instance.
 - If credentials are not supplied (e.g. offline local development), the server gracefully falls back to ephemeral in-memory mode.
 
 ---

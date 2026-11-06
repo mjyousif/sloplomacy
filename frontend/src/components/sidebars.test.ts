@@ -224,4 +224,52 @@ describe('MacroSidebar', () => {
     expect(html).toContain('RETREAT PHASE:');
     expect(html).toContain('1 dislodged unit must Retreat or Disband');
   });
+  describe('multiplayer resolution status', () => {
+    const seat = (power: Power) => ({
+      user_id: power,
+      email: `${power}@test.com`,
+      display_name: power,
+      power,
+      joined_at: '2026-11-06T00:00:00Z',
+      surrendered: false,
+    });
+    const match = (overrides: Partial<MacroSidebarProps>) =>
+      renderToString(
+        React.createElement(MacroSidebar, { ...baseMacroProps, isMultiplayer: true, ...overrides })
+      );
+
+    it('does not promise to resolve before a second player joins', () => {
+      const html = match({
+        lobbyStatus: 'waiting',
+        participants: { FRANCE: seat('FRANCE') },
+        finalizedPowers: ['FRANCE'],
+      });
+      expect(html).toContain('Waiting for Players');
+      expect(html).not.toContain('Resolving phase');
+    });
+
+    it('reports progress once two players are seated', () => {
+      const html = match({
+        units: [...mockUnits, { ...mockUnits[0], id: 'GER_A_BER', power: 'GERMANY', province: 'BRE' }],
+        participants: { FRANCE: seat('FRANCE'), GERMANY: seat('GERMANY') },
+        finalizedPowers: ['FRANCE'],
+      });
+      expect(html).toContain('Resolution Progress: 1/2 Ready');
+      expect(html).toContain('Waiting on: Germany');
+    });
+
+    it('does not wait for a power with no room to build', () => {
+      const html = match({
+        phase: 'Adjustments',
+        season: 'Winter',
+        builds: {
+          FRANCE: { count: 1, homes: [] },
+          GERMANY: { count: 1, homes: ['BRE'] },
+        } as unknown as MacroSidebarProps['builds'],
+        participants: { FRANCE: seat('FRANCE'), GERMANY: seat('GERMANY') },
+      });
+      expect(html).toContain('Resolution Progress: 0/1 Ready');
+      expect(html).toContain('Waiting on: Germany');
+    });
+  });
 });

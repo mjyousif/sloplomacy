@@ -1,6 +1,14 @@
 import pytest
 from fastapi.testclient import TestClient
-from main import GAMES, app, resolve_static_path
+from main import (
+    GAME_HISTORY,
+    GAME_SUMMARIES,
+    GAMES,
+    app,
+    create_default_orders,
+    get_required_finalizing_powers,
+    resolve_static_path,
+)
 from map_data import PROVINCES
 from models import Order, OrderType, Power, Unit, UnitType
 
@@ -251,6 +259,22 @@ def test_api_winter_builds_and_slot_management():
     # Critical regression check: updating an order in Adjustments must NOT wipe game.builds!
     assert upd_bre["builds"]["FRANCE"]["count"] == 3
     assert set(upd_bre["builds"]["FRANCE"]["homes"]) == {"PAR", "MAR", "BRE"}
+
+    # A build only happens if it is ordered, so order the other two as armies
+    for home in ("PAR", "MAR"):
+        client.post(
+            "/api/order",
+            json={
+                "order": {
+                    "unit_id": f"BUILD_FRANCE_{home}",
+                    "power": "FRANCE",
+                    "unit_type": "A",
+                    "origin": home,
+                    "order_type": "BUILD",
+                    "is_explicit": True,
+                }
+            },
+        )
 
     # Confirm all orders for France and adjudicate Winter 1901 Adjustments -> Spring 1902 Movement
     client.post("/api/orders/confirm-all", json={"power": "FRANCE"})
@@ -843,3 +867,444 @@ def test_shared_default_board_cannot_be_deleted():
     assert res.status_code == 403
     assert "proto_1901" in GAMES
     assert client.get("/api/game?game_id=proto_1901").status_code == 200
+
+
+def _set_turn(game_id, season, phase):
+    game = GAMES[game_id]
+    game.season, game.phase = season, phase
+    game.builds, game.retreats = None, None
+
+
+def _remove_unit(game_id, unit_id):
+    game = GAMES[game_id]
+    game.units = [u for u in game.units if u.id != unit_id]
+    game.orders.pop(unit_id, None)
+
+
+def _place_unit(game_id, unit_id, province):
+    game = GAMES[game_id]
+    next(u for u in game.units if u.id == unit_id).province = province
+    game.orders[unit_id].origin = province
+
+
+def _finalize(game_id, power):
+    res = client.post(f"/api/finalize?game_id={game_id}", json={"power": power, "force": True})
+    assert res.status_code == 200
+    return res.json()
+
+
+def _claim(game_id, power, user_id):
+    res = client.post(
+        f"/api/games/{game_id}/join",
+        json={"power": power, "user_id": user_id, "email": f"{user_id}@test.com"},
+    )
+    assert res.status_code == 200
+
+
+def _dislodge_russia_in_silesia(game_id):
+    """Germany attacks a Russian army in Silesia with support, leaving Russia with a retreat."""
+    _place_unit(game_id, "RUS_A_WAR", "SIL")
+    client.post(
+        f"/api/orders/batch?game_id={game_id}",
+        json={
+            "power": "GERMANY",
+            "orders": [
+                {
+                    "unit_id": "GER_A_BER",
+                    "power": "GERMANY",
+                    "unit_type": "A",
+                    "origin": "BER",
+                    "order_type": "MOVE",
+                    "target": "SIL",
+                    "is_explicit": True,
+                },
+                {
+                    "unit_id": "GER_A_MUN",
+                    "power": "GERMANY",
+                    "unit_type": "A",
+                    "origin": "MUN",
+                    "order_type": "SUPPORT",
+                    "aux_unit_origin": "BER",
+                    "target": "SIL",
+                    "is_explicit": True,
+                },
+            ],
+        },
+    )
+
+
+def test_phases_with_only_unclaimed_powers_involved_resolve_by_themselves():
+    game_id = _seated_game()
+    _set_turn(game_id, "Fall", "Movement")
+    _remove_unit(game_id, "RUS_A_WAR")  # Russia alone has an adjustment to make this Winter
+
+    _finalize(game_id, "FRANCE")
+    state = _finalize(game_id, "GERMANY")["state"]
+
+    assert (state["season"], state["year"], state["phase"]) == ("Spring", 1902, "Movement")
+
+
+def test_host_forced_turn_also_skips_phases_nobody_has_to_act_in():
+    game_id = _seated_game()
+    _set_turn(game_id, "Fall", "Movement")
+    _remove_unit(game_id, "RUS_A_WAR")
+
+    state = client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).json()
+
+    assert (state["season"], state["year"], state["phase"]) == ("Spring", 1902, "Movement")
+
+
+def test_unclaimed_powers_retreat_phase_plays_out_without_anyone():
+    game_id = _seated_game()
+    _dislodge_russia_in_silesia(game_id)
+
+    _finalize(game_id, "GERMANY")
+    state = _finalize(game_id, "FRANCE")["state"]
+
+    assert (state["season"], state["phase"]) == ("Fall", "Movement")
+    assert not any(u["id"] == "RUS_A_WAR" for u in state["units"])
+
+
+def test_a_retreat_that_concerns_a_player_still_waits_for_them():
+    game_id = _seated_game()
+    _place_unit(game_id, "GER_A_BER", "SIL")
+    client.post(
+        f"/api/orders/batch?game_id={game_id}",
+        json={
+            "power": "RUSSIA",
+            "orders": [
+                {
+                    "unit_id": "RUS_A_WAR",
+                    "power": "RUSSIA",
+                    "unit_type": "A",
+                    "origin": "WAR",
+                    "order_type": "MOVE",
+                    "target": "SIL",
+                    "is_explicit": True,
+                },
+                {
+                    "unit_id": "RUS_F_SEV",
+                    "power": "RUSSIA",
+                    "unit_type": "F",
+                    "origin": "SEV",
+                    "order_type": "HOLD",
+                    "is_explicit": True,
+                },
+            ],
+        },
+    )
+    _place_unit(game_id, "RUS_A_MOS", "GAL")
+    client.post(
+        f"/api/order?game_id={game_id}",
+        json={
+            "order": {
+                "unit_id": "RUS_A_MOS",
+                "power": "RUSSIA",
+                "unit_type": "A",
+                "origin": "GAL",
+                "order_type": "SUPPORT",
+                "aux_unit_origin": "WAR",
+                "target": "SIL",
+                "is_explicit": True,
+            }
+        },
+    )
+
+    _finalize(game_id, "FRANCE")
+    state = _finalize(game_id, "GERMANY")["state"]
+
+    assert state["phase"] == "Retreats"
+
+
+def test_turn_resolves_when_the_last_unready_player_surrenders():
+    game_id = _seated_game()
+    _claim(game_id, "RUSSIA", "cal")
+    _finalize(game_id, "FRANCE")
+    _finalize(game_id, "RUSSIA")
+
+    res = client.post(
+        f"/api/games/{game_id}/surrender",
+        json={"power": "GERMANY", "user_id": "bob", "leave": False},
+    )
+
+    assert res.status_code == 200
+    assert res.json()["state"]["season"] == "Fall"
+
+
+def test_turn_resolves_when_the_last_unready_player_leaves():
+    game_id = _seated_game()
+    _claim(game_id, "RUSSIA", "cal")
+    _finalize(game_id, "FRANCE")
+    _finalize(game_id, "RUSSIA")
+
+    res = client.post(f"/api/games/{game_id}/leave", json={"user_id": "bob"})
+
+    assert res.status_code == 200
+    assert GAMES[game_id].season == "Fall"
+
+
+def test_a_match_with_nobody_left_playing_does_not_run_on_by_itself():
+    game_id = _seated_game()
+    for power, user_id in (("FRANCE", "host"), ("GERMANY", "bob")):
+        client.post(
+            f"/api/games/{game_id}/surrender",
+            json={"power": power, "user_id": user_id, "leave": False},
+        )
+
+    assert GAMES[game_id].season == "Spring"
+    assert GAMES[game_id].phase == "Movement"
+
+
+def test_a_power_with_no_room_to_build_is_not_waited_for():
+    game_id = _seated_game()
+    game = GAMES[game_id]
+    game.builds = {
+        "FRANCE": {"count": 1, "homes": []},
+        "GERMANY": {"count": 1, "homes": ["KIE"]},
+    }
+    game.season, game.phase = "Winter", "Adjustments"
+
+    assert get_required_finalizing_powers(game, GAME_SUMMARIES[game_id]) == [Power.GERMANY]
+
+
+def test_retreat_consensus_is_read_from_dislodged_units():
+    game_id = _seated_game()
+    game = GAMES[game_id]
+    game.season, game.phase = "Spring", "Retreats"
+    next(u for u in game.units if u.id == "GER_A_BER").is_dislodged = True
+    game.retreats = None
+
+    assert get_required_finalizing_powers(game, GAME_SUMMARIES[game_id]) == [Power.GERMANY]
+
+
+def test_scenario_reset_on_a_live_match_needs_the_host():
+    game_id = _seated_game()
+    client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers())
+    reset = {"scenario_id": "standard_1901"}
+
+    nobody = client.post(f"/api/scenario?game_id={game_id}", json=reset)
+    bob = client.post(
+        f"/api/scenario?game_id={game_id}", json=reset, headers=_auth_headers("bob", "bob@test.com")
+    )
+
+    assert nobody.status_code == 401
+    assert bob.status_code == 403
+    assert GAMES[game_id].season == "Fall"
+
+    host = client.post(f"/api/scenario?game_id={game_id}", json=reset, headers=_auth_headers())
+    assert host.status_code == 200
+    assert GAMES[game_id].season == "Spring"
+
+
+def test_scenario_reset_stays_open_on_solo_and_saved_boards():
+    assert client.post("/api/scenario", json={"scenario_id": "standard_1901"}).status_code == 200
+    saved = client.post(
+        "/api/games/save-sandbox",
+        json={"name": "Study", "user_id": "host", "email": "host@test.com"},
+    ).json()["game_id"]
+
+    res = client.post(f"/api/scenario?game_id={saved}", json={"scenario_id": "standard_1901"})
+
+    assert res.status_code == 200
+
+
+def test_a_missed_retreat_disbands_the_unit():
+    game_id = _seated_game()
+    _dislodge_russia_in_silesia(game_id)
+    state = client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).json()
+
+    # Nobody commands Russia, so the unit that had somewhere to go disbands.
+    assert not any(u["id"] == "RUS_A_WAR" for u in state["units"])
+
+
+def test_a_dislodged_units_default_order_is_to_disband():
+    orders = create_default_orders(
+        [Unit(id="x", power=Power.FRANCE, unit_type=UnitType.ARMY, province="MUN", is_dislodged=True)],
+        "Retreats",
+    )
+
+    assert orders["x"].order_type == OrderType.DISBAND
+    assert orders["x"].is_explicit is False
+
+
+def _winter_with_a_french_build():
+    game_id = _seated_game()
+    _remove_unit(game_id, "FRA_A_PAR")
+    _set_turn(game_id, "Winter", "Adjustments")
+    client.get(f"/api/game?game_id={game_id}")
+    return game_id
+
+
+def test_a_missed_build_is_waived():
+    game_id = _winter_with_a_french_build()
+    assert GAMES[game_id].orders["BUILD_FRANCE_PAR"].order_type == OrderType.WAIVE
+
+    state = client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).json()
+
+    assert state["phase"] == "Movement"
+    assert sum(u["power"] == "FRANCE" for u in state["units"]) == 2
+
+
+def test_an_ordered_build_is_built():
+    game_id = _winter_with_a_french_build()
+    build = {
+        "unit_id": "BUILD_FRANCE_PAR",
+        "power": "FRANCE",
+        "unit_type": "A",
+        "origin": "PAR",
+        "order_type": "BUILD",
+        "is_explicit": True,
+    }
+    client.post(f"/api/order?game_id={game_id}", json={"order": build})
+
+    state = client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).json()
+
+    assert sum(u["power"] == "FRANCE" for u in state["units"]) == 3
+
+
+def test_a_build_chosen_before_surrendering_is_dropped():
+    game_id = _winter_with_a_french_build()
+    build = {
+        "unit_id": "BUILD_FRANCE_PAR",
+        "power": "FRANCE",
+        "unit_type": "A",
+        "origin": "PAR",
+        "order_type": "BUILD",
+        "is_explicit": True,
+    }
+    client.post(f"/api/order?game_id={game_id}", json={"order": build})
+
+    res = client.post(
+        f"/api/games/{game_id}/surrender",
+        json={"power": "FRANCE", "user_id": "host", "leave": False},
+    )
+
+    # Nobody else had anything to do this Winter, so surrendering also finished the phase.
+    assert res.json()["state"]["phase"] == "Movement"
+    assert sum(u["power"] == "FRANCE" for u in res.json()["state"]["units"]) == 2
+
+
+def test_a_retreat_chosen_before_surrendering_is_dropped():
+    game_id = _seated_game()
+    game = GAMES[game_id]
+    game.season, game.phase = "Spring", "Retreats"
+    unit = next(u for u in game.units if u.id == "GER_A_BER")
+    unit.is_dislodged = True
+    game.retreats = {"GERMANY": {"A BER": ["PRU"]}}
+    client.post(
+        f"/api/order?game_id={game_id}",
+        json={
+            "order": {
+                "unit_id": "GER_A_BER",
+                "power": "GERMANY",
+                "unit_type": "A",
+                "origin": "BER",
+                "order_type": "RETREAT",
+                "target": "PRU",
+                "is_explicit": True,
+            }
+        },
+    )
+
+    res = client.post(
+        f"/api/games/{game_id}/surrender",
+        json={"power": "GERMANY", "user_id": "bob", "leave": False},
+    )
+
+    # The surrender also finished the phase, and the unit it left behind did not retreat.
+    assert res.json()["state"]["phase"] == "Movement"
+    assert not any(u["id"] == "GER_A_BER" for u in res.json()["state"]["units"])
+
+
+def _solo_game_at(season, phase):
+    """A saved sandbox: one player, so ai-step is allowed and its active power matters."""
+    game_id = client.post(
+        "/api/games/save-sandbox",
+        json={"name": "Study", "user_id": "host", "email": "host@test.com"},
+    ).json()["game_id"]
+    _set_turn(game_id, season, phase)
+    return game_id
+
+
+def test_ai_step_plans_builds_for_a_player_who_chose_nothing():
+    game_id = _solo_game_at("Winter", "Adjustments")
+    GAMES[game_id].active_power = Power.FRANCE
+    _remove_unit(game_id, "FRA_A_PAR")
+    client.get(f"/api/game?game_id={game_id}")
+
+    state = client.post(f"/api/sandbox/ai-step?game_id={game_id}").json()
+
+    assert sum(u["power"] == "FRANCE" for u in state["units"]) == 3
+
+
+def test_ai_step_keeps_a_build_decision_the_player_made():
+    game_id = _solo_game_at("Winter", "Adjustments")
+    GAMES[game_id].active_power = Power.FRANCE
+    _remove_unit(game_id, "FRA_A_PAR")
+    client.get(f"/api/game?game_id={game_id}")
+    waive = {
+        "unit_id": "BUILD_FRANCE_PAR",
+        "power": "FRANCE",
+        "unit_type": "A",
+        "origin": "PAR",
+        "order_type": "WAIVE",
+        "is_explicit": True,
+    }
+    client.post(f"/api/order?game_id={game_id}", json={"order": waive})
+
+    state = client.post(f"/api/sandbox/ai-step?game_id={game_id}").json()
+
+    assert sum(u["power"] == "FRANCE" for u in state["units"]) == 2
+
+
+def test_rollback_hands_every_player_their_orders_back():
+    game_id = _seated_game()
+    _germany_moves_to_silesia(game_id)
+    _finalize(game_id, "FRANCE")
+    _finalize(game_id, "GERMANY")
+    assert GAMES[game_id].season == "Fall"
+
+    state = client.post(f"/api/admin/rollback?game_id={game_id}", headers=_auth_headers()).json()
+
+    assert state["season"] == "Spring"
+    assert state["finalized_powers"] == []
+    assert state["orders"]["GER_A_BER"]["target"] == "SIL"
+    # The turn does not resolve again until the players say so.
+    assert GAMES[game_id].season == "Spring"
+
+
+def test_rollback_recomputes_what_a_snapshot_leaves_out():
+    game_id = _seated_game()
+    client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers())
+    snapshot = GAME_HISTORY[game_id][-1]
+    assert snapshot.last_resolution is None
+
+    state = client.post(f"/api/admin/rollback?game_id={game_id}", headers=_auth_headers()).json()
+
+    assert state["last_resolution"] is not None
+
+
+def test_a_coast_on_an_army_order_is_ignored():
+    game_id = _new_game()
+    _place_unit(game_id, "FRA_A_MAR", "GAS")
+    order = _order_payload(unit_id="FRA_A_MAR", origin="GAS", target="SPA", target_coast="NC")
+
+    client.post(f"/api/order?game_id={game_id}", json={"order": order})
+    client.post(f"/api/orders/batch?game_id={game_id}", json={"power": "FRANCE", "orders": [order]})
+    client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers())
+
+    assert [(u.province, u.coast) for u in GAMES[game_id].units if u.id == "FRA_A_MAR"] == [("SPA", None)]
+
+
+def test_a_power_that_misses_its_disbands_still_loses_units():
+    game_id = _seated_game()
+    game = GAMES[game_id]
+    game.ownership = {k: v for k, v in game.ownership.items() if k != "PAR"}
+    _set_turn(game_id, "Winter", "Adjustments")
+    client.get(f"/api/game?game_id={game_id}")
+    assert game.builds["FRANCE"]["count"] == -1
+
+    state = client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).json()
+
+    assert state["phase"] == "Movement"
+    assert sum(u["power"] == "FRANCE" for u in state["units"]) == 2

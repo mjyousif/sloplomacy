@@ -183,6 +183,7 @@ The game cycles through three standard phases per year:
 2. **Retreats (`R`)**:
    - Dislodged units must choose an unoccupied adjacent province that was not the attacker's origin and not contested by bounce, or `DISBAND`.
    - After resolving retreats, advances to `Fall <Year> Movement` (from Spring) or `Winter <Year> Adjustments` (from Fall).
+   - A dislodged unit with no retreat order disbands. `create_default_orders` follows the rulebook: unordered units hold, dislodged units disband, and builds are waived. Nothing is built or retreated on a player's behalf.
 3. **Winter Adjustments (`A`)**:
    - Compares total Supply Centers (SCs) owned with existing unit counts.
    - If `SC > Units`: Owning power builds units (`BUILD`) in vacant home SCs (`count` builds allowed).
@@ -203,6 +204,8 @@ The game cycles through three standard phases per year:
 - **Invariant**: Memory is authoritative for a loaded game. Supabase only supplies games this process has not loaded, so never replace `GAMES` or `GAME_SUMMARIES` entries for a loaded game with a database copy. Call `persist_game` after every change to a game.
 - **Invariant**: A failed Supabase read raises `SupabaseUnavailable`, and must never be treated as "no such game". Only a successful read that lacks an already saved game means it was deleted; `UNSAVED_GAMES` marks the games that may have no row yet.
 - The default game `proto_1901` is shared by all visitors and the app loads it on startup, so it can never be deleted or evicted.
+- **Invariant**: Games live in one process, so the service runs a single instance (`--max-instances 1`, also set in `scripts/deploy.*` and Terraform). A second instance would overwrite resolved turns, and players on it would not see each other's updates.
+- A live match resolves by itself once everyone it is waiting for has finalized (`everyone_is_ready`). This is checked after a turn resolves and after a player leaves or surrenders. A retreat or adjustment phase no player is involved in plays out at once, but a movement phase always waits, so a match with nobody left playing never runs on.
 
 ### 4. Sandbox ("War Room") Mode Isolation
 - Sandbox mode allows a player to test orders for all 7 Great Powers without submitting real moves.
@@ -213,7 +216,8 @@ The game cycles through three standard phases per year:
 ### 5. Surrender & Civil Disorder
 - A player can surrender an active seat (`POST /api/games/{game_id}/surrender`).
 - Surrendered powers are marked in `surrendered_powers: List[Power]`.
-- Units belonging to surrendered powers enter **Civil Disorder**: they default to hold (`HOLD`), do not offer support, and auto-disband if forced to retreat or if down in supply centers during Winter adjustments.
+- Units belonging to surrendered powers enter **Civil Disorder**: they default to hold (`HOLD`), do not offer support, build nothing, and auto-disband if forced to retreat or if down in supply centers during Winter adjustments. `put_into_civil_disorder` also drops any retreat or build the player had already chosen.
+- Empty seats behave the same way, because nobody ever gave those powers orders.
 
 ### 6. Cartography & Bicoastal Provinces
 - Three provinces possess split coasts for Fleets:

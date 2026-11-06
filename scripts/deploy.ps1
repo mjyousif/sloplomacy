@@ -126,7 +126,7 @@ gcloud run deploy $ServiceName `
     --platform managed `
     --allow-unauthenticated `
     --min-instances 0 `
-    --max-instances 3 `
+    --max-instances 1 `
     --memory 512Mi `
     --port 8080 `
     --set-env-vars "$envVars"

@@ -12,6 +12,7 @@ from main import (
     GAME_HISTORY,
     GAME_PASSCODES,
     DEFAULT_GAME_ID,
+    HISTORY_UNSAVED,
     SAVES_RUNNING,
     UNSAVED_GAMES,
     build_scenario,
@@ -20,7 +21,9 @@ from main import (
 )
 from models import GameState, MultiplayerGameSummary, GameParticipant, Power, UnitType
 from database import (
+    LOBBY_COLUMNS,
     SupabaseUnavailable,
+    build_summary_from_row,
     is_persistence_enabled,
     to_db_status,
     to_app_status,
@@ -381,6 +384,7 @@ class FakeSupabase:
         self.rows = {}
         self.reads_fail = False
         self.writes_fail = False
+        self.saved_history = []  # Whether each save carried the rollback history
 
     def _require_reads(self):
         if self.reads_fail:
@@ -389,10 +393,12 @@ class FakeSupabase:
     async def save(self, game_id, state, summary=None, history=None, passcode=None, client=None):
         if self.writes_fail:
             return False
+        self.saved_history.append(history is not None)
+        kept_history = self.rows.get(game_id, {}).get("history", [])
         self.rows[game_id] = {
             "state": state.model_dump(mode="json"),
             "summary": summary.model_dump(mode="json") if summary else None,
-            "history": [h.model_dump(mode="json") for h in (history or [])],
+            "history": kept_history if history is None else [h.model_dump(mode="json") for h in history],
             "passcode": passcode,
         }
         return True
@@ -432,6 +438,7 @@ def supabase():
     ):
         yield db
     UNSAVED_GAMES.clear()
+    HISTORY_UNSAVED.clear()
 
 
 HOST = {"user_id": "host", "email": "host@test.com", "display_name": "Host"}
@@ -745,3 +752,236 @@ def test_private_sandbox_is_never_saved_or_listed(supabase):
 def test_shared_default_board_survives_lookup_of_a_missing_row(supabase):
     assert client.get("/api/games/proto_1901").status_code == 404
     assert client.get("/api/game?game_id=proto_1901").status_code == 200
+
+
+def _resolve_turn(game_id):
+    for power in ("FRANCE", "GERMANY"):
+        client.post(f"/api/finalize?game_id={game_id}", json={"power": power, "force": True})
+
+
+def _rollback_headers():
+    import jwt
+
+    return {"Authorization": "Bearer " + jwt.encode({"sub": HOST["user_id"], "email": HOST["email"]}, "k" * 32)}
+
+
+def test_an_order_click_leaves_the_saved_history_alone(supabase):
+    game_id = _create_game()
+    _join(game_id, "GERMANY", BOB)
+    _resolve_turn(game_id)
+    assert len(supabase.rows[game_id]["history"]) == 1
+    supabase.saved_history.clear()
+
+    order = {**ARMY_PARIS_TO_BURGUNDY, "origin": "PAR"}
+    assert client.post(f"/api/order?game_id={game_id}", json={"order": order}).status_code == 200
+
+    assert supabase.saved_history == [False]
+    assert len(supabase.rows[game_id]["history"]) == 1
+
+
+def test_history_survives_a_restart_and_rollback_still_works(supabase):
+    game_id = _create_game()
+    _join(game_id, "GERMANY", BOB)
+    _resolve_turn(game_id)
+    client.post(f"/api/order?game_id={game_id}", json={"order": {**ARMY_PARIS_TO_BURGUNDY}})
+
+    _restart_container(game_id)
+    client.get(f"/api/game?game_id={game_id}")
+
+    res = client.post(f"/api/admin/rollback?game_id={game_id}", headers=_rollback_headers())
+    assert res.status_code == 200
+    assert res.json()["season"] == "Spring"
+    assert supabase.rows[game_id]["history"] == []
+
+
+def test_a_scenario_reset_saves_the_emptied_history(supabase):
+    game_id = _create_game()
+    _join(game_id, "GERMANY", BOB)
+    _resolve_turn(game_id)
+
+    res = client.post(
+        f"/api/scenario?game_id={game_id}",
+        json={"scenario_id": "standard_1901"},
+        headers=_rollback_headers(),
+    )
+
+    assert res.status_code == 200
+    assert supabase.rows[game_id]["history"] == []
+
+
+def test_a_history_save_that_fails_is_sent_again(supabase):
+    game_id = _create_game()
+    _join(game_id, "GERMANY", BOB)
+    supabase.writes_fail = True
+    _resolve_turn(game_id)
+    assert supabase.rows[game_id]["history"] == []
+    supabase.writes_fail = False
+
+    client.post(f"/api/unfinalize?game_id={game_id}", json={"power": "FRANCE"})
+
+    assert len(supabase.rows[game_id]["history"]) == 1
+    assert game_id not in HISTORY_UNSAVED
+
+
+def test_a_turn_resolved_during_a_save_still_saves_its_history():
+    async def run_test():
+        game_id = "history_during_save"
+        GAMES[game_id] = build_scenario("standard_1901", Power.FRANCE, game_id)
+        GAME_HISTORY[game_id] = []
+        HISTORY_UNSAVED.add(game_id)
+        histories = []
+        started = asyncio.Event()
+        finish = asyncio.Event()
+
+        async def slow_save(game_id, state, summary=None, history=None, passcode=None):
+            histories.append(None if history is None else len(history))
+            started.set()
+            await finish.wait()
+            return True
+
+        env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+        with patch.dict(os.environ, env), patch("main.save_game_to_db", side_effect=slow_save):
+            first = asyncio.create_task(persist_game(game_id))
+            await started.wait()
+            GAME_HISTORY[game_id].append(GAMES[game_id].model_copy(deep=True))
+            HISTORY_UNSAVED.add(game_id)
+            await asyncio.wait_for(persist_game(game_id), timeout=1)
+            finish.set()
+            await asyncio.wait_for(first, timeout=1)
+
+        assert histories == [0, 1]
+        assert game_id not in HISTORY_UNSAVED
+        GAMES.pop(game_id, None)
+        GAME_HISTORY.pop(game_id, None)
+
+    asyncio.run(run_test())
+
+
+def test_save_without_history_leaves_the_column_out_of_the_write():
+    async def run_test():
+        game = build_scenario("standard_1901", Power.ENGLAND, "no_history")
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.post.return_value = httpx.Response(status_code=201)
+        env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+        with patch.dict(os.environ, env):
+            await save_game_to_db("no_history", game, client=mock_client)
+            without = mock_client.post.call_args.kwargs["json"]
+            await save_game_to_db("no_history", game, history=[game], client=mock_client)
+            with_history = mock_client.post.call_args.kwargs["json"]
+
+        assert "history" not in without
+        assert "history" not in without["game_state"]
+        assert len(with_history["history"]) == 1
+
+    asyncio.run(run_test())
+
+
+def test_lobby_read_does_not_download_game_states():
+    async def run_test():
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.get.return_value = httpx.Response(status_code=200, json=[])
+        env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+        with patch.dict(os.environ, env):
+            await load_all_summaries_from_db(client=mock_client)
+
+        url = mock_client.get.call_args.args[0]
+        assert f"select={LOBBY_COLUMNS}" in url
+        assert "*" not in url
+
+    asyncio.run(run_test())
+
+
+def test_lobby_row_keeps_seats_from_the_packed_summary():
+    summary = MultiplayerGameSummary(
+        game_id="lobby_row",
+        name="Seats",
+        status="active",
+        created_by="host@test.com",
+        created_at="2026-11-05T00:00:00Z",
+        participants={
+            "FRANCE": GameParticipant(
+                user_id="host",
+                email="host@test.com",
+                display_name="Host",
+                power=Power.FRANCE,
+                joined_at="2026-11-05T00:00:00Z",
+            )
+        },
+    )
+    row = {"room_code": "lobby_row", "status": "in_progress", "summary": summary.model_dump(mode="json")}
+
+    assert list(build_summary_from_row(row).participants) == ["FRANCE"]
+
+
+def test_history_kept_inside_an_older_row_moves_to_its_column_on_the_next_save(supabase):
+    game_id = _create_game()
+    _join(game_id, "GERMANY", BOB)
+    _resolve_turn(game_id)
+    _restart_container(game_id)
+
+    client.get(f"/api/game?game_id={game_id}")
+    assert game_id in HISTORY_UNSAVED
+    supabase.saved_history.clear()
+
+    client.post(f"/api/unfinalize?game_id={game_id}", json={"power": "FRANCE"})
+    client.post(f"/api/unfinalize?game_id={game_id}", json={"power": "GERMANY"})
+
+    assert supabase.saved_history == [True, False]
+    assert game_id not in HISTORY_UNSAVED
+
+
+def test_load_reads_history_from_its_column_and_from_older_rows():
+    async def run_test():
+        game = build_scenario("standard_1901", Power.FRANCE, "history_rows")
+        snapshot = game.model_dump(mode="json")
+        blob = {"state": snapshot, "summary": None, "passcode": None}
+        base = {"room_code": "history_rows", "status": "lobby", "name": "x"}
+        env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+
+        async def history_count(row):
+            mock_client = AsyncMock(spec=httpx.AsyncClient)
+            mock_client.get.return_value = httpx.Response(status_code=200, json=[row])
+            with patch.dict(os.environ, env):
+                loaded = await load_game_from_db("history_rows", client=mock_client)
+            return len(loaded[2])
+
+        assert await history_count({**base, "game_state": blob, "history": [snapshot]}) == 1
+        assert await history_count({**base, "game_state": {**blob, "history": [snapshot]}, "history": []}) == 1
+        # Once a row has been rewritten the column wins over anything older.
+        assert await history_count({**base, "game_state": {**blob, "history": [snapshot]}, "history": [snapshot, snapshot]}) == 2
+
+    asyncio.run(run_test())
+
+
+def test_lobby_falls_back_to_whole_rows_if_supabase_refuses_the_columns():
+    async def run_test():
+        row = {"room_code": "game_a", "name": "Alpha", "status": "lobby"}
+
+        async def get(url, headers=None, timeout=None):
+            if "select=*" in url:
+                return httpx.Response(status_code=200, json=[row])
+            return httpx.Response(status_code=400, json={"message": "failed to parse select"})
+
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.get.side_effect = get
+        env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+        with patch.dict(os.environ, env):
+            summaries = await load_all_summaries_from_db(client=mock_client)
+
+        assert list(summaries) == ["game_a"]
+
+    asyncio.run(run_test())
+
+
+def test_lobby_outage_is_not_retried_as_a_refused_query():
+    async def run_test():
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.get.return_value = httpx.Response(status_code=503, text="down")
+        env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+        with patch.dict(os.environ, env):
+            with pytest.raises(SupabaseUnavailable):
+                await load_all_summaries_from_db(client=mock_client)
+
+        assert mock_client.get.call_count == 1
+
+    asyncio.run(run_test())

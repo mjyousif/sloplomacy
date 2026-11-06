@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from adjudicator import adjudicate_turn, compute_current_builds, create_diplomacy_game
-from map_data import PROVINCES, get_initial_1901_units, get_initial_ownership, split_province_code
+from map_data import PROVINCES, get_initial_1901_units, get_initial_ownership
 from models import (
     AdminDestroyUnitRequest,
     AdminMoveUnitRequest,
@@ -103,6 +103,18 @@ def validate_order_references(order: Order) -> None:
             )
 
 
+def fleet_coast(unit_type: UnitType, province: ProvinceInfo, requested: Optional[str]) -> Optional[str]:
+    """
+    Return the coast a unit stands on. Only a fleet on a split-coast province has one.
+
+    An army stored with a coast is unknown to the engine, so it stops existing there: it captures
+    nothing, anything can move through it, and it is removed in the next Winter.
+    """
+    if unit_type != UnitType.FLEET or not province.coasts:
+        return None
+    return requested if requested in province.coasts else province.coasts[0]
+
+
 def resolve_static_path(static_root: str, requested: str) -> Optional[str]:
     """Return the file `requested` names inside static_root, or None if it is missing or outside it."""
     root = Path(static_root).resolve()
@@ -115,53 +127,40 @@ def resolve_static_path(static_root: str, requested: str) -> Optional[str]:
     return None
 
 
+def default_build_slot(power: Power, home: str) -> Order:
+    """A home center with no decision yet. Nothing is built unless the player orders it."""
+    return Order(
+        unit_id=f"BUILD_{power.value}_{home}",
+        power=power,
+        unit_type=UnitType.ARMY,
+        origin=home,
+        origin_coast=None,
+        order_type=OrderType.WAIVE,
+        is_explicit=False,
+    )
+
+
 def create_default_orders(
     units: List[Unit],
     phase: str = "Movement",
     builds: Optional[Dict[str, Any]] = None,
-    retreats: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Order]:
+    """
+    Return what every unit does if nobody orders it, which follows the rulebook: a unit holds, a
+    dislodged unit disbands, and a build is waived. The same goes for empty seats and civil disorder.
+    """
     orders: Dict[str, Order] = {}
     if phase == "Retreats":
         for u in units:
-            if u.is_dislodged:
-                u_loc = f"{u.province}/{u.coast}" if u.coast else u.province
-                u_key = f"{u.unit_type.value} {u_loc}"
-                p_ret = (retreats or {}).get(u.power.value, {})
-                valid_dests = p_ret.get(u_key, p_ret.get(f"{u.unit_type.value} {u.province}", []))
-                if valid_dests:
-                    first_base, first_coast = split_province_code(valid_dests[0])
-                    orders[u.id] = Order(
-                        unit_id=u.id,
-                        power=u.power,
-                        unit_type=u.unit_type,
-                        origin=u.province,
-                        origin_coast=u.coast,
-                        order_type=OrderType.RETREAT,
-                        target=first_base,
-                        target_coast=first_coast,
-                        is_explicit=False,
-                    )
-                else:
-                    orders[u.id] = Order(
-                        unit_id=u.id,
-                        power=u.power,
-                        unit_type=u.unit_type,
-                        origin=u.province,
-                        origin_coast=u.coast,
-                        order_type=OrderType.DISBAND,
-                        is_explicit=False,
-                    )
-            else:
-                orders[u.id] = Order(
-                    unit_id=u.id,
-                    power=u.power,
-                    unit_type=u.unit_type,
-                    origin=u.province,
-                    origin_coast=u.coast,
-                    order_type=OrderType.HOLD,
-                    is_explicit=True,
-                )
+            orders[u.id] = Order(
+                unit_id=u.id,
+                power=u.power,
+                unit_type=u.unit_type,
+                origin=u.province,
+                origin_coast=u.coast,
+                order_type=OrderType.DISBAND if u.is_dislodged else OrderType.HOLD,
+                is_explicit=not u.is_dislodged,
+            )
         return orders
 
     if phase == "Adjustments":
@@ -178,22 +177,10 @@ def create_default_orders(
             )
         if builds:
             for p_name, b_info in builds.items():
-                count = b_info.get("count", 0)
-                homes = b_info.get("homes", [])
-                pwr = Power(p_name)
-                if count > 0:
-                    for idx, h in enumerate(homes):
-                        b_id = f"BUILD_{p_name}_{h}"
-                        should_build = idx < count
-                        orders[b_id] = Order(
-                            unit_id=b_id,
-                            power=pwr,
-                            unit_type=UnitType.ARMY,
-                            origin=h,
-                            origin_coast=None,
-                            order_type=OrderType.BUILD if should_build else OrderType.WAIVE,
-                            is_explicit=False,
-                        )
+                if b_info.get("count", 0) > 0:
+                    for h in b_info.get("homes", []):
+                        slot = default_build_slot(Power(p_name), h)
+                        orders[slot.unit_id] = slot
         return orders
 
     # Default Movement phase
@@ -223,31 +210,10 @@ def refresh_diagnostics_and_simulation(game: GameState) -> None:
         game.builds = compute_current_builds(game.units, game.ownership, game.year)
         game.retreats = None
         for p_name, b_info in game.builds.items():
-            count = b_info.get("count", 0)
-            homes = b_info.get("homes", [])
-            pwr = Power(p_name)
-            if count > 0:
-                existing_builds = sum(
-                    1
-                    for h in homes
-                    if f"BUILD_{p_name}_{h}" in game.orders
-                    and game.orders[f"BUILD_{p_name}_{h}"].order_type == OrderType.BUILD
-                )
-                for h in homes:
-                    b_id = f"BUILD_{p_name}_{h}"
-                    if b_id not in game.orders:
-                        should_build = existing_builds < count
-                        if should_build:
-                            existing_builds += 1
-                        game.orders[b_id] = Order(
-                            unit_id=b_id,
-                            power=pwr,
-                            unit_type=UnitType.ARMY,
-                            origin=h,
-                            origin_coast=None,
-                            order_type=OrderType.BUILD if should_build else OrderType.WAIVE,
-                            is_explicit=False,
-                        )
+            if b_info.get("count", 0) > 0:
+                for h in b_info.get("homes", []):
+                    slot = default_build_slot(Power(p_name), h)
+                    game.orders.setdefault(slot.unit_id, slot)
     elif game.phase == "Retreats":
         game.builds = None
         if not game.retreats:
@@ -381,6 +347,9 @@ GAME_PASSCODES: Dict[str, str] = {}
 UNSAVED_GAMES: Set[str] = set()
 # Games with a save running. The value turns True if the game changes during it, so it repeats.
 SAVES_RUNNING: Dict[str, bool] = {}
+# Games whose rollback history differs from what is saved. History only changes when a turn does,
+# so other saves leave it out: it is the bulk of a save, and every order click saves.
+HISTORY_UNSAVED: Set[str] = set()
 # Private what-if copies of multiplayer matches: sandbox id -> (match id, the player's power).
 # They exist only in this process and are never saved, listed or shown to other players.
 PRIVATE_SANDBOXES: Dict[str, Tuple[str, Power]] = {}
@@ -500,6 +469,7 @@ def evict_game(game_id: str) -> None:
     GAME_PASSCODES.pop(game_id, None)
     SANDBOX_CHECKPOINTS.pop(game_id, None)
     UNSAVED_GAMES.discard(game_id)
+    HISTORY_UNSAVED.discard(game_id)
     PRIVATE_SANDBOXES.pop(game_id, None)
     for sandbox_id, (match_id, _) in list(PRIVATE_SANDBOXES.items()):
         if match_id == game_id:
@@ -534,13 +504,18 @@ async def persist_game(game_id: str) -> None:
             if not state:
                 return
             sync_summary(game_id)
+            # Cleared first so that a turn resolved during this save is sent by the next one.
+            send_history = game_id in HISTORY_UNSAVED
+            HISTORY_UNSAVED.discard(game_id)
             saved = await save_game_to_db(
                 game_id=game_id,
                 state=state,
                 summary=GAME_SUMMARIES.get(game_id),
-                history=GAME_HISTORY.get(game_id, []),
+                history=GAME_HISTORY.get(game_id, []) if send_history else None,
                 passcode=GAME_PASSCODES.get(game_id),
             )
+            if send_history and not saved:
+                HISTORY_UNSAVED.add(game_id)
             repeat = SAVES_RUNNING[game_id]
     finally:
         SAVES_RUNNING.pop(game_id, None)
@@ -588,6 +563,8 @@ def cache_loaded_game(game_id: str, loaded: tuple) -> GameState:
         GAME_SUMMARIES[game_id] = summary
     if history:
         GAME_HISTORY[game_id] = history
+        # Older rows keep history inside game_state, which the next save replaces.
+        HISTORY_UNSAVED.add(game_id)
     if passcode:
         GAME_PASSCODES[game_id] = passcode
     SANDBOX_CHECKPOINTS[game_id] = None
@@ -1018,14 +995,7 @@ async def leave_game(game_id: str, req: LeaveGameRequest):
         if pwr in game_state.finalized_powers:
             game_state.finalized_powers.remove(pwr)
 
-        # Reset unit orders to default HOLD in civil disorder
-        for u in game_state.units:
-            if u.power == pwr and u.id in game_state.orders:
-                game_state.orders[u.id].order_type = OrderType.HOLD
-                game_state.orders[u.id].target = None
-                game_state.orders[u.id].aux_unit_origin = None
-                game_state.orders[u.id].target_coast = None
-                game_state.orders[u.id].is_explicit = False
+        put_into_civil_disorder(game_state, pwr)
 
         power_label = pwr.value if hasattr(pwr, "value") else str(pwr)
         game_state.turn_history.append(
@@ -1053,6 +1023,9 @@ async def leave_game(game_id: str, req: LeaveGameRequest):
     await persist_game(game_id)
     await broadcast_game_update(game_id, game_state, summary)
     await broadcast_lobby_update()
+    # The player leaving may have been the last one everybody was waiting for.
+    if everyone_is_ready(game_state):
+        await _execute_adjudication(game_state)
     return GameBootstrapResponse(
         state=game_state,
         provinces=PROVINCES,
@@ -1079,14 +1052,7 @@ async def surrender_power(game_id: str, req: SurrenderRequest):
     if req.power not in game_state.surrendered_powers:
         game_state.surrendered_powers.append(req.power)
 
-    # Revert all unit orders to HOLD (Civil Disorder)
-    for u in game_state.units:
-        if u.power == req.power and u.id in game_state.orders:
-            game_state.orders[u.id].order_type = OrderType.HOLD
-            game_state.orders[u.id].target = None
-            game_state.orders[u.id].aux_unit_origin = None
-            game_state.orders[u.id].target_coast = None
-            game_state.orders[u.id].is_explicit = False
+    put_into_civil_disorder(game_state, req.power)
 
     if req.power in game_state.finalized_powers:
         game_state.finalized_powers.remove(req.power)
@@ -1111,6 +1077,9 @@ async def surrender_power(game_id: str, req: SurrenderRequest):
     await persist_game(game_id)
     await broadcast_game_update(game_id, game_state, summary)
     await broadcast_lobby_update()
+    # The player leaving may have been the last one everybody was waiting for.
+    if everyone_is_ready(game_state):
+        await _execute_adjudication(game_state)
     return GameBootstrapResponse(
         state=game_state,
         provinces=PROVINCES,
@@ -1186,6 +1155,14 @@ async def set_active_power(req: SetPowerRequest, game_id: Optional[str] = Query(
     return game
 
 
+def put_into_civil_disorder(game: GameState, power: Power) -> None:
+    """Drop a power's orders for what it does with nobody in command, including any chosen builds."""
+    defaults = create_default_orders(game.units, game.phase, game.builds)
+    kept_orders = {ord_id: o for ord_id, o in game.orders.items() if o.power != power}
+    own_defaults = {ord_id: o for ord_id, o in defaults.items() if o.power == power}
+    game.orders = {**kept_orders, **own_defaults}
+
+
 def is_multiplayer_match(game_id: str) -> bool:
     """True for a game shared by several players, as opposed to a solo or saved sandbox."""
     summary = GAME_SUMMARIES.get(game_id)
@@ -1203,7 +1180,7 @@ def reject_on_multiplayer_match(game_id: str) -> None:
 
 def reset_foreign_orders(game: GameState, power: Power) -> None:
     """Put every power except `power` back on its default orders."""
-    defaults = create_default_orders(game.units, game.phase, game.builds, game.retreats)
+    defaults = create_default_orders(game.units, game.phase, game.builds)
     own_orders = {ord_id: o for ord_id, o in game.orders.items() if o.power == power}
     foreign_orders = {ord_id: o for ord_id, o in defaults.items() if o.power != power}
     game.orders = {**foreign_orders, **own_orders}
@@ -1386,10 +1363,12 @@ async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
     """Auto-plan unassigned foreign powers with tactical AI and advance to next phase."""
     game = await resolve_game(game_id)
     reject_on_multiplayer_match(game.game_id)
+    # Outside Movement the holds of undisturbed units are explicit by default, so they prove nothing.
     powers_needing_orders = [
         p for p in Power
         if p != game.active_power or not any(
-            o.power == p and o.is_explicit for o in game.orders.values()
+            o.power == p and o.is_explicit and (game.phase == "Movement" or o.order_type != OrderType.HOLD)
+            for o in game.orders.values()
         )
     ]
     ai_orders = generate_tactical_orders(
@@ -1420,6 +1399,8 @@ async def update_single_order(req: SingleOrderUpdateRequest, game_id: Optional[s
         updated_order.unit_type = unit.unit_type
         updated_order.origin = unit.province
         updated_order.origin_coast = unit.coast
+        if unit.unit_type == UnitType.ARMY:
+            updated_order.target_coast = None
         game.orders[unit.id] = updated_order
 
         # In Winter Adjustments when count < 0, cap DISBAND orders to abs(count)
@@ -1505,6 +1486,8 @@ async def update_batch_orders(req: OrderSubmissionRequest, game_id: Optional[str
             updated.unit_type = u.unit_type
             updated.origin = u.province
             updated.origin_coast = u.coast
+            if u.unit_type == UnitType.ARMY:
+                updated.target_coast = None
             game.orders[u.id] = updated
         elif o.unit_id.startswith("BUILD_"):
             updated_b = o.model_copy()
@@ -1553,7 +1536,7 @@ def get_required_finalizing_powers(game: GameState, summary: Optional[Multiplaye
         return [p for p in claimed_powers if p in powers_with_units]
 
     elif game.phase == "Retreats":
-        dislodged_powers = {u.power for u in game.units if getattr(u, "dislodged", False)}
+        dislodged_powers = {u.power for u in game.units if u.is_dislodged}
         if game.retreats:
             for p_str, r_opts in game.retreats.items():
                 if r_opts:
@@ -1567,7 +1550,9 @@ def get_required_finalizing_powers(game: GameState, summary: Optional[Multiplaye
         adj_powers: Set[Power] = set()
         if game.builds:
             for p_str, b_dict in game.builds.items():
-                if isinstance(b_dict, dict) and b_dict.get("count", 0) != 0:
+                count = b_dict.get("count", 0) if isinstance(b_dict, dict) else 0
+                # A power owed builds with every home center occupied has no decision to make.
+                if count < 0 or (count > 0 and b_dict.get("homes")):
                     try:
                         adj_powers.add(Power(p_str))
                     except ValueError:
@@ -1612,13 +1597,8 @@ async def finalize_power_orders(req: FinalizeRequest, game_id: Optional[str] = Q
     await broadcast_lobby_update()
 
     # In active multiplayer matches, auto-adjudicate if all required participants have finalized
-    summary = GAME_SUMMARIES.get(game.game_id)
-    if summary and not summary.is_sandbox and summary.status == "active" and not game.winner:
-        required = get_required_finalizing_powers(game, summary)
-        if required and all(p in game.finalized_powers for p in required):
-            await _execute_adjudication(game)
-        else:
-            await persist_game(game.game_id)
+    if everyone_is_ready(game):
+        await _execute_adjudication(game)
     else:
         await persist_game(game.game_id)
     return FinalizeResponse(
@@ -1650,18 +1630,33 @@ async def simulate_current_orders(game_id: Optional[str] = Query(default=None)):
     return game.last_resolution
 
 
+def everyone_is_ready(game: GameState) -> bool:
+    """True when a live multiplayer match has nobody left to wait for."""
+    summary = GAME_SUMMARIES.get(game.game_id)
+    if not summary or summary.is_sandbox or summary.status != "active" or game.winner:
+        return False
+    required = get_required_finalizing_powers(game, summary)
+    if required:
+        return all(p in game.finalized_powers for p in required)
+    # Retreats and adjustments with no player involved just play out. A movement phase waits, or
+    # a match whose players have all been eliminated or surrendered would run on by itself.
+    return game.phase != "Movement"
+
+
 async def _execute_adjudication(game: GameState) -> GameState:
     gid = game.game_id
 
     if game.winner:
         raise HTTPException(status_code=409, detail=f"Game over: {game.winner.value} has already won.")
 
-    # Save deep copy snapshot to history before adjudicating so creator can roll back
+    # Save deep copy snapshot to history before adjudicating so creator can roll back.
+    # Rollback recomputes the previews and diagnostics, so the snapshot does not carry them.
     if gid not in GAME_HISTORY:
         GAME_HISTORY[gid] = []
-    GAME_HISTORY[gid].append(game.model_copy(deep=True))
+    GAME_HISTORY[gid].append(game.model_copy(deep=True, update={"last_resolution": None, "issues": []}))
     if len(GAME_HISTORY[gid]) > 30:
         GAME_HISTORY[gid].pop(0)
+    HISTORY_UNSAVED.add(gid)
 
     result = adjudicate_turn(
         game.units,
@@ -1677,7 +1672,7 @@ async def _execute_adjudication(game: GameState) -> GameState:
     next_year = result.next_year or (game.year if game.season == "Spring" else game.year + 1)
     next_phase = result.next_phase or "Movement"
 
-    new_orders = create_default_orders(result.new_units, next_phase, result.builds, result.retreats)
+    new_orders = create_default_orders(result.new_units, next_phase, result.builds)
     history_entry = f"Resolved {prev_label}: {len(result.summary)} tactical actions processed."
     game.season = next_season
     game.year = next_year
@@ -1698,6 +1693,9 @@ async def _execute_adjudication(game: GameState) -> GameState:
     await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
     await broadcast_lobby_update()
+    # At most a retreat and an adjustment phase can pass this way before a movement phase stops it.
+    if everyone_is_ready(game):
+        return await _execute_adjudication(game)
     return game
 
 
@@ -1721,13 +1719,19 @@ async def adjudicate_and_advance(
 
 
 @app.post("/api/scenario", response_model=GameState)
-async def load_scenario(req: ScenarioRequest, game_id: Optional[str] = Query(default=None)):
+async def load_scenario(
+    req: ScenarioRequest,
+    game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     if req.scenario_id not in SCENARIO_IDS:
         raise HTTPException(status_code=400, detail=f"Unknown scenario '{req.scenario_id}'.")
     current = await resolve_game(game_id)
     gid = current.game_id
+    verify_admin_access(gid, current_user)
     SANDBOX_CHECKPOINTS[gid] = None
     GAME_HISTORY[gid] = []
+    HISTORY_UNSAVED.add(gid)
     power = req.active_power or current.active_power
     GAMES[gid] = build_scenario(req.scenario_id, power, gid)
     sync_summary(gid)
@@ -1796,6 +1800,10 @@ async def admin_rollback_turn(
         raise HTTPException(status_code=400, detail="No previous turn snapshots in history to roll back to.")
 
     prev_state = history_stack.pop()
+    HISTORY_UNSAVED.add(gid)
+    # The snapshot was taken at the moment of resolving, when everyone had finalized. Rolling back
+    # exists so that the turn can be replayed, so every player gets their orders back to edit.
+    prev_state.finalized_powers = []
     prev_state.turn_history.insert(
         0, f"[ADMIN OVERRIDE] Rolled back turn to {prev_state.season} {prev_state.year} {prev_state.phase} Phase."
     )
@@ -1875,12 +1883,7 @@ async def admin_move_unit(
     if target_unit.unit_type == UnitType.FLEET and prov_info.type == ProvinceType.LAND:
         raise HTTPException(status_code=400, detail=f"Fleets cannot be placed in inland province {prov_info.name}.")
 
-    coast = req.new_coast
-    if prov_info.coasts:
-        if not coast or coast not in prov_info.coasts:
-            coast = prov_info.coasts[0]
-    else:
-        coast = None
+    coast = fleet_coast(target_unit.unit_type, prov_info, req.new_coast)
 
     old_prov = target_unit.province
     # Remove any other unit already occupying the target province
@@ -1938,12 +1941,7 @@ async def admin_spawn_unit(
     if req.unit_type == UnitType.FLEET and prov_info.type == ProvinceType.LAND:
         raise HTTPException(status_code=400, detail=f"Fleets cannot be placed in inland province {prov_info.name}.")
 
-    coast = req.coast
-    if prov_info.coasts:
-        if not coast or coast not in prov_info.coasts:
-            coast = prov_info.coasts[0]
-    else:
-        coast = None
+    coast = fleet_coast(req.unit_type, prov_info, req.coast)
 
     # Remove any existing unit in that province
     game.units = [u for u in game.units if u.province != prov_id]

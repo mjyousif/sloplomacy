@@ -69,6 +69,15 @@ In 1901, seven Great Powers contest Europe with 22 initial units:
 
 ---
 
+### 8. Missed Orders
+Nothing is ordered on a player's behalf:
+- A unit with no order holds.
+- A dislodged unit with no retreat order disbands, even if it had somewhere to go.
+- A build that was not ordered is waived.
+- A power that does not choose its required disbands has them chosen by the engine.
+
+Empty seats and surrendered powers follow the same rules, so they never build and their dislodged units always disband. Finalizing warns about a unit that would disband or a build that would be lost.
+
 ## Winning the Game
 
 The game ends as soon as one power controls 18 of the 34 supply centers. This is checked after Fall resolves, including any Fall retreats, and the Winter adjustments for that year are not played.
