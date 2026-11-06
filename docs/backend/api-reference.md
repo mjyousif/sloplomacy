@@ -19,6 +19,10 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/games/{game_id}/join` | Claim a sovereign Great Power seat (validating passcode if private) | `JoinGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/leave` | Vacate claimed power in lobby or match, or delete sandbox | `LeaveGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/surrender` | Concede sovereign command into Civil Disorder | `SurrenderRequest` | `GameBootstrapResponse` |
+| `POST` | `/api/games/{game_id}/timer/start` | Start a match's clock, opening the first vote (host only) | *None* | `GameState` |
+| `POST` | `/api/games/{game_id}/timer/vote` | Vote on the length of a Movement phase | `TimerVoteRequest` | `GameState` |
+| `POST` | `/api/games/{game_id}/timer/extend` | Ask for 5 more minutes, or take the request back | `TimerToggleRequest` | `GameState` |
+| `POST` | `/api/games/{game_id}/timer/ready` | Ready up in a paused game, or take it back | `TimerToggleRequest` | `GameState` |
 | `POST` | `/api/games/save-sandbox` | Save an in-memory solo sandbox to the lobby game list | `SaveSandboxRequest` | `MultiplayerGameSummary` |
 
 ### Match & Tactical Operations
@@ -201,6 +205,19 @@ Saves an active solo sandbox into the persistent game summary registry.
 }
 ```
 
+### Phase Clock: `POST /api/games/{game_id}/timer/...`
+
+The rules are in [the rulebook reference](../guides/rulebook-reference.md#9-turn-clock). The state is `GameState.timer`, which stays `null` until the host starts the clock, so matches without one are untimed.
+
+- **`start`**: Creator only, like `/api/adjudicate`. `409` if the clock is already running, or the match is not active.
+- **`vote`**: Body `{ "power": "FRANCE", "choice": "15" }`, where `choice` is `"15"`, `"20"`, `"30"` or `"pause"`. A player can change their vote until it closes. The vote closes once every player has voted.
+- **`extend`**: Body `{ "power": "FRANCE", "active": true }`. Set `active` to `false` to take the request back. The time is added once enough players have asked, and the requests then reset.
+- **`ready`**: Same body as `extend`. Once every player is ready a new vote opens.
+
+Each answers `403` for a power that is not playing, and `409` if the clock is in a different stage.
+
+Nothing runs in the background. `GET /api/game` and the game WebSocket check the deadline, and clients poll every 3 seconds, so a deadline is acted on within a few seconds while anyone is connected. A game nobody is connected to does not advance until someone returns.
+
 ---
 
 ## Detailed Specifications: Match & Tactical Operations
@@ -282,6 +299,8 @@ Returns the next phase `GameState` with combat resolutions and updated unit posi
 ### 10. `POST /api/order`
 Any `target_coast` on an army's order is ignored, because only fleets use coasts.
 
+Send the optional `turn` (for example `"Spring 1901 Movement"`) to have the order refused with `409` if that turn has already resolved.
+
 Submits or modifies a single military instruction. Automatically triggers validation and non-destructive simulation preview.
 
 #### Request (`SingleOrderUpdateRequest`):
@@ -313,11 +332,14 @@ Attempts to lock in orders for the active power. If errors or unassigned warning
 
 In active multiplayer campaigns (`status == "active"`), if all required active powers (commanded by participants and having pending phase actions) have finalized, the engine automatically executes turn adjudication, advances season and phase, resets `finalized_powers`, and returns the newly resolved `GameState`.
 
+The optional `turn` (for example `"Spring 1901 Movement"`) refuses the request with `409` if that turn has already resolved, so a click just after a deadline cannot lock the player's default orders into the next phase.
+
 #### Request (`FinalizeRequest`):
 ```json
 {
   "power": "FRANCE",
-  "force": false
+  "force": false,
+  "turn": "Spring 1901 Movement"
 }
 ```
 

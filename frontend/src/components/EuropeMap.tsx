@@ -73,6 +73,7 @@ export interface EuropeMapProps {
   onClearSimulationOverlay: () => void;
   onAdjudicateTurn: () => void;
   onZoomChange?: (zoomPercent: number) => void;
+  overlay?: React.ReactNode;
 }
 
 type MapInteractionMode =
@@ -361,6 +362,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     onUpdateOrder,
     onClearSimulationOverlay,
     onAdjudicateTurn,
+    overlay,
     onZoomChange,
   },
   ref
@@ -1160,6 +1162,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
           )}
         </div>
       )}
+
+      {overlay}
 
       {/* Zoom & Camera Controls */}
       <div className="map-camera-controls">

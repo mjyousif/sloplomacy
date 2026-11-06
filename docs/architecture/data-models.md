@@ -137,7 +137,23 @@ Complete server snapshot of a game session.
 | `turn_history` | `string[]` | Historical log of turn outcomes. |
 | `builds` | `Record<string, Any>?`| Build quotas and available home SCs during Winter Adjustments. |
 | `retreats` | `Record<string, Any>?`| Valid retreat provinces per dislodged unit during Retreats. |
+| `timer` | `PhaseTimer?` | The match clock. `null` until the host starts it, in sandboxes, and once a power has won. |
 | `winner` | `Power?` | Set once a power has won. The clock stays on the deciding phase and no further turns resolve. |
+
+### 6. `PhaseTimer`
+The clock of a live multiplayer match. Times are absolute, so it survives a restart. The rules are in `backend/phase_timer.py`.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `stage` | `TimerStage` | `'voting'`, `'running'`, or `'paused'`. |
+| `deadline` | `number?` | Unix time the vote or phase ends. `null` while paused. Clients count down from `remaining_seconds` instead. |
+| `minutes` | `number?` | Length the running phase was given. |
+| `players` | `Power[]` | Who votes, readies up and extends: seated, not surrendered, still in the game. |
+| `votes` | `Record<Power, TimerChoice>` | Votes cast, where `TimerChoice` is `'15'`, `'20'`, `'30'`, or `'pause'`. |
+| `extend_requests` | `Power[]` | Who has asked for more time since it was last added. |
+| `ready_powers` | `Power[]` | Who has readied up in a paused game. |
+| `remaining_seconds` | `number?` | Computed when sent: time left, so that a wrong device clock cannot matter. |
+| `extensions_needed` | `number` | Computed: 5 of 7, scaled up to `ceil(5n/7)` for `n` players. |
 
 ---
 
@@ -188,6 +204,10 @@ interface GameParticipant {
 - `SurrenderRequest`: `{ power, user_id, email?, leave: boolean }`
 - `SaveSandboxRequest`: `{ name, user_id, email, display_name? }`
 - `GenerateAIOrdersRequest`: `{ powers?: Power[] | null, include_active?: boolean }`
+- `SingleOrderUpdateRequest`: `{ order, active_power?, turn? }`
+- `FinalizeRequest`: `{ power, force?, turn? }`
+- `TimerVoteRequest`: `{ power, choice: TimerChoice }`
+- `TimerToggleRequest`: `{ power, active?: boolean }`
 
 ---
 

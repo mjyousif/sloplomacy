@@ -39,7 +39,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```bash
   python -m pytest backend/ -v
   ```
-  *(Runs all 9 test suites: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_database_persistence.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
+  *(Runs all 10 test suites: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_database_persistence.py`, `test_phase_timer.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
 
 ### Frontend Commands (`frontend/`)
 - **Install Dependencies**:
@@ -140,11 +140,12 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   ├── main.py                # FastAPI endpoints, multi-game room registry & static SPA mount
 │   ├── models.py              # Pydantic v2 models (GameState, Order, Issues, Admin schemas)
 │   ├── adjudicator.py         # Official DATC adjudication wrapper over `diplomacy` package
+│   ├── phase_timer.py         # Multiplayer turn clock rules: votes, pausing, extensions & deadlines
 │   ├── validator.py           # Real-time pre-flight legality and tactical blunder checks
 │   ├── ai_engine.py           # Heuristic order generation for sandbox AI planning
 │   ├── map_data.py            # Complete 76-province graph, dual coasts, 34 SC definitions
 │   ├── requirements.txt       # Python dependencies
-│   └── test_*.py              # Comprehensive pytest test harness (9 test suites)
+│   └── test_*.py              # Comprehensive pytest test harness (10 test suites)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx            # Main state container, viewMode controller & API coordinator
@@ -154,6 +155,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   │   │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
 │   │   │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
 │   │   │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
+│   │   │   ├── PhaseTimerWidget.tsx # Bottom-left turn clock, votes, ready-up & +5 minutes
 │   │   │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
 │   │   │   └── SanityCheckModal.tsx # Pre-finalization blunder gatekeeper modal
 │   │   ├── data/
@@ -219,7 +221,14 @@ The game cycles through three standard phases per year:
 - Units belonging to surrendered powers enter **Civil Disorder**: they default to hold (`HOLD`), do not offer support, build nothing, and auto-disband if forced to retreat or if down in supply centers during Winter adjustments. `put_into_civil_disorder` also drops any retreat or build the player had already chosen.
 - Empty seats behave the same way, because nobody ever gave those powers orders.
 
-### 6. Cartography & Bicoastal Provinces
+### 6. Turn Clock
+- `GameState.timer` is `None` until the host starts the clock, so matches without one are untimed. The rules are in `backend/phase_timer.py` and [docs/guides/rulebook-reference.md](docs/guides/rulebook-reference.md).
+- **Invariant**: Nothing runs in the background, because Cloud Run scales to zero and only gives CPU during requests. Deadlines are absolute times in the saved game, and `tick_timer` acts on them from `GET /api/game` and the game WebSocket.
+- **Invariant**: `_execute_adjudication` resets the clock before its first `await`, so two polls can never both resolve one deadline.
+- **Invariant**: The clock never holds a phase back. A phase still resolves as soon as everyone has finalized.
+- History snapshots hold no clock, and a private sandbox never has one. Anything that moves a game to another turn outside `_execute_adjudication` must call `start_phase_clock`.
+
+### 7. Cartography & Bicoastal Provinces
 - Three provinces possess split coasts for Fleets:
   - `STP`: North Coast (`NC`) and South Coast (`SC`).
   - `SPA`: North Coast (`NC`) and South Coast (`SC`).
@@ -250,7 +259,7 @@ The game cycles through three standard phases per year:
 - Always run `npx tsc --noEmit` before committing frontend modifications.
 
 ### 3. Run Comprehensive Verification
-- **Backend Tests**: Run python -m pytest backend/ -v (must pass all 9 test suites: adjudicator, admin, ai_and_private_lobbies, api_integration, database_persistence, engine, surrender_leave, validator, websocket_sync).
+- **Backend Tests**: Run python -m pytest backend/ -v (must pass all 10 test suites: adjudicator, admin, ai_and_private_lobbies, api_integration, database_persistence, engine, phase_timer, surrender_leave, validator, websocket_sync).
 - **Frontend Verification**: Run `npm test` (Vitest) and `npm run build` (Vite + TypeScript) in `frontend/`.
 
 ### 4. Preserve Documentation & Code Integrity

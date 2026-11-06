@@ -78,6 +78,20 @@ Nothing is ordered on a player's behalf:
 
 Empty seats and surrendered powers follow the same rules, so they never build and their dislodged units always disband. Finalizing warns about a unit that would disband or a build that would be lost.
 
+### 9. Turn Clock
+This is a house rule for live multiplayer matches. Nothing is timed until the host starts the clock, which opens the first vote.
+
+- **Movement phases** open with a 60-second vote: 15, 20 or 30 minutes, or pause. Orders stay open during it. The vote ends when everyone has voted or the 60 seconds are up. Most votes wins and a tie goes to the longer option, with pause counting as the longest.
+- **Retreats and Adjustments** get a fixed 5 minutes with no vote.
+- **Pausing** happens if the vote chooses it or nobody votes. Every player then has to ready up, which opens a new vote.
+- **Extending:** 5 of 7 players can add 5 minutes to a running clock, as often as they agree to. With fewer players it scales: 6 need 5, 5 need 4, 4 need 3, 3 need 3, and 2 need 2.
+- **Time running out** resolves the phase with whatever players have entered. Anything else follows [Missed Orders](#8-missed-orders).
+- **Finishing early** still works: the phase resolves as soon as everyone has finalized, even during a vote or a pause.
+
+Surrendered and eliminated players do not count. The host can still resolve a phase by force, which is also the way out of a pause if someone has gone missing.
+
+---
+
 ## Winning the Game
 
 The game ends as soon as one power controls 18 of the 34 supply centers. This is checked after Fall resolves, including any Fall retreats, and the Winter adjustments for that year are not played.
