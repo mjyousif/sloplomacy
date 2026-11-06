@@ -523,3 +523,54 @@ def test_army_placed_by_admin_is_a_real_unit_that_captures_its_province():
 
     assert resolved["ownership"]["SPA"] == "FRANCE"
     assert [u["province"] for u in resolved["units"] if u["id"] == "FRA_A_MAR"] == ["SPA"]
+
+def test_admin_es256_asymmetric_jwt_verification(monkeypatch):
+    """Verify that ES256 tokens signed with ECC (P-256) are cryptographically validated."""
+    import time
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives import serialization
+
+    # Generate an EC key pair for testing
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    public_pem = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("utf-8")
+
+    monkeypatch.setenv("SUPABASE_JWT_PUBLIC_KEY", public_pem)
+
+    client = TestClient(app)
+    game_id = "mp_concert_104"
+
+    def make_es256_token(user_id: str, email: str, exp_offset: int = 3600) -> str:
+        return jwt.encode(
+            {"sub": user_id, "email": email, "exp": int(time.time()) + exp_offset},
+            private_key,
+            algorithm="ES256",
+        )
+
+    # 1. Creator using ES256 (bot_bismarck)
+    creator_token = make_es256_token("bot_bismarck", "bismarck@diplomacy.eu")
+    res_creator = client.get(
+        f"/api/admin/status?game_id={game_id}",
+        headers={"Authorization": f"Bearer {creator_token}"},
+    )
+    assert res_creator.status_code == 200
+    assert res_creator.json()["is_creator"] is True
+
+    # 2. Non-creator using ES256 (intruder)
+    intruder_token = make_es256_token("intruder_id", "intruder@evil.org")
+    res_intruder = client.post(
+        f"/api/admin/rollback?game_id={game_id}",
+        headers={"Authorization": f"Bearer {intruder_token}"},
+    )
+    assert res_intruder.status_code == 403
+
+    # 3. Expired ES256 token -> 401
+    expired_token = make_es256_token("bot_bismarck", "bismarck@diplomacy.eu", exp_offset=-60)
+    res_expired = client.post(
+        f"/api/admin/rollback?game_id={game_id}",
+        headers={"Authorization": f"Bearer {expired_token}"},
+    )
+    assert res_expired.status_code == 401
+    assert "expired" in res_expired.json()["detail"].lower()

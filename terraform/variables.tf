@@ -46,3 +46,10 @@ variable "supabase_service_role_key" {
   default     = ""
   sensitive   = true
 }
+
+variable "supabase_jwt_secret" {
+  description = "Supabase JWT Secret for cryptographic admin authorization"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
