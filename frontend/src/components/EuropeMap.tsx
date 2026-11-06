@@ -25,6 +25,12 @@ import {
   getValidRetreatDestinations,
 } from '../utils/orderHelpers';
 import {
+  clampCamera,
+  DEFAULT_CAMERA,
+  MAX_ZOOM,
+  MIN_ZOOM,
+} from '../utils/mapCameraHelpers';
+import {
   AlertTriangle,
   Anchor,
   Compass,
@@ -371,9 +377,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
 
   // Camera state stored in a mutable ref for zero-re-render 60fps+ pan & zoom via requestAnimationFrame
   const cameraRef = useRef<{ x: number; y: number; zoom: number }>({
-    x: 0,
-    y: -35,
-    zoom: 1.05,
+    ...DEFAULT_CAMERA,
   });
   const isPanningRef = useRef<boolean>(false);
   const panStartRef = useRef<Point>({ x: 0, y: 0 });
@@ -1003,7 +1007,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
       e.preventDefault();
       const { x: oldPanX, y: oldPanY, zoom: oldZoom } = cameraRef.current;
       const factor = Math.exp(-e.deltaY * 0.0014);
-      const newZoom = Math.min(3.0, Math.max(0.75, Number((oldZoom * factor).toFixed(3))));
+      const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number((oldZoom * factor).toFixed(3))));
       if (newZoom === oldZoom) return;
 
       const rect = svgEl.getBoundingClientRect();
@@ -1022,9 +1026,9 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
       const newPanX = cursorSvgX - 762 - (mapPtX - 762) * newZoom;
       const newPanY = cursorSvgY - 678 - (mapPtY - 678) * newZoom;
 
-      cameraRef.current = { x: newPanX, y: newPanY, zoom: newZoom };
+      cameraRef.current = clampCamera({ x: newPanX, y: newPanY, zoom: newZoom });
       scheduleCameraSync();
-      onZoomChange?.(Math.round(newZoom * 100));
+      onZoomChange?.(Math.round(cameraRef.current.zoom * 100));
     };
 
     svgEl.addEventListener('wheel', onWheel, { passive: false });
@@ -1073,8 +1077,23 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     const H = rect?.height || 860;
     const scale = Math.min(W / 1524, H / 1357) || 1;
 
-    cameraRef.current.x = e.clientX / scale - panStartRef.current.x;
-    cameraRef.current.y = e.clientY / scale - panStartRef.current.y;
+    const rawX = e.clientX / scale - panStartRef.current.x;
+    const rawY = e.clientY / scale - panStartRef.current.y;
+    const clamped = clampCamera({
+      x: rawX,
+      y: rawY,
+      zoom: cameraRef.current.zoom,
+    });
+
+    if (rawX !== clamped.x) {
+      panStartRef.current.x = e.clientX / scale - clamped.x;
+    }
+    if (rawY !== clamped.y) {
+      panStartRef.current.y = e.clientY / scale - clamped.y;
+    }
+
+    cameraRef.current.x = clamped.x;
+    cameraRef.current.y = clamped.y;
     scheduleCameraSync();
   };
 
@@ -1091,16 +1110,20 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
 
   const stepZoom = useCallback((delta: number) => {
     const oldZoom = cameraRef.current.zoom;
-    const newZoom = Math.min(3.0, Math.max(0.75, Number((oldZoom + delta).toFixed(2))));
-    cameraRef.current.zoom = newZoom;
+    const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number((oldZoom + delta).toFixed(2))));
+    cameraRef.current = clampCamera({
+      x: cameraRef.current.x,
+      y: cameraRef.current.y,
+      zoom: newZoom,
+    });
     syncCameraDOM();
-    onZoomChange?.(Math.round(newZoom * 100));
+    onZoomChange?.(Math.round(cameraRef.current.zoom * 100));
   }, [syncCameraDOM, onZoomChange]);
 
   const resetCamera = useCallback(() => {
-    cameraRef.current = { x: 0, y: -35, zoom: 1.05 };
+    cameraRef.current = clampCamera({ ...DEFAULT_CAMERA });
     syncCameraDOM();
-    onZoomChange?.(105);
+    onZoomChange?.(Math.round(DEFAULT_CAMERA.zoom * 100));
   }, [syncCameraDOM, onZoomChange]);
 
   useImperativeHandle(
