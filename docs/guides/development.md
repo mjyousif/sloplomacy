@@ -42,6 +42,19 @@ python quickstart.py
 - `python quickstart.py --setup-only`: Install Python venv and npm packages without launching servers.
 - `python quickstart.py --test`: Run the complete backend test suite and verify frontend build.
 
+### Local Demo Sign-In
+When Supabase is not configured, the sign-in form creates a local demo account. It is stored in the browser, and the frontend sends it to the backend as an unsigned `alg: none` token.
+
+`backend/auth.py` rejects those tokens unless `ENVIRONMENT` is `development` or `test`, or `ALLOW_INSECURE_DEV_AUTH=true`. Every launcher above sets `ENVIRONMENT=development` for the backend it starts, so a demo sign-in works out of the box:
+
+- `quickstart.py` sets it in `backend_env()`. `start.sh`, `start.bat`, `scripts/dev.sh` and the default path of `start.ps1` and `scripts/dev.ps1` all run `quickstart.py`.
+- `scripts/dev.ps1` sets it in the backend window for `-SeparateWindows`, which starts Uvicorn directly.
+
+A value already in your shell wins. To try the production behaviour locally, run `ENVIRONMENT=production python quickstart.py`, and a demo sign-in gets a `401`.
+
+> [!WARNING]
+> With this flag the backend trusts unsigned tokens, and it also reads other tokens without checking their signature if it has no Supabase keys, so anyone who can reach it can act as any player. It belongs on a local machine only. Never set `ENVIRONMENT=development`, `ENVIRONMENT=test` or `ALLOW_INSECURE_DEV_AUTH=true` in `scripts/deploy.*`, `terraform/`, the `Dockerfile` or CI. The deployed container runs Uvicorn directly, so it never gets the flag from these launchers.
+
 ---
 
 ## Individual Service Workflows
@@ -64,6 +77,14 @@ pip install -r requirements.txt
 
 # Run dev server with auto-reload
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Starting Uvicorn by hand skips the launchers, so to use a [local demo sign-in](#local-demo-sign-in) set the flag yourself first:
+```bash
+export ENVIRONMENT=development      # macOS/Linux
+```
+```powershell
+$env:ENVIRONMENT = "development"    # Windows PowerShell
 ```
 
 ### 2. Frontend Application (`frontend/`)
@@ -170,6 +191,11 @@ The `main` branch is protected with automated quality gates and configuration-as
 
 ### Backend Virtual Environment Not Found
 - Run `python quickstart.py --setup-only` to automatically regenerate `.venv` and install all required packages.
+
+### "Backend Connection Required" / "Backend returned 401" After a Demo Sign-In
+- The backend is rejecting the unsigned demo token. See [Local Demo Sign-In](#local-demo-sign-in).
+- Start the app with one of the launchers, or set `ENVIRONMENT=development` before running Uvicorn by hand.
+- Check that your shell does not already export another value: `echo $ENVIRONMENT` (or `$env:ENVIRONMENT` in PowerShell).
 
 ### Frontend API Proxy 502 / Connection Refused
 - Confirm the backend is running at `http://127.0.0.1:8000`.
