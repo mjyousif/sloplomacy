@@ -314,6 +314,8 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               return (
                 <div
                   key={pwr}
+                  data-testid="power-standing-card"
+                  data-power={pwr}
                   className={`power-standing-card ${isSelected ? 'selected' : ''} ${!isMultiplayer ? 'clickable' : ''}`}
                   onClick={() => {
                     if (!isMultiplayer) onSelectPower(pwr);

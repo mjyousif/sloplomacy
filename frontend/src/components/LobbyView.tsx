@@ -266,6 +266,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           <div className="lobby-hero-actions">
             <button
               type="button"
+              data-testid="btn-enter-sandbox"
               className="lobby-primary-cta"
               onClick={onEnterSandbox}
             >

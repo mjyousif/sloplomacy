@@ -1318,3 +1318,35 @@ def test_a_power_that_misses_its_disbands_still_loses_units():
 
     assert state["phase"] == "Movement"
     assert sum(u["power"] == "FRANCE" for u in state["units"]) == 2
+
+
+def test_api_test_seed_scenarios():
+    # Test seeding standard 1901
+    res = client.post("/api/test/seed", json={"scenario_id": "standard_1901", "game_id": "test_seed_game"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["season"] == "Spring"
+    assert data["phase"] == "Movement"
+    assert data["year"] == 1901
+
+    # Test seeding spring retreats demo
+    res_ret = client.post("/api/test/seed", json={"scenario_id": "spring_retreats_demo", "game_id": "test_seed_game"})
+    assert res_ret.status_code == 200
+    ret_data = res_ret.json()
+    assert ret_data["season"] == "Spring"
+    assert ret_data["phase"] == "Retreats"
+    assert ret_data["retreats"] is not None
+    assert any(u.get("is_dislodged") for u in ret_data["units"])
+
+    # Test seeding winter adjustments demo
+    res_adj = client.post("/api/test/seed", json={"scenario_id": "winter_adjustments_demo", "game_id": "test_seed_game"})
+    assert res_adj.status_code == 200
+    adj_data = res_adj.json()
+    assert adj_data["season"] == "Winter"
+    assert adj_data["phase"] == "Adjustments"
+    assert adj_data["builds"] is not None
+    assert adj_data["builds"]["FRANCE"]["count"] == 2
+
+    # Test unknown scenario
+    res_bad = client.post("/api/test/seed", json={"scenario_id": "nonexistent_scenario", "game_id": "test_seed_game"})
+    assert res_bad.status_code == 400

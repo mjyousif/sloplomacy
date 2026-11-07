@@ -20,6 +20,10 @@ dist/
 Thumbs.db
 *.log
 
+# E2E Test Artifacts & Playwright
+artifacts/e2e/
+frontend/test-results/
+frontend/playwright-report/
 
 # Secrets & Environments
 .env
