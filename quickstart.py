@@ -142,6 +142,20 @@ def run_tests():
     return True
 
 
+def backend_env() -> dict:
+    """Environment for the local backend, so a local demo sign-in works.
+
+    Demo sign-ins send unsigned `alg: none` tokens, which backend/auth.py only
+    accepts when ENVIRONMENT is `development` or `test`. A value already set in
+    the shell wins, so `ENVIRONMENT=production python quickstart.py` still rejects
+    them. Nothing that deploys the app runs this launcher or may set this flag.
+    """
+    env = os.environ.copy()
+    if not env.get("ENVIRONMENT"):
+        env["ENVIRONMENT"] = "development"
+    return env
+
+
 def start_services(backend_only=False, frontend_only=False, no_open=False):
     procs = []
 
@@ -164,6 +178,7 @@ def start_services(backend_only=False, frontend_only=False, no_open=False):
         p_backend = subprocess.Popen(
             backend_cmd,
             cwd=str(BACKEND_DIR),
+            env=backend_env(),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,

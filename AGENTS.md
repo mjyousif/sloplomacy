@@ -35,6 +35,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```bash
   uvicorn main:app --reload --host 127.0.0.1 --port 8000
   ```
+  *(Set `ENVIRONMENT=development` first to use a local demo sign-in. The launchers do this for you. See [Local Demo Sign-In](docs/guides/development.md#local-demo-sign-in).)*
 - **Execute Test Suite**:
   ```bash
   python -m pytest backend/ -v
