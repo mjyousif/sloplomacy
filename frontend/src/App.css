@@ -4244,11 +4244,17 @@
   border-radius: 4px;
 }
 
+.sidebar-section,
 .tools-section {
   padding: 10px 14px;
   border-bottom: 1px solid #232936;
 }
 
+.sidebar-section.is-collapsed {
+  padding-bottom: 10px;
+}
+
+.sidebar-section-header,
 .tools-section-overline {
   display: flex;
   align-items: center;
@@ -4258,6 +4264,78 @@
   letter-spacing: 0.08em;
   color: #8b99ad;
   margin-bottom: 7px;
+}
+
+.sidebar-section.is-collapsed .sidebar-section-header {
+  margin-bottom: 0;
+}
+
+.sidebar-section-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: #8b99ad;
+  font-family: inherit;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.sidebar-section-toggle-btn:hover {
+  color: #e2e8f0;
+}
+
+.sidebar-section-static-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  color: #8b99ad;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar-section-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebar-section-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-section-toggle-btn:hover .sidebar-section-chevron {
+  color: #cbd5e1;
+}
+
+.sidebar-section-icon {
+  display: inline-flex;
+  align-items: center;
+  color: #94a3b8;
+}
+
+.sidebar-section-badge-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sidebar-section-content {
+  margin-top: 2px;
 }
 
 .tools-zoom-badge,

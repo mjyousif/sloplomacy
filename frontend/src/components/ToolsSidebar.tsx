@@ -1,4 +1,5 @@
 import React from 'react';
+import { CollapsibleSection } from './CollapsibleSection';
 import {
   ALL_POWERS,
   POWER_METADATA,
@@ -226,11 +227,11 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
 
       <div className="tools-sidebar-content">
         {/* 2. CAMERA & MAP CONTROLS */}
-        <section className="tools-section">
-          <div className="tools-section-overline">
-            <span>MAP VIEW &amp; CAMERA</span>
-            <span className="tools-zoom-badge">{zoomPercent}%</span>
-          </div>
+        <CollapsibleSection
+          title="MAP VIEW & CAMERA"
+          badge={<span className="tools-zoom-badge">{zoomPercent}%</span>}
+          collapsible={false}
+        >
           <div className="tools-zoom-toolbar">
             <button
               type="button"
@@ -260,13 +261,14 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               <span>Fit Map</span>
             </button>
           </div>
-        </section>
+        </CollapsibleSection>
 
         {/* 3. CARTOGRAPHIC TACTICAL LEGEND */}
-        <section className="tools-section">
-          <div className="tools-section-overline">
-            <span>TACTICAL MAP LEGEND</span>
-          </div>
+        <CollapsibleSection
+          title="TACTICAL MAP LEGEND"
+          collapsible={true}
+          defaultOpen={true}
+        >
           <div className="tools-legend-grid">
             <div className="legend-item" title="Army or Fleet movement arrow">
               <span className="legend-swatch swatch-move">
@@ -293,14 +295,15 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               <span className="legend-label">Warning / Dislodgement</span>
             </div>
           </div>
-        </section>
+        </CollapsibleSection>
 
         {/* 4. GREAT POWERS STANDING & SELECTION */}
-        <section className="tools-section">
-          <div className="tools-section-overline">
-            <span>{isMultiplayer ? 'DIPLOMATIC STANDING' : 'COMMAND NATION (SELECT)'}</span>
-            <span className="tools-section-count">7 Powers</span>
-          </div>
+        <CollapsibleSection
+          title={isMultiplayer ? 'DIPLOMATIC STANDING' : 'COMMAND NATION (SELECT)'}
+          badge={<span className="tools-section-count">7 Powers</span>}
+          collapsible={true}
+          defaultOpen={true}
+        >
           <div className="powers-standing-list">
             {ALL_POWERS.map((pwr) => {
               const meta = POWER_METADATA[pwr];
@@ -367,15 +370,14 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               );
             })}
           </div>
-        </section>
+        </CollapsibleSection>
 
         {/* 5. HYPOTHETICAL MODE & TACTICAL AI GENERAL STAFF */}
-        <section className="tools-section">
-          <div className="tools-section-overline">
-            <span>HYPOTHETICAL MODE &amp; PRE-MOVES</span>
-            {sandboxMode && <span className="sandbox-live-pill">ACTIVE</span>}
-          </div>
-
+        <CollapsibleSection
+          title="HYPOTHETICAL MODE & PRE-MOVES"
+          badge={sandboxMode ? <span className="sandbox-live-pill">ACTIVE</span> : undefined}
+          collapsible={false}
+        >
           <button
             type="button"
             className={`tools-sandbox-toggle-btn ${sandboxMode ? 'active' : ''}`}
@@ -474,16 +476,16 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               )}
             </div>
           )}
-        </section>
+        </CollapsibleSection>
 
         {/* 6. CREATOR ADMINISTRATOR CONTROLS */}
         {isGameCreator && onOpenAdminTools && (
-          <section className="tools-section admin-tools-section">
-            <div className="tools-section-overline">
-              <span className="creator-overline">
-                <ShieldAlert size={12} /> CREATOR ADMIN TOOLS
-              </span>
-            </div>
+          <CollapsibleSection
+            title="CREATOR ADMIN TOOLS"
+            icon={<ShieldAlert size={12} />}
+            collapsible={false}
+            className="admin-tools-section"
+          >
             <p className="tools-micro-desc">
               Roll back turns, teleport units, spawn or destroy forces arbitrarily.
             </p>
@@ -509,7 +511,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
                 </button>
               )}
             </div>
-          </section>
+          </CollapsibleSection>
         )}
       </div>
     </aside>
