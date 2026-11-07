@@ -139,6 +139,8 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   └── migrations/            # Supabase PostgreSQL schema & profiles RLS
 ├── backend/
 │   ├── main.py                # FastAPI endpoints, multi-game room registry & static SPA mount
+│   ├── auth.py                # Supabase JWT verification (HS256 secret, ES256 key or JWKS)
+│   ├── database.py            # Supabase PostgREST persistence: save, load, lobby columns, SupabaseUnavailable
 │   ├── models.py              # Pydantic v2 models (GameState, Order, Issues, Admin schemas)
 │   ├── adjudicator.py         # Official DATC adjudication wrapper over `diplomacy` package
 │   ├── phase_timer.py         # Multiplayer turn clock rules: votes, pausing, extensions & deadlines
@@ -146,12 +148,14 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   ├── ai_engine.py           # Heuristic order generation for sandbox AI planning
 │   ├── map_data.py            # Complete 76-province graph, dual coasts, 34 SC definitions
 │   ├── requirements.txt       # Python dependencies
+│   ├── conftest.py            # Shared pytest fixtures (resets the in-memory game registry)
 │   └── test_*.py              # Comprehensive pytest test harness (11 test suites)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx            # Main state container, viewMode controller & API coordinator
 │   │   ├── components/
 │   │   │   ├── EuropeMap.tsx        # High-performance interactive SVG board & order arrows
+│   │   │   ├── ToolsSidebar.tsx     # Left sidebar: legend, powers, sandbox & admin entry points
 │   │   │   ├── MacroSidebar.tsx     # Order builder, phase controls, diagnostics, admin/surrender
 │   │   │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
 │   │   │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
@@ -160,12 +164,15 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   │   │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every style
 │   │   │   ├── PhaseTimerWidget.tsx # Bottom-left turn clock, votes, ready-up & +5 minutes
 │   │   │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
+│   │   │   ├── ConfirmModal.tsx     # In-app confirmation for destructive actions (Shift+click skips it)
+│   │   │   ├── VersionBadge.tsx     # Commit short SHA badge & link
 │   │   │   └── SanityCheckModal.tsx # Pre-finalization blunder gatekeeper modal
 │   │   ├── data/
 │   │   │   ├── europeMapGeometry.ts # Authentic cartographic SVG paths & province coordinates
 │   │   │   ├── mapLayouts.ts        # Unit, star and name placements for each piece style
 │   │   │   └── mapTextMetrics.ts    # Libre Baskerville widths for sizing names without the DOM
 │   │   ├── hooks/
+│   │   │   ├── useDiplomacyWebSocket.ts # Live Sync socket: heartbeat, reconnect rules & clock refresh
 │   │   │   └── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
 │   │   ├── lib/
 │   │   │   └── supabase.ts          # Supabase client singleton & auth helpers
@@ -174,8 +181,10 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   │   └── utils/
 │   │       ├── orderHelpers.ts      # Move reachability, support targeting & retreat calculations
 │   │       ├── adminHelpers.ts      # Admin permission checks & payload formatters
+│   │       ├── timerHelpers.ts      # Turn clock labels, vote counts & formatting
+│   │       ├── mapCameraHelpers.ts  # Map pan and zoom bounds
 │   │       └── displayPrefs.ts      # Display preference types, defaults, sanitizing & sign-in rules
-│   ├── package.json
+│   ├── package.json         # Vitest suites sit next to their code as *.test.ts
 │   └── vite.config.ts
 └── docs/                      # Exhaustive technical documentation suite
 ```

@@ -67,6 +67,9 @@ The previews render with the real `MapPiece`, so they always match the map. Thes
 ### 5. Creator Administrator Controls (Game Creator Only)
 - Visible exclusively to room creators.
 - **"Open Admin Console"**: Launches `AdminToolsModal.tsx` for timeline rollbacks, unit teleportation, and arbitrary unit spawning/destruction.
+  - Destroy, Roll Back and Hard Reset ask for confirmation in an in-app `ConfirmModal`, never a browser dialog. A browser dialog the player has blocked answers "no" without showing anything, which made these buttons silently do nothing (issues #75, #77). Holding Shift while clicking skips the confirmation, and the modal says so. Escape or Cancel backs out.
+  - The turn form resets only when the console opens or the game reaches another turn, not on every order update, so typing is not undone and an error from the last action stays visible.
+- **"Solo Sandbox"** (top bar): leaving a multiplayer match for the solo board asks through the same `ConfirmModal`.
 - **"Direct-Edit Board Override"**: While on, the host can select and order any power's units on the map, and sees all their orders. Other players are unaffected, and the toggle has no effect in a game the player does not host.
 
 ---

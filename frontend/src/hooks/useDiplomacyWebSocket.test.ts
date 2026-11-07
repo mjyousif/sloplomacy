@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getWebSocketUrl, resolveWebSocketPath } from './useDiplomacyWebSocket';
+import { getWebSocketUrl, resolveWebSocketPath, shouldReconnect } from './useDiplomacyWebSocket';
 
 describe('useDiplomacyWebSocket helpers', () => {
   describe('resolveWebSocketPath', () => {
@@ -32,6 +32,19 @@ describe('useDiplomacyWebSocket helpers', () => {
     it('formats a ws or wss url corresponding to host and path', () => {
       const url = getWebSocketUrl('/ws/lobby');
       expect(url).toMatch(/^wss?:\/\/.*\/ws\/lobby$/);
+    });
+  });
+
+  describe('shouldReconnect', () => {
+    it('retries dropped connections and servers that ask to try again', () => {
+      expect(shouldReconnect(1006)).toBe(true);
+      expect(shouldReconnect(1013)).toBe(true);
+    });
+
+    it('stops on a normal close, a deleted game or a refused passcode', () => {
+      expect(shouldReconnect(1000)).toBe(false);
+      expect(shouldReconnect(4004)).toBe(false);
+      expect(shouldReconnect(4403)).toBe(false);
     });
   });
 });

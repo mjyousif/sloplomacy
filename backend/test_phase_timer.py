@@ -286,6 +286,49 @@ def test_two_requests_cannot_resolve_one_deadline_twice(client, monkeypatch):
     assert len(GAME_HISTORY[gid]) == 1
 
 
+def test_a_live_sync_refresh_resolves_a_deadline_that_has_passed(client):
+    # The browser sends `refresh` over the socket when its countdown reaches zero.
+    gid = make_match(client, powers=["FRANCE", "ENGLAND"])
+    start_clock(client, gid)
+    run_vote(client, gid)
+    with client.websocket_connect(f"/ws/games/{gid}") as ws:
+        assert ws.receive_json()["type"] == "game_update"
+        run_out(gid)
+        ws.send_json({"type": "ping"})
+        assert ws.receive_json()["type"] == "pong"
+        assert turn_label(gid) == "Spring 1901 Movement"
+        ws.send_json({"type": "refresh"})
+        while True:
+            msg = ws.receive_json()
+            if msg["type"] == "game_update" and msg["state"]["season"] == "Fall":
+                break
+    assert turn_label(gid) == "Fall 1901 Movement"
+
+
+def test_a_deadline_that_cannot_resolve_pauses_and_is_saved(client, monkeypatch):
+    gid = make_match(client, powers=["FRANCE", "ENGLAND"])
+    start_clock(client, gid)
+    run_vote(client, gid)
+    run_out(gid)
+
+    async def broken(game):
+        raise RuntimeError("adjudicator exploded")
+
+    saved = []
+    real_persist = main.persist_game
+
+    async def recording_persist(game_id):
+        saved.append(GAMES[game_id].timer.stage if GAMES[game_id].timer else None)
+        await real_persist(game_id)
+
+    monkeypatch.setattr(main, "_execute_adjudication", broken)
+    monkeypatch.setattr(main, "persist_game", recording_persist)
+    asyncio.run(tick_timer(GAMES[gid]))
+
+    assert GAMES[gid].timer.stage == TimerStage.PAUSED
+    assert saved == [TimerStage.PAUSED]
+
+
 @pytest.mark.parametrize("phase", ["Retreats", "Adjustments"])
 def test_retreats_and_builds_get_a_fixed_clock_with_no_vote(client, phase):
     gid = make_match(client, powers=["FRANCE", "ENGLAND"])

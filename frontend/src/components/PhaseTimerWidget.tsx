@@ -31,6 +31,10 @@ function useCountdown(
 ): number | null {
   const [seconds, setSeconds] = useState<number | null>(remainingSeconds ?? null);
   const expiredRef = useRef(false);
+  // Kept in a ref so a new callback identity never restarts the countdown
+  // from a server value that may be minutes old.
+  const onExpireRef = useRef(onExpire);
+  onExpireRef.current = onExpire;
 
   useEffect(() => {
     expiredRef.current = false;
@@ -44,13 +48,13 @@ function useCountdown(
       setSeconds(rem);
       if (rem <= 0 && !expiredRef.current) {
         expiredRef.current = true;
-        onExpire?.();
+        onExpireRef.current?.();
       }
     };
     tick();
     const interval = window.setInterval(tick, 250);
     return () => window.clearInterval(interval);
-  }, [remainingSeconds, onExpire]);
+  }, [remainingSeconds]);
 
   return seconds;
 }

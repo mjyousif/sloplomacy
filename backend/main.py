@@ -2031,6 +2031,8 @@ async def tick_timer(game: GameState) -> None:
             logger.exception("Could not resolve %s when its clock ran out.", game.game_id)
             timer.stage = TimerStage.PAUSED
             timer.deadline = None
+            # Save and announce the pause, or a restart would bring the expired clock back.
+            await publish_timer(game)
         return
     close_vote(timer, time.time())
     await publish_timer(game)
