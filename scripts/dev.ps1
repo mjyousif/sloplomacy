@@ -39,7 +39,10 @@ if (-not (Test-Path (Join-Path $FrontendDir "node_modules"))) {
 
 if ($SeparateWindows) {
     Write-Host "`nLaunching Backend and Frontend in separate windows..." -ForegroundColor Green
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$BackendDir'; Write-Host 'FastAPI Backend running on http://127.0.0.1:8000' -ForegroundColor Cyan; & '$PythonCmd' -m uvicorn main:app --reload --port 8000"
+    # Lets a local demo sign-in work, same as backend_env() in quickstart.py. It is set in the
+    # backend window so it cannot stay behind in the shell that ran this script.
+    $BackendEnv = "if (-not `$env:ENVIRONMENT) { `$env:ENVIRONMENT = 'development' }"
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$BackendDir'; $BackendEnv; Write-Host 'FastAPI Backend running on http://127.0.0.1:8000' -ForegroundColor Cyan; & '$PythonCmd' -m uvicorn main:app --reload --port 8000"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$FrontendDir'; Write-Host 'Vite Frontend running on http://localhost:5173' -ForegroundColor Green; npm run dev"
     
     if (-not $NoBrowser) {

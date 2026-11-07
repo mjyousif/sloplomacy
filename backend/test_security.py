@@ -1,5 +1,10 @@
+import base64
+import importlib.util
+import json
 import time
 import hmac
+from pathlib import Path
+
 import pytest
 import jwt
 from fastapi.testclient import TestClient
@@ -42,6 +47,41 @@ def test_jwt_alg_none_rejected(monkeypatch):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 401
+
+
+def load_quickstart():
+    path = Path(__file__).resolve().parent.parent / "quickstart.py"
+    spec = importlib.util.spec_from_file_location("quickstart", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def demo_sign_in_headers() -> dict:
+    """The token getAuthHeaders in frontend/src/lib/supabase.ts sends for a local demo user."""
+    def encode(value: dict) -> str:
+        return base64.b64encode(json.dumps(value, separators=(",", ":")).encode()).decode()
+
+    header = encode({"alg": "none", "typ": "JWT"})
+    payload = encode({"sub": "local_demo_example_com", "email": "demo@example.com"})
+    return {"Authorization": f"Bearer {header}.{payload}."}
+
+
+def test_local_launcher_backend_accepts_demo_sign_in(monkeypatch):
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    monkeypatch.delenv("ALLOW_INSECURE_DEV_AUTH", raising=False)
+
+    res = client.get("/api/admin/status?game_id=proto_1901", headers=demo_sign_in_headers())
+    assert res.status_code == 401
+
+    monkeypatch.setenv("ENVIRONMENT", load_quickstart().backend_env()["ENVIRONMENT"])
+    res = client.get("/api/admin/status?game_id=proto_1901", headers=demo_sign_in_headers())
+    assert res.status_code == 200
+
+
+def test_local_launcher_keeps_environment_set_in_the_shell(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    assert load_quickstart().backend_env()["ENVIRONMENT"] == "production"
 
 
 def test_jwt_tampered_signature_rejected():
