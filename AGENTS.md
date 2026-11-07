@@ -155,18 +155,25 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   │   │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
 │   │   │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
 │   │   │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
+│   │   │   ├── DisplaySettingsMenu.tsx # Top bar menu for this player's piece style and marks
+│   │   │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every style
 │   │   │   ├── PhaseTimerWidget.tsx # Bottom-left turn clock, votes, ready-up & +5 minutes
 │   │   │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
 │   │   │   └── SanityCheckModal.tsx # Pre-finalization blunder gatekeeper modal
 │   │   ├── data/
-│   │   │   └── europeMapGeometry.ts # Authentic cartographic SVG paths & province coordinates
+│   │   │   ├── europeMapGeometry.ts # Authentic cartographic SVG paths & province coordinates
+│   │   │   ├── mapLayouts.ts        # Unit, star and name placements for each piece style
+│   │   │   └── mapTextMetrics.ts    # Libre Baskerville widths for sizing names without the DOM
+│   │   ├── hooks/
+│   │   │   └── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
 │   │   ├── lib/
 │   │   │   └── supabase.ts          # Supabase client singleton & auth helpers
 │   │   ├── types/
 │   │   │   └── diplomacy.ts         # TypeScript interfaces synchronized with models.py
 │   │   └── utils/
 │   │       ├── orderHelpers.ts      # Move reachability, support targeting & retreat calculations
-│   │       └── adminHelpers.ts      # Admin permission checks & payload formatters
+│   │       ├── adminHelpers.ts      # Admin permission checks & payload formatters
+│   │       └── displayPrefs.ts      # Display preference types, defaults, sanitizing & sign-in rules
 │   ├── package.json
 │   └── vite.config.ts
 └── docs/                      # Exhaustive technical documentation suite
@@ -235,6 +242,14 @@ The game cycles through three standard phases per year:
   - `BUL`: East Coast (`EC`) and South Coast (`SC`).
 - Army movements ignore coasts; Fleet movements require explicit coast specifiers.
 - Switzerland (`SWI`) is impassable terrain.
+
+### 8. Display Preferences & Piece Styles
+- Each player chooses a piece style and army and fleet marks in the top bar menu. The rules are in [docs/frontend/map-renderer.md](docs/frontend/map-renderer.md) and [docs/frontend/state-management.md](docs/frontend/state-management.md).
+- **Invariant**: Display preferences change only what one player sees. They never enter `GameState` or reach the FastAPI backend.
+- **Invariant**: Everything read back from `localStorage` or `user_metadata` goes through `sanitizeDisplayPrefs`, because players can edit both.
+- **Invariant**: A failed account read must never be treated as "no saved value", because the upload that follows would overwrite the player's choice. Only a successful read that finds nothing means the account is empty.
+- **Invariant**: Classic with `letters` stays pixel-identical to the original map, including `CLY.unitPos` in the North Atlantic. Fix layout problems in the other styles' rows in `mapLayouts.ts`.
+- All piece bodies are drawn by `MapPiece`, and everything around them takes its size from `PieceFrame`. Don't hardcode ring radii or badge offsets in `EuropeMap.tsx`.
 
 ---
 

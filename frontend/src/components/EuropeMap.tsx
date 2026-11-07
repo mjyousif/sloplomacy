@@ -9,6 +9,8 @@ import {
   Point,
   ProvinceGeometry,
 } from '../data/europeMapGeometry';
+import { getMapLayout, SEA_SHORT_NAMES, SHARED_MAP_NAMES_SVG } from '../data/mapLayouts';
+import { MAP_NAME_FONT, measureMapName } from '../data/mapTextMetrics';
 import {
   IssueSeverity,
   Order,
@@ -31,6 +33,17 @@ import {
   MAX_ZOOM,
   MIN_ZOOM,
 } from '../utils/mapCameraHelpers';
+import { PieceStyle, UnitMark } from '../utils/displayPrefs';
+import {
+  getPieceArrowScale,
+  getPieceFrame,
+  makePiecePill,
+  MapPiece,
+  PieceHitArea,
+  PieceHoldOutline,
+  PieceOutline,
+  SupplyStar,
+} from './MapPiece';
 import {
   AlertTriangle,
   Anchor,
@@ -77,6 +90,9 @@ export interface EuropeMapProps {
   onClearSimulationOverlay: () => void;
   onAdjudicateTurn: () => void;
   onZoomChange?: (zoomPercent: number) => void;
+  /** This player's own display choice. It changes nothing for anyone else. */
+  pieceStyle: PieceStyle;
+  unitMark: UnitMark;
   overlay?: React.ReactNode;
 }
 
@@ -111,6 +127,67 @@ const StaticNamesLayer = memo(() => (
   />
 ));
 
+// Room kept beside a name for its star in the Name as piece style
+const NAME_STAR_ROOM = 6;
+
+/**
+ * Province names, fitted around the active piece style. Classic keeps the original
+ * typesetting. The other styles share its sea names and place land names themselves.
+ */
+const MapNamesLayer = memo<{
+  pieceStyle: PieceStyle;
+  provinces: Record<string, ProvinceInfo>;
+  ownership: Record<string, Power>;
+  occupied: string;
+}>(({ pieceStyle, provinces, ownership, occupied }) => {
+  if (pieceStyle === 'classic') return <StaticNamesLayer />;
+
+  const layout = getMapLayout(pieceStyle);
+  const isNameplate = pieceStyle === 'nameplate';
+  const hidden = isNameplate ? new Set(occupied.split(',')) : null;
+
+  return (
+    <g className="authentic-names-layer" pointerEvents="none">
+      <g dangerouslySetInnerHTML={{ __html: SHARED_MAP_NAMES_SVG }} />
+      {ALL_PROVINCE_GEOMETRIES.map((geom) => {
+        const placement = layout[geom.id]?.name;
+        const pInfo = provinces[geom.id];
+        if (!placement || !pInfo || hidden?.has(geom.id)) return null;
+
+        const hasStar = isNameplate && pInfo.is_supply_center;
+        const owner = ownership[geom.id] || pInfo.home_power;
+        const nameWidth = measureMapName(pInfo.name, placement.size);
+        return (
+          <g
+            key={`name_${geom.id}`}
+            transform={`translate(${placement.x}, ${placement.y}) rotate(${placement.angle})`}
+          >
+            <text
+              className="map-province-name"
+              x={hasStar ? NAME_STAR_ROOM : 0}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontFamily={MAP_NAME_FONT}
+              fontWeight="700"
+              fontSize={placement.size}
+            >
+              {pInfo.name}
+            </text>
+            {hasStar && (
+              <g transform={`translate(${NAME_STAR_ROOM - nameWidth / 2 - 8}, 0)`}>
+                <SupplyStar
+                  ownerColor={owner ? POWER_METADATA[owner].color : undefined}
+                  scale={0.5}
+                />
+              </g>
+            )}
+          </g>
+        );
+      })}
+    </g>
+  );
+});
+
 const StaticDefsLayer = memo(() => (
   <g dangerouslySetInnerHTML={{ __html: AUTHENTIC_DEFS_SVG }} />
 ));
@@ -125,6 +202,7 @@ interface ProvincePolygonProps {
   allowedCoastsStr: string;
   showFleetCoasts: boolean;
   showMoveReticle: boolean;
+  reticlePoint: Point;
   isHovered: boolean;
   isHighlighted: boolean;
   hasWarning: boolean;
@@ -141,6 +219,7 @@ const ProvincePolygon = memo<ProvincePolygonProps>(
     allowedCoastsStr,
     showFleetCoasts,
     showMoveReticle,
+    reticlePoint,
     isHovered,
     isHighlighted,
     hasWarning,
@@ -245,8 +324,8 @@ const ProvincePolygon = memo<ProvincePolygonProps>(
             }}
           >
             <circle
-              cx={geom.unitPos.x}
-              cy={geom.unitPos.y}
+              cx={reticlePoint.x}
+              cy={reticlePoint.y}
               r={24}
               fill="rgba(22, 163, 74, 0.22)"
               stroke="#15803d"
@@ -260,64 +339,60 @@ const ProvincePolygon = memo<ProvincePolygonProps>(
   }
 );
 
+const STAR_SCALE: Record<PieceStyle, number> = {
+  classic: 1,
+  seated: 0.85,
+  compact: 0.65,
+  flags: 0.72,
+  nameplate: 0.5,
+};
+
 const SupplyCentersLayer = memo<{
   provinces: Record<string, ProvinceInfo>;
   ownership: Record<string, Power>;
-}>(({ provinces, ownership }) => (
-  <g className="supply-centers-layer" pointerEvents="none">
-    {ALL_PROVINCE_GEOMETRIES.map((geom) => {
-      const pInfo = provinces[geom.id];
-      if (!pInfo || !pInfo.is_supply_center || !geom.scPos) return null;
-      const owner = ownership[geom.id] || pInfo.home_power;
-      return (
-        <g
-          key={`sc_${geom.id}`}
-          transform={`translate(${geom.scPos.x}, ${geom.scPos.y})`}
-        >
-          <circle
-            r="8.5"
-            fill={owner ? POWER_METADATA[owner].color : '#fef3c7'}
-            stroke="#1c1917"
-            strokeWidth="2"
-          />
-          <polygon
-            points="0,-5.8 1.6,-1.7 6,-1.7 2.5,1.1 3.8,5.4 0,2.8 -3.8,5.4 -2.5,1.1 -6,-1.7 -1.6,-1.7"
-            fill={owner ? '#fde047' : '#57534e'}
-          />
-        </g>
-      );
-    })}
-  </g>
-));
+  pieceStyle: PieceStyle;
+  occupied: string;
+}>(({ provinces, ownership, pieceStyle, occupied }) => {
+  // Name as piece draws each star beside its name or inside the pill instead
+  if (pieceStyle === 'nameplate') return null;
 
-function getBaseUnitPoint(unit: Unit): Point {
-  const geom = EUROPE_PROVINCE_GEOMETRY[unit.province];
-  if (!geom) return { x: 760, y: 680 };
-  if (unit.coast && geom.coastPositions && geom.coastPositions[unit.coast]) {
-    return geom.coastPositions[unit.coast];
-  }
-  return geom.unitPos;
-}
+  const layout = getMapLayout(pieceStyle);
+  const sharesUnitPoint = pieceStyle === 'seated' || pieceStyle === 'flags';
+  // In Star seat the unit carries the star, so only empty centers are drawn here
+  const carried = pieceStyle === 'seated' ? new Set(occupied.split(',')) : null;
 
-function getProvincePoint(provCode: string, coast?: string | null): Point {
-  const geom = EUROPE_PROVINCE_GEOMETRY[provCode];
-  if (!geom) return { x: 760, y: 680 };
-  if (coast && geom.coastPositions && geom.coastPositions[coast]) {
-    return geom.coastPositions[coast];
-  }
-  return geom.unitPos;
-}
+  return (
+    <g className="supply-centers-layer" pointerEvents="none">
+      {ALL_PROVINCE_GEOMETRIES.map((geom) => {
+        const pInfo = provinces[geom.id];
+        const entry = layout[geom.id];
+        const point = sharesUnitPoint ? entry?.unit : entry?.star;
+        if (!pInfo || !pInfo.is_supply_center || !point || carried?.has(geom.id)) return null;
+        const owner = ownership[geom.id] || pInfo.home_power;
+        return (
+          <g key={`sc_${geom.id}`} transform={`translate(${point.x}, ${point.y})`}>
+            <SupplyStar
+              ownerColor={owner ? POWER_METADATA[owner].color : undefined}
+              scale={STAR_SCALE[pieceStyle]}
+            />
+          </g>
+        );
+      })}
+    </g>
+  );
+});
 
 function computeQuadraticCurve(
   p1: Point,
   p2: Point,
-  curvature = 0.14
+  curvature = 0.14,
+  insetScale = 1
 ): { path: string; mid: Point } {
   const dx = p2.x - p1.x;
   const dy = p2.y - p1.y;
   const dist = Math.hypot(dx, dy) || 1;
-  const shrink = Math.min(26, dist * 0.22);
-  const startShrink = Math.min(18, dist * 0.15);
+  const shrink = Math.min(26 * insetScale, dist * 0.22);
+  const startShrink = Math.min(18 * insetScale, dist * 0.15);
   const sx = p1.x + (dx / dist) * startShrink;
   const sy = p1.y + (dy / dist) * startShrink;
   const ex = p2.x - (dx / dist) * shrink;
@@ -368,6 +443,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     onAdjudicateTurn,
     overlay,
     onZoomChange,
+    pieceStyle,
+    unitMark,
   },
   ref
 ) {
@@ -421,16 +498,63 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     unitsById[u.id] = u;
   }
 
+  const layout = getMapLayout(pieceStyle);
+  const arrowScale = getPieceArrowScale(pieceStyle);
+  const pieceRingScale = getPieceFrame(pieceStyle).ringScale;
+
+  const getProvincePoint = useCallback(
+    (provCode: string, coast?: string | null): Point => {
+      const geom = EUROPE_PROVINCE_GEOMETRY[provCode];
+      if (!geom) return { x: 760, y: 680 };
+      if (coast && geom.coastPositions && geom.coastPositions[coast]) {
+        return geom.coastPositions[coast];
+      }
+      return layout[provCode]?.unit ?? geom.unitPos;
+    },
+    [layout]
+  );
+
+  /** How a piece standing in this province is drawn in the active style. */
+  const describePiece = useCallback(
+    (province: string, coast: string | null | undefined, showStar: boolean) => {
+      const entry = layout[province];
+      const flagDirection = entry?.flagDirection ?? 1;
+      if (pieceStyle !== 'nameplate') {
+        return { flagDirection, frame: getPieceFrame(pieceStyle, flagDirection) };
+      }
+      const baseName = SEA_SHORT_NAMES[province] ?? provinces[province]?.name ?? province;
+      const pill = makePiecePill(
+        coast ? `${baseName} ${coast}` : baseName,
+        entry?.name?.size ?? 12.5,
+        coast ? 0 : entry?.name?.angle ?? 0,
+        showStar
+      );
+      return { flagDirection, frame: getPieceFrame(pieceStyle, flagDirection, pill) };
+    },
+    [layout, pieceStyle, provinces]
+  );
+
   const getUnitPoint = useCallback(
     (unit: Unit): Point => {
-      const basePt = getBaseUnitPoint(unit);
+      const basePt = getProvincePoint(unit.province, unit.coast);
       if (unit.is_dislodged && unitsByProv[unit.province]) {
-        return { x: basePt.x + 22, y: basePt.y - 18 };
+        const { dislodgeOffset } = describePiece(unit.province, unit.coast, false).frame;
+        return { x: basePt.x + dislodgeOffset.x, y: basePt.y + dislodgeOffset.y };
       }
       return basePt;
     },
-    [unitsByProv]
+    [unitsByProv, getProvincePoint, describePiece]
   );
+
+  const getStarOwnerColor = (province: string): string | undefined => {
+    const owner = ownership[province] || provinces[province]?.home_power;
+    return owner ? POWER_METADATA[owner].color : undefined;
+  };
+
+  // Provinces whose star or name a unit is standing on, as a string so the static layers can skip re-rendering
+  const occupiedProvinces = Object.keys({ ...unitsByProv, ...dislodgedByProv })
+    .sort()
+    .join(',');
 
   // Check if selectedUnitId refers to a BUILD_ order or an existing Unit
   const isSelectedBuildOrder = Boolean(
@@ -972,7 +1096,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
       anchorLeft: bestCandidate.x,
       anchorTop: bestCandidate.y,
     };
-  }, [selectedUnit, selectedBuildProv, reachableList, svgPointToScreen, getUnitPoint]);
+  }, [selectedUnit, selectedBuildProv, reachableList, svgPointToScreen, getUnitPoint, getProvincePoint]);
 
   // Apply camera transform & floating menu position directly to DOM
   const syncCameraDOM = useCallback(() => {
@@ -1181,7 +1305,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     if (o && o.order_type === 'MOVE' && o.target && EUROPE_PROVINCE_GEOMETRY[o.target]) {
       const p1 = getUnitPoint(u);
       const p2 = getProvincePoint(o.target, o.target_coast);
-      const { mid } = computeQuadraticCurve(p1, p2, 0.14);
+      const { mid } = computeQuadraticCurve(p1, p2, 0.14, arrowScale);
       moveMidpointsByOrigin[u.province] = mid;
     }
   }
@@ -1725,6 +1849,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   allowedCoastsStr={allowedCoastsStr}
                   showFleetCoasts={showFleetCoasts}
                   showMoveReticle={showMoveReticle}
+                  reticlePoint={layout[geom.id]?.unit ?? geom.unitPos}
                   isHovered={isHovered}
                   isHighlighted={isHighlighted}
                   hasWarning={hasWarning}
@@ -1739,10 +1864,20 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
           <StaticForegroundLayer />
 
           {/* 4. AUTHENTIC HAND-TYPESET PROVINCE & SEA ZONE NAMES */}
-          <StaticNamesLayer />
+          <MapNamesLayer
+            pieceStyle={pieceStyle}
+            provinces={provinces}
+            ownership={ownership}
+            occupied={occupiedProvinces}
+          />
 
           {/* 5. SUPPLY CENTER STAR EMBLEMS (34 Supply Centers) */}
-          <SupplyCentersLayer provinces={provinces} ownership={ownership} />
+          <SupplyCentersLayer
+            provinces={provinces}
+            ownership={ownership}
+            pieceStyle={pieceStyle}
+            occupied={occupiedProvinces}
+          />
 
           {/* 6. TACTICAL ORDER VECTORS LAYER */}
           <g className="tactical-vectors-layer">
@@ -1769,7 +1904,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   <circle
                     cx={fleetPt.x}
                     cy={fleetPt.y}
-                    r="26"
+                    r={26 * pieceRingScale}
                     fill="none"
                     stroke={hasIssue ? '#f59e0b' : '#0284c7'}
                     strokeWidth="2.5"
@@ -1831,7 +1966,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   <circle
                     cx={targetPoint.x}
                     cy={targetPoint.y}
-                    r={isSupportHold ? 24 : 8}
+                    r={isSupportHold ? 24 * pieceRingScale : 8}
                     fill={isSupportHold ? 'none' : strokeColor}
                     stroke={strokeColor}
                     strokeWidth="2.8"
@@ -1875,7 +2010,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
 
               const p1 = getUnitPoint(u);
               const p2 = getProvincePoint(o.target, o.target_coast);
-              const { path, mid } = computeQuadraticCurve(p1, p2, 0.14);
+              const { path, mid } = computeQuadraticCurve(p1, p2, 0.14, arrowScale);
 
               const unitIssues = issuesByUnit[u.id] || [];
               const hasError = unitIssues.some((i) => i.severity === 'error');
@@ -1913,6 +2048,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
 
               const strokeWidth = 4.5 + supCount * 1.8 + (isSelectedOrHovered ? 1.2 : 0);
               const meta = POWER_METADATA[u.power];
+              const ghostPiece = describePiece(o.target, o.target_coast, false);
 
               return (
                 <g key={`move_${u.id}`} pointerEvents="none">
@@ -1985,38 +2121,25 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   {/* GHOST PREVIEW UNIT TOKEN AT DESTINATION WHEN MOVE SUCCEEDS */}
                   {simActive && simRes && simRes.succeeded && (
                     <g transform={`translate(${p2.x}, ${p2.y})`} opacity="0.88">
-                      <circle
-                        r="22"
+                      <PieceOutline
+                        frame={ghostPiece.frame}
+                        radius={22}
                         fill="rgba(16, 185, 129, 0.22)"
                         stroke="#10b981"
                         strokeWidth="2.5"
                         strokeDasharray="4 3"
                       />
-                      {u.unit_type === 'A' ? (
-                        <circle
-                          r="15"
-                          fill={meta.color}
-                          stroke="#34d399"
-                          strokeWidth="2.5"
-                        />
-                      ) : (
-                        <polygon
-                          points="0,-17 16,-6 12,13 -12,13 -16,-6"
-                          fill={meta.color}
-                          stroke="#34d399"
-                          strokeWidth="2.5"
-                        />
-                      )}
-                      <text
-                        y="5"
-                        textAnchor="middle"
-                        fill="#ffffff"
-                        fontSize="12.5"
-                        fontWeight="800"
-                        fontFamily="Cinzel, serif"
-                      >
-                        {u.unit_type}
-                      </text>
+                      <MapPiece
+                        style={pieceStyle}
+                        mark={unitMark}
+                        unitType={u.unit_type}
+                        color={meta.color}
+                        variant="ghost"
+                        rim="#34d399"
+                        frame={ghostPiece.frame}
+                        flagDirection={ghostPiece.flagDirection}
+                        hasStar={Boolean(provinces[o.target]?.is_supply_center)}
+                      />
                     </g>
                   )}
                 </g>
@@ -2037,6 +2160,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                 const cst = uType === 'F' ? bOrder?.origin_coast : null;
                 const pt = getProvincePoint(homeProv, cst);
                 const meta = POWER_METADATA[pwr];
+                const buildPiece = describePiece(homeProv, cst, false);
 
                 return (
                   <g
@@ -2051,16 +2175,19 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                     onMouseEnter={() => onHoverUnit(bId)}
                     onMouseLeave={() => onHoverUnit(null)}
                   >
+                    <PieceHitArea frame={buildPiece.frame} />
                     {(isSelected || isHovered) && (
-                      <circle
-                        r="28"
+                      <PieceOutline
+                        frame={buildPiece.frame}
+                        radius={28}
                         fill="rgba(34, 197, 94, 0.25)"
                         stroke="#22c55e"
                         strokeWidth="3.5"
                       />
                     )}
-                    <circle
-                      r="23"
+                    <PieceOutline
+                      frame={buildPiece.frame}
+                      radius={23}
                       fill={isWaived ? 'rgba(100, 116, 139, 0.2)' : 'rgba(22, 163, 74, 0.22)'}
                       stroke={isWaived ? '#64748b' : '#16a34a'}
                       strokeWidth="2.6"
@@ -2068,33 +2195,18 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                     />
                     {!isWaived ? (
                       <>
-                        {uType === 'A' ? (
-                          <circle
-                            r="16"
-                            fill={meta.color}
-                            stroke="#4ade80"
-                            strokeWidth="2.8"
-                          />
-                        ) : (
-                          <polygon
-                            points="0,-18 17,-6 13,14 -13,14 -17,-6"
-                            fill={meta.color}
-                            stroke="#4ade80"
-                            strokeWidth="2.8"
-                          />
-                        )}
-                        <text
-                          y="5"
-                          textAnchor="middle"
-                          fill="#ffffff"
-                          fontSize="12.5"
-                          fontWeight="800"
-                          fontFamily="Cinzel, serif"
-                          pointerEvents="none"
-                        >
-                          +{uType}
-                        </text>
-                        <g transform="translate(0, 26)">
+                        <MapPiece
+                          style={pieceStyle}
+                          mark={unitMark}
+                          unitType={uType}
+                          color={meta.color}
+                          variant="build"
+                          rim="#4ade80"
+                          frame={buildPiece.frame}
+                          flagDirection={buildPiece.flagDirection}
+                          hasStar={Boolean(provinces[homeProv]?.is_supply_center)}
+                        />
+                        <g transform={`translate(0, ${buildPiece.frame.bannerY})`}>
                           <rect
                             x="-34"
                             y="-8"
@@ -2118,7 +2230,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                         </g>
                       </>
                     ) : (
-                      <g transform="translate(0, 26)">
+                      <g transform={`translate(0, ${buildPiece.frame.bannerY})`}>
                         <rect
                           x="-36"
                           y="-8"
@@ -2186,6 +2298,15 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   simRes?.succeeded
               );
 
+              // A dislodged unit stepped aside, so the star stays with the unit holding the province
+              const carriesStar =
+                (pieceStyle === 'seated' || pieceStyle === 'nameplate') &&
+                Boolean(provinces[u.province]?.is_supply_center) &&
+                !(u.is_dislodged && unitsByProv[u.province]);
+              const { frame, flagDirection } = describePiece(u.province, u.coast, carriesStar);
+              const steppedAside = Boolean(u.is_dislodged && unitsByProv[u.province]);
+              const bannerY = steppedAside ? frame.steppedAsideBannerY : frame.bannerY;
+
               return (
                 <g
                   key={u.id}
@@ -2200,9 +2321,12 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   }}
                   onMouseLeave={() => onHoverUnit(null)}
                 >
+                  <PieceHitArea frame={frame} />
+
                   {(isSelected || isHovered) && (
-                    <circle
-                      r="27"
+                    <PieceOutline
+                      frame={frame}
+                      radius={27}
                       fill="rgba(245, 158, 11, 0.22)"
                       stroke="#f59e0b"
                       strokeWidth="3.5"
@@ -2211,8 +2335,9 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   )}
 
                   {u.is_dislodged && (
-                    <circle
-                      r="24"
+                    <PieceOutline
+                      frame={frame}
+                      radius={24}
                       fill="rgba(234, 88, 12, 0.28)"
                       stroke="#ea580c"
                       strokeWidth="3"
@@ -2221,8 +2346,9 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   )}
 
                   {isDisbanding && (
-                    <circle
-                      r="24"
+                    <PieceOutline
+                      frame={frame}
+                      radius={24}
                       fill="rgba(220, 38, 38, 0.28)"
                       stroke="#dc2626"
                       strokeWidth="3"
@@ -2232,8 +2358,9 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
 
                   {/* Active Power Subtle Ring so your own units stand out clearly */}
                   {u.power === activePower && !isSelected && !u.is_dislodged && (
-                    <circle
-                      r="21"
+                    <PieceOutline
+                      frame={frame}
+                      radius={21}
                       fill="none"
                       stroke="#fef08a"
                       strokeWidth="2"
@@ -2242,8 +2369,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   )}
 
                   {isHold && !u.is_dislodged && isUnitOrderVisible(u) && (
-                    <polygon
-                      points="0,-22 16,-16 22,0 16,16 0,22 -16,16 -22,0 -16,-16"
+                    <PieceHoldOutline
+                      frame={frame}
                       fill="none"
                       stroke={isExplicitHold ? '#eab308' : '#1e293b'}
                       strokeWidth={isExplicitHold ? '2.8' : '1.6'}
@@ -2252,45 +2379,21 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                     />
                   )}
 
-                  {u.unit_type === 'A' ? (
-                    <g>
-                      <circle cx="0" cy="3.2" r="18.2" fill="rgba(15, 23, 42, 0.52)" />
-                      <circle
-                        r="17"
-                        fill={meta.color}
-                        stroke={u.is_dislodged ? '#fdba74' : isDisbanding ? '#fca5a5' : '#fef3c7'}
-                        strokeWidth="2.8"
-                      />
-                    </g>
-                  ) : (
-                    <g>
-                      <polygon
-                        points="0,-15.8 19,-3.8 15,18.2 -15,18.2 -19,-3.8"
-                        fill="rgba(15, 23, 42, 0.52)"
-                      />
-                      <polygon
-                        points="0,-19 18,-7 14,15 -14,15 -18,-7"
-                        fill={meta.color}
-                        stroke={u.is_dislodged ? '#fdba74' : isDisbanding ? '#fca5a5' : '#fef3c7'}
-                        strokeWidth="2.8"
-                      />
-                    </g>
-                  )}
-
-                  <text
-                    y="5.5"
-                    textAnchor="middle"
-                    fill="#ffffff"
-                    fontSize="14.5"
-                    fontWeight="800"
-                    fontFamily="Cinzel, serif"
-                    pointerEvents="none"
-                  >
-                    {u.unit_type}
-                  </text>
+                  <MapPiece
+                    style={pieceStyle}
+                    mark={unitMark}
+                    unitType={u.unit_type}
+                    color={meta.color}
+                    rim={u.is_dislodged ? '#fdba74' : isDisbanding ? '#fca5a5' : '#fef3c7'}
+                    frame={frame}
+                    flagDirection={flagDirection}
+                    hasStar={Boolean(provinces[u.province]?.is_supply_center)}
+                    showStar={carriesStar}
+                    starOwnerColor={getStarOwnerColor(u.province)}
+                  />
 
                   {holdSupCount > 0 && (
-                    <g transform="translate(-17, -17)">
+                    <g transform={`translate(${frame.badgeLeft.x}, ${frame.badgeLeft.y})`}>
                       <circle r="9" fill="#0f766e" stroke="#fef3c7" strokeWidth="1.5" />
                       <text y="3.5" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="800">
                         +{holdSupCount}
@@ -2299,7 +2402,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   )}
 
                   {topSeverity && (
-                    <g transform="translate(16, -16)">
+                    <g transform={`translate(${frame.badgeRight.x}, ${frame.badgeRight.y})`}>
                       <circle
                         r="10.5"
                         fill={topSeverity === 'error' ? '#dc2626' : '#f59e0b'}
@@ -2319,7 +2422,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   )}
 
                   {(u.is_dislodged || (simActive && simRes?.dislodged)) && !isDisbanding && (
-                    <g transform="translate(0, 26)">
+                    <g transform={`translate(0, ${bannerY})`}>
                       <rect
                         x="-38"
                         y="-8"
@@ -2337,7 +2440,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   )}
 
                   {isDisbanding && (
-                    <g transform="translate(0, 26)">
+                    <g transform={`translate(0, ${bannerY})`}>
                       <rect
                         x="-36"
                         y="-8"

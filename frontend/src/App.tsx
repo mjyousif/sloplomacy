@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import { AuthModal } from './components/AuthModal';
+import { DisplaySettingsMenu } from './components/DisplaySettingsMenu';
 import { EuropeMap, EuropeMapHandle } from './components/EuropeMap';
 import { LobbyView } from './components/LobbyView';
 import { MacroSidebar } from './components/MacroSidebar';
@@ -12,6 +13,7 @@ import { PhaseTimerWidget } from './components/PhaseTimerWidget';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
 import { turnLabel } from './utils/timerHelpers';
 import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
+import { useDisplayPrefs } from './hooks/useDisplayPrefs';
 import {
   getAuthHeaders,
   getInitialAuthUser,
@@ -70,6 +72,11 @@ export function App() {
 
   // Auth State
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const {
+    prefs: displayPrefs,
+    saveState: displayPrefsSaveState,
+    updatePrefs: updateDisplayPrefs,
+  } = useDisplayPrefs(authUser);
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [authModalReason, setAuthModalReason] = useState<string | null>(null);
   const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin');
@@ -1113,6 +1120,11 @@ export function App() {
             <span>{wsConnected ? 'Live Sync' : 'Connecting...'}</span>
           </div>
 
+          <DisplaySettingsMenu
+            prefs={displayPrefs}
+            saveState={displayPrefsSaveState}
+            onChange={updateDisplayPrefs}
+          />
 
           {/* User Authentication Controls */}
           {authUser ? (
@@ -1232,6 +1244,8 @@ export function App() {
           <EuropeMap
             ref={mapRef}
             onZoomChange={setZoomPercent}
+            pieceStyle={displayPrefs.pieceStyle}
+            unitMark={displayPrefs.unitMark}
             provinces={provinces}
             units={gameState.units}
             orders={gameState.orders}

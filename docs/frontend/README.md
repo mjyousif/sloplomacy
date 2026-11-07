@@ -26,12 +26,19 @@ frontend/
     │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
     │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
     │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
+    │   ├── DisplaySettingsMenu.tsx # Top bar menu for this player's piece style and army and fleet marks
+    │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every display style
     │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
     │   ├── SanityCheckModal.tsx # Pre-finalization tactical blunder warning dialogue
 │   └── VersionBadge.tsx     # Git commit short SHA indicator, clipboard copy & GitHub commit link
     ├── data/
     │   ├── europeMapGeometry.ts # Authentic SVG vector paths, province centers & defs
-    │   └── europeMapGeometry.test.ts # Vitest suite for map label typography
+    │   ├── europeMapGeometry.test.ts # Vitest suite for map label typography
+    │   ├── mapLayouts.ts        # Unit, star and name placements for each piece style
+    │   ├── mapLayouts.test.ts   # Checks every placement against the province outlines
+    │   └── mapTextMetrics.ts    # Libre Baskerville widths for sizing names without the DOM
+    ├── hooks/
+    │   └── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
     ├── lib/
     │   └── supabase.ts          # Supabase client singleton & auth helpers
     ├── types/
@@ -40,7 +47,9 @@ frontend/
         ├── orderHelpers.ts      # Reachability calculations, retreat targeting & symbolic formatters
         ├── orderHelpers.test.ts # Vitest suite for order parsing and valid destinations
         ├── adminHelpers.ts      # Admin permission verification & payload formatters
-        └── adminHelpers.test.ts # Vitest suite for admin authorization and mutations
+        ├── adminHelpers.test.ts # Vitest suite for admin authorization and mutations
+        ├── displayPrefs.ts      # Display preference types, defaults, sanitizing & sign-in rules
+        └── displayPrefs.test.ts # Vitest suite for display preferences
 ```
 
 ---
@@ -80,8 +89,9 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   ├── EuropeMap.tsx (Center Interactive SVG Board)
 │   │   ├── Authentic Cartographic Background Layer
 │   │   ├── Province Fill & Ownership Borders
+│   │   ├── Province Names Fitted to the Active Piece Style
 │   │   ├── Supply Center Markers
-│   │   ├── Unit Tokens (Armies & Fleets)
+│   │   ├── Unit Pieces (MapPiece, in the player's chosen style and mark)
 │   │   ├── Dislodged Unit Retreat Badges
 │   │   ├── Dynamic SVG Order Vectors & Bezier Arrows
 │   │   ├── Combat Clashes, Bounces & Cut Indicators
@@ -99,6 +109,7 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │       └── Sticky Footer: Order Finalization & Phase Adjudication Actions
 │
 ├── Modals & Overlays
+│   ├── DisplaySettingsMenu.tsx (Top bar popover for piece style and marks)
 │   ├── AuthModal.tsx (Supabase login/signup & local dev auth toggle)
 │   ├── AdminToolsModal.tsx (Creator unit teleport, spawn, destroy, turn jump, rollback)
 │   ├── SurrenderModal.tsx (Civil Disorder concession dialogue)

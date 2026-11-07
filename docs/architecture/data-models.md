@@ -233,6 +233,19 @@ class AuthUser(BaseModel):
     is_authenticated: bool = True
 ```
 
+### `DisplayPrefs`
+A player's own map display choice. It's frontend only, so it has no counterpart in `backend/models.py`. It's stored in `localStorage` and in Supabase `user_metadata.display_prefs`, and is defined in `frontend/src/utils/displayPrefs.ts`:
+
+```typescript
+type PieceStyle = 'classic' | 'seated' | 'compact' | 'flags' | 'nameplate';
+type UnitMark = 'icons' | 'vehicles' | 'nato' | 'letters';
+
+interface DisplayPrefs {
+  pieceStyle: PieceStyle;
+  unitMark: UnitMark;
+}
+```
+
 ---
 
 ## Administrator Schemas

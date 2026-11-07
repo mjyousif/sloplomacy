@@ -16,8 +16,23 @@ To prevent interface bloat and preserve a clean, focused tactical workspace, adh
 1. **Authoritative Lobby Navigation**: The clickable brand emblem and title (`SLOPLOMACY 1901`) in the top command header is the single authoritative control to return to the match lobby; never add separate "Main Page" or "Home" tab buttons to the header.
 2. **Sidebar Collapse & Rail Ownership**: Sidebar expand and collapse actions belong exclusively on the sidebars themselves (in their headers when expanded, and on their 44px slim rails when collapsed). Do not introduce top navigation header pill buttons to toggle sidebars.
 3. **Unobstructed Map Canvas**: The interactive SVG European map viewport must remain free of floating camera/zoom overlay boxes. All stepped zooming, percentage readout, and camera reset/fit actions belong in the Left Tools Sidebar (`ToolsSidebar.tsx`), accessible both in full view and via rail icons.
-4. **Tactical Map Legend Purity**: The Tactical Map Legend is strictly a visual guide for map symbology (movement vectors, support reticles, convoy anchors, and warning/dislodgement markers). Never embed rulebook mechanics or geography text footnotes (e.g. dual coasts or impassable terrain); interactive modal dialogs and cartographic text handle these directly.
+4. **Personal Display Settings in the Top Bar**: The `SlidersHorizontal` icon in the top header's right-hand actions opens `DisplaySettingsMenu.tsx`, on every screen and for guests too. See [Top Bar Display Settings](#top-bar-display-settings).
+5. **Tactical Map Legend Purity**: The Tactical Map Legend is strictly a visual guide for map symbology (movement vectors, support reticles, convoy anchors, and warning/dislodgement markers). Never embed rulebook mechanics or geography text footnotes (e.g. dual coasts or impassable terrain); interactive modal dialogs and cartographic text handle these directly.
 
+
+---
+
+## Top Bar Display Settings
+
+![The display settings menu open over the map](images/display-settings-menu.jpg)
+
+`DisplaySettingsMenu.tsx` sits between the sync badge and the account controls. It's a popover rather than a modal, so the map stays visible and each change shows live. It closes on an outside click or Escape, and Escape returns focus to the icon.
+
+- **Piece style**: Classic, Star seat, Compact pieces, Command flags or Name as piece.
+- **Army and fleet marks**: Swords and ship, Tank and warship, NATO symbols, or A and F letters.
+- **Status line**: says where the choice is saved, such as "Saved to your account" or "Saved on this device. Sign in to keep it across devices".
+
+The previews render with the real `MapPiece`, so they always match the map. These settings only affect this player's own view.
 
 ---
 
