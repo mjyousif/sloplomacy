@@ -126,20 +126,48 @@ if (-not $buildSuccess) {
 Write-Host ""
 Write-Host "--> Deploying service to Google Cloud Run with Supabase Database Persistence..." -ForegroundColor Cyan
 
-$backendKey = if ($SupabaseServiceRoleKey) { $SupabaseServiceRoleKey } else { $SupabaseAnonKey }
-$envVars = "VITE_SUPABASE_URL=$SupabaseUrl,VITE_SUPABASE_ANON_KEY=$SupabaseAnonKey,SUPABASE_URL=$SupabaseUrl,SUPABASE_KEY=$backendKey,SUPABASE_SERVICE_ROLE_KEY=$SupabaseServiceRoleKey,SUPABASE_JWT_SECRET=$SupabaseJwtSecret"
+# The backend persists games only with the service role key. RLS gives the anon key zero rows,
+# so falling back to it would make every saved game look deleted.
+if ($SupabaseUrl -and -not $SupabaseServiceRoleKey) {
+    Write-Host "[!] Warning: no SUPABASE_SERVICE_ROLE_KEY given. Game persistence stays off unless the service already has it." -ForegroundColor Yellow
+}
 
-gcloud run deploy $ServiceName `
-    --image $ImageTag `
-    --region $Region `
-    --project $ProjectId `
-    --platform managed `
-    --allow-unauthenticated `
-    --min-instances 0 `
-    --max-instances 1 `
-    --memory 512Mi `
-    --port 8080 `
-    --set-env-vars "$envVars"
+# --update-env-vars keeps variables set by hand on the service, and only values that are present
+# are sent, so a missing value never blanks one that is already set.
+$envPairs = [ordered]@{
+    VITE_SUPABASE_URL         = $SupabaseUrl
+    VITE_SUPABASE_ANON_KEY    = $SupabaseAnonKey
+    SUPABASE_URL              = $SupabaseUrl
+    SUPABASE_KEY              = $SupabaseServiceRoleKey
+    SUPABASE_SERVICE_ROLE_KEY = $SupabaseServiceRoleKey
+    SUPABASE_JWT_SECRET       = $SupabaseJwtSecret
+}
+$envVars = ($envPairs.GetEnumerator() | Where-Object { $_.Value } | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ","
+
+# --max-instances 1 is required: games live in one process.
+# --timeout 3600 lets a WebSocket stay open for an hour instead of 5 minutes.
+$deployArgs = @(
+    "run", "deploy", $ServiceName,
+    "--image", $ImageTag,
+    "--region", $Region,
+    "--project", $ProjectId,
+    "--platform", "managed",
+    "--allow-unauthenticated",
+    "--min-instances", "0",
+    "--max-instances", "1",
+    "--memory", "512Mi",
+    "--port", "8080",
+    "--timeout", "3600"
+)
+if ($envVars) {
+    $deployArgs += @("--update-env-vars", $envVars)
+}
+
+gcloud @deployArgs
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[!] Cloud Run deployment failed." -ForegroundColor Red
+    exit 1
+}
 
 # 6. Retrieve Service URL
 $ServiceUrl = (gcloud run services describe $ServiceName --region $Region --project $ProjectId --format "value(status.url)").Trim()

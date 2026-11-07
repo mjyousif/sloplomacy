@@ -14,10 +14,12 @@ create table if not exists public.profiles (
 -- Enable RLS
 alter table public.profiles enable row level security;
 
+drop policy if exists "Public profiles are viewable by everyone" on public.profiles;
 create policy "Public profiles are viewable by everyone" 
   on public.profiles for select 
   using (true);
 
+drop policy if exists "Users can update their own profile" on public.profiles;
 create policy "Users can update their own profile" 
   on public.profiles for update 
   using (auth.uid() = id);
@@ -62,22 +64,10 @@ create table if not exists public.multiplayer_games (
 
 alter table public.multiplayer_games enable row level security;
 
-create policy "Games are viewable by all logged-in players"
-  on public.multiplayer_games for select
-  using (true);
-
-create policy "Backend and service role game management"
-  on public.multiplayer_games for all
-  using (true)
-  with check (true);
-
-create policy "Authenticated users can create games"
-  on public.multiplayer_games for insert
-  with check (auth.role() = 'authenticated');
-
-create policy "Host can update game"
-  on public.multiplayer_games for update
-  using (auth.uid() = host_user_id);
+-- The policies for this table live in the later migrations, which allow only the backend's
+-- service_role key. Every deploy re-runs all migrations, so this file must not create the
+-- original open policies again, even for a moment. 20261107000000 drops them from databases
+-- that still have them.
 
 -- 3. Game Participants (Power assignments)
 create table if not exists public.game_participants (
@@ -93,14 +83,17 @@ create table if not exists public.game_participants (
 
 alter table public.game_participants enable row level security;
 
+drop policy if exists "Participants are viewable by everyone" on public.game_participants;
 create policy "Participants are viewable by everyone"
   on public.game_participants for select
   using (true);
 
+drop policy if exists "Authenticated users can join games" on public.game_participants;
 create policy "Authenticated users can join games"
   on public.game_participants for insert
   with check (auth.role() = 'authenticated');
 
+drop policy if exists "Users can update their own participant record" on public.game_participants;
 create policy "Users can update their own participant record"
   on public.game_participants for update
   using (auth.uid() = user_id);

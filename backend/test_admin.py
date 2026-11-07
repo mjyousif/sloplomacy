@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from main import app, GAMES, GAME_HISTORY, GAME_SUMMARIES, seed_initial_multiplayer_lobbies
 from models import Power, UnitType
+from ws_testing import receive_json
 
 TEST_JWT_SECRET = "test-secret-at-least-32-chars-long-12345"
 
@@ -371,7 +372,7 @@ def test_admin_multiplayer_lobby_lifecycle_with_jwt():
 
     # 3. Perform admin action as User A -> succeeds and broadcasts WebSocket event to room
     with client.websocket_connect(f"/ws/games/{gid}") as ws:
-        init_event = ws.receive_json()
+        init_event = receive_json(ws)
         assert init_event["type"] == "game_update"
 
         res_a_admin = client.post(
@@ -382,7 +383,7 @@ def test_admin_multiplayer_lobby_lifecycle_with_jwt():
         assert res_a_admin.status_code == 200
         assert res_a_admin.json()["season"] == "Fall"
 
-        ws_event = ws.receive_json()
+        ws_event = receive_json(ws)
         assert ws_event["type"] == "game_update"
         assert ws_event["state"]["season"] == "Fall"
 
