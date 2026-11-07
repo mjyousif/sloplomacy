@@ -5,6 +5,13 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
 BACKEND_DIR="$REPO_ROOT/backend"
 FRONTEND_DIR="$REPO_ROOT/frontend"
 
+RUN_E2E=false
+for arg in "$@"; do
+    if [ "$arg" == "--e2e" ] || [ "$arg" == "-e2e" ]; then
+        RUN_E2E=true
+    fi
+done
+
 echo "================================================="
 echo "  Sloplomacy - Full Test Suite & Quality Gates    "
 echo "================================================="
@@ -32,6 +39,14 @@ npm test
 echo "Running TypeScript typecheck & Vite build..."
 npm run build
 echo "[✓] Frontend tests and build passed!"
+
+# 3. Optional E2E Scenario Suite
+if [ "$RUN_E2E" = true ]; then
+    echo -e "\n[3/3] Running Interactive E2E Scenario Suite..."
+    cd "$REPO_ROOT"
+    $PYTHON_CMD scripts/e2e_runner.py run --all
+    echo "[✓] Interactive E2E suite passed!"
+fi
 
 echo -e "\n================================================="
 echo "  ALL TESTS & CHECKS PASSED!"

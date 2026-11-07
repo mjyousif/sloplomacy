@@ -237,6 +237,12 @@ class ScenarioRequest(BaseModel):
     active_power: Optional[Power] = None
 
 
+class SeedScenarioRequest(BaseModel):
+    scenario_id: str
+    game_id: Optional[str] = None
+    active_power: Optional[Power] = None
+
+
 class GameParticipant(BaseModel):
     user_id: str
     email: str

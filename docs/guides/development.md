@@ -140,6 +140,44 @@ npm run build
 
 ---
 
+## LLM-Driven E2E Interactive Testing
+
+Sloplomacy includes an interactive end-to-end (E2E) testing framework designed for AI coding agents and human developers. Unlike rigid visual regression tests that break when styling changes, this framework executes realistic user journeys, captures high-resolution screenshots at each step, logs runtime console telemetry, and allows visual and semantic inspection.
+
+### Running Interactive Scenarios
+Use the cross-platform runner (`scripts/e2e_runner.py`), which auto-detects and launches the backend and frontend dev servers if not already running:
+
+```bash
+# List all available scenarios:
+python scripts/e2e_runner.py list
+
+# Run a specific scenario:
+python scripts/e2e_runner.py run movement
+python scripts/e2e_runner.py run sandbox
+python scripts/e2e_runner.py run blunder
+python scripts/e2e_runner.py run retreats
+python scripts/e2e_runner.py run builds
+
+# Watch the browser interactively (headed mode):
+python scripts/e2e_runner.py run movement --headed
+
+# Run the complete E2E scenario suite:
+python scripts/e2e_runner.py run --all
+```
+
+### Scenario Catalog & Artifacts
+| Scenario | Focus Area | Step Screenshots Saved In |
+| :--- | :--- | :--- |
+| `movement` | Tactical movement, Hold orders, SVG arrows, turn advance | `artifacts/e2e/movement_and_orders/` |
+| `sandbox` | Lobby launch, War Room hypothetical orders, multi-power control | `artifacts/e2e/sandbox_isolation/` |
+| `blunder` | Self-bounce detection, Sanity Check modal, override flow | `artifacts/e2e/blunder_sanity_modal/` |
+| `retreats` | Dislodged unit ring, valid retreat selection, Fall advance | `artifacts/e2e/retreats_dislodgement/` |
+| `builds` | Winter adjustments, surplus SC calculations, home SC build placement | `artifacts/e2e/winter_builds/` |
+
+Each scenario exports a `summary.json` containing the execution status (`PASSED`/`FAILED`), step-by-step screenshot paths, and any browser console/runtime errors.
+
+---
+
 ## Repository Governance & Branch Protection (`main`)
 
 The `main` branch is protected with automated quality gates and configuration-as-code managed via [`.github/settings.yml`](../../.github/settings.yml):

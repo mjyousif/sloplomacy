@@ -85,7 +85,7 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
             <Clock size={14} /> Turn Clock
           </div>
           {isHost ? (
-            <button type="button" className="phase-timer-primary" onClick={onStart}>
+            <button type="button" data-testid="btn-timer-start" className="phase-timer-primary" onClick={onStart}>
               <Play size={13} /> Start First Vote
             </button>
           ) : (
@@ -137,6 +137,7 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
           {isPlayer && (
             <button
               type="button"
+              data-testid="btn-timer-ready"
               className={`phase-timer-primary ${amReady ? 'selected' : ''}`}
               aria-pressed={amReady}
               onClick={() => onReady(!amReady)}
@@ -164,6 +165,7 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
         {isPlayer && (
           <button
             type="button"
+            data-testid="btn-timer-extend"
             className={`phase-timer-extend ${askedForMore ? 'selected' : ''}`}
             aria-pressed={askedForMore}
             onClick={() => onExtend(!askedForMore)}

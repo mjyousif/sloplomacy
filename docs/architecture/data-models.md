@@ -208,6 +208,8 @@ interface GameParticipant {
 - `FinalizeRequest`: `{ power, force?, turn? }`
 - `TimerVoteRequest`: `{ power, choice: TimerChoice }`
 - `TimerToggleRequest`: `{ power, active?: boolean }`
+- `ScenarioRequest`: `{ scenario_id, active_power? }`
+- `SeedScenarioRequest`: `{ scenario_id, game_id?, active_power? }`
 
 ---
 

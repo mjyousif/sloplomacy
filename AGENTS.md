@@ -64,6 +64,23 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   npm run build
   ```
 
+### LLM-Driven Interactive E2E Verification (`scripts/e2e_runner.py`)
+- **List All Scenarios**:
+  ```bash
+  python scripts/e2e_runner.py list
+  ```
+- **Run Specific Scenario** (`movement`, `sandbox`, `blunder`, `retreats`, `builds`):
+  ```bash
+  python scripts/e2e_runner.py run movement
+  # Or run in a visible browser window:
+  python scripts/e2e_runner.py run movement --headed
+  ```
+- **Execute Full E2E Scenario Suite**:
+  ```bash
+  python scripts/e2e_runner.py run --all
+  ```
+  *(Captures step screenshots in `artifacts/e2e/<scenario>/` and logs console telemetry for multimodal inspection)*
+
 ### Cloud Run & Infrastructure (`scripts/deploy.*`, `terraform/`)
 - **Automated Scale-to-Zero Deploy**:
   ```powershell
@@ -266,7 +283,15 @@ The game cycles through three standard phases per year:
 - Retain all existing code comments, docstrings, and architectural explanations unless directly superseded by new logic.
 - Do not produce stale or misleading documentation when authoring or refactoring features.
 
-### 5. Pull Request & Branch Protection Governance
+### 5. LLM-Driven Interactive E2E Verification Protocol
+AI coding agents and contributors should run the relevant interactive E2E scenario whenever touching the SVG map canvas (`EuropeMap.tsx`), tactical HUD/sidebars (`MacroSidebar.tsx`, `ToolsSidebar.tsx`), modal dialogs, or adjudication state flows.
+- **Workflow**:
+  1. Run scenario: `python scripts/e2e_runner.py run <scenario_name>`.
+  2. Inspect the generated step screenshots in `artifacts/e2e/<scenario_name>/` using multimodal vision (`read_file`).
+  3. Verify visual sanity: ensure order vectors point to intended provinces, unit tokens and retreat rings render cleanly, and no console exceptions are logged in `summary.json`.
+  4. Attach passing screenshot paths or summaries to the task review or PR.
+
+### 6. Pull Request & Branch Protection Governance
 - **Branch Protection on `main`**: Direct pushes to `main` are prohibited. All modifications must be submitted via pull request.
 - **Mandatory Review**: PRs require at least 1 approving code review before merging (`required_approving_review_count: 1`). Pushing new commits automatically dismisses previous reviews.
 - **CI Quality Gates**: PRs must pass `Backend Tests (Pytest)` and `Frontend Tests & Build Check` before they are eligible for merge.

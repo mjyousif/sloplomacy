@@ -1025,6 +1025,7 @@ export function App() {
           <nav className="top-view-nav">
             <button
               type="button"
+              data-testid="nav-tab-sandbox"
               className={`nav-tab-btn ${viewMode === 'sandbox' ? 'active' : ''}`}
               onClick={handleEnterSoloSandbox}
               title="Open standalone 7-power practice laboratory"
@@ -1047,7 +1048,7 @@ export function App() {
         {/* Center Board Readout (Only when viewing Map Board) */}
         {viewMode !== 'lobby' && (
           <div className="header-center-telemetry">
-            <div className="turn-chronicle-pill">
+            <div className="turn-chronicle-pill" data-testid="turn-chronicle-pill">
               <Calendar size={15} className="turn-cal-icon" />
               <span className="turn-season-text">
                 {gameState.season.toUpperCase()} {gameState.year}
