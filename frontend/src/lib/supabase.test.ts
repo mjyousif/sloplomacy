@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from 'vitest';
 import {
+  fetchAccountDisplayPrefs,
+  saveAccountDisplayPrefs,
   isSupabaseConfigured,
   getAuthHeaders,
   signInWithEmailPassword,
@@ -9,6 +11,12 @@ import {
   subscribeToAuthChanges,
 } from './supabase';
 import { AuthUser } from '../types/diplomacy';
+
+const supabaseAuth = vi.hoisted(() => ({ getUser: vi.fn(), updateUser: vi.fn() }));
+
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: () => ({ auth: supabaseAuth }),
+}));
 
 describe('supabase auth & local fallback helper', () => {
   beforeAll(() => {
@@ -94,5 +102,83 @@ describe('supabase auth & local fallback helper', () => {
     await signOutUser();
     const afterSignOut = await getAuthHeaders();
     expect(afterSignOut).toEqual({});
+  });
+});
+
+describe('display preferences on an account', () => {
+  const prefs = { pieceStyle: 'flags', unitMark: 'vehicles' };
+  const demoUser = (id: string): AuthUser => ({
+    id,
+    email: `${id}@local.test`,
+    displayName: id,
+    isLocalDemo: true,
+  });
+
+  describe('local demo accounts', () => {
+    it('keeps each account\'s choice separate', async () => {
+      await saveAccountDisplayPrefs(demoUser('one'), prefs);
+
+      expect((await fetchAccountDisplayPrefs(demoUser('one'))).prefs).toEqual(prefs);
+      expect((await fetchAccountDisplayPrefs(demoUser('two'))).prefs).toBeNull();
+    });
+  });
+
+  describe('real accounts', () => {
+    const account = demoUser('real');
+    let api: typeof import('./supabase');
+
+    beforeEach(async () => {
+      supabaseAuth.getUser.mockReset();
+      supabaseAuth.updateUser.mockReset();
+      vi.resetModules();
+      vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
+      vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon-key');
+      api = await import('./supabase');
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('reads the saved value from the server', async () => {
+      supabaseAuth.getUser.mockResolvedValue({
+        data: { user: { user_metadata: { display_prefs: prefs } } },
+        error: null,
+      });
+
+      expect(await api.fetchAccountDisplayPrefs(account)).toEqual({ prefs, error: null });
+    });
+
+    it('reports an account with nothing saved as empty, not as a failure', async () => {
+      supabaseAuth.getUser.mockResolvedValue({
+        data: { user: { user_metadata: { display_name: 'Churchill' } } },
+        error: null,
+      });
+
+      expect(await api.fetchAccountDisplayPrefs(account)).toEqual({ prefs: null, error: null });
+    });
+
+    it('reports a failed read as an error, so it can never pass for an empty account', async () => {
+      supabaseAuth.getUser.mockResolvedValue({ data: { user: null }, error: { message: 'offline' } });
+      expect((await api.fetchAccountDisplayPrefs(account)).error).toBe('offline');
+
+      supabaseAuth.getUser.mockRejectedValue(new Error('network down'));
+      expect((await api.fetchAccountDisplayPrefs(account)).error).toBe('network down');
+    });
+
+    it('saves into user metadata', async () => {
+      supabaseAuth.updateUser.mockResolvedValue({ error: null });
+
+      expect(await api.saveAccountDisplayPrefs(account, prefs)).toEqual({ error: null });
+      expect(supabaseAuth.updateUser).toHaveBeenCalledWith({ data: { display_prefs: prefs } });
+    });
+
+    it('reports a failed save', async () => {
+      supabaseAuth.updateUser.mockResolvedValue({ error: { message: 'rejected' } });
+      expect((await api.saveAccountDisplayPrefs(account, prefs)).error).toBe('rejected');
+
+      supabaseAuth.updateUser.mockRejectedValue(new Error('network down'));
+      expect((await api.saveAccountDisplayPrefs(account, prefs)).error).toBe('network down');
+    });
   });
 });

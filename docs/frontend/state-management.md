@@ -14,6 +14,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `lockedPower` | `Power \| null` | Match | Claimed sovereign power for active player in multiplayer matches. `playerPower`, derived by `resolvePlayerPower`, is what the app uses as the player's power: this seat in multiplayer, `gameState.active_power` in a sandbox. |
 | `authUser` | `AuthUser \| null` | Auth | Authenticated user profile from Supabase (or local dev mode). |
 | `authModalOpen` | `boolean` | Modal | Controls visibility of Supabase auth dialogue. |
+| `displayPrefs` | `DisplayPrefs` | Display | This player's piece style and army and fleet marks, from `useDisplayPrefs`. |
 | `gamesList` | `MultiplayerGameSummary[]` | Lobby | Roster of public matches, lobbies, and sandboxes. |
 | `gameState` | `GameState \| null` | Global | Authoritative match state received from FastAPI. |
 | `provinces` | `Record<string, ProvinceInfo>` | Global | Static map topology metadata fetched once on bootstrap. |
@@ -35,6 +36,26 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `hypotheticalMatchTimer` | `PhaseTimer \| null` | Multiplayer | The real match's clock while `sandboxGameId` is set, because the private copy has none. Components read the derived `matchTimer`. |
 | `toastBanner` | `string \| null` | Banner | Auto-expiring toast message for user notifications. |
 | `wsConnected` | `boolean` | Network | Active real-time WebSocket connection to room feed or lobby. |
+
+---
+
+## Display Preferences (`useDisplayPrefs`)
+
+`hooks/useDisplayPrefs.ts` holds each player's choice of piece style and marks. It never touches game state or the FastAPI backend, because it only changes what that player sees.
+
+| Situation | What happens |
+| :--- | :--- |
+| Page load | The copy in `localStorage` applies at once, so the wrong style never flashes. Anyone with none gets `DEFAULT_DISPLAY_PREFS`. |
+| Changing a setting | Applies immediately and saves on the device, then saves to the account after 600ms, so clicking through options doesn't send a request per click. |
+| Signing in, account has a saved value | The account wins, and the device copy is updated. |
+| Signing in, account has none | The device's choice is uploaded. Someone who never chose uploads nothing, so they keep following the default. |
+| Changing a setting while the account is loading | The newer change is kept and saved over what the account held. |
+| An account read or save fails | The local value stays, and the menu says so. **A failed read is never treated as an empty account**, because the upload that follows would overwrite the player's saved choice. |
+| Signing out | The device keeps its last choice. |
+
+Accounts store the value in Supabase `user_metadata.display_prefs`, next to `display_name`. It needs no table, migration or backend route. `fetchAccountDisplayPrefs` calls `supabase.auth.getUser()` rather than reading the cached session, so a choice made on another device appears on the next page load. Tabs already open pick up a change on their next load.
+
+Players can edit their own metadata, so everything read back goes through `sanitizeDisplayPrefs` before it reaches the map. Local demo accounts use a per-user `localStorage` key instead, so the same flow works without Supabase.
 
 ---
 

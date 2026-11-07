@@ -254,3 +254,60 @@ export async function signOutUser(): Promise<void> {
   }
   setLocalStoredUser(null);
 }
+
+const DISPLAY_PREFS_METADATA_KEY = 'display_prefs';
+const LOCAL_ACCOUNT_PREFS_PREFIX = 'diplomacy_1901_display_prefs_';
+
+export interface AccountPrefsRead {
+  /** The raw saved value, or null if this account has never saved one. */
+  prefs: unknown | null;
+  /** Set when the read failed, which says nothing about what the account holds. */
+  error: string | null;
+}
+
+/**
+ * Reads display preferences from the account. This asks the server rather than
+ * the cached session, so a choice made on another device shows up here.
+ */
+export async function fetchAccountDisplayPrefs(user: AuthUser): Promise<AccountPrefsRead> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) return { prefs: null, error: error.message };
+      return { prefs: data.user?.user_metadata?.[DISPLAY_PREFS_METADATA_KEY] ?? null, error: null };
+    } catch (err) {
+      return { prefs: null, error: err instanceof Error ? err.message : 'Account unavailable.' };
+    }
+  }
+
+  // Local dev mode fallback: each demo account keeps its own copy on this device
+  try {
+    const raw = localStorage.getItem(`${LOCAL_ACCOUNT_PREFS_PREFIX}${user.id}`);
+    return { prefs: raw ? JSON.parse(raw) : null, error: null };
+  } catch {
+    return { prefs: null, error: null };
+  }
+}
+
+export async function saveAccountDisplayPrefs(
+  user: AuthUser,
+  prefs: unknown
+): Promise<{ error: string | null }> {
+  if (supabase) {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { [DISPLAY_PREFS_METADATA_KEY]: prefs },
+      });
+      return { error: error ? error.message : null };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Account unavailable.' };
+    }
+  }
+
+  try {
+    localStorage.setItem(`${LOCAL_ACCOUNT_PREFS_PREFIX}${user.id}`, JSON.stringify(prefs));
+  } catch {
+    // ignore storage errors
+  }
+  return { error: null };
+}

@@ -6,7 +6,7 @@ The visual centerpiece of the application is `frontend/src/components/EuropeMap.
 
 ## Geometry & Coordinate System
 
-- **ViewBox**: Defined in `frontend/src/data/europeMapGeometry.ts` (`MAP_VIEWBOX = "0 0 2000 1500"`).
+- **ViewBox**: Defined in `frontend/src/data/europeMapGeometry.ts` (`MAP_VIEWBOX = "0 0 1524 1357"`).
 - **Provinces & Borders**: Exact SVG boundary paths for all 76 provinces (including neutral territories and coastal divisions) extracted from authentic historical cartography (`AUTHENTIC_BACKGROUND_SVG` and `AUTHENTIC_FOREGROUND_SVG`).
 - **Centroids**: Pre-calculated `Point { x, y }` coordinates for each province and split coast (e.g. `STP_NC`, `STP_SC`), determining unit placement and vector arrow anchors.
 
@@ -30,7 +30,7 @@ The map features smooth multi-modal navigation without external library bloat:
 The map is rendered as a layered SVG pipeline:
 
 ```
-<svg viewBox="0 0 2000 1500">
+<svg viewBox="0 0 1524 1357">
   │
   ├── 1. Static Defs Layer (<defs>): Drop shadows, glow filters, arrow markers
   ├── 2. Background Map Layer: Landmass contours, ocean bathymetry, topography
@@ -41,34 +41,72 @@ The map is rendered as a layered SVG pipeline:
   │      - Amber glow on valid retreat destinations during Retreats phase
   │      - Gold pulsing border on vacant home SCs during Winter Adjustments
   │
-  ├── 4. Supply Center Layer:
+  ├── 4. Province Names Layer (MapNamesLayer):
+  │      - Classic: the original typesetting from AUTHENTIC_NAMES_SVG
+  │      - Other styles: shared sea names and coast tags, plus land names
+  │        placed by the active layout, with a parchment halo
+  │
+  ├── 5. Supply Center Layer:
   │      - Circular markers with gold star / power crest
   │      - Distinguishes neutral vs power-owned centers
+  │      - Position, size and presence follow the active piece style
   │
-  ├── 5. Order Vector Layer:
+  ├── 6. Order Vector Layer:
   │      - Blue curved bezier arrows for MOVE orders
   │      - Teal dashed arrows with target reticles for SUPPORT orders
   │      - Purple wavy arrows for CONVOY paths
   │      - Grey circular shields for HOLD orders
   │      - Amber arrows for RETREAT orders
   │
-  ├── 6. Tactical Simulation & Clash Layer:
+  ├── 7. Tactical Simulation & Clash Layer:
   │      - Red crossed swords (⚔) at contested provinces
   │      - Amber bounce markers (💥) where attacks fail
   │      - Scissors (✂) denoting cut supports
   │      - Dislodged unit badges with retreat indicators
   │
-  ├── 7. Unit Token Layer:
-  │      - Circular army / fleet tokens with power badges
+  ├── 8. Unit Token Layer:
+  │      - Army / fleet pieces drawn by MapPiece in the active style and mark
   │      - Offset dislodged unit tokens with dashed red border
   │      - Semi-transparent phantom tokens for pending BUILD orders
   │      - Selection ring and active power indicator
   │
-  └── 8. Floating Action Menu / HUD:
+  └── 9. Floating Action Menu / HUD:
          - Contextual radial quick-actions when a unit is clicked
          - Simulation summary banner
 </svg>
 ```
+
+---
+
+## Piece Styles & Layouts
+
+Each player chooses how pieces look from the display settings menu in the top bar. This changes only what that player sees, so `pieceStyle` and `unitMark` are plain props on `EuropeMap`, and neither touches game state or the server. See [State Management](state-management.md#display-preferences-usedisplayprefs).
+
+| Style | Token | Supply center star | Names |
+| :--- | :--- | :--- | :--- |
+| `classic` | Full size (`r=17`) | Separate, at `scPos` | The original `AUTHENTIC_NAMES_SVG` |
+| `seated` (default) | 76% size | Shares the unit point. Alone when empty, on the token's rim when occupied | Fitted around the token |
+| `compact` | 65% size | Small separate coin | Fitted around the token and star |
+| `flags` | Base point with a flag on a pole, which may overhang borders and sea | Coin at the base | Fitted around the base and flag |
+| `nameplate` | None: the name lights up as a coloured pill | Inside the name or pill | The piece itself |
+
+![The four fitted piece styles with every province occupied](images/display-settings-piece-styles.jpg)
+
+Marks show whether a piece is an army or a fleet: `icons` (crossed swords and a ship), `vehicles` (a tank and a warship), `nato` (the NATO armour symbol for armies, and an anchor in the round frame NATO uses at sea for fleets), or `letters` (`A` and `F`). Every style also tells the two apart by shape: tokens use a circle or a pentagon, flags a swallowtail or a pennant, and pills rounded or pointed ends.
+
+![The four army and fleet marks on Star seat pieces](images/display-settings-unit-marks.jpg)
+
+**Layouts (`data/mapLayouts.ts`)** hold each non-classic style's placements. A row records only what differs from the geometry: a province with no `unit` keeps its `unitPos`, and one with no `star` keeps its `scPos`. `getMapLayout(style)` returns the full layout. Tight provinces such as Liverpool can't hold a token and a name at full size, so their tokens move and their names shrink, with a floor of 12 units (11 for Edinburgh, Denmark and Liverpool).
+
+`mapLayouts.test.ts` checks every placement against the province outlines, so values can be edited by hand and the test reports any province that stops fitting. Text widths come from `data/mapTextMetrics.ts`, which holds Libre Baskerville Bold advance widths measured in the browser. Those widths also size the pills at render time.
+
+**Drawing (`components/MapPiece.tsx`)** is the only place piece bodies are drawn: units, simulation ghosts, winter builds and the previews in the settings menu all use `MapPiece`. `getPieceFrame` returns a `PieceFrame` for each style, which sets ring sizes, badge offsets, banner positions, the step-aside offset for a dislodged unit, and an invisible hit area that keeps small pieces as easy to click as the original token.
+
+`getProvincePoint` and `getUnitPoint` read the active layout, so arrows, support lines, convoy paths, reticles and the floating unit menu all follow the pieces.
+
+![Classic beside Star seat with every province occupied](images/display-settings-before-after.jpg)
+
+**Classic must stay pixel-identical to the original map.** With `letters`, its values in `getPieceFrame` and `DISC_SHAPES` are the original numbers. One known oddity is kept for this reason: `EUROPE_PROVINCE_GEOMETRY.CLY.unitPos` lies in the North Atlantic, so a Clyde unit draws on water in Classic. The other styles move it ashore.
 
 ---
 
