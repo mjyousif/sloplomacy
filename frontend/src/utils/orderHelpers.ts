@@ -76,6 +76,21 @@ export function canUnitSupportInto(
   return reachable.some((r) => r.province === targetProvince);
 }
 
+export type OrderMenuButton = 'MOVE' | 'HOLD' | 'SUPPORT' | 'CONVOY';
+
+// Picks the one button a unit's menu lights up. A saved Hold shows when the menu opens, because
+// Hold ends the selection and has no mode of its own, and gives way once the player picks a mode.
+export function getActiveOrderButton(
+  interactionMode: string,
+  order: Order | undefined,
+  moveModeChosen: boolean
+): OrderMenuButton {
+  if (interactionMode.startsWith('SUPPORT')) return 'SUPPORT';
+  if (interactionMode.startsWith('CONVOY')) return 'CONVOY';
+  if (!moveModeChosen && order?.order_type === 'HOLD' && order.is_explicit) return 'HOLD';
+  return 'MOVE';
+}
+
 export function formatOrderSummary(
   order: Order | undefined,
   provinces: Record<string, ProvinceInfo>,

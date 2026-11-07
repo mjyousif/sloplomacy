@@ -5,6 +5,7 @@ import {
   getValidRetreatDestinations,
   canUnitSupportInto,
   formatOrderSummary,
+  getActiveOrderButton,
   getConsensusStatusInfo,
 } from './orderHelpers';
 import { GameParticipant, Order, Power, ProvinceInfo, Unit } from '../types/diplomacy';
@@ -19,6 +20,28 @@ describe('splitProvinceCode', () => {
     expect(splitProvinceCode('spa/nc')).toEqual({ base: 'SPA', coast: 'NC' });
     expect(splitProvinceCode('STP/SC')).toEqual({ base: 'STP', coast: 'SC' });
     expect(splitProvinceCode('bul/ec')).toEqual({ base: 'BUL', coast: 'EC' });
+  });
+});
+
+describe('getActiveOrderButton', () => {
+  const holdOrder = (isExplicit: boolean) =>
+    ({ order_type: 'HOLD', is_explicit: isExplicit }) as Order;
+
+  it('defaults to Move, including for a default hold the player never chose', () => {
+    expect(getActiveOrderButton('MOVE', undefined, false)).toBe('MOVE');
+    expect(getActiveOrderButton('MOVE', holdOrder(false), false)).toBe('MOVE');
+  });
+
+  it('shows a saved Hold when the menu opens', () => {
+    expect(getActiveOrderButton('MOVE', holdOrder(true), false)).toBe('HOLD');
+  });
+
+  it('lets a chosen mode replace a saved Hold', () => {
+    expect(getActiveOrderButton('MOVE', holdOrder(true), true)).toBe('MOVE');
+    expect(getActiveOrderButton('SUPPORT_PICK_UNIT', holdOrder(true), false)).toBe('SUPPORT');
+    expect(getActiveOrderButton('SUPPORT_PICK_TARGET', holdOrder(true), false)).toBe('SUPPORT');
+    expect(getActiveOrderButton('CONVOY_PICK_ARMY', holdOrder(true), false)).toBe('CONVOY');
+    expect(getActiveOrderButton('CONVOY_PICK_TARGET', holdOrder(true), false)).toBe('CONVOY');
   });
 });
 

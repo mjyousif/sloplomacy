@@ -23,6 +23,7 @@ import {
   canUnitSupportInto,
   getReachableDestinations,
   getValidRetreatDestinations,
+  getActiveOrderButton,
 } from '../utils/orderHelpers';
 import {
   clampCamera,
@@ -387,20 +388,22 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
 
   // Draggable Floating Menu State (also updated via ref during drag)
   const menuDragOffsetRef = useRef<Point>({ x: 0, y: 0 });
-  const isDraggingMenuRef = useRef<boolean>(false);
   const menuDragStartRef = useRef<Point>({ x: 0, y: 0 });
 
   const [hoveredProv, setHoveredProv] = useState<string | null>(null);
   const [interactionMode, setInteractionMode] = useState<MapInteractionMode>('MOVE');
+  // True once the player presses Move on this selection, which replaces a saved Hold's highlight
+  const [moveModeChosen, setMoveModeChosen] = useState<boolean>(false);
   const [pendingAuxOrigin, setPendingAuxOrigin] = useState<string | null>(null);
   const [pendingCoastChoice, setPendingCoastChoice] = useState<{
     target: string;
     coasts: string[];
   } | null>(null);
 
-  // Reset menu drag offset whenever a different unit is selected
+  // Reset menu drag offset and chosen mode whenever a different unit is selected
   useEffect(() => {
     menuDragOffsetRef.current = { x: 0, y: 0 };
+    setMoveModeChosen(false);
   }, [selectedUnitId]);
 
   const isAdjustmentPhase = phase === 'Adjustments' || season === 'Winter';
@@ -910,6 +913,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
   const getSelectedUnitFloatingPosition = useCallback((): {
     left: number;
     top: number;
+    anchorLeft: number;
+    anchorTop: number;
   } | null => {
     const anchorPt = selectedUnit
       ? getUnitPoint(selectedUnit)
@@ -964,6 +969,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     return {
       left: Math.max(10, Math.min(W - menuW - 10, bestCandidate.x + menuDragOffsetRef.current.x)),
       top: Math.max(10, Math.min(H - menuH - 10, bestCandidate.y + menuDragOffsetRef.current.y)),
+      anchorLeft: bestCandidate.x,
+      anchorTop: bestCandidate.y,
     };
   }, [selectedUnit, selectedBuildProv, reachableList, svgPointToScreen, getUnitPoint]);
 
@@ -1054,14 +1061,6 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDraggingMenuRef.current) {
-      menuDragOffsetRef.current = {
-        x: e.clientX - menuDragStartRef.current.x,
-        y: e.clientY - menuDragStartRef.current.y,
-      };
-      scheduleCameraSync();
-      return;
-    }
     if (!isPanningRef.current) return;
     const dist = Math.hypot(
       e.clientX - mouseDownClientRef.current.x,
@@ -1102,10 +1101,37 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
       isPanningRef.current = false;
       svgRef.current?.classList.remove('panning', 'actively-dragging');
     }
-    if (isDraggingMenuRef.current) {
-      isDraggingMenuRef.current = false;
-      floatingMenuRef.current?.classList.remove('dragging');
+  };
+
+  // The cursor stays over the menu during a drag, so the map's own handlers never see it.
+  // Capturing the pointer sends every move and the release to the header instead, wherever
+  // the cursor goes. A capture also takes the click, so buttons in the header must not start one.
+  const handleMenuDragStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || (e.target as Element).closest('button')) return;
+    const pos = getSelectedUnitFloatingPosition();
+    if (pos) {
+      // Start from where the menu is, since an earlier drag may have run past the map edge
+      menuDragOffsetRef.current = { x: pos.left - pos.anchorLeft, y: pos.top - pos.anchorTop };
     }
+    menuDragStartRef.current = {
+      x: e.clientX - menuDragOffsetRef.current.x,
+      y: e.clientY - menuDragOffsetRef.current.y,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    floatingMenuRef.current?.classList.add('dragging');
+  };
+
+  const handleMenuDragMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+    menuDragOffsetRef.current = {
+      x: e.clientX - menuDragStartRef.current.x,
+      y: e.clientY - menuDragStartRef.current.y,
+    };
+    scheduleCameraSync();
+  };
+
+  const handleMenuDragEnd = () => {
+    floatingMenuRef.current?.classList.remove('dragging');
   };
 
   const stepZoom = useCallback((delta: number) => {
@@ -1141,6 +1167,11 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
   }, [onZoomChange]);
 
   const floatingPos = getSelectedUnitFloatingPosition();
+  const activeOrderButton = getActiveOrderButton(
+    interactionMode,
+    selectedUnit ? orders[selectedUnit.id] : undefined,
+    moveModeChosen
+  );
 
   // Precompute Move midpoints so Support arrows point directly to the move arrow they support
   const moveMidpointsByOrigin: Record<string, Point> = {};
@@ -1224,15 +1255,9 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
           <div
             className="floating-menu-header"
             title="Drag to move this menu anywhere"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              isDraggingMenuRef.current = true;
-              floatingMenuRef.current?.classList.add('dragging');
-              menuDragStartRef.current = {
-                x: e.clientX - menuDragOffsetRef.current.x,
-                y: e.clientY - menuDragOffsetRef.current.y,
-              };
-            }}
+            onPointerDown={handleMenuDragStart}
+            onPointerMove={handleMenuDragMove}
+            onLostPointerCapture={handleMenuDragEnd}
           >
             <div className="floating-unit-title">
               <GripHorizontal size={13} className="floating-drag-grip" />
@@ -1373,15 +1398,9 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
           <div
             className="floating-menu-header"
             title="Drag to move this menu anywhere"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              isDraggingMenuRef.current = true;
-              floatingMenuRef.current?.classList.add('dragging');
-              menuDragStartRef.current = {
-                x: e.clientX - menuDragOffsetRef.current.x,
-                y: e.clientY - menuDragOffsetRef.current.y,
-              };
-            }}
+            onPointerDown={handleMenuDragStart}
+            onPointerMove={handleMenuDragMove}
+            onLostPointerCapture={handleMenuDragEnd}
           >
             <div className="floating-unit-title">
               <GripHorizontal size={13} className="floating-drag-grip" />
@@ -1507,9 +1526,10 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
             <>
               <div className="floating-menu-buttons">
                 <button
-                  className={`tactical-mode-btn ${interactionMode === 'MOVE' ? 'active' : ''}`}
+                  className={`tactical-mode-btn ${activeOrderButton === 'MOVE' ? 'active' : ''}`}
                   onClick={() => {
                     setInteractionMode('MOVE');
+                    setMoveModeChosen(true);
                     setPendingAuxOrigin(null);
                   }}
                 >
@@ -1519,10 +1539,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
 
                 <button
                   className={`tactical-mode-btn ${
-                    orders[selectedUnit.id]?.order_type === 'HOLD' &&
-                    orders[selectedUnit.id]?.is_explicit
-                      ? 'active-hold'
-                      : ''
+                    activeOrderButton === 'HOLD' ? 'active-hold' : ''
                   }`}
                   onClick={() => {
                     onUpdateOrder({
@@ -1547,7 +1564,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
 
                 <button
                   className={`tactical-mode-btn ${
-                    interactionMode.startsWith('SUPPORT') ? 'active' : ''
+                    activeOrderButton === 'SUPPORT' ? 'active' : ''
                   }`}
                   onClick={() => {
                     setInteractionMode('SUPPORT_PICK_UNIT');
@@ -1562,7 +1579,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   provinces[selectedUnit.province]?.type === 'SEA' && (
                     <button
                       className={`tactical-mode-btn ${
-                        interactionMode.startsWith('CONVOY') ? 'active' : ''
+                        activeOrderButton === 'CONVOY' ? 'active' : ''
                       }`}
                       onClick={() => {
                         setInteractionMode('CONVOY_PICK_ARMY');

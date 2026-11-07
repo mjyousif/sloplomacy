@@ -78,6 +78,12 @@ The map is rendered as a layered SVG pipeline:
 
 ---
 
+## Floating Unit Menu
+- **Highlighted Button**: `getActiveOrderButton` lights exactly one of Move, Hold, Support, or Convoy. The menu opens on Move, or on Hold if the unit has an explicit `HOLD` order. Pressing Move, Support, or Convoy takes the highlight from a saved Hold. The saved order itself stays until a new one replaces it.
+- **Dragging**: Press and hold the menu header, then drag. The header captures the pointer, so the drag follows the cursor over the menu and outside the map, and it ends on release. Buttons in the header do not start a drag.
+
+---
+
 ## Click-to-Order Interaction Modes
 
 A player can only control their own units, and other powers' units are marked `foreign-locked`. Every control check goes through `canEditAnyPower`, which is true in the sandbox and for a host with Direct-Edit on (`directEditActive`). That also decides whose orders and diagnostics are drawn.
