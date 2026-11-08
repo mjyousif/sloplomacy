@@ -7,7 +7,7 @@ from collections import defaultdict
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 import uuid
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
 from auth import AuthUser, get_current_user
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -92,6 +92,20 @@ else:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """
+    Defense-in-depth HTTP security headers to protect against clickjacking,
+    MIME-sniffing, referrer leakage, and unauthorized browser feature access.
+    """
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
+    return response
 
 SCENARIO_IDS = {"standard_1901", "tactical_blunders_demo"}
 FIRST_YEAR = 1901
