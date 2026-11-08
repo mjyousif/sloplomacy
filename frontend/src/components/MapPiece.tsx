@@ -1,7 +1,6 @@
 import { Point } from '../data/europeMapGeometry';
 import { FlagDirection } from '../data/mapLayouts';
 import { MAP_NAME_FONT, measureMapName } from '../data/mapTextMetrics';
-import { memo } from 'react';
 import { PieceStyle, UnitMark } from '../utils/displayPrefs';
 
 export type PieceUnitType = 'A' | 'F';
@@ -561,14 +560,8 @@ function PillPiece({
   );
 }
 
-/**
- * One unit's body, for any style and mark. The map draws rings and badges around it.
- *
- * ⚡ Bolt: Wrapped in React.memo to prevent unnecessary re-renders when the EuropeMap
- * re-renders (e.g., during order planning or simulation updates).
- * Impact: Prevents re-rendering 34+ MapPiece components when unchanged.
- */
-export const MapPiece = memo(function MapPiece({
+/** One unit's body, for any style and mark. The map draws rings and badges around it. */
+export function MapPiece({
   style,
   mark,
   unitType,
@@ -622,4 +615,4 @@ export const MapPiece = memo(function MapPiece({
       )}
     </>
   );
-});
+}

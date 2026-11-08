@@ -1,3 +1,3 @@
-## 2024-03-20 - Memoizing MapPiece
-**Learning:** Components heavily reused inside dynamic SVG maps (like MapPiece rendered for every unit) are a massive source of re-renders if left unmemoized.
-**Action:** Always memoize these lower-level render components in interactive canvases.
+## 2024-03-20 - Failed MapPiece Memoization
+**Learning:** Wrapping a component in `React.memo` (like `MapPiece`) yields a 0% cache hit rate if its props (like `frame`) receive newly allocated objects on every parent render. This adds prop-comparison overhead without skipping any renders.
+**Action:** Before memoizing a component, verify that its props are stable (e.g., using `useMemo` or hoisting object creation). Optimize at the container level if prop stability is difficult.
