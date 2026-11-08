@@ -1,0 +1,4 @@
+# Development and CI linting, formatting, and code quality tools.
+# Runtime dependencies and test runners are inherited from requirements.txt.
+-r requirements.txt
+ruff>=0.17.0

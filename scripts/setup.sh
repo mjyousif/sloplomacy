@@ -16,8 +16,10 @@ if [ ! -d "$BACKEND_DIR/.venv" ]; then
 fi
 PIP_CMD="$BACKEND_DIR/.venv/bin/pip"
 if [ ! -f "$PIP_CMD" ]; then PIP_CMD="pip"; fi
+PIP_REQ="$BACKEND_DIR/requirements-dev.txt"
+if [ ! -f "$PIP_REQ" ]; then PIP_REQ="$BACKEND_DIR/requirements.txt"; fi
 "$PIP_CMD" install --upgrade pip
-"$PIP_CMD" install -r "$BACKEND_DIR/requirements.txt"
+"$PIP_CMD" install -r "$PIP_REQ"
 echo "[✓] Backend environment ready!"
 
 # 2. Frontend npm

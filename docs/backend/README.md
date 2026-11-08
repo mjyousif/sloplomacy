@@ -28,7 +28,8 @@ backend/
 ├── test_websocket_sync.py   # Real-time WebSocket room & lobby synchronization tests
 ├── ws_testing.py            # Test helper: WebSocket receive with a time limit
 ├── requirements-runtime.txt # Python runtime dependencies (what the Docker image installs)
-└── requirements.txt         # Runtime dependencies plus test tools, for development and CI
+├── requirements.txt         # Runtime dependencies plus test tools, for CI tests
+└── requirements-dev.txt     # Runtime + test + code quality tools (Ruff) for development
 ```
 
 ---
