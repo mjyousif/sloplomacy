@@ -1,4 +1,4 @@
-import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
   AUTHENTIC_BACKGROUND_SVG,
   AUTHENTIC_DEFS_SVG,
@@ -490,17 +490,20 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
   const isAdjustmentPhase = phase === 'Adjustments' || season === 'Winter';
   const isRetreatPhase = phase === 'Retreats';
 
-  const unitsByProv: Record<string, Unit> = {};
-  const dislodgedByProv: Record<string, Unit> = {};
-  const unitsById: Record<string, Unit> = {};
-  for (const u of units) {
-    if (u.is_dislodged) {
-      dislodgedByProv[u.province] = u;
-    } else {
-      unitsByProv[u.province] = u;
+  const { unitsByProv, dislodgedByProv, unitsById } = useMemo(() => {
+    const byProv: Record<string, Unit> = {};
+    const dislodged: Record<string, Unit> = {};
+    const byId: Record<string, Unit> = {};
+    for (const u of units) {
+      if (u.is_dislodged) {
+        dislodged[u.province] = u;
+      } else {
+        byProv[u.province] = u;
+      }
+      byId[u.id] = u;
     }
-    unitsById[u.id] = u;
-  }
+    return { unitsByProv: byProv, dislodgedByProv: dislodged, unitsById: byId };
+  }, [units]);
 
   const layout = getMapLayout(pieceStyle);
   const arrowScale = getPieceArrowScale(pieceStyle);
@@ -581,75 +584,90 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
       ? rawSelectedUnit
       : null;
 
-  const reachableList = selectedUnit
-    ? isRetreatPhase
-      ? getValidRetreatDestinations(selectedUnit, retreats, provinces)
-      : isAdjustmentPhase
-      ? []
-      : getReachableDestinations(selectedUnit, provinces)
-    : [];
-  const reachableMap: Record<string, string[]> = {};
-  for (const r of reachableList) {
-    reachableMap[r.province] = r.coasts;
-  }
-
-  // Only show issues for activePower unless foreign units can be edited
-  const visibleIssues = canEditAnyPower
-    ? issues
-    : issues.filter((i) => i.power === activePower);
-
-  const issuesByUnit: Record<string, ValidationIssue[]> = {};
-  const issuesByProvince: Record<string, ValidationIssue[]> = {};
-  for (const iss of visibleIssues) {
-    for (const uid of iss.unit_ids) {
-      if (!issuesByUnit[uid]) issuesByUnit[uid] = [];
-      issuesByUnit[uid].push(iss);
+  const { reachableList, reachableMap } = useMemo(() => {
+    const list = selectedUnit
+      ? isRetreatPhase
+        ? getValidRetreatDestinations(selectedUnit, retreats, provinces)
+        : isAdjustmentPhase
+        ? []
+        : getReachableDestinations(selectedUnit, provinces)
+      : [];
+    const map: Record<string, string[]> = {};
+    for (const r of list) {
+      map[r.province] = r.coasts;
     }
-    for (const pid of iss.provinces) {
-      if (!issuesByProvince[pid]) issuesByProvince[pid] = [];
-      issuesByProvince[pid].push(iss);
+    return { reachableList: list, reachableMap: map };
+  }, [selectedUnit, isRetreatPhase, isAdjustmentPhase, retreats, provinces]);
+
+  const { issuesByUnit, issuesByProvince } = useMemo(() => {
+    // Only show issues for activePower unless foreign units can be edited
+    const visibleIssues = canEditAnyPower
+      ? issues
+      : issues.filter((i) => i.power === activePower);
+
+    const byUnit: Record<string, ValidationIssue[]> = {};
+    const byProvince: Record<string, ValidationIssue[]> = {};
+    for (const iss of visibleIssues) {
+      for (const uid of iss.unit_ids) {
+        if (!byUnit[uid]) byUnit[uid] = [];
+        byUnit[uid].push(iss);
+      }
+      for (const pid of iss.provinces) {
+        if (!byProvince[pid]) byProvince[pid] = [];
+        byProvince[pid].push(iss);
+      }
     }
-  }
+    return { issuesByUnit: byUnit, issuesByProvince: byProvince };
+  }, [issues, canEditAnyPower, activePower]);
 
   // Filter which units' orders are visible on the map:
-  const isUnitOrderVisible = (u: Unit) => canEditAnyPower || u.power === activePower;
+  const isUnitOrderVisible = useCallback(
+    (u: Unit) => canEditAnyPower || u.power === activePower,
+    [canEditAnyPower, activePower]
+  );
 
   // Build homes map for Adjustments phase
-  const controllableBuildHomes: Record<string, Power> = {};
-  if (isAdjustmentPhase && builds) {
-    for (const [pwrStr, bInfo] of Object.entries(builds)) {
-      const pwr = pwrStr as Power;
-      if (bInfo.count > 0 && (pwr === activePower || canEditAnyPower)) {
-        for (const h of bInfo.homes) {
-          controllableBuildHomes[h] = pwr;
+  const controllableBuildHomes = useMemo(() => {
+    const homes: Record<string, Power> = {};
+    if (isAdjustmentPhase && builds) {
+      for (const [pwrStr, bInfo] of Object.entries(builds)) {
+        const pwr = pwrStr as Power;
+        if (bInfo.count > 0 && (pwr === activePower || canEditAnyPower)) {
+          for (const h of bInfo.homes) {
+            homes[h] = pwr;
+          }
         }
       }
     }
-  }
+    return homes;
+  }, [isAdjustmentPhase, builds, activePower, canEditAnyPower]);
 
   // Count how many valid supports each moving/holding unit receives among visible orders
-  const supportCountByUnitId: Record<string, number> = {};
-  if (!isRetreatPhase && !isAdjustmentPhase) {
-    for (const u of units) {
-      if (!isUnitOrderVisible(u) || u.is_dislodged) continue;
-      const o = orders[u.id];
-      if (o && o.order_type === 'SUPPORT' && o.aux_unit_origin && o.target) {
-        const targetUnit = unitsByProv[o.aux_unit_origin];
-        if (targetUnit && isUnitOrderVisible(targetUnit)) {
-          const targetOrder = orders[targetUnit.id];
-          const isHoldSup = o.aux_unit_origin === o.target;
-          if (
-            (isHoldSup && (!targetOrder || targetOrder.order_type !== 'MOVE')) ||
-            (!isHoldSup && targetOrder?.order_type === 'MOVE' && targetOrder?.target === o.target)
-          ) {
-            if (canUnitSupportInto(u, o.target, provinces)) {
-              supportCountByUnitId[targetUnit.id] = (supportCountByUnitId[targetUnit.id] || 0) + 1;
+  const supportCountByUnitId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (!isRetreatPhase && !isAdjustmentPhase) {
+      for (const u of units) {
+        if (!isUnitOrderVisible(u) || u.is_dislodged) continue;
+        const o = orders[u.id];
+        if (o && o.order_type === 'SUPPORT' && o.aux_unit_origin && o.target) {
+          const targetUnit = unitsByProv[o.aux_unit_origin];
+          if (targetUnit && isUnitOrderVisible(targetUnit)) {
+            const targetOrder = orders[targetUnit.id];
+            const isHoldSup = o.aux_unit_origin === o.target;
+            if (
+              (isHoldSup && (!targetOrder || targetOrder.order_type !== 'MOVE')) ||
+              (!isHoldSup && targetOrder?.order_type === 'MOVE' && targetOrder?.target === o.target)
+            ) {
+              if (canUnitSupportInto(u, o.target, provinces)) {
+                counts[targetUnit.id] = (counts[targetUnit.id] || 0) + 1;
+              }
             }
           }
         }
       }
     }
-  }
+    return counts;
+  }, [units, orders, unitsByProv, provinces, isUnitOrderVisible, isRetreatPhase, isAdjustmentPhase]);
 
   const clearSelection = () => {
     onSelectUnit(null);
@@ -1302,17 +1320,20 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
   );
 
   // Precompute Move midpoints so Support arrows point directly to the move arrow they support
-  const moveMidpointsByOrigin: Record<string, Point> = {};
-  for (const u of units) {
-    if (!isUnitOrderVisible(u) || u.is_dislodged) continue;
-    const o = orders[u.id];
-    if (o && o.order_type === 'MOVE' && o.target && EUROPE_PROVINCE_GEOMETRY[o.target]) {
-      const p1 = getUnitPoint(u);
-      const p2 = getProvincePoint(o.target, o.target_coast);
-      const { mid } = computeQuadraticCurve(p1, p2, 0.14, arrowScale);
-      moveMidpointsByOrigin[u.province] = mid;
+  const moveMidpointsByOrigin = useMemo(() => {
+    const midpoints: Record<string, Point> = {};
+    for (const u of units) {
+      if (!isUnitOrderVisible(u) || u.is_dislodged) continue;
+      const o = orders[u.id];
+      if (o && o.order_type === 'MOVE' && o.target && EUROPE_PROVINCE_GEOMETRY[o.target]) {
+        const p1 = getUnitPoint(u);
+        const p2 = getProvincePoint(o.target, o.target_coast);
+        const { mid } = computeQuadraticCurve(p1, p2, 0.14, arrowScale);
+        midpoints[u.province] = mid;
+      }
     }
-  }
+    return midpoints;
+  }, [units, orders, isUnitOrderVisible, getUnitPoint, getProvincePoint, arrowScale]);
 
   return (
     <div ref={containerRef} className="map-viewport-container">
