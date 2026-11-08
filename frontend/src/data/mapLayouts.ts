@@ -1,4 +1,8 @@
-import { AUTHENTIC_NAMES_SVG, EUROPE_PROVINCE_GEOMETRY, Point } from './europeMapGeometry';
+import {
+  AUTHENTIC_NAMES_SVG,
+  EUROPE_PROVINCE_GEOMETRY,
+  Point,
+} from './europeMapGeometry';
 import { PieceStyle } from '../utils/displayPrefs';
 
 /**
@@ -294,7 +298,10 @@ const NAMEPLATE_ROWS: Record<string, LayoutRow> = {
   YOR: { name: [402, 673.5, -35, 13] },
 };
 
-const ROWS: Record<Exclude<PieceStyle, 'classic'>, Record<string, LayoutRow>> = {
+const ROWS: Record<
+  Exclude<PieceStyle, 'classic'>,
+  Record<string, LayoutRow>
+> = {
   seated: SEATED_ROWS,
   compact: COMPACT_ROWS,
   flags: FLAG_ROWS,
@@ -303,11 +310,15 @@ const ROWS: Record<Exclude<PieceStyle, 'classic'>, Record<string, LayoutRow>> = 
 
 const toPoint = ([x, y]: [number, number]): Point => ({ x, y });
 
-function buildLayout(rows: Record<string, LayoutRow>, unitsOnNames = false): MapLayout {
+function buildLayout(
+  rows: Record<string, LayoutRow>,
+  unitsOnNames = false,
+): MapLayout {
   const layout: MapLayout = {};
   for (const [id, geom] of Object.entries(EUROPE_PROVINCE_GEOMETRY)) {
     const row = rows[id] ?? {};
-    const namePoint = unitsOnNames && row.name ? { x: row.name[0], y: row.name[1] } : null;
+    const namePoint =
+      unitsOnNames && row.name ? { x: row.name[0], y: row.name[1] } : null;
     layout[id] = {
       unit: namePoint ?? (row.unit ? toPoint(row.unit) : geom.unitPos),
       star: row.star ? toPoint(row.star) : geom.scPos,
@@ -342,13 +353,17 @@ const COAST_TAGS = new Set(['NC', 'SC', 'EC']);
  * Sea names and coast tags, which read the same in every style. They come out of
  * `AUTHENTIC_NAMES_SVG` so the classic map and the other styles can't drift apart.
  */
-export const SHARED_MAP_NAMES_SVG = [...AUTHENTIC_NAMES_SVG.matchAll(/<text\b[^>]*>.*?<\/text>/gs)]
+export const SHARED_MAP_NAMES_SVG = [
+  ...AUTHENTIC_NAMES_SVG.matchAll(/<text\b[^>]*>.*?<\/text>/gs),
+]
   .map(([markup]) => markup)
   .filter((markup) => {
     const text = [...markup.matchAll(/<tspan\b[^>]*>(.*?)<\/tspan>/gs)]
       .map(([, inner]) => inner.replace(/<[^>]+>/g, '').trim())
       .join(' ');
-    return COAST_TAGS.has(text) || (text.length > 3 && text === text.toUpperCase());
+    return (
+      COAST_TAGS.has(text) || (text.length > 3 && text === text.toUpperCase())
+    );
   })
   .join('');
 

@@ -61,7 +61,9 @@ function mapSupabaseUser(sbUser: any): AuthUser {
 
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   if (supabase) {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (session?.access_token) {
       return {
         Authorization: `Bearer ${session.access_token}`,
@@ -73,7 +75,9 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   const localUser = getLocalStoredUser();
   if (localUser) {
     const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
-    const payload = btoa(JSON.stringify({ sub: localUser.id, email: localUser.email }));
+    const payload = btoa(
+      JSON.stringify({ sub: localUser.id, email: localUser.email }),
+    );
     return {
       Authorization: `Bearer ${header}.${payload}.`,
     };
@@ -112,7 +116,7 @@ export function subscribeToAuthChanges(callback: AuthListener): () => void {
 
 export async function signInWithEmailPassword(
   email: string,
-  password: string
+  password: string,
 ): Promise<{ user: AuthUser | null; error: string | null }> {
   const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -146,7 +150,7 @@ export async function signInWithEmailPassword(
 export async function signUpWithEmailPassword(
   email: string,
   password: string,
-  displayName?: string
+  displayName?: string,
 ): Promise<{ user: AuthUser | null; error: string | null; message?: string }> {
   const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -194,7 +198,7 @@ export async function signUpWithEmailPassword(
 }
 
 export async function sendMagicLink(
-  email: string
+  email: string,
 ): Promise<{ error: string | null; sent: boolean }> {
   const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -224,7 +228,7 @@ export async function sendMagicLink(
 }
 
 export async function signInWithOAuthProvider(
-  provider: 'google' | 'discord' | 'github'
+  provider: 'google' | 'discord' | 'github',
 ): Promise<{ error: string | null }> {
   if (supabase) {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -269,14 +273,22 @@ export interface AccountPrefsRead {
  * Reads display preferences from the account. This asks the server rather than
  * the cached session, so a choice made on another device shows up here.
  */
-export async function fetchAccountDisplayPrefs(user: AuthUser): Promise<AccountPrefsRead> {
+export async function fetchAccountDisplayPrefs(
+  user: AuthUser,
+): Promise<AccountPrefsRead> {
   if (supabase) {
     try {
       const { data, error } = await supabase.auth.getUser();
       if (error) return { prefs: null, error: error.message };
-      return { prefs: data.user?.user_metadata?.[DISPLAY_PREFS_METADATA_KEY] ?? null, error: null };
+      return {
+        prefs: data.user?.user_metadata?.[DISPLAY_PREFS_METADATA_KEY] ?? null,
+        error: null,
+      };
     } catch (err) {
-      return { prefs: null, error: err instanceof Error ? err.message : 'Account unavailable.' };
+      return {
+        prefs: null,
+        error: err instanceof Error ? err.message : 'Account unavailable.',
+      };
     }
   }
 
@@ -291,7 +303,7 @@ export async function fetchAccountDisplayPrefs(user: AuthUser): Promise<AccountP
 
 export async function saveAccountDisplayPrefs(
   user: AuthUser,
-  prefs: unknown
+  prefs: unknown,
 ): Promise<{ error: string | null }> {
   if (supabase) {
     try {
@@ -300,12 +312,17 @@ export async function saveAccountDisplayPrefs(
       });
       return { error: error ? error.message : null };
     } catch (err) {
-      return { error: err instanceof Error ? err.message : 'Account unavailable.' };
+      return {
+        error: err instanceof Error ? err.message : 'Account unavailable.',
+      };
     }
   }
 
   try {
-    localStorage.setItem(`${LOCAL_ACCOUNT_PREFS_PREFIX}${user.id}`, JSON.stringify(prefs));
+    localStorage.setItem(
+      `${LOCAL_ACCOUNT_PREFS_PREFIX}${user.id}`,
+      JSON.stringify(prefs),
+    );
   } catch {
     // ignore storage errors
   }

@@ -58,7 +58,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             <AlertTriangle size={20} className="confirm-modal-icon" />
             <h3 id="confirm-modal-title">{title}</h3>
           </div>
-          <button type="button" className="confirm-modal-close" onClick={onCancel} aria-label="Cancel">
+          <button
+            type="button"
+            className="confirm-modal-close"
+            onClick={onCancel}
+            aria-label="Cancel"
+          >
             <X size={16} />
           </button>
         </div>
@@ -69,10 +74,20 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           Tip: hold <kbd>Shift</kbd> while clicking to skip this confirmation.
         </p>
         <div className="confirm-modal-footer">
-          <button type="button" className="confirm-modal-cancel" onClick={onCancel}>
+          <button
+            type="button"
+            className="confirm-modal-cancel"
+            onClick={onCancel}
+          >
             Cancel
           </button>
-          <button type="button" ref={confirmRef} data-testid="btn-confirm-modal-confirm" className="confirm-modal-confirm" onClick={onConfirm}>
+          <button
+            type="button"
+            ref={confirmRef}
+            data-testid="btn-confirm-modal-confirm"
+            className="confirm-modal-confirm"
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </button>
         </div>
@@ -82,8 +97,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 };
 
 /** True when the click that started an action should skip the confirmation. */
-export const skipsConfirmation = (event?: { shiftKey?: boolean } | null): boolean =>
-  Boolean(event?.shiftKey);
+export const skipsConfirmation = (
+  event?: { shiftKey?: boolean } | null,
+): boolean => Boolean(event?.shiftKey);
 
 /**
  * `confirm(options, event)` resolves `true` at once when Shift was held during
@@ -91,12 +107,16 @@ export const skipsConfirmation = (event?: { shiftKey?: boolean } | null): boolea
  * Render `confirmModal` somewhere in the component.
  */
 export function useConfirm() {
-  const [pending, setPending] = useState<
-    { options: ConfirmOptions; resolve: (ok: boolean) => void } | null
-  >(null);
+  const [pending, setPending] = useState<{
+    options: ConfirmOptions;
+    resolve: (ok: boolean) => void;
+  } | null>(null);
 
   const confirm = useCallback(
-    (options: ConfirmOptions, event?: { shiftKey?: boolean } | null): Promise<boolean> => {
+    (
+      options: ConfirmOptions,
+      event?: { shiftKey?: boolean } | null,
+    ): Promise<boolean> => {
       if (skipsConfirmation(event)) return Promise.resolve(true);
       return new Promise<boolean>((resolve) => {
         setPending((prev) => {
@@ -106,23 +126,24 @@ export function useConfirm() {
         });
       });
     },
-    []
+    [],
   );
 
-  const answer = useCallback(
-    (ok: boolean) => {
-      setPending((prev) => {
-        prev?.resolve(ok);
-        return null;
-      });
-    },
-    []
-  );
+  const answer = useCallback((ok: boolean) => {
+    setPending((prev) => {
+      prev?.resolve(ok);
+      return null;
+    });
+  }, []);
   const onConfirm = useCallback(() => answer(true), [answer]);
   const onCancel = useCallback(() => answer(false), [answer]);
 
   const confirmModal = pending ? (
-    <ConfirmModal {...pending.options} onConfirm={onConfirm} onCancel={onCancel} />
+    <ConfirmModal
+      {...pending.options}
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    />
   ) : null;
 
   return { confirm, confirmModal };

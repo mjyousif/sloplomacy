@@ -126,7 +126,10 @@ describe('Map Camera Bounding (Issue #20)', () => {
 describe('touch camera helpers (issue #54)', () => {
   const close = (a: number, b: number) => expect(a).toBeCloseTo(b, 6);
   // Where a board point is drawn, in viewBox units, for a camera.
-  const project = (cam: { x: number; y: number; zoom: number }, p: { x: number; y: number }) => ({
+  const project = (
+    cam: { x: number; y: number; zoom: number },
+    p: { x: number; y: number },
+  ) => ({
     x: MAP_CENTER_X + (p.x - MAP_CENTER_X) * cam.zoom + cam.x,
     y: MAP_CENTER_Y + (p.y - MAP_CENTER_Y) * cam.zoom + cam.y,
   });
@@ -154,7 +157,11 @@ describe('touch camera helpers (issue #54)', () => {
   });
 
   it('zoomAtPoint about the view centre with no pan keeps the pan at zero', () => {
-    const next = zoomAtPoint({ x: 0, y: 0, zoom: 1 }, { x: MAP_CENTER_X, y: MAP_CENTER_Y }, 2.5);
+    const next = zoomAtPoint(
+      { x: 0, y: 0, zoom: 1 },
+      { x: MAP_CENTER_X, y: MAP_CENTER_Y },
+      2.5,
+    );
     expect(next).toEqual({ x: 0, y: 0, zoom: 2.5 });
   });
 
@@ -162,7 +169,9 @@ describe('touch camera helpers (issue #54)', () => {
     const cam = { x: 0, y: 0, zoom: 2 };
     const centre = { x: MAP_CENTER_X, y: MAP_CENTER_Y };
     expect(zoomAtPoint(cam, centre, 10).zoom).toBe(MAX_ZOOM);
-    expect(zoomAtPoint(cam, centre, 10, { maxZoom: COMPACT_MAX_ZOOM }).zoom).toBe(COMPACT_MAX_ZOOM);
+    expect(
+      zoomAtPoint(cam, centre, 10, { maxZoom: COMPACT_MAX_ZOOM }).zoom,
+    ).toBe(COMPACT_MAX_ZOOM);
     expect(zoomAtPoint(cam, centre, 0.1).zoom).toBe(MIN_ZOOM);
   });
 
@@ -170,8 +179,14 @@ describe('touch camera helpers (issue #54)', () => {
     const cam = { x: 0, y: 0, zoom: 1.5 };
     const next = pinchStep(
       cam,
-      [{ x: 700, y: 600 }, { x: 800, y: 600 }],
-      [{ x: 650, y: 600 }, { x: 850, y: 600 }]
+      [
+        { x: 700, y: 600 },
+        { x: 800, y: 600 },
+      ],
+      [
+        { x: 650, y: 600 },
+        { x: 850, y: 600 },
+      ],
     );
     close(next.zoom, 3);
   });
@@ -206,7 +221,9 @@ describe('touch camera helpers (issue #54)', () => {
   });
 
   it('getPhoneDefaultCamera fills a portrait screen top to bottom', () => {
-    const cam = getPhoneDefaultCamera(375, 700, null, { maxZoom: COMPACT_MAX_ZOOM });
+    const cam = getPhoneDefaultCamera(375, 700, null, {
+      maxZoom: COMPACT_MAX_ZOOM,
+    });
     const fit = getViewportFit(375, 700);
     // The board's drawn height, in screen pixels, matches the screen.
     // (to within a pixel, since the zoom is rounded to three places).
@@ -217,7 +234,9 @@ describe('touch camera helpers (issue #54)', () => {
 
   it('getPhoneDefaultCamera centres on the focus point', () => {
     const focus = { x: 1100, y: 900 };
-    const cam = getPhoneDefaultCamera(375, 700, focus, { maxZoom: COMPACT_MAX_ZOOM });
+    const cam = getPhoneDefaultCamera(375, 700, focus, {
+      maxZoom: COMPACT_MAX_ZOOM,
+    });
     close(project(cam, focus).x, MAP_CENTER_X);
     expect(cam).toEqual(clampCamera(cam, { maxZoom: COMPACT_MAX_ZOOM }));
   });

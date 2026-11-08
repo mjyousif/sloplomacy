@@ -12,7 +12,7 @@ describe('ConfirmModal', () => {
         confirmLabel: 'Destroy',
         onConfirm: () => {},
         onCancel: () => {},
-      })
+      }),
     );
     expect(html).toContain('Destroy this unit?');
     expect(html).toContain('France Army in PAR');

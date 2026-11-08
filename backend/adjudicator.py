@@ -59,7 +59,9 @@ def order_to_diplomacy_str(order: Order, units_by_prov: Dict[str, Unit]) -> Opti
             return None
         aux_prov = order.aux_unit_origin
         aux_unit = units_by_prov.get(aux_prov)
-        aux_type = aux_unit.unit_type.value if (aux_unit and hasattr(aux_unit.unit_type, "value")) else "A"
+        aux_type = (
+            aux_unit.unit_type.value if (aux_unit and hasattr(aux_unit.unit_type, "value")) else "A"
+        )
         aux_orig = f"{aux_prov}/{aux_unit.coast}" if (aux_unit and aux_unit.coast) else aux_prov
         target_prov = order.target or aux_prov
         if target_prov == aux_prov:
@@ -71,7 +73,9 @@ def order_to_diplomacy_str(order: Order, units_by_prov: Dict[str, Unit]) -> Opti
             return None
         aux_prov = order.aux_unit_origin
         aux_unit = units_by_prov.get(aux_prov)
-        aux_type = aux_unit.unit_type.value if (aux_unit and hasattr(aux_unit.unit_type, "value")) else "A"
+        aux_type = (
+            aux_unit.unit_type.value if (aux_unit and hasattr(aux_unit.unit_type, "value")) else "A"
+        )
         return f"{u_type} {orig} C {aux_type} {aux_prov} - {order.target}"
     elif order.order_type == OrderType.BUILD:
         if u_type == "A":
@@ -80,7 +84,11 @@ def order_to_diplomacy_str(order: Order, units_by_prov: Dict[str, Unit]) -> Opti
         coast = order.origin_coast or order.target_coast
         if not coast and prov_info and prov_info.coasts:
             coast = prov_info.coasts[0]
-        loc = f"{order.origin}/{coast}" if (prov_info and prov_info.coasts and coast) else order.origin
+        loc = (
+            f"{order.origin}/{coast}"
+            if (prov_info and prov_info.coasts and coast)
+            else order.origin
+        )
         return f"F {loc} B"
     elif order.order_type == OrderType.DISBAND:
         return f"{u_type} {orig} D"
@@ -235,7 +243,11 @@ def adjudicate_turn(
                 max_b = min(count, len(homes))
                 build_candidates: List[Order] = []
                 for ord_key, ord_obj in orders.items():
-                    ord_pwr = ord_obj.power.value if hasattr(ord_obj.power, "value") else str(ord_obj.power)
+                    ord_pwr = (
+                        ord_obj.power.value
+                        if hasattr(ord_obj.power, "value")
+                        else str(ord_obj.power)
+                    )
                     if (
                         ord_key not in unit_by_id
                         and ord_pwr == p_name
@@ -355,17 +367,23 @@ def adjudicate_turn(
             target = ord_obj.target if ord_obj else None
 
             rejected = otype != OrderType.HOLD and not engine_kept_order(u)
-            succeeded = not (no_convoy or bounced or cut or dislodged or voided or disrupted or rejected)
+            succeeded = not (
+                no_convoy or bounced or cut or dislodged or voided or disrupted or rejected
+            )
 
             if rejected:
                 defense_strength = 1 + uncut_supports_for_hold.get(u.province, 0)
-                reason = f"Illegal {otype.value} order rejected; unit held in {p_name_fn(u.province)}."
+                reason = (
+                    f"Illegal {otype.value} order rejected; unit held in {p_name_fn(u.province)}."
+                )
                 summary.append(
                     f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} held: illegal {otype.value} order rejected."
                 )
                 if dislodged:
                     reason += " Dislodged by superior force."
-                    summary.append(f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} dislodged.")
+                    summary.append(
+                        f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} dislodged."
+                    )
             elif otype == OrderType.MOVE and target:
                 attack_strength = 1 + uncut_supports_for_move.get((u.province, target), 0)
                 if no_convoy:
@@ -380,7 +398,9 @@ def adjudicate_turn(
                     )
                 elif dislodged:
                     reason = f"Dislodged while attempting to move to {p_name_fn(target)}!"
-                    summary.append(f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} was dislodged!")
+                    summary.append(
+                        f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} was dislodged!"
+                    )
                 else:
                     reason = f"Advanced to {p_name_fn(target)} with strength {attack_strength}."
                     summary.append(
@@ -389,23 +409,31 @@ def adjudicate_turn(
             elif otype == OrderType.SUPPORT:
                 if cut:
                     reason = "Support cut by enemy attack!"
-                    summary.append(f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} support cut.")
+                    summary.append(
+                        f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} support cut."
+                    )
                 elif dislodged:
                     reason = "Dislodged! Support broken."
-                    summary.append(f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} dislodged.")
+                    summary.append(
+                        f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} dislodged."
+                    )
                 else:
                     reason = "Support held unbroken."
             elif otype == OrderType.CONVOY:
                 if disrupted or dislodged:
                     reason = "Convoy disrupted by fleet dislodgement."
-                    summary.append(f"[{u.power.value}] Fleet {p_name_fn(u.province)} convoy disrupted.")
+                    summary.append(
+                        f"[{u.power.value}] Fleet {p_name_fn(u.province)} convoy disrupted."
+                    )
                 else:
                     reason = "Convoy route maintained."
             elif otype == OrderType.HOLD:
                 defense_strength = 1 + uncut_supports_for_hold.get(u.province, 0)
                 if dislodged:
                     reason = f"Dislodged by superior force (defense {defense_strength})."
-                    summary.append(f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} dislodged.")
+                    summary.append(
+                        f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} dislodged."
+                    )
                 else:
                     reason = f"Held position (defense strength {defense_strength})."
             else:
@@ -453,7 +481,12 @@ def adjudicate_turn(
             if ord_obj and ord_obj.order_type == OrderType.MOVE and succeeded and ord_obj.target:
                 dest = ord_obj.target
                 dest_coast = ord_obj.target_coast
-                if u.unit_type == UnitType.FLEET and PROVINCES.get(dest) and PROVINCES[dest].coasts and not dest_coast:
+                if (
+                    u.unit_type == UnitType.FLEET
+                    and PROVINCES.get(dest)
+                    and PROVINCES[dest].coasts
+                    and not dest_coast
+                ):
                     for ut, bp, cst in engine_regular_by_pwr.get(u.power.value, []):
                         if ut == u.unit_type.value and bp == dest and cst:
                             dest_coast = cst
@@ -509,7 +542,9 @@ def adjudicate_turn(
             ord_obj = orders.get(u.id)
             u_loc = f"{u.province}/{u.coast}" if u.coast else u.province
             u_key = f"{u.unit_type.value} {u_loc}"
-            res_list = results_for_phase.get(u_key, results_for_phase.get(f"{u.unit_type.value} {u.province}", []))
+            res_list = results_for_phase.get(
+                u_key, results_for_phase.get(f"{u.unit_type.value} {u.province}", [])
+            )
 
             bounced = any(r.code == 10002 or "bounce" in str(r).lower() for r in res_list)
             disbanded = any(r.code == 10007 or "disband" in str(r).lower() for r in res_list)
@@ -575,7 +610,9 @@ def adjudicate_turn(
                     )
             else:
                 reason = f"Disbanded dislodged {u.unit_type.value} in {p_name_fn(u.province)}."
-                summary.append(f"[{u.power.value}] Dislodged {u.unit_type.value} {p_name_fn(u.province)} was disbanded.")
+                summary.append(
+                    f"[{u.power.value}] Dislodged {u.unit_type.value} {p_name_fn(u.province)} was disbanded."
+                )
                 resolutions[u.id] = OrderResolution(
                     unit_id=u.id,
                     origin=u.province,

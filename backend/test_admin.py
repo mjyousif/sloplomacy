@@ -10,7 +10,9 @@ from ws_testing import receive_json
 TEST_JWT_SECRET = "test-secret-at-least-32-chars-long-12345"
 
 
-def make_token(user_id: str, email: str, secret: str = TEST_JWT_SECRET, exp_offset: int = 3600) -> str:
+def make_token(
+    user_id: str, email: str, secret: str = TEST_JWT_SECRET, exp_offset: int = 3600
+) -> str:
     return jwt.encode(
         {"sub": user_id, "email": email, "exp": int(time.time()) + exp_offset},
         secret,
@@ -18,7 +20,9 @@ def make_token(user_id: str, email: str, secret: str = TEST_JWT_SECRET, exp_offs
     )
 
 
-def make_auth_headers(user_id: str, email: str, secret: str = TEST_JWT_SECRET, exp_offset: int = 3600) -> dict:
+def make_auth_headers(
+    user_id: str, email: str, secret: str = TEST_JWT_SECRET, exp_offset: int = 3600
+) -> dict:
     return {"Authorization": f"Bearer {make_token(user_id, email, secret, exp_offset)}"}
 
 
@@ -346,7 +350,12 @@ def test_admin_multiplayer_lobby_lifecycle_with_jwt():
     # 1. Create a multiplayer lobby with User A
     res_create = client.post(
         "/api/games",
-        json={"name": "Lifecycle Room", "creator_power": "ENGLAND", "user_id": "user_a", "email": "a@uk.gov"},
+        json={
+            "name": "Lifecycle Room",
+            "creator_power": "ENGLAND",
+            "user_id": "user_a",
+            "email": "a@uk.gov",
+        },
     )
     assert res_create.status_code == 200
     gid = res_create.json()["game_id"]
@@ -430,9 +439,7 @@ def test_set_turn_refuses_impossible_turns_and_leaves_the_game_readable(season, 
 )
 def test_set_turn_accepts_every_real_turn(season, phase):
     client = TestClient(app)
-    res = client.post(
-        "/api/scenario?game_id=proto_1901", json={"scenario_id": "standard_1901"}
-    )
+    res = client.post("/api/scenario?game_id=proto_1901", json={"scenario_id": "standard_1901"})
     assert res.status_code == 200
 
     res = client.post(
@@ -525,6 +532,7 @@ def test_army_placed_by_admin_is_a_real_unit_that_captures_its_province():
     assert resolved["ownership"]["SPA"] == "FRANCE"
     assert [u["province"] for u in resolved["units"] if u["id"] == "FRA_A_MAR"] == ["SPA"]
 
+
 def test_admin_es256_asymmetric_jwt_verification(monkeypatch):
     """Verify that ES256 tokens signed with ECC (P-256) are cryptographically validated."""
     import time
@@ -533,10 +541,14 @@ def test_admin_es256_asymmetric_jwt_verification(monkeypatch):
 
     # Generate an EC key pair for testing
     private_key = ec.generate_private_key(ec.SECP256R1())
-    public_pem = private_key.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    ).decode("utf-8")
+    public_pem = (
+        private_key.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode("utf-8")
+    )
 
     monkeypatch.setenv("SUPABASE_JWT_PUBLIC_KEY", public_pem)
 

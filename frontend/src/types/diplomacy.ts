@@ -320,7 +320,6 @@ export interface AdminStatusResponse {
   creator_id?: string | null;
 }
 
-
 export interface WebSocketGameUpdate {
   type: 'game_update';
   game_id: string;

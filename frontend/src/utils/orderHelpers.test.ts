@@ -8,7 +8,13 @@ import {
   getActiveOrderButton,
   getConsensusStatusInfo,
 } from './orderHelpers';
-import { GameParticipant, Order, Power, ProvinceInfo, Unit } from '../types/diplomacy';
+import {
+  GameParticipant,
+  Order,
+  Power,
+  ProvinceInfo,
+  Unit,
+} from '../types/diplomacy';
 
 describe('splitProvinceCode', () => {
   it('parses base province without coast', () => {
@@ -38,10 +44,18 @@ describe('getActiveOrderButton', () => {
 
   it('lets a chosen mode replace a saved Hold', () => {
     expect(getActiveOrderButton('MOVE', holdOrder(true), true)).toBe('MOVE');
-    expect(getActiveOrderButton('SUPPORT_PICK_UNIT', holdOrder(true), false)).toBe('SUPPORT');
-    expect(getActiveOrderButton('SUPPORT_PICK_TARGET', holdOrder(true), false)).toBe('SUPPORT');
-    expect(getActiveOrderButton('CONVOY_PICK_ARMY', holdOrder(true), false)).toBe('CONVOY');
-    expect(getActiveOrderButton('CONVOY_PICK_TARGET', holdOrder(true), false)).toBe('CONVOY');
+    expect(
+      getActiveOrderButton('SUPPORT_PICK_UNIT', holdOrder(true), false),
+    ).toBe('SUPPORT');
+    expect(
+      getActiveOrderButton('SUPPORT_PICK_TARGET', holdOrder(true), false),
+    ).toBe('SUPPORT');
+    expect(
+      getActiveOrderButton('CONVOY_PICK_ARMY', holdOrder(true), false),
+    ).toBe('CONVOY');
+    expect(
+      getActiveOrderButton('CONVOY_PICK_TARGET', holdOrder(true), false),
+    ).toBe('CONVOY');
   });
 });
 
@@ -91,7 +105,17 @@ describe('getReachableDestinations and canUnitSupportInto', () => {
       coasts: [],
       army_adj: [],
       fleet_adj: {
-        '': ['BRE', 'ENG', 'GAS', 'IRI', 'NAO', 'POR', 'SPA/NC', 'SPA/SC', 'WES'],
+        '': [
+          'BRE',
+          'ENG',
+          'GAS',
+          'IRI',
+          'NAO',
+          'POR',
+          'SPA/NC',
+          'SPA/SC',
+          'WES',
+        ],
       },
     },
   };
@@ -105,7 +129,9 @@ describe('getReachableDestinations and canUnitSupportInto', () => {
       coast: null,
     };
     const reachable = getReachableDestinations(army, mockProvinces);
-    expect(reachable.map((r) => r.province).sort()).toEqual(['BRE', 'BUR', 'GAS', 'PIC'].sort());
+    expect(reachable.map((r) => r.province).sort()).toEqual(
+      ['BRE', 'BUR', 'GAS', 'PIC'].sort(),
+    );
     expect(canUnitSupportInto(army, 'BUR', mockProvinces)).toBe(true);
     expect(canUnitSupportInto(army, 'MAO', mockProvinces)).toBe(false);
   });
@@ -119,7 +145,9 @@ describe('getReachableDestinations and canUnitSupportInto', () => {
       coast: null,
     };
     const reachable = getReachableDestinations(fleet, mockProvinces);
-    expect(reachable.map((r) => r.province).sort()).toEqual(['ENG', 'GAS', 'MAO', 'PIC'].sort());
+    expect(reachable.map((r) => r.province).sort()).toEqual(
+      ['ENG', 'GAS', 'MAO', 'PIC'].sort(),
+    );
     expect(canUnitSupportInto(fleet, 'MAO', mockProvinces)).toBe(true);
     expect(canUnitSupportInto(fleet, 'PAR', mockProvinces)).toBe(false);
   });
@@ -141,16 +169,73 @@ describe('getReachableDestinations and canUnitSupportInto', () => {
 
 describe('formatOrderSummary', () => {
   const mockProvinces: Record<string, ProvinceInfo> = {
-    PAR: { id: 'PAR', name: 'Paris', type: 'LAND', is_supply_center: true, home_power: 'FRANCE', coasts: [], army_adj: [], fleet_adj: {} },
-    BUR: { id: 'BUR', name: 'Burgundy', type: 'LAND', is_supply_center: false, home_power: null, coasts: [], army_adj: [], fleet_adj: {} },
-    MAR: { id: 'MAR', name: 'Marseilles', type: 'COAST', is_supply_center: true, home_power: 'FRANCE', coasts: [], army_adj: [], fleet_adj: {} },
-    SPA: { id: 'SPA', name: 'Spain', type: 'COAST', is_supply_center: true, home_power: null, coasts: ['NC', 'SC'], army_adj: [], fleet_adj: {} },
-    MAO: { id: 'MAO', name: 'Mid-Atlantic Ocean', type: 'SEA', is_supply_center: false, home_power: null, coasts: [], army_adj: [], fleet_adj: {} },
+    PAR: {
+      id: 'PAR',
+      name: 'Paris',
+      type: 'LAND',
+      is_supply_center: true,
+      home_power: 'FRANCE',
+      coasts: [],
+      army_adj: [],
+      fleet_adj: {},
+    },
+    BUR: {
+      id: 'BUR',
+      name: 'Burgundy',
+      type: 'LAND',
+      is_supply_center: false,
+      home_power: null,
+      coasts: [],
+      army_adj: [],
+      fleet_adj: {},
+    },
+    MAR: {
+      id: 'MAR',
+      name: 'Marseilles',
+      type: 'COAST',
+      is_supply_center: true,
+      home_power: 'FRANCE',
+      coasts: [],
+      army_adj: [],
+      fleet_adj: {},
+    },
+    SPA: {
+      id: 'SPA',
+      name: 'Spain',
+      type: 'COAST',
+      is_supply_center: true,
+      home_power: null,
+      coasts: ['NC', 'SC'],
+      army_adj: [],
+      fleet_adj: {},
+    },
+    MAO: {
+      id: 'MAO',
+      name: 'Mid-Atlantic Ocean',
+      type: 'SEA',
+      is_supply_center: false,
+      home_power: null,
+      coasts: [],
+      army_adj: [],
+      fleet_adj: {},
+    },
   };
 
   const unitsByProv: Record<string, Unit> = {
-    PAR: { id: 'FRA_A_PAR', power: 'FRANCE', unit_type: 'A', province: 'PAR', coast: null },
-    MAR: { id: 'FRA_A_MAR', power: 'FRANCE', unit_type: 'A', province: 'MAR', coast: null },
+    PAR: {
+      id: 'FRA_A_PAR',
+      power: 'FRANCE',
+      unit_type: 'A',
+      province: 'PAR',
+      coast: null,
+    },
+    MAR: {
+      id: 'FRA_A_MAR',
+      power: 'FRANCE',
+      unit_type: 'A',
+      province: 'MAR',
+      coast: null,
+    },
   };
 
   it('formats HOLD order', () => {
@@ -248,7 +333,9 @@ describe('formatOrderSummary', () => {
       via_convoy: false,
       is_explicit: true,
     };
-    expect(formatOrderSummary(buildOrder, mockProvinces, unitsByProv).verb).toBe('BUILD');
+    expect(
+      formatOrderSummary(buildOrder, mockProvinces, unitsByProv).verb,
+    ).toBe('BUILD');
 
     const disbandOrder: Order = {
       unit_id: 'DISBAND_FRANCE_PAR',
@@ -259,7 +346,9 @@ describe('formatOrderSummary', () => {
       via_convoy: false,
       is_explicit: true,
     };
-    expect(formatOrderSummary(disbandOrder, mockProvinces, unitsByProv).verb).toBe('DISBAND');
+    expect(
+      formatOrderSummary(disbandOrder, mockProvinces, unitsByProv).verb,
+    ).toBe('DISBAND');
 
     const waiveOrder: Order = {
       unit_id: 'WAIVE_FRANCE_PAR',
@@ -270,7 +359,9 @@ describe('formatOrderSummary', () => {
       via_convoy: false,
       is_explicit: true,
     };
-    expect(formatOrderSummary(waiveOrder, mockProvinces, unitsByProv).verb).toBe('WAIVE');
+    expect(
+      formatOrderSummary(waiveOrder, mockProvinces, unitsByProv).verb,
+    ).toBe('WAIVE');
 
     const retreatOrder: Order = {
       unit_id: 'FRA_A_PAR',
@@ -282,7 +373,9 @@ describe('formatOrderSummary', () => {
       via_convoy: false,
       is_explicit: true,
     };
-    expect(formatOrderSummary(retreatOrder, mockProvinces, unitsByProv).verb).toBe('RETREAT');
+    expect(
+      formatOrderSummary(retreatOrder, mockProvinces, unitsByProv).verb,
+    ).toBe('RETREAT');
 
     const unit: Unit = {
       id: 'GER_A_BUR',

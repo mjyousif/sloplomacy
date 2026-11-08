@@ -20,7 +20,9 @@ def test_ai_engine_generates_valid_non_conflicting_orders():
 
     for pwr, p_orders in by_power.items():
         move_targets = [o.target for o in p_orders if o.order_type == OrderType.MOVE and o.target]
-        assert len(move_targets) == len(set(move_targets)), f"Friendly self-bounce detected for {pwr}"
+        assert len(move_targets) == len(set(move_targets)), (
+            f"Friendly self-bounce detected for {pwr}"
+        )
 
 
 def test_ai_sandbox_api_endpoints():

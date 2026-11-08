@@ -14,7 +14,9 @@ def test_map_symmetry_and_75_provinces():
     for pid, pinfo in PROVINCES.items():
         for neighbor in pinfo.army_adj:
             assert neighbor in PROVINCES, f"{pid} references unknown army neighbor {neighbor}"
-            assert pid in PROVINCES[neighbor].army_adj, f"Army adjacency {pid} <-> {neighbor} is not symmetric!"
+            assert pid in PROVINCES[neighbor].army_adj, (
+                f"Army adjacency {pid} <-> {neighbor} is not symmetric!"
+            )
 
     # Check fleet adjacency symmetry
     for pid, pinfo in PROVINCES.items():
@@ -22,9 +24,13 @@ def test_map_symmetry_and_75_provinces():
             full_self = f"{pid}/{coast}" if coast else pid
             for n_entry in neighbors:
                 n_base, n_coast = split_province_code(n_entry)
-                assert n_base in PROVINCES, f"{full_self} references unknown fleet neighbor {n_entry}"
+                assert n_base in PROVINCES, (
+                    f"{full_self} references unknown fleet neighbor {n_entry}"
+                )
                 n_fleet_list = PROVINCES[n_base].fleet_adj.get(n_coast or "", [])
-                assert full_self in n_fleet_list, f"Fleet adjacency {full_self} <-> {n_entry} is not symmetric!"
+                assert full_self in n_fleet_list, (
+                    f"Fleet adjacency {full_self} <-> {n_entry} is not symmetric!"
+                )
 
 
 def test_self_bounce_and_unmatched_support_validation():
@@ -106,7 +112,9 @@ def test_fastapi_endpoints_and_finalize_sanity_check():
     client = TestClient(app)
 
     # Load tactical blunders demo scenario
-    r = client.post("/api/scenario", json={"scenario_id": "tactical_blunders_demo", "active_power": "FRANCE"})
+    r = client.post(
+        "/api/scenario", json={"scenario_id": "tactical_blunders_demo", "active_power": "FRANCE"}
+    )
     assert r.status_code == 200
     state = r.json()
     assert state["active_power"] == "FRANCE"
@@ -227,7 +235,9 @@ def test_spring_vs_fall_sc_ownership_and_winter_builds():
     fall_orders["FRA_F_BRE"].order_type = OrderType.MOVE
     fall_orders["FRA_F_BRE"].target = "POR"
 
-    res_fall = adjudicate_turn(fall_units, fall_orders, res_spring.new_ownership, "Fall", 1901, "Movement")
+    res_fall = adjudicate_turn(
+        fall_units, fall_orders, res_spring.new_ownership, "Fall", 1901, "Movement"
+    )
     # In Fall, ownership updates!
     assert res_fall.new_ownership.get("SPA") == Power.FRANCE
     assert res_fall.new_ownership.get("BEL") == Power.FRANCE
@@ -252,7 +262,9 @@ def test_spring_vs_fall_sc_ownership_and_winter_builds():
             is_explicit=True,
         )
 
-    res_winter = adjudicate_turn(winter_units, winter_orders, res_fall.new_ownership, "Winter", 1901, "Adjustments")
+    res_winter = adjudicate_turn(
+        winter_units, winter_orders, res_fall.new_ownership, "Winter", 1901, "Adjustments"
+    )
     assert res_winter.next_season == "Spring"
     assert res_winter.next_year == 1902
     assert res_winter.next_phase == "Movement"
@@ -350,7 +362,3 @@ def test_multiplayer_lobby_create_join_and_save_sandbox():
     saved_summary = save_res.json()
     assert saved_summary["is_sandbox"] is True
     assert saved_summary["name"] == "My French Opening Study"
-
-
-
-

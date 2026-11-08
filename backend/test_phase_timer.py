@@ -30,7 +30,12 @@ def client():
 
 def host_headers() -> dict:
     token = jwt.encode(
-        {"sub": HOST_ID, "email": HOST_EMAIL, "exp": int(time.time()) + 3600, "aud": "authenticated"},
+        {
+            "sub": HOST_ID,
+            "email": HOST_EMAIL,
+            "exp": int(time.time()) + 3600,
+            "aud": "authenticated",
+        },
         TEST_JWT_SECRET,
         algorithm="HS256",
     )
@@ -40,7 +45,12 @@ def host_headers() -> dict:
 def make_match(client, powers=ALL_POWERS) -> str:
     created = client.post(
         "/api/games",
-        json={"name": "Timer Test", "creator_power": powers[0], "user_id": HOST_ID, "email": HOST_EMAIL},
+        json={
+            "name": "Timer Test",
+            "creator_power": powers[0],
+            "user_id": HOST_ID,
+            "email": HOST_EMAIL,
+        },
     )
     assert created.status_code == 200
     gid = created.json()["game_id"]
@@ -119,7 +129,9 @@ def test_tally_votes(votes, expected):
     assert tally_votes(votes) == expected
 
 
-@pytest.mark.parametrize("players, needed", [(7, 5), (6, 5), (5, 4), (4, 3), (3, 3), (2, 2), (1, 1)])
+@pytest.mark.parametrize(
+    "players, needed", [(7, 5), (6, 5), (5, 4), (4, 3), (3, 3), (2, 2), (1, 1)]
+)
 def test_extension_scales_with_players(players, needed):
     timer = PhaseTimer(stage=TimerStage.RUNNING, players=[Power(p) for p in ALL_POWERS[:players]])
     assert timer.extensions_needed == needed
@@ -413,7 +425,9 @@ def test_a_late_finalize_cannot_lock_the_next_phase(client):
     run_out(gid)
     poll(client, gid)
 
-    res = client.post(f"/api/finalize?game_id={gid}", json={"power": "FRANCE", "force": True, "turn": turn})
+    res = client.post(
+        f"/api/finalize?game_id={gid}", json={"power": "FRANCE", "force": True, "turn": turn}
+    )
     assert res.status_code == 409
     assert GAMES[gid].finalized_powers == []
 
@@ -437,7 +451,9 @@ def test_a_late_order_cannot_land_on_the_next_phase(client):
         "order_type": "MOVE",
         "target": "BUR",
     }
-    res = client.post(f"/api/order?game_id={gid}", json={"order": order, "turn": "Spring 1900 Movement"})
+    res = client.post(
+        f"/api/order?game_id={gid}", json={"order": order, "turn": "Spring 1900 Movement"}
+    )
     assert res.status_code == 409
 
 
@@ -499,7 +515,12 @@ def test_surrender_can_complete_a_vote(client):
 
     res = client.post(
         f"/api/games/{gid}/surrender",
-        json={"user_id": "user_GERMANY", "email": "GERMANY@example.com", "power": "GERMANY", "leave": False},
+        json={
+            "user_id": "user_GERMANY",
+            "email": "GERMANY@example.com",
+            "power": "GERMANY",
+            "leave": False,
+        },
     )
     assert res.status_code == 200
     assert GAMES[gid].timer.stage == TimerStage.RUNNING

@@ -200,9 +200,16 @@ def generate_tactical_orders(
                     prov_info = PROVINCES.get(h)
                     if idx < build_slots:
                         is_coastal = bool(prov_info and prov_info.coasts)
-                        choose_fleet = is_coastal and (p == Power.ENGLAND or (idx == 0 and h in ["STP", "ANK", "NAP", "KIE", "TRI"]))
+                        choose_fleet = is_coastal and (
+                            p == Power.ENGLAND
+                            or (idx == 0 and h in ["STP", "ANK", "NAP", "KIE", "TRI"])
+                        )
                         u_type = UnitType.FLEET if choose_fleet else UnitType.ARMY
-                        coast = prov_info.coasts[0] if (choose_fleet and prov_info and prov_info.coasts) else None
+                        coast = (
+                            prov_info.coasts[0]
+                            if (choose_fleet and prov_info and prov_info.coasts)
+                            else None
+                        )
                         if choose_fleet and h == "STP":
                             coast = "NC"
                         ai_orders[b_id] = Order(
@@ -263,7 +270,9 @@ def generate_tactical_orders(
 
     # 2. Retreats Phase AI
     if phase == "Retreats":
-        r_game = create_diplomacy_game(units, ownership, season, year, "Retreats", retreats=retreats)
+        r_game = create_diplomacy_game(
+            units, ownership, season, year, "Retreats", retreats=retreats
+        )
         active_retreats = retreats or r_game.get_state().get("retreats", {})
 
         for u in units:
@@ -315,7 +324,9 @@ def generate_tactical_orders(
     all_possible = d_game.get_all_possible_orders()
 
     units_by_prov: Dict[str, Unit] = {u.province: u for u in units}
-    neutral_scs = {pid for pid, pinfo in PROVINCES.items() if pinfo.is_supply_center and pid not in ownership}
+    neutral_scs = {
+        pid for pid, pinfo in PROVINCES.items() if pinfo.is_supply_center and pid not in ownership
+    }
     enemy_scs = {pid for pid, pwr in ownership.items() if pwr not in powers_to_plan}
     occupied_provs = set(units_by_prov.keys())
 
@@ -359,7 +370,11 @@ def generate_tactical_orders(
                     if dest in assigned_targets:
                         score -= 500.0
                     other_u = units_by_prov.get(dest)
-                    if other_u and other_u.power == p and planned_moves.get(other_u.id, (None,))[0] == u.province:
+                    if (
+                        other_u
+                        and other_u.power == p
+                        and planned_moves.get(other_u.id, (None,))[0] == u.province
+                    ):
                         score -= 600.0
 
                     if dest in neutral_scs:
@@ -370,10 +385,12 @@ def generate_tactical_orders(
                         # Sea zones adjacent to neutral SCs get major strategic priority
                         sc_touching = len(strategic_waters[dest].intersection(neutral_scs))
                         score += 90.0 + (sc_touching * 25.0)
-                    elif PROVINCES.get(dest, None) and any(adj in neutral_scs for adj in PROVINCES[dest].army_adj):
-                        score += 65.0   # Stepping stone adjacent to neutral SC
+                    elif PROVINCES.get(dest, None) and any(
+                        adj in neutral_scs for adj in PROVINCES[dest].army_adj
+                    ):
+                        score += 65.0  # Stepping stone adjacent to neutral SC
                     elif dest not in occupied_provs:
-                        score += 35.0   # General advance
+                        score += 35.0  # General advance
                     else:
                         score += 10.0
 
@@ -393,14 +410,18 @@ def generate_tactical_orders(
                 scored_candidates.append((score, c_str, parsed))
 
             scored_candidates.sort(key=lambda x: x[0], reverse=True)
-            best_parsed = scored_candidates[0][2] if scored_candidates else Order(
-                unit_id=u.id,
-                power=p,
-                unit_type=u.unit_type,
-                origin=u.province,
-                origin_coast=u.coast,
-                order_type=OrderType.HOLD,
-                is_explicit=True,
+            best_parsed = (
+                scored_candidates[0][2]
+                if scored_candidates
+                else Order(
+                    unit_id=u.id,
+                    power=p,
+                    unit_type=u.unit_type,
+                    origin=u.province,
+                    origin_coast=u.coast,
+                    order_type=OrderType.HOLD,
+                    is_explicit=True,
+                )
             )
 
             if best_parsed.order_type == OrderType.MOVE and best_parsed.target:
@@ -413,25 +434,31 @@ def generate_tactical_orders(
         for u in p_units:
             current_ord = unit_orders[u.id]
             # Don't convert if moving to neutral SC, enemy SC, or strategic water
-            is_priority_action = (
-                current_ord.order_type == OrderType.MOVE
-                and (
-                    current_ord.target in neutral_scs
-                    or current_ord.target in enemy_scs
-                    or (u.unit_type == UnitType.FLEET and current_ord.target in strategic_waters)
-                )
+            is_priority_action = current_ord.order_type == OrderType.MOVE and (
+                current_ord.target in neutral_scs
+                or current_ord.target in enemy_scs
+                or (u.unit_type == UnitType.FLEET and current_ord.target in strategic_waters)
             )
             if not is_priority_action:
                 loc_key = f"{u.province}/{u.coast}" if u.coast else u.province
                 candidate_strs = all_possible.get(loc_key, all_possible.get(u.province, []))
                 for c_str in candidate_strs:
                     cand = parse_diplomacy_order_str(c_str, p, u.id)
-                    if cand and cand.order_type == OrderType.SUPPORT and cand.aux_unit_origin and cand.target:
+                    if (
+                        cand
+                        and cand.order_type == OrderType.SUPPORT
+                        and cand.aux_unit_origin
+                        and cand.target
+                    ):
                         aux_u = units_by_prov.get(cand.aux_unit_origin)
                         if aux_u and aux_u.power == p:
                             aux_move = planned_moves.get(aux_u.id)
                             # Support if aux_u is moving to contested enemy SC or occupied province
-                            if aux_move and aux_move[0] == cand.target and (cand.target in enemy_scs or cand.target in occupied_provs):
+                            if (
+                                aux_move
+                                and aux_move[0] == cand.target
+                                and (cand.target in enemy_scs or cand.target in occupied_provs)
+                            ):
                                 cand.is_explicit = True
                                 unit_orders[u.id] = cand
                                 break

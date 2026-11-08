@@ -1,6 +1,16 @@
-import { GameParticipant, Order, POWER_METADATA, Power, ProvinceInfo, Unit } from '../types/diplomacy';
+import {
+  GameParticipant,
+  Order,
+  POWER_METADATA,
+  Power,
+  ProvinceInfo,
+  Unit,
+} from '../types/diplomacy';
 
-export function splitProvinceCode(code: string): { base: string; coast: string | null } {
+export function splitProvinceCode(code: string): {
+  base: string;
+  coast: string | null;
+} {
   if (code.includes('/')) {
     const [base, coast] = code.split('/');
     return { base: base.toUpperCase(), coast: coast.toUpperCase() };
@@ -10,7 +20,7 @@ export function splitProvinceCode(code: string): { base: string; coast: string |
 
 export function getReachableDestinations(
   unit: Unit,
-  provinces: Record<string, ProvinceInfo>
+  provinces: Record<string, ProvinceInfo>,
 ): { province: string; coasts: string[] }[] {
   const orig = provinces[unit.province];
   if (!orig) return [];
@@ -41,7 +51,7 @@ export function getReachableDestinations(
 export function getValidRetreatDestinations(
   unit: Unit,
   retreats: Partial<Record<Power, Record<string, string[]>>> | null | undefined,
-  provinces: Record<string, ProvinceInfo>
+  provinces: Record<string, ProvinceInfo>,
 ): { province: string; coasts: string[] }[] {
   if (!retreats) {
     return getReachableDestinations(unit, provinces);
@@ -70,7 +80,7 @@ export function getValidRetreatDestinations(
 export function canUnitSupportInto(
   unit: Unit,
   targetProvince: string,
-  provinces: Record<string, ProvinceInfo>
+  provinces: Record<string, ProvinceInfo>,
 ): boolean {
   const reachable = getReachableDestinations(unit, provinces);
   return reachable.some((r) => r.province === targetProvince);
@@ -83,18 +93,19 @@ export type OrderMenuButton = 'MOVE' | 'HOLD' | 'SUPPORT' | 'CONVOY';
 export function getActiveOrderButton(
   interactionMode: string,
   order: Order | undefined,
-  moveModeChosen: boolean
+  moveModeChosen: boolean,
 ): OrderMenuButton {
   if (interactionMode.startsWith('SUPPORT')) return 'SUPPORT';
   if (interactionMode.startsWith('CONVOY')) return 'CONVOY';
-  if (!moveModeChosen && order?.order_type === 'HOLD' && order.is_explicit) return 'HOLD';
+  if (!moveModeChosen && order?.order_type === 'HOLD' && order.is_explicit)
+    return 'HOLD';
   return 'MOVE';
 }
 
 export function formatOrderSummary(
   order: Order | undefined,
   provinces: Record<string, ProvinceInfo>,
-  unitsByProvince: Record<string, Unit>
+  unitsByProvince: Record<string, Unit>,
 ): {
   verb: string;
   targetText: string;
@@ -125,7 +136,9 @@ export function formatOrderSummary(
   }
 
   if (order.order_type === 'SUPPORT') {
-    const supUnit = order.aux_unit_origin ? unitsByProvince[order.aux_unit_origin] : undefined;
+    const supUnit = order.aux_unit_origin
+      ? unitsByProvince[order.aux_unit_origin]
+      : undefined;
     const uType = supUnit ? supUnit.unit_type : 'Unit';
     const isHoldSupport = order.aux_unit_origin === order.target;
     if (isHoldSupport) {
@@ -200,7 +213,6 @@ export function formatOrderSummary(
   };
 }
 
-
 export interface ConsensusStatusInfo {
   isWaitingForPlayers: boolean;
   title: string;
@@ -231,7 +243,7 @@ export function getConsensusStatusInfo({
 }): ConsensusStatusInfo {
   const activeEnvoys = participants
     ? Object.values(participants).filter(
-        (p) => !p.surrendered && !surrenderedPowers.includes(p.power)
+        (p) => !p.surrendered && !surrenderedPowers.includes(p.power),
       )
     : [];
 
@@ -240,10 +252,10 @@ export function getConsensusStatusInfo({
 
   const totalRequiredCount = requiredPowers.length;
   const finalizedCount = requiredPowers.filter((p) =>
-    finalizedPowers.includes(p)
+    finalizedPowers.includes(p),
   ).length;
   const missingPowers = requiredPowers.filter(
-    (p) => !finalizedPowers.includes(p)
+    (p) => !finalizedPowers.includes(p),
   );
 
   if (gameOver) {
@@ -261,7 +273,8 @@ export function getConsensusStatusInfo({
     return {
       isWaitingForPlayers,
       title: 'Waiting for Players',
-      description: 'No active envoys have claimed powers with active units yet.',
+      description:
+        'No active envoys have claimed powers with active units yet.',
       buttonLabel: isWaitingForPlayers
         ? 'Advance Phase Solo (Host Override)'
         : 'Force Adjudicate Phase (Host Override)',
@@ -280,8 +293,8 @@ export function getConsensusStatusInfo({
     const description = !isReady
       ? 'Multiplayer campaigns require at least 2 players to auto-resolve turns. Orders can be prepared and finalized while waiting for opponents.'
       : isGameCreator
-      ? 'Your orders are locked. Auto-resolution begins once 2+ players join. As host, you can click "Advance Phase Solo" below to resolve now without waiting.'
-      : 'Your orders are locked. Auto-resolution begins once 2+ players join. Waiting for opponents to join or the host to advance.';
+        ? 'Your orders are locked. Auto-resolution begins once 2+ players join. As host, you can click "Advance Phase Solo" below to resolve now without waiting.'
+        : 'Your orders are locked. Auto-resolution begins once 2+ players join. Waiting for opponents to join or the host to advance.';
 
     return {
       isWaitingForPlayers: true,

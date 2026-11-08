@@ -29,7 +29,9 @@ def tally_votes(votes: Dict[Power, TimerChoice]) -> TimerChoice:
     if not votes:
         return TimerChoice.PAUSE
     counts = Counter(votes.values())
-    return max(CHOICES_BY_LENGTH, key=lambda choice: (counts[choice], CHOICES_BY_LENGTH.index(choice)))
+    return max(
+        CHOICES_BY_LENGTH, key=lambda choice: (counts[choice], CHOICES_BY_LENGTH.index(choice))
+    )
 
 
 def open_vote(players: List[Power], now: float) -> PhaseTimer:

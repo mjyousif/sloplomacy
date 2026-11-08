@@ -21,7 +21,6 @@ def setup_jwt_secret(monkeypatch):
     monkeypatch.setenv("SUPABASE_JWT_SECRET", "test-secret-at-least-32-chars-long-12345")
 
 
-
 def test_api_404_error_handling():
     """Verify that invalid game IDs or unknown unit IDs return 404 status codes."""
     # Unknown game lookup
@@ -295,11 +294,15 @@ def test_api_winter_builds_and_slot_management():
     assert len({u["id"] for u in fra_units}) == 6
 
 
-
 def _new_game(power="FRANCE"):
     res = client.post(
         "/api/games",
-        json={"name": "Regression", "creator_power": power, "user_id": "host", "email": "host@test.com"},
+        json={
+            "name": "Regression",
+            "creator_power": power,
+            "user_id": "host",
+            "email": "host@test.com",
+        },
     )
     assert res.status_code == 200
     return res.json()["game_id"]
@@ -307,6 +310,7 @@ def _new_game(power="FRANCE"):
 
 def _auth_headers(user_id="host", email="host@test.com"):
     import jwt
+
     token = jwt.encode(
         {"sub": user_id, "email": email, "aud": "authenticated"},
         "test-secret-at-least-32-chars-long-12345",
@@ -351,7 +355,9 @@ def test_order_naming_a_place_that_does_not_exist_is_refused(overrides):
 
 def test_build_order_for_unknown_province_is_refused():
     game_id = _new_game()
-    payload = _order_payload(unit_id="BUILD_FRANCE_ZZZ", origin="ZZZ", order_type="BUILD", target=None)
+    payload = _order_payload(
+        unit_id="BUILD_FRANCE_ZZZ", origin="ZZZ", order_type="BUILD", target=None
+    )
 
     res = client.post(f"/api/order?game_id={game_id}", json={"order": payload})
 
@@ -371,7 +377,9 @@ def test_valid_coast_and_illegal_but_real_moves_are_still_accepted():
             )
         },
     )
-    illegal_move = client.post(f"/api/order?game_id={game_id}", json={"order": _order_payload(target="MOS")})
+    illegal_move = client.post(
+        f"/api/order?game_id={game_id}", json={"order": _order_payload(target="MOS")}
+    )
 
     assert legal_coast.status_code == 200
     assert illegal_move.status_code == 200
@@ -387,7 +395,10 @@ def test_incomplete_support_does_not_break_the_game():
     assert drafted.status_code == 200
     assert any(i["code"] == "ILLEGAL_SUPPORT" for i in drafted.json()["issues"])
     assert client.get(f"/api/game?game_id={game_id}").status_code == 200
-    assert client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).status_code == 200
+    assert (
+        client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).status_code
+        == 200
+    )
 
 
 def test_batch_with_one_bad_order_changes_nothing():
@@ -420,7 +431,9 @@ def test_scenario_refuses_unknown_scenarios_and_unknown_games():
     game_id = _new_game()
     games_before = len(GAMES)
 
-    bad_scenario = client.post(f"/api/scenario?game_id={game_id}", json={"scenario_id": "not-a-scenario"})
+    bad_scenario = client.post(
+        f"/api/scenario?game_id={game_id}", json={"scenario_id": "not-a-scenario"}
+    )
     bad_game = client.post("/api/scenario?game_id=junk_game", json={"scenario_id": "standard_1901"})
 
     assert bad_scenario.status_code == 400
@@ -430,7 +443,9 @@ def test_scenario_refuses_unknown_scenarios_and_unknown_games():
 
 def _put_game_one_center_from_a_solo(game_id):
     game = GAMES[game_id]
-    centers = sorted(p.id for p in PROVINCES.values() if p.is_supply_center and p.id not in ("TUN", "PAR"))[:16]
+    centers = sorted(
+        p.id for p in PROVINCES.values() if p.is_supply_center and p.id not in ("TUN", "PAR")
+    )[:16]
     game.ownership = {center: Power.FRANCE for center in centers}
     game.ownership["PAR"] = Power.FRANCE
     game.season, game.year, game.phase = "Fall", 1907, "Movement"
@@ -468,7 +483,10 @@ def test_game_ends_when_a_power_reaches_eighteen_centers():
     reread = client.get(f"/api/game?game_id={game_id}")
     assert reread.status_code == 200
     assert reread.json()["state"]["winner"] == "FRANCE"
-    assert client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).status_code == 409
+    assert (
+        client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).status_code
+        == 409
+    )
     assert client.post(f"/api/sandbox/ai-step?game_id={game_id}").status_code == 409
 
 
@@ -477,8 +495,12 @@ def test_game_ends_only_after_the_retreat_of_the_deciding_turn():
     _put_game_one_center_from_a_solo(game_id)
     game = GAMES[game_id]
     # The 18th center is defended, so taking it dislodges a unit that still has to retreat.
-    game.units.append(Unit(id="TUR_A_TUN", power=Power.TURKEY, unit_type=UnitType.ARMY, province="TUN"))
-    game.units.append(Unit(id="FRA_F_WES", power=Power.FRANCE, unit_type=UnitType.FLEET, province="WES"))
+    game.units.append(
+        Unit(id="TUR_A_TUN", power=Power.TURKEY, unit_type=UnitType.ARMY, province="TUN")
+    )
+    game.units.append(
+        Unit(id="FRA_F_WES", power=Power.FRANCE, unit_type=UnitType.FLEET, province="WES")
+    )
     game.orders["FRA_F_WES"] = Order(
         unit_id="FRA_F_WES",
         power=Power.FRANCE,
@@ -500,7 +522,10 @@ def test_game_ends_only_after_the_retreat_of_the_deciding_turn():
     assert retreat["winner"] == "FRANCE"
     assert (retreat["season"], retreat["year"], retreat["phase"]) == ("Fall", 1907, "Retreats")
     assert client.get(f"/api/game?game_id={game_id}").status_code == 200
-    assert client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).status_code == 409
+    assert (
+        client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).status_code
+        == 409
+    )
 
 
 def test_previewing_a_winning_turn_does_not_end_the_game():
@@ -531,7 +556,10 @@ def test_rollback_reopens_a_finished_game():
 
     assert state["winner"] is None
     assert client.get(f"/api/games/{game_id}").json()["status"] == "active"
-    assert client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).json()["winner"] == "FRANCE"
+    assert (
+        client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).json()["winner"]
+        == "FRANCE"
+    )
 
 
 @pytest.mark.parametrize(
@@ -576,7 +604,9 @@ def test_static_lookup_finds_real_files(tmp_path):
     (root / "assets" / "app.js").write_text("js")
 
     assert resolve_static_path(str(root), "favicon.svg") == str((root / "favicon.svg").resolve())
-    assert resolve_static_path(str(root), "assets/app.js") == str((root / "assets" / "app.js").resolve())
+    assert resolve_static_path(str(root), "assets/app.js") == str(
+        (root / "assets" / "app.js").resolve()
+    )
 
 
 def test_joining_does_not_change_the_power_other_players_see():
@@ -613,7 +643,12 @@ def test_multiplayer_auto_adjudication_on_consensus_finalization():
     # 1. Host creates game as England
     res_create = client.post(
         "/api/games",
-        json={"name": "Consensus Test", "creator_power": "ENGLAND", "user_id": "host_george", "email": "king@uk.gov"},
+        json={
+            "name": "Consensus Test",
+            "creator_power": "ENGLAND",
+            "user_id": "host_george",
+            "email": "king@uk.gov",
+        },
     )
     assert res_create.status_code == 200
     gid = res_create.json()["game_id"]
@@ -732,9 +767,7 @@ def test_hypothetical_orders_never_reach_the_real_match():
     sandbox_id = _enter_sandbox(game_id)["game_id"]
 
     _germany_moves_to_silesia(sandbox_id)
-    res = client.post(
-        f"/api/sandbox/ai-orders?game_id={sandbox_id}", json={"include_active": True}
-    )
+    res = client.post(f"/api/sandbox/ai-orders?game_id={sandbox_id}", json={"include_active": True})
     assert res.status_code == 200
     assert GAMES[game_id].orders["GER_A_BER"] == real_germany_order
 
@@ -840,14 +873,20 @@ def test_deleting_a_match_removes_its_sandboxes():
     assert client.delete(f"/api/games/{game_id}", headers=_auth_headers()).status_code == 200
 
     assert sandbox_id not in GAMES
-    assert client.post(
-        f"/api/sandbox/exit?game_id={sandbox_id}", json={"power": "FRANCE"}
-    ).status_code == 404
+    assert (
+        client.post(f"/api/sandbox/exit?game_id={sandbox_id}", json={"power": "FRANCE"}).status_code
+        == 404
+    )
 
 
 @pytest.mark.parametrize(
     "path",
-    ["/api/sandbox/exit", "/api/sandbox/clear-foreign", "/api/sandbox/ai-orders", "/api/sandbox/ai-step"],
+    [
+        "/api/sandbox/exit",
+        "/api/sandbox/clear-foreign",
+        "/api/sandbox/ai-orders",
+        "/api/sandbox/ai-step",
+    ],
 )
 def test_sandbox_writes_are_refused_on_a_live_match(path):
     game_id = _seated_game()
@@ -1103,7 +1142,15 @@ def test_a_missed_retreat_disbands_the_unit():
 
 def test_a_dislodged_units_default_order_is_to_disband():
     orders = create_default_orders(
-        [Unit(id="x", power=Power.FRANCE, unit_type=UnitType.ARMY, province="MUN", is_dislodged=True)],
+        [
+            Unit(
+                id="x",
+                power=Power.FRANCE,
+                unit_type=UnitType.ARMY,
+                province="MUN",
+                is_dislodged=True,
+            )
+        ],
         "Retreats",
     )
 
@@ -1277,7 +1324,9 @@ def test_a_coast_on_an_army_order_is_ignored():
     client.post(f"/api/orders/batch?game_id={game_id}", json={"power": "FRANCE", "orders": [order]})
     client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers())
 
-    assert [(u.province, u.coast) for u in GAMES[game_id].units if u.id == "FRA_A_MAR"] == [("SPA", None)]
+    assert [(u.province, u.coast) for u in GAMES[game_id].units if u.id == "FRA_A_MAR"] == [
+        ("SPA", None)
+    ]
 
 
 def test_a_power_that_misses_its_disbands_still_loses_units():
@@ -1423,6 +1472,7 @@ def test_gzip_compression_and_static_caching(tmp_path, monkeypatch):
     # 2. Cached static files
     from fastapi import FastAPI
     from main import CachedStaticFiles
+
     assets_dir = tmp_path / "assets"
     assets_dir.mkdir()
     asset_file = assets_dir / "bundle-test.js"

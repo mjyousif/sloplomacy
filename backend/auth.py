@@ -42,10 +42,9 @@ def get_supabase_url() -> str:
 
 def is_insecure_dev_auth_allowed() -> bool:
     """Determine whether unverified development auth fallback is permitted."""
-    return (
-        os.getenv("ALLOW_INSECURE_DEV_AUTH", "false").lower() == "true"
-        or os.getenv("ENVIRONMENT", "").lower() in ("test", "development")
-    )
+    return os.getenv("ALLOW_INSECURE_DEV_AUTH", "false").lower() == "true" or os.getenv(
+        "ENVIRONMENT", ""
+    ).lower() in ("test", "development")
 
 
 def get_jwks_client(supabase_url: str) -> Optional[jwt.PyJWKClient]:

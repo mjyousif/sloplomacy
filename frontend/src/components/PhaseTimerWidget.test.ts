@@ -15,8 +15,18 @@ const voting: PhaseTimer = {
   remaining_seconds: 42,
   extensions_needed: 3,
 };
-const running: PhaseTimer = { ...voting, stage: 'running', minutes: 15, remaining_seconds: 845 };
-const paused: PhaseTimer = { ...voting, stage: 'paused', remaining_seconds: null, ready_powers: ['ENGLAND'] };
+const running: PhaseTimer = {
+  ...voting,
+  stage: 'running',
+  minutes: 15,
+  remaining_seconds: 845,
+};
+const paused: PhaseTimer = {
+  ...voting,
+  stage: 'paused',
+  remaining_seconds: null,
+  ready_powers: ['ENGLAND'],
+};
 
 function render(props: Partial<PhaseTimerWidgetProps>): string {
   const noop = () => undefined;
@@ -31,7 +41,7 @@ function render(props: Partial<PhaseTimerWidgetProps>): string {
       onExtend: noop,
       onReady: noop,
       ...props,
-    })
+    }),
   );
 }
 
@@ -73,12 +83,18 @@ describe('PhaseTimerWidget', () => {
     const watching = render({ timer: running, seatPower: null });
     expect(watching).toContain('14:05');
     expect(watching).not.toContain('5 Minutes');
-    expect(render({ timer: paused, seatPower: 'TURKEY' })).not.toContain('Ready Up');
+    expect(render({ timer: paused, seatPower: 'TURKEY' })).not.toContain(
+      'Ready Up',
+    );
     expect(render({ timer: voting, seatPower: null })).toContain('disabled');
   });
 
   it('warns that the real clock runs on behind Hypothetical Mode', () => {
-    expect(render({ timer: running, hypothetical: true })).toContain('real clock is still running');
-    expect(render({ timer: running })).not.toContain('real clock is still running');
+    expect(render({ timer: running, hypothetical: true })).toContain(
+      'real clock is still running',
+    );
+    expect(render({ timer: running })).not.toContain(
+      'real clock is still running',
+    );
   });
 });

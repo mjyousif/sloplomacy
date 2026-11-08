@@ -19,11 +19,15 @@ describe('useDiplomacyWebSocket helpers', () => {
     });
 
     it('returns /ws/games/{id} when viewMode is multiplayer', () => {
-      expect(resolveWebSocketPath('multiplayer', 'match_104')).toBe('/ws/games/match_104?handshake=1');
+      expect(resolveWebSocketPath('multiplayer', 'match_104')).toBe(
+        '/ws/games/match_104?handshake=1',
+      );
     });
 
     it('returns /ws/games/{id} when viewMode is sandbox', () => {
-      expect(resolveWebSocketPath('sandbox', 'proto_1901')).toBe('/ws/games/proto_1901?handshake=1');
+      expect(resolveWebSocketPath('sandbox', 'proto_1901')).toBe(
+        '/ws/games/proto_1901?handshake=1',
+      );
     });
 
     it('returns null when activeGameId is null in match modes', () => {
@@ -33,13 +37,13 @@ describe('useDiplomacyWebSocket helpers', () => {
 
     it('asks for the auth handshake and never carries a token in the URL', () => {
       expect(resolveWebSocketPath('multiplayer', 'g1', 'FRANCE', 'pw')).toBe(
-        '/ws/games/g1?handshake=1&power=FRANCE&passcode=pw'
+        '/ws/games/g1?handshake=1&power=FRANCE&passcode=pw',
       );
     });
 
     it('properly URI encodes complex game IDs', () => {
       expect(resolveWebSocketPath('multiplayer', 'game/room#1')).toBe(
-        '/ws/games/game%2Froom%231?handshake=1'
+        '/ws/games/game%2Froom%231?handshake=1',
       );
     });
   });

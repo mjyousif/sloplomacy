@@ -11,7 +11,8 @@ import { useSyncExternalStore } from 'react';
 export const COMPACT_LAYOUT_QUERY = '(max-width: 767px), (max-height: 500px)';
 
 function getMediaQuery(): MediaQueryList | null {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return null;
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function')
+    return null;
   return window.matchMedia(COMPACT_LAYOUT_QUERY);
 }
 

@@ -9,7 +9,14 @@ import pytest
 import jwt
 from fastapi.testclient import TestClient
 
-from main import app, GAMES, GAME_SUMMARIES, GAME_PASSCODES, MAX_ACTIVE_GAMES, seed_initial_multiplayer_lobbies
+from main import (
+    app,
+    GAMES,
+    GAME_SUMMARIES,
+    GAME_PASSCODES,
+    MAX_ACTIVE_GAMES,
+    seed_initial_multiplayer_lobbies,
+)
 from models import Order, OrderType, Power, UnitType
 from database import is_valid_room_code
 
@@ -17,14 +24,26 @@ JWT_SECRET = "test-secret-at-least-32-chars-long-12345"
 client = TestClient(app)
 
 
-def make_jwt(user_id: str, email: str, secret: str = JWT_SECRET, exp_offset: int = 3600, aud: str = "authenticated") -> str:
+def make_jwt(
+    user_id: str,
+    email: str,
+    secret: str = JWT_SECRET,
+    exp_offset: int = 3600,
+    aud: str = "authenticated",
+) -> str:
     payload = {"sub": user_id, "email": email, "exp": int(time.time()) + exp_offset}
     if aud:
         payload["aud"] = aud
     return jwt.encode(payload, secret, algorithm="HS256")
 
 
-def auth_headers(user_id: str, email: str, secret: str = JWT_SECRET, exp_offset: int = 3600, aud: str = "authenticated") -> dict:
+def auth_headers(
+    user_id: str,
+    email: str,
+    secret: str = JWT_SECRET,
+    exp_offset: int = 3600,
+    aud: str = "authenticated",
+) -> dict:
     return {"Authorization": f"Bearer {make_jwt(user_id, email, secret, exp_offset, aud)}"}
 
 
@@ -36,6 +55,7 @@ def reset_server():
 # ==============================================================================
 # SEC-01: Cryptographic JWT Verification & alg: none Rejection
 # ==============================================================================
+
 
 def test_jwt_alg_none_rejected(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "production")
@@ -59,6 +79,7 @@ def load_quickstart():
 
 def demo_sign_in_headers() -> dict:
     """The token getAuthHeaders in frontend/src/lib/supabase.ts sends for a local demo user."""
+
     def encode(value: dict) -> str:
         return base64.b64encode(json.dumps(value, separators=(",", ":")).encode()).decode()
 
@@ -85,7 +106,9 @@ def test_local_launcher_keeps_environment_set_in_the_shell(monkeypatch):
 
 
 def test_jwt_tampered_signature_rejected():
-    fake_token = make_jwt("attacker", "attacker@test.com", secret="wrong-secret-key-at-least-32-characters-123")
+    fake_token = make_jwt(
+        "attacker", "attacker@test.com", secret="wrong-secret-key-at-least-32-characters-123"
+    )
     res = client.get(
         "/api/admin/status?game_id=proto_1901",
         headers={"Authorization": f"Bearer {fake_token}"},
@@ -106,12 +129,18 @@ def test_jwt_expired_token_rejected():
 # SEC-02: Seat Authorization on Order Mutations
 # ==============================================================================
 
+
 def test_seat_authorization_prevents_opponent_order_tampering():
     # Alice creates match as FRANCE
     alice_id = "00000000-0000-0000-0000-000000000001"
     res_create = client.post(
         "/api/games",
-        json={"name": "Auth Match", "creator_power": "FRANCE", "user_id": alice_id, "email": "alice@test.com"},
+        json={
+            "name": "Auth Match",
+            "creator_power": "FRANCE",
+            "user_id": alice_id,
+            "email": "alice@test.com",
+        },
         headers=auth_headers(alice_id, "alice@test.com"),
     )
     assert res_create.status_code == 200
@@ -171,13 +200,19 @@ def test_seat_authorization_prevents_opponent_order_tampering():
 # SEC-03: Fog of War / Simultaneous Order Secrecy
 # ==============================================================================
 
+
 def test_fog_of_war_masks_opponent_orders():
     alice_id = "00000000-0000-0000-0000-000000000001"
     bob_id = "00000000-0000-0000-0000-000000000002"
 
     res_create = client.post(
         "/api/games",
-        json={"name": "FoW Match", "creator_power": "FRANCE", "user_id": alice_id, "email": "alice@test.com"},
+        json={
+            "name": "FoW Match",
+            "creator_power": "FRANCE",
+            "user_id": alice_id,
+            "email": "alice@test.com",
+        },
         headers=auth_headers(alice_id, "alice@test.com"),
     )
     gid = res_create.json()["game_id"]
@@ -231,13 +266,19 @@ def test_fog_of_war_masks_opponent_orders():
 # SEC-04: IDOR Prevention on Leave & Surrender
 # ==============================================================================
 
+
 def test_surrender_and_leave_idor_protection():
     alice_id = "00000000-0000-0000-0000-000000000001"
     bob_id = "00000000-0000-0000-0000-000000000002"
 
     res_create = client.post(
         "/api/games",
-        json={"name": "IDOR Match", "creator_power": "FRANCE", "user_id": alice_id, "email": "alice@test.com"},
+        json={
+            "name": "IDOR Match",
+            "creator_power": "FRANCE",
+            "user_id": alice_id,
+            "email": "alice@test.com",
+        },
         headers=auth_headers(alice_id, "alice@test.com"),
     )
     gid = res_create.json()["game_id"]
@@ -274,6 +315,7 @@ def test_surrender_and_leave_idor_protection():
 # SEC-06: Passcode Protection for Private Games
 # ==============================================================================
 
+
 def test_private_game_passcode_enforced():
     alice_id = "00000000-0000-0000-0000-000000000001"
     res_create = client.post(
@@ -308,6 +350,7 @@ def test_private_game_passcode_enforced():
 # SEC-05: Denial of Service / Game Room Capacity Limits
 # ==============================================================================
 
+
 def test_game_capacity_limit_enforced(monkeypatch):
     from main import check_game_capacity, MAX_ACTIVE_GAMES
     from fastapi import HTTPException
@@ -326,6 +369,7 @@ def test_game_capacity_limit_enforced(monkeypatch):
 # SEC-07: Room Code & Input Validation
 # ==============================================================================
 
+
 def test_room_code_sanitization():
     assert is_valid_room_code("mp_abc123") is True
     assert is_valid_room_code("my-custom-room_42") is True
@@ -340,13 +384,19 @@ def test_room_code_sanitization():
 # SEC-08: Timer Authorization
 # ==============================================================================
 
+
 def test_timer_action_authorization():
     alice_id = "00000000-0000-0000-0000-000000000001"
     bob_id = "00000000-0000-0000-0000-000000000002"
 
     res_create = client.post(
         "/api/games",
-        json={"name": "Timer Match", "creator_power": "FRANCE", "user_id": alice_id, "email": "alice@test.com"},
+        json={
+            "name": "Timer Match",
+            "creator_power": "FRANCE",
+            "user_id": alice_id,
+            "email": "alice@test.com",
+        },
         headers=auth_headers(alice_id, "alice@test.com"),
     )
     gid = res_create.json()["game_id"]
@@ -391,6 +441,7 @@ def test_timer_action_authorization():
 # SEC-09: Defense-in-Depth Security Response Headers
 # ==============================================================================
 
+
 def test_security_headers_present():
     """Verify that HTTP responses include standard defensive security headers."""
     res = client.get("/api/games")
@@ -425,22 +476,39 @@ def bob_headers() -> dict:
 
 def secret_plan_match(private: bool = False) -> str:
     """Alice (host, France) has secretly ordered Paris to Burgundy; Bob holds Germany."""
-    body = {"name": "Secrets", "creator_power": "FRANCE", "user_id": ALICE_ID, "email": "alice@test.com"}
+    body = {
+        "name": "Secrets",
+        "creator_power": "FRANCE",
+        "user_id": ALICE_ID,
+        "email": "alice@test.com",
+    }
     if private:
         body.update({"is_private": True, "passcode": "Secret1901"})
     gid = client.post("/api/games", json=body, headers=alice_headers()).json()["game_id"]
     joined = client.post(
         f"/api/games/{gid}/join",
-        json={"power": "GERMANY", "user_id": BOB_ID, "email": "bob@test.com", "passcode": "Secret1901" if private else None},
+        json={
+            "power": "GERMANY",
+            "user_id": BOB_ID,
+            "email": "bob@test.com",
+            "passcode": "Secret1901" if private else None,
+        },
         headers=bob_headers(),
     )
     assert joined.status_code == 200, joined.text
     res = client.post(
         f"/api/order?game_id={gid}",
-        json={"order": {
-            "unit_id": "FRA_A_PAR", "power": "FRANCE", "unit_type": "A", "origin": "PAR",
-            "order_type": "MOVE", "target": "BUR", "is_explicit": True,
-        }},
+        json={
+            "order": {
+                "unit_id": "FRA_A_PAR",
+                "power": "FRANCE",
+                "unit_type": "A",
+                "origin": "PAR",
+                "order_type": "MOVE",
+                "target": "BUR",
+                "is_explicit": True,
+            }
+        },
         headers=alice_headers(),
     )
     assert res.status_code == 200, res.text
@@ -500,10 +568,14 @@ def test_saving_a_live_match_copies_only_what_the_caller_sees():
 def test_private_sandbox_opens_only_for_your_own_seat():
     gid = secret_plan_match()
     for headers in (bob_headers(), {}):
-        res = client.post(f"/api/sandbox/enter?game_id={gid}", json={"power": "FRANCE"}, headers=headers)
+        res = client.post(
+            f"/api/sandbox/enter?game_id={gid}", json={"power": "FRANCE"}, headers=headers
+        )
         assert res.status_code == 403
 
-    own = client.post(f"/api/sandbox/enter?game_id={gid}", json={"power": "GERMANY"}, headers=bob_headers())
+    own = client.post(
+        f"/api/sandbox/enter?game_id={gid}", json={"power": "GERMANY"}, headers=bob_headers()
+    )
     assert own.status_code == 200
     assert own.json()["orders"]["FRA_A_PAR"]["order_type"] == "HOLD"
 
@@ -513,8 +585,10 @@ def test_only_the_seat_holder_carries_sandbox_orders_into_the_match():
     sandbox_id = client.post(
         f"/api/sandbox/enter?game_id={gid}", json={"power": "GERMANY"}, headers=bob_headers()
     ).json()["game_id"]
-    GAMES[sandbox_id].orders["GER_A_BER"] = GAMES[sandbox_id].orders["GER_A_BER"].model_copy(
-        update={"order_type": OrderType.MOVE, "target": "SIL", "is_explicit": True}
+    GAMES[sandbox_id].orders["GER_A_BER"] = (
+        GAMES[sandbox_id]
+        .orders["GER_A_BER"]
+        .model_copy(update={"order_type": OrderType.MOVE, "target": "SIL", "is_explicit": True})
     )
 
     res = client.post(f"/api/sandbox/exit?game_id={sandbox_id}", json={"power": "GERMANY"})
@@ -527,10 +601,19 @@ def test_a_batch_cannot_order_another_powers_units():
     gid = secret_plan_match()
     res = client.post(
         f"/api/orders/batch?game_id={gid}",
-        json={"power": "GERMANY", "orders": [{
-            "unit_id": "FRA_A_PAR", "power": "GERMANY", "unit_type": "A", "origin": "PAR",
-            "order_type": "HOLD", "is_explicit": True,
-        }]},
+        json={
+            "power": "GERMANY",
+            "orders": [
+                {
+                    "unit_id": "FRA_A_PAR",
+                    "power": "GERMANY",
+                    "unit_type": "A",
+                    "origin": "PAR",
+                    "order_type": "HOLD",
+                    "is_explicit": True,
+                }
+            ],
+        },
         headers=bob_headers(),
     )
     assert res.status_code == 403
@@ -541,10 +624,16 @@ def test_a_build_slot_belongs_to_the_power_it_names():
     gid = secret_plan_match()
     res = client.post(
         f"/api/order?game_id={gid}",
-        json={"order": {
-            "unit_id": "BUILD_FRANCE_PAR", "power": "GERMANY", "unit_type": "A", "origin": "PAR",
-            "order_type": "BUILD", "is_explicit": True,
-        }},
+        json={
+            "order": {
+                "unit_id": "BUILD_FRANCE_PAR",
+                "power": "GERMANY",
+                "unit_type": "A",
+                "origin": "PAR",
+                "order_type": "BUILD",
+                "is_explicit": True,
+            }
+        },
         headers=bob_headers(),
     )
     assert res.status_code == 403
@@ -553,12 +642,21 @@ def test_a_build_slot_belongs_to_the_power_it_names():
 
 def test_nobody_orders_an_empty_seat():
     gid = secret_plan_match()
-    order = {"order": {
-        "unit_id": "RUS_A_MOS", "power": "RUSSIA", "unit_type": "A", "origin": "MOS",
-        "order_type": "MOVE", "target": "UKR", "is_explicit": True,
-    }}
+    order = {
+        "order": {
+            "unit_id": "RUS_A_MOS",
+            "power": "RUSSIA",
+            "unit_type": "A",
+            "origin": "MOS",
+            "order_type": "MOVE",
+            "target": "UKR",
+            "is_explicit": True,
+        }
+    }
     for headers in (bob_headers(), {}):
-        assert client.post(f"/api/order?game_id={gid}", json=order, headers=headers).status_code == 403
+        assert (
+            client.post(f"/api/order?game_id={gid}", json=order, headers=headers).status_code == 403
+        )
     assert GAMES[gid].orders["RUS_A_MOS"].order_type == OrderType.HOLD
 
 
@@ -574,7 +672,9 @@ def socket_state(path: str, token: str | None = None) -> dict:
 def test_socket_shows_hidden_orders_only_to_their_seat():
     gid = secret_plan_match()
     assert_plan_hidden(socket_state(f"/ws/games/{gid}?power=FRANCE"))
-    assert_plan_hidden(socket_state(f"/ws/games/{gid}?power=FRANCE&handshake=1", make_jwt(BOB_ID, "bob@test.com")))
+    assert_plan_hidden(
+        socket_state(f"/ws/games/{gid}?power=FRANCE&handshake=1", make_jwt(BOB_ID, "bob@test.com"))
+    )
     assert_plan_hidden(socket_state(f"/ws/games/{gid}?power=FRANCE&handshake=1", "not-a-token"))
 
     own = socket_state(f"/ws/games/{gid}?handshake=1", make_jwt(ALICE_ID, "alice@test.com"))

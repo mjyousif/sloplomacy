@@ -45,10 +45,15 @@ export interface CompactTopBarProps {
 }
 
 /** "2 errors, 1 warning", for the problem badge's label. */
-export function describeIssueCount(errorCount: number, warningCount: number): string {
+export function describeIssueCount(
+  errorCount: number,
+  warningCount: number,
+): string {
   const parts: string[] = [];
-  if (errorCount > 0) parts.push(`${errorCount} error${errorCount === 1 ? '' : 's'}`);
-  if (warningCount > 0) parts.push(`${warningCount} warning${warningCount === 1 ? '' : 's'}`);
+  if (errorCount > 0)
+    parts.push(`${errorCount} error${errorCount === 1 ? '' : 's'}`);
+  if (warningCount > 0)
+    parts.push(`${warningCount} warning${warningCount === 1 ? '' : 's'}`);
   return parts.length > 0 ? parts.join(', ') : 'No problems with your orders';
 }
 
@@ -108,7 +113,11 @@ export function CompactTopBar({
   }, [menuOpen]);
 
   return (
-    <header className="compact-top-bar" ref={rootRef} data-testid="compact-top-bar">
+    <header
+      className="compact-top-bar"
+      ref={rootRef}
+      data-testid="compact-top-bar"
+    >
       {inGame ? (
         <button
           type="button"
@@ -148,7 +157,11 @@ export function CompactTopBar({
             onClick={onOpenOrderCheck}
             aria-label={`${describeIssueCount(errorCount, warningCount)}. Open the order check.`}
           >
-            {errorCount > 0 ? <AlertOctagon size={15} /> : <AlertTriangle size={15} />}
+            {errorCount > 0 ? (
+              <AlertOctagon size={15} />
+            ) : (
+              <AlertTriangle size={15} />
+            )}
             <span>{issueTotal}</span>
           </button>
         ) : (
@@ -172,11 +185,19 @@ export function CompactTopBar({
         onClick={() => (menuOpen ? closeMenu() : setMenuOpen(true))}
       >
         <MoreHorizontal size={22} />
-        {!wsConnected && <span className="compact-menu-alert-dot" aria-hidden="true" />}
+        {!wsConnected && (
+          <span className="compact-menu-alert-dot" aria-hidden="true" />
+        )}
       </button>
 
       {menuOpen && (
-        <div id={menuId} className="compact-menu-panel" data-testid="compact-menu-panel" role="dialog" aria-label="Menu">
+        <div
+          id={menuId}
+          className="compact-menu-panel"
+          data-testid="compact-menu-panel"
+          role="dialog"
+          aria-label="Menu"
+        >
           {menuView === 'display' ? (
             <>
               <button

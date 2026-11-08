@@ -2,12 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { getPieceFrame } from '../components/MapPiece';
 import { PIECE_STYLES, PieceStyle } from '../utils/displayPrefs';
 import { EUROPE_PROVINCE_GEOMETRY, Point } from './europeMapGeometry';
-import { getMapLayout, SEA_SHORT_NAMES, SHARED_MAP_NAMES_SVG } from './mapLayouts';
+import {
+  getMapLayout,
+  SEA_SHORT_NAMES,
+  SHARED_MAP_NAMES_SVG,
+} from './mapLayouts';
 import { measureMapName } from './mapTextMetrics';
 
 const SEAS = Object.keys(SEA_SHORT_NAMES);
 const LAND = Object.keys(EUROPE_PROVINCE_GEOMETRY).filter(
-  (id) => id !== 'SWI' && !SEAS.includes(id)
+  (id) => id !== 'SWI' && !SEAS.includes(id),
 );
 const FITTED_STYLES = PIECE_STYLES.filter((style) => style !== 'classic');
 
@@ -19,21 +23,70 @@ const SMALLEST_NAME_SIZE = 11;
 const STEEPEST_NAME_ANGLE = 85;
 
 /** The drawn radius of each style's token around the unit point, plus its stroke. */
-const TOKEN_REACH: Partial<Record<PieceStyle, number>> = { seated: 14, compact: 12 };
+const TOKEN_REACH: Partial<Record<PieceStyle, number>> = {
+  seated: 14,
+  compact: 12,
+};
 const STAR_REACH: Partial<Record<PieceStyle, number>> = { compact: 6.5 };
 const BASE_REACH = 5;
 
 const NAMES: Record<string, string> = {
-  ALB: 'Albania', ANK: 'Ankara', APU: 'Apulia', ARM: 'Armenia', BEL: 'Belgium', BER: 'Berlin',
-  BOH: 'Bohemia', BRE: 'Brest', BUD: 'Budapest', BUL: 'Bulgaria', BUR: 'Burgundy', CLY: 'Clyde',
-  CON: 'Constantinople', DEN: 'Denmark', EDI: 'Edinburgh', FIN: 'Finland', GAL: 'Galicia',
-  GAS: 'Gascony', GRE: 'Greece', HOL: 'Holland', KIE: 'Kiel', LON: 'London', LVN: 'Livonia',
-  LVP: 'Liverpool', MAR: 'Marseilles', MOS: 'Moscow', MUN: 'Munich', NAF: 'North Africa',
-  NAP: 'Naples', NWY: 'Norway', PAR: 'Paris', PIC: 'Picardy', PIE: 'Piedmont', POR: 'Portugal',
-  PRU: 'Prussia', ROM: 'Rome', RUH: 'Ruhr', RUM: 'Rumania', SER: 'Serbia', SEV: 'Sevastopol',
-  SIL: 'Silesia', SMY: 'Smyrna', SPA: 'Spain', STP: 'St. Petersburg', SWE: 'Sweden', SYR: 'Syria',
-  TRI: 'Trieste', TUN: 'Tunis', TUS: 'Tuscany', TYR: 'Tyrolia', UKR: 'Ukraine', VEN: 'Venice',
-  VIE: 'Vienna', WAL: 'Wales', WAR: 'Warsaw', YOR: 'Yorkshire',
+  ALB: 'Albania',
+  ANK: 'Ankara',
+  APU: 'Apulia',
+  ARM: 'Armenia',
+  BEL: 'Belgium',
+  BER: 'Berlin',
+  BOH: 'Bohemia',
+  BRE: 'Brest',
+  BUD: 'Budapest',
+  BUL: 'Bulgaria',
+  BUR: 'Burgundy',
+  CLY: 'Clyde',
+  CON: 'Constantinople',
+  DEN: 'Denmark',
+  EDI: 'Edinburgh',
+  FIN: 'Finland',
+  GAL: 'Galicia',
+  GAS: 'Gascony',
+  GRE: 'Greece',
+  HOL: 'Holland',
+  KIE: 'Kiel',
+  LON: 'London',
+  LVN: 'Livonia',
+  LVP: 'Liverpool',
+  MAR: 'Marseilles',
+  MOS: 'Moscow',
+  MUN: 'Munich',
+  NAF: 'North Africa',
+  NAP: 'Naples',
+  NWY: 'Norway',
+  PAR: 'Paris',
+  PIC: 'Picardy',
+  PIE: 'Piedmont',
+  POR: 'Portugal',
+  PRU: 'Prussia',
+  ROM: 'Rome',
+  RUH: 'Ruhr',
+  RUM: 'Rumania',
+  SER: 'Serbia',
+  SEV: 'Sevastopol',
+  SIL: 'Silesia',
+  SMY: 'Smyrna',
+  SPA: 'Spain',
+  STP: 'St. Petersburg',
+  SWE: 'Sweden',
+  SYR: 'Syria',
+  TRI: 'Trieste',
+  TUN: 'Tunis',
+  TUS: 'Tuscany',
+  TYR: 'Tyrolia',
+  UKR: 'Ukraine',
+  VEN: 'Venice',
+  VIE: 'Vienna',
+  WAL: 'Wales',
+  WAR: 'Warsaw',
+  YOR: 'Yorkshire',
 };
 
 /** Turns an SVG path into polygons, covering every command the map geometry uses. */
@@ -105,8 +158,16 @@ function flattenPath(path: string): Point[][] {
           const t = step / 8;
           const u = 1 - t;
           polygon.push({
-            x: u * u * u * x + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * ex,
-            y: u * u * u * y + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * ey,
+            x:
+              u * u * u * x +
+              3 * u * u * t * c1x +
+              3 * u * t * t * c2x +
+              t * t * t * ex,
+            y:
+              u * u * u * y +
+              3 * u * u * t * c1y +
+              3 * u * t * t * c2y +
+              t * t * t * ey,
           });
         }
         x = ex;
@@ -126,7 +187,10 @@ function flattenPath(path: string): Point[][] {
 }
 
 const POLYGONS = Object.fromEntries(
-  Object.entries(EUROPE_PROVINCE_GEOMETRY).map(([id, geom]) => [id, flattenPath(geom.path)])
+  Object.entries(EUROPE_PROVINCE_GEOMETRY).map(([id, geom]) => [
+    id,
+    flattenPath(geom.path),
+  ]),
 );
 
 /** Even-odd test across all of a province's polygons, matching how SVG fills it. */
@@ -136,7 +200,10 @@ function isInside(provinceId: string, { x, y }: Point): boolean {
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
       const a = polygon[i];
       const b = polygon[j];
-      if (a.y > y !== b.y > y && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) {
+      if (
+        a.y > y !== b.y > y &&
+        x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x
+      ) {
         inside = !inside;
       }
     }
@@ -166,10 +233,13 @@ function nameBox(style: PieceStyle, provinceId: string): Point[] {
 }
 
 const nearestDistance = (points: Point[], to: Point) =>
-  Math.min(...points.map((point) => Math.hypot(point.x - to.x, point.y - to.y)));
+  Math.min(
+    ...points.map((point) => Math.hypot(point.x - to.x, point.y - to.y)),
+  );
 
 /** Failures read as a list of province ids, so a broken edit names what to fix. */
-const failing = (provinces: string[], breaks: (id: string) => boolean) => provinces.filter(breaks);
+const failing = (provinces: string[], breaks: (id: string) => boolean) =>
+  provinces.filter(breaks);
 
 describe('map layouts', () => {
   it('checks every land province', () => {
@@ -187,11 +257,13 @@ describe('map layouts', () => {
   });
 
   it('shares the sea names and coast tags, and no land names, across the fitted styles', () => {
-    const texts = [...SHARED_MAP_NAMES_SVG.matchAll(/<tspan\b[^>]*>(.*?)<\/tspan>/gs)].map(
-      ([, inner]) => inner.replace(/<[^>]+>/g, '').trim()
-    );
+    const texts = [
+      ...SHARED_MAP_NAMES_SVG.matchAll(/<tspan\b[^>]*>(.*?)<\/tspan>/gs),
+    ].map(([, inner]) => inner.replace(/<[^>]+>/g, '').trim());
     expect(texts).toContain('NORTH SEA');
-    expect(texts.filter((text) => ['NC', 'SC', 'EC'].includes(text))).toHaveLength(6);
+    expect(
+      texts.filter((text) => ['NC', 'SC', 'EC'].includes(text)),
+    ).toHaveLength(6);
     expect(texts).not.toContain('Liverpool');
     expect(texts).not.toContain('LVP');
   });
@@ -214,12 +286,14 @@ describe('map layouts', () => {
 
     it('keeps names readable', () => {
       const tooSmall = failing(LAND, (id) => {
-        const floor = NAME_SIZE_EXCEPTIONS.includes(id) ? SMALLEST_NAME_SIZE : MIN_NAME_SIZE;
+        const floor = NAME_SIZE_EXCEPTIONS.includes(id)
+          ? SMALLEST_NAME_SIZE
+          : MIN_NAME_SIZE;
         return layout[id].name!.size < floor;
       });
       const tooSteep = failing(
         LAND,
-        (id) => Math.abs(layout[id].name!.angle) > STEEPEST_NAME_ANGLE
+        (id) => Math.abs(layout[id].name!.angle) > STEEPEST_NAME_ANGLE,
       );
       expect(tooSmall).toEqual([]);
       expect(tooSteep).toEqual([]);
@@ -228,7 +302,11 @@ describe('map layouts', () => {
     it('keeps every name inside its province', () => {
       const spilled = failing(LAND, (id) => {
         const points = nameBox(style, id);
-        return points.filter((point) => !isInside(id, point)).length / points.length > 0.04;
+        return (
+          points.filter((point) => !isInside(id, point)).length /
+            points.length >
+          0.04
+        );
       });
       expect(spilled).toEqual([]);
     });
@@ -238,7 +316,9 @@ describe('map layouts', () => {
       const boxes = LAND.map((id) => ({ id, points: nameBox(style, id) }));
       for (let i = 0; i < boxes.length; i++) {
         for (let j = i + 1; j < boxes.length; j++) {
-          const near = boxes[i].points.some((point) => nearestDistance(boxes[j].points, point) < 1.5);
+          const near = boxes[i].points.some(
+            (point) => nearestDistance(boxes[j].points, point) < 1.5,
+          );
           if (near) clashes.push(`${boxes[i].id}/${boxes[j].id}`);
         }
       }
@@ -250,7 +330,8 @@ describe('map layouts', () => {
       it('never puts a token on its own province name', () => {
         const covered = failing(
           LAND,
-          (id) => nearestDistance(nameBox(style, id), layout[id].unit) < tokenReach
+          (id) =>
+            nearestDistance(nameBox(style, id), layout[id].unit) < tokenReach,
         );
         expect(covered).toEqual([]);
       });
@@ -261,7 +342,10 @@ describe('map layouts', () => {
       it('never puts a star on its own province name', () => {
         const covered = failing(LAND, (id) => {
           const star = layout[id].star;
-          return Boolean(star) && nearestDistance(nameBox(style, id), star!) < starReach;
+          return (
+            Boolean(star) &&
+            nearestDistance(nameBox(style, id), star!) < starReach
+          );
         });
         expect(covered).toEqual([]);
       });
@@ -275,7 +359,8 @@ describe('map layouts', () => {
           const box = nameBox(style, id);
           const onFlag = box.some(
             (point) =>
-              Math.abs(point.x - (unit.x + center.x)) < 13 && Math.abs(point.y - (unit.y - 22)) < 7
+              Math.abs(point.x - (unit.x + center.x)) < 13 &&
+              Math.abs(point.y - (unit.y - 22)) < 7,
           );
           return onFlag || nearestDistance(box, unit) < BASE_REACH;
         });

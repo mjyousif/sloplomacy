@@ -79,7 +79,9 @@ def test_ws_finalize_and_adjudicate_broadcast():
         _ = receive_json(ws)  # Initial state
 
         # Finalize France
-        fin_res = client.post("/api/finalize?game_id=proto_1901", json={"power": "FRANCE", "force": True})
+        fin_res = client.post(
+            "/api/finalize?game_id=proto_1901", json={"power": "FRANCE", "force": True}
+        )
         assert fin_res.status_code == 200
 
         fin_msg = receive_json(ws)
@@ -148,7 +150,12 @@ def test_ws_lobby_hears_about_resolved_turns():
     client = TestClient(app)
     created = client.post(
         "/api/games",
-        json={"name": "Lobby Turn", "creator_power": "FRANCE", "user_id": "host", "email": "host@test.com"},
+        json={
+            "name": "Lobby Turn",
+            "creator_power": "FRANCE",
+            "user_id": "host",
+            "email": "host@test.com",
+        },
     )
     game_id = created.json()["game_id"]
 
@@ -157,9 +164,16 @@ def test_ws_lobby_hears_about_resolved_turns():
 
         import jwt
         import os
+
         secret = os.getenv("SUPABASE_JWT_SECRET", "test-secret-at-least-32-chars-long-12345")
-        token = jwt.encode({"sub": "host", "email": "host@test.com", "aud": "authenticated"}, secret, algorithm="HS256")
-        res = client.post(f"/api/adjudicate?game_id={game_id}", headers={"Authorization": f"Bearer {token}"})
+        token = jwt.encode(
+            {"sub": "host", "email": "host@test.com", "aud": "authenticated"},
+            secret,
+            algorithm="HS256",
+        )
+        res = client.post(
+            f"/api/adjudicate?game_id={game_id}", headers={"Authorization": f"Bearer {token}"}
+        )
         assert res.status_code == 200
 
         update = receive_json(ws)

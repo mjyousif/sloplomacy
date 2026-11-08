@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  beforeAll,
+  afterEach,
+  vi,
+} from 'vitest';
 import {
   fetchAccountDisplayPrefs,
   saveAccountDisplayPrefs,
@@ -12,7 +20,10 @@ import {
 } from './supabase';
 import { AuthUser } from '../types/diplomacy';
 
-const supabaseAuth = vi.hoisted(() => ({ getUser: vi.fn(), updateUser: vi.fn() }));
+const supabaseAuth = vi.hoisted(() => ({
+  getUser: vi.fn(),
+  updateUser: vi.fn(),
+}));
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({ auth: supabaseAuth }),
@@ -42,17 +53,26 @@ describe('supabase auth & local fallback helper', () => {
   });
 
   it('validates email format and password length', async () => {
-    const invalidEmail = await signInWithEmailPassword('invalid-email', '123456');
+    const invalidEmail = await signInWithEmailPassword(
+      'invalid-email',
+      '123456',
+    );
     expect(invalidEmail.error).toBe('Please enter a valid email address.');
     expect(invalidEmail.user).toBeNull();
 
-    const shortPassword = await signInWithEmailPassword('test@diplomacy.eu', '123');
+    const shortPassword = await signInWithEmailPassword(
+      'test@diplomacy.eu',
+      '123',
+    );
     expect(shortPassword.error).toBe('Password must be at least 6 characters.');
     expect(shortPassword.user).toBeNull();
   });
 
   it('handles local dev fallback guest sign-in when Supabase is not configured', async () => {
-    const res = await signInWithEmailPassword('churchill@uk.gov', 'password123');
+    const res = await signInWithEmailPassword(
+      'churchill@uk.gov',
+      'password123',
+    );
     expect(res.error).toBeNull();
     expect(res.user?.email).toBe('churchill@uk.gov');
     expect(res.user?.isLocalDemo).toBe(true);
@@ -69,7 +89,7 @@ describe('supabase auth & local fallback helper', () => {
     const res = await signUpWithEmailPassword(
       'bismarck@germany.gov',
       'securepass123',
-      'Otto von Bismarck'
+      'Otto von Bismarck',
     );
     expect(res.error).toBeNull();
     expect(res.user?.displayName).toBe('Otto von Bismarck');
@@ -115,11 +135,15 @@ describe('display preferences on an account', () => {
   });
 
   describe('local demo accounts', () => {
-    it('keeps each account\'s choice separate', async () => {
+    it("keeps each account's choice separate", async () => {
       await saveAccountDisplayPrefs(demoUser('one'), prefs);
 
-      expect((await fetchAccountDisplayPrefs(demoUser('one'))).prefs).toEqual(prefs);
-      expect((await fetchAccountDisplayPrefs(demoUser('two'))).prefs).toBeNull();
+      expect((await fetchAccountDisplayPrefs(demoUser('one'))).prefs).toEqual(
+        prefs,
+      );
+      expect(
+        (await fetchAccountDisplayPrefs(demoUser('two'))).prefs,
+      ).toBeNull();
     });
   });
 
@@ -146,7 +170,10 @@ describe('display preferences on an account', () => {
         error: null,
       });
 
-      expect(await api.fetchAccountDisplayPrefs(account)).toEqual({ prefs, error: null });
+      expect(await api.fetchAccountDisplayPrefs(account)).toEqual({
+        prefs,
+        error: null,
+      });
     });
 
     it('reports an account with nothing saved as empty, not as a failure', async () => {
@@ -155,30 +182,50 @@ describe('display preferences on an account', () => {
         error: null,
       });
 
-      expect(await api.fetchAccountDisplayPrefs(account)).toEqual({ prefs: null, error: null });
+      expect(await api.fetchAccountDisplayPrefs(account)).toEqual({
+        prefs: null,
+        error: null,
+      });
     });
 
     it('reports a failed read as an error, so it can never pass for an empty account', async () => {
-      supabaseAuth.getUser.mockResolvedValue({ data: { user: null }, error: { message: 'offline' } });
-      expect((await api.fetchAccountDisplayPrefs(account)).error).toBe('offline');
+      supabaseAuth.getUser.mockResolvedValue({
+        data: { user: null },
+        error: { message: 'offline' },
+      });
+      expect((await api.fetchAccountDisplayPrefs(account)).error).toBe(
+        'offline',
+      );
 
       supabaseAuth.getUser.mockRejectedValue(new Error('network down'));
-      expect((await api.fetchAccountDisplayPrefs(account)).error).toBe('network down');
+      expect((await api.fetchAccountDisplayPrefs(account)).error).toBe(
+        'network down',
+      );
     });
 
     it('saves into user metadata', async () => {
       supabaseAuth.updateUser.mockResolvedValue({ error: null });
 
-      expect(await api.saveAccountDisplayPrefs(account, prefs)).toEqual({ error: null });
-      expect(supabaseAuth.updateUser).toHaveBeenCalledWith({ data: { display_prefs: prefs } });
+      expect(await api.saveAccountDisplayPrefs(account, prefs)).toEqual({
+        error: null,
+      });
+      expect(supabaseAuth.updateUser).toHaveBeenCalledWith({
+        data: { display_prefs: prefs },
+      });
     });
 
     it('reports a failed save', async () => {
-      supabaseAuth.updateUser.mockResolvedValue({ error: { message: 'rejected' } });
-      expect((await api.saveAccountDisplayPrefs(account, prefs)).error).toBe('rejected');
+      supabaseAuth.updateUser.mockResolvedValue({
+        error: { message: 'rejected' },
+      });
+      expect((await api.saveAccountDisplayPrefs(account, prefs)).error).toBe(
+        'rejected',
+      );
 
       supabaseAuth.updateUser.mockRejectedValue(new Error('network down'));
-      expect((await api.saveAccountDisplayPrefs(account, prefs)).error).toBe('network down');
+      expect((await api.saveAccountDisplayPrefs(account, prefs)).error).toBe(
+        'network down',
+      );
     });
   });
 });

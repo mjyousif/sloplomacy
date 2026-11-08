@@ -68,7 +68,9 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
               {icon && <span className="sidebar-section-icon">{icon}</span>}
               <span className="sidebar-section-title">{title}</span>
             </span>
-            {badge && <span className="sidebar-section-badge-wrap">{badge}</span>}
+            {badge && (
+              <span className="sidebar-section-badge-wrap">{badge}</span>
+            )}
           </button>
         ) : (
           <div className="sidebar-section-static-header">
@@ -76,13 +78,20 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
               {icon && <span className="sidebar-section-icon">{icon}</span>}
               <span className="sidebar-section-title">{title}</span>
             </span>
-            {badge && <span className="sidebar-section-badge-wrap">{badge}</span>}
+            {badge && (
+              <span className="sidebar-section-badge-wrap">{badge}</span>
+            )}
           </div>
         )}
       </div>
 
       {(!collapsible || open) && (
-        <div id={contentId} className="sidebar-section-content" role="region" aria-label={typeof title === 'string' ? title : undefined}>
+        <div
+          id={contentId}
+          className="sidebar-section-content"
+          role="region"
+          aria-label={typeof title === 'string' ? title : undefined}
+        >
           {children}
         </div>
       )}

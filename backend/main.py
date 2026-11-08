@@ -8,7 +8,17 @@ from collections import defaultdict
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 import uuid
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
+from fastapi import (
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
@@ -164,6 +174,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
     return response
 
+
 SCENARIO_IDS = {
     "standard_1901",
     "tactical_blunders_demo",
@@ -202,7 +213,9 @@ def validate_order_references(order: Order) -> None:
             )
 
 
-def fleet_coast(unit_type: UnitType, province: ProvinceInfo, requested: Optional[str]) -> Optional[str]:
+def fleet_coast(
+    unit_type: UnitType, province: ProvinceInfo, requested: Optional[str]
+) -> Optional[str]:
     """
     Return the coast a unit stands on. Only a fleet on a split-coast province has one.
 
@@ -442,11 +455,7 @@ def build_scenario(
         orders = create_default_orders(units, phase)
         # Dislodged from BUR by an attack from MAR, while PAR is occupied:
         # unoccupied adjacent provinces are RUH, BEL, MUN, PIC, and GAS.
-        retreats_data = {
-            "GERMANY": {
-                "A BUR": ["RUH", "BEL", "MUN", "PIC", "GAS"]
-            }
-        }
+        retreats_data = {"GERMANY": {"A BUR": ["RUH", "BEL", "MUN", "PIC", "GAS"]}}
         default_power = Power.GERMANY
 
     elif scenario_id == "winter_adjustments_demo":
@@ -505,12 +514,8 @@ DEFAULT_GAME_ID = "proto_1901"
 GAMES: Dict[str, GameState] = {
     DEFAULT_GAME_ID: build_scenario("standard_1901", Power.FRANCE, DEFAULT_GAME_ID)
 }
-SANDBOX_CHECKPOINTS: Dict[str, Optional[GameState]] = {
-    DEFAULT_GAME_ID: None
-}
-GAME_HISTORY: Dict[str, List[GameState]] = {
-    DEFAULT_GAME_ID: []
-}
+SANDBOX_CHECKPOINTS: Dict[str, Optional[GameState]] = {DEFAULT_GAME_ID: None}
+GAME_HISTORY: Dict[str, List[GameState]] = {DEFAULT_GAME_ID: []}
 GAME_SUMMARIES: Dict[str, MultiplayerGameSummary] = {}
 GAME_PASSCODES: Dict[str, str] = {}
 # Games whose newest state is not confirmed saved, so Supabase may not even have a row for them.
@@ -625,8 +630,6 @@ def seed_initial_multiplayer_lobbies() -> None:
 
 
 # seed_initial_multiplayer_lobbies()  # Disabled by default so no fake/ghost games clutter the lobby
-
-
 
 
 def evict_game(game_id: str) -> None:
@@ -839,7 +842,11 @@ def verify_power_authorization(
     if current_user:
         if summary.creator_id and summary.creator_id == current_user.user_id:
             is_creator = True
-        elif summary.created_by and current_user.email and summary.created_by.lower() == current_user.email.lower():
+        elif (
+            summary.created_by
+            and current_user.email
+            and summary.created_by.lower() == current_user.email.lower()
+        ):
             is_creator = True
 
     if is_creator:
@@ -891,7 +898,9 @@ def caller_holds_seat(
     if current_user:
         if part.user_id and part.user_id == current_user.user_id:
             return True
-        return bool(part.email and current_user.email and part.email.lower() == current_user.email.lower())
+        return bool(
+            part.email and current_user.email and part.email.lower() == current_user.email.lower()
+        )
     return not (part.user_id and is_valid_uuid(part.user_id))
 
 
@@ -959,16 +968,10 @@ def sanitize_game_state_for_viewer(
     defaults = create_default_orders(game.units, game.phase, game.builds)
 
     if viewer_power:
-        own_orders = {
-            uid: o for uid, o in game.orders.items() if o.power == viewer_power
-        }
-        foreign_defaults = {
-            uid: o for uid, o in defaults.items() if o.power != viewer_power
-        }
+        own_orders = {uid: o for uid, o in game.orders.items() if o.power == viewer_power}
+        foreign_defaults = {uid: o for uid, o in defaults.items() if o.power != viewer_power}
         masked_game.orders = {**foreign_defaults, **own_orders}
-        masked_game.issues = [
-            issue for issue in game.issues if issue.power == viewer_power
-        ]
+        masked_game.issues = [issue for issue in game.issues if issue.power == viewer_power]
     else:
         masked_game.orders = defaults
         masked_game.issues = []
@@ -1011,11 +1014,15 @@ class ConnectionManager:
         self.game_connections: Dict[str, Dict[WebSocket, Optional[Power]]] = defaultdict(dict)
         self.lobby_connections: Set[WebSocket] = set()
 
-    async def connect_game(self, game_id: str, websocket: WebSocket, power: Optional[Power] = None) -> None:
+    async def connect_game(
+        self, game_id: str, websocket: WebSocket, power: Optional[Power] = None
+    ) -> None:
         await websocket.accept()
         self.game_connections[game_id][websocket] = power
 
-    def register_game(self, game_id: str, websocket: WebSocket, power: Optional[Power] = None) -> None:
+    def register_game(
+        self, game_id: str, websocket: WebSocket, power: Optional[Power] = None
+    ) -> None:
         """Add a socket that has already been accepted."""
         self.game_connections[game_id][websocket] = power
 
@@ -1221,8 +1228,12 @@ async def delete_game(
 
     if summary and not summary.is_sandbox:
         if summary.creator_id and summary.creator_id != "guest":
-            if not user or (user.user_id != summary.creator_id and user.email != summary.created_by):
-                raise HTTPException(status_code=403, detail="Only the host can delete this campaign.")
+            if not user or (
+                user.user_id != summary.creator_id and user.email != summary.created_by
+            ):
+                raise HTTPException(
+                    status_code=403, detail="Only the host can delete this campaign."
+                )
 
     evict_game(game_id)
     if is_persistence_enabled():
@@ -1313,7 +1324,9 @@ async def join_multiplayer_game(
 
     # Passcode verification for private lobbies
     if summary.has_passcode:
-        is_already_participant = any(p.user_id == effective_user_id for p in summary.participants.values())
+        is_already_participant = any(
+            p.user_id == effective_user_id for p in summary.participants.values()
+        )
         if not is_already_participant:
             expected_pw = GAME_PASSCODES.get(game_id)
             provided_pw = (req.passcode or "").strip()
@@ -1399,7 +1412,9 @@ async def leave_game(
 
     effective_user_id = current_user.user_id if current_user else req.user_id
     if current_user and req.user_id and req.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Cannot vacate a seat claimed by another player.")
+        raise HTTPException(
+            status_code=403, detail="Cannot vacate a seat claimed by another player."
+        )
     if not current_user and is_valid_uuid(req.user_id):
         raise HTTPException(status_code=401, detail="Authentication required to vacate this seat.")
 
@@ -1407,11 +1422,15 @@ async def leave_game(
         p_val = req.power.value if hasattr(req.power, "value") else str(req.power)
         part = summary.participants.get(p_val)
         if part and part.user_id != effective_user_id:
-            raise HTTPException(status_code=403, detail=f"You do not command {p_val} in this campaign.")
+            raise HTTPException(
+                status_code=403, detail=f"You do not command {p_val} in this campaign."
+            )
 
     # Saved sandbox scenario deletion
     if summary.is_sandbox:
-        if summary.creator_id == effective_user_id or summary.created_by == (current_user.email if current_user else req.email):
+        if summary.creator_id == effective_user_id or summary.created_by == (
+            current_user.email if current_user else req.email
+        ):
             evict_game(game_id)
             if is_persistence_enabled():
                 await delete_game_from_db(game_id)
@@ -1431,12 +1450,17 @@ async def leave_game(
 
     if not leaving_powers and req.power:
         p_val = req.power.value if hasattr(req.power, "value") else str(req.power)
-        if p_val in summary.participants and summary.participants[p_val].user_id == effective_user_id:
+        if (
+            p_val in summary.participants
+            and summary.participants[p_val].user_id == effective_user_id
+        ):
             leaving_powers.append(summary.participants[p_val].power)
             del summary.participants[p_val]
 
     if not leaving_powers:
-        raise HTTPException(status_code=400, detail="User is not an active participant in this game.")
+        raise HTTPException(
+            status_code=400, detail="User is not an active participant in this game."
+        )
 
     for pwr in leaving_powers:
         if pwr in game_state.finalized_powers:
@@ -1504,7 +1528,9 @@ async def surrender_power(
     effective_user_id = current_user.user_id if current_user else req.user_id
     if part:
         if current_user:
-            if part.user_id != current_user.user_id and (not current_user.email or current_user.email.lower() != (part.email or "").lower()):
+            if part.user_id != current_user.user_id and (
+                not current_user.email or current_user.email.lower() != (part.email or "").lower()
+            ):
                 raise HTTPException(
                     status_code=403,
                     detail=f"You do not command {p_val} in this campaign.",
@@ -1593,7 +1619,8 @@ async def save_sandbox_to_account(
     display_name = req.display_name or effective_email.split("@")[0]
     summary = MultiplayerGameSummary(
         game_id=new_gid,
-        name=req.name.strip() or f"Saved Tactical Sandbox ({cloned_state.season} {cloned_state.year})",
+        name=req.name.strip()
+        or f"Saved Tactical Sandbox ({cloned_state.season} {cloned_state.year})",
         status="active",
         season=cloned_state.season,
         year=cloned_state.year,
@@ -1644,9 +1671,13 @@ async def get_game(
         expected_pw = GAME_PASSCODES.get(gid, "")
         provided_pw = (passcode or x_passcode or "").strip()
         is_participant = False
-        if current_user and any(p.user_id == current_user.user_id for p in summary.participants.values()):
+        if current_user and any(
+            p.user_id == current_user.user_id for p in summary.participants.values()
+        ):
             is_participant = True
-        if not is_participant and (not expected_pw or not hmac.compare_digest(provided_pw, expected_pw)):
+        if not is_participant and (
+            not expected_pw or not hmac.compare_digest(provided_pw, expected_pw)
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Passcode required or incorrect for this private campaign.",
@@ -1751,7 +1782,11 @@ async def close_private_sandbox(sandbox: GameState) -> GameState:
     holds_seat = bool(
         summary and power.value in summary.participants and power not in match.surrendered_powers
     )
-    same_turn = (match.season, match.year, match.phase) == (sandbox.season, sandbox.year, sandbox.phase)
+    same_turn = (match.season, match.year, match.phase) == (
+        sandbox.season,
+        sandbox.year,
+        sandbox.phase,
+    )
     changed_orders = {
         ord_id: o
         for ord_id, o in sandbox.orders.items()
@@ -1875,7 +1910,9 @@ async def exit_sandbox_mode(
     summary="Clear Foreign Pre-Moves",
     description="Reset all hypothetical orders in sandbox mode for powers other than req.power back to default HOLD.",
 )
-async def clear_foreign_pre_moves(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
+async def clear_foreign_pre_moves(
+    req: SetPowerRequest, game_id: Optional[str] = Query(default=None)
+):
     """Reset all hypothetical orders for powers other than req.power back to default."""
     game = await resolve_game(game_id)
     reject_on_multiplayer_match(game.game_id)
@@ -1940,9 +1977,13 @@ async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
     reject_on_multiplayer_match(game.game_id)
     # Outside Movement the holds of undisturbed units are explicit by default, so they prove nothing.
     powers_needing_orders = [
-        p for p in Power
-        if p != game.active_power or not any(
-            o.power == p and o.is_explicit and (game.phase == "Movement" or o.order_type != OrderType.HOLD)
+        p
+        for p in Power
+        if p != game.active_power
+        or not any(
+            o.power == p
+            and o.is_explicit
+            and (game.phase == "Movement" or o.order_type != OrderType.HOLD)
             for o in game.orders.values()
         )
     ]
@@ -1985,7 +2026,9 @@ async def update_single_order(
         # The slot decides whose build it is, so nobody can fill another power's slot.
         slot_power = build_slot_power(req.order.unit_id)
         if slot_power is None:
-            raise HTTPException(status_code=404, detail=f"Unit or build order {req.order.unit_id} not found.")
+            raise HTTPException(
+                status_code=404, detail=f"Unit or build order {req.order.unit_id} not found."
+            )
         target_power = slot_power
     verify_power_authorization(game.game_id, target_power, current_user)
 
@@ -2042,7 +2085,7 @@ async def update_single_order(
             max_builds = min(b_info.get("count", 0), len(homes))
             if max_builds > 0:
                 other_builds = [
-                    game.orders[ f"BUILD_{p_name}_{h}" ]
+                    game.orders[f"BUILD_{p_name}_{h}"]
                     for h in homes
                     if f"BUILD_{p_name}_{h}" != req.order.unit_id
                     and f"BUILD_{p_name}_{h}" in game.orders
@@ -2057,7 +2100,9 @@ async def update_single_order(
         if target_power in game.finalized_powers:
             game.finalized_powers.remove(target_power)
     else:
-        raise HTTPException(status_code=404, detail=f"Unit or build order {req.order.unit_id} not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Unit or build order {req.order.unit_id} not found."
+        )
 
     if req.active_power:
         game.active_power = req.active_power
@@ -2089,7 +2134,9 @@ async def update_batch_orders(
         validate_order_references(o)
         if is_multiplayer_match(game.game_id):
             # Being allowed to order req.power says nothing about the units in the batch.
-            owner = unit_map[o.unit_id].power if o.unit_id in unit_map else build_slot_power(o.unit_id)
+            owner = (
+                unit_map[o.unit_id].power if o.unit_id in unit_map else build_slot_power(o.unit_id)
+            )
             if owner is not None and owner != req.power:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -2149,7 +2196,9 @@ async def confirm_all_power_orders(
     return sanitize_game_state_for_viewer(game, req.power)
 
 
-def get_required_finalizing_powers(game: GameState, summary: Optional[MultiplayerGameSummary] = None) -> List[Power]:
+def get_required_finalizing_powers(
+    game: GameState, summary: Optional[MultiplayerGameSummary] = None
+) -> List[Power]:
     """Determine which powers must finalize before auto-adjudication occurs in multiplayer."""
     if not summary or summary.is_sandbox:
         return []
@@ -2311,13 +2360,17 @@ async def _execute_adjudication(game: GameState) -> GameState:
     gid = game.game_id
 
     if game.winner:
-        raise HTTPException(status_code=409, detail=f"Game over: {game.winner.value} has already won.")
+        raise HTTPException(
+            status_code=409, detail=f"Game over: {game.winner.value} has already won."
+        )
 
     # Save deep copy snapshot to history before adjudicating so creator can roll back.
     # Rollback recomputes the previews and diagnostics, so the snapshot does not carry them.
     if gid not in GAME_HISTORY:
         GAME_HISTORY[gid] = []
-    GAME_HISTORY[gid].append(game.model_copy(deep=True, update={"last_resolution": None, "issues": [], "timer": None}))
+    GAME_HISTORY[gid].append(
+        game.model_copy(deep=True, update={"last_resolution": None, "issues": [], "timer": None})
+    )
     if len(GAME_HISTORY[gid]) > 30:
         GAME_HISTORY[gid].pop(0)
     HISTORY_UNSAVED.add(gid)
@@ -2400,7 +2453,9 @@ def timer_players(game: GameState) -> List[Power]:
     return [
         part.power
         for part in summary.participants.values()
-        if not part.surrendered and part.power not in game.surrendered_powers and part.power in in_game
+        if not part.surrendered
+        and part.power not in game.surrendered_powers
+        and part.power in in_game
     ]
 
 
@@ -2456,7 +2511,9 @@ def reject_stale_turn(game: GameState, turn: Optional[str]) -> None:
     """Refuse a request made for a turn that has since resolved."""
     current = f"{game.season} {game.year} {game.phase}"
     if turn and turn != current:
-        raise HTTPException(status_code=409, detail=f"Too late: the game has moved on to {current}.")
+        raise HTTPException(
+            status_code=409, detail=f"Too late: the game has moved on to {current}."
+        )
 
 
 async def require_timer_player(
@@ -2480,10 +2537,17 @@ async def require_timer_player(
         part = summary.participants.get(power.value)
         if part:
             if current_user:
-                if part.user_id != current_user.user_id and (not current_user.email or current_user.email.lower() != (part.email or "").lower()):
-                    raise HTTPException(status_code=403, detail=f"You do not command {power.value} in this match.")
+                if part.user_id != current_user.user_id and (
+                    not current_user.email
+                    or current_user.email.lower() != (part.email or "").lower()
+                ):
+                    raise HTTPException(
+                        status_code=403, detail=f"You do not command {power.value} in this match."
+                    )
             elif is_valid_uuid(part.user_id):
-                raise HTTPException(status_code=401, detail=f"Authentication required to act for {power.value}.")
+                raise HTTPException(
+                    status_code=401, detail=f"Authentication required to act for {power.value}."
+                )
 
     return game
 
@@ -2503,7 +2567,9 @@ async def start_timer(game_id: str, current_user: Optional[AuthUser] = Depends(g
         raise HTTPException(status_code=409, detail="The clock is already running.")
     players = timer_players(game)
     if not players or game.winner:
-        raise HTTPException(status_code=409, detail="The clock can only start in a match being played.")
+        raise HTTPException(
+            status_code=409, detail="The clock can only start in a match being played."
+        )
     start_phase_clock(game, players, time.time())
     return await publish_timer(game)
 
@@ -2604,9 +2670,9 @@ async def load_scenario(
 
 def is_test_seed_enabled() -> bool:
     """Permit the test seed endpoint only in local development or automated test runs."""
-    return (
-        is_insecure_dev_auth_allowed()
-        or os.getenv("ENABLE_TEST_SEED_ENDPOINT", "").lower() in ("1", "true")
+    return is_insecure_dev_auth_allowed() or os.getenv("ENABLE_TEST_SEED_ENDPOINT", "").lower() in (
+        "1",
+        "true",
     )
 
 
@@ -2723,7 +2789,9 @@ async def admin_rollback_turn(
 
     history_stack = GAME_HISTORY.get(gid, [])
     if not history_stack:
-        raise HTTPException(status_code=400, detail="No previous turn snapshots in history to roll back to.")
+        raise HTTPException(
+            status_code=400, detail="No previous turn snapshots in history to roll back to."
+        )
 
     prev_state = history_stack.pop()
     HISTORY_UNSAVED.add(gid)
@@ -2736,7 +2804,8 @@ async def admin_rollback_turn(
         prev_state.timer = current.timer
         start_phase_clock(prev_state, timer_players(prev_state), time.time())
     prev_state.turn_history.insert(
-        0, f"[ADMIN OVERRIDE] Rolled back turn to {prev_state.season} {prev_state.year} {prev_state.phase} Phase."
+        0,
+        f"[ADMIN OVERRIDE] Rolled back turn to {prev_state.season} {prev_state.year} {prev_state.phase} Phase.",
     )
     GAMES[gid] = prev_state
     refresh_diagnostics_and_simulation(prev_state)
@@ -2770,9 +2839,14 @@ async def admin_set_turn(
     valid_seasons = ["Spring", "Fall", "Winter"]
     valid_phases = ["Movement", "Retreats", "Adjustments"]
     if req.season not in valid_seasons:
-        raise HTTPException(status_code=400, detail=f"Invalid season '{req.season}'. Must be one of {valid_seasons}.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid season '{req.season}'. Must be one of {valid_seasons}.",
+        )
     if req.phase not in valid_phases:
-        raise HTTPException(status_code=400, detail=f"Invalid phase '{req.phase}'. Must be one of {valid_phases}.")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid phase '{req.phase}'. Must be one of {valid_phases}."
+        )
     if req.phase not in PHASES_BY_SEASON[req.season]:
         raise HTTPException(status_code=400, detail=f"{req.season} has no {req.phase} phase.")
     if req.year < FIRST_YEAR:
@@ -2783,7 +2857,9 @@ async def admin_set_turn(
     game.phase = req.phase
     if game.timer:
         start_phase_clock(game, timer_players(game), time.time())
-    game.turn_history.insert(0, f"[ADMIN OVERRIDE] Adjusted game clock to {req.season} {req.year} {req.phase} Phase.")
+    game.turn_history.insert(
+        0, f"[ADMIN OVERRIDE] Adjusted game clock to {req.season} {req.year} {req.phase} Phase."
+    )
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
     await persist_game(gid)
@@ -2819,16 +2895,24 @@ async def admin_move_unit(
     prov_id = req.new_province.upper()
     prov_info = PROVINCES.get(prov_id)
     if not prov_info:
-        raise HTTPException(status_code=400, detail=f"Province '{req.new_province}' does not exist.")
+        raise HTTPException(
+            status_code=400, detail=f"Province '{req.new_province}' does not exist."
+        )
 
     if prov_info.type == ProvinceType.IMPASSABLE:
-        raise HTTPException(status_code=400, detail=f"Cannot place units in impassable province {prov_info.name}.")
+        raise HTTPException(
+            status_code=400, detail=f"Cannot place units in impassable province {prov_info.name}."
+        )
 
     if target_unit.unit_type == UnitType.ARMY and prov_info.type == ProvinceType.SEA:
-        raise HTTPException(status_code=400, detail=f"Armies cannot be placed in sea province {prov_info.name}.")
+        raise HTTPException(
+            status_code=400, detail=f"Armies cannot be placed in sea province {prov_info.name}."
+        )
 
     if target_unit.unit_type == UnitType.FLEET and prov_info.type == ProvinceType.LAND:
-        raise HTTPException(status_code=400, detail=f"Fleets cannot be placed in inland province {prov_info.name}.")
+        raise HTTPException(
+            status_code=400, detail=f"Fleets cannot be placed in inland province {prov_info.name}."
+        )
 
     coast = fleet_coast(target_unit.unit_type, prov_info, req.new_coast)
 
@@ -2851,7 +2935,8 @@ async def admin_move_unit(
     )
 
     game.turn_history.insert(
-        0, f"[ADMIN OVERRIDE] Relocated {target_unit.power.value} {target_unit.unit_type.value} from {old_prov} to {prov_id}."
+        0,
+        f"[ADMIN OVERRIDE] Relocated {target_unit.power.value} {target_unit.unit_type.value} from {old_prov} to {prov_id}.",
     )
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
@@ -2887,13 +2972,19 @@ async def admin_spawn_unit(
         raise HTTPException(status_code=400, detail=f"Province '{req.province}' does not exist.")
 
     if prov_info.type == ProvinceType.IMPASSABLE:
-        raise HTTPException(status_code=400, detail=f"Cannot place units in impassable province {prov_info.name}.")
+        raise HTTPException(
+            status_code=400, detail=f"Cannot place units in impassable province {prov_info.name}."
+        )
 
     if req.unit_type == UnitType.ARMY and prov_info.type == ProvinceType.SEA:
-        raise HTTPException(status_code=400, detail=f"Armies cannot be placed in sea province {prov_info.name}.")
+        raise HTTPException(
+            status_code=400, detail=f"Armies cannot be placed in sea province {prov_info.name}."
+        )
 
     if req.unit_type == UnitType.FLEET and prov_info.type == ProvinceType.LAND:
-        raise HTTPException(status_code=400, detail=f"Fleets cannot be placed in inland province {prov_info.name}.")
+        raise HTTPException(
+            status_code=400, detail=f"Fleets cannot be placed in inland province {prov_info.name}."
+        )
 
     coast = fleet_coast(req.unit_type, prov_info, req.coast)
 
@@ -2967,7 +3058,8 @@ async def admin_destroy_unit(
     game.orders.pop(req.unit_id, None)
 
     game.turn_history.insert(
-        0, f"[ADMIN OVERRIDE] Destroyed {target_unit.power.value} {target_unit.unit_type.value} in {target_unit.province}."
+        0,
+        f"[ADMIN OVERRIDE] Destroyed {target_unit.power.value} {target_unit.unit_type.value} in {target_unit.province}.",
     )
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
@@ -3001,11 +3093,15 @@ async def admin_set_ownership(
     if prov_id not in PROVINCES:
         raise HTTPException(status_code=400, detail=f"Province '{req.province}' does not exist.")
     if not PROVINCES[prov_id].is_supply_center:
-        raise HTTPException(status_code=400, detail=f"{PROVINCES[prov_id].name} is not a supply center.")
+        raise HTTPException(
+            status_code=400, detail=f"{PROVINCES[prov_id].name} is not a supply center."
+        )
 
     if req.power is not None:
         game.ownership[prov_id] = req.power
-        game.turn_history.insert(0, f"[ADMIN OVERRIDE] Set ownership of {prov_id} to {req.power.value}.")
+        game.turn_history.insert(
+            0, f"[ADMIN OVERRIDE] Set ownership of {prov_id} to {req.power.value}."
+        )
     else:
         game.ownership.pop(prov_id, None)
         game.turn_history.insert(0, f"[ADMIN OVERRIDE] Reset ownership of {prov_id} to Neutral.")
@@ -3109,7 +3205,9 @@ async def ws_game_endpoint(
         expected_pw = GAME_PASSCODES.get(game_id, "")
         provided_pw = (passcode or "").strip()
         # Seated players are let in without it, as GET /api/game does.
-        if power_enum is None and (not expected_pw or not hmac.compare_digest(provided_pw, expected_pw)):
+        if power_enum is None and (
+            not expected_pw or not hmac.compare_digest(provided_pw, expected_pw)
+        ):
             await websocket.close(code=4403)
             return
 
@@ -3120,12 +3218,14 @@ async def ws_game_endpoint(
         await tick_timer(game)
         summary = GAME_SUMMARIES.get(game_id)
         sanitized = sanitize_game_state_for_viewer(game, power_enum)
-        await websocket.send_json({
-            "type": "game_update",
-            "game_id": game_id,
-            "state": sanitized.model_dump(mode="json"),
-            "summary": summary.model_dump(mode="json") if summary else None,
-        })
+        await websocket.send_json(
+            {
+                "type": "game_update",
+                "game_id": game_id,
+                "state": sanitized.model_dump(mode="json"),
+                "summary": summary.model_dump(mode="json") if summary else None,
+            }
+        )
         while True:
             data = await websocket.receive_json()
             if isinstance(data, dict):
@@ -3138,12 +3238,14 @@ async def ws_game_endpoint(
                     if g:
                         await tick_timer(g)
                         g_sanitized = sanitize_game_state_for_viewer(g, power_enum)
-                        await websocket.send_json({
-                            "type": "game_update",
-                            "game_id": game_id,
-                            "state": g_sanitized.model_dump(mode="json"),
-                            "summary": s.model_dump(mode="json") if s else None,
-                        })
+                        await websocket.send_json(
+                            {
+                                "type": "game_update",
+                                "game_id": game_id,
+                                "state": g_sanitized.model_dump(mode="json"),
+                                "summary": s.model_dump(mode="json") if s else None,
+                            }
+                        )
     except WebSocketDisconnect:
         manager.disconnect_game(game_id, websocket)
     except Exception:
@@ -3156,10 +3258,12 @@ async def ws_lobby_endpoint(websocket: WebSocket):
     try:
         for gid in list(GAME_SUMMARIES.keys()):
             sync_summary(gid)
-        await websocket.send_json({
-            "type": "lobby_update",
-            "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values()],
-        })
+        await websocket.send_json(
+            {
+                "type": "lobby_update",
+                "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values()],
+            }
+        )
         while True:
             data = await websocket.receive_json()
             if isinstance(data, dict):
@@ -3169,10 +3273,12 @@ async def ws_lobby_endpoint(websocket: WebSocket):
                 elif msg_type == "refresh":
                     for gid in list(GAME_SUMMARIES.keys()):
                         sync_summary(gid)
-                    await websocket.send_json({
-                        "type": "lobby_update",
-                        "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values()],
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "lobby_update",
+                            "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values()],
+                        }
+                    )
     except WebSocketDisconnect:
         manager.disconnect_lobby(websocket)
     except Exception:
@@ -3201,7 +3307,11 @@ if os.path.exists(STATIC_DIR):
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        if full_path.startswith("api/") or full_path.startswith("ws/") or full_path in ("docs", "openapi.json", "redoc"):
+        if (
+            full_path.startswith("api/")
+            or full_path.startswith("ws/")
+            or full_path in ("docs", "openapi.json", "redoc")
+        ):
             raise HTTPException(status_code=404, detail="Not Found")
         file_path = resolve_static_path(STATIC_DIR, full_path)
         if file_path:
@@ -3210,4 +3320,3 @@ if os.path.exists(STATIC_DIR):
         if os.path.isfile(index_file):
             return FileResponse(index_file, headers={"Cache-Control": "no-cache, must-revalidate"})
         raise HTTPException(status_code=404, detail="Frontend index.html not found")
-

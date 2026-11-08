@@ -78,7 +78,9 @@ class ProvinceInfo(BaseModel):
     home_power: Optional[Power] = None
     coasts: List[str] = Field(default_factory=list)
     army_adj: List[str] = Field(default_factory=list)
-    fleet_adj: Dict[str, List[str]] = Field(default_factory=dict)  # key "" or coast like "NC", "SC", "EC"
+    fleet_adj: Dict[str, List[str]] = Field(
+        default_factory=dict
+    )  # key "" or coast like "NC", "SC", "EC"
 
 
 class Unit(BaseModel):
@@ -97,9 +99,13 @@ class Order(BaseModel):
     origin: str  # Base province e.g. "LON"
     origin_coast: Optional[str] = None
     order_type: OrderType = OrderType.HOLD
-    target: Optional[str] = None  # Target province for MOVE, or destination of supported/convoyed unit
+    target: Optional[str] = (
+        None  # Target province for MOVE, or destination of supported/convoyed unit
+    )
     target_coast: Optional[str] = None
-    aux_unit_origin: Optional[str] = None  # For SUPPORT or CONVOY: the province of the unit being supported/convoyed
+    aux_unit_origin: Optional[str] = (
+        None  # For SUPPORT or CONVOY: the province of the unit being supported/convoyed
+    )
     via_convoy: bool = False
     is_explicit: bool = False  # True if the user explicitly assigned or confirmed this order
 

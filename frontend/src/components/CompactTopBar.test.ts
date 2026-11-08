@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { CompactTopBar, CompactTopBarProps, describeIssueCount } from './CompactTopBar';
+import {
+  CompactTopBar,
+  CompactTopBarProps,
+  describeIssueCount,
+} from './CompactTopBar';
 import { SurrenderModal } from './SurrenderModal';
 import { DEFAULT_DISPLAY_PREFS } from '../utils/displayPrefs';
 import { MultiplayerGameSummary } from '../types/diplomacy';
@@ -54,14 +58,18 @@ describe('CompactTopBar', () => {
   it('shows the way back, the turn and a tappable problem count in a game', () => {
     const html = renderBar({ errorCount: 1, warningCount: 2 });
     expect(html).toContain('aria-label="Back to lobby"');
-    expect(html).toContain('Spring<!-- --> <!-- -->1901<!-- --> · <!-- -->Movement');
+    expect(html).toContain(
+      'Spring<!-- --> <!-- -->1901<!-- --> · <!-- -->Movement',
+    );
     expect(html).toMatch(/<button[^>]*class="compact-issue-badge has-errors"/);
     expect(html).toContain('1 error, 2 warnings. Open the order check.');
     expect(html).toContain('<span>3</span>');
   });
 
   it('uses the warning colour when there are only warnings', () => {
-    expect(renderBar({ warningCount: 1 })).toContain('compact-issue-badge has-warnings');
+    expect(renderBar({ warningCount: 1 })).toContain(
+      'compact-issue-badge has-warnings',
+    );
   });
 
   it('shows a plain check, not a button, when the orders are clean', () => {
@@ -114,7 +122,7 @@ describe('SurrenderModal on a phone', () => {
         power: 'FRANCE',
         onSurrender: async () => {},
         onLeave: async () => {},
-      })
+      }),
     );
 
   it('spells out the difference between the two surrender buttons in an active match', () => {
@@ -124,6 +132,8 @@ describe('SurrenderModal on a phone', () => {
   });
 
   it('has no such note before the match starts', () => {
-    expect(render({ ...game, status: 'waiting' })).not.toContain('surrender-choice-note');
+    expect(render({ ...game, status: 'waiting' })).not.toContain(
+      'surrender-choice-note',
+    );
   });
 });

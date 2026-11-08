@@ -2,13 +2,12 @@
 target-version = "py310"
 line-length = 100
 
-# Phase 1: Baseline exemption so existing backend code is not touched.
-# Phase 2 will remove this exclusion and apply formatting and linting all around.
+[tool.ruff.lint]
+# Phase 2: Formatter is applied repository-wide.
+# Lint rule checks are scoped for Phase 3 rule tightening and autofixes.
 exclude = [
     "backend/*.py",
 ]
-
-[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "F",   # pyflakes

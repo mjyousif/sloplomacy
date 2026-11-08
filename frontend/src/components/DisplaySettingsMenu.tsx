@@ -22,11 +22,21 @@ const SAVE_MESSAGES: Record<DisplayPrefsSaveState, string> = {
   failed: 'Couldn’t reach your account. Saved on this device.',
 };
 
-function PieceStylePreview({ style, mark }: { style: PieceStyle; mark: UnitMark }) {
-  const pill = style === 'nameplate' ? makePiecePill('Rome', 12, 0, true) : null;
+function PieceStylePreview({
+  style,
+  mark,
+}: {
+  style: PieceStyle;
+  mark: UnitMark;
+}) {
+  const pill =
+    style === 'nameplate' ? makePiecePill('Rome', 12, 0, true) : null;
   const frame = getPieceFrame(style, 1, pill);
   // Star seat and Name as piece carry the star, so only the others draw one beside the piece
-  const separateStar: Record<PieceStyle, { x: number; y: number; scale: number } | null> = {
+  const separateStar: Record<
+    PieceStyle,
+    { x: number; y: number; scale: number } | null
+  > = {
     classic: { x: 21, y: 9, scale: 1 },
     seated: null,
     compact: { x: 19, y: 7, scale: 0.65 },
@@ -38,7 +48,11 @@ function PieceStylePreview({ style, mark }: { style: PieceStyle; mark: UnitMark 
   const pieceY = style === 'flags' ? 13 : 0;
 
   return (
-    <svg className="display-option-preview" viewBox="-36 -22 72 44" aria-hidden="true">
+    <svg
+      className="display-option-preview"
+      viewBox="-36 -22 72 44"
+      aria-hidden="true"
+    >
       <rect x="-36" y="-22" width="72" height="44" fill={PREVIEW_LAND} />
       {star && (
         <g transform={`translate(${star.x}, ${star.y})`}>
@@ -64,13 +78,29 @@ function PieceStylePreview({ style, mark }: { style: PieceStyle; mark: UnitMark 
 function UnitMarkPreview({ mark }: { mark: UnitMark }) {
   const frame = getPieceFrame('classic');
   return (
-    <svg className="display-option-preview" viewBox="-38 -22 76 44" aria-hidden="true">
+    <svg
+      className="display-option-preview"
+      viewBox="-38 -22 76 44"
+      aria-hidden="true"
+    >
       <rect x="-38" y="-22" width="76" height="44" fill={PREVIEW_LAND} />
       <g transform="translate(-18, 0)">
-        <MapPiece style="classic" mark={mark} unitType="A" color={PREVIEW_COLOR} frame={frame} />
+        <MapPiece
+          style="classic"
+          mark={mark}
+          unitType="A"
+          color={PREVIEW_COLOR}
+          frame={frame}
+        />
       </g>
       <g transform="translate(18, 0)">
-        <MapPiece style="classic" mark={mark} unitType="F" color={PREVIEW_COLOR} frame={frame} />
+        <MapPiece
+          style="classic"
+          mark={mark}
+          unitType="F"
+          color={PREVIEW_COLOR}
+          frame={frame}
+        />
       </g>
     </svg>
   );
@@ -86,7 +116,11 @@ interface DisplaySettingsMenuProps {
  * The choices themselves. The desktop top bar shows them in its own popover, and the
  * phone top bar shows them inside its ⋯ menu.
  */
-export function DisplaySettingsOptions({ prefs, saveState, onChange }: DisplaySettingsMenuProps) {
+export function DisplaySettingsOptions({
+  prefs,
+  saveState,
+  onChange,
+}: DisplaySettingsMenuProps) {
   return (
     <>
       <h2 className="display-settings-title">Display settings</h2>
@@ -105,7 +139,9 @@ export function DisplaySettingsOptions({ prefs, saveState, onChange }: DisplaySe
             <span className="display-option-card">
               <PieceStylePreview style={style} mark={prefs.unitMark} />
               <span className="display-option-text">
-                <span className="display-option-name">{PIECE_STYLE_LABELS[style].name}</span>
+                <span className="display-option-name">
+                  {PIECE_STYLE_LABELS[style].name}
+                </span>
                 <span className="display-option-description">
                   {PIECE_STYLE_LABELS[style].description}
                 </span>
@@ -128,7 +164,9 @@ export function DisplaySettingsOptions({ prefs, saveState, onChange }: DisplaySe
               />
               <span className="display-option-card stacked">
                 <UnitMarkPreview mark={mark} />
-                <span className="display-option-name">{UNIT_MARK_LABELS[mark]}</span>
+                <span className="display-option-name">
+                  {UNIT_MARK_LABELS[mark]}
+                </span>
               </span>
             </label>
           ))}
@@ -143,7 +181,11 @@ export function DisplaySettingsOptions({ prefs, saveState, onChange }: DisplaySe
 }
 
 /** The top bar control for this player's own map display. It stays open so changes show live. */
-export function DisplaySettingsMenu({ prefs, saveState, onChange }: DisplaySettingsMenuProps) {
+export function DisplaySettingsMenu({
+  prefs,
+  saveState,
+  onChange,
+}: DisplaySettingsMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const toggleRef = useRef<HTMLButtonElement | null>(null);
@@ -196,7 +238,11 @@ export function DisplaySettingsMenu({ prefs, saveState, onChange }: DisplaySetti
           role="dialog"
           aria-label="Display settings"
         >
-          <DisplaySettingsOptions prefs={prefs} saveState={saveState} onChange={onChange} />
+          <DisplaySettingsOptions
+            prefs={prefs}
+            saveState={saveState}
+            onChange={onChange}
+          />
         </div>
       )}
     </div>

@@ -3,7 +3,13 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { ToolsSidebar, ToolsSidebarProps } from './ToolsSidebar';
 import { MacroSidebar, MacroSidebarProps } from './MacroSidebar';
-import { Order, Power, ProvinceInfo, Unit, ValidationIssue } from '../types/diplomacy';
+import {
+  Order,
+  Power,
+  ProvinceInfo,
+  Unit,
+  ValidationIssue,
+} from '../types/diplomacy';
 
 const mockProvinces: Record<string, ProvinceInfo> = {
   PAR: {
@@ -29,8 +35,22 @@ const mockProvinces: Record<string, ProvinceInfo> = {
 };
 
 const mockUnits: Unit[] = [
-  { id: 'A_PAR', power: 'FRANCE', unit_type: 'A', province: 'PAR', coast: null, is_dislodged: false },
-  { id: 'F_BRE', power: 'FRANCE', unit_type: 'F', province: 'BRE', coast: null, is_dislodged: false },
+  {
+    id: 'A_PAR',
+    power: 'FRANCE',
+    unit_type: 'A',
+    province: 'PAR',
+    coast: null,
+    is_dislodged: false,
+  },
+  {
+    id: 'F_BRE',
+    power: 'FRANCE',
+    unit_type: 'F',
+    province: 'BRE',
+    coast: null,
+    is_dislodged: false,
+  },
 ];
 
 const mockOrders: Record<string, Order> = {
@@ -94,7 +114,9 @@ describe('ToolsSidebar', () => {
   };
 
   it('renders collapsed rail view when collapsed is true', () => {
-    const html = renderToString(React.createElement(ToolsSidebar, { ...baseToolsProps, collapsed: true }));
+    const html = renderToString(
+      React.createElement(ToolsSidebar, { ...baseToolsProps, collapsed: true }),
+    );
     expect(html).toContain('aria-label="Tools Sidebar Collapsed"');
     expect(html).toContain('tools-sidebar-collapsed');
     expect(html).toContain('Zoom In');
@@ -103,7 +125,9 @@ describe('ToolsSidebar', () => {
   });
 
   it('renders expanded tools layout with legend, zoom, powers and sandbox', () => {
-    const html = renderToString(React.createElement(ToolsSidebar, baseToolsProps));
+    const html = renderToString(
+      React.createElement(ToolsSidebar, baseToolsProps),
+    );
     expect(html).toContain('CHANCELLERY TOOLS');
     expect(html).toContain('MAP VIEW &amp; CAMERA');
     expect(html).toContain('105%');
@@ -121,7 +145,13 @@ describe('ToolsSidebar', () => {
   });
 
   it('renders creator admin section only when isGameCreator is true', () => {
-    const html = renderToString(React.createElement(ToolsSidebar, { ...baseToolsProps, isGameCreator: true, onOpenAdminTools: vi.fn() }));
+    const html = renderToString(
+      React.createElement(ToolsSidebar, {
+        ...baseToolsProps,
+        isGameCreator: true,
+        onOpenAdminTools: vi.fn(),
+      }),
+    );
     expect(html).toContain('CREATOR ADMIN TOOLS');
     expect(html).toContain('Open Admin Console');
   });
@@ -159,7 +189,9 @@ describe('MacroSidebar', () => {
   };
 
   it('renders collapsed rail view when collapsed is true', () => {
-    const html = renderToString(React.createElement(MacroSidebar, { ...baseMacroProps, collapsed: true }));
+    const html = renderToString(
+      React.createElement(MacroSidebar, { ...baseMacroProps, collapsed: true }),
+    );
     expect(html).toContain('aria-label="Tactical Orders Collapsed"');
     expect(html).toContain('macro-sidebar-collapsed');
     expect(html).toContain('rail-power-crest');
@@ -167,7 +199,9 @@ describe('MacroSidebar', () => {
   });
 
   it('renders expanded gameplay view with units and turn resolution actions', () => {
-    const html = renderToString(React.createElement(MacroSidebar, baseMacroProps));
+    const html = renderToString(
+      React.createElement(MacroSidebar, baseMacroProps),
+    );
     expect(html).toContain('aria-label="Tactical Command &amp; Orders"');
     expect(html).toContain('France');
     expect(html).toContain('ACTIVE FORCE ORDERS (2 UNITS)');
@@ -180,20 +214,22 @@ describe('MacroSidebar', () => {
   });
 
   it('renders Winter Adjustment instructions and build targets', () => {
-    const html = renderToString(React.createElement(MacroSidebar, {
-      ...baseMacroProps,
-      phase: 'Adjustments',
-      season: 'Winter',
-      builds: {
-        AUSTRIA: { count: 0, homes: [] },
-        ENGLAND: { count: 0, homes: [] },
-        FRANCE: { count: 1, homes: ['PAR'] },
-        GERMANY: { count: 0, homes: [] },
-        ITALY: { count: 0, homes: [] },
-        RUSSIA: { count: 0, homes: [] },
-        TURKEY: { count: 0, homes: [] },
-      },
-    }));
+    const html = renderToString(
+      React.createElement(MacroSidebar, {
+        ...baseMacroProps,
+        phase: 'Adjustments',
+        season: 'Winter',
+        builds: {
+          AUSTRIA: { count: 0, homes: [] },
+          ENGLAND: { count: 0, homes: [] },
+          FRANCE: { count: 1, homes: ['PAR'] },
+          GERMANY: { count: 0, homes: [] },
+          ITALY: { count: 0, homes: [] },
+          RUSSIA: { count: 0, homes: [] },
+          TURKEY: { count: 0, homes: [] },
+        },
+      }),
+    );
     expect(html).toContain('WINTER ADJUSTMENTS:');
     expect(html).toContain('HOME BUILDS');
   });
@@ -207,20 +243,22 @@ describe('MacroSidebar', () => {
       coast: null,
       is_dislodged: true,
     };
-    const html = renderToString(React.createElement(MacroSidebar, {
-      ...baseMacroProps,
-      units: [dislodgedUnit],
-      phase: 'Retreats',
-      retreats: {
-        FRANCE: { A_PAR: ['BRE', 'BUR'] },
-        AUSTRIA: {},
-        ENGLAND: {},
-        GERMANY: {},
-        ITALY: {},
-        RUSSIA: {},
-        TURKEY: {},
-      },
-    }));
+    const html = renderToString(
+      React.createElement(MacroSidebar, {
+        ...baseMacroProps,
+        units: [dislodgedUnit],
+        phase: 'Retreats',
+        retreats: {
+          FRANCE: { A_PAR: ['BRE', 'BUR'] },
+          AUSTRIA: {},
+          ENGLAND: {},
+          GERMANY: {},
+          ITALY: {},
+          RUSSIA: {},
+          TURKEY: {},
+        },
+      }),
+    );
     expect(html).toContain('RETREAT PHASE:');
     expect(html).toContain('1 dislodged unit must Retreat or Disband');
   });
@@ -235,7 +273,11 @@ describe('MacroSidebar', () => {
     });
     const match = (overrides: Partial<MacroSidebarProps>) =>
       renderToString(
-        React.createElement(MacroSidebar, { ...baseMacroProps, isMultiplayer: true, ...overrides })
+        React.createElement(MacroSidebar, {
+          ...baseMacroProps,
+          isMultiplayer: true,
+          ...overrides,
+        }),
       );
 
     it('does not promise to resolve before a second player joins', () => {
@@ -250,7 +292,15 @@ describe('MacroSidebar', () => {
 
     it('reports progress once two players are seated', () => {
       const html = match({
-        units: [...mockUnits, { ...mockUnits[0], id: 'GER_A_BER', power: 'GERMANY', province: 'BRE' }],
+        units: [
+          ...mockUnits,
+          {
+            ...mockUnits[0],
+            id: 'GER_A_BER',
+            power: 'GERMANY',
+            province: 'BRE',
+          },
+        ],
         participants: { FRANCE: seat('FRANCE'), GERMANY: seat('GERMANY') },
         finalizedPowers: ['FRANCE'],
       });

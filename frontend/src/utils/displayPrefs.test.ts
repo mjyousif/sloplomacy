@@ -12,8 +12,14 @@ import {
   writeStoredDisplayPrefs,
 } from './displayPrefs';
 
-const FLAGS_AND_TANKS: DisplayPrefs = { pieceStyle: 'flags', unitMark: 'vehicles' };
-const CLASSIC_LETTERS: DisplayPrefs = { pieceStyle: 'classic', unitMark: 'letters' };
+const FLAGS_AND_TANKS: DisplayPrefs = {
+  pieceStyle: 'flags',
+  unitMark: 'vehicles',
+};
+const CLASSIC_LETTERS: DisplayPrefs = {
+  pieceStyle: 'classic',
+  unitMark: 'letters',
+};
 
 describe('sanitizeDisplayPrefs', () => {
   it('keeps valid settings', () => {
@@ -23,7 +29,10 @@ describe('sanitizeDisplayPrefs', () => {
   it('accepts every option the menu offers', () => {
     for (const pieceStyle of PIECE_STYLES) {
       for (const unitMark of UNIT_MARKS) {
-        expect(sanitizeDisplayPrefs({ pieceStyle, unitMark })).toEqual({ pieceStyle, unitMark });
+        expect(sanitizeDisplayPrefs({ pieceStyle, unitMark })).toEqual({
+          pieceStyle,
+          unitMark,
+        });
       }
     }
   });
@@ -35,7 +44,9 @@ describe('sanitizeDisplayPrefs', () => {
   });
 
   it('repairs a bad setting without losing the good one', () => {
-    expect(sanitizeDisplayPrefs({ pieceStyle: 'hologram', unitMark: 'vehicles' })).toEqual({
+    expect(
+      sanitizeDisplayPrefs({ pieceStyle: 'hologram', unitMark: 'vehicles' }),
+    ).toEqual({
       pieceStyle: DEFAULT_DISPLAY_PREFS.pieceStyle,
       unitMark: 'vehicles',
     });
@@ -46,14 +57,20 @@ describe('sanitizeDisplayPrefs', () => {
   });
 
   it('drops fields it does not recognise', () => {
-    expect(sanitizeDisplayPrefs({ ...FLAGS_AND_TANKS, extra: 'value' })).toEqual(FLAGS_AND_TANKS);
+    expect(
+      sanitizeDisplayPrefs({ ...FLAGS_AND_TANKS, extra: 'value' }),
+    ).toEqual(FLAGS_AND_TANKS);
   });
 });
 
 describe('option labels', () => {
   it('names every option', () => {
-    expect(Object.keys(PIECE_STYLE_LABELS).sort()).toEqual([...PIECE_STYLES].sort());
-    expect(Object.keys(UNIT_MARK_LABELS).sort()).toEqual([...UNIT_MARKS].sort());
+    expect(Object.keys(PIECE_STYLE_LABELS).sort()).toEqual(
+      [...PIECE_STYLES].sort(),
+    );
+    expect(Object.keys(UNIT_MARK_LABELS).sort()).toEqual(
+      [...UNIT_MARKS].sort(),
+    );
   });
 });
 
@@ -98,7 +115,7 @@ describe('resolveSignInPrefs', () => {
         accountPrefs: FLAGS_AND_TANKS,
         devicePrefs: CLASSIC_LETTERS,
         editedDuringFetch: false,
-      })
+      }),
     ).toEqual({ apply: FLAGS_AND_TANKS, upload: null });
   });
 
@@ -108,7 +125,7 @@ describe('resolveSignInPrefs', () => {
         accountPrefs: { pieceStyle: 'hologram' },
         devicePrefs: null,
         editedDuringFetch: false,
-      }).apply
+      }).apply,
     ).toEqual(DEFAULT_DISPLAY_PREFS);
   });
 
@@ -118,13 +135,17 @@ describe('resolveSignInPrefs', () => {
         accountPrefs: null,
         devicePrefs: FLAGS_AND_TANKS,
         editedDuringFetch: false,
-      })
+      }),
     ).toEqual({ apply: null, upload: FLAGS_AND_TANKS });
   });
 
   it('pins nothing for someone who never chose, so they keep following the default', () => {
     expect(
-      resolveSignInPrefs({ accountPrefs: null, devicePrefs: null, editedDuringFetch: false })
+      resolveSignInPrefs({
+        accountPrefs: null,
+        devicePrefs: null,
+        editedDuringFetch: false,
+      }),
     ).toEqual({ apply: null, upload: null });
   });
 
@@ -134,7 +155,7 @@ describe('resolveSignInPrefs', () => {
         accountPrefs: CLASSIC_LETTERS,
         devicePrefs: FLAGS_AND_TANKS,
         editedDuringFetch: true,
-      })
+      }),
     ).toEqual({ apply: null, upload: FLAGS_AND_TANKS });
   });
 });

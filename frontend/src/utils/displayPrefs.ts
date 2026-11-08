@@ -7,7 +7,13 @@
  * `sanitizeDisplayPrefs` before it reaches the map.
  */
 
-export const PIECE_STYLES = ['classic', 'seated', 'compact', 'flags', 'nameplate'] as const;
+export const PIECE_STYLES = [
+  'classic',
+  'seated',
+  'compact',
+  'flags',
+  'nameplate',
+] as const;
 export type PieceStyle = (typeof PIECE_STYLES)[number];
 
 export const UNIT_MARKS = ['icons', 'vehicles', 'nato', 'letters'] as const;
@@ -24,7 +30,10 @@ export const DEFAULT_DISPLAY_PREFS: DisplayPrefs = {
   unitMark: 'icons',
 };
 
-export const PIECE_STYLE_LABELS: Record<PieceStyle, { name: string; description: string }> = {
+export const PIECE_STYLE_LABELS: Record<
+  PieceStyle,
+  { name: string; description: string }
+> = {
   classic: {
     name: 'Classic',
     description: 'The original large tokens and separate stars.',
@@ -59,7 +68,8 @@ const STORAGE_KEY = 'diplomacy_1901_display_prefs';
 const isPieceStyle = (value: unknown): value is PieceStyle =>
   PIECE_STYLES.includes(value as PieceStyle);
 
-const isUnitMark = (value: unknown): value is UnitMark => UNIT_MARKS.includes(value as UnitMark);
+const isUnitMark = (value: unknown): value is UnitMark =>
+  UNIT_MARKS.includes(value as UnitMark);
 
 /** Keeps each valid setting and falls back to the default for anything else. */
 export function sanitizeDisplayPrefs(raw: unknown): DisplayPrefs {
@@ -70,7 +80,9 @@ export function sanitizeDisplayPrefs(raw: unknown): DisplayPrefs {
     pieceStyle: isPieceStyle(candidate.pieceStyle)
       ? candidate.pieceStyle
       : DEFAULT_DISPLAY_PREFS.pieceStyle,
-    unitMark: isUnitMark(candidate.unitMark) ? candidate.unitMark : DEFAULT_DISPLAY_PREFS.unitMark,
+    unitMark: isUnitMark(candidate.unitMark)
+      ? candidate.unitMark
+      : DEFAULT_DISPLAY_PREFS.unitMark,
   };
 }
 

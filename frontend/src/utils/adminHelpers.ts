@@ -15,7 +15,7 @@ import {
 export function resolvePlayerPower(
   viewMode: 'lobby' | 'sandbox' | 'multiplayer',
   lockedPower: Power | null,
-  serverActivePower: Power | undefined
+  serverActivePower: Power | undefined,
 ): Power {
   if (viewMode === 'multiplayer' && lockedPower) {
     return lockedPower;
@@ -26,7 +26,7 @@ export function resolvePlayerPower(
 export function checkIsGameCreator(
   gameSummary: MultiplayerGameSummary | null,
   user: AuthUser | null,
-  viewMode: 'lobby' | 'sandbox' | 'multiplayer'
+  viewMode: 'lobby' | 'sandbox' | 'multiplayer',
 ): boolean {
   if (viewMode === 'sandbox') {
     return true;
@@ -57,7 +57,7 @@ export function checkIsGameCreator(
 
 export function canPlaceUnitTypeInProvince(
   unitType: UnitType,
-  provinceType: ProvinceType
+  provinceType: ProvinceType,
 ): boolean {
   if (provinceType === 'IMPASSABLE') {
     return false;
@@ -73,7 +73,7 @@ export function canPlaceUnitTypeInProvince(
 
 export function getAvailableCoasts(
   provinceInfo: ProvinceInfo | undefined,
-  unitType: UnitType
+  unitType: UnitType,
 ): string[] {
   if (!provinceInfo || unitType !== 'F') {
     return [];
@@ -81,7 +81,10 @@ export function getAvailableCoasts(
   return provinceInfo.coasts || [];
 }
 
-export function filterUnitsForDisband(units: Unit[], powerFilter: string): Unit[] {
+export function filterUnitsForDisband(
+  units: Unit[],
+  powerFilter: string,
+): Unit[] {
   if (!powerFilter || powerFilter === 'ALL') {
     return units;
   }

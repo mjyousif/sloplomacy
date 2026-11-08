@@ -6,7 +6,12 @@ import {
   getAvailableCoasts,
   resolvePlayerPower,
 } from './adminHelpers';
-import { AuthUser, MultiplayerGameSummary, ProvinceInfo, Unit } from '../types/diplomacy';
+import {
+  AuthUser,
+  MultiplayerGameSummary,
+  ProvinceInfo,
+  Unit,
+} from '../types/diplomacy';
 
 describe('adminHelpers', () => {
   describe('checkIsGameCreator', () => {
@@ -46,7 +51,9 @@ describe('adminHelpers', () => {
     });
 
     it('returns false for joined non-creator player in multiplayer match', () => {
-      expect(checkIsGameCreator(mpGame, regularPlayer, 'multiplayer')).toBe(false);
+      expect(checkIsGameCreator(mpGame, regularPlayer, 'multiplayer')).toBe(
+        false,
+      );
     });
 
     it('returns true for saved sandbox sessions', () => {
@@ -54,7 +61,9 @@ describe('adminHelpers', () => {
         ...mpGame,
         is_sandbox: true,
       };
-      expect(checkIsGameCreator(savedSandbox, regularPlayer, 'multiplayer')).toBe(true);
+      expect(
+        checkIsGameCreator(savedSandbox, regularPlayer, 'multiplayer'),
+      ).toBe(true);
     });
   });
 
@@ -116,7 +125,9 @@ describe('adminHelpers', () => {
 
 describe('resolvePlayerPower', () => {
   it('uses the claimed seat in multiplayer, whatever the shared game says', () => {
-    expect(resolvePlayerPower('multiplayer', 'ENGLAND', 'RUSSIA')).toBe('ENGLAND');
+    expect(resolvePlayerPower('multiplayer', 'ENGLAND', 'RUSSIA')).toBe(
+      'ENGLAND',
+    );
   });
 
   it('follows the game in the sandbox, where the player can switch powers', () => {

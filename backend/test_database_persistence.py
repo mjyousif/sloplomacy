@@ -39,6 +39,7 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def restore_seeded_lobbies():
     from main import seed_initial_multiplayer_lobbies
+
     yield
     seed_initial_multiplayer_lobbies()
 
@@ -108,7 +109,9 @@ def _fake_supabase_jwt(role: str) -> str:
 )
 def test_persistence_refuses_keys_that_are_not_service_role(env):
     """RLS gives anon zero rows, so persisting with it would make every saved game look deleted."""
-    with patch.dict(os.environ, {"SUPABASE_URL": "https://abc123xyz.supabase.co", **env}, clear=True):
+    with patch.dict(
+        os.environ, {"SUPABASE_URL": "https://abc123xyz.supabase.co", **env}, clear=True
+    ):
         assert is_persistence_enabled() is False
 
 
@@ -390,6 +393,7 @@ def test_delete_game_api_endpoint():
 
 def test_proto_1901_never_persisted_or_listed_in_lobbies():
     """Verify proto_1901 solo sandbox is rejected by save_game_to_db and excluded from list_games."""
+
     # 1. save_game_to_db rejects proto_1901
     async def run_save_test():
         state = build_scenario("standard_1901", Power.FRANCE, "proto_1901")
@@ -450,7 +454,9 @@ class FakeSupabase:
         self.rows[game_id] = {
             "state": state.model_dump(mode="json"),
             "summary": summary.model_dump(mode="json") if summary else None,
-            "history": kept_history if history is None else [h.model_dump(mode="json") for h in history],
+            "history": kept_history
+            if history is None
+            else [h.model_dump(mode="json") for h in history],
             "passcode": passcode,
         }
         return True
@@ -483,10 +489,12 @@ class FakeSupabase:
 def supabase():
     db = FakeSupabase()
     env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
-    with patch.dict(os.environ, env), patch("main.save_game_to_db", side_effect=db.save), patch(
-        "main.load_game_from_db", side_effect=db.load
-    ), patch("main.load_all_summaries_from_db", side_effect=db.load_all), patch(
-        "main.delete_game_from_db", side_effect=db.delete
+    with (
+        patch.dict(os.environ, env),
+        patch("main.save_game_to_db", side_effect=db.save),
+        patch("main.load_game_from_db", side_effect=db.load),
+        patch("main.load_all_summaries_from_db", side_effect=db.load_all),
+        patch("main.delete_game_from_db", side_effect=db.delete),
     ):
         yield db
     UNSAVED_GAMES.clear()
@@ -814,6 +822,7 @@ def _resolve_turn(game_id):
 def _rollback_headers():
     import jwt
     import os
+
     secret = os.getenv("SUPABASE_JWT_SECRET", "k" * 32)
     return {
         "Authorization": "Bearer "
@@ -968,7 +977,11 @@ def test_lobby_row_keeps_seats_from_the_packed_summary():
             )
         },
     )
-    row = {"room_code": "lobby_row", "status": "in_progress", "summary": summary.model_dump(mode="json")}
+    row = {
+        "room_code": "lobby_row",
+        "status": "in_progress",
+        "summary": summary.model_dump(mode="json"),
+    }
 
     assert list(build_summary_from_row(row).participants) == ["FRANCE"]
 
@@ -1006,9 +1019,23 @@ def test_load_reads_history_from_its_column_and_from_older_rows():
             return len(loaded[2])
 
         assert await history_count({**base, "game_state": blob, "history": [snapshot]}) == 1
-        assert await history_count({**base, "game_state": {**blob, "history": [snapshot]}, "history": []}) == 1
+        assert (
+            await history_count(
+                {**base, "game_state": {**blob, "history": [snapshot]}, "history": []}
+            )
+            == 1
+        )
         # Once a row has been rewritten the column wins over anything older.
-        assert await history_count({**base, "game_state": {**blob, "history": [snapshot]}, "history": [snapshot, snapshot]}) == 2
+        assert (
+            await history_count(
+                {
+                    **base,
+                    "game_state": {**blob, "history": [snapshot]},
+                    "history": [snapshot, snapshot],
+                }
+            )
+            == 2
+        )
 
     asyncio.run(run_test())
 

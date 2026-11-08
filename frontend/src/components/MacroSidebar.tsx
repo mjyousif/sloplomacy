@@ -142,7 +142,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   const requiredPowersInMatch = useMemo(() => {
     if (!isMultiplayer || !participants) return [];
     const activeParticipants = Object.values(participants).filter(
-      (p) => !p.surrendered && !surrenderedPowers.includes(p.power)
+      (p) => !p.surrendered && !surrenderedPowers.includes(p.power),
     );
     if (activeParticipants.length === 0) return [];
 
@@ -152,18 +152,25 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         .filter((p) => {
           const b = builds[p.power];
           // A power owed builds with every home center occupied has no decision to make.
-          return b && typeof b === 'object' && (b.count < 0 || (b.count > 0 && b.homes.length > 0));
+          return (
+            b &&
+            typeof b === 'object' &&
+            (b.count < 0 || (b.count > 0 && b.homes.length > 0))
+          );
         })
         .map((p) => p.power);
     }
 
     if (isRetreatPhase) {
       const dislodgedPowers = new Set(
-        units.filter((u) => u.is_dislodged).map((u) => u.power)
+        units.filter((u) => u.is_dislodged).map((u) => u.power),
       );
       if (retreats) {
         Object.keys(retreats).forEach((pStr) => {
-          if (retreats[pStr as Power] && Object.keys(retreats[pStr as Power]).length > 0) {
+          if (
+            retreats[pStr as Power] &&
+            Object.keys(retreats[pStr as Power]).length > 0
+          ) {
             dislodgedPowers.add(pStr as Power);
           }
         });
@@ -180,7 +187,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   }, [
     isMultiplayer,
     participants,
-  lobbyStatus,
+    lobbyStatus,
     surrenderedPowers,
     isAdjustmentPhase,
     isRetreatPhase,
@@ -190,11 +197,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   ]);
 
   const requiredFinalizedCount = requiredPowersInMatch.filter((p) =>
-    finalizedPowers.includes(p)
+    finalizedPowers.includes(p),
   ).length;
   const totalRequiredCount = requiredPowersInMatch.length;
   const missingPowers = requiredPowersInMatch.filter(
-    (p) => !finalizedPowers.includes(p)
+    (p) => !finalizedPowers.includes(p),
   );
 
   const consensusInfo = useMemo(
@@ -218,13 +225,15 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       finalizedPowers,
       isGameCreator,
       gameOver,
-    ]
+    ],
   );
-
 
   const rawMyUnits = units.filter((u) => u.power === activePower);
   const myUnits = isRetreatPhase
-    ? [...rawMyUnits].sort((a, b) => Number(Boolean(b.is_dislodged)) - Number(Boolean(a.is_dislodged)))
+    ? [...rawMyUnits].sort(
+        (a, b) =>
+          Number(Boolean(b.is_dislodged)) - Number(Boolean(a.is_dislodged)),
+      )
     : rawMyUnits;
   const myDislodgedUnits = myUnits.filter((u) => u.is_dislodged);
   const myActiveFieldUnits = myUnits.filter((u) => !u.is_dislodged);
@@ -259,17 +268,18 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
               p.home_power === activePower &&
               p.is_supply_center &&
               ownership[p.id] === activePower &&
-              !unitsByProv[p.id]
+              !unitsByProv[p.id],
           )
           .map((p) => p.id);
 
-  const maxAllowedBuilds = buildCount > 0 ? Math.min(buildCount, buildHomes.length) : 0;
+  const maxAllowedBuilds =
+    buildCount > 0 ? Math.min(buildCount, buildHomes.length) : 0;
   const assignedBuildsCount = buildHomes.filter(
-    (h) => orders[`BUILD_${activePower}_${h}`]?.order_type === 'BUILD'
+    (h) => orders[`BUILD_${activePower}_${h}`]?.order_type === 'BUILD',
   ).length;
   const neededDisbands = buildCount < 0 ? Math.abs(buildCount) : 0;
   const assignedDisbandsCount = myUnits.filter(
-    (u) => orders[u.id]?.order_type === 'DISBAND'
+    (u) => orders[u.id]?.order_type === 'DISBAND',
   ).length;
 
   const issuesByUnit: Record<string, ValidationIssue[]> = {};
@@ -286,12 +296,14 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
   if (isRetreatPhase) {
     totalActionableCount = myDislodgedUnits.length;
-    confirmedCount = myDislodgedUnits.filter((u) => orders[u.id]?.is_explicit).length;
+    confirmedCount = myDislodgedUnits.filter(
+      (u) => orders[u.id]?.is_explicit,
+    ).length;
   } else if (isAdjustmentPhase) {
     if (buildCount > 0 && buildHomes.length > 0) {
       totalActionableCount = maxAllowedBuilds;
       const explicitBuilds = buildHomes.filter(
-        (h) => orders[`BUILD_${activePower}_${h}`]?.is_explicit
+        (h) => orders[`BUILD_${activePower}_${h}`]?.is_explicit,
       ).length;
       confirmedCount = Math.min(maxAllowedBuilds, explicitBuilds);
     } else if (buildCount < 0) {
@@ -308,7 +320,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
   const handleOrderTypeChange = (unit: Unit, newType: OrderType) => {
     if (newType === 'RETREAT') {
-      const validRetreats = getValidRetreatDestinations(unit, retreats, provinces);
+      const validRetreats = getValidRetreatDestinations(
+        unit,
+        retreats,
+        provinces,
+      );
       const firstRet = validRetreats[0];
       onUpdateOrder({
         unit_id: unit.id,
@@ -318,7 +334,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         origin_coast: unit.coast,
         order_type: 'RETREAT',
         target: firstRet ? firstRet.province : null,
-        target_coast: firstRet && firstRet.coasts.length === 1 ? firstRet.coasts[0] : null,
+        target_coast:
+          firstRet && firstRet.coasts.length === 1 ? firstRet.coasts[0] : null,
         aux_unit_origin: null,
         via_convoy: false,
         is_explicit: true,
@@ -368,20 +385,25 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         origin_coast: unit.coast,
         order_type: 'MOVE',
         target: firstDest ? firstDest.province : null,
-        target_coast: firstDest && firstDest.coasts.length === 1 ? firstDest.coasts[0] : null,
+        target_coast:
+          firstDest && firstDest.coasts.length === 1
+            ? firstDest.coasts[0]
+            : null,
         aux_unit_origin: null,
         via_convoy: false,
         is_explicit: true,
       });
     } else if (newType === 'SUPPORT') {
-      const otherUnits = units.filter((other) => other.id !== unit.id && !other.is_dislodged);
+      const otherUnits = units.filter(
+        (other) => other.id !== unit.id && !other.is_dislodged,
+      );
       const defaultSup =
         otherUnits.find(
           (other) =>
             other.power === unit.power &&
             (canUnitSupportInto(unit, other.province, provinces) ||
               (orders[other.id]?.target &&
-                canUnitSupportInto(unit, orders[other.id].target!, provinces)))
+                canUnitSupportInto(unit, orders[other.id].target!, provinces))),
         ) || otherUnits[0];
 
       const supOrder = defaultSup ? orders[defaultSup.id] : undefined;
@@ -406,9 +428,13 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         is_explicit: true,
       });
     } else if (newType === 'CONVOY') {
-      const armies = units.filter((u2) => u2.unit_type === 'A' && !u2.is_dislodged);
+      const armies = units.filter(
+        (u2) => u2.unit_type === 'A' && !u2.is_dislodged,
+      );
       const firstArmy = armies.find((a) => a.power === unit.power) || armies[0];
-      const coastalProvs = Object.values(provinces).filter((p) => p.type === 'COAST');
+      const coastalProvs = Object.values(provinces).filter(
+        (p) => p.type === 'COAST',
+      );
       onUpdateOrder({
         unit_id: unit.id,
         power: unit.power,
@@ -427,7 +453,10 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   // Collapsed Rail View
   if (collapsed) {
     return (
-      <aside className="macro-sidebar macro-sidebar-collapsed" aria-label="Tactical Orders Collapsed">
+      <aside
+        className="macro-sidebar macro-sidebar-collapsed"
+        aria-label="Tactical Orders Collapsed"
+      >
         {onToggleCollapse && (
           <button
             type="button"
@@ -450,7 +479,10 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           <span>{powerMeta.crest}</span>
         </div>
 
-        <div className="rail-counter-badge" title={`${unconfirmedCount} unconfirmed orders`}>
+        <div
+          className="rail-counter-badge"
+          title={`${unconfirmedCount} unconfirmed orders`}
+        >
           {unconfirmedCount > 0 ? (
             <span className="rail-badge-unconfirmed">{unconfirmedCount}</span>
           ) : (
@@ -459,7 +491,10 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         </div>
 
         {myIssues.length > 0 && (
-          <div className="rail-warn-badge" title={`${myIssues.length} tactical issues`}>
+          <div
+            className="rail-warn-badge"
+            title={`${myIssues.length} tactical issues`}
+          >
             <AlertTriangle size={14} />
           </div>
         )}
@@ -482,7 +517,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
   // Expanded Core-Gameplay Sidebar
   return (
-    <aside className="macro-sidebar macro-sidebar-expanded" data-testid="macro-sidebar" aria-label="Tactical Command & Orders">
+    <aside
+      className="macro-sidebar macro-sidebar-expanded"
+      data-testid="macro-sidebar"
+      aria-label="Tactical Command & Orders"
+    >
       {/* 1. ACTIVE POWER HEADER & TELEMETRY */}
       <div
         className="active-power-banner"
@@ -496,8 +535,10 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
             </div>
             <div className="power-banner-sub">
               {myActiveFieldUnits.length} Units
-              {myDislodgedUnits.length > 0 ? ` (+${myDislodgedUnits.length} Dislodged)` : ''} •{' '}
-              {scCountByPower[activePower]} SCs
+              {myDislodgedUnits.length > 0
+                ? ` (+${myDislodgedUnits.length} Dislodged)`
+                : ''}{' '}
+              • {scCountByPower[activePower]} SCs
             </div>
           </div>
 
@@ -513,7 +554,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                 </span>
               ) : myIssues.length > 0 ? (
                 <span className="status-badge has-warnings">
-                  <AlertTriangle size={11} /> {myIssues.length} Issue{myIssues.length > 1 ? 's' : ''}
+                  <AlertTriangle size={11} /> {myIssues.length} Issue
+                  {myIssues.length > 1 ? 's' : ''}
                 </span>
               ) : (
                 <span className="status-badge drafting">Drafting</span>
@@ -543,7 +585,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
             title="Mark all current orders as confirmed"
             onClick={onConfirmAllHolds}
           >
-            <CheckCircle2 size={12} /> Confirm All ({confirmedCount}/{totalActionableCount})
+            <CheckCircle2 size={12} /> Confirm All ({confirmedCount}/
+            {totalActionableCount})
           </button>
           {isMultiplayer && onSurrenderClick && (
             <button
@@ -564,10 +607,10 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
             {buildCount > 0 && buildHomes.length > 0
               ? `Build up to ${maxAllowedBuilds} unit${maxAllowedBuilds > 1 ? 's' : ''} in open home centers (${assignedBuildsCount}/${maxAllowedBuilds} assigned).`
               : buildCount > 0 && buildHomes.length === 0
-              ? `+${buildCount} surplus, but home centers are occupied.`
-              : buildCount < 0
-              ? `Disband ${neededDisbands} unit${neededDisbands > 1 ? 's' : ''} (${assignedDisbandsCount}/${neededDisbands} selected).`
-              : `Forces in equilibrium (${myActiveFieldUnits.length} units = ${scCountByPower[activePower]} SCs).`}
+                ? `+${buildCount} surplus, but home centers are occupied.`
+                : buildCount < 0
+                  ? `Disband ${neededDisbands} unit${neededDisbands > 1 ? 's' : ''} (${assignedDisbandsCount}/${neededDisbands} selected).`
+                  : `Forces in equilibrium (${myActiveFieldUnits.length} units = ${scCountByPower[activePower]} SCs).`}
           </div>
         )}
 
@@ -597,11 +640,17 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
               const buildOrder = orders[bId];
               const pInfo = provinces[homeProv];
               const isWaived = buildOrder?.order_type === 'WAIVE';
-              const isArmy = !isWaived && (buildOrder?.unit_type === 'A' || !buildOrder);
+              const isArmy =
+                !isWaived && (buildOrder?.unit_type === 'A' || !buildOrder);
               const isFleet = !isWaived && buildOrder?.unit_type === 'F';
-              const activeCoast = buildOrder?.origin_coast || buildOrder?.target_coast || null;
+              const activeCoast =
+                buildOrder?.origin_coast || buildOrder?.target_coast || null;
               const isSelected = selectedUnitId === bId;
-              const summary = formatOrderSummary(buildOrder, provinces, unitsByProv);
+              const summary = formatOrderSummary(
+                buildOrder,
+                provinces,
+                unitsByProv,
+              );
 
               return (
                 <div
@@ -628,7 +677,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                     <div className="unit-identity">
                       <span
                         className="unit-type-badge"
-                        style={{ backgroundColor: isWaived ? '#64748b' : '#16a34a' }}
+                        style={{
+                          backgroundColor: isWaived ? '#64748b' : '#16a34a',
+                        }}
                       >
                         <PlusCircle size={11} />
                         {isWaived ? '—' : buildOrder?.unit_type || 'A'}
@@ -645,10 +696,13 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                     </div>
                     <div className="unit-status-pill-wrap">
                       {isWaived ? (
-                        <span className="unit-mini-pill unconfirmed">Waived</span>
+                        <span className="unit-mini-pill unconfirmed">
+                          Waived
+                        </span>
                       ) : (
                         <span className="unit-mini-pill confirmed">
-                          <CheckCircle2 size={11} /> Build {buildOrder?.unit_type === 'F' ? 'Fleet' : 'Army'}
+                          <CheckCircle2 size={11} /> Build{' '}
+                          {buildOrder?.unit_type === 'F' ? 'Fleet' : 'Army'}
                         </span>
                       )}
                     </div>
@@ -661,10 +715,15 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                     >
                       {summary.verb}
                     </span>
-                    <span className="behavior-target-text">{summary.targetText}</span>
+                    <span className="behavior-target-text">
+                      {summary.targetText}
+                    </span>
                   </div>
 
-                  <div className="unit-inline-controls" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="unit-inline-controls"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div className="order-type-tabs">
                       <button
                         type="button"
@@ -672,7 +731,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         className={`order-tab-btn ${isArmy ? 'active' : ''}`}
                         style={
                           isArmy
-                            ? { backgroundColor: '#15803d', borderColor: '#4ade80', color: '#fff' }
+                            ? {
+                                backgroundColor: '#15803d',
+                                borderColor: '#4ade80',
+                                color: '#fff',
+                              }
                             : undefined
                         }
                         onClick={() =>
@@ -694,7 +757,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                       {pInfo?.type === 'COAST' &&
                         (pInfo.coasts && pInfo.coasts.length > 0 ? (
                           pInfo.coasts.map((cst) => {
-                            const isThisCoastFleet = isFleet && activeCoast === cst;
+                            const isThisCoastFleet =
+                              isFleet && activeCoast === cst;
                             return (
                               <button
                                 key={cst}
@@ -806,7 +870,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           const validRetreats = unit.is_dislodged
             ? getValidRetreatDestinations(unit, retreats, provinces)
             : [];
-          const simRes = simActive ? simulationResult?.resolutions[unit.id] : null;
+          const simRes = simActive
+            ? simulationResult?.resolutions[unit.id]
+            : null;
           const isDisbanding = order?.order_type === 'DISBAND';
 
           return (
@@ -821,8 +887,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                 unit.is_dislodged
                   ? { borderLeft: '4px solid #ea580c' }
                   : isDisbanding
-                  ? { borderLeft: '4px solid #dc2626' }
-                  : undefined
+                    ? { borderLeft: '4px solid #dc2626' }
+                    : undefined
               }
               onClick={() => onSelectUnit(isSelected ? null : unit.id)}
               onPointerEnter={(e) => {
@@ -849,11 +915,15 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                       backgroundColor: unit.is_dislodged
                         ? '#ea580c'
                         : isDisbanding
-                        ? '#dc2626'
-                        : powerMeta.color,
+                          ? '#dc2626'
+                          : powerMeta.color,
                     }}
                   >
-                    {unit.unit_type === 'A' ? <Swords size={11} /> : <Anchor size={11} />}
+                    {unit.unit_type === 'A' ? (
+                      <Swords size={11} />
+                    ) : (
+                      <Anchor size={11} />
+                    )}
                     {unit.unit_type}
                   </span>
                   <div>
@@ -884,7 +954,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                     <span className="unit-mini-pill warning">
                       <AlertTriangle size={11} /> Warning
                     </span>
-                  ) : isAdjustmentPhase || (isRetreatPhase && !unit.is_dislodged) ? (
+                  ) : isAdjustmentPhase ||
+                    (isRetreatPhase && !unit.is_dislodged) ? (
                     <span className="unit-mini-pill confirmed">
                       <CheckCircle2 size={11} /> Retained
                     </span>
@@ -914,7 +985,10 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
               </div>
 
               {/* Order Controls */}
-              <div className="unit-inline-controls" onClick={(e) => e.stopPropagation()}>
+              <div
+                className="unit-inline-controls"
+                onClick={(e) => e.stopPropagation()}
+              >
                 {isRetreatPhase ? (
                   unit.is_dislodged ? (
                     <>
@@ -926,10 +1000,16 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                             className={`order-tab-btn ${order?.order_type === 'RETREAT' ? 'active' : ''}`}
                             style={
                               order?.order_type === 'RETREAT'
-                                ? { backgroundColor: '#ea580c', borderColor: '#fdba74', color: '#fff' }
+                                ? {
+                                    backgroundColor: '#ea580c',
+                                    borderColor: '#fdba74',
+                                    color: '#fff',
+                                  }
                                 : undefined
                             }
-                            onClick={() => handleOrderTypeChange(unit, 'RETREAT')}
+                            onClick={() =>
+                              handleOrderTypeChange(unit, 'RETREAT')
+                            }
                           >
                             <MoveRight size={11} /> RETREAT
                           </button>
@@ -940,7 +1020,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                           className={`order-tab-btn ${order?.order_type === 'DISBAND' ? 'active' : ''}`}
                           style={
                             order?.order_type === 'DISBAND'
-                              ? { backgroundColor: '#dc2626', borderColor: '#fca5a5', color: '#fff' }
+                              ? {
+                                  backgroundColor: '#dc2626',
+                                  borderColor: '#fca5a5',
+                                  color: '#fff',
+                                }
                               : undefined
                           }
                           onClick={() => handleOrderTypeChange(unit, 'DISBAND')}
@@ -949,45 +1033,53 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         </button>
                       </div>
 
-                      {order?.order_type === 'RETREAT' && validRetreats.length > 0 && (
-                        <div className="order-param-row">
-                          <label>Retreat To:</label>
-                          <select
-                            data-testid="select-retreat-target"
-                            value={
-                              order.target
-                                ? `${order.target}${order.target_coast ? `/${order.target_coast}` : ''}`
-                                : ''
-                            }
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (!val) return;
-                              const [base, cst] = val.split('/');
-                              onUpdateOrder({
-                                ...order,
-                                target: base,
-                                target_coast: cst || null,
-                                is_explicit: true,
-                              });
-                            }}
-                          >
-                            {validRetreats.flatMap((r) => {
-                              if (r.coasts.length > 0 && unit.unit_type === 'F') {
-                                return r.coasts.map((c) => (
-                                  <option key={`${r.province}/${c}`} value={`${r.province}/${c}`}>
-                                    {provinces[r.province]?.name} ({c} Coast) [{r.province}/{c}]
-                                  </option>
-                                ));
+                      {order?.order_type === 'RETREAT' &&
+                        validRetreats.length > 0 && (
+                          <div className="order-param-row">
+                            <label>Retreat To:</label>
+                            <select
+                              data-testid="select-retreat-target"
+                              value={
+                                order.target
+                                  ? `${order.target}${order.target_coast ? `/${order.target_coast}` : ''}`
+                                  : ''
                               }
-                              return (
-                                <option key={r.province} value={r.province}>
-                                  {provinces[r.province]?.name} ({r.province})
-                                </option>
-                              );
-                            })}
-                          </select>
-                        </div>
-                      )}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (!val) return;
+                                const [base, cst] = val.split('/');
+                                onUpdateOrder({
+                                  ...order,
+                                  target: base,
+                                  target_coast: cst || null,
+                                  is_explicit: true,
+                                });
+                              }}
+                            >
+                              {validRetreats.flatMap((r) => {
+                                if (
+                                  r.coasts.length > 0 &&
+                                  unit.unit_type === 'F'
+                                ) {
+                                  return r.coasts.map((c) => (
+                                    <option
+                                      key={`${r.province}/${c}`}
+                                      value={`${r.province}/${c}`}
+                                    >
+                                      {provinces[r.province]?.name} ({c} Coast)
+                                      [{r.province}/{c}]
+                                    </option>
+                                  ));
+                                }
+                                return (
+                                  <option key={r.province} value={r.province}>
+                                    {provinces[r.province]?.name} ({r.province})
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+                        )}
                     </>
                   ) : null
                 ) : isAdjustmentPhase ? (
@@ -1007,7 +1099,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         className={`order-tab-btn ${isDisbanding ? 'active' : ''}`}
                         style={
                           isDisbanding
-                            ? { backgroundColor: '#dc2626', borderColor: '#fca5a5', color: '#fff' }
+                            ? {
+                                backgroundColor: '#dc2626',
+                                borderColor: '#fca5a5',
+                                color: '#fff',
+                              }
                             : undefined
                         }
                         onClick={() => handleOrderTypeChange(unit, 'DISBAND')}
@@ -1019,10 +1115,13 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                 ) : (
                   <>
                     <div className="order-type-tabs">
-                      {(['HOLD', 'MOVE', 'SUPPORT', 'CONVOY'] as OrderType[]).map((oType) => {
+                      {(
+                        ['HOLD', 'MOVE', 'SUPPORT', 'CONVOY'] as OrderType[]
+                      ).map((oType) => {
                         if (
                           oType === 'CONVOY' &&
-                          (unit.unit_type !== 'F' || provinces[unit.province]?.type !== 'SEA')
+                          (unit.unit_type !== 'F' ||
+                            provinces[unit.province]?.type !== 'SEA')
                         ) {
                           return null;
                         }
@@ -1059,7 +1158,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                             const val = e.target.value;
                             if (!val) return;
                             const [base, cst] = val.split('/');
-                            const isAdjacent = reachable.some((r) => r.province === base);
+                            const isAdjacent = reachable.some(
+                              (r) => r.province === base,
+                            );
                             onUpdateOrder({
                               ...order,
                               target: base,
@@ -1071,10 +1172,17 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         >
                           <optgroup label="Reachable Provinces">
                             {reachable.flatMap((r) => {
-                              if (r.coasts.length > 0 && unit.unit_type === 'F') {
+                              if (
+                                r.coasts.length > 0 &&
+                                unit.unit_type === 'F'
+                              ) {
                                 return r.coasts.map((c) => (
-                                  <option key={`${r.province}/${c}`} value={`${r.province}/${c}`}>
-                                    {provinces[r.province]?.name} ({c} Coast) [{r.province}/{c}]
+                                  <option
+                                    key={`${r.province}/${c}`}
+                                    value={`${r.province}/${c}`}
+                                  >
+                                    {provinces[r.province]?.name} ({c} Coast) [
+                                    {r.province}/{c}]
                                   </option>
                                 ));
                               }
@@ -1092,7 +1200,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                                   (p) =>
                                     p.type === 'COAST' &&
                                     p.id !== unit.province &&
-                                    !reachable.some((r) => r.province === p.id)
+                                    !reachable.some((r) => r.province === p.id),
                                 )
                                 .map((p) => (
                                   <option key={p.id} value={p.id}>
@@ -1115,7 +1223,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                             onChange={(e) => {
                               const newAux = e.target.value;
                               const supUnit = unitsByProv[newAux];
-                              const supOrd = supUnit ? orders[supUnit.id] : undefined;
+                              const supOrd = supUnit
+                                ? orders[supUnit.id]
+                                : undefined;
                               const autoTarget =
                                 supOrd?.order_type === 'MOVE' && supOrd.target
                                   ? supOrd.target
@@ -1129,11 +1239,14 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                             }}
                           >
                             {units
-                              .filter((u2) => u2.id !== unit.id && !u2.is_dislodged)
+                              .filter(
+                                (u2) => u2.id !== unit.id && !u2.is_dislodged,
+                              )
                               .map((u2) => (
                                 <option key={u2.id} value={u2.province}>
-                                  [{POWER_METADATA[u2.power].shortName}] {u2.unit_type}{' '}
-                                  {provinces[u2.province]?.name} ({u2.province})
+                                  [{POWER_METADATA[u2.power].shortName}]{' '}
+                                  {u2.unit_type} {provinces[u2.province]?.name}{' '}
+                                  ({u2.province})
                                 </option>
                               ))}
                           </select>
@@ -1153,15 +1266,19 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                           >
                             {order.aux_unit_origin && (
                               <option value={order.aux_unit_origin}>
-                                HOLD in {provinces[order.aux_unit_origin]?.name} ({order.aux_unit_origin})
+                                HOLD in {provinces[order.aux_unit_origin]?.name}{' '}
+                                ({order.aux_unit_origin})
                               </option>
                             )}
                             <optgroup label="Support Move Into:">
                               {reachable
-                                .filter((r) => r.province !== order.aux_unit_origin)
+                                .filter(
+                                  (r) => r.province !== order.aux_unit_origin,
+                                )
                                 .map((r) => (
                                   <option key={r.province} value={r.province}>
-                                    → {provinces[r.province]?.name} ({r.province})
+                                    → {provinces[r.province]?.name} (
+                                    {r.province})
                                   </option>
                                 ))}
                             </optgroup>
@@ -1185,10 +1302,14 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                             }
                           >
                             {units
-                              .filter((u2) => u2.unit_type === 'A' && !u2.is_dislodged)
+                              .filter(
+                                (u2) =>
+                                  u2.unit_type === 'A' && !u2.is_dislodged,
+                              )
                               .map((u2) => (
                                 <option key={u2.id} value={u2.province}>
-                                  A {provinces[u2.province]?.name} ({u2.province})
+                                  A {provinces[u2.province]?.name} (
+                                  {u2.province})
                                 </option>
                               ))}
                           </select>
@@ -1222,7 +1343,10 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
               {/* Diagnostic Alerts */}
               {unitIssues.map((iss) => (
-                <div key={iss.id} className={`unit-diagnostic-alert ${iss.severity}`}>
+                <div
+                  key={iss.id}
+                  className={`unit-diagnostic-alert ${iss.severity}`}
+                >
                   <AlertTriangle size={13} className="diag-icon" />
                   <div>
                     <strong>{iss.title}:</strong> {iss.message}
@@ -1237,7 +1361,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                     simRes.succeeded ? 'sim-ok' : 'sim-fail'
                   }`}
                 >
-                  <strong>{simRes.succeeded ? '✓ SIMULATED:' : '✕ BOUNCED / CUT:'}</strong>{' '}
+                  <strong>
+                    {simRes.succeeded ? '✓ SIMULATED:' : '✕ BOUNCED / CUT:'}
+                  </strong>{' '}
                   {simRes.reason}
                 </div>
               )}
@@ -1261,7 +1387,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
               <>
                 <AlertTriangle size={15} />
                 <span>
-                  Finalize {powerMeta.shortName} ({myIssues.length} Warning{myIssues.length > 1 ? 's' : ''})
+                  Finalize {powerMeta.shortName} ({myIssues.length} Warning
+                  {myIssues.length > 1 ? 's' : ''})
                 </span>
               </>
             ) : (
@@ -1269,13 +1396,20 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                 <Lock size={15} />
                 <span>
                   Finalize {powerMeta.shortName} Orders
-                  {unconfirmedCount > 0 ? ` (${unconfirmedCount} Unconfirmed)` : ''}
+                  {unconfirmedCount > 0
+                    ? ` (${unconfirmedCount} Unconfirmed)`
+                    : ''}
                 </span>
               </>
             )}
           </button>
         ) : (
-          <button type="button" data-testid="btn-unfinalize-orders" className="unfinalize-btn" onClick={onUnfinalizeClick}>
+          <button
+            type="button"
+            data-testid="btn-unfinalize-orders"
+            className="unfinalize-btn"
+            onClick={onUnfinalizeClick}
+          >
             <Unlock size={15} />
             <span>Orders Finalized — Click to Unlock</span>
           </button>
@@ -1295,15 +1429,17 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
               {gameOver
                 ? 'Game Over'
                 : isAdjustmentPhase
-                ? 'Resolve Adjustments & Advance'
-                : isRetreatPhase
-                ? 'Resolve Retreats & Advance'
-                : 'Resolve Phase'}
+                  ? 'Resolve Adjustments & Advance'
+                  : isRetreatPhase
+                    ? 'Resolve Retreats & Advance'
+                    : 'Resolve Phase'}
             </span>
           </button>
         ) : (
           <div className="mp-resolution-controls">
-            <div className={`mp-consensus-status-card ${consensusInfo.isWaitingForPlayers ? 'waiting-mode' : ''}`}>
+            <div
+              className={`mp-consensus-status-card ${consensusInfo.isWaitingForPlayers ? 'waiting-mode' : ''}`}
+            >
               <div className="mp-consensus-header">
                 {consensusInfo.isWaitingForPlayers ? (
                   <Users size={14} className="consensus-icon" />
@@ -1312,7 +1448,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                 )}
                 <span className="consensus-title">{consensusInfo.title}</span>
               </div>
-              <div className="mp-consensus-desc">{consensusInfo.description}</div>
+              <div className="mp-consensus-desc">
+                {consensusInfo.description}
+              </div>
             </div>
 
             {isGameCreator && (
@@ -1332,10 +1470,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           </div>
         )}
       </div>
-        <div className="sidebar-version-footer">
-          <VersionBadge />
-        </div>
-
+      <div className="sidebar-version-footer">
+        <VersionBadge />
+      </div>
     </aside>
   );
 };
