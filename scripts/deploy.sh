@@ -33,7 +33,30 @@ if [ -f "frontend/.env" ]; then
   SUPABASE_JWT_SECRET=$(grep -E '^SUPABASE_JWT_SECRET=' frontend/.env | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
 fi
 
-BACKEND_KEY="${SUPABASE_SERVICE_ROLE_KEY:-$SUPABASE_ANON_KEY}"
+# The backend persists games only with the service role key. RLS gives the anon key zero rows,
+# so falling back to it would make every saved game look deleted.
+if [ -n "$SUPABASE_URL" ] && [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+  echo "[!] Warning: SUPABASE_SERVICE_ROLE_KEY is not in frontend/.env. Game persistence stays off unless the service already has it."
+fi
+
+# --update-env-vars keeps variables set by hand on the service, and only values that are present
+# are sent, so a missing value never blanks one that is already set.
+ENV_VARS=""
+add_env() {
+  if [ -n "$2" ]; then
+    ENV_VARS="${ENV_VARS:+${ENV_VARS},}$1=$2"
+  fi
+}
+add_env VITE_SUPABASE_URL "$SUPABASE_URL"
+add_env VITE_SUPABASE_ANON_KEY "$SUPABASE_ANON_KEY"
+add_env SUPABASE_URL "$SUPABASE_URL"
+add_env SUPABASE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
+add_env SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
+add_env SUPABASE_JWT_SECRET "$SUPABASE_JWT_SECRET"
+ENV_FLAGS=()
+if [ -n "$ENV_VARS" ]; then
+  ENV_FLAGS=(--update-env-vars "$ENV_VARS")
+fi
 
 echo "--> Enabling Google Cloud APIs..."
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project "$PROJECT_ID"
@@ -42,6 +65,8 @@ echo "--> Building container with Google Cloud Build..."
 SHORT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
 gcloud builds submit --config=cloudbuild.yaml --substitutions="_SUPABASE_URL=${SUPABASE_URL},_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},_SHORT_SHA=${SHORT_SHA},_IMAGE_TAG=${IMAGE_TAG}" --project "$PROJECT_ID" .
 
+# --max-instances 1 is required: games live in one process.
+# --timeout 3600 lets a WebSocket stay open for an hour instead of 5 minutes.
 echo "--> Deploying to Google Cloud Run (Scale-to-zero with Supabase Persistence)..."
 gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_TAG" \
@@ -53,7 +78,8 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances 1 \
   --memory 512Mi \
   --port 8080 \
-  --set-env-vars "VITE_SUPABASE_URL=${SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_KEY=${BACKEND_KEY},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY},SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}"
+  --timeout 3600 \
+  ${ENV_FLAGS[@]+"${ENV_FLAGS[@]}"}
 
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format "value(status.url)")
 
