@@ -608,11 +608,13 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                     borderLeft: `4px solid ${isWaived ? '#64748b' : '#16a34a'}`,
                   }}
                   onClick={() => onSelectUnit(isSelected ? null : bId)}
-                  onMouseEnter={() => {
+                  onPointerEnter={(e) => {
+                    if (e.pointerType === 'touch') return;
                     onHoverUnit(bId);
                     onHighlightProvinces([homeProv]);
                   }}
-                  onMouseLeave={() => {
+                  onPointerLeave={(e) => {
+                    if (e.pointerType === 'touch') return;
                     onHoverUnit(null);
                     onHighlightProvinces([]);
                   }}
@@ -812,14 +814,17 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                   : undefined
               }
               onClick={() => onSelectUnit(isSelected ? null : unit.id)}
-              onMouseEnter={() => {
+              onPointerEnter={(e) => {
+                // A finger has no hover: on touch the highlight would stick until the next tap.
+                if (e.pointerType === 'touch') return;
                 onHoverUnit(unit.id);
                 const provs = [unit.province];
                 if (order?.target) provs.push(order.target);
                 if (order?.aux_unit_origin) provs.push(order.aux_unit_origin);
                 onHighlightProvinces(provs);
               }}
-              onMouseLeave={() => {
+              onPointerLeave={(e) => {
+                if (e.pointerType === 'touch') return;
                 onHoverUnit(null);
                 onHighlightProvinces([]);
               }}

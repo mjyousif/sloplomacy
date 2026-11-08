@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { VersionBadge } from './VersionBadge';
+import { useCompactLayout } from '../hooks/useCompactLayout';
 import {
   ALL_POWERS,
   AuthUser,
@@ -60,6 +61,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onJoinOrEnterGame,
   onOpenSurrenderModal,
 }) => {
+  // On a phone the Host and Join forms sit below the game lists instead of beside them.
+  const hostFormPlace = useCompactLayout() ? 'below' : 'on the right';
+
   // Host game form state
   const [newGameName, setNewGameName] = useState('');
   const [selectedCreatePower, setSelectedCreatePower] = useState<Power>('FRANCE');
@@ -354,7 +358,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             ) : myGames.length === 0 ? (
               <div className="lobby-empty-box">
                 <p>
-                  You haven&apos;t joined any campaigns yet. Host a public or private campaign on the right, or join using a Game ID &amp; passcode!
+                  You haven&apos;t joined any campaigns yet. Host a public or private campaign {hostFormPlace}, or join using a Game ID &amp; passcode!
                 </p>
               </div>
             ) : (
@@ -472,7 +476,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   <div>
                     <strong>No Active Campaigns Right Now</strong>
                     <p>
-                      There are no active multiplayer lobbies yet. Host a new public or private match on the right, or join a friend&apos;s game using their Game ID and passcode!
+                      There are no active multiplayer lobbies yet. Host a new public or private match {hostFormPlace}, or join a friend&apos;s game using their Game ID and passcode!
                     </p>
                   </div>
                 </div>
