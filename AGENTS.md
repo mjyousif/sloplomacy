@@ -203,7 +203,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   │       ├── orderHelpers.ts      # Move reachability, support targeting & retreat calculations
 │   │       ├── adminHelpers.ts      # Admin permission checks & payload formatters
 │   │       ├── timerHelpers.ts      # Turn clock labels, vote counts & formatting
-│   │       ├── mapCameraHelpers.ts  # Map pan and zoom bounds
+│   │       ├── mapCameraHelpers.ts  # Map pan and zoom bounds, zoom-at-point, pinch & phone camera
 │   │       └── displayPrefs.ts      # Display preference types, defaults, sanitizing & sign-in rules
 │   ├── package.json         # Vitest suites sit next to their code as *.test.ts
 │   └── vite.config.ts
