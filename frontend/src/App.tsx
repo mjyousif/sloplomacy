@@ -210,6 +210,7 @@ export function App() {
     viewMode,
     power: playerPower,
     passcode: activeGameId ? matchPasscodes[activeGameId] ?? null : null,
+    authKey: authUser?.id ?? null,
     onGameUpdate: handleWsGameUpdate,
     onLobbyUpdate: handleWsLobbyUpdate,
   });

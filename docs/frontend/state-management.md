@@ -159,7 +159,8 @@ To guarantee seamless multiplayer coordination, the frontend maintains a persist
 3. **Connection Resilience**:
    - Sends a `{ type: 'ping' }` heartbeat every 25 seconds to keep proxies and serverless Cloud Run instances active. Each socket owns its heartbeat, and a late close event from a replaced socket is ignored.
    - Reconnects 2 seconds after an unexpected drop. It stops for good on `4004` (game deleted) and `4403` (passcode missing or wrong), because a retry cannot fix either (`shouldReconnect`). The fallback HTTP poll then takes over.
-   - The passcode a player types when joining a private match is kept in `matchPasscodes` for this visit only and sent with the socket. After a reload the socket is refused, and the poll, which knows the seated player, keeps the board current.
+   - Game sockets ask for the auth handshake (`?handshake=1`) and send `{ type: 'auth', token }` as their first message, with the token from `getAuthHeaders`. The server works out the player's seat from it, so it shows them their own orders and lets a seated player into a private match without the passcode. The socket reconnects when the player signs in or out (`authKey`).
+   - The passcode a player types when joining a private match is kept in `matchPasscodes` for this visit only and sent with the socket, for anyone not yet seated.
    - When the turn clock reaches zero, `PhaseTimerWidget` calls `onExpire`, and the app sends `{ type: 'refresh' }`. Only `refresh` makes the server run the clock; `ping` just keeps the connection open. Without a socket, the fallback poll runs the clock within 4 seconds. The countdown keeps `onExpire` in a ref, so a new callback never restarts it from an old server value.
 5. **Stale replies**:
    - `fetchGame` and joining a match bump `boardRequestSeq`. A `GET /api/game` reply that comes back after a newer request is dropped, so the startup load of `proto_1901` cannot replace a match the player has just joined.
