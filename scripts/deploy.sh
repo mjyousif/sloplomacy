@@ -11,7 +11,8 @@ echo "=========================================================="
 PROJECT_ID="${1:-$(gcloud config get-value project 2>/dev/null)}"
 REGION="${2:-us-central1}"
 SERVICE_NAME="${3:-diplomacy-1901}"
-IMAGE_TAG="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest"
+ARTIFACT_REPO="${4:-diplomacy-repo}"
+IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${SERVICE_NAME}:latest"
 
 if [ -z "$PROJECT_ID" ]; then
   echo "Error: No active GCP project configured. Run 'gcloud config set project <PROJECT_ID>'."
@@ -61,12 +62,24 @@ fi
 echo "--> Enabling Google Cloud APIs..."
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project "$PROJECT_ID"
 
+echo "--> Ensuring Artifact Registry repository '$ARTIFACT_REPO' exists..."
+if ! gcloud artifacts repositories describe "$ARTIFACT_REPO" --location="$REGION" --project="$PROJECT_ID" &>/dev/null; then
+  echo "Creating Artifact Registry repository '$ARTIFACT_REPO'..."
+  gcloud artifacts repositories create "$ARTIFACT_REPO" \
+    --repository-format=docker \
+    --location="$REGION" \
+    --description="Docker repository for Sloplomacy 1901" \
+    --project="$PROJECT_ID"
+fi
+
 echo "--> Building container with Google Cloud Build..."
 SHORT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
-gcloud builds submit --config=cloudbuild.yaml --substitutions="_SUPABASE_URL=${SUPABASE_URL},_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},_SHORT_SHA=${SHORT_SHA},_IMAGE_TAG=${IMAGE_TAG}" --project "$PROJECT_ID" .
+gcloud builds submit --config=cloudbuild.yaml --substitutions="_SUPABASE_URL=${SUPABASE_URL},_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},_SHORT_SHA=${SHORT_SHA},_IMAGE_TAG=${IMAGE_TAG},_REGION=${REGION}" --project "$PROJECT_ID" .
 
 # --max-instances 1 is required: games live in one process.
 # --timeout 3600 lets a WebSocket stay open for an hour instead of 5 minutes.
+# --cpu-throttling ensures compute charges apply only during active request processing.
+# --cpu-boost temporarily allocates extra CPU during cold-start boot.
 echo "--> Deploying to Google Cloud Run (Scale-to-zero with Supabase Persistence)..."
 gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_TAG" \
@@ -76,7 +89,10 @@ gcloud run deploy "$SERVICE_NAME" \
   --allow-unauthenticated \
   --min-instances 0 \
   --max-instances 1 \
+  --cpu 1 \
   --memory 512Mi \
+  --cpu-throttling \
+  --cpu-boost \
   --port 8080 \
   --timeout 3600 \
   ${ENV_FLAGS[@]+"${ENV_FLAGS[@]}"}

@@ -18,10 +18,20 @@ fi
 
 echo "[✓] Target GCP Project: $PROJECT_ID"
 
-# 2. Enable Required APIs
+# 2. Enable Required APIs & Prepare Artifact Registry
 echo ""
 echo "--> Enabling required APIs (Cloud Run, Cloud Build, Artifact Registry, IAM)..."
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com iam.googleapis.com --project "$PROJECT_ID"
+
+echo "--> Ensuring Artifact Registry repository 'diplomacy-repo' exists..."
+if ! gcloud artifacts repositories describe diplomacy-repo --location="us-central1" --project="$PROJECT_ID" &>/dev/null; then
+  echo "Creating Artifact Registry repository 'diplomacy-repo'..."
+  gcloud artifacts repositories create diplomacy-repo \
+    --repository-format=docker \
+    --location="us-central1" \
+    --description="Docker repository for Sloplomacy 1901" \
+    --project="$PROJECT_ID"
+fi
 
 # 3. Create Service Account
 SA_NAME="github-deployer"

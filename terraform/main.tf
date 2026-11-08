@@ -26,21 +26,49 @@ resource "google_project_service" "artifact_registry" {
   disable_dependent_services = false
 }
 
-# 2. Artifact Registry Docker Repository
-# Nothing pushes here yet: the CI workflow and scripts/deploy.* push to gcr.io/<project>/<service>,
-# which is also the default image below. Set container_image to use an image in this repository.
+# 2. Artifact Registry Docker Repository with automated cleanup policies to prevent storage billing creep
 resource "google_artifact_registry_repository" "app_repo" {
   depends_on    = [google_project_service.artifact_registry]
   location      = var.region
   repository_id = var.artifact_repository_id
   description   = "Docker repository for Sloplomacy 1901 serverless container"
   format        = "DOCKER"
+
+  cleanup_policy_dry_run = false
+
+  # Retain the 5 most recent image versions regardless of age
+  cleanup_policies {
+    id     = "keep-recent-versions"
+    action = "KEEP"
+    most_recent_versions {
+      keep_count = 5
+    }
+  }
+
+  # Prune untagged intermediate layer images
+  cleanup_policies {
+    id     = "delete-untagged"
+    action = "DELETE"
+    condition {
+      tag_state = "UNTAGGED"
+    }
+  }
+
+  # Prune tagged images older than 30 days (unless retained by keep-recent-versions)
+  cleanup_policies {
+    id     = "delete-old-tagged"
+    action = "DELETE"
+    condition {
+      tag_state  = "TAGGED"
+      older_than = "2592000s" # 30 days
+    }
+  }
 }
 
 # 3. Google Cloud Run Service (Serverless, True Scale-to-Zero)
 locals {
-  # The same path the CI workflow and scripts/deploy.* push to.
-  default_image = "gcr.io/${var.project_id}/${var.service_name}:latest"
+  # Default image path in Artifact Registry
+  default_image = "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_repository_id}/${var.service_name}:latest"
 }
 
 resource "google_cloud_run_v2_service" "diplomacy_service" {
@@ -71,7 +99,8 @@ resource "google_cloud_run_v2_service" "diplomacy_service" {
           cpu    = "1"
           memory = "512Mi"
         }
-        cpu_idle = true # Only pay for CPU during active HTTP requests
+        cpu_idle          = true # Only pay for CPU during active HTTP requests
+        startup_cpu_boost = true # Boost CPU during cold starts to slash startup latency
       }
 
       # Terraform owns this whole list: a variable set by hand in the console is removed on the

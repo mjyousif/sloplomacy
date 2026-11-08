@@ -1404,3 +1404,34 @@ def test_api_test_seed_scenarios_and_security(monkeypatch):
         json={"scenario_id": "standard_1901", "game_id": mp_gid},
     )
     assert res_unloaded_mp.status_code == 403
+
+
+def test_gzip_compression_and_static_caching(tmp_path, monkeypatch):
+    """
+    Verify GZipMiddleware compresses large JSON responses to conserve Cloud Run egress,
+    and static asset handlers set immutable Cache-Control headers.
+    """
+    # 1. GZip compression on large responses (> 1000 bytes)
+    res_gzip = client.get("/api/game?game_id=proto_1901", headers={"Accept-Encoding": "gzip"})
+    assert res_gzip.status_code == 200
+    assert res_gzip.headers.get("content-encoding") == "gzip"
+
+    res_raw = client.get("/api/game?game_id=proto_1901", headers={"Accept-Encoding": "identity"})
+    assert res_raw.status_code == 200
+    assert res_raw.headers.get("content-encoding") != "gzip"
+
+    # 2. Cached static files
+    from fastapi import FastAPI
+    from main import CachedStaticFiles
+    assets_dir = tmp_path / "assets"
+    assets_dir.mkdir()
+    asset_file = assets_dir / "bundle-test.js"
+    asset_file.write_text("console.log('test');")
+
+    static_app = FastAPI()
+    static_app.mount("/assets", CachedStaticFiles(directory=str(assets_dir)), name="assets")
+    static_client = TestClient(static_app)
+    res_asset = static_client.get("/assets/bundle-test.js")
+    assert res_asset.status_code == 200
+    assert "public" in res_asset.headers.get("cache-control", "")
+    assert "immutable" in res_asset.headers.get("cache-control", "")

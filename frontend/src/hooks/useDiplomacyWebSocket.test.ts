@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { getWebSocketUrl, resolveWebSocketPath, shouldReconnect } from './useDiplomacyWebSocket';
+import {
+  BACKGROUND_DISCONNECT_MS,
+  getWebSocketUrl,
+  resolveWebSocketPath,
+  shouldReconnect,
+} from './useDiplomacyWebSocket';
 
 describe('useDiplomacyWebSocket helpers', () => {
+  describe('BACKGROUND_DISCONNECT_MS', () => {
+    it('is configured for 5 minutes of background inactivity before disconnect', () => {
+      expect(BACKGROUND_DISCONNECT_MS).toBe(5 * 60 * 1000);
+    });
+  });
   describe('resolveWebSocketPath', () => {
     it('returns /ws/lobby when viewMode is lobby', () => {
       expect(resolveWebSocketPath('lobby', 'proto_1901')).toBe('/ws/lobby');
