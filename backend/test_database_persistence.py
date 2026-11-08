@@ -62,7 +62,7 @@ def test_persistence_enabled_flag():
     ):
         assert is_persistence_enabled() is True
 
-    # 4. Fallback to VITE_SUPABASE_* variables
+    # 4. The URL may come from VITE_SUPABASE_URL, but the anon key never enables persistence
     with patch.dict(
         os.environ,
         {
@@ -71,6 +71,58 @@ def test_persistence_enabled_flag():
         },
         clear=True,
     ):
+        assert is_persistence_enabled() is False
+
+    with patch.dict(
+        os.environ,
+        {
+            "VITE_SUPABASE_URL": "https://live-cluster.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "secret_service_key",
+        },
+        clear=True,
+    ):
+        assert is_persistence_enabled() is True
+
+
+def _fake_supabase_jwt(role: str) -> str:
+    import base64
+    import json
+
+    def part(obj: dict) -> str:
+        return base64.urlsafe_b64encode(json.dumps(obj).encode()).decode().rstrip("=")
+
+    return f"{part({'alg': 'HS256', 'typ': 'JWT'})}.{part({'iss': 'supabase', 'role': role})}.signature"
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        # The anon key passed off as the backend key, as the old deploy scripts did without a service key
+        {"SUPABASE_KEY": "anon_key_value", "VITE_SUPABASE_ANON_KEY": "anon_key_value"},
+        {"SUPABASE_SERVICE_ROLE_KEY": "anon_key_value", "SUPABASE_ANON_KEY": "anon_key_value"},
+        # Keys that say they are not service_role
+        {"SUPABASE_KEY": _fake_supabase_jwt("anon")},
+        {"SUPABASE_KEY": _fake_supabase_jwt("authenticated")},
+        {"SUPABASE_KEY": "sb_publishable_abc123"},
+    ],
+)
+def test_persistence_refuses_keys_that_are_not_service_role(env):
+    """RLS gives anon zero rows, so persisting with it would make every saved game look deleted."""
+    with patch.dict(os.environ, {"SUPABASE_URL": "https://abc123xyz.supabase.co", **env}, clear=True):
+        assert is_persistence_enabled() is False
+
+
+@pytest.mark.parametrize(
+    "key",
+    [_fake_supabase_jwt("service_role"), "sb_secret_abc123", "opaque_service_key"],
+)
+def test_persistence_accepts_service_role_keys(key):
+    env = {
+        "SUPABASE_URL": "https://abc123xyz.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": key,
+        "VITE_SUPABASE_ANON_KEY": _fake_supabase_jwt("anon"),
+    }
+    with patch.dict(os.environ, env, clear=True):
         assert is_persistence_enabled() is True
 
 

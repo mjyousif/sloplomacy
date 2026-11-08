@@ -1,8 +1,4 @@
-fastapi>=0.162.0
-uvicorn[standard]>=0.54.0
-pydantic>=2.14.2
-pytest>=9.2.0
-httpx>=0.28.1
-diplomacy>=1.1.2
-PyJWT>=2.8.0
-cryptography>=42.0.0
+# Everything for local development and CI: the runtime packages plus the test tools.
+# The Docker image installs requirements-runtime.txt only.
+-r requirements-runtime.txt
+pytest>=9.2.0,<10.0
