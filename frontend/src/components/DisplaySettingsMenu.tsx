@@ -82,6 +82,66 @@ interface DisplaySettingsMenuProps {
   onChange: (change: Partial<DisplayPrefs>) => void;
 }
 
+/**
+ * The choices themselves. The desktop top bar shows them in its own popover, and the
+ * phone top bar shows them inside its ⋯ menu.
+ */
+export function DisplaySettingsOptions({ prefs, saveState, onChange }: DisplaySettingsMenuProps) {
+  return (
+    <>
+      <h2 className="display-settings-title">Display settings</h2>
+      <p className="display-settings-note">These only change what you see.</p>
+
+      <fieldset className="display-settings-group">
+        <legend>Piece style</legend>
+        {PIECE_STYLES.map((style) => (
+          <label key={style} className="display-option">
+            <input
+              type="radio"
+              name="display-piece-style"
+              checked={prefs.pieceStyle === style}
+              onChange={() => onChange({ pieceStyle: style })}
+            />
+            <span className="display-option-card">
+              <PieceStylePreview style={style} mark={prefs.unitMark} />
+              <span className="display-option-text">
+                <span className="display-option-name">{PIECE_STYLE_LABELS[style].name}</span>
+                <span className="display-option-description">
+                  {PIECE_STYLE_LABELS[style].description}
+                </span>
+              </span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      <fieldset className="display-settings-group">
+        <legend>Army and fleet marks</legend>
+        <div className="display-mark-grid">
+          {UNIT_MARKS.map((mark) => (
+            <label key={mark} className="display-option">
+              <input
+                type="radio"
+                name="display-unit-mark"
+                checked={prefs.unitMark === mark}
+                onChange={() => onChange({ unitMark: mark })}
+              />
+              <span className="display-option-card stacked">
+                <UnitMarkPreview mark={mark} />
+                <span className="display-option-name">{UNIT_MARK_LABELS[mark]}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <p className="display-settings-status" role="status">
+        {SAVE_MESSAGES[saveState]}
+      </p>
+    </>
+  );
+}
+
 /** The top bar control for this player's own map display. It stays open so changes show live. */
 export function DisplaySettingsMenu({ prefs, saveState, onChange }: DisplaySettingsMenuProps) {
   const [open, setOpen] = useState(false);
@@ -136,55 +196,7 @@ export function DisplaySettingsMenu({ prefs, saveState, onChange }: DisplaySetti
           role="dialog"
           aria-label="Display settings"
         >
-          <h2 className="display-settings-title">Display settings</h2>
-          <p className="display-settings-note">These only change what you see.</p>
-
-          <fieldset className="display-settings-group">
-            <legend>Piece style</legend>
-            {PIECE_STYLES.map((style) => (
-              <label key={style} className="display-option">
-                <input
-                  type="radio"
-                  name="display-piece-style"
-                  checked={prefs.pieceStyle === style}
-                  onChange={() => onChange({ pieceStyle: style })}
-                />
-                <span className="display-option-card">
-                  <PieceStylePreview style={style} mark={prefs.unitMark} />
-                  <span className="display-option-text">
-                    <span className="display-option-name">{PIECE_STYLE_LABELS[style].name}</span>
-                    <span className="display-option-description">
-                      {PIECE_STYLE_LABELS[style].description}
-                    </span>
-                  </span>
-                </span>
-              </label>
-            ))}
-          </fieldset>
-
-          <fieldset className="display-settings-group">
-            <legend>Army and fleet marks</legend>
-            <div className="display-mark-grid">
-              {UNIT_MARKS.map((mark) => (
-                <label key={mark} className="display-option">
-                  <input
-                    type="radio"
-                    name="display-unit-mark"
-                    checked={prefs.unitMark === mark}
-                    onChange={() => onChange({ unitMark: mark })}
-                  />
-                  <span className="display-option-card stacked">
-                    <UnitMarkPreview mark={mark} />
-                    <span className="display-option-name">{UNIT_MARK_LABELS[mark]}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <p className="display-settings-status" role="status">
-            {SAVE_MESSAGES[saveState]}
-          </p>
+          <DisplaySettingsOptions prefs={prefs} saveState={saveState} onChange={onChange} />
         </div>
       )}
     </div>

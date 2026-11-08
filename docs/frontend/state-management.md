@@ -19,7 +19,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `gameState` | `GameState \| null` | Global | Authoritative match state received from FastAPI. |
 | `provinces` | `Record<string, ProvinceInfo>` | Global | Static map topology metadata fetched once on bootstrap. |
 | `selectedUnitId` | `string \| null` | UI | Currently selected military unit on the map or in the sidebar. |
-| `hoveredUnitId` | `string \| null` | UI | Unit hovered for cross-component highlighting. |
+| `hoveredUnitId` | `string \| null` | UI | Unit hovered for cross-component highlighting. Set from `onPointerEnter`/`onPointerLeave` on map pieces and sidebar cards, which ignore `pointerType === 'touch'`: a finger has no hover, so a tap would otherwise leave the highlight on. |
 | `highlightedProvinces`| `string[]` | UI | Provinces highlighted during targeting or diagnostic inspection. |
 | `sandboxMode` | `boolean` | Mode | True when user is in Hypothetical Mode (Eye icon, guessing opponent moves). |
 | `sandboxGameId` | `string \| null` | Mode | Id of the private server-side copy used by a multiplayer sandbox, or `null`. Drafts, AI plans and previews go to `draftGameId`, which is this id when set and `activeGameId` otherwise. |
@@ -30,6 +30,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `leftSidebarCollapsed`| `boolean` | UI | Whether the Left Tools Sidebar is collapsed into a 44px rail. |
 | `rightSidebarCollapsed`| `boolean` | UI | Whether the Right Tactical Sidebar is collapsed into a 44px rail. |
 | `zoomPercent` | `number` | UI | Real-time map zoom percentage (default: `105`). |
+| `isCompact` | `boolean` | Layout | True on phone-sized screens, from `useCompactLayout()`. It follows rotation and resizes. App writes it on the shell as `data-layout`, which `compact.css` styles, and uses it to swap in `CompactTopBar`. `LobbyView` reads the same hook to say whether the Host form is "below" or "on the right". |
 | `surrenderModalOpen` | `boolean` | Modal | Controls visibility of the Surrender / Civil Disorder confirmation modal. |
 | `sanityModalOpen` | `boolean` | Modal | Controls visibility of pre-finalization warning modal. |
 | `sanityModalIssues` | `ValidationIssue[]` | Modal | Issues displayed inside the Sanity Check modal. |
