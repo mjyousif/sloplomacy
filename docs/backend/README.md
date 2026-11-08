@@ -26,22 +26,26 @@ backend/
 ├── test_surrender_leave.py  # Concession, civil disorder, and seat-vacating tests
 ├── test_validator.py        # Blunder detection, friendly fire, and phase-specific validations
 ├── test_websocket_sync.py   # Real-time WebSocket room & lobby synchronization tests
-└── requirements.txt         # Python runtime dependencies
+├── ws_testing.py            # Test helper: WebSocket receive with a time limit
+├── requirements-runtime.txt # Python runtime dependencies (what the Docker image installs)
+└── requirements.txt         # Runtime dependencies plus test tools, for development and CI
 ```
 
 ---
 
 ## Technical Dependencies
 
-Listed in `backend/requirements.txt`:
+Runtime packages are listed in `backend/requirements-runtime.txt`, each capped below its next major version:
 ```txt
-fastapi>=0.110.0
-uvicorn[standard]>=0.28.0
-pydantic>=2.0.0
-pytest>=8.0.0
-httpx>=0.27.0
-diplomacy>=1.1.2
+fastapi>=0.162.0,<1.0
+uvicorn[standard]>=0.54.0,<1.0
+pydantic>=2.14.2,<3.0
+httpx>=0.28.1,<1.0
+diplomacy>=1.1.2,<2.0
+PyJWT>=2.8.0,<3.0
+cryptography>=42.0.0,<51.0
 ```
+`backend/requirements.txt` includes that file and adds `pytest>=9.2.0,<10.0`. Install `requirements.txt` for development and tests.
 
 ---
 
@@ -79,7 +83,7 @@ The backend maintains active match sessions in scoped memory dictionaries acting
 - `SAVES_RUNNING: Dict[str, bool]`: Games with a save running, and whether that save must repeat because the game changed during it.
 - `HISTORY_UNSAVED: Set[str]`: Games whose rollback history differs from what is saved.
 
-When `SUPABASE_URL` and `SUPABASE_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`) are configured, the backend automatically operates a **read-through / write-through** persistence layer via [`database.py`](database.py):
+When `SUPABASE_URL` and the service role key (`SUPABASE_SERVICE_ROLE_KEY`, or `SUPABASE_KEY` holding the service role key) are configured, the backend automatically operates a **read-through / write-through** persistence layer via [`database.py`](database.py):
 - On state mutation, the game state, summary, history, and passcodes are serialized to JSONB and persisted to Supabase's `public.multiplayer_games` table. Only one save runs per game, so an older write cannot land after a newer one, and a change made during a save is written when that save repeats.
 - On container cold start (such as Google Cloud Run scale-to-zero wakeups), any request for a game absent from RAM is transparently fetched and restored from Supabase.
 - Memory is authoritative for a loaded game. `GET /api/games` uses Supabase only to pick up games this process has not loaded and to drop games deleted from Supabase, never to replace a loaded game.
@@ -88,6 +92,7 @@ When `SUPABASE_URL` and `SUPABASE_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`) are conf
 - The lobby reads only `LOBBY_COLUMNS`, so a refresh downloads about 1 KB per game and no game states. If Supabase answers `400` to those columns, it falls back to whole rows.
 - Each process keeps its own copy of a loaded game, so running several instances against one database lets them overwrite each other's turns. Every deploy path therefore sets a maximum of one instance.
 - If credentials are not supplied (e.g. offline local development), the server gracefully falls back to ephemeral in-memory mode.
+- The anon key never enables persistence. RLS on `multiplayer_games` allows only `service_role`, so with the anon key every read would succeed with zero rows and the lobby would drop every saved game. `get_supabase_key` refuses a key that equals `VITE_SUPABASE_ANON_KEY` or `SUPABASE_ANON_KEY`, a `sb_publishable_` key, or a JWT whose `role` claim is not `service_role`, and logs an error once. A missing key with `SUPABASE_URL` set is logged the same way.
 
 ---
 

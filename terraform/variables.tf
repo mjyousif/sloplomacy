@@ -22,7 +22,7 @@ variable "artifact_repository_id" {
 }
 
 variable "container_image" {
-  description = "Full container image URL. If left blank, defaults to the Artifact Registry repository path"
+  description = "Full container image URL. If left blank, defaults to gcr.io/<project_id>/<service_name>:latest, where the CI workflow and scripts/deploy.* push"
   type        = string
   default     = ""
 }
@@ -41,7 +41,7 @@ variable "supabase_anon_key" {
 }
 
 variable "supabase_service_role_key" {
-  description = "Supabase service_role API key for authoritative backend persistence"
+  description = "Supabase service_role API key. Game persistence stays off without it: the backend never uses the anon key"
   type        = string
   default     = ""
   sensitive   = true
