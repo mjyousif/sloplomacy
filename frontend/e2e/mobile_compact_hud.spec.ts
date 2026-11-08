@@ -1,4 +1,5 @@
 // @scenario mobile
+// @order 6
 // @description Mobile phone viewport (390x844), CompactTopBar, order problem modal, 3-dots menu, and touch navigation.
 import { test, expect } from '@playwright/test';
 import { ScenarioRecorder, seedScenario } from './helpers';

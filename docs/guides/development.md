@@ -197,7 +197,9 @@ Add `frontend/e2e/<topic>.spec.ts` that starts with two header comments, and the
 ```ts
 // @scenario <short name>
 // @description <one line shown by 'list'>
-```n
+// @alias <optional extra name>   (optional, repeatable)
+// @order <optional number>       (optional position in 'list' and 'run --all')
+```
 Use the file name (without `.spec.ts`) as the `ScenarioRecorder` name, because that is the artifacts folder. The file name also works as a long alias, and duplicate names fail at startup. Then add a row to the catalog below.
 
 ### Scenario Catalog & Artifacts

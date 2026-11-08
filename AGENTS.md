@@ -323,34 +323,33 @@ The game cycles through three standard phases per year:
 AI coding agents and contributors should run the **one relevant** interactive E2E scenario whenever touching the SVG map canvas (`EuropeMap.tsx`), tactical HUD/sidebars (`MacroSidebar.tsx`, `ToolsSidebar.tsx`), modal dialogs, or adjudication state flows. This includes backend changes to API responses, adjudication, phase flow, sandbox, validator or auth behavior, because the scenarios run against the real backend.
 - **Workflow**:
   1. Run scenario: `python scripts/e2e_runner.py run <scenario_name>`.
-  2. Inspect the generated step screenshots in `artifacts/e2e/<scenario_name>/` using multimodal vision (`read_file`).
+  2. Inspect the generated step screenshots in `artifacts/e2e/<spec_file_name>/` (for example `artifacts/e2e/movement_and_orders/`) using multimodal vision (`read_file`).
   3. Verify visual sanity: ensure order vectors point to intended provinces, unit tokens and retreat rings render cleanly, and no console or page exceptions are logged in `summary.json`.
   4. Attach passing screenshot paths or summaries to the task review or PR.
-- **Keep it targeted.** Pick the single scenario that covers the change and look only at the screenshots for the affected steps. Skip E2E only when nothing a user can see or click could change (docs, comments, test-only changes, fully covered refactors, infra scripts, or internals such as persistence or security headers that leave responses unchanged). Reserve un --all for broad changes (shared layout, App.tsx state flow, map rendering), since it is slow and reading screenshots costs tokens.
+- **Keep it targeted.** Pick the single scenario that covers the change and look only at the screenshots for the affected steps. Skip E2E only when nothing a user can see or click could change (docs, comments, test-only changes, fully covered refactors, infra scripts, or internals such as persistence or security headers that leave responses unchanged). Reserve `run --all` for broad changes (shared layout, App.tsx state flow, map rendering), since it is slow and reading screenshots costs tokens.
 
 ### 6. Project Skills & Working Style
-Reusable playbooks live in .agents/skills/. Read the matching SKILL.md before starting that kind of work:
+Reusable playbooks live in `.agents/skills/`. Read the matching `SKILL.md` before starting that kind of work:
 
 | Skill | Use when |
 | :--- | :--- |
-| verify-change | Finishing any change: picks the right pytest / tsc / vitest / build / E2E checks and the docs checklist |
-| secrecy-review | Adding or changing an endpoint, WebSocket message, broadcast, save path, sandbox or admin action (fog of war and seat authorization) |
-| frontend-change | Editing the map, sidebars, top bar, modals, CSS, display settings or phone layout |
-| open-pr | Committing, opening or updating a PR, or resolving conflicts on a stacked PR |
-| supabase, supabase-postgres-best-practices | Anything touching the database, RLS, migrations or Supabase Auth |
+| `verify-change` | Finishing any change: picks the right pytest / tsc / vitest / build / E2E checks and the docs checklist |
+| `secrecy-review` | Adding or changing an endpoint, WebSocket message, broadcast, save path, sandbox or admin action (fog of war and seat authorization) |
+| `frontend-change` | Editing the map, sidebars, top bar, modals, CSS, display settings or phone layout |
+| `open-pr` | Committing, opening or updating a PR, or resolving conflicts on a stacked PR |
+| `supabase`, `supabase-postgres-best-practices` | Anything touching the database, RLS, migrations or Supabase Auth |
 
 Working rules for agents:
-- **Fetch first.** main moves quickly. Run git fetch origin and base your work on origin/main. Read the code as it is now, not as your checkout last saw it.
+- **Fetch first.** `main` moves quickly. Run `git fetch origin` and base your work on `origin/main`. Read the code as it is now, not as your checkout last saw it.
 - **Reproduce before fixing.** For a bug, write the failing test (backend: pytest, frontend: Vitest, UI: E2E scenario) first, then fix it.
 - **Test the adversary.** For any multiplayer feature, test with two players, where one tries to see or change the other's state.
-- **A new path is a new leak.** Every response, broadcast, or save of a live match's state must go through sanitize_game_state_for_viewer. Fixes in #90, #91 and #101 were each for a path that skipped it.
+- **A new path is a new leak.** Every response, broadcast, or save of a live match's state must go through `sanitize_game_state_for_viewer`. Fixes in #90, #91 and #101 were each for a path that skipped it.
 - **Keep PRs single-topic** and say what you ran and what you could not run. Don't claim a check passed that you didn't run.
 - **Record invariants you discover.** If a bug taught you a rule that isn't obvious from the code, add one bold **Invariant** line to the right subsection of section 4.
 - **Grow the checks with the product.** If a change adds user-visible behavior no E2E scenario covers, add a scenario (or extend the closest one) in the same PR and register it by adding the two `// @scenario` and `// @description` header comments (the runner discovers specs in `frontend/e2e/`). The steps are in `verify-change` section 6. Add a new test for every bug you fix.
 - **Keep skills current.** If you learn a rule the skills or invariants don't state, or find one that is wrong, update the matching skill or section 4 in the same PR and say so in the PR description.
 - **Never hardcode counts** (tests, endpoints, scenarios) in prose when a list will do. They go stale.
-- **Don't commit generated output**: rtifacts/, .pr_body.md, .venv, 
-ode_modules, dist.
+- **Don't commit generated output**: `artifacts/`, `.pr_body.md`, `.venv`, `node_modules`, `dist`.
 
 ### 7. Pull Request & Branch Protection Governance
 - **Branch Protection on `main`**: Direct pushes to `main` are prohibited. All modifications must be submitted via pull request.

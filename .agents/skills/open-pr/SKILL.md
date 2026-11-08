@@ -41,7 +41,7 @@ For visual changes (layout, map, piece styles, phone layout), attach one or two 
 
 ```powershell
 gh pr comment <n> --body-file .pr_comment.md --attach "artifacts/e2e/<scenario>/step_02_<name>.png#What it shows"
-```n
+```
 Alt text goes after `#`. If the comment body references the file as `![alt](./path.png)`, the link is rewritten to the uploaded asset. Never commit `artifacts/`.
 
 ## Stacked PRs and conflicts

@@ -1,4 +1,5 @@
 // @scenario retreats
+// @order 4
 // @description Spring dislodgement detection, retreat destination validation, and retreat resolution.
 import { test, expect } from '@playwright/test';
 import { ScenarioRecorder, seedScenario } from './helpers';

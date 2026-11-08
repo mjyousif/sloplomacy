@@ -1,4 +1,5 @@
 // @scenario builds
+// @order 5
 // @description Winter adjustments, Army/Fleet builds, bicoastal STP/NC Fleet build, deficit disband, and advance to 1902.
 import { test, expect } from '@playwright/test';
 import { ScenarioRecorder, seedScenario } from './helpers';

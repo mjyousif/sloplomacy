@@ -35,28 +35,41 @@ def discover_scenarios():
     Each `*.spec.ts` starts with two header comments:
         // @scenario <short name>
         // @description <one line>
+    Optional headers:
+        // @alias <extra name>   (repeatable, extra names accepted by `run`)
+        // @order <number>       (position in `list` and `run --all`, lowest first)
     Adding a spec file with that header is all it takes to register a scenario.
-    The file name (without `.spec.ts`) also works as a long alias.
-    Returns (scenarios, aliases), where scenarios is a list of dicts in file order
+    The file name (without `.spec.ts`) also works as a long alias. Names are
+    case-insensitive. Scenarios without `@order` come last, by file name.
+    Returns (scenarios, aliases), where scenarios is a list of dicts in run order
     and aliases maps every accepted name to its scenario.
     """
     scenarios = []
     aliases = {}
     for spec in sorted(E2E_DIR.glob("*.spec.ts")):
         stem = spec.name[: -len(".spec.ts")]
-        name, desc = stem, ""
+        name, desc, extra, order = stem, "", [], float("inf")
         with open(spec, "r", encoding="utf-8") as f:
             for line in f.read().splitlines()[:10]:
                 if line.startswith("// @scenario "):
                     name = line[len("// @scenario "):].strip()
                 elif line.startswith("// @description "):
                     desc = line[len("// @description "):].strip()
-        sc = {"name": name, "stem": stem, "spec": f"e2e/{spec.name}", "description": desc}
+                elif line.startswith("// @alias "):
+                    extra.append(line[len("// @alias "):].strip())
+                elif line.startswith("// @order "):
+                    try:
+                        order = float(line[len("// @order "):].strip())
+                    except ValueError:
+                        raise SystemExit(f"Invalid @order in frontend/e2e/{spec.name}")
+        name = name.lower()
+        sc = {"name": name, "stem": stem, "spec": f"e2e/{spec.name}", "description": desc, "order": order}
         scenarios.append(sc)
-        for alias in (name, stem):
+        for alias in (name, stem.lower(), *(a.lower() for a in extra)):
             if alias in aliases and aliases[alias] is not sc:
                 raise SystemExit(f"Duplicate E2E scenario name '{alias}' in frontend/e2e/")
             aliases[alias] = sc
+    scenarios.sort(key=lambda sc: (sc["order"], sc["stem"]))
     return scenarios, aliases
 
 

@@ -1,4 +1,6 @@
 // @scenario blunder
+// @alias blunder_sanity
+// @order 3
 // @description Tactical blunder diagnostics, illegal order detection, and pre-finalization sanity check modal.
 import { test, expect } from '@playwright/test';
 import { ScenarioRecorder, seedScenario } from './helpers';
