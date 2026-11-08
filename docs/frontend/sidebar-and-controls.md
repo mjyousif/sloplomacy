@@ -47,14 +47,26 @@ In the compact layout (see [Responsive & Layout Specifications](styling-and-them
 
 ---
 
+## Reusable Collapsible Section (`CollapsibleSection.tsx`)
+
+`CollapsibleSection.tsx` standardizes all sidebar panel sections with a shared design and typographic hierarchy:
+- **Collapsible or Static Modes**: Set `collapsible={true}` for sections that can fold shut (such as the Tactical Map Legend and Great Powers Standing), or `collapsible={false}` for action controls that share identical headers and borders without toggle behavior.
+- **Accessible ARIA Attributes**: Includes `aria-expanded` and `aria-controls` on the toggle button with animated chevron indicators (`ChevronDown` / `ChevronRight`).
+- **Badge and Counter Support**: Accepts an optional `badge` node (such as zoom percentage badges or unit counts).
+- **Controlled & Uncontrolled Support**: Supports `defaultOpen` for initial expansion state, or `isOpen` and `onToggle` for controlled state management.
+
+---
+
 ## Left Sidebar: Chancellery Tools & Intel (`ToolsSidebar.tsx`)
 
 ### 1. Map View & Camera Controls
+- Rendered via a non-collapsible `CollapsibleSection` to retain uniform visual hierarchy with action controls.
 - **Zoom In (`+`) & Zoom Out (`-`)**: Stepped zooming across the SVG canvas.
 - **Current Zoom Readout**: Real-time percentage indicator (e.g., `105%`).
 - **Fit Map / Reset Camera**: Instantly realigns camera to the default center framing at 105% zoom.
 
 ### 2. Tactical Map Cartographic Legend
+- Rendered inside a collapsible `CollapsibleSection` (`defaultOpen={true}`). Commanders can collapse the legend to free vertical space for power rosters and sandbox controls.
 - Displays symbolic explanations for all map vector overlays:
   - **Move / Attack Vector**: Blue curved arrow indicating unit repositioning.
   - **Support Link**: Teal dashed line with target reticle indicating defensive or offensive support.

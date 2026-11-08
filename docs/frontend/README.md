@@ -20,6 +20,8 @@ frontend/
     ├── index.css                # Base reset & typography
     ├── components/
     │   ├── EuropeMap.tsx        # High-performance interactive SVG game board & order arrows
+    │   ├── CollapsibleSection.tsx # Reusable collapsible/static section container with accessible toggles
+    │   ├── CollapsibleSection.test.tsx # Vitest suite for CollapsibleSection behavior and accessibility
     │   ├── ToolsSidebar.tsx     # Left collapsible sidebar: legend, zoom options, powers, sandbox & admin
     │   ├── MacroSidebar.tsx     # Right collapsible sidebar: core gameplay orders, builds, finalize & adjudicate
     │   ├── sidebars.test.ts     # Vitest suite for ToolsSidebar and MacroSidebar collapsible views
@@ -87,9 +89,9 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   │
 │   ├── ToolsSidebar.tsx (Left Collapsible Tools & Intel Panel)
 │   │   ├── Collapse / Expand Rail Toggle (44px collapsed rail)
-│   │   ├── Map View & Camera Controls (Zoom In, Zoom Out, Fit Map 105%)
-│   │   ├── Tactical Map Legend (Move, Support, Convoy, Conflict vectors)
-│   │   ├── Great Powers Standing & Command Selector (SC & Unit tallies)
+│   │   ├── Map View & Camera Controls (Zoom In, Zoom Out, Fit Map 105% - CollapsibleSection static)
+│   │   ├── Tactical Map Legend (Move, Support, Convoy, Conflict vectors - CollapsibleSection toggle)
+│   │   ├── Great Powers Standing & Command Selector (SC & Unit tallies - CollapsibleSection toggle)
 │   │   ├── Hypothetical Mode (What-If Opponent Guesses) & Tactical General Staff AI
 │   │   ├── Foreign Guesses Count & Discard Actions
 │   │   └── Creator Admin Console & Direct-Edit Override Trigger
