@@ -72,7 +72,7 @@ python -m venv .venv
 # macOS/Linux:
 source .venv/bin/activate
 
-# Install requirements
+# Install requirements (runtime packages plus pytest; the Docker image installs requirements-runtime.txt only)
 pip install -r requirements.txt
 
 # Run dev server with auto-reload
@@ -138,6 +138,8 @@ The backend includes 11 test suites covering the entire engine:
 - `test_surrender_leave.py`: Concessions, civil disorder, and room departures.
 - `test_validator.py`: Pre-flight blunder diagnostics across Movement, Retreats, and Adjustments.
 - `test_websocket_sync.py`: Live game and lobby broadcasts.
+
+WebSocket tests read messages with `receive_json(ws)` from `backend/ws_testing.py` rather than `ws.receive_json()`. Starlette's test client waits forever for a message, so a broadcast the server never sends would hang the run; the helper fails the test after 5 seconds instead. In CI every job also has a `timeout-minutes` limit.
 
 Run all tests from the repository root:
 ```bash
