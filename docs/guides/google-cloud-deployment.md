@@ -8,12 +8,12 @@ This guide outlines how to deploy the **Diplomacy 1901 Tactical Engine & Multipl
 
 | Component | Service | Cost Profile & Configuration |
 | :--- | :--- | :--- |
-| **Compute Runtime** | **Google Cloud Run** | **Scale-to-zero ( idle cost)**. Uses Google Cloud Run's free tier (2M requests/month, 360,000 vCPU-seconds). Configured with --min-instances 0 and --max-instances 1, because games live in one process and a second instance would overwrite them, and --timeout 3600 so a WebSocket can stay open for an hour instead of the default 5 minutes. The container completely shuts down during idle periods, incurring 0 compute or memory cost. |
-| **Container Registry**| **GCP Artifact Registry** (`gcr.io` paths) | Standard Docker image storage (~.10/GB/month). Every deploy path pushes to `gcr.io/<project>/<service>`. |
-| **Adjudication Engine**| **FastAPI + DATC Adjudicator** | Runs inside Cloud Run container. Adjudicates official DATC turns deterministically in under 5ms. |
+| **Compute Runtime** | **Google Cloud Run** | **Scale-to-zero ($0 idle cost)**. Uses Google Cloud Run's free tier (2M requests/month, 360,000 vCPU-seconds, 360,000 GiB-seconds). Configured with `--min-instances 0`, `--max-instances 1` (games live in one process), `--cpu-throttling` (CPU charged only during active request processing), and `--cpu-boost` (startup CPU boost to slash cold-start delays). Includes client-side background idle disconnection to prevent abandoned browser tabs from keeping instances awake. |
+| **Container Registry**| **GCP Artifact Registry** (`docker.pkg.dev` paths) | Docker repository (`diplomacy-repo`) with automated cleanup policies keeping the 5 most recent versions and deleting untagged layers to prevent storage billing creep. |
+| **Adjudication Engine**| **FastAPI + DATC Adjudicator** | Runs inside Cloud Run container. Adjudicates official DATC turns deterministically in under 5ms, with GZip compression and immutable asset cache headers to minimize egress bandwidth. |
 | **Authentication** | **Supabase Auth** | **Free up to 50,000 Monthly Active Users (MAU)**. Handles Email/Password, Google/Discord OAuth, Magic Links, and ES256 / HS256 JWT validation. |
 | **Database & Persistence** | **Supabase PostgreSQL** | **Free 500 MB database** with Row-Level Security (RLS) and JSONB game state tracking. Automatically persists match state and turn histories across container cold starts. |
-| **Infrastructure as Code**| **Terraform** | Declaratively provisions Cloud Run v2 services and Artifact Registry Docker repositories. |
+| **Infrastructure as Code**| **Terraform** | Declaratively provisions Cloud Run v2 services with startup CPU boost and Artifact Registry repositories with automated lifecycle cleanup policies. |
 
 ---
 
@@ -59,9 +59,9 @@ Or interactively provide Supabase secrets:
 
 ### What the Automated Scripts Do:
 1. Validates that `gcloud` is authenticated and configured.
-2. Ensures required GCP APIs are enabled (`run.googleapis.com`, `cloudbuild.googleapis.com`, `artifactregistry.googleapis.com`).
-3. Triggers **Google Cloud Build** using [`cloudbuild.yaml`](../../cloudbuild.yaml) to build the multi-stage [`Dockerfile`](../../Dockerfile) and push it to `gcr.io/<project>/<service>:latest`.
-4. Deploys the image to **Google Cloud Run** with --min-instances 0 (scale-to-zero), --max-instances 1 (games live in one process, which also protects the budget) and --timeout 3600 (WebSockets stay open for an hour).
+2. Ensures required GCP APIs are enabled (`run.googleapis.com`, `cloudbuild.googleapis.com`, `artifactregistry.googleapis.com`) and verifies the `diplomacy-repo` Artifact Registry repository exists.
+3. Triggers **Google Cloud Build** using [`cloudbuild.yaml`](../../cloudbuild.yaml) to build the multi-stage [`Dockerfile`](../../Dockerfile) and push it to `${REGION}-docker.pkg.dev/<project>/diplomacy-repo/<service>:latest`.
+4. Deploys the image to **Google Cloud Run** with `--min-instances 0` (scale-to-zero), `--max-instances 1` (games live in one process, protecting budget), `--cpu-throttling` (request-based billing), `--cpu-boost` (startup CPU acceleration), and `--timeout 3600` (WebSockets stay open for an hour).
 5. Sets the Supabase variables with `--update-env-vars`. Variables you set by hand on the service are kept, and a value the script doesn't have is left as it is on the service instead of being blanked.
 
 ### Game Persistence Needs the Service Role Key
@@ -87,8 +87,8 @@ terraform apply -var="project_id=your-gcp-project-id"
 ```
 
 ### Terraform Manifests:
-- [`terraform/main.tf`](../../terraform/main.tf): Enables Cloud APIs, provisions an Artifact Registry Docker repository, and configures the Cloud Run v2 service with scale-to-zero, one instance, a 3600 s request timeout and persistence settings.
-  - The image defaults to `gcr.io/<project_id>/<service_name>:latest`, where the CI workflow and `scripts/deploy.*` push. The `diplomacy-repo` repository Terraform creates is not used by those paths. Set `container_image` to deploy an image from it.
+- [`terraform/main.tf`](../../terraform/main.tf): Enables Cloud APIs, provisions an Artifact Registry Docker repository with automated cleanup policies (keeping recent 5 versions and deleting untagged layers), and configures the Cloud Run v2 service with scale-to-zero, one instance, startup CPU boost, a 3600 s request timeout and persistence settings.
+  - The image defaults to `${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_repository_id}/${var.service_name}:latest`, matching the CI workflow and `scripts/deploy.*`. Set `container_image` if deploying a custom tag.
   - Terraform owns the service's whole environment list: a variable set by hand in the console is removed on the next `terraform apply`. `PORT` is not set, because Cloud Run reserves it. `SUPABASE_KEY` is the service role key only.
 - [`terraform/variables.tf`](../../terraform/variables.tf): Configurable parameters (`project_id`, `region`, `service_name`, container image, Supabase URL, anon key, service role key, JWT secret).
 - [`terraform/outputs.tf`](../../terraform/outputs.tf): Emits the live Cloud Run service URL and Artifact Registry endpoint.
@@ -103,8 +103,9 @@ The repository features an automated GitHub Actions pipeline in [`.github/workfl
 1. **Quality Gates**: Runs backend unit tests (`pytest`, Python 3.11) and frontend tests & production build check (`vitest`, `npm run build`, Node.js 22). Each job has a `timeout-minutes` limit, so a hung test fails the run instead of holding it for six hours.
 2. **Conditional Deployment**: Only runs when commits hit `main` (not unmerged PRs) and both test suites succeed.
 3. **Migrations**: When `DATABASE_URL` (or `SUPABASE_DB_URL`) is set, runs every migration with `psql -v ON_ERROR_STOP=1 --single-transaction`. A failing migration rolls back the whole run and stops the deploy. Without the secret the step is skipped.
-4. **Cloud Build & Cloud Run**: Builds the container on GCP Cloud Build with production environment arguments and deploys a new revision to Google Cloud Run with `--update-env-vars`. Only secrets that are set are sent, so an unset GitHub secret never blanks a value on the service.
-5. **Summary**: Posts the verified public live URL to the GitHub Actions job summary.
+4. **Direct Docker Build & Artifact Registry**: Builds the multi-stage container directly on GitHub Actions runners with Docker Buildx and GitHub Actions layer caching (`type=gha`), pushing directly to GCP Artifact Registry without consuming Google Cloud Build minutes or Cloud Storage staging quotas.
+5. **Cloud Run Deployment**: Deploys a new revision to Google Cloud Run with `--update-env-vars`, `--cpu-throttling`, and `--cpu-boost`.
+6. **Summary**: Posts the verified public live URL to the GitHub Actions job summary.
    - **Production Endpoint**: [https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app](https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app)
 
 ### One-Time CI/CD Setup:

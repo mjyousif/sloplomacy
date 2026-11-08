@@ -49,6 +49,12 @@ export function shouldReconnect(closeCode: number): boolean {
   return closeCode !== 1000 && !PERMANENT_CLOSE_CODES.has(closeCode);
 }
 
+/**
+ * Idle timeout while document is hidden before closing the WebSocket to allow Cloud Run to scale to zero.
+ * 5 minutes of background inactivity stops keep-alive pings and frees serverless compute.
+ */
+export const BACKGROUND_DISCONNECT_MS = 5 * 60 * 1000;
+
 /** The bearer token from getAuthHeaders, or null when signed out. */
 async function getSocketToken(): Promise<string | null> {
   try {
@@ -82,6 +88,8 @@ export function useDiplomacyWebSocket({
 }: UseDiplomacyWebSocketProps) {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const reconnectTimeoutRef = useRef<number | null>(null);
+  const backgroundTimerRef = useRef<number | null>(null);
+  const wasBackgroundDisconnectedRef = useRef<boolean>(false);
   const wsRef = useRef<WebSocket | null>(null);
 
   // Keep callback refs fresh without resetting websocket connection
@@ -122,6 +130,7 @@ export function useDiplomacyWebSocket({
             ws.close(1000);
             return;
           }
+          wasBackgroundDisconnectedRef.current = false;
           if (needsHandshake) {
             ws.send(JSON.stringify({ type: 'auth', token }));
           }
@@ -158,8 +167,8 @@ export function useDiplomacyWebSocket({
           wsRef.current = null;
           setIsConnected(false);
           // Only attempt reconnect if not intentionally closed by navigation/unmount,
-          // and not refused for a reason a retry cannot fix.
-          if (!isCancelled && shouldReconnect(event.code)) {
+          // not suspended by background idle timeout, and not refused for a reason a retry cannot fix.
+          if (!isCancelled && !wasBackgroundDisconnectedRef.current && shouldReconnect(event.code)) {
             reconnectTimeoutRef.current = window.setTimeout(() => {
               connect();
             }, 2000);
@@ -180,8 +189,48 @@ export function useDiplomacyWebSocket({
 
     connect();
 
+    // Suspend WebSocket after 5 minutes of document being hidden, allowing Cloud Run to scale to zero.
+    // When tab becomes visible again, reconnect or refresh state immediately.
+    const handleVisibilityChange = () => {
+      if (typeof document === 'undefined') return;
+
+      if (document.visibilityState === 'hidden') {
+        if (backgroundTimerRef.current === null) {
+          backgroundTimerRef.current = window.setTimeout(() => {
+            backgroundTimerRef.current = null;
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden' && wsRef.current) {
+              wasBackgroundDisconnectedRef.current = true;
+              wsRef.current.close(1000);
+            }
+          }, BACKGROUND_DISCONNECT_MS);
+        }
+      } else if (document.visibilityState === 'visible') {
+        if (backgroundTimerRef.current !== null) {
+          clearTimeout(backgroundTimerRef.current);
+          backgroundTimerRef.current = null;
+        }
+        if (wasBackgroundDisconnectedRef.current) {
+          wasBackgroundDisconnectedRef.current = false;
+          connect();
+        } else if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'refresh' }));
+        }
+      }
+    };
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
     return () => {
       isCancelled = true;
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+      if (backgroundTimerRef.current !== null) {
+        clearTimeout(backgroundTimerRef.current);
+        backgroundTimerRef.current = null;
+      }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;

@@ -46,6 +46,18 @@ Write-Host ""
 Write-Host "--> Enabling required APIs (Cloud Run, Cloud Build, Artifact Registry, IAM)..." -ForegroundColor Cyan
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com iam.googleapis.com --project $ProjectId
 
+Write-Host ""
+Write-Host "--> Ensuring Artifact Registry repository 'diplomacy-repo' exists..." -ForegroundColor Cyan
+& gcloud artifacts repositories describe diplomacy-repo --location=us-central1 --project=$ProjectId 2>$null | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Creating Artifact Registry repository 'diplomacy-repo'..." -ForegroundColor Yellow
+    & gcloud artifacts repositories create diplomacy-repo `
+        --repository-format=docker `
+        --location=us-central1 `
+        --description="Docker repository for Sloplomacy 1901" `
+        --project=$ProjectId
+}
+
 # 3. Create Service Account
 $SaName = "github-deployer"
 $SaEmail = "$SaName@$ProjectId.iam.gserviceaccount.com"

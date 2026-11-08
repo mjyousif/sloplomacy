@@ -299,7 +299,11 @@ export function App() {
     if (wsConnected) return; // Real-time WebSocket is active; avoid redundant HTTP polling and state races
 
     let abandoned = false;
-    const interval = setInterval(async () => {
+
+    const pollState = async () => {
+      // Pause polling when browser tab is in background to allow Cloud Run to scale to zero
+      if (typeof document !== 'undefined' && document.hidden) return;
+
       try {
         const effectivePower = playerPower;
         const params = new URLSearchParams({ game_id: activeGameId });
@@ -324,11 +328,26 @@ export function App() {
       } catch {
         // Fallback polling network errors are silently ignored
       }
-    }, 4000);
+    };
+
+    const interval = setInterval(pollState, 4000);
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && !document.hidden && !abandoned) {
+        pollState();
+      }
+    };
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
 
     return () => {
       abandoned = true;
       clearInterval(interval);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
     };
   }, [viewMode, activeGameId, sandboxGameId, wsConnected, playerPower]);
 

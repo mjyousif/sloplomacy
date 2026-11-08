@@ -22,7 +22,7 @@ variable "artifact_repository_id" {
 }
 
 variable "container_image" {
-  description = "Full container image URL. If left blank, defaults to gcr.io/<project_id>/<service_name>:latest, where the CI workflow and scripts/deploy.* push"
+  description = "Full container image URL. If left blank, defaults to <region>-docker.pkg.dev/<project_id>/<artifact_repository_id>/<service_name>:latest, where the CI workflow and scripts/deploy.* push"
   type        = string
   default     = ""
 }
