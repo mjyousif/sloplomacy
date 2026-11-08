@@ -1,4 +1,14 @@
-import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  memo,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   AUTHENTIC_BACKGROUND_SVG,
   AUTHENTIC_DEFS_SVG,
@@ -28,10 +38,17 @@ import {
   getActiveOrderButton,
 } from '../utils/orderHelpers';
 import {
+  CameraBoundsOptions,
   clampCamera,
+  COMPACT_MAX_ZOOM,
   DEFAULT_CAMERA,
-  MAX_ZOOM,
-  MIN_ZOOM,
+  elementPointToViewBox,
+  getPhoneDefaultCamera,
+  getViewportFit,
+  MAP_CENTER_X,
+  MAP_CENTER_Y,
+  pinchStep,
+  zoomAtPoint,
 } from '../utils/mapCameraHelpers';
 import { PieceStyle, UnitMark } from '../utils/displayPrefs';
 import {
@@ -51,6 +68,7 @@ import {
   Crosshair,
   Eye,
   GripHorizontal,
+  Maximize2,
   MoveRight,
   Play,
   PlusCircle,
@@ -58,6 +76,8 @@ import {
   Swords,
   Trash2,
   X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 
 export interface EuropeMapHandle {
@@ -94,6 +114,11 @@ export interface EuropeMapProps {
   pieceStyle: PieceStyle;
   unitMark: UnitMark;
   overlay?: React.ReactNode;
+  /**
+   * The phone layout. It raises the zoom ceiling, starts the camera filling the screen's height
+   * around the player's own units, and puts zoom buttons on the map.
+   */
+  compact?: boolean;
 }
 
 type MapInteractionMode =
@@ -456,6 +481,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     onZoomChange,
     pieceStyle,
     unitMark,
+    compact = false,
   },
   ref
 ) {
@@ -469,10 +495,23 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     ...DEFAULT_CAMERA,
   });
   const isPanningRef = useRef<boolean>(false);
-  const panStartRef = useRef<Point>({ x: 0, y: 0 });
   const dragMovedRef = useRef<boolean>(false);
   const mouseDownClientRef = useRef<Point>({ x: 0, y: 0 });
+  // Pointers pressed on the map, by id, at the client position last applied to the camera.
+  // One pointer pans, and two pinch.
+  const activePointersRef = useRef<Map<number, Point>>(new Map());
   const rafIdRef = useRef<number | null>(null);
+
+  // Read through refs so the wheel listener and the rAF callback always see the current values.
+  const cameraOptions = useMemo<CameraBoundsOptions | undefined>(
+    () => (compact ? { maxZoom: COMPACT_MAX_ZOOM } : undefined),
+    [compact]
+  );
+  const cameraOptionsRef = useRef(cameraOptions);
+  cameraOptionsRef.current = cameraOptions;
+  const onZoomChangeRef = useRef(onZoomChange);
+  onZoomChangeRef.current = onZoomChange;
+  const reportedZoomRef = useRef<number | null>(null);
 
   // Draggable Floating Menu State (also updated via ref during drag)
   const menuDragOffsetRef = useRef<Point>({ x: 0, y: 0 });
@@ -1142,13 +1181,24 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     }
   }, [getSelectedUnitFloatingPosition]);
 
+  // Tells App the zoom, but only when the rounded figure changes, so a wheel spin or a pinch
+  // doesn't re-render the whole app on every frame.
+  const reportZoom = useCallback(() => {
+    const percent = Math.round(cameraRef.current.zoom * 100);
+    if (percent === reportedZoomRef.current) return;
+    reportedZoomRef.current = percent;
+    onZoomChangeRef.current?.(percent);
+  }, []);
+
   const scheduleCameraSync = useCallback(() => {
     if (rafIdRef.current !== null) return;
     rafIdRef.current = requestAnimationFrame(() => {
       rafIdRef.current = null;
       syncCameraDOM();
+      // A pinch reports once the fingers lift.
+      if (activePointersRef.current.size < 2) reportZoom();
     });
-  }, [syncCameraDOM]);
+  }, [syncCameraDOM, reportZoom]);
 
   useEffect(() => {
     return () => {
@@ -1158,6 +1208,14 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     };
   }, []);
 
+  /** A client-space point in viewBox units, allowing for the letterbox around the board. */
+  const clientToViewBox = useCallback((pt: Point): Point => {
+    const rect = svgRef.current?.getBoundingClientRect();
+    const W = rect?.width || 980;
+    const H = rect?.height || 860;
+    return elementPointToViewBox({ x: pt.x - (rect?.left ?? 0), y: pt.y - (rect?.top ?? 0) }, W, H);
+  }, []);
+
   // Native non-passive wheel listener for smooth cursor-anchored zooming
   useEffect(() => {
     const svgEl = svgRef.current;
@@ -1165,95 +1223,127 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const { x: oldPanX, y: oldPanY, zoom: oldZoom } = cameraRef.current;
+      const current = cameraRef.current;
       const factor = Math.exp(-e.deltaY * 0.0014);
-      const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number((oldZoom * factor).toFixed(3))));
-      if (newZoom === oldZoom) return;
-
-      const rect = svgEl.getBoundingClientRect();
-      const W = rect.width || 980;
-      const H = rect.height || 860;
-      const scale = Math.min(W / 1524, H / 1357);
-      const offsetX = (W - 1524 * scale) / 2;
-      const offsetY = (H - 1357 * scale) / 2;
-
-      const cursorSvgX = (e.clientX - rect.left - offsetX) / scale;
-      const cursorSvgY = (e.clientY - rect.top - offsetY) / scale;
-
-      const mapPtX = 762 + (cursorSvgX - 762 - oldPanX) / oldZoom;
-      const mapPtY = 678 + (cursorSvgY - 678 - oldPanY) / oldZoom;
-
-      const newPanX = cursorSvgX - 762 - (mapPtX - 762) * newZoom;
-      const newPanY = cursorSvgY - 678 - (mapPtY - 678) * newZoom;
-
-      cameraRef.current = clampCamera({ x: newPanX, y: newPanY, zoom: newZoom });
+      const next = zoomAtPoint(
+        current,
+        clientToViewBox({ x: e.clientX, y: e.clientY }),
+        Number((current.zoom * factor).toFixed(3)),
+        cameraOptionsRef.current
+      );
+      if (next.zoom === current.zoom) return;
+      cameraRef.current = next;
       scheduleCameraSync();
-      onZoomChange?.(Math.round(cameraRef.current.zoom * 100));
     };
 
     svgEl.addEventListener('wheel', onWheel, { passive: false });
     return () => svgEl.removeEventListener('wheel', onWheel);
-  }, [scheduleCameraSync]);
+  }, [scheduleCameraSync, clientToViewBox]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    isPanningRef.current = true;
-    svgRef.current?.classList.add('panning');
-    dragMovedRef.current = false;
-    mouseDownClientRef.current = { x: e.clientX, y: e.clientY };
-
-    const rect = svgRef.current?.getBoundingClientRect();
-    const W = rect?.width || 980;
-    const H = rect?.height || 860;
-    const scale = Math.min(W / 1524, H / 1357) || 1;
-
-    panStartRef.current = {
-      x: e.clientX / scale - cameraRef.current.x,
-      y: e.clientY / scale - cameraRef.current.y,
-    };
+  // Pointer Events cover the mouse, a finger and a pen alike. The map takes the pointer only
+  // once a drag passes the threshold: capturing on press would send the click to the map
+  // instead of the unit or province under it.
+  const endPanning = () => {
+    isPanningRef.current = false;
+    svgRef.current?.classList.remove('panning', 'actively-dragging');
+    reportZoom();
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPanningRef.current) return;
-    const dist = Math.hypot(
-      e.clientX - mouseDownClientRef.current.x,
-      e.clientY - mouseDownClientRef.current.y
-    );
-    if (dist > 4 && !dragMovedRef.current) {
-      dragMovedRef.current = true;
-      svgRef.current?.classList.add('actively-dragging');
+  const markDragging = () => {
+    dragMovedRef.current = true;
+    svgRef.current?.classList.add('actively-dragging');
+  };
+
+  const capturePointer = (pointerId: number) => {
+    try {
+      svgRef.current?.setPointerCapture(pointerId);
+    } catch {
+      // The pointer is already gone, for example lifted in the same frame.
     }
-    if (!dragMovedRef.current) return;
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const pointers = activePointersRef.current;
+    const client = { x: e.clientX, y: e.clientY };
+    if (pointers.size === 0) {
+      isPanningRef.current = true;
+      svgRef.current?.classList.add('panning');
+      dragMovedRef.current = false;
+      mouseDownClientRef.current = client;
+    }
+    pointers.set(e.pointerId, client);
+    if (pointers.size === 2) {
+      // A second finger turns the gesture into a pinch, and a pinch is never a tap.
+      markDragging();
+      pointers.forEach((_, id) => capturePointer(id));
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    const pointers = activePointersRef.current;
+    const last = pointers.get(e.pointerId);
+    if (!last) return;
+    const client = { x: e.clientX, y: e.clientY };
+
+    if (pointers.size >= 2) {
+      const [idA, idB] = Array.from(pointers.keys());
+      if (e.pointerId !== idA && e.pointerId !== idB) return;
+      const prev: [Point, Point] = [
+        clientToViewBox(pointers.get(idA)!),
+        clientToViewBox(pointers.get(idB)!),
+      ];
+      pointers.set(e.pointerId, client);
+      const next: [Point, Point] = [
+        clientToViewBox(pointers.get(idA)!),
+        clientToViewBox(pointers.get(idB)!),
+      ];
+      cameraRef.current = pinchStep(cameraRef.current, prev, next, cameraOptionsRef.current);
+      scheduleCameraSync();
+      return;
+    }
+
+    if (!dragMovedRef.current) {
+      // A finger wobbles more than a mouse, so a tap allows more movement before it pans.
+      const threshold = e.pointerType === 'mouse' ? 4 : 10;
+      const dist = Math.hypot(
+        client.x - mouseDownClientRef.current.x,
+        client.y - mouseDownClientRef.current.y
+      );
+      if (dist <= threshold) return;
+      markDragging();
+      capturePointer(e.pointerId);
+    }
+
     const rect = svgRef.current?.getBoundingClientRect();
-    const W = rect?.width || 980;
-    const H = rect?.height || 860;
-    const scale = Math.min(W / 1524, H / 1357) || 1;
-
-    const rawX = e.clientX / scale - panStartRef.current.x;
-    const rawY = e.clientY / scale - panStartRef.current.y;
-    const clamped = clampCamera({
-      x: rawX,
-      y: rawY,
-      zoom: cameraRef.current.zoom,
-    });
-
-    if (rawX !== clamped.x) {
-      panStartRef.current.x = e.clientX / scale - clamped.x;
-    }
-    if (rawY !== clamped.y) {
-      panStartRef.current.y = e.clientY / scale - clamped.y;
-    }
-
-    cameraRef.current.x = clamped.x;
-    cameraRef.current.y = clamped.y;
+    const { scale } = getViewportFit(rect?.width || 980, rect?.height || 860);
+    cameraRef.current = clampCamera(
+      {
+        x: cameraRef.current.x + (client.x - last.x) / scale,
+        y: cameraRef.current.y + (client.y - last.y) / scale,
+        zoom: cameraRef.current.zoom,
+      },
+      cameraOptionsRef.current
+    );
+    pointers.set(e.pointerId, client);
     scheduleCameraSync();
   };
 
-  const handleMouseUp = () => {
-    if (isPanningRef.current) {
-      isPanningRef.current = false;
-      svgRef.current?.classList.remove('panning', 'actively-dragging');
+  const handlePointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    const pointers = activePointersRef.current;
+    if (!pointers.delete(e.pointerId)) return;
+    if (svgRef.current?.hasPointerCapture(e.pointerId)) {
+      svgRef.current.releasePointerCapture(e.pointerId);
     }
+    // With one finger left after a pinch, carrying on pans from where that finger is.
+    if (pointers.size === 0) endPanning();
+  };
+
+  // A captured pointer keeps the drag going off the map. Before the threshold, leaving the map
+  // ends the press, as it always has for the mouse.
+  const handlePointerLeave = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (svgRef.current?.hasPointerCapture(e.pointerId)) return;
+    handlePointerUp(e);
   };
 
   // The cursor stays over the menu during a drag, so the map's own handlers never see it.
@@ -1287,23 +1377,67 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     floatingMenuRef.current?.classList.remove('dragging');
   };
 
-  const stepZoom = useCallback((delta: number) => {
-    const oldZoom = cameraRef.current.zoom;
-    const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number((oldZoom + delta).toFixed(2))));
-    cameraRef.current = clampCamera({
-      x: cameraRef.current.x,
-      y: cameraRef.current.y,
-      zoom: newZoom,
-    });
-    syncCameraDOM();
-    onZoomChange?.(Math.round(cameraRef.current.zoom * 100));
-  }, [syncCameraDOM, onZoomChange]);
+  /** Zooms about the middle of the view, so whatever is in the middle stays there. */
+  const zoomAboutCentre = useCallback(
+    (newZoom: number) => {
+      cameraRef.current = zoomAtPoint(
+        cameraRef.current,
+        { x: MAP_CENTER_X, y: MAP_CENTER_Y },
+        newZoom,
+        cameraOptionsRef.current
+      );
+      syncCameraDOM();
+      reportZoom();
+    },
+    [syncCameraDOM, reportZoom]
+  );
+
+  const stepZoom = useCallback(
+    (delta: number) => {
+      zoomAboutCentre(Number((cameraRef.current.zoom + delta).toFixed(2)));
+    },
+    [zoomAboutCentre]
+  );
+
+  // Where a phone's camera starts: the middle of the player's own units, if they have any.
+  const ownUnitsCentre = useMemo((): Point | null => {
+    const own = units.filter((u) => u.power === activePower && !u.is_dislodged);
+    if (own.length === 0) return null;
+    const pts = own.map((u) => getUnitPoint(u));
+    return {
+      x: pts.reduce((sum, p) => sum + p.x, 0) / pts.length,
+      y: pts.reduce((sum, p) => sum + p.y, 0) / pts.length,
+    };
+  }, [units, activePower, getUnitPoint]);
+  const ownUnitsCentreRef = useRef(ownUnitsCentre);
+  ownUnitsCentreRef.current = ownUnitsCentre;
+
+  const getHomeCamera = useCallback(() => {
+    if (!compact) return clampCamera({ ...DEFAULT_CAMERA });
+    const rect = svgRef.current?.getBoundingClientRect();
+    return getPhoneDefaultCamera(
+      rect?.width ?? 0,
+      rect?.height ?? 0,
+      ownUnitsCentreRef.current,
+      cameraOptionsRef.current
+    );
+  }, [compact]);
 
   const resetCamera = useCallback(() => {
-    cameraRef.current = clampCamera({ ...DEFAULT_CAMERA });
+    cameraRef.current = getHomeCamera();
     syncCameraDOM();
-    onZoomChange?.(Math.round(DEFAULT_CAMERA.zoom * 100));
-  }, [syncCameraDOM, onZoomChange]);
+    reportZoom();
+  }, [getHomeCamera, syncCameraDOM, reportZoom]);
+
+  // Entering or leaving the phone layout, or switching powers on a phone, moves the camera
+  // home. The wide layout starts on DEFAULT_CAMERA already, so its first render is untouched.
+  const cameraHomeKeyRef = useRef<string>('wide');
+  useLayoutEffect(() => {
+    const key = compact ? `compact:${activePower}` : 'wide';
+    if (key === cameraHomeKeyRef.current) return;
+    cameraHomeKeyRef.current = key;
+    resetCamera();
+  }, [compact, activePower, resetCamera]);
 
   useImperativeHandle(
     ref,
@@ -1316,8 +1450,10 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
   );
 
   useEffect(() => {
-    onZoomChange?.(Math.round(cameraRef.current.zoom * 100));
-  }, [onZoomChange]);
+    // App gave a new callback, so tell it the zoom even if the figure hasn't changed.
+    reportedZoomRef.current = null;
+    reportZoom();
+  }, [onZoomChange, reportZoom]);
 
   const floatingPos = getSelectedUnitFloatingPosition();
   const activeOrderButton = getActiveOrderButton(
@@ -1767,10 +1903,11 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
         ref={svgRef}
         viewBox={MAP_VIEWBOX}
         className="europe-svg-canvas"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onPointerLeave={handlePointerLeave}
       >
         <defs>
           <StaticDefsLayer />
@@ -2512,6 +2649,36 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
           </g>
         </g>
       </svg>
+
+      {/* Phones have no wheel and the tools rail is out of reach, so zoom lives on the map. */}
+      {compact && (
+        <div className="map-zoom-controls" role="group" aria-label="Map zoom">
+          <button
+            type="button"
+            className="map-zoom-btn"
+            aria-label="Zoom in"
+            onClick={() => zoomAboutCentre(cameraRef.current.zoom * 1.5)}
+          >
+            <ZoomIn size={20} />
+          </button>
+          <button
+            type="button"
+            className="map-zoom-btn"
+            aria-label="Zoom out"
+            onClick={() => zoomAboutCentre(cameraRef.current.zoom / 1.5)}
+          >
+            <ZoomOut size={20} />
+          </button>
+          <button
+            type="button"
+            className="map-zoom-btn"
+            aria-label="Back to my units"
+            onClick={resetCamera}
+          >
+            <Maximize2 size={18} />
+          </button>
+        </div>
+      )}
     </div>
   );
 });

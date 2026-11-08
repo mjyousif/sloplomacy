@@ -15,14 +15,27 @@ The visual centerpiece of the application is `frontend/src/components/EuropeMap.
 ## Pan & Zoom Engine
 
 The map features smooth multi-modal navigation without external library bloat:
-1. **Mouse Drag**: The camera lives in a ref, and a `requestAnimationFrame` sync writes it to the camera group's SVG `transform` attribute, so panning never re-renders React:
+1. **Drag to pan (mouse, finger or pen)**: The camera lives in a ref, and a `requestAnimationFrame` sync writes it to the camera group's SVG `transform` attribute, so panning never re-renders React:
    ```ts
    cameraGroupRef.current.setAttribute('transform', `translate(${x}, ${y}) scale(${zoom})`)
    ```
-   Panning listens for mouse events only, and the SVG has `touch-action: none`, so a finger drag does not pan yet. Touch pan and pinch zoom are planned (issue #54).
-2. **Bounded Panning (`mapCameraHelpers.ts`)**: Prevents dragging or zooming the map endlessly off-screen into an empty void. Panning coordinates `(x, y)` are dynamically clamped to allowable zoom-dependent boundaries via `clampCamera`, keeping the map firmly in view while allowing full inspection of border territories and split coasts without dead-zone drag lag.
-3. **Wheel Zoom**: Smooth zoom centered around the cursor position with configurable clamping (min `0.75x`, max `3.0x`), notifying external toolbars via `onZoomChange`.
-4. **Imperative Handle (`EuropeMapHandle`)**: Exposes `stepZoom(delta)`, `resetCamera()`, and `getZoom()` via React `forwardRef`, enabling seamless zoom and fit control from the Left Tools Sidebar without SVG re-renders.
+   The SVG listens for Pointer Events and has `touch-action: none`, so the browser leaves gestures to the map. A press only becomes a pan after it moves 4px (mouse) or 10px (finger or pen), and only then does the map call `setPointerCapture`: capturing on press would take the `click` away from the unit or province under the pointer. After a drag, `dragMovedRef` stops the release from also counting as a tap.
+2. **Pinch zoom**: a second finger turns the gesture into a pinch. The board point under the fingers' midpoint follows them, and the zoom changes by how far they spread (`pinchStep`). Lifting one finger carries on as a pan.
+3. **Bounded Panning (`mapCameraHelpers.ts`)**: Prevents dragging or zooming the map endlessly off-screen into an empty void. Panning coordinates `(x, y)` are dynamically clamped to allowable zoom-dependent boundaries via `clampCamera`, keeping the map firmly in view while allowing full inspection of border territories and split coasts without dead-zone drag lag.
+4. **Wheel Zoom**: zooms about the cursor. The wheel, a pinch and the zoom buttons all go through `zoomAtPoint`, which keeps the board point under an anchor still. Its anchor is in viewBox units, and `elementPointToViewBox` allows for the letterbox that `preserveAspectRatio` leaves around the board. Zoom is clamped between `0.75x` and `3.0x` (`6.0x` on phones).
+5. **Imperative Handle (`EuropeMapHandle`)**: Exposes `stepZoom(delta)`, `resetCamera()`, and `getZoom()` via React `forwardRef`, enabling seamless zoom and fit control from the Left Tools Sidebar without SVG re-renders. `stepZoom` zooms about the middle of the view.
+6. **Zoom reports**: `onZoomChange` fires at most once per animation frame, and only when the rounded percentage changes. During a pinch it waits until the fingers lift, because each report re-renders App.
+
+### Phone camera (`compact` prop)
+App passes `compact` from `useCompactLayout()`. On a phone the map:
+- **Starts filling the screen's height**, centred on the player's own units (`getPhoneDefaultCamera`). A portrait screen would otherwise fit the board to its width and leave a thin strip. The camera goes back to this view when the layout turns compact, when the player's power changes, and on Fit.
+- **Zooms to `6.0x`** (`COMPACT_MAX_ZOOM`), because pieces are only about 27px across at `3.0x`.
+- **Shows zoom buttons on the map**: zoom in, zoom out (each by 1.5×) and "Back to my units", 44px square in the bottom-right corner (`.map-zoom-controls` in `compact.css`).
+- **Drops `backdrop-filter`** from the cartouche and the unit popup, since blurring what is behind them repaints the board on every pan frame.
+
+The wide layout is unchanged: it starts on `DEFAULT_CAMERA`, keeps the `3.0x` ceiling and renders no zoom buttons.
+
+The browser pane and Playwright's phone emulation send mouse events, so drag and pinch have unit tests (`mapCameraHelpers.test.ts`) but need a real phone to check by hand.
 
 ---
 

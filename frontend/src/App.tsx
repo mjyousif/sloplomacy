@@ -1330,6 +1330,7 @@ export function App() {
           <EuropeMap
             ref={mapRef}
             onZoomChange={setZoomPercent}
+            compact={isCompact}
             pieceStyle={displayPrefs.pieceStyle}
             unitMark={displayPrefs.unitMark}
             provinces={provinces}
