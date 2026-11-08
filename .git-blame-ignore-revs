@@ -1,4 +1,5 @@
 # Commits to ignore in `git blame` (mass reformats, formatting transitions)
 # Run `git config blame.ignoreRevsFile .git-blame-ignore-revs` to enable locally.
 #
-# Phase 2 commit SHA will be appended below upon completion of the mass reformat.
+# Phase 2 mass reformat (Ruff + Biome)
+f13da1f
