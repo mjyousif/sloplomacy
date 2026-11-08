@@ -505,7 +505,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
     return { unitsByProv: byProv, dislodgedByProv: dislodged, unitsById: byId };
   }, [units]);
 
-  const layout = useMemo(() => getMapLayout(pieceStyle), [pieceStyle]);
+  const layout = getMapLayout(pieceStyle);
   const arrowScale = getPieceArrowScale(pieceStyle);
   const pieceRingScale = getPieceFrame(pieceStyle).ringScale;
 
