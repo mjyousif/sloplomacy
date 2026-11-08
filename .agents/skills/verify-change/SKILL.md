@@ -35,8 +35,17 @@ In a fresh worktree run `npm ci` in `frontend/` (and `pip install -r backend/req
 
 **Run only the one scenario that covers your change.** Backend changes count: E2E runs against the real backend, so run the matching scenario when you change API responses, adjudication, phase flow, sandbox, validator or auth behavior (for example adjudication or retreats -> etreats, uilds, movement; validator -> lunder; sandbox endpoints -> sandbox). Skip E2E only when nothing a user can see or click could change: docs, comments, refactors fully covered by tests, infra scripts, or internals such as persistence or security headers with no change to responses. Avoid un --all unless the change is broad (shared layout, App.tsx state flow, map rendering across phases), because it is slow and the screenshots cost tokens to read. Look only at the screenshots from the steps your change affects.
 
-Then open those screenshots in `artifacts/e2e/<scenario>/` with `read_file` and **look at them**. Also check `summary.json` for console or page errors. A green exit code with a broken-looking screenshot is a failure. Don't commit `artifacts/`.
+Then evaluate the screenshots. The E2E suite exists so that **you** read them. A green Playwright exit only means the scripted clicks worked, not that the UI is right.
 
+1. **Before running**, write down what the affected steps should show (for example, "arrow from Paris to Burgundy, warning badge on both cards, modal lists the self-bounce").
+2. Run the scenario, then open the screenshots for those steps with `read_file`. Open them all if the change touches shared layout.
+3. **Compare each image to your expectation**, element by element: right provinces and arrows, units and rings drawn cleanly, text not clipped or overlapping, correct phase and turn label, no stray modal or stuck highlight, and correct behavior at the viewport used (`mobile` is 390x844).
+4. Check `summary.json` for `consoleErrors` and `pageErrors`.
+5. If an image looks wrong, the change fails even though the test passed. Fix it and rerun. If a scenario's script no longer matches the intended behavior, update the spec.
+6. For a **new** scenario, capture a screenshot after every meaningful state change, name the steps by what they show, and add Playwright assertions for the critical facts so the run fails loudly as well.
+7. Report what each opened screenshot showed (see section 5). Don't claim a pass for images you didn't open.
+
+Don't commit `artifacts/`.
 ## 3. Documentation and contracts (always)
 
 Walk the checklist in AGENTS.md section 5.1 against `git diff --stat`. The ones people forget:
