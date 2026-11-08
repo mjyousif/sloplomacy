@@ -388,6 +388,26 @@ def test_timer_action_authorization():
 
 
 # ==============================================================================
+# SEC-09: Defense-in-Depth Security Response Headers
+# ==============================================================================
+
+def test_security_headers_present():
+    """Verify that HTTP responses include standard defensive security headers."""
+    res = client.get("/api/games")
+    assert res.status_code == 200
+    assert res.headers.get("x-content-type-options") == "nosniff"
+    assert res.headers.get("x-frame-options") == "DENY"
+    assert res.headers.get("referrer-policy") == "strict-origin-when-cross-origin"
+    assert res.headers.get("permissions-policy") == "geolocation=(), camera=(), microphone=()"
+
+    # Also check game endpoint response
+    res_game = client.get("/api/game?game_id=proto_1901")
+    assert res_game.status_code == 200
+    assert res_game.headers.get("x-content-type-options") == "nosniff"
+    assert res_game.headers.get("x-frame-options") == "DENY"
+
+
+# ==============================================================================
 # SEC-05: Hidden orders stay hidden on every path
 # ==============================================================================
 
