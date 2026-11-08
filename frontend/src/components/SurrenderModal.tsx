@@ -209,6 +209,14 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
               <span>{loading ? 'Leaving...' : 'Vacate & Leave Lobby'}</span>
             </button>
           )}
+
+          {/* Touch screens can't show the buttons' tooltips, so the difference is spelled out. */}
+          {isActiveMatch && (
+            <p className="surrender-choice-note compact-only">
+              Both hand your units to Civil Disorder. Spectate keeps you in the room as an observer;
+              Leave returns you to the lobby.
+            </p>
+          )}
         </div>
       </div>
     </div>

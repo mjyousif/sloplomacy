@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
+import './compact.css';
 import { AuthModal } from './components/AuthModal';
+import { CompactTopBar } from './components/CompactTopBar';
 import { DisplaySettingsMenu } from './components/DisplaySettingsMenu';
 import { EuropeMap, EuropeMapHandle } from './components/EuropeMap';
 import { LobbyView } from './components/LobbyView';
@@ -9,11 +11,13 @@ import { ToolsSidebar } from './components/ToolsSidebar';
 import { AdminToolsModal } from './components/AdminToolsModal';
 import { SanityCheckModal } from './components/SanityCheckModal';
 import { SurrenderModal } from './components/SurrenderModal';
+import { useConfirm } from './components/ConfirmModal';
 import { PhaseTimerWidget } from './components/PhaseTimerWidget';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
 import { turnLabel } from './utils/timerHelpers';
 import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
 import { useDisplayPrefs } from './hooks/useDisplayPrefs';
+import { useCompactLayout } from './hooks/useCompactLayout';
 import {
   getAuthHeaders,
   getInitialAuthUser,
@@ -107,12 +111,18 @@ export function App() {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState<boolean>(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState<boolean>(false);
   const [zoomPercent, setZoomPercent] = useState<number>(105);
+  // Phone-sized screens get the compact layout, styled from compact.css.
+  const isCompact = useCompactLayout();
   const mapRef = useRef<EuropeMapHandle | null>(null);
 
   // Sanity Check Modal State
   const [sanityModalOpen, setSanityModalOpen] = useState<boolean>(false);
   const [sanityModalIssues, setSanityModalIssues] = useState<ValidationIssue[]>([]);
   const [toastBanner, setToastBanner] = useState<string | null>(null);
+  const { confirm, confirmModal } = useConfirm();
+  // Passcodes this player typed for private matches during this visit, so the live
+  // socket can present them. Never saved: a reload falls back to polling.
+  const [matchPasscodes, setMatchPasscodes] = useState<Record<string, string>>({});
 
   // Surrender & Leave Modal State
   const [surrenderModalOpen, setSurrenderModalOpen] = useState<boolean>(false);
@@ -200,10 +210,12 @@ export function App() {
     [activeGameId]
   );
 
-  const { isConnected: wsConnected, sendPing: sendWsPing } = useDiplomacyWebSocket({
+  const { isConnected: wsConnected, sendRefresh: sendWsRefresh } = useDiplomacyWebSocket({
     activeGameId,
     viewMode,
     power: playerPower,
+    passcode: activeGameId ? matchPasscodes[activeGameId] ?? null : null,
+    authKey: authUser?.id ?? null,
     onGameUpdate: handleWsGameUpdate,
     onLobbyUpdate: handleWsLobbyUpdate,
   });
@@ -223,7 +235,12 @@ export function App() {
     }
   };
 
+  // Bumped by every fetchGame and every join, so an older reply still in flight
+  // (such as the startup load of proto_1901) cannot replace a board opened since.
+  const boardRequestSeq = useRef(0);
+
   const fetchGame = async (gid: string = activeGameId, targetPower?: Power | null) => {
+    const seq = ++boardRequestSeq.current;
     try {
       setLoading(true);
       const effectivePower = targetPower !== undefined ? targetPower : playerPower;
@@ -237,6 +254,7 @@ export function App() {
       });
       if (!res.ok) throw new Error(`Backend returned ${res.status}`);
       const data = await res.json();
+      if (seq !== boardRequestSeq.current) return;
       applyServerState(data.state);
       setProvinces(data.provinces);
       if (data.summary) {
@@ -244,7 +262,9 @@ export function App() {
       }
       setErrorMsg(null);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to connect to Diplomacy backend server.');
+      if (seq === boardRequestSeq.current) {
+        setErrorMsg(err.message || 'Failed to connect to Diplomacy backend server.');
+      }
     } finally {
       setLoading(false);
     }
@@ -258,13 +278,12 @@ export function App() {
     return () => unsub();
   }, []);
 
+  // Only a `refresh` makes the server run the clock; a `ping` is just a heartbeat.
+  // Without a socket the fallback poll below runs the clock every few seconds, and
+  // it also knows to leave the board alone while a private sandbox is open.
   const handleTimerExpired = useCallback(() => {
-    if (wsConnected) {
-      sendWsPing();
-    } else if (activeGameId) {
-      fetchGame(activeGameId);
-    }
-  }, [wsConnected, sendWsPing, activeGameId]);
+    sendWsRefresh();
+  }, [sendWsRefresh]);
 
   // Fallback poll game state in multiplayer mode ONLY when WebSocket is disconnected,
   // so turn advancements and timers continue to work if a network drops WS connections.
@@ -320,10 +339,15 @@ export function App() {
   }, [viewMode, sandboxGameId]);
 
 
-  const handleEnterSoloSandbox = async () => {
+  const handleEnterSoloSandbox = async (event?: React.MouseEvent) => {
     if (viewMode === 'multiplayer' && activeGameSummary) {
-      const confirmLeave = window.confirm(
-        `Switch from match "${activeGameSummary.name}" to the Solo Sandbox board? Your submitted orders remain safe on the server.`
+      const confirmLeave = await confirm(
+        {
+          title: 'Switch to the Solo Sandbox?',
+          message: `You leave match "${activeGameSummary.name}" for the Solo Sandbox board. Your submitted orders remain safe on the server.`,
+          confirmLabel: 'Switch',
+        },
+        event
       );
       if (!confirmLeave) return;
     }
@@ -413,6 +437,11 @@ export function App() {
         throw new Error(msg);
       }
       const data = await res.json();
+      boardRequestSeq.current++;
+      const typedPasscode = passcode?.trim();
+      if (typedPasscode) {
+        setMatchPasscodes((prev) => ({ ...prev, [gameId]: typedPasscode }));
+      }
       setActiveGameId(gameId);
       setActiveGameSummary(data.summary);
       applyServerState(data.state);
@@ -1004,166 +1033,196 @@ export function App() {
   const activeErrors = activePowerIssues.filter((i) => i.severity === 'error');
   const activeWarnings = activePowerIssues.filter((i) => i.severity === 'warning');
 
+  const handleBackToLobby = () => {
+    setViewMode('lobby');
+    fetchGamesList();
+  };
+
+  const handleSignOut = async () => {
+    await signOutUser();
+    if (viewMode === 'multiplayer') {
+      setViewMode('lobby');
+    }
+    triggerToast('Signed out — now in Guest Mode.');
+  };
+
   return (
-    <div className="diplomacy-app-shell">
-      {/* TOP COMMAND HEADER BAR */}
-      <header className="imperial-top-header">
-        <div className="brand-and-nav">
-          <div
-            className="brand-block clickable"
-            onClick={() => {
-              setViewMode('lobby');
-              fetchGamesList();
-            }}
-            title="Return to Main Lobby"
-          >
-            <div className="brand-emblem">
-              <Compass size={22} />
-            </div>
-            <div>
-              <h1 className="brand-title">SLOPLOMACY 1901</h1>
-              <span className="brand-subtitle">
-                TACTICAL ENGINE &amp; MULTIPLAYER CHANCELLERY
-              </span>
-            </div>
-          </div>
-
-          {/* Primary Navigation Switcher */}
-          <nav className="top-view-nav">
-            <button
-              type="button"
-              className={`nav-tab-btn ${viewMode === 'sandbox' ? 'active' : ''}`}
-              onClick={handleEnterSoloSandbox}
-              title="Open standalone 7-power practice laboratory"
+    <div className="diplomacy-app-shell" data-layout={isCompact ? 'compact' : 'wide'}>
+      {/* TOP COMMAND HEADER BAR (phones get a one-row bar with a ⋯ menu) */}
+      {isCompact ? (
+        <CompactTopBar
+          viewMode={viewMode}
+          turn={viewMode === 'lobby' ? null : gameState}
+          winner={gameState.winner ?? null}
+          errorCount={activeErrors.length}
+          warningCount={activeWarnings.length}
+          onOpenOrderCheck={() => handleFinalizeClick(false)}
+          onBackToLobby={handleBackToLobby}
+          wsConnected={wsConnected}
+          syncDetail={viewMode === 'lobby' ? 'Lobby feed' : `Game ${activeGameId}`}
+          matchLabel={
+            viewMode === 'multiplayer' && activeGameSummary
+              ? `${activeGameSummary.name} (${POWER_METADATA[playerPower].shortName})`
+              : null
+          }
+          onEnterSoloSandbox={handleEnterSoloSandbox}
+          displayPrefs={displayPrefs}
+          displayPrefsSaveState={displayPrefsSaveState}
+          onChangeDisplayPrefs={updateDisplayPrefs}
+          authUser={authUser}
+          onSignIn={() => openAuthPrompt(undefined, 'signin')}
+          onSignOut={handleSignOut}
+        />
+      ) : (
+        <header className="imperial-top-header">
+          <div className="brand-and-nav">
+            <div
+              className="brand-block clickable"
+              onClick={handleBackToLobby}
+              title="Return to Main Lobby"
             >
-              <FlaskConical size={14} />
-              <span>Solo Sandbox</span>
-            </button>
-            {viewMode === 'multiplayer' && activeGameSummary && (
-              <span className="nav-active-match-pill">
-                <Crown size={13} />
-                <span>
-                  {activeGameSummary.name} (
-                  {POWER_METADATA[playerPower].shortName})
+              <div className="brand-emblem">
+                <Compass size={22} />
+              </div>
+              <div>
+                <h1 className="brand-title">SLOPLOMACY 1901</h1>
+                <span className="brand-subtitle">
+                  TACTICAL ENGINE &amp; MULTIPLAYER CHANCELLERY
                 </span>
-              </span>
-            )}
-          </nav>
-        </div>
-
-        {/* Center Board Readout (Only when viewing Map Board) */}
-        {viewMode !== 'lobby' && (
-          <div className="header-center-telemetry">
-            <div className="turn-chronicle-pill">
-              <Calendar size={15} className="turn-cal-icon" />
-              <span className="turn-season-text">
-                {gameState.season.toUpperCase()} {gameState.year}
-              </span>
-              <span className="turn-phase-divider">•</span>
-              <span className="turn-phase-text">
-                {gameState.phase.toUpperCase()} PHASE
-              </span>
+              </div>
             </div>
 
-            {gameState.winner && (
-              <span className="game-over-pill">
-                <Crown size={14} />
-                <span>{POWER_METADATA[gameState.winner].shortName.toUpperCase()} WINS</span>
-              </span>
-            )}
-
-            <div className="header-sanity-readout">
-              {activeErrors.length > 0 ? (
-                <div
-                  className="header-error-pill"
-                  onClick={() => handleFinalizeClick(false)}
-                  title="Click to open Sanity Check Diagnostics"
-                >
-                  <AlertOctagon size={15} />
+            {/* Primary Navigation Switcher */}
+            <nav className="top-view-nav">
+              <button
+                type="button"
+                className={`nav-tab-btn ${viewMode === 'sandbox' ? 'active' : ''}`}
+                onClick={handleEnterSoloSandbox}
+                title="Open standalone 7-power practice laboratory"
+              >
+                <FlaskConical size={14} />
+                <span>Solo Sandbox</span>
+              </button>
+              {viewMode === 'multiplayer' && activeGameSummary && (
+                <span className="nav-active-match-pill">
+                  <Crown size={13} />
                   <span>
-                    Error: {activeErrors.length}
-                    {activeWarnings.length > 0
-                      ? ` • Warning: ${activeWarnings.length}`
-                      : ''}
+                    {activeGameSummary.name} (
+                    {POWER_METADATA[playerPower].shortName})
                   </span>
-                </div>
-              ) : activeWarnings.length > 0 ? (
-                <div
-                  className="header-warning-pill"
-                  onClick={() => handleFinalizeClick(false)}
-                  title="Click to open Sanity Check Diagnostics"
-                >
-                  <AlertTriangle size={15} />
-                  <span>Warning: {activeWarnings.length}</span>
-                </div>
-              ) : (
-                <div className="header-clean-pill">
-                  <ShieldCheck size={15} />
-                  <span>Valid Moves</span>
-                </div>
+                </span>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* Right Header Controls: Board Actions + User Account */}
-        <div className="header-right-actions">
-          <div
-            className={`header-ws-badge ${wsConnected ? 'ws-connected' : 'ws-disconnected'}`}
-            title={
-              wsConnected
-                ? `Real-time synchronization connected (${viewMode === 'lobby' ? 'Lobby Feed' : activeGameId})`
-                : 'Connecting to real-time synchronization...'
-            }
-          >
-            <span className={`ws-status-dot ${wsConnected ? 'dot-online' : 'dot-offline'}`} />
-            <span>{wsConnected ? 'Live Sync' : 'Connecting...'}</span>
+            </nav>
           </div>
 
-          <DisplaySettingsMenu
-            prefs={displayPrefs}
-            saveState={displayPrefsSaveState}
-            onChange={updateDisplayPrefs}
-          />
+          {/* Center Board Readout (Only when viewing Map Board) */}
+          {viewMode !== 'lobby' && (
+            <div className="header-center-telemetry">
+              <div className="turn-chronicle-pill">
+                <Calendar size={15} className="turn-cal-icon" />
+                <span className="turn-season-text">
+                  {gameState.season.toUpperCase()} {gameState.year}
+                </span>
+                <span className="turn-phase-divider">•</span>
+                <span className="turn-phase-text">
+                  {gameState.phase.toUpperCase()} PHASE
+                </span>
+              </div>
 
-          {/* User Authentication Controls */}
-          {authUser ? (
-            <div className="header-user-Menu">
-              <span className="header-user-badge" title={authUser.email}>
-                <UserIcon size={13} />
-                <span>{authUser.displayName}</span>
-              </span>
-              <button
-                type="button"
-                className="header-auth-btn signout"
-                onClick={async () => {
-                  await signOutUser();
-                  if (viewMode === 'multiplayer') {
-                    setViewMode('lobby');
-                  }
-                  triggerToast('Signed out — now in Guest Mode.');
-                }}
-                title="Sign Out"
-              >
-                <LogOut size={14} />
-                <span>Sign Out</span>
-              </button>
-            </div>
-          ) : (
-            <div className="header-user-Menu">
-              <span className="header-guest-tag">Guest Mode</span>
-              <button
-                type="button"
-                className="header-auth-btn signin"
-                onClick={() => openAuthPrompt(undefined, 'signin')}
-              >
-                <LogIn size={14} />
-                <span>Sign In / Register</span>
-              </button>
+              {gameState.winner && (
+                <span className="game-over-pill">
+                  <Crown size={14} />
+                  <span>{POWER_METADATA[gameState.winner].shortName.toUpperCase()} WINS</span>
+                </span>
+              )}
+
+              <div className="header-sanity-readout">
+                {activeErrors.length > 0 ? (
+                  <div
+                    className="header-error-pill"
+                    onClick={() => handleFinalizeClick(false)}
+                    title="Click to open Sanity Check Diagnostics"
+                  >
+                    <AlertOctagon size={15} />
+                    <span>
+                      Error: {activeErrors.length}
+                      {activeWarnings.length > 0
+                        ? ` • Warning: ${activeWarnings.length}`
+                        : ''}
+                    </span>
+                  </div>
+                ) : activeWarnings.length > 0 ? (
+                  <div
+                    className="header-warning-pill"
+                    onClick={() => handleFinalizeClick(false)}
+                    title="Click to open Sanity Check Diagnostics"
+                  >
+                    <AlertTriangle size={15} />
+                    <span>Warning: {activeWarnings.length}</span>
+                  </div>
+                ) : (
+                  <div className="header-clean-pill">
+                    <ShieldCheck size={15} />
+                    <span>Valid Moves</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
-        </div>
-      </header>
+
+          {/* Right Header Controls: Board Actions + User Account */}
+          <div className="header-right-actions">
+            <div
+              className={`header-ws-badge ${wsConnected ? 'ws-connected' : 'ws-disconnected'}`}
+              title={
+                wsConnected
+                  ? `Real-time synchronization connected (${viewMode === 'lobby' ? 'Lobby Feed' : activeGameId})`
+                  : 'Connecting to real-time synchronization...'
+              }
+            >
+              <span className={`ws-status-dot ${wsConnected ? 'dot-online' : 'dot-offline'}`} />
+              <span>{wsConnected ? 'Live Sync' : 'Connecting...'}</span>
+            </div>
+
+            <DisplaySettingsMenu
+              prefs={displayPrefs}
+              saveState={displayPrefsSaveState}
+              onChange={updateDisplayPrefs}
+            />
+
+            {/* User Authentication Controls */}
+            {authUser ? (
+              <div className="header-user-Menu">
+                <span className="header-user-badge" title={authUser.email}>
+                  <UserIcon size={13} />
+                  <span>{authUser.displayName}</span>
+                </span>
+                <button
+                  type="button"
+                  className="header-auth-btn signout"
+                  onClick={handleSignOut}
+                  title="Sign Out"
+                >
+                  <LogOut size={14} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <div className="header-user-Menu">
+                <span className="header-guest-tag">Guest Mode</span>
+                <button
+                  type="button"
+                  className="header-auth-btn signin"
+                  onClick={() => openAuthPrompt(undefined, 'signin')}
+                >
+                  <LogIn size={14} />
+                  <span>Sign In / Register</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </header>
+      )}
 
       {/* ADMIN DIRECT-EDIT OVERRIDE BANNER */}
       {directEditActive && (
@@ -1388,6 +1447,7 @@ export function App() {
           fetchGamesList();
         }}
       />
+      {confirmModal}
     </div>
   );
 }

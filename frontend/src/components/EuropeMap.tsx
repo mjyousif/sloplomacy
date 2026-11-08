@@ -287,8 +287,12 @@ const ProvincePolygon = memo<ProvincePolygonProps>(
           strokeWidth={isHighlighted || isReachable || hasWarning ? 3.5 : 0}
           className="province-interactive-path"
           onClick={() => onClickProvince(geom.id)}
-          onMouseEnter={() => onHoverProvince(geom.id)}
-          onMouseLeave={() => onHoverProvince(null)}
+          onPointerEnter={(e) => {
+            if (e.pointerType !== 'touch') onHoverProvince(geom.id);
+          }}
+          onPointerLeave={(e) => {
+            if (e.pointerType !== 'touch') onHoverProvince(null);
+          }}
         />
 
         {/* Split-coast interactive sub-polygons for Fleets */}
@@ -2193,8 +2197,12 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                       if (dragMovedRef.current) return;
                       onSelectUnit(isSelected ? null : bId);
                     }}
-                    onMouseEnter={() => onHoverUnit(bId)}
-                    onMouseLeave={() => onHoverUnit(null)}
+                    onPointerEnter={(e) => {
+                      if (e.pointerType !== 'touch') onHoverUnit(bId);
+                    }}
+                    onPointerLeave={(e) => {
+                      if (e.pointerType !== 'touch') onHoverUnit(null);
+                    }}
                   >
                     <PieceHitArea frame={buildPiece.frame} />
                     {(isSelected || isHovered) && (
@@ -2337,10 +2345,12 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   } ${!isControllable ? 'foreign-locked' : ''}`}
                   opacity={isAdvancingInSim && !isSelected ? 0.62 : 1}
                   onClick={(e) => handleSelectUnitOnMap(u, e)}
-                  onMouseEnter={() => {
-                    if (isControllable) onHoverUnit(u.id);
+                  onPointerEnter={(e) => {
+                    if (isControllable && e.pointerType !== 'touch') onHoverUnit(u.id);
                   }}
-                  onMouseLeave={() => onHoverUnit(null)}
+                  onPointerLeave={(e) => {
+                    if (e.pointerType !== 'touch') onHoverUnit(null);
+                  }}
                 >
                   <PieceHitArea frame={frame} />
 

@@ -1,7 +1,7 @@
 # ==============================================================================
 # Stage 1: Build React/Vite Frontend
 # ==============================================================================
-FROM node:20-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
@@ -28,9 +28,9 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080
 
-# Install dependencies
-COPY backend/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# Install runtime dependencies only (requirements.txt adds the test tools on top)
+COPY backend/requirements-runtime.txt ./
+RUN pip install --no-cache-dir -r requirements-runtime.txt
 
 # Copy backend application code
 COPY backend/ ./

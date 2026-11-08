@@ -15,10 +15,11 @@ The visual centerpiece of the application is `frontend/src/components/EuropeMap.
 ## Pan & Zoom Engine
 
 The map features smooth multi-modal navigation without external library bloat:
-1. **Mouse Drag / Touch Pan**: Tracks `(dx, dy)` deltas and updates the SVG transform matrix:
-   ```css
-   transform: translate(${pan.x}px, ${pan.y}px) scale(${zoom})
+1. **Mouse Drag**: The camera lives in a ref, and a `requestAnimationFrame` sync writes it to the camera group's SVG `transform` attribute, so panning never re-renders React:
+   ```ts
+   cameraGroupRef.current.setAttribute('transform', `translate(${x}, ${y}) scale(${zoom})`)
    ```
+   Panning listens for mouse events only, and the SVG has `touch-action: none`, so a finger drag does not pan yet. Touch pan and pinch zoom are planned (issue #54).
 2. **Bounded Panning (`mapCameraHelpers.ts`)**: Prevents dragging or zooming the map endlessly off-screen into an empty void. Panning coordinates `(x, y)` are dynamically clamped to allowable zoom-dependent boundaries via `clampCamera`, keeping the map firmly in view while allowing full inspection of border territories and split coasts without dead-zone drag lag.
 3. **Wheel Zoom**: Smooth zoom centered around the cursor position with configurable clamping (min `0.75x`, max `3.0x`), notifying external toolbars via `onZoomChange`.
 4. **Imperative Handle (`EuropeMapHandle`)**: Exposes `stepZoom(delta)`, `resetCamera()`, and `getZoom()` via React `forwardRef`, enabling seamless zoom and fit control from the Left Tools Sidebar without SVG re-renders.
@@ -107,6 +108,12 @@ Marks show whether a piece is an army or a fleet: `icons` (crossed swords and a 
 ![Classic beside Star seat with every province occupied](images/display-settings-before-after.jpg)
 
 **Classic must stay pixel-identical to the original map.** With `letters`, its values in `getPieceFrame` and `DISC_SHAPES` are the original numbers. One known oddity is kept for this reason: `EUROPE_PROVINCE_GEOMETRY.CLY.unitPos` lies in the North Atlantic, so a Clyde unit draws on water in Classic. The other styles move it ashore.
+
+---
+
+## Hover
+
+Hovering a province brightens a reachable one, and hovering a unit rings it and highlights its sidebar card. These use `onPointerEnter`/`onPointerLeave` and ignore `pointerType === 'touch'`, because a tap would otherwise leave the hover on until the next tap. On touch, selecting a unit shows the same information.
 
 ---
 

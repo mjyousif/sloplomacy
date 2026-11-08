@@ -17,10 +17,9 @@ alter table public.multiplayer_games add column if not exists is_private boolean
 -- 3. Ensure indexing on room_code for fast O(1) game lookups
 create index if not exists idx_multiplayer_games_room_code on public.multiplayer_games(room_code);
 
--- 4. Update Row-Level Security policies to allow authoritative backend server operations
+-- 4. Row-Level Security.
+--    This step used to recreate "Backend and service role game management" (for all, using true),
+--    which let the public anon key write every row. Every deploy re-runs all migrations, so it gave
+--    anon full write between this file and the lock-down that follows. It now only drops that
+--    policy. The service_role policies are in 20261106023059 and 20261106030000.
 drop policy if exists "Backend and service role game management" on public.multiplayer_games;
-create policy "Backend and service role game management"
-  on public.multiplayer_games
-  for all
-  using (true)
-  with check (true);

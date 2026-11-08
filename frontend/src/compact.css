@@ -1,0 +1,634 @@
+/* =========================================================================
+   COMPACT (PHONE) LAYOUT
+   Every rule here applies only while the app shell carries data-layout="compact".
+   The breakpoint lives in one place, COMPACT_LAYOUT_QUERY in hooks/useCompactLayout.ts,
+   so this file never writes its own @media width rule. Desktop styles stay in App.css
+   and are not changed by anything below.
+   ========================================================================= */
+
+/* Mobile browsers show and hide their toolbars, so 100vh is taller than the visible page
+   there. 100dvh follows the visible height and equals 100vh on desktop. */
+.diplomacy-app-shell,
+.loading-screen,
+.error-screen {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Elements that only exist to say on a phone what a desktop tooltip says. */
+.compact-only {
+  display: none;
+}
+
+[data-layout='compact'] .compact-only {
+  display: revert;
+}
+
+/* -------------------------------------------------------------------------
+   1. SHELL, SAFE AREAS AND TOUCH BASICS
+   ------------------------------------------------------------------------- */
+[data-layout='compact'].diplomacy-app-shell {
+  /* index.html sets viewport-fit=cover, so keep content clear of the notch and home bar. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  -webkit-tap-highlight-color: rgba(200, 150, 62, 0.25);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* iOS zooms the page in when a field under 16px gets focus, and the page cannot scroll back. */
+[data-layout='compact'] input,
+[data-layout='compact'] select,
+[data-layout='compact'] textarea {
+  font-size: 16px;
+}
+
+[data-layout='compact'] .imperial-toast-banner {
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  max-width: calc(100vw - 32px);
+}
+
+/* -------------------------------------------------------------------------
+   2. MODALS
+   Cards fit the visible height and scroll, footers stack into full-width
+   buttons, and close buttons get a finger-sized target.
+   ------------------------------------------------------------------------- */
+[data-layout='compact'] .sanity-modal-backdrop,
+[data-layout='compact'] .surrender-modal-backdrop,
+[data-layout='compact'] .admin-modal-backdrop,
+[data-layout='compact'] .modal-backdrop {
+  padding: 12px;
+}
+
+[data-layout='compact'] .confirm-modal-backdrop {
+  padding: 12px;
+}
+
+[data-layout='compact'] .sanity-modal-card,
+[data-layout='compact'] .admin-modal-card {
+  max-height: calc(100dvh - 24px);
+}
+
+[data-layout='compact'] .surrender-modal-card,
+[data-layout='compact'] .confirm-modal-card,
+[data-layout='compact'] .auth-modal-card,
+[data-layout='compact'] .private-created-modal-card,
+[data-layout='compact'] .passcode-prompt-card {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+[data-layout='compact'] .private-created-modal-card,
+[data-layout='compact'] .passcode-prompt-card,
+[data-layout='compact'] .auth-modal-card {
+  padding: 18px 16px;
+}
+
+[data-layout='compact'] .sanity-modal-header,
+[data-layout='compact'] .sanity-summary-banner,
+[data-layout='compact'] .sanity-issues-list,
+[data-layout='compact'] .surrender-body-content {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+[data-layout='compact'] .sanity-modal-footer,
+[data-layout='compact'] .surrender-modal-footer,
+[data-layout='compact'] .confirm-modal-footer,
+[data-layout='compact'] .created-modal-actions,
+[data-layout='compact'] .passcode-modal-actions {
+  flex-direction: column-reverse;
+  align-items: stretch;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+[data-layout='compact'] .created-modal-actions,
+[data-layout='compact'] .passcode-modal-actions {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+[data-layout='compact'] .surrender-btn-group {
+  flex-direction: column-reverse;
+  align-items: stretch;
+}
+
+[data-layout='compact'] .sanity-modal-footer button,
+[data-layout='compact'] .surrender-modal-footer button,
+[data-layout='compact'] .confirm-modal-footer button,
+[data-layout='compact'] .created-modal-actions button,
+[data-layout='compact'] .passcode-modal-actions button {
+  min-height: 44px;
+  justify-content: center;
+  white-space: normal;
+}
+
+[data-layout='compact'] .surrender-choice-note {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #94a3b8;
+  text-align: center;
+}
+
+/* A Fix Order button beside the text squeezes the message to a sliver, so it goes underneath. */
+[data-layout='compact'] .sanity-issue-item {
+  flex-wrap: wrap;
+}
+
+[data-layout='compact'] .sanity-issue-content {
+  flex: 1 1 calc(100% - 40px);
+  min-width: 0;
+}
+
+[data-layout='compact'] .sanity-inspect-btn {
+  flex: 1 1 100%;
+  justify-content: center;
+  min-height: 44px;
+}
+
+[data-layout='compact'] .sanity-issue-header-row {
+  flex-wrap: wrap;
+}
+
+/* Close buttons */
+[data-layout='compact'] .sanity-close-x,
+[data-layout='compact'] .surrender-close-x,
+[data-layout='compact'] .confirm-modal-close,
+[data-layout='compact'] .auth-close-btn,
+[data-layout='compact'] .admin-close-btn,
+[data-layout='compact'] .modal-close-btn {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* LobbyView's private-match modals use a close button that has no style of its own. */
+[data-layout='compact'] .modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+/* The Shift+click shortcut needs a keyboard, so the tip is noise on a touch screen. */
+@media (hover: none) {
+  .confirm-modal-tip {
+    display: none;
+  }
+}
+
+/* Auth */
+[data-layout='compact'] .auth-oauth-grid {
+  grid-template-columns: 1fr;
+}
+
+[data-layout='compact'] .auth-tabs button {
+  min-height: 40px;
+}
+
+/* Admin console: reachable on a phone, not tuned for it */
+[data-layout='compact'] .admin-modal-header {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+[data-layout='compact'] .admin-status-strip {
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+}
+
+[data-layout='compact'] .admin-status-left {
+  flex-wrap: wrap;
+}
+
+[data-layout='compact'] .admin-tabs-nav {
+  overflow-x: auto;
+  padding: 0 8px;
+  scrollbar-width: none;
+}
+
+[data-layout='compact'] .admin-tab-btn {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+[data-layout='compact'] .admin-tab-body {
+  padding: 16px;
+}
+
+[data-layout='compact'] .admin-form-grid-2,
+[data-layout='compact'] .admin-form-grid-3 {
+  grid-template-columns: 1fr;
+}
+
+[data-layout='compact'] .admin-form-actions-row {
+  flex-wrap: wrap;
+}
+
+[data-layout='compact'] .admin-modal-footer {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* -------------------------------------------------------------------------
+   3. TOP BAR (CompactTopBar)
+   One row: back to lobby (or the brand in the lobby), the turn, the
+   order-problem count and a ⋯ menu.
+   ------------------------------------------------------------------------- */
+.compact-top-bar {
+  position: relative;
+  z-index: 40;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 52px;
+  padding: 0 4px;
+  background: linear-gradient(180deg, #1f242d 0%, #171b22 100%);
+  border-bottom: 1px solid #353b47;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.compact-bar-icon-btn {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.compact-bar-icon-btn:active,
+.compact-bar-icon-btn.open {
+  background: #262c38;
+}
+
+.compact-brand {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 8px;
+}
+
+.compact-brand-emblem {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.compact-brand-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #f7ebd2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-turn-text {
+  flex: 1;
+  min-width: 0;
+  font-family: 'Cinzel', serif;
+  /* Shrinks a little on narrow phones so "Winter 1901 · Adjustments" still fits at 360px. */
+  font-size: clamp(0.8rem, 3.8vw, 0.92rem);
+  font-weight: 700;
+  color: #fde68a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-issue-badge,
+.compact-winner-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 36px;
+  min-width: 44px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.compact-issue-badge.has-errors {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: #ef4444;
+  color: #fca5a5;
+  cursor: pointer;
+}
+
+.compact-issue-badge.has-warnings {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: #f59e0b;
+  color: #fde68a;
+  cursor: pointer;
+}
+
+.compact-issue-badge.is-clean {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #a7f3d0;
+}
+
+.compact-winner-badge {
+  background: rgba(200, 150, 62, 0.18);
+  border-color: #c8963e;
+  color: #fde68a;
+}
+
+.compact-menu-alert-dot {
+  position: absolute;
+  top: 9px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px #1d2129;
+}
+
+.compact-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 8px;
+  z-index: 50;
+  width: min(340px, calc(100vw - 16px));
+  max-height: calc(100dvh - 76px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: #1b202b;
+  border: 1px solid #3f4859;
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65);
+}
+
+.compact-menu-status,
+.compact-menu-match,
+.compact-menu-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+}
+
+.compact-menu-status .ws-status-dot {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+}
+
+.compact-menu-status-text,
+.compact-menu-user > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.compact-menu-status-text strong,
+.compact-menu-user strong {
+  font-size: 0.92rem;
+  color: #f1ede4;
+}
+
+.compact-menu-status-text span,
+.compact-menu-user span {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  overflow-wrap: anywhere;
+}
+
+.compact-menu-match {
+  color: #fde68a;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.compact-menu-user {
+  color: #cbd5e1;
+}
+
+.compact-menu-item,
+.compact-menu-back {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #e2e8f0;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.compact-menu-item:active,
+.compact-menu-back:active {
+  background: #262c38;
+}
+
+.compact-menu-item.primary {
+  margin-top: 4px;
+  background: linear-gradient(135deg, #c8963e 0%, #a87a2c 100%);
+  color: #14171c;
+}
+
+.compact-menu-item-chevron {
+  margin-left: auto;
+  color: #64748b;
+}
+
+.compact-menu-account {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #2d3545;
+}
+
+.compact-menu-back {
+  min-height: 44px;
+  color: #cbd5e1;
+}
+
+.compact-display-settings {
+  padding: 0 8px 8px;
+}
+
+[data-layout='compact'] .admin-override-banner {
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+}
+
+[data-layout='compact'] .admin-override-banner button {
+  min-height: 40px;
+}
+
+/* -------------------------------------------------------------------------
+   4. LOBBY
+   One column: your games, open games, Host and Join, then the intro banner
+   last, as the user chose for phones.
+   ------------------------------------------------------------------------- */
+[data-layout='compact'] .lobby-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px 12px 28px;
+}
+
+[data-layout='compact'] .lobby-main-grid {
+  order: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+[data-layout='compact'] .lobby-hero {
+  order: 2;
+  width: 100%;
+  margin: 0;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  padding: 18px 16px;
+}
+
+[data-layout='compact'] .lobby-footer-bar {
+  order: 3;
+  width: 100%;
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+[data-layout='compact'] .lobby-hero-title {
+  font-size: 1.5rem;
+}
+
+[data-layout='compact'] .lobby-mode-comparison {
+  grid-template-columns: 1fr;
+}
+
+[data-layout='compact'] .lobby-games-column {
+  gap: 16px;
+}
+
+[data-layout='compact'] .lobby-section,
+[data-layout='compact'] .lobby-create-card {
+  padding: 16px 14px;
+}
+
+[data-layout='compact'] .lobby-create-card.join-card {
+  margin-top: 16px !important; /* overrides the inline 20px gap between the two forms */
+}
+
+[data-layout='compact'] .lobby-section-header {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+[data-layout='compact'] .lobby-empty-box.locked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+[data-layout='compact'] .my-game-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+[data-layout='compact'] .my-game-action-group {
+  flex-wrap: wrap;
+}
+
+[data-layout='compact'] .my-game-action-group > button {
+  flex: 1 1 140px;
+  justify-content: center;
+}
+
+[data-layout='compact'] .lobby-game-card {
+  padding: 14px 12px;
+}
+
+[data-layout='compact'] .lobby-game-card-header,
+[data-layout='compact'] .lobby-game-badges {
+  flex-wrap: wrap;
+}
+
+[data-layout='compact'] .lobby-power-slots-grid {
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+}
+
+[data-layout='compact'] .power-slot-btn {
+  min-height: 56px;
+}
+
+[data-layout='compact'] .lobby-primary-cta,
+[data-layout='compact'] .lobby-secondary-cta,
+[data-layout='compact'] .lobby-inline-auth-btn,
+[data-layout='compact'] .lobby-refresh-btn,
+[data-layout='compact'] .enter-match-btn,
+[data-layout='compact'] .leave-campaign-btn,
+[data-layout='compact'] .lobby-claim-leave-btn,
+[data-layout='compact'] .lobby-create-submit-btn,
+[data-layout='compact'] .lobby-join-submit-btn,
+[data-layout='compact'] .privacy-toggle-btn,
+[data-layout='compact'] .create-power-option,
+[data-layout='compact'] .cred-copy-btn,
+[data-layout='compact'] .created-enter-btn,
+[data-layout='compact'] .created-close-secondary-btn {
+  min-height: 44px;
+}
+
+[data-layout='compact'] .lobby-hero-actions > * {
+  flex: 1 1 100%;
+  justify-content: center;
+}
+
+/* Small pills and labels get at least 12px of text on a phone. */
+[data-layout='compact'] .lobby-era-pill,
+[data-layout='compact'] .lobby-count-badge,
+[data-layout='compact'] .my-game-turn-pill,
+[data-layout='compact'] .players-count-pill,
+[data-layout='compact'] .game-status-pill,
+[data-layout='compact'] .lobby-claim-leave-btn,
+[data-layout='compact'] .power-slot-status,
+[data-layout='compact'] .lobby-footer-tagline,
+[data-layout='compact'] .version-badge-text,
+[data-layout='compact'] .sanity-code-pill,
+[data-layout='compact'] .sanity-overline,
+[data-layout='compact'] .surrender-overline,
+[data-layout='compact'] .admin-overline-tag {
+  font-size: 0.75rem;
+}
