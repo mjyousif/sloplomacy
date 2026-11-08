@@ -54,7 +54,7 @@ Walk the checklist in AGENTS.md section 5.1 against `git diff --stat`. The ones 
 
 ## 5. Report
 
-End with: what you ran, what passed, which screenshots you inspected, and anything you could not run (say so, don't imply it passed).
+End with: what you ran, what passed, which screenshots you inspected (scenario, step, and what each showed, or "E2E not run, because ..."), and anything you could not run (say so, don't imply it passed).
 
 ## 6. Keep the checks and these skills current
 

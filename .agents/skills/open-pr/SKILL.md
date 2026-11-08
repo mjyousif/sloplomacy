@@ -31,8 +31,18 @@ Body format that has worked well here:
 - **What changed**: a table or short list. For security or behavior fixes use a Before / Now table, one row per path.
 - **Why this approach**: the invariant it protects, with the AGENTS.md section if one applies.
 - **Verification**: counts and commands actually run (pytest, `tsc`, vitest, build, E2E scenario and screenshots checked). If a run was skipped, say so.
+- **Screenshots inspected**: if you ran an E2E scenario, name the scenario, the steps you opened, and what each showed (for example, "step 2: modal lists the Burgundy self-bounce"). If you did not run E2E, say why. Opening the images is the point, so don't list steps you didn't look at.
 - **Deploy notes**: new secrets, env vars, migrations, or "nothing needed". Reviewers act on this.
 - `Closes #<issue>` when there is one.
+
+## Attaching screenshots
+
+For visual changes (layout, map, piece styles, phone layout), attach one or two key screenshots from `artifacts/e2e/<scenario>/` as a PR comment. Backend-only or logic changes don't need images. Needs `gh` 2.99+ and write access:
+
+```powershell
+gh pr comment <n> --body-file .pr_comment.md --attach "artifacts/e2e/<scenario>/step_02_<name>.png#What it shows"
+```n
+Alt text goes after `#`. If the comment body references the file as `![alt](./path.png)`, the link is rewritten to the uploaded asset. Never commit `artifacts/`.
 
 ## Stacked PRs and conflicts
 
