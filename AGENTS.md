@@ -29,7 +29,12 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   cd backend
   python -m venv .venv
   # Windows: .venv\Scripts\Activate.ps1 | macOS/Linux: source .venv/bin/activate
-  pip install -r requirements.txt
+  pip install -r requirements-dev.txt # Or requirements.txt for tests only
+  ```
+- **Linting & Formatting (Ruff)**:
+  ```bash
+  ruff check backend/
+  ruff format --check backend/ # Or: ruff format backend/
   ```
 - **Run FastAPI Dev Server**:
   ```bash
@@ -48,13 +53,18 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   cd frontend
   npm install
   ```
-- **Run Vite Dev Server** (`http://localhost:5173` with proxy `/api` -> `:8000`):
+- **Linting & Formatting (Biome)**:
   ```bash
-  npm run dev
+  npm run lint
+  npm run format:check # Or: npm run format
   ```
 - **Type Checking**:
   ```bash
-  npx tsc --noEmit
+  npm run typecheck # Or: npx tsc --noEmit
+  ```
+- **Run Vite Dev Server** (`http://localhost:5173` with proxy `/api` -> `:8000`):
+  ```bash
+  npm run dev
   ```
 - **Unit Testing (Vitest)**:
   ```bash
@@ -63,6 +73,19 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 - **Production Build**:
   ```bash
   npm run build
+  ```
+
+### Fullstack Linting & Formatting Scripts (`scripts/`)
+- **Run Linters & Typecheck**:
+  ```bash
+  ./scripts/lint.sh
+  # Windows: .\scripts\lint.ps1
+  ```
+- **Format Code Verification / Application**:
+  ```bash
+  ./scripts/format.sh --check # Verify formatting
+  ./scripts/format.sh         # Apply formatting
+  # Windows: .\scripts\format.ps1 [-Check]
   ```
 
 ### LLM-Driven Interactive E2E Verification (`scripts/e2e_runner.py`)

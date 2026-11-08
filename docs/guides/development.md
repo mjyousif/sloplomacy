@@ -72,8 +72,8 @@ python -m venv .venv
 # macOS/Linux:
 source .venv/bin/activate
 
-# Install requirements (runtime packages plus pytest; the Docker image installs requirements-runtime.txt only)
-pip install -r requirements.txt
+# Install requirements (runtime packages plus pytest; install requirements-dev.txt for development linters)
+pip install -r requirements-dev.txt
 
 # Run dev server with auto-reload
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
@@ -109,6 +109,45 @@ To test cloud authentication locally rather than default local dev mode:
    VITE_SUPABASE_ANON_KEY=<your-anon-public-key>
    ```
 2. Restart the frontend dev server. The app will detect the credentials and switch to cloud Supabase authentication.
+
+---
+
+## Code Quality, Linting & Formatting
+
+Static analysis, linting, and formatting checks are decoupled from runtime tests:
+
+### Unified Linting & Formatting Runners
+- **Run Linters & Typecheck**:
+  ```bash
+  ./scripts/lint.sh
+  # Windows PowerShell:
+  .\scripts\lint.ps1
+  ```
+- **Check Formatting (Dry-Run)**:
+  ```bash
+  ./scripts/format.sh --check
+  # Windows PowerShell:
+  .\scripts\format.ps1 -Check
+  ```
+- **Apply Formatting**:
+  ```bash
+  ./scripts/format.sh
+  # Windows PowerShell:
+  .\scripts\format.ps1
+  ```
+
+### Individual Service Tooling
+- **Backend (Python)**:
+  - Linter & Formatter: **Ruff** (configured via `pyproject.toml`).
+  - Run lint: `ruff check backend/`
+  - Run format check: `ruff format --check backend/`
+  - Apply format: `ruff format backend/`
+- **Frontend (TypeScript & React)**:
+  - Linter & Formatter: **Biome** (configured via `frontend/biome.jsonc`).
+  - Typecheck: `npm run typecheck` (`tsc --noEmit`)
+  - Run lint: `npm run lint`
+  - Run format check: `npm run format:check`
+  - Apply format: `npm run format`
 
 ---
 

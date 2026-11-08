@@ -1,0 +1,10 @@
+# Ensure consistent line endings across platforms (Windows / macOS / Linux)
+* text=auto eol=lf
+
+# Explicit binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text eol=lf

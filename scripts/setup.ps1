@@ -20,9 +20,11 @@ if (-not (Test-Path $VenvDir)) {
 }
 $PipExe = Join-Path $VenvDir "Scripts\pip.exe"
 if (-not (Test-Path $PipExe)) { $PipExe = "pip" }
-Write-Host "Installing backend dependencies from requirements.txt..."
+$PipReq = Join-Path $BackendDir "requirements-dev.txt"
+if (-not (Test-Path $PipReq)) { $PipReq = Join-Path $BackendDir "requirements.txt" }
+Write-Host "Installing backend dependencies from $PipReq..."
 & $PipExe install --upgrade pip
-& $PipExe install -r (Join-Path $BackendDir "requirements.txt")
+& $PipExe install -r $PipReq
 Write-Host "[OK] Backend environment ready!" -ForegroundColor Green
 
 # 2. Frontend npm
