@@ -128,7 +128,10 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   // Collapsed Minimalist Rail
   if (collapsed) {
     return (
-      <aside className="tools-sidebar tools-sidebar-collapsed" aria-label="Tools Sidebar Collapsed">
+      <aside
+        className="tools-sidebar tools-sidebar-collapsed"
+        aria-label="Tools Sidebar Collapsed"
+      >
         <button
           type="button"
           data-testid="tools-sidebar-expand-btn"
@@ -174,7 +177,11 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           type="button"
           className={`sidebar-rail-btn ${sandboxMode ? 'rail-active-glow' : ''}`}
           onClick={onToggleSandboxMode}
-          title={sandboxMode ? 'Hypothetical Mode ACTIVE (Click to toggle)' : 'Enter Hypothetical Mode'}
+          title={
+            sandboxMode
+              ? 'Hypothetical Mode ACTIVE (Click to toggle)'
+              : 'Enter Hypothetical Mode'
+          }
         >
           <Eye size={16} />
         </button>
@@ -206,14 +213,19 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
 
   // Expanded Tools Sidebar
   return (
-    <aside className="tools-sidebar tools-sidebar-expanded" aria-label="Chancellery Tools & Intel">
+    <aside
+      className="tools-sidebar tools-sidebar-expanded"
+      aria-label="Chancellery Tools & Intel"
+    >
       {/* 1. SIDEBAR HEADER */}
       <div className="tools-sidebar-header">
         <div className="tools-header-title">
           <Sliders size={16} className="tools-header-icon" />
           <div>
             <h3>CHANCELLERY TOOLS</h3>
-            <span className="tools-header-sub">Intel, Camera &amp; War Room</span>
+            <span className="tools-header-sub">
+              Intel, Camera &amp; War Room
+            </span>
           </div>
         </div>
         <button
@@ -284,7 +296,10 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               </span>
               <span className="legend-label">Support Link</span>
             </div>
-            <div className="legend-item" title="Fleet convoying an army across sea">
+            <div
+              className="legend-item"
+              title="Fleet convoying an army across sea"
+            >
               <span className="legend-swatch swatch-convoy">
                 <Anchor size={12} />
               </span>
@@ -301,7 +316,9 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
 
         {/* 4. GREAT POWERS STANDING & SELECTION */}
         <CollapsibleSection
-          title={isMultiplayer ? 'DIPLOMATIC STANDING' : 'COMMAND NATION (SELECT)'}
+          title={
+            isMultiplayer ? 'DIPLOMATIC STANDING' : 'COMMAND NATION (SELECT)'
+          }
           badge={<span className="tools-section-count">7 Powers</span>}
           collapsible={true}
           defaultOpen={true}
@@ -339,9 +356,14 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
                     <span className="power-card-crest">{meta.crest}</span>
                     <div className="power-card-info">
                       <div className="power-card-name">
-                        <span className="power-dot" style={{ backgroundColor: meta.color }} />
+                        <span
+                          className="power-dot"
+                          style={{ backgroundColor: meta.color }}
+                        />
                         <strong>{meta.shortName}</strong>
-                        {isSelected && <span className="active-tag">Active</span>}
+                        {isSelected && (
+                          <span className="active-tag">Active</span>
+                        )}
                       </div>
                       <div className="power-card-metrics">
                         <span>{scs} SC</span>
@@ -353,19 +375,31 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
 
                   <div className="power-card-status">
                     {isSurr ? (
-                      <span className="mini-status-tag surrendered" title="Civil Disorder">
+                      <span
+                        className="mini-status-tag surrendered"
+                        title="Civil Disorder"
+                      >
                         <Flag size={10} /> CD
                       </span>
                     ) : isFinal ? (
-                      <span className="mini-status-tag finalized" title="Finalized">
+                      <span
+                        className="mini-status-tag finalized"
+                        title="Finalized"
+                      >
                         <CheckCircle2 size={11} />
                       </span>
                     ) : pwrIssues.length > 0 ? (
-                      <span className="mini-status-tag warning" title={`${pwrIssues.length} issues`}>
+                      <span
+                        className="mini-status-tag warning"
+                        title={`${pwrIssues.length} issues`}
+                      >
                         {pwrIssues.length}⚠
                       </span>
                     ) : (
-                      <span className="mini-status-tag pending" title="Drafting Orders">
+                      <span
+                        className="mini-status-tag pending"
+                        title="Drafting Orders"
+                      >
                         Draft
                       </span>
                     )}
@@ -379,7 +413,11 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
         {/* 5. HYPOTHETICAL MODE & TACTICAL AI GENERAL STAFF */}
         <CollapsibleSection
           title="HYPOTHETICAL MODE & PRE-MOVES"
-          badge={sandboxMode ? <span className="sandbox-live-pill">ACTIVE</span> : undefined}
+          badge={
+            sandboxMode ? (
+              <span className="sandbox-live-pill">ACTIVE</span>
+            ) : undefined
+          }
           collapsible={false}
         >
           <button
@@ -390,7 +428,9 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           >
             <Eye size={14} />
             <span>
-              {sandboxMode ? 'Exit Mode (Discard Guesses)' : 'Enter Hypothetical Mode'}
+              {sandboxMode
+                ? 'Exit Mode (Discard Guesses)'
+                : 'Enter Hypothetical Mode'}
             </span>
           </button>
 
@@ -493,7 +533,8 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
             className="admin-tools-section"
           >
             <p className="tools-micro-desc">
-              Roll back turns, teleport units, spawn or destroy forces arbitrarily.
+              Roll back turns, teleport units, spawn or destroy forces
+              arbitrarily.
             </p>
             <div className="admin-actions-column">
               <button
@@ -514,7 +555,11 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
                   title="Toggle Direct-Edit Override on the board"
                 >
                   <Shield size={13} />
-                  <span>{adminOverrideActive ? 'Direct-Edit: ON' : 'Direct-Edit: OFF'}</span>
+                  <span>
+                    {adminOverrideActive
+                      ? 'Direct-Edit: ON'
+                      : 'Direct-Edit: OFF'}
+                  </span>
                 </button>
               )}
             </div>

@@ -45,7 +45,7 @@ export const DEFAULT_MARGIN_Y = 350;
  */
 export function getCameraBounds(
   zoom: number,
-  options?: CameraBoundsOptions
+  options?: CameraBoundsOptions,
 ): CameraBounds {
   const cx = options?.centerX ?? MAP_CENTER_X;
   const cy = options?.centerY ?? MAP_CENTER_Y;
@@ -67,12 +67,14 @@ export function getCameraBounds(
  */
 export function clampCamera(
   camera: CameraState,
-  options?: CameraBoundsOptions
+  options?: CameraBoundsOptions,
 ): CameraState {
   const minZoom = options?.minZoom ?? MIN_ZOOM;
   const maxZoom = options?.maxZoom ?? MAX_ZOOM;
 
-  const rawZoom = Number.isFinite(camera.zoom) ? camera.zoom : DEFAULT_CAMERA.zoom;
+  const rawZoom = Number.isFinite(camera.zoom)
+    ? camera.zoom
+    : DEFAULT_CAMERA.zoom;
   const clampedZoom = Math.min(maxZoom, Math.max(minZoom, rawZoom));
 
   const bounds = getCameraBounds(clampedZoom, options);
@@ -109,7 +111,8 @@ export interface ViewportFit {
 }
 
 export function getViewportFit(width: number, height: number): ViewportFit {
-  const scale = Math.min(width / MAP_VIEWBOX_WIDTH, height / MAP_VIEWBOX_HEIGHT) || 1;
+  const scale =
+    Math.min(width / MAP_VIEWBOX_WIDTH, height / MAP_VIEWBOX_HEIGHT) || 1;
   return {
     scale,
     offsetX: (width - MAP_VIEWBOX_WIDTH * scale) / 2,
@@ -118,7 +121,11 @@ export function getViewportFit(width: number, height: number): ViewportFit {
 }
 
 /** Turns a point in element pixels (relative to its top-left corner) into viewBox units. */
-export function elementPointToViewBox(pt: Point2D, width: number, height: number): Point2D {
+export function elementPointToViewBox(
+  pt: Point2D,
+  width: number,
+  height: number,
+): Point2D {
   const { scale, offsetX, offsetY } = getViewportFit(width, height);
   return { x: (pt.x - offsetX) / scale, y: (pt.y - offsetY) / scale };
 }
@@ -134,7 +141,7 @@ export function zoomAtPoint(
   camera: CameraState,
   anchor: Point2D,
   newZoom: number,
-  options?: CameraBoundsOptions
+  options?: CameraBoundsOptions,
 ): CameraState {
   const minZoom = options?.minZoom ?? MIN_ZOOM;
   const maxZoom = options?.maxZoom ?? MAX_ZOOM;
@@ -151,7 +158,7 @@ export function zoomAtPoint(
       y: anchor.y - cy - (boardY - cy) * zoom,
       zoom,
     },
-    options
+    options,
   );
 }
 
@@ -164,14 +171,20 @@ export function pinchStep(
   camera: CameraState,
   prev: [Point2D, Point2D],
   next: [Point2D, Point2D],
-  options?: CameraBoundsOptions
+  options?: CameraBoundsOptions,
 ): CameraState {
   const prevDist = Math.hypot(prev[0].x - prev[1].x, prev[0].y - prev[1].y);
   const nextDist = Math.hypot(next[0].x - next[1].x, next[0].y - next[1].y);
   const ratio = prevDist > 0 && nextDist > 0 ? nextDist / prevDist : 1;
 
-  const prevMid = { x: (prev[0].x + prev[1].x) / 2, y: (prev[0].y + prev[1].y) / 2 };
-  const nextMid = { x: (next[0].x + next[1].x) / 2, y: (next[0].y + next[1].y) / 2 };
+  const prevMid = {
+    x: (prev[0].x + prev[1].x) / 2,
+    y: (prev[0].y + prev[1].y) / 2,
+  };
+  const nextMid = {
+    x: (next[0].x + next[1].x) / 2,
+    y: (next[0].y + next[1].y) / 2,
+  };
 
   // Move first, without clamping, so a board edge doesn't eat part of the zoom anchor.
   const moved = {
@@ -192,12 +205,14 @@ export function getPhoneDefaultCamera(
   width: number,
   height: number,
   focus: Point2D | null,
-  options?: CameraBoundsOptions
+  options?: CameraBoundsOptions,
 ): CameraState {
-  if (!(width > 0) || !(height > 0)) return clampCamera({ ...DEFAULT_CAMERA }, options);
+  if (!(width > 0) || !(height > 0))
+    return clampCamera({ ...DEFAULT_CAMERA }, options);
   const fillHeightZoom =
     (height * MAP_VIEWBOX_WIDTH) / (MAP_VIEWBOX_HEIGHT * width);
-  if (fillHeightZoom <= DEFAULT_CAMERA.zoom) return clampCamera({ ...DEFAULT_CAMERA }, options);
+  if (fillHeightZoom <= DEFAULT_CAMERA.zoom)
+    return clampCamera({ ...DEFAULT_CAMERA }, options);
 
   const cx = options?.centerX ?? MAP_CENTER_X;
   const cy = options?.centerY ?? MAP_CENTER_Y;
@@ -210,6 +225,6 @@ export function getPhoneDefaultCamera(
       y: 0,
       zoom,
     },
-    options
+    options,
   );
 }

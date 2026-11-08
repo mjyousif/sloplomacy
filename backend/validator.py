@@ -124,7 +124,9 @@ def validate_orders(
 
     # --- RETREATS PHASE VALIDATION ---
     if phase == "Retreats":
-        retreats_by_power_and_dest: Dict[Power, Dict[str, List[Unit]]] = defaultdict(lambda: defaultdict(list))
+        retreats_by_power_and_dest: Dict[Power, Dict[str, List[Unit]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
         for unit in units:
             if not unit.is_dislodged:
                 continue
@@ -160,7 +162,9 @@ def validate_orders(
                     u_loc = f"{unit.province}/{unit.coast}" if unit.coast else unit.province
                     u_key = f"{unit.unit_type.value} {u_loc}"
                     p_ret = retreats.get(unit.power.value, {})
-                    valid_locs = p_ret.get(u_key, p_ret.get(f"{unit.unit_type.value} {unit.province}", []))
+                    valid_locs = p_ret.get(
+                        u_key, p_ret.get(f"{unit.unit_type.value} {unit.province}", [])
+                    )
                     valid_bases = {split_province_code(loc)[0] for loc in valid_locs}
                     if order.target not in valid_bases:
                         add_issue(
@@ -177,7 +181,9 @@ def validate_orders(
         for power, dest_map in retreats_by_power_and_dest.items():
             for dest, ret_units in dest_map.items():
                 if len(ret_units) > 1:
-                    u_names = ", ".join(f"{u.unit_type.value} {p_name(u.province)}" for u in ret_units)
+                    u_names = ", ".join(
+                        f"{u.unit_type.value} {p_name(u.province)}" for u in ret_units
+                    )
                     add_issue(
                         IssueSeverity.WARNING,
                         IssueCode.SELF_BOUNCE,
@@ -200,7 +206,9 @@ def validate_orders(
                 if count < 0:
                     needed_disbands = abs(count)
                     disbanding_units = [
-                        u for u in pwr_units if orders.get(u.id) and orders[u.id].order_type == OrderType.DISBAND
+                        u
+                        for u in pwr_units
+                        if orders.get(u.id) and orders[u.id].order_type == OrderType.DISBAND
                     ]
                     if len(disbanding_units) < needed_disbands:
                         rem = needed_disbands - len(disbanding_units)
@@ -216,12 +224,14 @@ def validate_orders(
                 elif count > 0 and homes and include_unassigned_warnings:
                     slots = min(count, len(homes))
                     chosen = [
-                        h for h in homes
+                        h
+                        for h in homes
                         if orders.get(f"BUILD_{p_str}_{h}")
                         and orders[f"BUILD_{p_str}_{h}"].order_type == OrderType.BUILD
                     ]
                     undecided = [
-                        h for h in homes
+                        h
+                        for h in homes
                         if orders.get(f"BUILD_{p_str}_{h}")
                         and orders[f"BUILD_{p_str}_{h}"].order_type == OrderType.WAIVE
                         and not orders[f"BUILD_{p_str}_{h}"].is_explicit
@@ -280,7 +290,9 @@ def validate_orders(
             )
             if not ok:
                 # Check if Army could be convoyed
-                if unit.unit_type == UnitType.ARMY and can_army_be_convoyed_theoretically(unit.province, order.target):
+                if unit.unit_type == UnitType.ARMY and can_army_be_convoyed_theoretically(
+                    unit.province, order.target
+                ):
                     if not has_active_convoy_chain(unit.province, order.target, units, orders):
                         add_issue(
                             IssueSeverity.WARNING,
@@ -437,7 +449,10 @@ def validate_orders(
                         )
 
         elif order.order_type == OrderType.CONVOY:
-            if unit.unit_type != UnitType.FLEET or PROVINCES[unit.province].type != ProvinceType.SEA:
+            if (
+                unit.unit_type != UnitType.FLEET
+                or PROVINCES[unit.province].type != ProvinceType.SEA
+            ):
                 add_issue(
                     IssueSeverity.ERROR,
                     IssueCode.ILLEGAL_CONVOY,
@@ -474,7 +489,11 @@ def validate_orders(
                 )
             else:
                 conv_order = orders.get(convoyed_unit.id)
-                if not conv_order or conv_order.order_type != OrderType.MOVE or conv_order.target != order.target:
+                if (
+                    not conv_order
+                    or conv_order.order_type != OrderType.MOVE
+                    or conv_order.target != order.target
+                ):
                     add_issue(
                         IssueSeverity.WARNING,
                         IssueCode.BROKEN_CONVOY,
@@ -492,16 +511,28 @@ def validate_orders(
         if u.is_dislodged:
             continue
         o = orders.get(u.id)
-        if o and o.order_type == OrderType.SUPPORT and o.aux_unit_origin and o.target and o.aux_unit_origin != o.target:
+        if (
+            o
+            and o.order_type == OrderType.SUPPORT
+            and o.aux_unit_origin
+            and o.target
+            and o.aux_unit_origin != o.target
+        ):
             sup_unit = unit_by_prov.get(o.aux_unit_origin)
             if sup_unit:
                 sup_order = orders.get(sup_unit.id)
-                if sup_order and sup_order.order_type == OrderType.MOVE and sup_order.target == o.target:
+                if (
+                    sup_order
+                    and sup_order.order_type == OrderType.MOVE
+                    and sup_order.target == o.target
+                ):
                     can_s, _ = can_unit_support_province(u.unit_type, u.province, u.coast, o.target)
                     if can_s:
                         move_support_counts[sup_unit.id] += 1
 
-    moves_by_power_and_target: Dict[Power, Dict[str, List[Unit]]] = defaultdict(lambda: defaultdict(list))
+    moves_by_power_and_target: Dict[Power, Dict[str, List[Unit]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
     for u in units:
         if u.is_dislodged:
             continue
@@ -517,7 +548,9 @@ def validate_orders(
                     key=lambda x: x[0],
                     reverse=True,
                 )
-                unit_names = ", ".join(f"{mu.unit_type.value} {p_name(mu.province)}" for mu in moving_units)
+                unit_names = ", ".join(
+                    f"{mu.unit_type.value} {p_name(mu.province)}" for mu in moving_units
+                )
                 if strengths[0][0] == strengths[1][0]:
                     add_issue(
                         IssueSeverity.WARNING,
@@ -557,7 +590,11 @@ def validate_orders(
                             [mover.province, dest],
                             power,
                         )
-                    elif occ_order.target == mover.province and not occ_order.via_convoy and not orders[mover.id].via_convoy:
+                    elif (
+                        occ_order.target == mover.province
+                        and not occ_order.via_convoy
+                        and not orders[mover.id].via_convoy
+                    ):
                         if mover.id < occupant.id:
                             add_issue(
                                 IssueSeverity.WARNING,

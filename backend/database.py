@@ -100,9 +100,7 @@ def get_supabase_key() -> str:
     sync would then take every saved game for deleted and drop it.
     """
     key = (
-        os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-        or os.environ.get("SUPABASE_KEY")
-        or ""
+        os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY") or ""
     ).strip()
     if not key:
         if get_supabase_url():
@@ -422,7 +420,9 @@ async def delete_game_from_db(
             logger.debug("Deleted game '%s' from Supabase.", game_id)
             return True
 
-        logger.warning("Supabase delete failed for '%s': HTTP %d %s", game_id, resp.status_code, resp.text)
+        logger.warning(
+            "Supabase delete failed for '%s': HTTP %d %s", game_id, resp.status_code, resp.text
+        )
         return False
 
     except Exception as ex:

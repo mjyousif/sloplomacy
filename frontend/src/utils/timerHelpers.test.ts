@@ -31,7 +31,9 @@ describe('timerHelpers', () => {
   });
 
   it('names the turn the way the server does', () => {
-    expect(turnLabel({ season: 'Spring', year: 1901, phase: 'Movement' })).toBe('Spring 1901 Movement');
+    expect(turnLabel({ season: 'Spring', year: 1901, phase: 'Movement' })).toBe(
+      'Spring 1901 Movement',
+    );
   });
 
   it('finds who has not voted or readied up', () => {

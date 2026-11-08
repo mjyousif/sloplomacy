@@ -40,12 +40,12 @@ interface LobbyViewProps {
     name: string,
     power: Power,
     isPrivate?: boolean,
-    passcode?: string
+    passcode?: string,
   ) => Promise<MultiplayerGameSummary | void>;
   onJoinOrEnterGame: (
     gameId: string,
     power: Power,
-    passcode?: string
+    passcode?: string,
   ) => Promise<void>;
   onOpenSurrenderModal: (game: MultiplayerGameSummary, power: Power) => void;
 }
@@ -66,7 +66,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
   // Host game form state
   const [newGameName, setNewGameName] = useState('');
-  const [selectedCreatePower, setSelectedCreatePower] = useState<Power>('FRANCE');
+  const [selectedCreatePower, setSelectedCreatePower] =
+    useState<Power>('FRANCE');
   const [isPrivate, setIsPrivate] = useState<boolean>(false);
   const [passcode, setPasscode] = useState<string>('');
   const [creating, setCreating] = useState(false);
@@ -95,7 +96,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   } | null>(null);
   const [enteredModalPasscode, setEnteredModalPasscode] = useState('');
   const [passcodeModalSubmitting, setPasscodeModalSubmitting] = useState(false);
-  const [passcodeModalError, setPasscodeModalError] = useState<string | null>(null);
+  const [passcodeModalError, setPasscodeModalError] = useState<string | null>(
+    null,
+  );
 
   const [joiningKey, setJoiningKey] = useState<string | null>(null);
 
@@ -110,7 +113,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   // Separate games into user's active games vs all multiplayer lobbies
   const myGames = user
     ? games.filter((g) =>
-        Object.values(g.participants || {}).some((p) => p.user_id === user.id)
+        Object.values(g.participants || {}).some((p) => p.user_id === user.id),
       )
     : [];
 
@@ -121,7 +124,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     if (!user) {
       onOpenAuth(
         'Sign in or create an account to host a new multiplayer Diplomacy campaign.',
-        'signup'
+        'signup',
       );
       return;
     }
@@ -136,7 +139,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         newGameName.trim() || `${user.displayName}'s 1901 Campaign`,
         selectedCreatePower,
         isPrivate,
-        passcode.trim()
+        passcode.trim(),
       );
       if (isPrivate && summary && passcode.trim()) {
         setCreatedPrivateModal({
@@ -157,12 +160,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
   const handlePowerSlotClick = async (
     game: MultiplayerGameSummary,
-    power: Power
+    power: Power,
   ) => {
     if (!user) {
       onOpenAuth(
         `Sign in or create an account to claim ${POWER_METADATA[power].shortName} in "${game.name}".`,
-        'signin'
+        'signin',
       );
       return;
     }
@@ -170,7 +173,10 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     const isAlreadyClaimedByMe =
       game.participants && game.participants[power]?.user_id === user.id;
     const isAlreadyInThisGame = Boolean(
-      user && Object.values(game.participants || {}).some((p) => p.user_id === user.id)
+      user &&
+        Object.values(game.participants || {}).some(
+          (p) => p.user_id === user.id,
+        ),
     );
 
     // If private with passcode and user isn't already a participant, ask for passcode!
@@ -201,12 +207,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       await onJoinOrEnterGame(
         passcodeModalTarget.game.game_id,
         passcodeModalTarget.power,
-        enteredModalPasscode.trim()
+        enteredModalPasscode.trim(),
       );
       setPasscodeModalTarget(null);
     } catch (err: any) {
       setPasscodeModalError(
-        err.message || 'Incorrect passcode for this private campaign.'
+        err.message || 'Incorrect passcode for this private campaign.',
       );
     } finally {
       setPasscodeModalSubmitting(false);
@@ -230,7 +236,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       setJoinCodePasscode('');
     } catch (err: any) {
       setJoinCodeError(
-        err.message || 'Could not join campaign. Please verify Game ID and passcode.'
+        err.message ||
+          'Could not join campaign. Please verify Game ID and passcode.',
       );
     } finally {
       setJoinCodeLoading(false);
@@ -256,13 +263,15 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               <>
                 Welcome back, Envoy <strong>{user.displayName}</strong>. Command
                 your nation in power-locked multiplayer campaigns, or open the
-                solo sandbox with automated General Staff AI to test multi-power maneuvers.
+                solo sandbox with automated General Staff AI to test multi-power
+                maneuvers.
               </>
             ) : (
               <>
                 Experiment freely with the full 7-power tactical engine in{' '}
-                <strong>Guest Solo Sandbox</strong>—now powered with intelligent tactical AI—or
-                sign in to claim your own nation, save scenarios, and wage multiplayer campaigns.
+                <strong>Guest Solo Sandbox</strong>—now powered with intelligent
+                tactical AI—or sign in to claim your own nation, save scenarios,
+                and wage multiplayer campaigns.
               </>
             )}
           </p>
@@ -276,9 +285,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             >
               <FlaskConical size={18} />
               <span>
-                {user
-                  ? 'Launch Solo Sandbox'
-                  : 'Launch Solo Sandbox (Guest)'}
+                {user ? 'Launch Solo Sandbox' : 'Launch Solo Sandbox (Guest)'}
               </span>
             </button>
 
@@ -343,9 +350,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               <div className="lobby-empty-box locked">
                 <Lock size={22} />
                 <div>
-                  <strong>Account Required to Save &amp; Track Campaigns</strong>
+                  <strong>
+                    Account Required to Save &amp; Track Campaigns
+                  </strong>
                   <p>
-                    Sign in to see your active multiplayer nations and saved tactical studies here.
+                    Sign in to see your active multiplayer nations and saved
+                    tactical studies here.
                   </p>
                 </div>
                 <button
@@ -359,14 +369,16 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             ) : myGames.length === 0 ? (
               <div className="lobby-empty-box">
                 <p>
-                  You haven&apos;t joined any campaigns yet. Host a public or private campaign {hostFormPlace}, or join using a Game ID &amp; passcode!
+                  You haven&apos;t joined any campaigns yet. Host a public or
+                  private campaign {hostFormPlace}, or join using a Game ID
+                  &amp; passcode!
                 </p>
               </div>
             ) : (
               <div className="my-games-list">
                 {myGames.map((game) => {
                   const myEntry = Object.values(game.participants || {}).find(
-                    (p) => p.user_id === user.id
+                    (p) => p.user_id === user.id,
                   );
                   const myPower = myEntry?.power || 'FRANCE';
                   const pMeta = POWER_METADATA[myPower];
@@ -387,7 +399,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                             </span>
                           )}
                           {game.is_sandbox && (
-                            <span className="my-game-sandbox-tag">Saved Sandbox</span>
+                            <span className="my-game-sandbox-tag">
+                              Saved Sandbox
+                            </span>
                           )}
                         </div>
                         <div className="my-game-sub">
@@ -406,7 +420,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                               isFinalized ? 'ready' : 'pending'
                             }`}
                           >
-                            {isFinalized ? '✓ Orders Finalized' : '● Orders Pending'}
+                            {isFinalized
+                              ? '✓ Orders Finalized'
+                              : '● Orders Pending'}
                           </span>
                         </div>
                       </div>
@@ -427,8 +443,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                             game.is_sandbox
                               ? 'Delete saved solo sandbox scenario'
                               : game.status === 'active'
-                              ? `Surrender & leave ${game.name}`
-                              : `Leave ${game.name} lobby`
+                                ? `Surrender & leave ${game.name}`
+                                : `Leave ${game.name} lobby`
                           }
                           onClick={() => onOpenSurrenderModal(game, myPower)}
                         >
@@ -437,8 +453,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                             {game.is_sandbox
                               ? 'Delete'
                               : game.status === 'active'
-                              ? 'Surrender & Leave'
-                              : 'Leave'}
+                                ? 'Surrender & Leave'
+                                : 'Leave'}
                           </span>
                         </button>
                       </div>
@@ -477,7 +493,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   <div>
                     <strong>No Active Campaigns Right Now</strong>
                     <p>
-                      There are no active multiplayer lobbies yet. Host a new public or private match {hostFormPlace}, or join a friend&apos;s game using their Game ID and passcode!
+                      There are no active multiplayer lobbies yet. Host a new
+                      public or private match {hostFormPlace}, or join a
+                      friend&apos;s game using their Game ID and passcode!
                     </p>
                   </div>
                 </div>
@@ -487,7 +505,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   const claimedCount = Object.keys(participants).length;
                   const myExistingClaim = user
                     ? Object.values(participants).find(
-                        (p) => p.user_id === user.id
+                        (p) => p.user_id === user.id,
                       )
                     : undefined;
 
@@ -498,19 +516,26 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                           <div className="lobby-game-title-row">
                             <h3 className="lobby-game-title">{game.name}</h3>
                             {game.is_private && (
-                              <span className="game-status-pill private" title="Private lobby protected by passcode">
+                              <span
+                                className="game-status-pill private"
+                                title="Private lobby protected by passcode"
+                              >
                                 <Lock size={11} /> Private
                               </span>
                             )}
                           </div>
                           <span className="lobby-game-meta">
                             {game.season} {game.year} ({game.phase}) · Hosted by{' '}
-                            {game.created_by} · <span className="game-id-mono">ID: {game.game_id}</span>
+                            {game.created_by} ·{' '}
+                            <span className="game-id-mono">
+                              ID: {game.game_id}
+                            </span>
                           </span>
                         </div>
                         <div className="lobby-game-badges">
                           <span className="players-count-pill">
-                            <Users size={13} /> {claimedCount} / 7 Powers Claimed
+                            <Users size={13} /> {claimedCount} / 7 Powers
+                            Claimed
                           </span>
                           <span
                             className={`game-status-pill ${
@@ -531,17 +556,23 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                               You are commanding{' '}
                               <strong>
                                 {POWER_METADATA[myExistingClaim.power].crest}{' '}
-                                {POWER_METADATA[myExistingClaim.power].shortName}
+                                {
+                                  POWER_METADATA[myExistingClaim.power]
+                                    .shortName
+                                }
                               </strong>{' '}
-                              in this campaign. Click your country below to enter, or
-                              select an unclaimed nation to switch.
+                              in this campaign. Click your country below to
+                              enter, or select an unclaimed nation to switch.
                             </span>
                             <button
                               type="button"
                               className="lobby-claim-leave-btn"
                               title="Surrender command and leave this match"
                               onClick={() =>
-                                onOpenSurrenderModal(game, myExistingClaim.power)
+                                onOpenSurrenderModal(
+                                  game,
+                                  myExistingClaim.power,
+                                )
                               }
                             >
                               <Flag size={12} />
@@ -554,8 +585,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                           </div>
                         ) : (
                           <span>
-                            Select an available Great Power below to claim it and
-                            enter the match{game.has_passcode ? ' (Passcode Required)' : ''}:
+                            Select an available Great Power below to claim it
+                            and enter the match
+                            {game.has_passcode ? ' (Passcode Required)' : ''}:
                           </span>
                         )}
                       </div>
@@ -566,8 +598,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                           const occupant = participants[pwr];
                           const isMine =
                             Boolean(user) && occupant?.user_id === user?.id;
-                          const isTakenByOther =
-                            Boolean(occupant) && !isMine;
+                          const isTakenByOther = Boolean(occupant) && !isMine;
                           const isBusy =
                             joiningKey === `${game.game_id}_${pwr}`;
 
@@ -581,15 +612,15 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                                 isMine
                                   ? 'slot-mine'
                                   : isTakenByOther
-                                  ? 'slot-taken'
-                                  : 'slot-open'
+                                    ? 'slot-taken'
+                                    : 'slot-open'
                               }`}
                               style={{
                                 borderColor: isMine
                                   ? meta.color
                                   : isTakenByOther
-                                  ? 'rgba(0,0,0,0.12)'
-                                  : meta.color,
+                                    ? 'rgba(0,0,0,0.12)'
+                                    : meta.color,
                                 backgroundColor: isMine
                                   ? meta.lightBg
                                   : undefined,
@@ -623,7 +654,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                                   </span>
                                 ) : (
                                   <span className="slot-claim-label">
-                                    {game.has_passcode ? '🔒' : '+'} Claim {meta.shortName}
+                                    {game.has_passcode ? '🔒' : '+'} Claim{' '}
+                                    {meta.shortName}
                                   </span>
                                 )}
                               </div>
@@ -648,7 +680,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               <h3>Host New Multiplayer Game</h3>
             </div>
             <p className="lobby-create-desc">
-              Create a new 1901 European theater as either a public match or a private campaign with a secret passcode.
+              Create a new 1901 European theater as either a public match or a
+              private campaign with a secret passcode.
             </p>
 
             <form onSubmit={handleCreateMatch} className="lobby-create-form">
@@ -691,7 +724,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
               {isPrivate && (
                 <div className="lobby-field">
-                  <label htmlFor="private-passcode">Campaign Passcode / PIN</label>
+                  <label htmlFor="private-passcode">
+                    Campaign Passcode / PIN
+                  </label>
                   <input
                     id="private-passcode"
                     type="text"
@@ -701,7 +736,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                     required={isPrivate}
                   />
                   <span className="field-hint">
-                    Players will need to enter this passcode to join your private campaign.
+                    Players will need to enter this passcode to join your
+                    private campaign.
                   </span>
                 </div>
               )}
@@ -722,9 +758,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                         }`}
                         style={{
                           borderColor: selected ? meta.color : undefined,
-                          backgroundColor: selected
-                            ? meta.lightBg
-                            : undefined,
+                          backgroundColor: selected ? meta.lightBg : undefined,
                         }}
                       >
                         <span>{meta.crest}</span>
@@ -752,21 +786,25 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   {creating
                     ? 'Creating Campaign...'
                     : user
-                    ? `Create ${isPrivate ? 'Private' : ''} & Play as ${POWER_METADATA[selectedCreatePower].shortName}`
-                    : 'Sign In to Host Campaign'}
+                      ? `Create ${isPrivate ? 'Private' : ''} & Play as ${POWER_METADATA[selectedCreatePower].shortName}`
+                      : 'Sign In to Host Campaign'}
                 </span>
               </button>
             </form>
           </div>
 
           {/* 2. Join Private Campaign by Game ID & Passcode */}
-          <div className="lobby-create-card join-card" style={{ marginTop: '20px' }}>
+          <div
+            className="lobby-create-card join-card"
+            style={{ marginTop: '20px' }}
+          >
             <div className="lobby-create-header">
               <KeyRound size={18} />
               <h3>Join Private Campaign</h3>
             </div>
             <p className="lobby-create-desc">
-              Have a Game ID and passcode from a host? Enter them below to claim your nation and join the war room.
+              Have a Game ID and passcode from a host? Enter them below to claim
+              your nation and join the war room.
             </p>
 
             <form onSubmit={handleJoinCodeSubmit} className="lobby-create-form">
@@ -809,9 +847,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                         }`}
                         style={{
                           borderColor: selected ? meta.color : undefined,
-                          backgroundColor: selected
-                            ? meta.lightBg
-                            : undefined,
+                          backgroundColor: selected ? meta.lightBg : undefined,
                         }}
                       >
                         <span>{meta.crest}</span>
@@ -839,8 +875,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   {joinCodeLoading
                     ? 'Verifying & Joining...'
                     : user
-                    ? `Unlock & Claim ${POWER_METADATA[joinCodePower].shortName}`
-                    : 'Sign In to Join Campaign'}
+                      ? `Unlock & Claim ${POWER_METADATA[joinCodePower].shortName}`
+                      : 'Sign In to Join Campaign'}
                 </span>
               </button>
             </form>
@@ -850,7 +886,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
       {/* FOOTER BAR */}
       <footer className="lobby-footer-bar">
-        <span className="lobby-footer-tagline">Sloplomacy &bull; 1901 Tactical Engine</span>
+        <span className="lobby-footer-tagline">
+          Sloplomacy &bull; 1901 Tactical Engine
+        </span>
         <VersionBadge />
       </footer>
 
@@ -872,8 +910,10 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               </button>
             </div>
             <p className="created-modal-desc">
-              Your private campaign <strong>&ldquo;{createdPrivateModal.name}&rdquo;</strong> has been created.
-              Share this <strong>Game ID</strong> and <strong>Passcode</strong> with other players so they can enter:
+              Your private campaign{' '}
+              <strong>&ldquo;{createdPrivateModal.name}&rdquo;</strong> has been
+              created. Share this <strong>Game ID</strong> and{' '}
+              <strong>Passcode</strong> with other players so they can enter:
             </p>
 
             <div className="credential-box-wrap">
@@ -885,21 +925,33 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   className="cred-copy-btn"
                   onClick={() => handleCopy(createdPrivateModal.gameId, 'gid')}
                 >
-                  {copiedField === 'gid' ? <Check size={14} /> : <Copy size={14} />}
+                  {copiedField === 'gid' ? (
+                    <Check size={14} />
+                  ) : (
+                    <Copy size={14} />
+                  )}
                   <span>{copiedField === 'gid' ? 'Copied!' : 'Copy ID'}</span>
                 </button>
               </div>
 
               <div className="credential-row">
                 <span className="cred-label">Passcode:</span>
-                <span className="cred-value highlight">{createdPrivateModal.passcode}</span>
+                <span className="cred-value highlight">
+                  {createdPrivateModal.passcode}
+                </span>
                 <button
                   type="button"
                   className="cred-copy-btn"
                   onClick={() => handleCopy(createdPrivateModal.passcode, 'pw')}
                 >
-                  {copiedField === 'pw' ? <Check size={14} /> : <Copy size={14} />}
-                  <span>{copiedField === 'pw' ? 'Copied!' : 'Copy Passcode'}</span>
+                  {copiedField === 'pw' ? (
+                    <Check size={14} />
+                  ) : (
+                    <Copy size={14} />
+                  )}
+                  <span>
+                    {copiedField === 'pw' ? 'Copied!' : 'Copy Passcode'}
+                  </span>
                 </button>
               </div>
             </div>
@@ -947,11 +999,17 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               </button>
             </div>
             <p className="created-modal-desc">
-              <strong>&ldquo;{passcodeModalTarget.game.name}&rdquo;</strong> is a private campaign.
-              Enter the passcode set by the host to claim{' '}
-              <strong>{POWER_METADATA[passcodeModalTarget.power].shortName}</strong>:
+              <strong>&ldquo;{passcodeModalTarget.game.name}&rdquo;</strong> is
+              a private campaign. Enter the passcode set by the host to claim{' '}
+              <strong>
+                {POWER_METADATA[passcodeModalTarget.power].shortName}
+              </strong>
+              :
             </p>
-            <form onSubmit={handlePasscodeModalSubmit} className="passcode-modal-form">
+            <form
+              onSubmit={handlePasscodeModalSubmit}
+              className="passcode-modal-form"
+            >
               <div className="lobby-field">
                 <label htmlFor="modal-passcode-input">Passcode</label>
                 <input
@@ -974,7 +1032,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 <button
                   type="submit"
                   className="created-enter-btn"
-                  disabled={passcodeModalSubmitting || !enteredModalPasscode.trim()}
+                  disabled={
+                    passcodeModalSubmitting || !enteredModalPasscode.trim()
+                  }
                 >
                   <KeyRound size={14} />
                   <span>

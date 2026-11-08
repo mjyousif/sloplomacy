@@ -27,9 +27,11 @@ const LOW_TIME_SECONDS = 60;
 /** Counts down from what the server last reported, so a wrong device clock cannot matter. */
 function useCountdown(
   remainingSeconds: number | null | undefined,
-  onExpire?: () => void
+  onExpire?: () => void,
 ): number | null {
-  const [seconds, setSeconds] = useState<number | null>(remainingSeconds ?? null);
+  const [seconds, setSeconds] = useState<number | null>(
+    remainingSeconds ?? null,
+  );
   const expiredRef = useRef(false);
   // Kept in a ref so a new callback identity never restarts the countdown
   // from a server value that may be minutes old.
@@ -44,7 +46,10 @@ function useCountdown(
     }
     const receivedAt = performance.now();
     const tick = () => {
-      const rem = Math.max(0, remainingSeconds - (performance.now() - receivedAt) / 1000);
+      const rem = Math.max(
+        0,
+        remainingSeconds - (performance.now() - receivedAt) / 1000,
+      );
       setSeconds(rem);
       if (rem <= 0 && !expiredRef.current) {
         expiredRef.current = true;
@@ -73,10 +78,16 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
   const seconds = useCountdown(timer?.remaining_seconds, onExpire);
   const isPlayer = !!timer && !!seatPower && timer.players.includes(seatPower);
   // The whole vote is shorter than this, so only a phase clock can run low.
-  const lowTime = timer?.stage === 'running' && seconds !== null && seconds <= LOW_TIME_SECONDS;
+  const lowTime =
+    timer?.stage === 'running' &&
+    seconds !== null &&
+    seconds <= LOW_TIME_SECONDS;
 
   const renderClock = () => (
-    <div className={`phase-timer-clock ${lowTime ? 'phase-timer-low' : ''}`} role="timer">
+    <div
+      className={`phase-timer-clock ${lowTime ? 'phase-timer-low' : ''}`}
+      role="timer"
+    >
       {seconds === null ? '--:--' : formatClock(seconds)}
     </div>
   );
@@ -89,11 +100,18 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
             <Clock size={14} /> Turn Clock
           </div>
           {isHost ? (
-            <button type="button" data-testid="btn-timer-start" className="phase-timer-primary" onClick={onStart}>
+            <button
+              type="button"
+              data-testid="btn-timer-start"
+              className="phase-timer-primary"
+              onClick={onStart}
+            >
               <Play size={13} /> Start First Vote
             </button>
           ) : (
-            <p className="phase-timer-note">Waiting for the host to start the clock.</p>
+            <p className="phase-timer-note">
+              Waiting for the host to start the clock.
+            </p>
           )}
         </>
       );
@@ -153,13 +171,15 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
             <strong>
               Ready {timer.ready_powers.length}/{timer.players.length}.
             </strong>{' '}
-            Waiting on: {powerNames(pending)}. A new vote opens once everyone is ready.
+            Waiting on: {powerNames(pending)}. A new vote opens once everyone is
+            ready.
           </p>
         </>
       );
     }
 
-    const askedForMore = !!seatPower && timer.extend_requests.includes(seatPower);
+    const askedForMore =
+      !!seatPower && timer.extend_requests.includes(seatPower);
     return (
       <>
         <div className="phase-timer-title">
@@ -174,7 +194,8 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
             aria-pressed={askedForMore}
             onClick={() => onExtend(!askedForMore)}
           >
-            <Plus size={13} /> 5 Minutes ({timer.extend_requests.length}/{timer.extensions_needed})
+            <Plus size={13} /> 5 Minutes ({timer.extend_requests.length}/
+            {timer.extensions_needed})
           </button>
         )}
       </>
@@ -186,7 +207,8 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
       {renderBody()}
       {hypothetical && timer && (
         <p className="phase-timer-note phase-timer-warning">
-          The real clock is still running. Exit Hypothetical Mode before it ends to keep your orders.
+          The real clock is still running. Exit Hypothetical Mode before it ends
+          to keep your orders.
         </p>
       )}
     </aside>

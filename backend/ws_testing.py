@@ -4,6 +4,7 @@ Test helper: read a WebSocket message with a time limit.
 Starlette's test client waits forever in `receive_json`, so a broadcast the server never sends
 would hang the test run. `receive_json(ws)` fails the test instead.
 """
+
 import threading
 from typing import Any, Dict
 

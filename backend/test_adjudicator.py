@@ -507,7 +507,9 @@ def test_adjudicator_winter_builds_and_unique_unit_ids():
     assert "FRA_A_PAR" in fra_ids
     assert "FRA_A_PAR_2" in fra_ids
 
-    rus_stp = next((u for u in res.new_units if u.power == Power.RUSSIA and u.province == "STP"), None)
+    rus_stp = next(
+        (u for u in res.new_units if u.power == Power.RUSSIA and u.province == "STP"), None
+    )
     assert rus_stp is not None
     assert rus_stp.unit_type == UnitType.FLEET
     assert rus_stp.coast == "NC"
@@ -538,12 +540,13 @@ def test_adjudicator_winter_disbands_execution():
     assert all(u.id != "FRA_A_BUR" for u in fra_units)
 
 
-
 def _unit(uid, power, unit_type, province, coast=None):
     return Unit(id=uid, power=power, unit_type=unit_type, province=province, coast=coast)
 
 
-def _order(unit, order_type=OrderType.HOLD, target=None, aux=None, target_coast=None, via_convoy=False):
+def _order(
+    unit, order_type=OrderType.HOLD, target=None, aux=None, target_coast=None, via_convoy=False
+):
     return Order(
         unit_id=unit.id,
         power=unit.power,
@@ -590,7 +593,9 @@ def test_order_the_engine_rejects_leaves_the_unit_in_place(unit_type, origin, ta
         (UnitType.FLEET, "NTH", OrderType.CONVOY, {"aux": "LON"}),
     ],
 )
-def test_incomplete_order_holds_instead_of_crashing_the_engine(unit_type, origin, order_type, fields):
+def test_incomplete_order_holds_instead_of_crashing_the_engine(
+    unit_type, origin, order_type, fields
+):
     """The engine raises on an order with no subject, and every later read of the game would too."""
     unit = _unit("X", Power.FRANCE, unit_type, origin)
 
@@ -686,11 +691,18 @@ def _random_order(rng, unit, units):
     roll = rng.random()
 
     if roll < 0.15:
-        return _order(unit, OrderType.MOVE, rng.choice(sorted(PROVINCES)), via_convoy=rng.random() < 0.5)
+        return _order(
+            unit, OrderType.MOVE, rng.choice(sorted(PROVINCES)), via_convoy=rng.random() < 0.5
+        )
     if roll < 0.3 and unit.unit_type == UnitType.FLEET and prov.type == ProvinceType.SEA:
         armies = [u for u in units if u.unit_type == UnitType.ARMY]
         if armies:
-            return _order(unit, OrderType.CONVOY, rng.choice(sorted(PROVINCES)), aux=rng.choice(armies).province)
+            return _order(
+                unit,
+                OrderType.CONVOY,
+                rng.choice(sorted(PROVINCES)),
+                aux=rng.choice(armies).province,
+            )
     if roll < 0.55:
         others = [u for u in units if u.id != unit.id]
         if others and reachable:
@@ -724,7 +736,9 @@ def _engine_board(units, orders, ownership, season, year):
     game = create_diplomacy_game(units, ownership, season, year, "Movement")
     by_province = {u.province: u for u in units}
     for power in {u.power for u in units}:
-        strings = [order_to_diplomacy_str(orders[u.id], by_province) for u in units if u.power == power]
+        strings = [
+            order_to_diplomacy_str(orders[u.id], by_province) for u in units if u.power == power
+        ]
         game.set_orders(power.value, strings)
     game.process()
     return sorted((power, unit) for power, located in game.get_units().items() for unit in located)
@@ -734,7 +748,9 @@ def _board(units):
     board = []
     for u in units:
         location = f"{u.province}/{u.coast}" if u.coast else u.province
-        board.append((u.power.value, f"{'*' if u.is_dislodged else ''}{u.unit_type.value} {location}"))
+        board.append(
+            (u.power.value, f"{'*' if u.is_dislodged else ''}{u.unit_type.value} {location}")
+        )
     return sorted(board)
 
 
@@ -755,7 +771,9 @@ def test_final_positions_always_match_the_engine():
             assert _board(result.new_units) == _engine_board(units, orders, ownership, season, year)
 
             standing = [u for u in result.new_units if not u.is_dislodged]
-            assert len({u.province for u in standing}) == len(standing), "two units share a province"
+            assert len({u.province for u in standing}) == len(standing), (
+                "two units share a province"
+            )
             turns_with_a_rejected_order += any(
                 "rejected" in r.reason.lower() for r in result.resolutions.values()
             )
@@ -772,7 +790,9 @@ def test_final_positions_always_match_the_engine():
 
 def _board_one_center_from_a_solo():
     """France holds 17 centers and F ION can take Tunis, the 18th."""
-    centers = sorted(p.id for p in PROVINCES.values() if p.is_supply_center and p.id not in ("TUN", "PAR"))[:16]
+    centers = sorted(
+        p.id for p in PROVINCES.values() if p.is_supply_center and p.id not in ("TUN", "PAR")
+    )[:16]
     ownership = {center: Power.FRANCE for center in centers}
     ownership["PAR"] = Power.FRANCE
     fleet = _unit("FRA_F_ION", Power.FRANCE, UnitType.FLEET, "ION")

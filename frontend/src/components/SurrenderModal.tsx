@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
-import { MultiplayerGameSummary, POWER_METADATA, Power } from '../types/diplomacy';
-import { AlertTriangle, Flag, LogOut, Trash2, X, ShieldAlert } from 'lucide-react';
+import {
+  MultiplayerGameSummary,
+  POWER_METADATA,
+  Power,
+} from '../types/diplomacy';
+import {
+  AlertTriangle,
+  Flag,
+  LogOut,
+  Trash2,
+  X,
+  ShieldAlert,
+} from 'lucide-react';
 
 interface SurrenderModalProps {
   isOpen: boolean;
@@ -59,11 +70,16 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
 
   return (
     <div className="surrender-modal-backdrop" onClick={onClose}>
-      <div className="surrender-modal-card" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="surrender-modal-card"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
         <div className="surrender-modal-header">
           <div className="surrender-header-title-group">
-            <div className={`surrender-hazard-badge ${isSandbox ? 'trash' : 'flag'}`}>
+            <div
+              className={`surrender-hazard-badge ${isSandbox ? 'trash' : 'flag'}`}
+            >
               {isSandbox ? (
                 <Trash2 size={24} />
               ) : isActiveMatch ? (
@@ -77,15 +93,15 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
                 {isSandbox
                   ? 'TACTICAL SANDBOX REMOVAL'
                   : isActiveMatch
-                  ? 'SURRENDER SOVEREIGN COMMAND'
-                  : 'VACATE POWER IN LOBBY'}
+                    ? 'SURRENDER SOVEREIGN COMMAND'
+                    : 'VACATE POWER IN LOBBY'}
               </div>
               <h2 className="surrender-main-title">
                 {isSandbox
                   ? `Delete "${game.name}"?`
                   : isActiveMatch
-                  ? `Surrender & Leave ${meta.shortName}?`
-                  : `Leave Campaign Lobby for ${meta.shortName}?`}
+                    ? `Surrender & Leave ${meta.shortName}?`
+                    : `Leave Campaign Lobby for ${meta.shortName}?`}
               </h2>
             </div>
           </div>
@@ -113,7 +129,8 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
               {meta.name} ({meta.shortName})
             </strong>
             <span className="surrender-campaign-name">
-              Campaign: <strong>{game.name}</strong> ({game.season} {game.year} · {game.phase})
+              Campaign: <strong>{game.name}</strong> ({game.season} {game.year}{' '}
+              · {game.phase})
             </span>
           </div>
         </div>
@@ -122,8 +139,9 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
         <div className="surrender-body-content">
           {isSandbox ? (
             <p>
-              Are you sure you want to remove this saved tactical study from your profile?
-              All recorded movements, pre-moves, and scenarios in this saved game will be permanently deleted.
+              Are you sure you want to remove this saved tactical study from
+              your profile? All recorded movements, pre-moves, and scenarios in
+              this saved game will be permanently deleted.
             </p>
           ) : isActiveMatch ? (
             <div className="surrender-consequences-box">
@@ -132,7 +150,9 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
                 <div>
                   <strong>Forces Enter Civil Disorder:</strong>
                   <p>
-                    All military units under {meta.shortName}&apos;s flag will immediately stand down to <code>HOLD</code> orders. Any explicit attack plans or supports will be discarded.
+                    All military units under {meta.shortName}&apos;s flag will
+                    immediately stand down to <code>HOLD</code> orders. Any
+                    explicit attack plans or supports will be discarded.
                   </p>
                 </div>
               </div>
@@ -141,15 +161,19 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
                 <div>
                   <strong>Vacating Sovereign Seat:</strong>
                   <p>
-                    Your claim to {meta.shortName} will be vacated, allowing another envoy from the Chancellery to claim it, or leaving the power in neutral civil disorder.
+                    Your claim to {meta.shortName} will be vacated, allowing
+                    another envoy from the Chancellery to claim it, or leaving
+                    the power in neutral civil disorder.
                   </p>
                 </div>
               </div>
             </div>
           ) : (
             <p>
-              This campaign has not commenced yet. Vacating your seat will release{' '}
-              <strong>{meta.shortName}</strong> so another diplomat can claim it. You can re-join at any time before the campaign begins if seats remain open.
+              This campaign has not commenced yet. Vacating your seat will
+              release <strong>{meta.shortName}</strong> so another diplomat can
+              claim it. You can re-join at any time before the campaign begins
+              if seats remain open.
             </p>
           )}
         </div>
@@ -185,7 +209,9 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
                 title="Concede command to Civil Disorder, but remain in the room as an observer"
               >
                 <Flag size={14} />
-                <span>{loading ? 'Surrendering...' : 'Surrender (Spectate)'}</span>
+                <span>
+                  {loading ? 'Surrendering...' : 'Surrender (Spectate)'}
+                </span>
               </button>
               <button
                 type="button"
@@ -195,7 +221,9 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
                 title="Surrender command to Civil Disorder and return to the main lobby"
               >
                 <LogOut size={15} />
-                <span>{loading ? 'Processing...' : 'Surrender & Leave Game'}</span>
+                <span>
+                  {loading ? 'Processing...' : 'Surrender & Leave Game'}
+                </span>
               </button>
             </div>
           ) : (
@@ -213,8 +241,8 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
           {/* Touch screens can't show the buttons' tooltips, so the difference is spelled out. */}
           {isActiveMatch && (
             <p className="surrender-choice-note compact-only">
-              Both hand your units to Civil Disorder. Spectate keeps you in the room as an observer;
-              Leave returns you to the lobby.
+              Both hand your units to Civil Disorder. Spectate keeps you in the
+              room as an observer; Leave returns you to the lobby.
             </p>
           )}
         </div>

@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchAccountDisplayPrefs, saveAccountDisplayPrefs } from '../lib/supabase';
+import {
+  fetchAccountDisplayPrefs,
+  saveAccountDisplayPrefs,
+} from '../lib/supabase';
 import { AuthUser } from '../types/diplomacy';
 import {
   DEFAULT_DISPLAY_PREFS,
@@ -27,7 +30,7 @@ export interface UseDisplayPrefsResult {
  */
 export function useDisplayPrefs(user: AuthUser | null): UseDisplayPrefsResult {
   const [prefs, setPrefs] = useState<DisplayPrefs>(
-    () => readStoredDisplayPrefs() ?? DEFAULT_DISPLAY_PREFS
+    () => readStoredDisplayPrefs() ?? DEFAULT_DISPLAY_PREFS,
   );
   const [saveState, setSaveState] = useState<DisplayPrefsSaveState>('device');
 
@@ -38,14 +41,17 @@ export function useDisplayPrefs(user: AuthUser | null): UseDisplayPrefsResult {
   const editsRef = useRef(0);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const saveToAccount = useCallback(async (account: AuthUser, value: DisplayPrefs) => {
-    setSaveState('saving');
-    const { error } = await saveAccountDisplayPrefs(account, value);
-    // Ignore the result if the player has since signed out or switched accounts
-    if (userRef.current?.id === account.id) {
-      setSaveState(error ? 'failed' : 'account');
-    }
-  }, []);
+  const saveToAccount = useCallback(
+    async (account: AuthUser, value: DisplayPrefs) => {
+      setSaveState('saving');
+      const { error } = await saveAccountDisplayPrefs(account, value);
+      // Ignore the result if the player has since signed out or switched accounts
+      if (userRef.current?.id === account.id) {
+        setSaveState(error ? 'failed' : 'account');
+      }
+    },
+    [],
+  );
 
   const userId = user?.id ?? null;
 
@@ -94,7 +100,7 @@ export function useDisplayPrefs(user: AuthUser | null): UseDisplayPrefsResult {
     () => () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     },
-    []
+    [],
   );
 
   const updatePrefs = useCallback(
@@ -114,7 +120,7 @@ export function useDisplayPrefs(user: AuthUser | null): UseDisplayPrefsResult {
         }, ACCOUNT_SAVE_DELAY_MS);
       }
     },
-    [saveToAccount]
+    [saveToAccount],
   );
 
   return { prefs, saveState, updatePrefs };

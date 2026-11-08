@@ -12,8 +12,12 @@ describe('CollapsibleSection', () => {
           title: 'Tactical Map Legend',
           badge: React.createElement('span', { className: 'badge' }, '4 items'),
         },
-        React.createElement('div', { className: 'legend-body' }, 'Legend Content')
-      )
+        React.createElement(
+          'div',
+          { className: 'legend-body' },
+          'Legend Content',
+        ),
+      ),
     );
 
     expect(html).toContain('Tactical Map Legend');
@@ -34,8 +38,12 @@ describe('CollapsibleSection', () => {
           title: 'Closed Section',
           defaultOpen: false,
         },
-        React.createElement('div', { className: 'hidden-body' }, 'Hidden Content')
-      )
+        React.createElement(
+          'div',
+          { className: 'hidden-body' },
+          'Hidden Content',
+        ),
+      ),
     );
 
     expect(html).toContain('Closed Section');
@@ -53,8 +61,12 @@ describe('CollapsibleSection', () => {
           collapsible: false,
           badge: React.createElement('span', null, '105%'),
         },
-        React.createElement('div', { className: 'actions-body' }, 'Action Controls')
-      )
+        React.createElement(
+          'div',
+          { className: 'actions-body' },
+          'Action Controls',
+        ),
+      ),
     );
 
     expect(html).toContain('Actions &amp; Camera');
@@ -75,8 +87,8 @@ describe('CollapsibleSection', () => {
           className: 'admin-custom-class',
           collapsible: false,
         },
-        React.createElement('p', null, 'Admin controls')
-      )
+        React.createElement('p', null, 'Admin controls'),
+      ),
     );
 
     expect(html).toContain('Admin Tools');

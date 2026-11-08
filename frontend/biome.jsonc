@@ -6,7 +6,8 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"ignoreUnknown": true
+		"ignoreUnknown": true,
+		"maxSize": 2097152
 	},
 	"formatter": {
 		"enabled": true,
@@ -32,14 +33,11 @@
 			}
 		}
 	},
-	// Phase 1: Baseline exemption so existing frontend code is not touched.
-	// Phase 2 will remove this override and apply formatting, linting, and import sorting repository-wide.
+	// Phase 2: Formatter is enabled all around.
+	// Linter and assist are scoped for Phase 3 rule tightening and autofixes.
 	"overrides": [
 		{
 			"includes": ["src/**"],
-			"formatter": {
-				"enabled": false
-			},
 			"linter": {
 				"enabled": false
 			},

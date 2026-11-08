@@ -60,15 +60,20 @@ const API_BASE = '/api';
 
 export function App() {
   // Navigation & Mode State
-  const [viewMode, setViewMode] = useState<'lobby' | 'sandbox' | 'multiplayer'>(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('view') === 'sandbox' || window.location.hash === '#sandbox') {
-        return 'sandbox';
+  const [viewMode, setViewMode] = useState<'lobby' | 'sandbox' | 'multiplayer'>(
+    () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        if (
+          params.get('view') === 'sandbox' ||
+          window.location.hash === '#sandbox'
+        ) {
+          return 'sandbox';
+        }
       }
-    }
-    return 'lobby';
-  });
+      return 'lobby';
+    },
+  );
   const [activeGameId, setActiveGameId] = useState<string>('proto_1901');
   const [activeGameSummary, setActiveGameSummary] =
     useState<MultiplayerGameSummary | null>(null);
@@ -83,7 +88,9 @@ export function App() {
   } = useDisplayPrefs(authUser);
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [authModalReason, setAuthModalReason] = useState<string | null>(null);
-  const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin');
+  const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>(
+    'signin',
+  );
 
   // Lobby Games State
   const [gamesList, setGamesList] = useState<MultiplayerGameSummary[]>([]);
@@ -98,21 +105,31 @@ export function App() {
   // UI Interaction State
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [hoveredUnitId, setHoveredUnitId] = useState<string | null>(null);
-  const [highlightedProvinces, setHighlightedProvinces] = useState<string[]>([]);
+  const [highlightedProvinces, setHighlightedProvinces] = useState<string[]>(
+    [],
+  );
   const [sandboxMode, setSandboxMode] = useState<boolean>(false);
   // A multiplayer sandbox runs on a private server-side copy of the match under its own game id.
   const [sandboxGameId, setSandboxGameId] = useState<string | null>(null);
   // The private copy has no clock, so this follows the real match while the player is in it.
-  const [hypotheticalMatchTimer, setHypotheticalMatchTimer] = useState<PhaseTimer | null>(null);
-  const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
-  const [showSimulationOverlay, setShowSimulationOverlay] = useState<boolean>(false);
+  const [hypotheticalMatchTimer, setHypotheticalMatchTimer] =
+    useState<PhaseTimer | null>(null);
+  const [simulationResult, setSimulationResult] =
+    useState<SimulationResult | null>(null);
+  const [showSimulationOverlay, setShowSimulationOverlay] =
+    useState<boolean>(false);
   const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
-  const [adminOverrideActive, setAdminOverrideActive] = useState<boolean>(false);
+  const [adminOverrideActive, setAdminOverrideActive] =
+    useState<boolean>(false);
   const [zoomPercent, setZoomPercent] = useState<number>(105);
   // Phone-sized screens get the compact layout, styled from compact.css.
   const isCompact = useCompactLayout();
-  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState<boolean>(() => isCompact);
-  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState<boolean>(() => isCompact);
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState<boolean>(
+    () => isCompact,
+  );
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState<boolean>(
+    () => isCompact,
+  );
 
   useEffect(() => {
     if (isCompact) {
@@ -124,26 +141,42 @@ export function App() {
 
   // Sanity Check Modal State
   const [sanityModalOpen, setSanityModalOpen] = useState<boolean>(false);
-  const [sanityModalIssues, setSanityModalIssues] = useState<ValidationIssue[]>([]);
+  const [sanityModalIssues, setSanityModalIssues] = useState<ValidationIssue[]>(
+    [],
+  );
   const [toastBanner, setToastBanner] = useState<string | null>(null);
   const { confirm, confirmModal } = useConfirm();
   // Passcodes this player typed for private matches during this visit, so the live
   // socket can present them. Never saved: a reload falls back to polling.
-  const [matchPasscodes, setMatchPasscodes] = useState<Record<string, string>>({});
+  const [matchPasscodes, setMatchPasscodes] = useState<Record<string, string>>(
+    {},
+  );
 
   // Surrender & Leave Modal State
   const [surrenderModalOpen, setSurrenderModalOpen] = useState<boolean>(false);
   const [surrenderModalGame, setSurrenderModalGame] =
     useState<MultiplayerGameSummary | null>(null);
-  const [surrenderModalPower, setSurrenderModalPower] = useState<Power | null>(null);
+  const [surrenderModalPower, setSurrenderModalPower] = useState<Power | null>(
+    null,
+  );
 
-  const playerPower = resolvePlayerPower(viewMode, lockedPower, gameState?.active_power);
-  const isGameCreator = checkIsGameCreator(activeGameSummary, authUser, viewMode);
+  const playerPower = resolvePlayerPower(
+    viewMode,
+    lockedPower,
+    gameState?.active_power,
+  );
+  const isGameCreator = checkIsGameCreator(
+    activeGameSummary,
+    authUser,
+    viewMode,
+  );
   // Direct-Edit stays on when the host moves to another game, where it must not apply.
   const directEditActive = isGameCreator && adminOverrideActive;
   // Drafts, AI plans and previews go to the private copy while there is one.
   const draftGameId = sandboxGameId ?? activeGameId;
-  const matchTimer = sandboxGameId ? hypotheticalMatchTimer : (gameState?.timer ?? null);
+  const matchTimer = sandboxGameId
+    ? hypotheticalMatchTimer
+    : (gameState?.timer ?? null);
 
   const triggerToast = (msg: string) => {
     setToastBanner(msg);
@@ -159,7 +192,10 @@ export function App() {
     return false;
   };
 
-  const openAuthPrompt = (reason?: string, tab: 'signin' | 'signup' = 'signin') => {
+  const openAuthPrompt = (
+    reason?: string,
+    tab: 'signin' | 'signup' = 'signin',
+  ) => {
     setAuthModalReason(reason || null);
     setAuthModalTab(tab);
     setAuthModalOpen(true);
@@ -193,7 +229,7 @@ export function App() {
             prev.phase !== update.state.phase)
         ) {
           triggerToast(
-            `Phase advanced: ${update.state.season} ${update.state.year} (${update.state.phase})`
+            `Phase advanced: ${update.state.season} ${update.state.year} (${update.state.phase})`,
           );
         }
         return update.state;
@@ -203,7 +239,7 @@ export function App() {
         setSimulationResult(update.state.last_resolution);
       }
     },
-    [activeGameId, sandboxGameId]
+    [activeGameId, sandboxGameId],
   );
 
   const handleWsLobbyUpdate = useCallback(
@@ -214,18 +250,19 @@ export function App() {
         setActiveGameSummary(current);
       }
     },
-    [activeGameId]
+    [activeGameId],
   );
 
-  const { isConnected: wsConnected, sendRefresh: sendWsRefresh } = useDiplomacyWebSocket({
-    activeGameId,
-    viewMode,
-    power: playerPower,
-    passcode: activeGameId ? matchPasscodes[activeGameId] ?? null : null,
-    authKey: authUser?.id ?? null,
-    onGameUpdate: handleWsGameUpdate,
-    onLobbyUpdate: handleWsLobbyUpdate,
-  });
+  const { isConnected: wsConnected, sendRefresh: sendWsRefresh } =
+    useDiplomacyWebSocket({
+      activeGameId,
+      viewMode,
+      power: playerPower,
+      passcode: activeGameId ? (matchPasscodes[activeGameId] ?? null) : null,
+      authKey: authUser?.id ?? null,
+      onGameUpdate: handleWsGameUpdate,
+      onLobbyUpdate: handleWsLobbyUpdate,
+    });
 
   const fetchGamesList = async () => {
     try {
@@ -246,11 +283,15 @@ export function App() {
   // (such as the startup load of proto_1901) cannot replace a board opened since.
   const boardRequestSeq = useRef(0);
 
-  const fetchGame = async (gid: string = activeGameId, targetPower?: Power | null) => {
+  const fetchGame = async (
+    gid: string = activeGameId,
+    targetPower?: Power | null,
+  ) => {
     const seq = ++boardRequestSeq.current;
     try {
       setLoading(true);
-      const effectivePower = targetPower !== undefined ? targetPower : playerPower;
+      const effectivePower =
+        targetPower !== undefined ? targetPower : playerPower;
       const params = new URLSearchParams({ game_id: gid });
       if (effectivePower) {
         params.set('power', effectivePower);
@@ -270,7 +311,9 @@ export function App() {
       setErrorMsg(null);
     } catch (err: any) {
       if (seq === boardRequestSeq.current) {
-        setErrorMsg(err.message || 'Failed to connect to Diplomacy backend server.');
+        setErrorMsg(
+          err.message || 'Failed to connect to Diplomacy backend server.',
+        );
       }
     } finally {
       setLoading(false);
@@ -346,7 +389,10 @@ export function App() {
       abandoned = true;
       clearInterval(interval);
       if (typeof document !== 'undefined') {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        document.removeEventListener(
+          'visibilitychange',
+          handleVisibilityChange,
+        );
       }
     };
   }, [viewMode, activeGameId, sandboxGameId, wsConnected, playerPower]);
@@ -354,16 +400,18 @@ export function App() {
   // Leaving the match board by any route closes its private sandbox.
   useEffect(() => {
     if (!sandboxGameId || viewMode === 'multiplayer') return;
-    fetch(`${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(sandboxGameId)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ power: playerPower }),
-    }).catch(() => {});
+    fetch(
+      `${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(sandboxGameId)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ power: playerPower }),
+      },
+    ).catch(() => {});
     setSandboxGameId(null);
     setSandboxMode(false);
     setShowSimulationOverlay(false);
   }, [viewMode, sandboxGameId]);
-
 
   const handleEnterSoloSandbox = async (event?: React.MouseEvent) => {
     if (viewMode === 'multiplayer' && activeGameSummary) {
@@ -373,7 +421,7 @@ export function App() {
           message: `You leave match "${activeGameSummary.name}" for the Solo Sandbox board. Your submitted orders remain safe on the server.`,
           confirmLabel: 'Switch',
         },
-        event
+        event,
       );
       if (!confirmLeave) return;
     }
@@ -388,7 +436,7 @@ export function App() {
     name: string,
     power: Power,
     isPrivate?: boolean,
-    passcode?: string
+    passcode?: string,
   ): Promise<MultiplayerGameSummary | void> => {
     if (!authUser) {
       openAuthPrompt('Please sign in to create a multiplayer game.', 'signup');
@@ -419,7 +467,7 @@ export function App() {
       if (!isPrivate || !passcode) {
         await handleJoinOrEnterMultiplayerGame(summary.game_id, power);
         triggerToast(
-          `Created "${summary.name}" — You are commanding ${POWER_METADATA[power].shortName}!`
+          `Created "${summary.name}" — You are commanding ${POWER_METADATA[power].shortName}!`,
         );
       }
       return summary;
@@ -431,12 +479,12 @@ export function App() {
   const handleJoinOrEnterMultiplayerGame = async (
     gameId: string,
     power: Power,
-    passcode?: string
+    passcode?: string,
   ) => {
     if (!authUser) {
       openAuthPrompt(
         `Sign in to claim ${POWER_METADATA[power].shortName} and play multiplayer.`,
-        'signin'
+        'signin',
       );
       return;
     }
@@ -454,7 +502,7 @@ export function App() {
             display_name: authUser.displayName,
             passcode: passcode?.trim() || null,
           }),
-        }
+        },
       );
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -490,8 +538,13 @@ export function App() {
     }
   };
 
-  const handleGenerateAIMoves = async (powers?: Power[], includeActive: boolean = false) => {
-    const foreignPowers = (Object.keys(POWER_METADATA) as Power[]).filter((p) => p !== playerPower);
+  const handleGenerateAIMoves = async (
+    powers?: Power[],
+    includeActive: boolean = false,
+  ) => {
+    const foreignPowers = (Object.keys(POWER_METADATA) as Power[]).filter(
+      (p) => p !== playerPower,
+    );
     try {
       setLoading(true);
       const res = await fetch(
@@ -503,7 +556,7 @@ export function App() {
             powers: powers || (includeActive ? null : foreignPowers),
             include_active: includeActive,
           }),
-        }
+        },
       );
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -516,8 +569,8 @@ export function App() {
         includeActive
           ? 'Tactical AI planned orders for all 7 Great Powers!'
           : powers && powers.length === 1
-          ? `Tactical AI planned orders for ${POWER_METADATA[powers[0]].shortName}!`
-          : 'Tactical AI planned orders for foreign powers!'
+            ? `Tactical AI planned orders for ${POWER_METADATA[powers[0]].shortName}!`
+            : 'Tactical AI planned orders for foreign powers!',
       );
     } catch (e: any) {
       console.error(e);
@@ -535,7 +588,7 @@ export function App() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-        }
+        },
       );
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -547,7 +600,7 @@ export function App() {
       setSelectedUnitId(null);
       setShowSimulationOverlay(false);
       triggerToast(
-        `AI advanced game clock to ${updatedState.season} ${updatedState.year} ${updatedState.phase}!`
+        `AI advanced game clock to ${updatedState.season} ${updatedState.year} ${updatedState.phase}!`,
       );
     } catch (e: any) {
       console.error(e);
@@ -561,7 +614,7 @@ export function App() {
     if (!authUser) {
       openAuthPrompt(
         'Sign in or create a free account to save this tactical sandbox scenario to your profile.',
-        'signup'
+        'signup',
       );
       return;
     }
@@ -582,7 +635,7 @@ export function App() {
             email: authUser.email,
             display_name: authUser.displayName,
           }),
-        }
+        },
       );
       if (res.ok) {
         const saved: MultiplayerGameSummary = await res.json();
@@ -594,16 +647,26 @@ export function App() {
     }
   };
 
-  const handleOpenSurrenderModal = (game: MultiplayerGameSummary, power: Power) => {
+  const handleOpenSurrenderModal = (
+    game: MultiplayerGameSummary,
+    power: Power,
+  ) => {
     if (!requireRealBoard('surrender')) return;
     setSurrenderModalGame(game);
     setSurrenderModalPower(power);
     setSurrenderModalOpen(true);
   };
 
-  const handleSurrenderPower = async (gameId: string, power: Power, leave: boolean) => {
+  const handleSurrenderPower = async (
+    gameId: string,
+    power: Power,
+    leave: boolean,
+  ) => {
     if (!authUser) {
-      openAuthPrompt('Please sign in to manage your sovereign position.', 'signin');
+      openAuthPrompt(
+        'Please sign in to manage your sovereign position.',
+        'signin',
+      );
       return;
     }
     try {
@@ -619,7 +682,7 @@ export function App() {
             email: authUser.email,
             leave,
           }),
-        }
+        },
       );
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -634,13 +697,13 @@ export function App() {
           setActiveGameSummary(null);
         }
         triggerToast(
-          `Surrendered command of ${POWER_METADATA[power].shortName} and left match.`
+          `Surrendered command of ${POWER_METADATA[power].shortName} and left match.`,
         );
       } else {
         applyServerState(data.state);
         if (data.summary) setActiveGameSummary(data.summary);
         triggerToast(
-          `Command of ${POWER_METADATA[power].shortName} surrendered. Units stand in Civil Disorder.`
+          `Command of ${POWER_METADATA[power].shortName} surrendered. Units stand in Civil Disorder.`,
         );
       }
       await fetchGamesList();
@@ -666,7 +729,7 @@ export function App() {
             user_id: authUser.id,
             email: authUser.email,
           }),
-        }
+        },
       );
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -690,7 +753,7 @@ export function App() {
     if (viewMode === 'multiplayer' && lockedPower) {
       if (power !== lockedPower) {
         triggerToast(
-          `Country locked: You are playing as ${POWER_METADATA[lockedPower].shortName} in this multiplayer campaign.`
+          `Country locked: You are playing as ${POWER_METADATA[lockedPower].shortName} in this multiplayer campaign.`,
         );
       }
       return;
@@ -702,7 +765,7 @@ export function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ power }),
-        }
+        },
       );
       if (res.ok) {
         const st: GameState = await res.json();
@@ -724,7 +787,7 @@ export function App() {
       order.power !== lockedPower
     ) {
       triggerToast(
-        `Enable "Sandbox Pre-Moves" to plot hypothetical orders for foreign powers.`
+        `Enable "Sandbox Pre-Moves" to plot hypothetical orders for foreign powers.`,
       );
       return;
     }
@@ -735,8 +798,11 @@ export function App() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
-          body: JSON.stringify({ order, turn: gameState ? turnLabel(gameState) : undefined }),
-        }
+          body: JSON.stringify({
+            order,
+            turn: gameState ? turnLabel(gameState) : undefined,
+          }),
+        },
       );
       if (res.ok) {
         const st: GameState = await res.json();
@@ -760,13 +826,13 @@ export function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ power: playerPower }),
-        }
+        },
       );
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
         triggerToast(
-          `Confirmed all current orders for ${POWER_METADATA[playerPower].shortName}.`
+          `Confirmed all current orders for ${POWER_METADATA[playerPower].shortName}.`,
         );
       }
     } catch (e) {
@@ -784,7 +850,7 @@ export function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ power: playerPower }),
-        }
+        },
       );
       if (res.ok) {
         const st: GameState = await res.json();
@@ -807,7 +873,7 @@ export function App() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ power: playerPower }),
-          }
+          },
         );
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -821,7 +887,7 @@ export function App() {
         setSandboxMode(true);
         setShowSimulationOverlay(true);
         triggerToast(
-          'Entered Hypothetical Mode: Plot hypothetical foreign moves to test outcomes. Exiting will discard foreign guesses!'
+          'Entered Hypothetical Mode: Plot hypothetical foreign moves to test outcomes. Exiting will discard foreign guesses!',
         );
       } else {
         const res = await fetch(
@@ -830,7 +896,7 @@ export function App() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ power: playerPower }),
-          }
+          },
         );
         let turnMovedOn = false;
         if (res.ok) {
@@ -853,7 +919,7 @@ export function App() {
             ? 'The match moved on while in Hypothetical Mode, so hypothetical orders were not kept.'
             : `Exited Hypothetical Mode — foreign guesses discarded. Showing only ${
                 POWER_METADATA[playerPower].shortName
-              }'s real orders.`
+              }'s real orders.`,
         );
       }
     } catch (e) {
@@ -870,8 +936,12 @@ export function App() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
-          body: JSON.stringify({ power: playerPower, force, turn: turnLabel(gameState) }),
-        }
+          body: JSON.stringify({
+            power: playerPower,
+            force,
+            turn: turnLabel(gameState),
+          }),
+        },
       );
       if (res.ok) {
         const data: FinalizeResponse = await res.json();
@@ -882,7 +952,7 @@ export function App() {
         } else {
           setSanityModalOpen(false);
           triggerToast(
-            `${POWER_METADATA[playerPower].name} orders locked & finalized!`
+            `${POWER_METADATA[playerPower].name} orders locked & finalized!`,
           );
           fetchGamesList();
         }
@@ -907,7 +977,7 @@ export function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ power: playerPower }),
-        }
+        },
       );
       if (res.ok) {
         const st: GameState = await res.json();
@@ -924,7 +994,7 @@ export function App() {
     try {
       const res = await fetch(
         `${API_BASE}/simulate?game_id=${encodeURIComponent(draftGameId)}`,
-        { method: 'POST' }
+        { method: 'POST' },
       );
       if (res.ok) {
         const sim: SimulationResult = await res.json();
@@ -938,7 +1008,7 @@ export function App() {
 
   const postTimerAction = async (
     action: 'start' | 'vote' | 'extend' | 'ready',
-    body: Record<string, unknown> = {}
+    body: Record<string, unknown> = {},
   ) => {
     try {
       const authHeaders = await getAuthHeaders();
@@ -948,7 +1018,7 @@ export function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify(body),
-        }
+        },
       );
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -977,7 +1047,7 @@ export function App() {
       };
       const res = await fetch(
         `${API_BASE}/adjudicate?game_id=${encodeURIComponent(activeGameId)}`,
-        { method: 'POST', headers }
+        { method: 'POST', headers },
       );
       if (res.ok) {
         const st: GameState = await res.json();
@@ -986,7 +1056,7 @@ export function App() {
         triggerToast(
           st.winner
             ? `${POWER_METADATA[st.winner].name} has won the game!`
-            : `Turn resolved! Now in ${st.season} ${st.year} (${st.phase} Phase).`
+            : `Turn resolved! Now in ${st.season} ${st.year} (${st.phase} Phase).`,
         );
         fetchGamesList();
       } else {
@@ -1010,7 +1080,7 @@ export function App() {
             scenario_id: scenarioId,
             active_power: playerPower,
           }),
-        }
+        },
       );
       if (res.ok) {
         const st: GameState = await res.json();
@@ -1054,10 +1124,12 @@ export function App() {
   };
 
   const activePowerIssues = gameState.issues.filter(
-    (i) => i.power === playerPower
+    (i) => i.power === playerPower,
   );
   const activeErrors = activePowerIssues.filter((i) => i.severity === 'error');
-  const activeWarnings = activePowerIssues.filter((i) => i.severity === 'warning');
+  const activeWarnings = activePowerIssues.filter(
+    (i) => i.severity === 'warning',
+  );
 
   const handleBackToLobby = () => {
     setViewMode('lobby');
@@ -1073,7 +1145,10 @@ export function App() {
   };
 
   return (
-    <div className="diplomacy-app-shell" data-layout={isCompact ? 'compact' : 'wide'}>
+    <div
+      className="diplomacy-app-shell"
+      data-layout={isCompact ? 'compact' : 'wide'}
+    >
       {/* TOP COMMAND HEADER BAR (phones get a one-row bar with a ⋯ menu) */}
       {isCompact ? (
         <CompactTopBar
@@ -1085,7 +1160,9 @@ export function App() {
           onOpenOrderCheck={() => handleFinalizeClick(false)}
           onBackToLobby={handleBackToLobby}
           wsConnected={wsConnected}
-          syncDetail={viewMode === 'lobby' ? 'Lobby feed' : `Game ${activeGameId}`}
+          syncDetail={
+            viewMode === 'lobby' ? 'Lobby feed' : `Game ${activeGameId}`
+          }
           matchLabel={
             viewMode === 'multiplayer' && activeGameSummary
               ? `${activeGameSummary.name} (${POWER_METADATA[playerPower].shortName})`
@@ -1145,7 +1222,10 @@ export function App() {
           {/* Center Board Readout (Only when viewing Map Board) */}
           {viewMode !== 'lobby' && (
             <div className="header-center-telemetry">
-              <div className="turn-chronicle-pill" data-testid="turn-chronicle-pill">
+              <div
+                className="turn-chronicle-pill"
+                data-testid="turn-chronicle-pill"
+              >
                 <Calendar size={15} className="turn-cal-icon" />
                 <span className="turn-season-text">
                   {gameState.season.toUpperCase()} {gameState.year}
@@ -1159,7 +1239,10 @@ export function App() {
               {gameState.winner && (
                 <span className="game-over-pill">
                   <Crown size={14} />
-                  <span>{POWER_METADATA[gameState.winner].shortName.toUpperCase()} WINS</span>
+                  <span>
+                    {POWER_METADATA[gameState.winner].shortName.toUpperCase()}{' '}
+                    WINS
+                  </span>
                 </span>
               )}
 
@@ -1207,7 +1290,9 @@ export function App() {
                   : 'Connecting to real-time synchronization...'
               }
             >
-              <span className={`ws-status-dot ${wsConnected ? 'dot-online' : 'dot-offline'}`} />
+              <span
+                className={`ws-status-dot ${wsConnected ? 'dot-online' : 'dot-offline'}`}
+              />
               <span>{wsConnected ? 'Live Sync' : 'Connecting...'}</span>
             </div>
 
@@ -1256,11 +1341,16 @@ export function App() {
         <div className="admin-override-banner">
           <span>
             <ShieldAlert size={16} />
-            <strong>ADMIN DIRECT-EDIT ACTIVE:</strong> You have Game Creator authority to edit any power's moves or state directly on the board.
+            <strong>ADMIN DIRECT-EDIT ACTIVE:</strong> You have Game Creator
+            authority to edit any power's moves or state directly on the board.
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" onClick={openAdminTools}>Admin Console</button>
-            <button type="button" onClick={() => setAdminOverrideActive(false)}>Disable Direct-Edit</button>
+            <button type="button" onClick={openAdminTools}>
+              Admin Console
+            </button>
+            <button type="button" onClick={() => setAdminOverrideActive(false)}>
+              Disable Direct-Edit
+            </button>
           </div>
         </div>
       )}
@@ -1323,7 +1413,9 @@ export function App() {
             isGameCreator={isGameCreator}
             onOpenAdminTools={openAdminTools}
             adminOverrideActive={adminOverrideActive}
-            onToggleAdminOverride={() => setAdminOverrideActive((prev) => !prev)}
+            onToggleAdminOverride={() =>
+              setAdminOverrideActive((prev) => !prev)
+            }
           />
 
           {/* CENTER: Europe Map */}
@@ -1365,9 +1457,15 @@ export function App() {
                   isHost={isGameCreator}
                   hypothetical={!!sandboxGameId}
                   onStart={() => postTimerAction('start')}
-                  onVote={(choice) => postTimerAction('vote', { power: lockedPower, choice })}
-                  onExtend={(active) => postTimerAction('extend', { power: lockedPower, active })}
-                  onReady={(active) => postTimerAction('ready', { power: lockedPower, active })}
+                  onVote={(choice) =>
+                    postTimerAction('vote', { power: lockedPower, choice })
+                  }
+                  onExtend={(active) =>
+                    postTimerAction('extend', { power: lockedPower, active })
+                  }
+                  onReady={(active) =>
+                    postTimerAction('ready', { power: lockedPower, active })
+                  }
                   onExpire={handleTimerExpired}
                 />
               )

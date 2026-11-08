@@ -67,7 +67,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           } else {
             onSuccess(
               res.user,
-              `Account created! Welcome to the Diplomatic Corps, ${res.user.displayName}.`
+              `Account created! Welcome to the Diplomatic Corps, ${res.user.displayName}.`,
             );
             onClose();
           }
@@ -79,7 +79,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         } else if (res.sent) {
           if (isSupabaseConfigured) {
             setInfoMessage(
-              `Magic sign-in link sent to ${email}. Check your inbox!`
+              `Magic sign-in link sent to ${email}. Check your inbox!`,
             );
           } else {
             onClose();
@@ -129,7 +129,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </div>
 
-        {reasonBanner && <div className="auth-reason-banner">{reasonBanner}</div>}
+        {reasonBanner && (
+          <div className="auth-reason-banner">{reasonBanner}</div>
+        )}
 
         <div className="auth-provider-status">
           {isSupabaseConfigured ? (
@@ -273,10 +275,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {submitting
               ? 'Authenticating...'
               : tab === 'signin'
-              ? 'Sign In to Chancellery'
-              : tab === 'signup'
-              ? 'Create Diplomatic Account'
-              : 'Send Passwordless Magic Link'}
+                ? 'Sign In to Chancellery'
+                : tab === 'signup'
+                  ? 'Create Diplomatic Account'
+                  : 'Send Passwordless Magic Link'}
           </button>
         </form>
 

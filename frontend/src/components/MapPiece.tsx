@@ -59,10 +59,21 @@ const PILL_MARK_ROOM = 18;
 const PILL_STAR_ROOM = 13;
 const PILL_END_ROOM = 8;
 
-export function SupplyStar({ ownerColor, scale = 1 }: { ownerColor?: string; scale?: number }) {
+export function SupplyStar({
+  ownerColor,
+  scale = 1,
+}: {
+  ownerColor?: string;
+  scale?: number;
+}) {
   return (
     <g transform={scale === 1 ? undefined : `scale(${scale})`}>
-      <circle r="8.5" fill={ownerColor ?? DEFAULT_RIM} stroke="#1c1917" strokeWidth="2" />
+      <circle
+        r="8.5"
+        fill={ownerColor ?? DEFAULT_RIM}
+        stroke="#1c1917"
+        strokeWidth="2"
+      />
       <polygon
         points="0,-5.8 1.6,-1.7 6,-1.7 2.5,1.1 3.8,5.4 0,2.8 -3.8,5.4 -2.5,1.1 -6,-1.7 -1.6,-1.7"
         fill={ownerColor ? '#fde047' : '#57534e'}
@@ -151,7 +162,10 @@ function NatoNaval() {
       <circle r="10.5" strokeWidth="2.3" />
       <circle cy="-5" r="1.5" strokeWidth="1.6" />
       <path d="M0 -3.5L0 6.5M-3.5 -1.5L3.5 -1.5" strokeWidth="1.8" />
-      <path d="M-6 1.5C-5.5 5 -3 6.5 0 6.5C3 6.5 5.5 5 6 1.5" strokeWidth="1.8" />
+      <path
+        d="M-6 1.5C-5.5 5 -3 6.5 0 6.5C3 6.5 5.5 5 6 1.5"
+        strokeWidth="1.8"
+      />
     </g>
   );
 }
@@ -204,7 +218,7 @@ export function makePiecePill(
   name: string,
   fontSize: number,
   angle: number,
-  hasStar: boolean
+  hasStar: boolean,
 ): PiecePill {
   const endRoom = hasStar ? PILL_STAR_ROOM : PILL_END_ROOM;
   return {
@@ -255,7 +269,7 @@ export function getPieceArrowScale(style: PieceStyle): number {
 export function getPieceFrame(
   style: PieceStyle,
   flagDirection: FlagDirection = 1,
-  pill: PiecePill | null = null
+  pill: PiecePill | null = null,
 ): PieceFrame {
   if (style === 'nameplate' && pill) {
     const angle = (pill.angle * Math.PI) / 180;
@@ -382,10 +396,14 @@ const HOLD_RING = [
 ];
 
 /** The eight-sided ring around a unit that is holding. */
-export function PieceHoldOutline({ frame, ...paint }: { frame: PieceFrame } & OutlinePaint) {
+export function PieceHoldOutline({
+  frame,
+  ...paint
+}: { frame: PieceFrame } & OutlinePaint) {
   if (frame.pill) return <PieceOutline frame={frame} radius={22} {...paint} />;
   const points = HOLD_RING.map(
-    ([x, y]) => `${x * frame.ringScale + frame.center.x},${y * frame.ringScale + frame.center.y}`
+    ([x, y]) =>
+      `${x * frame.ringScale + frame.center.x},${y * frame.ringScale + frame.center.y}`,
   ).join(' ');
   return <polygon points={points} {...paint} />;
 }
@@ -393,7 +411,14 @@ export function PieceHoldOutline({ frame, ...paint }: { frame: PieceFrame } & Ou
 /** Keeps a small piece as easy to click as the original token. */
 export function PieceHitArea({ frame }: { frame: PieceFrame }) {
   if (frame.hitRadius === 0) return null;
-  return <circle cx={frame.center.x} cy={frame.center.y} r={frame.hitRadius} fill="transparent" />;
+  return (
+    <circle
+      cx={frame.center.x}
+      cy={frame.center.y}
+      r={frame.hitRadius}
+      fill="transparent"
+    />
+  );
 }
 
 interface MapPieceProps {
@@ -441,7 +466,12 @@ function DiscPiece({
           />
         ))}
       {isArmy ? (
-        <circle r={shape.radius} fill={color} stroke={rim} strokeWidth={shape.strokeWidth} />
+        <circle
+          r={shape.radius}
+          fill={color}
+          stroke={rim}
+          strokeWidth={shape.strokeWidth}
+        />
       ) : (
         <polygon
           points={shape.fleetPoints}
@@ -490,7 +520,9 @@ function FlagPiece({
       <g transform={`translate(${markX}, -22) scale(${markScale})`}>
         <UnitMarkGlyph unitType={unitType} mark={mark} color={color} />
       </g>
-      {!hasStar && <circle r="3.4" fill={color} stroke={rim} strokeWidth="1.2" />}
+      {!hasStar && (
+        <circle r="3.4" fill={color} stroke={rim} strokeWidth="1.2" />
+      )}
     </g>
   );
 }
@@ -536,7 +568,9 @@ function PillPiece({
           strokeWidth="1.4"
         />
       )}
-      <g transform={`translate(${-halfWidth + 10}, 0) scale(${PILL_MARK_SCALE})`}>
+      <g
+        transform={`translate(${-halfWidth + 10}, 0) scale(${PILL_MARK_SCALE})`}
+      >
         <UnitMarkGlyph unitType={unitType} mark={mark} color={color} />
       </g>
       <text
@@ -609,7 +643,9 @@ export function MapPiece({
         scale={DISC_SCALE[style] ?? 1}
       />
       {style === 'seated' && showStar && (
-        <g transform={`translate(${SEATED_STAR_OFFSET.x}, ${SEATED_STAR_OFFSET.y})`}>
+        <g
+          transform={`translate(${SEATED_STAR_OFFSET.x}, ${SEATED_STAR_OFFSET.y})`}
+        >
           <SupplyStar ownerColor={starOwnerColor} scale={SEATED_STAR_SCALE} />
         </g>
       )}

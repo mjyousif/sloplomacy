@@ -1,4 +1,10 @@
-import { GameState, PhaseTimer, Power, POWER_METADATA, TimerChoice } from '../types/diplomacy';
+import {
+  GameState,
+  PhaseTimer,
+  Power,
+  POWER_METADATA,
+  TimerChoice,
+} from '../types/diplomacy';
 
 export const TIMER_OPTIONS: { choice: TimerChoice; label: string }[] = [
   { choice: '15', label: '15 min' },
@@ -8,7 +14,9 @@ export const TIMER_OPTIONS: { choice: TimerChoice; label: string }[] = [
 ];
 
 /** Identifies a turn to the server, which refuses orders meant for one that has resolved. */
-export function turnLabel(state: Pick<GameState, 'season' | 'year' | 'phase'>): string {
+export function turnLabel(
+  state: Pick<GameState, 'season' | 'year' | 'phase'>,
+): string {
   return `${state.season} ${state.year} ${state.phase}`;
 }
 

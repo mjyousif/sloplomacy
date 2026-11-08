@@ -11,7 +11,8 @@ export function getWebSocketUrl(path: string): string {
     typeof window !== 'undefined' && window.location.protocol === 'https:'
       ? 'wss:'
       : 'ws:';
-  const host = typeof window !== 'undefined' ? window.location.host : 'localhost:5173';
+  const host =
+    typeof window !== 'undefined' ? window.location.host : 'localhost:5173';
   return `${protocol}//${host}${path}`;
 }
 
@@ -19,7 +20,7 @@ export function resolveWebSocketPath(
   viewMode: 'lobby' | 'sandbox' | 'multiplayer',
   activeGameId: string | null,
   power?: string | null,
-  passcode?: string | null
+  passcode?: string | null,
 ): string | null {
   if (viewMode === 'lobby') {
     return '/ws/lobby';
@@ -102,7 +103,12 @@ export function useDiplomacyWebSocket({
     let isCancelled = false;
 
     // Determine target WS endpoint based on current viewMode & activeGameId
-    const targetPath = resolveWebSocketPath(viewMode, activeGameId, power, passcode);
+    const targetPath = resolveWebSocketPath(
+      viewMode,
+      activeGameId,
+      power,
+      passcode,
+    );
 
     if (!targetPath) {
       setIsConnected(false);
@@ -168,7 +174,11 @@ export function useDiplomacyWebSocket({
           setIsConnected(false);
           // Only attempt reconnect if not intentionally closed by navigation/unmount,
           // not suspended by background idle timeout, and not refused for a reason a retry cannot fix.
-          if (!isCancelled && !wasBackgroundDisconnectedRef.current && shouldReconnect(event.code)) {
+          if (
+            !isCancelled &&
+            !wasBackgroundDisconnectedRef.current &&
+            shouldReconnect(event.code)
+          ) {
             reconnectTimeoutRef.current = window.setTimeout(() => {
               connect();
             }, 2000);
@@ -198,7 +208,11 @@ export function useDiplomacyWebSocket({
         if (backgroundTimerRef.current === null) {
           backgroundTimerRef.current = window.setTimeout(() => {
             backgroundTimerRef.current = null;
-            if (typeof document !== 'undefined' && document.visibilityState === 'hidden' && wsRef.current) {
+            if (
+              typeof document !== 'undefined' &&
+              document.visibilityState === 'hidden' &&
+              wsRef.current
+            ) {
               wasBackgroundDisconnectedRef.current = true;
               wsRef.current.close(1000);
             }
@@ -212,7 +226,10 @@ export function useDiplomacyWebSocket({
         if (wasBackgroundDisconnectedRef.current) {
           wasBackgroundDisconnectedRef.current = false;
           connect();
-        } else if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        } else if (
+          wsRef.current &&
+          wsRef.current.readyState === WebSocket.OPEN
+        ) {
           wsRef.current.send(JSON.stringify({ type: 'refresh' }));
         }
       }
@@ -225,7 +242,10 @@ export function useDiplomacyWebSocket({
     return () => {
       isCancelled = true;
       if (typeof document !== 'undefined') {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        document.removeEventListener(
+          'visibilitychange',
+          handleVisibilityChange,
+        );
       }
       if (backgroundTimerRef.current !== null) {
         clearTimeout(backgroundTimerRef.current);
