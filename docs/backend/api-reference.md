@@ -9,41 +9,48 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 
 ## Endpoint Summary
 
-### Lobby & Multiplayer Management
+### Lobby & Match Management
 | Method | Endpoint | Description | Request Body | Response Model |
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/games` | List all open lobbies, active matches, and saved sandboxes | *None* | `List[MultiplayerGameSummary]` |
-| `GET` | `/api/games/{game_id}` | Fetch summary metadata and status for a specific game room | *None* | `MultiplayerGameSummary` |
+| `GET` | `/api/games/{game_id}` | Fetch summary metadata, participants, and status for a game room | *None* | `MultiplayerGameSummary` |
 | `POST` | `/api/games` | Create a new multiplayer room (public or private with passcode) | `CreateGameRequest` | `MultiplayerGameSummary` |
 | `DELETE` | `/api/games/{game_id}` | Delete a match lobby and remove its state from Supabase | *None* | `Dict[str, str]` |
 | `POST` | `/api/games/{game_id}/join` | Claim a sovereign Great Power seat (validating passcode if private) | `JoinGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/leave` | Vacate claimed power in lobby or match, or delete sandbox | `LeaveGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/surrender` | Concede sovereign command into Civil Disorder | `SurrenderRequest` | `GameBootstrapResponse` |
-| `POST` | `/api/games/{game_id}/timer/start` | Start a match's clock, opening the first vote (host only) | *None* | `GameState` |
-| `POST` | `/api/games/{game_id}/timer/vote` | Vote on the length of a Movement phase | `TimerVoteRequest` | `GameState` |
-| `POST` | `/api/games/{game_id}/timer/extend` | Ask for 5 more minutes, or take the request back | `TimerToggleRequest` | `GameState` |
-| `POST` | `/api/games/{game_id}/timer/ready` | Ready up in a paused game, or take it back | `TimerToggleRequest` | `GameState` |
-| `POST` | `/api/games/save-sandbox` | Save an in-memory solo sandbox to the lobby game list | `SaveSandboxRequest` | `MultiplayerGameSummary` |
 
 ### Match & Tactical Operations
 | Method | Endpoint | Description | Request Body | Response Model |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/game` | Fetch current game state and province topology dictionary | *None* | `GameBootstrapResponse` |
+| `GET` | `/api/game` | Fetch current game state (scoped to caller's seat) and province topology | *None* | `GameBootstrapResponse` |
 | `POST` | `/api/power` | Switch active viewing power (returns what the caller's own seat may see) | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/sandbox/enter` | Activate Sandbox Mode: a private copy for a multiplayer match, or a checkpoint of a solo game | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/sandbox/exit` | Leave Sandbox Mode and return the real game state (`409` on a live match: call it on the sandbox id) | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/sandbox/clear-foreign` | Reset all foreign hypothetical orders to default HOLD (`409` on a live match) | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/sandbox/ai-orders` | Generate DATC-compliant tactical AI orders for specified/foreign powers | `GenerateAIOrdersRequest` | `GameState` |
-| `POST` | `/api/sandbox/ai-step` | Auto-plan unassigned foreign powers with tactical AI and advance turn | *None* | `GameState` |
-| `POST` | `/api/order` | Submit or update an order for a single military unit | `SingleOrderUpdateRequest` | `GameState` |
-| `POST` | `/api/orders/batch` | Update multiple orders simultaneously (all or nothing: one invalid order rejects the batch with `400`) | `OrderSubmissionRequest` | `GameState` |
-| `POST` | `/api/orders/confirm-all` | Mark all orders of a given power as explicitly confirmed | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/finalize` | Pre-flight sanity check and finalize power's orders; resolves the turn in a live match once nobody is left to wait for | `FinalizeRequest` | `FinalizeResponse` |
+| `POST` | `/api/order` | Submit or update an order for a single military unit or build slot | `SingleOrderUpdateRequest` | `GameState` |
+| `POST` | `/api/orders/batch` | Update multiple orders simultaneously (atomic: invalid order rejects with `400`) | `OrderSubmissionRequest` | `GameState` |
+| `POST` | `/api/orders/confirm-all` | Mark all default orders of a given power as explicitly confirmed | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/finalize` | Pre-flight sanity check and finalize power's orders; auto-adjudicates when all are ready | `FinalizeRequest` | `FinalizeResponse` |
 | `POST` | `/api/unfinalize` | Unlock finalized orders for subsequent editing | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/simulate` | Execute non-destructive tactical preview resolution (in a live match, from the caller's own orders with everyone else holding) | *None* | `SimulationResult` |
+| `POST` | `/api/simulate` | Execute non-destructive tactical preview resolution using official DATC rules | *None* | `SimulationResult` |
 | `POST` | `/api/adjudicate` | Commit orders, resolve combat, advance season/phase | *None* | `GameState` |
-| `POST` | `/api/scenario` | Reset board and load predefined tactical scenario (host only on a live match: `401` or `403`; `400` for an unknown scenario, `404` for an unknown game) | `ScenarioRequest` | `GameState` |
-| `POST` | `/api/test/seed` | Seed game state for LLM-driven E2E tests and local developer verification (`403` in production or on a multiplayer match) | `SeedScenarioRequest` | `GameState` |
+| `POST` | `/api/scenario` | Reset board and load predefined tactical scenario (host only on live match) | `ScenarioRequest` | `GameState` |
+
+### Sandbox & AI Planning
+| Method | Endpoint | Description | Request Body | Response Model |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/sandbox/enter` | Activate Sandbox Mode: private copy for multiplayer, or solo checkpoint | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/sandbox/exit` | Leave Sandbox Mode and return real match (carrying player's modified orders) | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/sandbox/clear-foreign` | Reset all foreign hypothetical orders to default HOLD (`409` on live match) | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/sandbox/ai-orders` | Generate DATC-compliant heuristic tactical AI orders for specified powers | `GenerateAIOrdersRequest` | `GameState` |
+| `POST` | `/api/sandbox/ai-step` | Auto-plan unassigned foreign powers with tactical AI and advance turn | *None* | `GameState` |
+| `POST` | `/api/games/save-sandbox` | Save an in-memory solo sandbox session into persistent game list | `SaveSandboxRequest` | `MultiplayerGameSummary` |
+
+### Phase Clock & Timers
+| Method | Endpoint | Description | Request Body | Response Model |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/games/{game_id}/timer/start` | Start match clock, opening Movement duration vote (host only) | *None* | `GameState` |
+| `POST` | `/api/games/{game_id}/timer/vote` | Vote on length of Movement phase (15, 20, 30m, or pause) | `TimerVoteRequest` | `GameState` |
+| `POST` | `/api/games/{game_id}/timer/extend` | Request +5 minutes extension, or withdraw request | `TimerToggleRequest` | `GameState` |
+| `POST` | `/api/games/{game_id}/timer/ready` | Ready up in a paused game to open new duration vote | `TimerToggleRequest` | `GameState` |
 
 ### Administrator & Game Creator Controls
 | Method | Endpoint | Description | Request Body | Response Model |
@@ -56,6 +63,11 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/admin/unit/destroy` | Disband and remove any unit from the board | `AdminDestroyUnitRequest` | `GameState` |
 | `POST` | `/api/admin/ownership` | Reassign province / supply center ownership | `AdminSetOwnershipRequest` | `GameState` |
 | `POST` | `/api/admin/unfinalize-all` | Unlock and unfinalize orders for all 7 powers | *None* | `GameState` |
+
+### Developer & Testing Utilities
+| Method | Endpoint | Description | Request Body | Response Model |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/test/seed` | Seed game state for LLM-driven E2E tests and local dev verification (`403` in prod) | `SeedScenarioRequest` | `GameState` |
 
 ### Real-Time WebSocket Synchronization
 | Protocol | Endpoint | Description | Client Messages | Server Broadcasts |

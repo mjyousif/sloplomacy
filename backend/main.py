@@ -71,7 +71,57 @@ import hmac
 
 logger = logging.getLogger("diplomacy.server")
 
-app = FastAPI(title="Sloplomacy 1901 Tactical Server", version="1.2.0")
+TAGS_METADATA = [
+    {
+        "name": "Lobby & Match Management",
+        "description": "Create, list, join, leave, surrender, and manage multiplayer game rooms and lobbies.",
+    },
+    {
+        "name": "Match & Tactical Operations",
+        "description": (
+            "Bootstrap game state, switch power viewpoints, load scenarios, submit and batch orders, "
+            "confirm moves, run tactical preview simulations, and adjudicate turns."
+        ),
+    },
+    {
+        "name": "Sandbox & AI Planning",
+        "description": (
+            "Isolated sandbox mode ('War Room') for experimenting with moves without affecting authoritative "
+            "match state, clearing foreign pre-moves, and generating heuristic tactical orders."
+        ),
+    },
+    {
+        "name": "Phase Clock & Timers",
+        "description": "Turn clock lifecycle, phase duration voting, time extensions (+5m), and ready-up synchronization.",
+    },
+    {
+        "name": "Administrator & Creator Controls",
+        "description": (
+            "Privileged match controls: timeline rollback snapshots, season/phase jumping, unit movement, "
+            "spawning, disbanding, supply center ownership reassignment, and bulk unfinalization."
+        ),
+    },
+    {
+        "name": "Developer & Testing Utilities",
+        "description": "Deterministic game state seeding endpoints for E2E testing and local developer verification.",
+    },
+]
+
+app = FastAPI(
+    title="Sloplomacy 1901 Tactical Server",
+    description=(
+        "Official DATC-adjudicated Diplomacy tactical engine, multi-game room registry, "
+        "real-time synchronization, and sandbox planning server."
+    ),
+    version="1.2.0",
+    openapi_tags=TAGS_METADATA,
+    swagger_ui_parameters={
+        "docExpansion": "list",
+        "filter": True,
+        "persistAuthorization": True,
+        "displayRequestDuration": True,
+    },
+)
 
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
 if allowed_origins_env.strip():
@@ -1090,7 +1140,13 @@ async def sync_lobby_with_db() -> None:
         await manager.broadcast_lobby()
 
 
-@app.get("/api/games", response_model=List[MultiplayerGameSummary])
+@app.get(
+    "/api/games",
+    response_model=List[MultiplayerGameSummary],
+    tags=["Lobby & Match Management"],
+    summary="List Games",
+    description="Return all multiplayer games, open lobbies, and saved sessions.",
+)
 async def list_games():
     """Return all multiplayer games and saved sessions."""
     GAME_SUMMARIES.pop(DEFAULT_GAME_ID, None)
@@ -1104,7 +1160,13 @@ async def list_games():
     return [s for gid, s in GAME_SUMMARIES.items() if gid not in (DEFAULT_GAME_ID, "proto_1901")]
 
 
-@app.get("/api/games/{game_id}", response_model=MultiplayerGameSummary)
+@app.get(
+    "/api/games/{game_id}",
+    response_model=MultiplayerGameSummary,
+    tags=["Lobby & Match Management"],
+    summary="Get Game Lobby Details",
+    description="Retrieve details, participants, and settings for a single game lobby by its Game ID.",
+)
 async def get_game_details(game_id: str):
     """Retrieve details for a single game lobby by its Game ID."""
     if is_persistence_enabled():
@@ -1131,7 +1193,12 @@ async def get_game_details(game_id: str):
     return summary
 
 
-@app.delete("/api/games/{game_id}")
+@app.delete(
+    "/api/games/{game_id}",
+    tags=["Lobby & Match Management"],
+    summary="Delete Game",
+    description="Delete a game lobby and its persisted state in Supabase (host only).",
+)
 async def delete_game(
     game_id: str,
     user: Optional[AuthUser] = Depends(get_current_user),
@@ -1162,7 +1229,13 @@ async def delete_game(
     return {"status": "deleted", "game_id": game_id}
 
 
-@app.post("/api/games", response_model=MultiplayerGameSummary)
+@app.post(
+    "/api/games",
+    response_model=MultiplayerGameSummary,
+    tags=["Lobby & Match Management"],
+    summary="Create Multiplayer Game",
+    description="Create a new multiplayer game room (public or private with passcode) and assign creator_power to the user.",
+)
 async def create_multiplayer_game(
     req: CreateGameRequest,
     current_user: Optional[AuthUser] = Depends(get_current_user),
@@ -1214,7 +1287,13 @@ async def create_multiplayer_game(
     return summary
 
 
-@app.post("/api/games/{game_id}/join", response_model=GameBootstrapResponse)
+@app.post(
+    "/api/games/{game_id}/join",
+    response_model=GameBootstrapResponse,
+    tags=["Lobby & Match Management"],
+    summary="Join Multiplayer Game",
+    description="Claim an open sovereign Great Power seat (validating passcode if private).",
+)
 async def join_multiplayer_game(
     game_id: str,
     req: JoinGameRequest,
@@ -1297,7 +1376,13 @@ async def join_multiplayer_game(
     )
 
 
-@app.post("/api/games/{game_id}/leave", response_model=GameBootstrapResponse)
+@app.post(
+    "/api/games/{game_id}/leave",
+    response_model=GameBootstrapResponse,
+    tags=["Lobby & Match Management"],
+    summary="Leave Game",
+    description="Leave a multiplayer match (vacating claimed power) or remove a saved sandbox scenario.",
+)
 async def leave_game(
     game_id: str,
     req: LeaveGameRequest,
@@ -1393,7 +1478,13 @@ async def leave_game(
     )
 
 
-@app.post("/api/games/{game_id}/surrender", response_model=GameBootstrapResponse)
+@app.post(
+    "/api/games/{game_id}/surrender",
+    response_model=GameBootstrapResponse,
+    tags=["Lobby & Match Management"],
+    summary="Surrender Power",
+    description="Concede sovereign command of a Great Power into Civil Disorder.",
+)
 async def surrender_power(
     game_id: str,
     req: SurrenderRequest,
@@ -1465,7 +1556,13 @@ async def surrender_power(
     )
 
 
-@app.post("/api/games/save-sandbox", response_model=MultiplayerGameSummary)
+@app.post(
+    "/api/games/save-sandbox",
+    response_model=MultiplayerGameSummary,
+    tags=["Sandbox & AI Planning", "Lobby & Match Management"],
+    summary="Save Sandbox to Account",
+    description="Save the current sandbox game state into the authenticated user's personal games list.",
+)
 async def save_sandbox_to_account(
     req: SaveSandboxRequest,
     game_id: Optional[str] = Query(default=None),
@@ -1519,7 +1616,13 @@ async def save_sandbox_to_account(
     return summary
 
 
-@app.get("/api/game", response_model=GameBootstrapResponse)
+@app.get(
+    "/api/game",
+    response_model=GameBootstrapResponse,
+    tags=["Match & Tactical Operations"],
+    summary="Get Game State",
+    description="Bootstrap client by returning current GameState (scoped by caller seat under Fog of War) and province topology dictionary.",
+)
 async def get_game(
     game_id: Optional[str] = Query(default=None),
     power: Optional[Power] = Query(default=None),
@@ -1556,7 +1659,13 @@ async def get_game(
     )
 
 
-@app.post("/api/power", response_model=GameState)
+@app.post(
+    "/api/power",
+    response_model=GameState,
+    tags=["Match & Tactical Operations"],
+    summary="Set Active Power",
+    description="Switch active viewing power (returns what the caller's own seat may see under Fog of War).",
+)
 async def set_active_power(
     req: SetPowerRequest,
     game_id: Optional[str] = Query(default=None),
@@ -1659,7 +1768,13 @@ async def close_private_sandbox(sandbox: GameState) -> GameState:
     return match
 
 
-@app.post("/api/sandbox/enter", response_model=GameState)
+@app.post(
+    "/api/sandbox/enter",
+    response_model=GameState,
+    tags=["Sandbox & AI Planning"],
+    summary="Enter Sandbox Mode",
+    description="Activate Sandbox Mode: creates an isolated private hypothetical copy for multiplayer matches, or checkpoints a solo game.",
+)
 async def enter_sandbox_mode(
     req: SetPowerRequest,
     game_id: Optional[str] = Query(default=None),
@@ -1687,7 +1802,13 @@ async def enter_sandbox_mode(
     return game
 
 
-@app.post("/api/sandbox/exit", response_model=GameState)
+@app.post(
+    "/api/sandbox/exit",
+    response_model=GameState,
+    tags=["Sandbox & AI Planning"],
+    summary="Exit Sandbox Mode",
+    description="Exit Sandbox Mode and restore the authoritative game state (carrying over player's modified orders).",
+)
 async def exit_sandbox_mode(
     req: SetPowerRequest,
     game_id: Optional[str] = Query(default=None),
@@ -1744,7 +1865,13 @@ async def exit_sandbox_mode(
     return game
 
 
-@app.post("/api/sandbox/clear-foreign", response_model=GameState)
+@app.post(
+    "/api/sandbox/clear-foreign",
+    response_model=GameState,
+    tags=["Sandbox & AI Planning"],
+    summary="Clear Foreign Pre-Moves",
+    description="Reset all hypothetical orders in sandbox mode for powers other than req.power back to default HOLD.",
+)
 async def clear_foreign_pre_moves(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
     """Reset all hypothetical orders for powers other than req.power back to default."""
     game = await resolve_game(game_id)
@@ -1756,7 +1883,13 @@ async def clear_foreign_pre_moves(req: SetPowerRequest, game_id: Optional[str] =
     return game
 
 
-@app.post("/api/sandbox/ai-orders", response_model=GameState)
+@app.post(
+    "/api/sandbox/ai-orders",
+    response_model=GameState,
+    tags=["Sandbox & AI Planning"],
+    summary="Generate AI Orders",
+    description="Generate DATC-compliant heuristic tactical orders for specified Great Powers or foreign powers in sandbox mode.",
+)
 async def generate_sandbox_ai_orders(
     req: Optional[GenerateAIOrdersRequest] = None,
     game_id: Optional[str] = Query(default=None),
@@ -1791,7 +1924,13 @@ async def generate_sandbox_ai_orders(
     return game
 
 
-@app.post("/api/sandbox/ai-step", response_model=GameState)
+@app.post(
+    "/api/sandbox/ai-step",
+    response_model=GameState,
+    tags=["Sandbox & AI Planning"],
+    summary="Step Turn With AI",
+    description="Auto-plan unassigned foreign powers with tactical AI and advance to next phase in sandbox mode.",
+)
 async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
     """Auto-plan unassigned foreign powers with tactical AI and advance to next phase."""
     game = await resolve_game(game_id)
@@ -1820,7 +1959,13 @@ async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
     return await _execute_adjudication(game)
 
 
-@app.post("/api/order", response_model=GameState)
+@app.post(
+    "/api/order",
+    response_model=GameState,
+    tags=["Match & Tactical Operations"],
+    summary="Submit Single Order",
+    description="Submit or update a tactical order for a single military unit or winter adjustment slot.",
+)
 async def update_single_order(
     req: SingleOrderUpdateRequest,
     game_id: Optional[str] = Query(default=None),
@@ -1921,7 +2066,13 @@ async def update_single_order(
     return sanitize_game_state_for_viewer(game, target_power)
 
 
-@app.post("/api/orders/batch", response_model=GameState)
+@app.post(
+    "/api/orders/batch",
+    response_model=GameState,
+    tags=["Match & Tactical Operations"],
+    summary="Submit Batch Orders",
+    description="Update multiple orders atomically (all or nothing: rejected with 400 if any order is invalid).",
+)
 async def update_batch_orders(
     req: OrderSubmissionRequest,
     game_id: Optional[str] = Query(default=None),
@@ -1972,7 +2123,13 @@ async def update_batch_orders(
     return sanitize_game_state_for_viewer(game, req.power)
 
 
-@app.post("/api/orders/confirm-all", response_model=GameState)
+@app.post(
+    "/api/orders/confirm-all",
+    response_model=GameState,
+    tags=["Match & Tactical Operations"],
+    summary="Confirm All Orders",
+    description="Mark all default orders for a given Great Power as explicitly confirmed.",
+)
 async def confirm_all_power_orders(
     req: SetPowerRequest,
     game_id: Optional[str] = Query(default=None),
@@ -2033,7 +2190,13 @@ def get_required_finalizing_powers(game: GameState, summary: Optional[Multiplaye
     return claimed_powers
 
 
-@app.post("/api/finalize", response_model=FinalizeResponse)
+@app.post(
+    "/api/finalize",
+    response_model=FinalizeResponse,
+    tags=["Match & Tactical Operations"],
+    summary="Finalize Orders",
+    description="Run pre-flight sanity checks and lock in a power's orders. In multiplayer matches, auto-adjudicates once all active participants finalize.",
+)
 async def finalize_power_orders(
     req: FinalizeRequest,
     game_id: Optional[str] = Query(default=None),
@@ -2086,7 +2249,13 @@ async def finalize_power_orders(
     )
 
 
-@app.post("/api/unfinalize", response_model=GameState)
+@app.post(
+    "/api/unfinalize",
+    response_model=GameState,
+    tags=["Match & Tactical Operations"],
+    summary="Unfinalize Orders",
+    description="Unlock finalized orders for subsequent editing before the turn resolves.",
+)
 async def unfinalize_power_orders(
     req: SetPowerRequest,
     game_id: Optional[str] = Query(default=None),
@@ -2104,7 +2273,13 @@ async def unfinalize_power_orders(
     return sanitize_game_state_for_viewer(game, req.power)
 
 
-@app.post("/api/simulate", response_model=SimulationResult)
+@app.post(
+    "/api/simulate",
+    response_model=SimulationResult,
+    tags=["Match & Tactical Operations"],
+    summary="Simulate Turn Resolution",
+    description="Execute non-destructive tactical preview resolution using official DATC rules.",
+)
 async def simulate_current_orders(
     game_id: Optional[str] = Query(default=None),
     current_user: Optional[AuthUser] = Depends(get_current_user),
@@ -2188,7 +2363,13 @@ async def _execute_adjudication(game: GameState) -> GameState:
     return game
 
 
-@app.post("/api/adjudicate", response_model=GameState)
+@app.post(
+    "/api/adjudicate",
+    response_model=GameState,
+    tags=["Match & Tactical Operations"],
+    summary="Adjudicate Turn & Advance Phase",
+    description="Commit orders, resolve combat, dislodgements, retreats, and adjustments, advancing the game phase (creator only in multiplayer).",
+)
 async def adjudicate_and_advance(
     game_id: Optional[str] = Query(default=None),
     current_user: Optional[AuthUser] = Depends(get_current_user),
@@ -2304,7 +2485,13 @@ async def require_timer_player(
     return game
 
 
-@app.post("/api/games/{game_id}/timer/start", response_model=GameState)
+@app.post(
+    "/api/games/{game_id}/timer/start",
+    response_model=GameState,
+    tags=["Phase Clock & Timers"],
+    summary="Start Phase Clock",
+    description="Start the turn clock for a match (creator only), opening the duration vote for Movement phases.",
+)
 async def start_timer(game_id: str, current_user: Optional[AuthUser] = Depends(get_current_user)):
     """Start the clock for a match (Creator Only). From here on it runs by itself."""
     game = await resolve_game(game_id)
@@ -2318,7 +2505,13 @@ async def start_timer(game_id: str, current_user: Optional[AuthUser] = Depends(g
     return await publish_timer(game)
 
 
-@app.post("/api/games/{game_id}/timer/vote", response_model=GameState)
+@app.post(
+    "/api/games/{game_id}/timer/vote",
+    response_model=GameState,
+    tags=["Phase Clock & Timers"],
+    summary="Vote on Turn Duration",
+    description="Choose this phase's length. The vote closes early once every seated player has voted.",
+)
 async def vote_on_timer(
     game_id: str,
     req: TimerVoteRequest,
@@ -2331,7 +2524,13 @@ async def vote_on_timer(
     return sanitize_game_state_for_viewer(await publish_timer(game), req.power)
 
 
-@app.post("/api/games/{game_id}/timer/extend", response_model=GameState)
+@app.post(
+    "/api/games/{game_id}/timer/extend",
+    response_model=GameState,
+    tags=["Phase Clock & Timers"],
+    summary="Request Clock Extension",
+    description="Request or withdraw an extension of +5 minutes, added once enough seated players have requested it.",
+)
 async def request_timer_extension(
     game_id: str,
     req: TimerToggleRequest,
@@ -2348,7 +2547,13 @@ async def request_timer_extension(
     return sanitize_game_state_for_viewer(await publish_timer(game), req.power)
 
 
-@app.post("/api/games/{game_id}/timer/ready", response_model=GameState)
+@app.post(
+    "/api/games/{game_id}/timer/ready",
+    response_model=GameState,
+    tags=["Phase Clock & Timers"],
+    summary="Ready Up / Resume Clock",
+    description="Signal readiness in a paused game. Once every player is ready a new vote opens.",
+)
 async def ready_up_timer(
     game_id: str,
     req: TimerToggleRequest,
@@ -2365,7 +2570,13 @@ async def ready_up_timer(
     return sanitize_game_state_for_viewer(await publish_timer(game), req.power)
 
 
-@app.post("/api/scenario", response_model=GameState)
+@app.post(
+    "/api/scenario",
+    response_model=GameState,
+    tags=["Match & Tactical Operations"],
+    summary="Load Tactical Scenario",
+    description="Reset board state and load a predefined tactical scenario (creator only on live matches).",
+)
 async def load_scenario(
     req: ScenarioRequest,
     game_id: Optional[str] = Query(default=None),
@@ -2396,7 +2607,13 @@ def is_test_seed_enabled() -> bool:
     )
 
 
-@app.post("/api/test/seed", response_model=GameState)
+@app.post(
+    "/api/test/seed",
+    response_model=GameState,
+    tags=["Developer & Testing Utilities"],
+    summary="Seed Test Scenario",
+    description="Seed game state deterministically for LLM-driven E2E tests and local developer verification (development only).",
+)
 async def seed_test_scenario(req: SeedScenarioRequest):
     """Seed game state for LLM-driven E2E tests and local developer verification."""
     if not is_test_seed_enabled():
@@ -2436,7 +2653,13 @@ async def seed_test_scenario(req: SeedScenarioRequest):
 # ==========================================
 # ADMINISTRATOR / GAME CREATOR ENDPOINTS
 # ==========================================
-@app.get("/api/admin/status", response_model=AdminStatusResponse)
+@app.get(
+    "/api/admin/status",
+    response_model=AdminStatusResponse,
+    tags=["Administrator & Creator Controls"],
+    summary="Get Admin Status",
+    description="Check creator/admin privileges and rollback history depth for the given game.",
+)
 def get_admin_status(
     game_id: Optional[str] = Query(default=None),
     current_user: Optional[AuthUser] = Depends(get_current_user),
@@ -2475,7 +2698,13 @@ def get_admin_status(
     )
 
 
-@app.post("/api/admin/rollback", response_model=GameState)
+@app.post(
+    "/api/admin/rollback",
+    response_model=GameState,
+    tags=["Administrator & Creator Controls"],
+    summary="Rollback Turn Snapshot",
+    description="Roll back to the previous turn snapshot in history (creator only).",
+)
 async def admin_rollback_turn(
     req: Optional[AdminRollbackRequest] = None,
     game_id: Optional[str] = Query(default=None),
@@ -2515,7 +2744,13 @@ async def admin_rollback_turn(
     return prev_state
 
 
-@app.post("/api/admin/set-turn", response_model=GameState)
+@app.post(
+    "/api/admin/set-turn",
+    response_model=GameState,
+    tags=["Administrator & Creator Controls"],
+    summary="Set Season & Phase",
+    description="Arbitrarily adjust season, year, or phase (creator only).",
+)
 async def admin_set_turn(
     req: AdminSetTurnRequest,
     game_id: Optional[str] = Query(default=None),
@@ -2554,7 +2789,13 @@ async def admin_set_turn(
     return game
 
 
-@app.post("/api/admin/unit/move", response_model=GameState)
+@app.post(
+    "/api/admin/unit/move",
+    response_model=GameState,
+    tags=["Administrator & Creator Controls"],
+    summary="Teleport Unit",
+    description="Arbitrarily teleport or move any military unit to any valid province on the map (creator only).",
+)
 async def admin_move_unit(
     req: AdminMoveUnitRequest,
     game_id: Optional[str] = Query(default=None),
@@ -2617,7 +2858,13 @@ async def admin_move_unit(
     return game
 
 
-@app.post("/api/admin/unit/spawn", response_model=GameState)
+@app.post(
+    "/api/admin/unit/spawn",
+    response_model=GameState,
+    tags=["Administrator & Creator Controls"],
+    summary="Spawn Military Unit",
+    description="Arbitrarily spawn an army or fleet anywhere on the board (creator only).",
+)
 async def admin_spawn_unit(
     req: AdminSpawnUnitRequest,
     game_id: Optional[str] = Query(default=None),
@@ -2689,7 +2936,13 @@ async def admin_spawn_unit(
     return game
 
 
-@app.post("/api/admin/unit/destroy", response_model=GameState)
+@app.post(
+    "/api/admin/unit/destroy",
+    response_model=GameState,
+    tags=["Administrator & Creator Controls"],
+    summary="Destroy Military Unit",
+    description="Arbitrarily destroy or disband any unit on the board (creator only).",
+)
 async def admin_destroy_unit(
     req: AdminDestroyUnitRequest,
     game_id: Optional[str] = Query(default=None),
@@ -2721,7 +2974,13 @@ async def admin_destroy_unit(
     return game
 
 
-@app.post("/api/admin/ownership", response_model=GameState)
+@app.post(
+    "/api/admin/ownership",
+    response_model=GameState,
+    tags=["Administrator & Creator Controls"],
+    summary="Set SC Ownership",
+    description="Arbitrarily reassign province/supply center ownership to any Great Power or Neutrality (creator only).",
+)
 async def admin_set_ownership(
     req: AdminSetOwnershipRequest,
     game_id: Optional[str] = Query(default=None),
@@ -2756,7 +3015,13 @@ async def admin_set_ownership(
     return game
 
 
-@app.post("/api/admin/unfinalize-all", response_model=GameState)
+@app.post(
+    "/api/admin/unfinalize-all",
+    response_model=GameState,
+    tags=["Administrator & Creator Controls"],
+    summary="Unfinalize All Powers",
+    description="Unlock and unfinalize orders for all Great Powers simultaneously (creator only).",
+)
 async def admin_unfinalize_all(
     game_id: Optional[str] = Query(default=None),
     current_user: Optional[AuthUser] = Depends(get_current_user),
