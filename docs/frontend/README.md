@@ -16,6 +16,7 @@ frontend/
     ├── main.tsx                 # React DOM bootstrapping
     ├── App.tsx                  # Root state container, viewMode router & API coordination
     ├── App.css                  # Tactical HUD styling, CRT brass themes, animations & modals
+    ├── compact.css              # Phone layout, applied while the shell has data-layout="compact"
     ├── index.css                # Base reset & typography
     ├── components/
     │   ├── EuropeMap.tsx        # High-performance interactive SVG game board & order arrows
@@ -26,6 +27,8 @@ frontend/
     │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
     │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
     │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
+    │   ├── CompactTopBar.tsx    # Phone top bar: back, turn, order-problem count and a ⋯ menu
+    │   ├── CompactTopBar.test.ts # Vitest suite for the phone top bar and the surrender note
     │   ├── DisplaySettingsMenu.tsx # Top bar menu for this player's piece style and army and fleet marks
     │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every display style
     │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
@@ -42,6 +45,7 @@ frontend/
     ├── hooks/
     │   ├── useDiplomacyWebSocket.ts # Live Sync socket: heartbeat, reconnect rules & clock refresh
     │   ├── useDiplomacyWebSocket.test.ts # Vitest suite for socket URLs and reconnect rules
+    │   ├── useCompactLayout.ts  # The phone breakpoint (COMPACT_LAYOUT_QUERY) as a live boolean
     │   └── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
     ├── lib/
     │   └── supabase.ts          # Supabase client singleton & auth helpers
@@ -74,7 +78,7 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   └── User Auth Header & Profile Switcher
 │
 ├── View 2: Tactical Workspace (when viewMode === 'multiplayer' | 'sandbox')
-│   ├── Imperial Header Bar
+│   ├── Imperial Header Bar (CompactTopBar.tsx on phones: back, turn, problem count, ⋯ menu)
 │   │   ├── Return to Lobby (Clickable Brand Emblem & Title)
 │   │   ├── Turn Chronicle Pill (Season, Year, Phase & Winner)
 │   │   ├── Sanity Check Diagnostics Warning Pill

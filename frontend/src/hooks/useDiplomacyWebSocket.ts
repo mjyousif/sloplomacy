@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getAuthHeaders } from '../lib/supabase';
 import {
   WebSocketGameUpdate,
   WebSocketLobbyUpdate,
@@ -25,6 +26,10 @@ export function resolveWebSocketPath(
   }
   if (activeGameId) {
     const params = new URLSearchParams();
+    // The server waits for an `auth` message first, which says who is connecting. A browser
+    // cannot put an Authorization header on a socket, and a token in the URL would be logged.
+    params.set('handshake', '1');
+    // Only picks among the player's own seats; the server never shows another power's orders.
     if (power) params.set('power', power);
     if (passcode) params.set('passcode', passcode);
     const qs = params.toString();
@@ -44,11 +49,24 @@ export function shouldReconnect(closeCode: number): boolean {
   return closeCode !== 1000 && !PERMANENT_CLOSE_CODES.has(closeCode);
 }
 
+/** The bearer token from getAuthHeaders, or null when signed out. */
+async function getSocketToken(): Promise<string | null> {
+  try {
+    const headers = await getAuthHeaders();
+    const value = headers.Authorization;
+    return value?.startsWith('Bearer ') ? value.slice('Bearer '.length) : null;
+  } catch {
+    return null;
+  }
+}
+
 interface UseDiplomacyWebSocketProps {
   activeGameId: string | null;
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
   power?: string | null;
   passcode?: string | null;
+  /** Changes when the player signs in or out, so the socket reconnects as them. */
+  authKey?: string | null;
   onGameUpdate: (update: WebSocketGameUpdate) => void;
   onLobbyUpdate: (update: WebSocketLobbyUpdate) => void;
 }
@@ -58,6 +76,7 @@ export function useDiplomacyWebSocket({
   viewMode,
   power,
   passcode,
+  authKey,
   onGameUpdate,
   onLobbyUpdate,
 }: UseDiplomacyWebSocketProps) {
@@ -82,10 +101,14 @@ export function useDiplomacyWebSocket({
       return;
     }
 
-    const connect = () => {
+    const needsHandshake = targetPath.includes('handshake=1');
+
+    const connect = async () => {
       if (isCancelled) return;
 
       const wsUrl = getWebSocketUrl(targetPath);
+      const token = needsHandshake ? await getSocketToken() : null;
+      if (isCancelled) return;
 
       try {
         const ws = new WebSocket(wsUrl);
@@ -98,6 +121,9 @@ export function useDiplomacyWebSocket({
           if (isCancelled || wsRef.current !== ws) {
             ws.close(1000);
             return;
+          }
+          if (needsHandshake) {
+            ws.send(JSON.stringify({ type: 'auth', token }));
           }
           setIsConnected(true);
 
@@ -168,7 +194,7 @@ export function useDiplomacyWebSocket({
       }
       setIsConnected(false);
     };
-  }, [viewMode, activeGameId, power, passcode]);
+  }, [viewMode, activeGameId, power, passcode, authKey]);
 
   const sendPing = useCallback(() => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {

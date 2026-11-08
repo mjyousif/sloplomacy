@@ -153,6 +153,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx            # Main state container, viewMode controller & API coordinator
+│   │   ├── compact.css        # Phone layout rules, all under [data-layout='compact']
 │   │   ├── components/
 │   │   │   ├── EuropeMap.tsx        # High-performance interactive SVG board & order arrows
 │   │   │   ├── ToolsSidebar.tsx     # Left sidebar: legend, powers, sandbox & admin entry points
@@ -160,6 +161,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   │   │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
 │   │   │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
 │   │   │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
+│   │   │   ├── CompactTopBar.tsx    # Phone top bar: back, turn, order-problem count & ⋯ menu
 │   │   │   ├── DisplaySettingsMenu.tsx # Top bar menu for this player's piece style and marks
 │   │   │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every style
 │   │   │   ├── PhaseTimerWidget.tsx # Bottom-left turn clock, votes, ready-up & +5 minutes
@@ -173,6 +175,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   │   │   └── mapTextMetrics.ts    # Libre Baskerville widths for sizing names without the DOM
 │   │   ├── hooks/
 │   │   │   ├── useDiplomacyWebSocket.ts # Live Sync socket: heartbeat, reconnect rules & clock refresh
+│   │   │   ├── useCompactLayout.ts  # The phone breakpoint (COMPACT_LAYOUT_QUERY) as a live boolean
 │   │   │   └── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
 │   │   ├── lib/
 │   │   │   └── supabase.ts          # Supabase client singleton & auth helpers
@@ -219,6 +222,7 @@ The game cycles through three standard phases per year:
 - The backend supports multiple concurrent games, lobbies, and sandboxes in `GAMES: Dict[str, GameState]`.
 - All mutation endpoints (`/api/order`, `/api/finalize`, `/api/adjudicate`, etc.) accept an optional `?game_id=<id>` query parameter (defaults to `'proto_1901'`).
 - Always pass `activeGameId` in frontend API requests.
+- **Invariant**: A caller sees hidden orders only for a seat they hold. The server finds it from their token (`viewer_power_for`, `caller_holds_seat`); a `power` a client names only picks among its own seats. `sanitize_game_state_for_viewer` masks foreign orders and issues and rebuilds `last_resolution` from what the viewer may see. Every response or broadcast of a live match's `GameState` goes through it. The game socket learns who is connecting from an `auth` first message (`?handshake=1`), never from the URL.
 - **Invariant**: `GameState.active_power` is shared by everyone in a game, so it never identifies a multiplayer player. The client takes the player's power from `resolvePlayerPower` (their claimed seat), and `join` reports the joiner's power only in its own response.
 - **Invariant**: Memory is authoritative for a loaded game. Supabase only supplies games this process has not loaded, so never replace `GAMES` or `GAME_SUMMARIES` entries for a loaded game with a database copy. Call `persist_game` after every change to a game.
 - **Invariant**: A failed Supabase read raises `SupabaseUnavailable`, and must never be treated as "no such game". Only a successful read that lacks an already saved game means it was deleted; `UNSAVED_GAMES` marks the games that may have no row yet.
@@ -260,6 +264,12 @@ The game cycles through three standard phases per year:
 - **Invariant**: A failed account read must never be treated as "no saved value", because the upload that follows would overwrite the player's choice. Only a successful read that finds nothing means the account is empty.
 - **Invariant**: Classic with `letters` stays pixel-identical to the original map, including `CLY.unitPos` in the North Atlantic. Fix layout problems in the other styles' rows in `mapLayouts.ts`.
 - All piece bodies are drawn by `MapPiece`, and everything around them takes its size from `PieceFrame`. Don't hardcode ring radii or badge offsets in `EuropeMap.tsx`.
+
+### 9. Phone Layout
+- Phones get a compact layout, chosen by `useCompactLayout()` from `COMPACT_LAYOUT_QUERY` and written on the shell as `data-layout`. The rules are in [docs/frontend/styling-and-themes.md](docs/frontend/styling-and-themes.md#responsive--layout-specifications).
+- **Invariant**: Every phone style lives in `src/compact.css` under `[data-layout='compact']`. Don't add width `@media` rules, so the breakpoint stays in one place.
+- **Invariant**: The compact layout must not change the wide one. Check a change by comparing every element's box at 1440×900 before and after.
+- Hover handlers use `onPointerEnter`/`onPointerLeave` and ignore `pointerType === 'touch'`, so a tap never leaves a hover highlight behind.
 
 ---
 
