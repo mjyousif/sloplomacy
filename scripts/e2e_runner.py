@@ -26,31 +26,54 @@ IS_WINDOWS = platform.system() == "Windows"
 NPM_CMD = "npm.cmd" if IS_WINDOWS else "npm"
 NPX_CMD = "npx.cmd" if IS_WINDOWS else "npx"
 
-SCENARIO_MAP = {
-    "movement": "e2e/movement_and_orders.spec.ts",
-    "movement_and_orders": "e2e/movement_and_orders.spec.ts",
-    "sandbox": "e2e/sandbox_isolation.spec.ts",
-    "sandbox_isolation": "e2e/sandbox_isolation.spec.ts",
-    "blunder": "e2e/blunder_sanity_modal.spec.ts",
-    "blunder_sanity": "e2e/blunder_sanity_modal.spec.ts",
-    "blunder_sanity_modal": "e2e/blunder_sanity_modal.spec.ts",
-    "retreats": "e2e/retreats_dislodgement.spec.ts",
-    "retreats_dislodgement": "e2e/retreats_dislodgement.spec.ts",
-    "builds": "e2e/winter_builds.spec.ts",
-    "winter_builds": "e2e/winter_builds.spec.ts",
-    "mobile": "e2e/mobile_compact_hud.spec.ts",
-    "mobile_compact_hud": "e2e/mobile_compact_hud.spec.ts",
-}
+E2E_DIR = FRONTEND_DIR / "e2e"
 
-SCENARIO_DESCRIPTIONS = {
-    "movement": "Map reticle Move, Support vector, Hold toggle, adjudication, and Admin Console turn rollback.",
-    "sandbox": "Lobby launch, Hypothetical Mode foreign pre-move isolation, and order retention check.",
-    "blunder": "Tactical blunder diagnostics, illegal order detection, and pre-finalization sanity check modal.",
-    "retreats": "Spring dislodgement detection, retreat destination validation, and retreat resolution.",
-    "builds": "Winter adjustments, Army/Fleet builds, bicoastal STP/NC Fleet build, deficit disband, and advance to 1902.",
-    "mobile": "Mobile phone viewport (390x844), CompactTopBar, order problem modal, 3-dots menu, and touch navigation.",
-}
 
+def discover_scenarios():
+    """Find scenarios from the specs in frontend/e2e/.
+
+    Each `*.spec.ts` starts with two header comments:
+        // @scenario <short name>
+        // @description <one line>
+    Optional headers:
+        // @alias <extra name>   (repeatable, extra names accepted by `run`)
+        // @order <number>       (position in `list` and `run --all`, lowest first)
+    Adding a spec file with that header is all it takes to register a scenario.
+    The file name (without `.spec.ts`) also works as a long alias. Names are
+    case-insensitive. Scenarios without `@order` come last, by file name.
+    Returns (scenarios, aliases), where scenarios is a list of dicts in run order
+    and aliases maps every accepted name to its scenario.
+    """
+    scenarios = []
+    aliases = {}
+    for spec in sorted(E2E_DIR.glob("*.spec.ts")):
+        stem = spec.name[: -len(".spec.ts")]
+        name, desc, extra, order = stem, "", [], float("inf")
+        with open(spec, "r", encoding="utf-8") as f:
+            for line in f.read().splitlines()[:10]:
+                if line.startswith("// @scenario "):
+                    name = line[len("// @scenario "):].strip()
+                elif line.startswith("// @description "):
+                    desc = line[len("// @description "):].strip()
+                elif line.startswith("// @alias "):
+                    extra.append(line[len("// @alias "):].strip())
+                elif line.startswith("// @order "):
+                    try:
+                        order = float(line[len("// @order "):].strip())
+                    except ValueError:
+                        raise SystemExit(f"Invalid @order in frontend/e2e/{spec.name}")
+        name = name.lower()
+        sc = {"name": name, "stem": stem, "spec": f"e2e/{spec.name}", "description": desc, "order": order}
+        scenarios.append(sc)
+        for alias in (name, stem.lower(), *(a.lower() for a in extra)):
+            if alias in aliases and aliases[alias] is not sc:
+                raise SystemExit(f"Duplicate E2E scenario name '{alias}' in frontend/e2e/")
+            aliases[alias] = sc
+    scenarios.sort(key=lambda sc: (sc["order"], sc["stem"]))
+    return scenarios, aliases
+
+
+SCENARIOS, SCENARIO_ALIASES = discover_scenarios()
 
 class Colors:
     CYAN = "\033[96m"
@@ -88,12 +111,9 @@ def wait_for_service(url: str, name: str, max_wait: float = 25.0) -> bool:
 def list_scenarios():
     print_colored("\n=== Sloplomacy E2E Interactive Test Scenarios ===", Colors.CYAN + Colors.BOLD)
     print("Available scenarios for LLM agents & developers:\n")
-    unique_scenarios = ["movement", "sandbox", "blunder", "retreats", "builds", "mobile"]
-    for key in unique_scenarios:
-        desc = SCENARIO_DESCRIPTIONS.get(key, "")
-        spec = SCENARIO_MAP.get(key, "")
-        print_colored(f"  * {key.ljust(12)} -> {desc}", Colors.GREEN)
-        print(f"    Spec: frontend/{spec}\n")
+    for sc in SCENARIOS:
+        print_colored(f"  * {sc['name'].ljust(12)} -> {sc['description']}", Colors.GREEN)
+        print(f"    Spec: frontend/{sc['spec']}\n")
     print("Usage:")
     print("  python scripts/e2e_runner.py run <scenario_name> [--headed]")
     print("  python scripts/e2e_runner.py run --all\n")
@@ -187,31 +207,17 @@ def run_scenario(scenario_arg: str, headed: bool = False, base_url: str = "http:
 
         # Determine specs to run
         if scenario_arg == "--all" or scenario_arg == "all":
-            spec_args = [
-                "e2e/movement_and_orders.spec.ts",
-                "e2e/sandbox_isolation.spec.ts",
-                "e2e/blunder_sanity_modal.spec.ts",
-                "e2e/retreats_dislodgement.spec.ts",
-                "e2e/winter_builds.spec.ts",
-                "e2e/mobile_compact_hud.spec.ts",
-            ]
-            target_scenarios = [
-                "movement_and_orders",
-                "sandbox_isolation",
-                "blunder_sanity_modal",
-                "retreats_dislodgement",
-                "winter_builds",
-                "mobile_compact_hud",
-            ]
+            spec_args = [sc["spec"] for sc in SCENARIOS]
+            target_scenarios = [sc["stem"] for sc in SCENARIOS]
         else:
             clean_name = scenario_arg.lower().strip()
-            if clean_name not in SCENARIO_MAP:
+            if clean_name not in SCENARIO_ALIASES:
                 print_colored(f"[ERROR] Unknown scenario '{scenario_arg}'.", Colors.RED)
                 list_scenarios()
                 return 1
-            spec_file = SCENARIO_MAP[clean_name]
-            spec_args = [spec_file]
-            target_scenarios = [Path(spec_file).name.replace(".spec.ts", "")]
+            sc = SCENARIO_ALIASES[clean_name]
+            spec_args = [sc["spec"]]
+            target_scenarios = [sc["stem"]]
 
         print_colored(f"\n=======================================================", Colors.CYAN)
         print_colored(f"  Executing Playwright E2E Scenario: {scenario_arg}", Colors.CYAN + Colors.BOLD)

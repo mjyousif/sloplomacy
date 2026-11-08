@@ -192,6 +192,16 @@ python scripts/e2e_runner.py run movement --headed
 python scripts/e2e_runner.py run --all
 ```
 
+### Adding a Scenario
+Add `frontend/e2e/<topic>.spec.ts` that starts with two header comments, and the runner picks it up for `list`, `run <name>` and `run --all` with no other registration:
+```ts
+// @scenario <short name>
+// @description <one line shown by 'list'>
+// @alias <optional extra name>   (optional, repeatable)
+// @order <optional number>       (optional position in 'list' and 'run --all')
+```
+Use the file name (without `.spec.ts`) as the `ScenarioRecorder` name, because that is the artifacts folder. The file name also works as a long alias, and duplicate names fail at startup. Then add a row to the catalog below.
+
 ### Scenario Catalog & Artifacts
 | Scenario | Focus Area | Step Screenshots Saved In |
 | :--- | :--- | :--- |

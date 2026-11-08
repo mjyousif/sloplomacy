@@ -1,3 +1,6 @@
+// @scenario movement
+// @order 1
+// @description Map reticle Move, Support vector, Hold toggle, adjudication, and Admin Console turn rollback.
 import { test, expect } from '@playwright/test';
 import { ScenarioRecorder, seedScenario } from './helpers';
 
