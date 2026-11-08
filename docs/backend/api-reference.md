@@ -216,7 +216,7 @@ The rules are in [the rulebook reference](../guides/rulebook-reference.md#9-turn
 
 Each answers `403` for a power that is not playing, and `409` if the clock is in a different stage.
 
-Nothing runs in the background. The game WebSocket and `GET /api/game` check the deadline (with clients sending an immediate WebSocket ping or fallback HTTP fetch on countdown expiry), so a deadline is acted on within seconds while anyone is connected. A game nobody is connected to does not advance until someone returns.
+Nothing runs in the background. The game WebSocket and `GET /api/game` check the deadline (with clients sending a WebSocket `refresh` on countdown expiry, or the fallback HTTP poll when there is no socket), so a deadline is acted on within seconds while anyone is connected. A game nobody is connected to does not advance until someone returns.
 
 ---
 
@@ -500,7 +500,8 @@ Establishes a persistent, low-latency WebSocket connection scoped to a specific 
   - Immediately transmits the sanitized `game_update` payload tailored to the connected viewer's power.
 - **Client Heartbeats & Refresh**:
   - Send `{"type": "ping"}` -> Server replies `{"type": "pong"}` to maintain Cloud Run & proxy connections.
-  - Send `{"type": "refresh"}` -> Server resends the latest authoritative `game_update`.
+  - Send `{"type": "refresh"}` -> Server runs `tick_timer` (resolving a deadline that has passed), then resends the latest authoritative `game_update`. The client sends this when its countdown reaches zero; `ping` does not run the clock.
+- **Close codes**: `4004` (no such game) and `4403` (passcode refused) are permanent, and the client does not reconnect. `1013` means try again later (the database could not be read).
 - **Automatic Broadcast Triggers**:
   - Whenever an order is submitted or changed (`/api/order`, `/api/orders/batch`, `/api/orders/confirm-all`).
   - Whenever a power finalizes or unfinalizes (`/api/finalize`, `/api/unfinalize`).

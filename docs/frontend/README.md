@@ -30,7 +30,9 @@ frontend/
     │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every display style
     │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
     │   ├── SanityCheckModal.tsx # Pre-finalization tactical blunder warning dialogue
-│   └── VersionBadge.tsx     # Git commit short SHA indicator, clipboard copy & GitHub commit link
+    │   ├── ConfirmModal.tsx     # In-app confirmation for destructive actions; Shift+click skips it
+    │   ├── ConfirmModal.test.ts # Vitest suite for the confirmation and its Shift rule
+    │   └── VersionBadge.tsx     # Git commit short SHA indicator, clipboard copy & GitHub commit link
     ├── data/
     │   ├── europeMapGeometry.ts # Authentic SVG vector paths, province centers & defs
     │   ├── europeMapGeometry.test.ts # Vitest suite for map label typography
@@ -38,6 +40,8 @@ frontend/
     │   ├── mapLayouts.test.ts   # Checks every placement against the province outlines
     │   └── mapTextMetrics.ts    # Libre Baskerville widths for sizing names without the DOM
     ├── hooks/
+    │   ├── useDiplomacyWebSocket.ts # Live Sync socket: heartbeat, reconnect rules & clock refresh
+    │   ├── useDiplomacyWebSocket.test.ts # Vitest suite for socket URLs and reconnect rules
     │   └── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
     ├── lib/
     │   └── supabase.ts          # Supabase client singleton & auth helpers

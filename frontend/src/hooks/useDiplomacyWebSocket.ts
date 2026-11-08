@@ -33,6 +33,17 @@ export function resolveWebSocketPath(
   return null;
 }
 
+/**
+ * Close codes the server sends when retrying cannot help: the game is gone (4004)
+ * or the passcode is missing or wrong (4403). The hook stops reconnecting and the
+ * caller falls back to HTTP polling, which knows who the player is.
+ */
+export const PERMANENT_CLOSE_CODES: ReadonlySet<number> = new Set([4004, 4403]);
+
+export function shouldReconnect(closeCode: number): boolean {
+  return closeCode !== 1000 && !PERMANENT_CLOSE_CODES.has(closeCode);
+}
+
 interface UseDiplomacyWebSocketProps {
   activeGameId: string | null;
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -52,7 +63,6 @@ export function useDiplomacyWebSocket({
 }: UseDiplomacyWebSocketProps) {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const reconnectTimeoutRef = useRef<number | null>(null);
-  const heartbeatIntervalRef = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   // Keep callback refs fresh without resetting websocket connection
@@ -80,19 +90,19 @@ export function useDiplomacyWebSocket({
       try {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
+        // Each socket owns its heartbeat, so a late close from an old socket
+        // cannot stop the heartbeat of the one that replaced it.
+        let heartbeat: number | null = null;
 
         ws.onopen = () => {
-          if (isCancelled) {
+          if (isCancelled || wsRef.current !== ws) {
             ws.close(1000);
             return;
           }
           setIsConnected(true);
 
           // Heartbeat ping every 25 seconds to keep proxies & Cloud Run alive
-          if (heartbeatIntervalRef.current) {
-            clearInterval(heartbeatIntervalRef.current);
-          }
-          heartbeatIntervalRef.current = window.setInterval(() => {
+          heartbeat = window.setInterval(() => {
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: 'ping' }));
             }
@@ -113,13 +123,17 @@ export function useDiplomacyWebSocket({
         };
 
         ws.onclose = (event) => {
-          setIsConnected(false);
-          if (heartbeatIntervalRef.current) {
-            clearInterval(heartbeatIntervalRef.current);
-            heartbeatIntervalRef.current = null;
+          if (heartbeat !== null) {
+            clearInterval(heartbeat);
+            heartbeat = null;
           }
-          // Only attempt reconnect if not intentionally closed by navigation/unmount
-          if (!isCancelled && event.code !== 1000) {
+          // A socket that has already been replaced says nothing about the current one.
+          if (wsRef.current !== ws) return;
+          wsRef.current = null;
+          setIsConnected(false);
+          // Only attempt reconnect if not intentionally closed by navigation/unmount,
+          // and not refused for a reason a retry cannot fix.
+          if (!isCancelled && shouldReconnect(event.code)) {
             reconnectTimeoutRef.current = window.setTimeout(() => {
               connect();
             }, 2000);
@@ -142,17 +156,15 @@ export function useDiplomacyWebSocket({
 
     return () => {
       isCancelled = true;
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-        heartbeatIntervalRef.current = null;
-      }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
       if (wsRef.current) {
-        wsRef.current.close(1000);
+        const ws = wsRef.current;
         wsRef.current = null;
+        // Its onclose still clears its own heartbeat.
+        ws.close(1000);
       }
       setIsConnected(false);
     };
@@ -164,5 +176,14 @@ export function useDiplomacyWebSocket({
     }
   }, []);
 
-  return { isConnected, sendPing };
+  /** Asks the server to run the turn clock and send the current state back. */
+  const sendRefresh = useCallback((): boolean => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'refresh' }));
+      return true;
+    }
+    return false;
+  }, []);
+
+  return { isConnected, sendPing, sendRefresh };
 }

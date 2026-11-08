@@ -9,6 +9,7 @@ import { ToolsSidebar } from './components/ToolsSidebar';
 import { AdminToolsModal } from './components/AdminToolsModal';
 import { SanityCheckModal } from './components/SanityCheckModal';
 import { SurrenderModal } from './components/SurrenderModal';
+import { useConfirm } from './components/ConfirmModal';
 import { PhaseTimerWidget } from './components/PhaseTimerWidget';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
 import { turnLabel } from './utils/timerHelpers';
@@ -113,6 +114,10 @@ export function App() {
   const [sanityModalOpen, setSanityModalOpen] = useState<boolean>(false);
   const [sanityModalIssues, setSanityModalIssues] = useState<ValidationIssue[]>([]);
   const [toastBanner, setToastBanner] = useState<string | null>(null);
+  const { confirm, confirmModal } = useConfirm();
+  // Passcodes this player typed for private matches during this visit, so the live
+  // socket can present them. Never saved: a reload falls back to polling.
+  const [matchPasscodes, setMatchPasscodes] = useState<Record<string, string>>({});
 
   // Surrender & Leave Modal State
   const [surrenderModalOpen, setSurrenderModalOpen] = useState<boolean>(false);
@@ -200,10 +205,11 @@ export function App() {
     [activeGameId]
   );
 
-  const { isConnected: wsConnected, sendPing: sendWsPing } = useDiplomacyWebSocket({
+  const { isConnected: wsConnected, sendRefresh: sendWsRefresh } = useDiplomacyWebSocket({
     activeGameId,
     viewMode,
     power: playerPower,
+    passcode: activeGameId ? matchPasscodes[activeGameId] ?? null : null,
     onGameUpdate: handleWsGameUpdate,
     onLobbyUpdate: handleWsLobbyUpdate,
   });
@@ -223,7 +229,12 @@ export function App() {
     }
   };
 
+  // Bumped by every fetchGame and every join, so an older reply still in flight
+  // (such as the startup load of proto_1901) cannot replace a board opened since.
+  const boardRequestSeq = useRef(0);
+
   const fetchGame = async (gid: string = activeGameId, targetPower?: Power | null) => {
+    const seq = ++boardRequestSeq.current;
     try {
       setLoading(true);
       const effectivePower = targetPower !== undefined ? targetPower : playerPower;
@@ -237,6 +248,7 @@ export function App() {
       });
       if (!res.ok) throw new Error(`Backend returned ${res.status}`);
       const data = await res.json();
+      if (seq !== boardRequestSeq.current) return;
       applyServerState(data.state);
       setProvinces(data.provinces);
       if (data.summary) {
@@ -244,7 +256,9 @@ export function App() {
       }
       setErrorMsg(null);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to connect to Diplomacy backend server.');
+      if (seq === boardRequestSeq.current) {
+        setErrorMsg(err.message || 'Failed to connect to Diplomacy backend server.');
+      }
     } finally {
       setLoading(false);
     }
@@ -258,13 +272,12 @@ export function App() {
     return () => unsub();
   }, []);
 
+  // Only a `refresh` makes the server run the clock; a `ping` is just a heartbeat.
+  // Without a socket the fallback poll below runs the clock every few seconds, and
+  // it also knows to leave the board alone while a private sandbox is open.
   const handleTimerExpired = useCallback(() => {
-    if (wsConnected) {
-      sendWsPing();
-    } else if (activeGameId) {
-      fetchGame(activeGameId);
-    }
-  }, [wsConnected, sendWsPing, activeGameId]);
+    sendWsRefresh();
+  }, [sendWsRefresh]);
 
   // Fallback poll game state in multiplayer mode ONLY when WebSocket is disconnected,
   // so turn advancements and timers continue to work if a network drops WS connections.
@@ -320,10 +333,15 @@ export function App() {
   }, [viewMode, sandboxGameId]);
 
 
-  const handleEnterSoloSandbox = async () => {
+  const handleEnterSoloSandbox = async (event?: React.MouseEvent) => {
     if (viewMode === 'multiplayer' && activeGameSummary) {
-      const confirmLeave = window.confirm(
-        `Switch from match "${activeGameSummary.name}" to the Solo Sandbox board? Your submitted orders remain safe on the server.`
+      const confirmLeave = await confirm(
+        {
+          title: 'Switch to the Solo Sandbox?',
+          message: `You leave match "${activeGameSummary.name}" for the Solo Sandbox board. Your submitted orders remain safe on the server.`,
+          confirmLabel: 'Switch',
+        },
+        event
       );
       if (!confirmLeave) return;
     }
@@ -413,6 +431,11 @@ export function App() {
         throw new Error(msg);
       }
       const data = await res.json();
+      boardRequestSeq.current++;
+      const typedPasscode = passcode?.trim();
+      if (typedPasscode) {
+        setMatchPasscodes((prev) => ({ ...prev, [gameId]: typedPasscode }));
+      }
       setActiveGameId(gameId);
       setActiveGameSummary(data.summary);
       applyServerState(data.state);
@@ -1388,6 +1411,7 @@ export function App() {
           fetchGamesList();
         }}
       />
+      {confirmModal}
     </div>
   );
 }
