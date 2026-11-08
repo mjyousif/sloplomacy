@@ -108,11 +108,56 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
 
-      - name: Build & Deploy Unified Container
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Ensure Artifact Registry Repository Exists
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          REGION: ${{ secrets.GCP_REGION || 'us-central1' }}
+          REPO_NAME: ${{ secrets.GCP_ARTIFACT_REPO || 'diplomacy-repo' }}
+        run: |
+          if ! gcloud artifacts repositories describe "$REPO_NAME" --location="$REGION" --project="$PROJECT_ID" &>/dev/null; then
+            echo "Creating Artifact Registry repository '$REPO_NAME'..."
+            gcloud artifacts repositories create "$REPO_NAME" \
+              --repository-format=docker \
+              --location="$REGION" \
+              --description="Docker repository for Sloplomacy 1901" \
+              --project="$PROJECT_ID"
+          fi
+
+      - name: Configure Docker for Artifact Registry
+        env:
+          REGION: ${{ secrets.GCP_REGION || 'us-central1' }}
+        run: |
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build & Push Container Image
         env:
           PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           REGION: ${{ secrets.GCP_REGION || 'us-central1' }}
           SERVICE_NAME: ${{ secrets.GCP_SERVICE_NAME || 'diplomacy-1901' }}
+          REPO_NAME: ${{ secrets.GCP_ARTIFACT_REPO || 'diplomacy-repo' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:latest
+          build-args: |
+            VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
+            VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
+            VITE_GIT_COMMIT=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Google Cloud Run
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          REGION: ${{ secrets.GCP_REGION || 'us-central1' }}
+          SERVICE_NAME: ${{ secrets.GCP_SERVICE_NAME || 'diplomacy-1901' }}
+          REPO_NAME: ${{ secrets.GCP_ARTIFACT_REPO || 'diplomacy-repo' }}
           SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -121,23 +166,10 @@ jobs:
           echo "Target Project: $PROJECT_ID"
           echo "Target Region : $REGION"
           echo "Target Service: $SERVICE_NAME"
-          
-          IMAGE_TAG="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:${{ github.sha }}"
-          LATEST_TAG="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest"
 
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SERVICE_NAME}:${{ github.sha }}"
 
-          # 1. Build and push container with Cloud Build
-          echo "Building container with Google Cloud Build (revision: $SHORT_SHA)..."
-          gcloud builds submit \
-            --config=cloudbuild.yaml \
-            --substitutions="_SUPABASE_URL=${SUPABASE_URL},_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},_SHORT_SHA=${SHORT_SHA},_IMAGE_TAG=${IMAGE_TAG}" \
-            --project="$PROJECT_ID"
-
-          # 2. Also tag as latest
-          gcloud container images add-tag "$IMAGE_TAG" "$LATEST_TAG" --quiet || true
-
-          # 3. Deploy container revision to Cloud Run.
+          # Deploy container revision to Cloud Run.
           # --update-env-vars keeps variables set by hand on the service. Only secrets that are
           # configured are sent, so an unset GitHub secret never blanks a value on the service.
           # SUPABASE_KEY is only ever the service role key: the backend refuses to persist with
@@ -164,6 +196,8 @@ jobs:
 
           # --max-instances 1 is required: games live in one process.
           # --timeout 3600 lets a WebSocket stay open for an hour instead of 5 minutes.
+          # --cpu-throttling ensures compute charges apply only during active request processing.
+          # --cpu-boost temporarily allocates extra CPU during cold-start boot.
           echo "Deploying to Cloud Run with Supabase state persistence..."
           gcloud run deploy "$SERVICE_NAME" \
             --image "$IMAGE_TAG" \
@@ -173,12 +207,15 @@ jobs:
             --allow-unauthenticated \
             --min-instances 0 \
             --max-instances 1 \
+            --cpu 1 \
             --memory 512Mi \
+            --cpu-throttling \
+            --cpu-boost \
             --port 8080 \
             --timeout 3600 \
             "${ENV_FLAGS[@]}"
 
-          # 4. Extract and report public service URL
+          # Extract and report public service URL
           SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format "value(status.url)")
           echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
           echo "- **Service Name:** \`$SERVICE_NAME\`" >> $GITHUB_STEP_SUMMARY

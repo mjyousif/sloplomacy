@@ -11,6 +11,7 @@ import uuid
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
 from auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from fastapi.security import HTTPAuthorizationCredentials
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
@@ -96,6 +97,8 @@ else:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 @app.middleware("http")
@@ -2911,12 +2914,25 @@ async def ws_lobby_endpoint(websocket: WebSocket):
         manager.disconnect_lobby(websocket)
 
 
+class CachedStaticFiles(StaticFiles):
+    """
+    Static asset file response handler that attaches aggressive Cache-Control headers
+    for content-hashed frontend bundles, saving Cloud Run egress bandwidth and compute.
+    """
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
 # Mount static frontend build when running in production container
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(STATIC_DIR):
     assets_dir = os.path.join(STATIC_DIR, "assets")
     if os.path.exists(assets_dir):
-        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+        app.mount("/assets", CachedStaticFiles(directory=assets_dir), name="assets")
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
@@ -2924,9 +2940,9 @@ if os.path.exists(STATIC_DIR):
             raise HTTPException(status_code=404, detail="Not Found")
         file_path = resolve_static_path(STATIC_DIR, full_path)
         if file_path:
-            return FileResponse(file_path)
+            return FileResponse(file_path, headers={"Cache-Control": "public, max-age=86400"})
         index_file = os.path.join(STATIC_DIR, "index.html")
         if os.path.isfile(index_file):
-            return FileResponse(index_file)
+            return FileResponse(index_file, headers={"Cache-Control": "no-cache, must-revalidate"})
         raise HTTPException(status_code=404, detail="Frontend index.html not found")
 

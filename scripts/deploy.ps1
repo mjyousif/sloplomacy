@@ -11,6 +11,7 @@ param(
     [string]$ProjectId = "",
     [string]$Region = "us-central1",
     [string]$ServiceName = "diplomacy-1901",
+    [string]$ArtifactRepo = "diplomacy-repo",
     [string]$SupabaseUrl = "",
     [string]$SupabaseAnonKey = "",
     [string]$SupabaseServiceRoleKey = "",
@@ -97,8 +98,21 @@ gcloud services enable `
     artifactregistry.googleapis.com `
     --project $ProjectId
 
-# 4. Build Container Image with Google Cloud Build
-$ImageTag = "gcr.io/$ProjectId/${ServiceName}:latest"
+# 4. Build Container Image with Google Cloud Build (Artifact Registry)
+$ImageTag = "$Region-docker.pkg.dev/$ProjectId/${ArtifactRepo}/${ServiceName}:latest"
+
+Write-Host ""
+Write-Host "--> Ensuring Artifact Registry repository '$ArtifactRepo' exists..." -ForegroundColor Cyan
+& gcloud artifacts repositories describe $ArtifactRepo --location=$Region --project=$ProjectId 2>$null | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Creating Artifact Registry repository '$ArtifactRepo'..." -ForegroundColor Yellow
+    & gcloud artifacts repositories create $ArtifactRepo `
+        --repository-format=docker `
+        --location=$Region `
+        --description="Docker repository for Sloplomacy 1901" `
+        --project=$ProjectId
+}
+
 Write-Host ""
 Write-Host "--> Building container on Cloud Build ($ImageTag)..." -ForegroundColor Cyan
 
@@ -108,7 +122,7 @@ try {
     if (-not $ShortSha) { $ShortSha = "dev" }
     gcloud builds submit `
         --config="$RepoRoot\cloudbuild.yaml" `
-        --substitutions="_SUPABASE_URL=$SupabaseUrl,_SUPABASE_ANON_KEY=$SupabaseAnonKey,_SHORT_SHA=$ShortSha,_IMAGE_TAG=$ImageTag" `
+        --substitutions="_SUPABASE_URL=$SupabaseUrl,_SUPABASE_ANON_KEY=$SupabaseAnonKey,_SHORT_SHA=$ShortSha,_IMAGE_TAG=$ImageTag,_REGION=$Region" `
         --project $ProjectId `
         $RepoRoot
     $buildSuccess = ($LASTEXITCODE -eq 0)
@@ -146,6 +160,8 @@ $envVars = ($envPairs.GetEnumerator() | Where-Object { $_.Value } | ForEach-Obje
 
 # --max-instances 1 is required: games live in one process.
 # --timeout 3600 lets a WebSocket stay open for an hour instead of 5 minutes.
+# --cpu-throttling ensures compute charges apply only during active request processing.
+# --cpu-boost temporarily allocates extra CPU during cold-start boot.
 $deployArgs = @(
     "run", "deploy", $ServiceName,
     "--image", $ImageTag,
@@ -155,7 +171,10 @@ $deployArgs = @(
     "--allow-unauthenticated",
     "--min-instances", "0",
     "--max-instances", "1",
+    "--cpu", "1",
     "--memory", "512Mi",
+    "--cpu-throttling",
+    "--cpu-boost",
     "--port", "8080",
     "--timeout", "3600"
 )
