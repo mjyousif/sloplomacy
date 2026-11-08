@@ -62,7 +62,7 @@ The app has two layouts. `useCompactLayout()` (`hooks/useCompactLayout.ts`) deci
   - **Lobby**: one column, in this order: your games, open games, Host, Join, then the intro banner. Power slots wrap to as many columns as fit (about three on a phone), and rows of buttons wrap.
   - **Modals**: cards fit the visible height and scroll. Footers stack into full-width buttons, with the main action on top and Cancel at the bottom. Close buttons are `44px` square. The admin console's tabs scroll sideways and its forms use one column.
   - **Touch**: buttons in modals, the lobby and the top bar are at least `44px` tall. Inputs and selects use `16px` text so iOS doesn't zoom in on focus. Small pills and labels get at least `12px` text.
-  - **Not yet**: the game screen still uses the wide workspace, so the map has little or no room on a phone. A bottom sheet for orders and a tools drawer are planned (issue #54).
+  - **Workspace (in-game screen)**: on phones, the map takes the full visible space between two slim 44px rails. Expanded sidebars operate as overlay drawers (`position: absolute; z-index: 35`) rather than crushing the map canvas.
 - **`.compact-only`**: hidden in the wide layout and shown in the compact one. It carries text that a desktop tooltip already gives, such as what the two surrender buttons do.
 - **Touch screens**: `@media (hover: none)` hides the ConfirmModal's Shift tip, because Shift needs a keyboard.
 - **Header Bar (wide)**: fixed height `60px` with nation crests, season pill, and sandbox toggle.

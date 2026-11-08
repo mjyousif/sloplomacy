@@ -406,6 +406,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
     <div className="admin-modal-backdrop" onClick={onClose}>
       <div
         className="admin-modal-card"
+        data-testid="admin-tools-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-labelledby="admin-title"
@@ -535,6 +536,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
                   </div>
                   <button
                     type="button"
+                    data-testid="btn-admin-rollback"
                     className="admin-primary-btn rollback"
                     disabled={!canRollback || loading}
                     onClick={handleRollback}
@@ -980,7 +982,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
             <ShieldAlert size={14} />
             <span>Administrator Actions are audited in the imperial turn chronicle.</span>
           </div>
-          <button type="button" className="admin-done-btn" onClick={onClose}>
+          <button type="button" data-testid="btn-admin-close" className="admin-done-btn" onClick={onClose}>
             Done / Close Console
           </button>
         </div>

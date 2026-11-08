@@ -108,10 +108,11 @@ export function CompactTopBar({
   }, [menuOpen]);
 
   return (
-    <header className="compact-top-bar" ref={rootRef}>
+    <header className="compact-top-bar" ref={rootRef} data-testid="compact-top-bar">
       {inGame ? (
         <button
           type="button"
+          data-testid="compact-back-lobby-btn"
           className="compact-bar-icon-btn"
           onClick={onBackToLobby}
           aria-label="Back to lobby"
@@ -119,7 +120,7 @@ export function CompactTopBar({
           <ArrowLeft size={20} />
         </button>
       ) : (
-        <div className="compact-brand">
+        <div className="compact-brand" data-testid="compact-brand">
           <span className="brand-emblem compact-brand-emblem">
             <Compass size={18} />
           </span>
@@ -128,7 +129,7 @@ export function CompactTopBar({
       )}
 
       {turn && (
-        <span className="compact-turn-text">
+        <span className="compact-turn-text" data-testid="compact-turn-text">
           {turn.season} {turn.year} · {turn.phase}
         </span>
       )}
@@ -142,6 +143,7 @@ export function CompactTopBar({
         ) : issueTotal > 0 ? (
           <button
             type="button"
+            data-testid="compact-issue-badge"
             className={`compact-issue-badge ${errorCount > 0 ? 'has-errors' : 'has-warnings'}`}
             onClick={onOpenOrderCheck}
             aria-label={`${describeIssueCount(errorCount, warningCount)}. Open the order check.`}
@@ -162,6 +164,7 @@ export function CompactTopBar({
       <button
         ref={toggleRef}
         type="button"
+        data-testid="compact-menu-toggle"
         className={`compact-bar-icon-btn compact-menu-toggle ${menuOpen ? 'open' : ''}`}
         aria-label={wsConnected ? 'Menu' : 'Menu (live sync is reconnecting)'}
         aria-expanded={menuOpen}
@@ -173,11 +176,12 @@ export function CompactTopBar({
       </button>
 
       {menuOpen && (
-        <div id={menuId} className="compact-menu-panel" role="dialog" aria-label="Menu">
+        <div id={menuId} className="compact-menu-panel" data-testid="compact-menu-panel" role="dialog" aria-label="Menu">
           {menuView === 'display' ? (
             <>
               <button
                 type="button"
+                data-testid="compact-menu-display-back"
                 className="compact-menu-back"
                 onClick={() => setMenuView('main')}
               >
@@ -215,6 +219,7 @@ export function CompactTopBar({
               {viewMode !== 'sandbox' && (
                 <button
                   type="button"
+                  data-testid="compact-menu-solo-sandbox"
                   className="compact-menu-item"
                   onClick={(event) => {
                     closeMenu();
@@ -228,6 +233,7 @@ export function CompactTopBar({
 
               <button
                 type="button"
+                data-testid="compact-menu-display-settings"
                 className="compact-menu-item"
                 onClick={() => setMenuView('display')}
               >

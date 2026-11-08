@@ -131,6 +131,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
       <aside className="tools-sidebar tools-sidebar-collapsed" aria-label="Tools Sidebar Collapsed">
         <button
           type="button"
+          data-testid="tools-sidebar-expand-btn"
           className="sidebar-rail-btn rail-toggle-btn"
           onClick={onToggleCollapse}
           title="Expand Chancellery Tools & Intel"
@@ -217,6 +218,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
         </div>
         <button
           type="button"
+          data-testid="tools-sidebar-collapse-btn"
           className="sidebar-collapse-toggle-btn"
           onClick={onToggleCollapse}
           title="Collapse Tools Sidebar"
@@ -317,6 +319,8 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               return (
                 <div
                   key={pwr}
+                  data-testid="power-standing-card"
+                  data-power={pwr}
                   className={`power-standing-card ${isSelected ? 'selected' : ''} ${!isMultiplayer ? 'clickable' : ''}`}
                   onClick={() => {
                     if (!isMultiplayer) onSelectPower(pwr);
@@ -380,6 +384,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
         >
           <button
             type="button"
+            data-testid="btn-toggle-sandbox"
             className={`tools-sandbox-toggle-btn ${sandboxMode ? 'active' : ''}`}
             onClick={onToggleSandboxMode}
           >
@@ -456,6 +461,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
             <div className="tools-scenario-actions">
               <button
                 type="button"
+                data-testid="btn-reset-scenario"
                 className="tools-btn"
                 onClick={() => onLoadScenario('standard_1901')}
                 title="Reset to clean Spring 1901 start"
@@ -492,6 +498,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
             <div className="admin-actions-column">
               <button
                 type="button"
+                data-testid="btn-open-admin-console"
                 className="tools-btn tools-admin-console-btn"
                 onClick={onOpenAdminTools}
                 title="Open comprehensive administrator modal"

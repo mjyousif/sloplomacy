@@ -108,11 +108,18 @@ export function App() {
   const [showSimulationOverlay, setShowSimulationOverlay] = useState<boolean>(false);
   const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
   const [adminOverrideActive, setAdminOverrideActive] = useState<boolean>(false);
-  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState<boolean>(false);
-  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState<boolean>(false);
   const [zoomPercent, setZoomPercent] = useState<number>(105);
   // Phone-sized screens get the compact layout, styled from compact.css.
   const isCompact = useCompactLayout();
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState<boolean>(() => isCompact);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState<boolean>(() => isCompact);
+
+  useEffect(() => {
+    if (isCompact) {
+      setLeftSidebarCollapsed(true);
+      setRightSidebarCollapsed(true);
+    }
+  }, [isCompact]);
   const mapRef = useRef<EuropeMapHandle | null>(null);
 
   // Sanity Check Modal State
@@ -1096,6 +1103,7 @@ export function App() {
             <nav className="top-view-nav">
               <button
                 type="button"
+                data-testid="nav-tab-sandbox"
                 className={`nav-tab-btn ${viewMode === 'sandbox' ? 'active' : ''}`}
                 onClick={handleEnterSoloSandbox}
                 title="Open standalone 7-power practice laboratory"
@@ -1118,7 +1126,7 @@ export function App() {
           {/* Center Board Readout (Only when viewing Map Board) */}
           {viewMode !== 'lobby' && (
             <div className="header-center-telemetry">
-              <div className="turn-chronicle-pill">
+              <div className="turn-chronicle-pill" data-testid="turn-chronicle-pill">
                 <Calendar size={15} className="turn-cal-icon" />
                 <span className="turn-season-text">
                   {gameState.season.toUpperCase()} {gameState.year}

@@ -9,7 +9,7 @@ import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 import uuid
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
-from auth import AuthUser, get_current_user
+from auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials
 from starlette.concurrency import run_in_threadpool
@@ -42,6 +42,7 @@ from models import (
     ProvinceType,
     SaveSandboxRequest,
     ScenarioRequest,
+    SeedScenarioRequest,
     SimulationResult,
     SingleOrderUpdateRequest,
     SurrenderRequest,
@@ -110,7 +111,12 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
     return response
 
-SCENARIO_IDS = {"standard_1901", "tactical_blunders_demo"}
+SCENARIO_IDS = {
+    "standard_1901",
+    "tactical_blunders_demo",
+    "spring_retreats_demo",
+    "winter_adjustments_demo",
+}
 FIRST_YEAR = 1901
 PHASES_BY_SEASON = {
     "Spring": {"Movement", "Retreats"},
@@ -286,12 +292,20 @@ def refresh_diagnostics_and_simulation(game: GameState) -> None:
 
 def build_scenario(
     scenario_id: str,
-    active_power: Power = Power.FRANCE,
+    active_power: Optional[Power] = None,
     game_id: str = "proto_1901",
 ) -> GameState:
     units = get_initial_1901_units()
     ownership = get_initial_ownership()
     orders = create_default_orders(units)
+
+    season = "Spring"
+    year = 1901
+    phase = "Movement"
+    turn_hist = ["Game initialized — Spring 1901 Diplomatic & Movement Phase."]
+    retreats_data = None
+    builds_data = None
+    default_power = Power.FRANCE
 
     if scenario_id == "tactical_blunders_demo":
         # France: A PAR -> BUR AND A MAR -> BUR (Self-Bounce in Burgundy!)
@@ -352,20 +366,83 @@ def build_scenario(
             is_explicit=True,
         )
 
+    elif scenario_id == "spring_retreats_demo":
+        season = "Spring"
+        year = 1901
+        phase = "Retreats"
+        turn_hist = [
+            "Game initialized with Spring 1901 Retreats demo.",
+            "Spring 1901: German Army in Burgundy was dislodged by French advance from Marseilles.",
+        ]
+        units = [u for u in units if u.id != "GER_A_MUN"]
+        dislodged_ger = Unit(
+            id="GER_A_MUN",
+            power=Power.GERMANY,
+            unit_type=UnitType.ARMY,
+            province="BUR",
+            is_dislodged=True,
+        )
+        units.append(dislodged_ger)
+        for u in units:
+            if u.id == "FRA_A_MAR":
+                u.province = "BUR"
+        orders = create_default_orders(units, phase)
+        # Dislodged from BUR by an attack from MAR, while PAR is occupied:
+        # unoccupied adjacent provinces are RUH, BEL, MUN, PIC, and GAS.
+        retreats_data = {
+            "GERMANY": {
+                "A BUR": ["RUH", "BEL", "MUN", "PIC", "GAS"]
+            }
+        }
+        default_power = Power.GERMANY
+
+    elif scenario_id == "winter_adjustments_demo":
+        season = "Winter"
+        year = 1901
+        phase = "Adjustments"
+        turn_hist = [
+            "Game initialized with Winter 1901 Adjustments demo.",
+            "Winter 1901: France holds 5 Supply Centers with 3 units (+2 builds pending).",
+        ]
+        ownership = get_initial_ownership()
+        ownership["SPA"] = Power.FRANCE
+        ownership["POR"] = Power.FRANCE
+        # Russia holds 5 SCs (+1 build in vacant STP) and Austria holds 2 SCs (-1 deficit disband)
+        ownership["RUM"] = Power.RUSSIA
+        ownership["TRI"] = Power.ITALY
+        for u in units:
+            if u.id == "FRA_A_PAR":
+                u.province = "BUR"
+            elif u.id == "FRA_A_MAR":
+                u.province = "SPA"
+            elif u.id == "FRA_F_BRE":
+                u.province = "MAO"
+            elif u.id == "RUS_F_STP":
+                u.province = "BOT"
+                u.coast = None
+            elif u.id == "AUS_F_TRI":
+                u.province = "ALB"
+        orders = create_default_orders(units, phase)
+        default_power = Power.FRANCE
+
+    resolved_power = active_power if active_power is not None else default_power
+
     game = GameState(
         game_id=game_id,
-        season="Spring",
-        year=1901,
-        phase="Movement",
+        season=season,
+        year=year,
+        phase=phase,
         scenario_id=scenario_id,
-        active_power=active_power,
+        active_power=resolved_power,
         units=units,
         orders=orders,
         ownership=ownership,
         finalized_powers=[],
         issues=[],
         last_resolution=None,
-        turn_history=["Game initialized — Spring 1901 Diplomatic & Movement Phase."],
+        turn_history=turn_hist,
+        retreats=retreats_data,
+        builds=builds_data,
     )
     refresh_diagnostics_and_simulation(game)
     return game
@@ -2306,6 +2383,51 @@ async def load_scenario(
     GAMES[gid] = build_scenario(req.scenario_id, power, gid)
     sync_summary(gid)
     await persist_game(gid)
+    await broadcast_game_update(gid, GAMES[gid])
+    await broadcast_lobby_update()
+    return GAMES[gid]
+
+
+def is_test_seed_enabled() -> bool:
+    """Permit the test seed endpoint only in local development or automated test runs."""
+    return (
+        is_insecure_dev_auth_allowed()
+        or os.getenv("ENABLE_TEST_SEED_ENDPOINT", "").lower() in ("1", "true")
+    )
+
+
+@app.post("/api/test/seed", response_model=GameState)
+async def seed_test_scenario(req: SeedScenarioRequest):
+    """Seed game state for LLM-driven E2E tests and local developer verification."""
+    if not is_test_seed_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Test seed endpoint is disabled in production. Set ENVIRONMENT=development or ENABLE_TEST_SEED_ENDPOINT=1 for local testing.",
+        )
+    if req.scenario_id not in SCENARIO_IDS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown scenario '{req.scenario_id}'. Available: {sorted(SCENARIO_IDS)}",
+        )
+    gid = req.game_id or DEFAULT_GAME_ID
+    if gid not in GAMES and is_persistence_enabled():
+        loaded = await load_saved_game(gid)
+        if loaded is not None:
+            cache_loaded_game(gid, loaded)
+    if is_multiplayer_match(gid):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot seed over a multiplayer match.",
+        )
+    if gid not in GAMES:
+        check_game_capacity()
+    SANDBOX_CHECKPOINTS[gid] = None
+    GAME_HISTORY[gid] = []
+    HISTORY_UNSAVED.add(gid)
+    GAMES[gid] = build_scenario(req.scenario_id, req.active_power, gid)
+    sync_summary(gid)
+    if gid in GAME_SUMMARIES:
+        await persist_game(gid)
     await broadcast_game_update(gid, GAMES[gid])
     await broadcast_lobby_update()
     return GAMES[gid]

@@ -43,6 +43,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/simulate` | Execute non-destructive tactical preview resolution (in a live match, from the caller's own orders with everyone else holding) | *None* | `SimulationResult` |
 | `POST` | `/api/adjudicate` | Commit orders, resolve combat, advance season/phase | *None* | `GameState` |
 | `POST` | `/api/scenario` | Reset board and load predefined tactical scenario (host only on a live match: `401` or `403`; `400` for an unknown scenario, `404` for an unknown game) | `ScenarioRequest` | `GameState` |
+| `POST` | `/api/test/seed` | Seed game state for LLM-driven E2E tests and local developer verification (`403` in production or on a multiplayer match) | `SeedScenarioRequest` | `GameState` |
 
 ### Administrator & Game Creator Controls
 | Method | Endpoint | Description | Request Body | Response Model |
@@ -383,6 +384,27 @@ In a live match, a retreat or adjustment phase that no player is involved in the
 
 - **Multiplayer Security**: In multiplayer campaigns (`!is_sandbox`), manual adjudication requires authentic game creator authorization via a cryptographically signed Supabase JSON Web Token (`Authorization: Bearer <token>`). Missing, invalid, or expired tokens receive `401 Unauthorized`. Authenticated users who are not the game creator receive `403 Forbidden`. In normal multiplayer play, turns advance automatically upon consensus finalization; this endpoint acts as an administrative host override. Solo sandbox mode (`proto_1901`) and personal sandboxes retain zero-friction anonymous access.
 - A unit whose order the engine rejects holds in place. When a power reaches 18 supply centers the response carries `winner`, the clock stays on the deciding phase, and further calls return `409`.
+
+---
+
+### `POST /api/test/seed`
+Seed the game state for a specific test scenario (`standard_1901`, `tactical_blunders_demo`, `spring_retreats_demo`, `winter_adjustments_demo`). Designed for LLM-driven E2E tests and local developer verification without requiring admin credentials or full manual playthroughs.
+
+- **Security Gate**: Only active when `ENVIRONMENT` is `development` or `test`, `ALLOW_INSECURE_DEV_AUTH=true`, or `ENABLE_TEST_SEED_ENDPOINT=1`. Returns `403 Forbidden` in production or if called against a multiplayer match.
+
+**Request Schema (`SeedScenarioRequest`)**:
+```json
+{
+  "scenario_id": "spring_retreats_demo",
+  "game_id": "proto_1901",
+  "active_power": "GERMANY"
+}
+```
+
+**Responses**:
+- `200 OK`: Returns the freshly initialized `GameState`.
+- `400 Bad Request`: Unknown scenario identifier.
+- `403 Forbidden`: Endpoint is disabled in production or target `game_id` is a multiplayer match.
 
 ---
 
