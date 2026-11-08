@@ -15,6 +15,7 @@ jobs:
   backend-tests:
     name: Backend Tests (Pytest)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: backend
@@ -23,8 +24,9 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
+          cache-dependency-path: backend/requirements*.txt
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -36,6 +38,7 @@ jobs:
   frontend-tests:
     name: Frontend Tests & Build Check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
@@ -59,6 +62,7 @@ jobs:
     needs: [backend-tests, frontend-tests]
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -74,8 +78,9 @@ jobs:
             exit 1
           fi
 
-      - name: Apply Supabase Migrations (Optional)
-        continue-on-error: true
+      # A failed migration stops the deploy. Every file runs in one transaction, so a failure
+      # leaves the database as it was, and no other connection sees a half-applied policy set.
+      - name: Apply Supabase Migrations
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.SUPABASE_DB_URL }}
         run: |
@@ -83,14 +88,17 @@ jobs:
             echo "DATABASE_URL not configured. Skipping migrations."
             exit 0
           fi
-          echo "Applying pending migrations to Supabase PostgreSQL..."
+          files=()
           for sql_file in $(ls -1 supabase/migrations/*.sql | sort); do
-            echo "--> Running migration: $sql_file"
-            if ! psql "$DATABASE_URL" -f "$sql_file"; then
-              echo "::warning::Migration failed for $sql_file. If using direct 'db.<ref>.supabase.co', please switch DATABASE_URL to the IPv4 Connection Pooler URI (aws-0-<region>.pooler.supabase.com:6543) in the Supabase 'Connect' modal because GitHub Actions runners do not support IPv6."
-            fi
+            echo "--> Will run migration: $sql_file"
+            files+=(-f "$sql_file")
           done
-          echo "Migration step completed."
+          echo "Applying migrations to Supabase PostgreSQL..."
+          if ! psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction "${files[@]}"; then
+            echo "::error::Migrations failed and were rolled back, so nothing was deployed. If DATABASE_URL uses the direct 'db.<ref>.supabase.co' host, switch it to the IPv4 Connection Pooler URI (aws-0-<region>.pooler.supabase.com:6543) from the Supabase 'Connect' modal, because GitHub Actions runners do not support IPv6."
+            exit 1
+          fi
+          echo "Migrations applied."
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -129,8 +137,33 @@ jobs:
           # 2. Also tag as latest
           gcloud container images add-tag "$IMAGE_TAG" "$LATEST_TAG" --quiet || true
 
-          # 3. Deploy container revision to Cloud Run
-          BACKEND_KEY="${SUPABASE_SERVICE_ROLE_KEY:-$SUPABASE_ANON_KEY}"
+          # 3. Deploy container revision to Cloud Run.
+          # --update-env-vars keeps variables set by hand on the service. Only secrets that are
+          # configured are sent, so an unset GitHub secret never blanks a value on the service.
+          # SUPABASE_KEY is only ever the service role key: the backend refuses to persist with
+          # the anon key, because RLS gives anon zero rows and the lobby would drop every game.
+          ENV_VARS=""
+          add_env() {
+            if [ -n "$2" ]; then
+              ENV_VARS="${ENV_VARS:+${ENV_VARS},}$1=$2"
+            fi
+          }
+          add_env VITE_SUPABASE_URL "$SUPABASE_URL"
+          add_env VITE_SUPABASE_ANON_KEY "$SUPABASE_ANON_KEY"
+          add_env SUPABASE_URL "$SUPABASE_URL"
+          add_env SUPABASE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
+          add_env SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
+          add_env SUPABASE_JWT_SECRET "$SUPABASE_JWT_SECRET"
+          if [ -n "$SUPABASE_URL" ] && [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::warning::SUPABASE_SERVICE_ROLE_KEY is not set. Game persistence stays off unless the service already has it."
+          fi
+          ENV_FLAGS=()
+          if [ -n "$ENV_VARS" ]; then
+            ENV_FLAGS=(--update-env-vars "$ENV_VARS")
+          fi
+
+          # --max-instances 1 is required: games live in one process.
+          # --timeout 3600 lets a WebSocket stay open for an hour instead of 5 minutes.
           echo "Deploying to Cloud Run with Supabase state persistence..."
           gcloud run deploy "$SERVICE_NAME" \
             --image "$IMAGE_TAG" \
@@ -142,7 +175,8 @@ jobs:
             --max-instances 1 \
             --memory 512Mi \
             --port 8080 \
-            --set-env-vars "VITE_SUPABASE_URL=${SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_KEY=${BACKEND_KEY},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY},SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}"
+            --timeout 3600 \
+            "${ENV_FLAGS[@]}"
 
           # 4. Extract and report public service URL
           SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format "value(status.url)")

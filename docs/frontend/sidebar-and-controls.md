@@ -13,10 +13,10 @@ Both sidebars feature smooth, 44px collapsed rail views with quick tool icons an
 
 To prevent interface bloat and preserve a clean, focused tactical workspace, adhere to these UI design invariants:
 
-1. **Authoritative Lobby Navigation**: The clickable brand emblem and title (`SLOPLOMACY 1901`) in the top command header is the single authoritative control to return to the match lobby; never add separate "Main Page" or "Home" tab buttons to the header.
+1. **Authoritative Lobby Navigation**: The clickable brand emblem and title (`SLOPLOMACY 1901`) in the top command header is the single authoritative control to return to the match lobby; never add separate "Main Page" or "Home" tab buttons to the header. On phones the ← button at the left of `CompactTopBar` takes this role, because a phone has no tooltip to explain the brand.
 2. **Sidebar Collapse & Rail Ownership**: Sidebar expand and collapse actions belong exclusively on the sidebars themselves (in their headers when expanded, and on their 44px slim rails when collapsed). Do not introduce top navigation header pill buttons to toggle sidebars.
 3. **Unobstructed Map Canvas**: The interactive SVG European map viewport must remain free of floating camera/zoom overlay boxes. All stepped zooming, percentage readout, and camera reset/fit actions belong in the Left Tools Sidebar (`ToolsSidebar.tsx`), accessible both in full view and via rail icons.
-4. **Personal Display Settings in the Top Bar**: The `SlidersHorizontal` icon in the top header's right-hand actions opens `DisplaySettingsMenu.tsx`, on every screen and for guests too. See [Top Bar Display Settings](#top-bar-display-settings).
+4. **Personal Display Settings in the Top Bar**: The `SlidersHorizontal` icon in the top header's right-hand actions opens `DisplaySettingsMenu.tsx`, on every screen and for guests too. See [Top Bar Display Settings](#top-bar-display-settings). On phones it sits inside the ⋯ menu instead.
 5. **Tactical Map Legend Purity**: The Tactical Map Legend is strictly a visual guide for map symbology (movement vectors, support reticles, convoy anchors, and warning/dislodgement markers). Never embed rulebook mechanics or geography text footnotes (e.g. dual coasts or impassable terrain); interactive modal dialogs and cartographic text handle these directly.
 
 
@@ -33,6 +33,17 @@ To prevent interface bloat and preserve a clean, focused tactical workspace, adh
 - **Status line**: says where the choice is saved, such as "Saved to your account" or "Saved on this device. Sign in to keep it across devices".
 
 The previews render with the real `MapPiece`, so they always match the map. These settings only affect this player's own view.
+
+---
+
+## Phone Top Bar (`CompactTopBar.tsx`)
+
+In the compact layout (see [Responsive & Layout Specifications](styling-and-themes.md#responsive--layout-specifications)) the header becomes one `52px` row:
+
+- **Left**: in a game, a ← button back to the lobby. In the lobby, the brand.
+- **Turn**: for example "Spring 1901 · Movement". The text shrinks slightly on narrow phones and ends in an ellipsis if it still doesn't fit.
+- **Order problems**: a red or amber badge with the count of your errors and warnings. Tapping it does what the desktop pill does: it asks to finalize, and the server answers with the order check. With no problems it shows a green check that does nothing. Once someone has won, it shows the winner instead.
+- **⋯ menu**: Live Sync status with what it follows (the lobby feed or the game id), the match and your power, Solo Sandbox, Display settings (the same choices as `DisplaySettingsMenu`, from its `DisplaySettingsOptions`), and your account with its email, Sign In / Register or Sign Out. An amber dot on ⋯ means Live Sync is reconnecting. The menu closes on an outside tap, Escape, or after any action.
 
 ---
 
@@ -79,6 +90,9 @@ The previews render with the real `MapPiece`, so they always match the map. Thes
 ### 5. Creator Administrator Controls (Game Creator Only)
 - Visible exclusively to room creators.
 - **"Open Admin Console"**: Launches `AdminToolsModal.tsx` for timeline rollbacks, unit teleportation, and arbitrary unit spawning/destruction.
+  - Destroy, Roll Back and Hard Reset ask for confirmation in an in-app `ConfirmModal`, never a browser dialog. A browser dialog the player has blocked answers "no" without showing anything, which made these buttons silently do nothing (issues #75, #77). Holding Shift while clicking skips the confirmation, and the modal says so. Escape or Cancel backs out.
+  - The turn form resets only when the console opens or the game reaches another turn, not on every order update, so typing is not undone and an error from the last action stays visible.
+- **"Solo Sandbox"** (top bar): leaving a multiplayer match for the solo board asks through the same `ConfirmModal`.
 - **"Direct-Edit Board Override"**: While on, the host can select and order any power's units on the map, and sees all their orders. Other players are unaffected, and the toggle has no effect in a game the player does not host.
 
 ---
@@ -133,5 +147,3 @@ When either sidebar is collapsed:
 - Sits at the sticky footer bottom of the sidebar.
 - Displays the current build revision short SHA (`rev <sha>`) with one-click clipboard copy and direct link to the commit on GitHub.
 
-### 8. Historical Turn Log
-- Reverse-chronological audit log detailing tactical outcomes of previous seasons.

@@ -139,6 +139,8 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   └── migrations/            # Supabase PostgreSQL schema & profiles RLS
 ├── backend/
 │   ├── main.py                # FastAPI endpoints, multi-game room registry & static SPA mount
+│   ├── auth.py                # Supabase JWT verification (HS256 secret, ES256 key or JWKS)
+│   ├── database.py            # Supabase PostgREST persistence: save, load, lobby columns, SupabaseUnavailable
 │   ├── models.py              # Pydantic v2 models (GameState, Order, Issues, Admin schemas)
 │   ├── adjudicator.py         # Official DATC adjudication wrapper over `diplomacy` package
 │   ├── phase_timer.py         # Multiplayer turn clock rules: votes, pausing, extensions & deadlines
@@ -146,26 +148,34 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   ├── ai_engine.py           # Heuristic order generation for sandbox AI planning
 │   ├── map_data.py            # Complete 76-province graph, dual coasts, 34 SC definitions
 │   ├── requirements.txt       # Python dependencies
+│   ├── conftest.py            # Shared pytest fixtures (resets the in-memory game registry)
 │   └── test_*.py              # Comprehensive pytest test harness (11 test suites)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx            # Main state container, viewMode controller & API coordinator
+│   │   ├── compact.css        # Phone layout rules, all under [data-layout='compact']
 │   │   ├── components/
 │   │   │   ├── EuropeMap.tsx        # High-performance interactive SVG board & order arrows
+│   │   │   ├── ToolsSidebar.tsx     # Left sidebar: legend, powers, sandbox & admin entry points
 │   │   │   ├── MacroSidebar.tsx     # Order builder, phase controls, diagnostics, admin/surrender
 │   │   │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
 │   │   │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
 │   │   │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
+│   │   │   ├── CompactTopBar.tsx    # Phone top bar: back, turn, order-problem count & ⋯ menu
 │   │   │   ├── DisplaySettingsMenu.tsx # Top bar menu for this player's piece style and marks
 │   │   │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every style
 │   │   │   ├── PhaseTimerWidget.tsx # Bottom-left turn clock, votes, ready-up & +5 minutes
 │   │   │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
+│   │   │   ├── ConfirmModal.tsx     # In-app confirmation for destructive actions (Shift+click skips it)
+│   │   │   ├── VersionBadge.tsx     # Commit short SHA badge & link
 │   │   │   └── SanityCheckModal.tsx # Pre-finalization blunder gatekeeper modal
 │   │   ├── data/
 │   │   │   ├── europeMapGeometry.ts # Authentic cartographic SVG paths & province coordinates
 │   │   │   ├── mapLayouts.ts        # Unit, star and name placements for each piece style
 │   │   │   └── mapTextMetrics.ts    # Libre Baskerville widths for sizing names without the DOM
 │   │   ├── hooks/
+│   │   │   ├── useDiplomacyWebSocket.ts # Live Sync socket: heartbeat, reconnect rules & clock refresh
+│   │   │   ├── useCompactLayout.ts  # The phone breakpoint (COMPACT_LAYOUT_QUERY) as a live boolean
 │   │   │   └── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
 │   │   ├── lib/
 │   │   │   └── supabase.ts          # Supabase client singleton & auth helpers
@@ -174,8 +184,10 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   │   └── utils/
 │   │       ├── orderHelpers.ts      # Move reachability, support targeting & retreat calculations
 │   │       ├── adminHelpers.ts      # Admin permission checks & payload formatters
+│   │       ├── timerHelpers.ts      # Turn clock labels, vote counts & formatting
+│   │       ├── mapCameraHelpers.ts  # Map pan and zoom bounds
 │   │       └── displayPrefs.ts      # Display preference types, defaults, sanitizing & sign-in rules
-│   ├── package.json
+│   ├── package.json         # Vitest suites sit next to their code as *.test.ts
 │   └── vite.config.ts
 └── docs/                      # Exhaustive technical documentation suite
 ```
@@ -210,6 +222,7 @@ The game cycles through three standard phases per year:
 - The backend supports multiple concurrent games, lobbies, and sandboxes in `GAMES: Dict[str, GameState]`.
 - All mutation endpoints (`/api/order`, `/api/finalize`, `/api/adjudicate`, etc.) accept an optional `?game_id=<id>` query parameter (defaults to `'proto_1901'`).
 - Always pass `activeGameId` in frontend API requests.
+- **Invariant**: A caller sees hidden orders only for a seat they hold. The server finds it from their token (`viewer_power_for`, `caller_holds_seat`); a `power` a client names only picks among its own seats. `sanitize_game_state_for_viewer` masks foreign orders and issues and rebuilds `last_resolution` from what the viewer may see. Every response or broadcast of a live match's `GameState` goes through it. The game socket learns who is connecting from an `auth` first message (`?handshake=1`), never from the URL.
 - **Invariant**: `GameState.active_power` is shared by everyone in a game, so it never identifies a multiplayer player. The client takes the player's power from `resolvePlayerPower` (their claimed seat), and `join` reports the joiner's power only in its own response.
 - **Invariant**: Memory is authoritative for a loaded game. Supabase only supplies games this process has not loaded, so never replace `GAMES` or `GAME_SUMMARIES` entries for a loaded game with a database copy. Call `persist_game` after every change to a game.
 - **Invariant**: A failed Supabase read raises `SupabaseUnavailable`, and must never be treated as "no such game". Only a successful read that lacks an already saved game means it was deleted; `UNSAVED_GAMES` marks the games that may have no row yet.
@@ -251,6 +264,12 @@ The game cycles through three standard phases per year:
 - **Invariant**: A failed account read must never be treated as "no saved value", because the upload that follows would overwrite the player's choice. Only a successful read that finds nothing means the account is empty.
 - **Invariant**: Classic with `letters` stays pixel-identical to the original map, including `CLY.unitPos` in the North Atlantic. Fix layout problems in the other styles' rows in `mapLayouts.ts`.
 - All piece bodies are drawn by `MapPiece`, and everything around them takes its size from `PieceFrame`. Don't hardcode ring radii or badge offsets in `EuropeMap.tsx`.
+
+### 9. Phone Layout
+- Phones get a compact layout, chosen by `useCompactLayout()` from `COMPACT_LAYOUT_QUERY` and written on the shell as `data-layout`. The rules are in [docs/frontend/styling-and-themes.md](docs/frontend/styling-and-themes.md#responsive--layout-specifications).
+- **Invariant**: Every phone style lives in `src/compact.css` under `[data-layout='compact']`. Don't add width `@media` rules, so the breakpoint stays in one place.
+- **Invariant**: The compact layout must not change the wide one. Check a change by comparing every element's box at 1440×900 before and after.
+- Hover handlers use `onPointerEnter`/`onPointerLeave` and ignore `pointerType === 'touch'`, so a tap never leaves a hover highlight behind.
 
 ---
 

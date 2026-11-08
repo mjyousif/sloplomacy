@@ -29,7 +29,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | Method | Endpoint | Description | Request Body | Response Model |
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/game` | Fetch current game state and province topology dictionary | *None* | `GameBootstrapResponse` |
-| `POST` | `/api/power` | Switch active viewing power | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/power` | Switch active viewing power (returns what the caller's own seat may see) | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/sandbox/enter` | Activate Sandbox Mode: a private copy for a multiplayer match, or a checkpoint of a solo game | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/sandbox/exit` | Leave Sandbox Mode and return the real game state (`409` on a live match: call it on the sandbox id) | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/sandbox/clear-foreign` | Reset all foreign hypothetical orders to default HOLD (`409` on a live match) | `SetPowerRequest` | `GameState` |
@@ -40,7 +40,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/orders/confirm-all` | Mark all orders of a given power as explicitly confirmed | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/finalize` | Pre-flight sanity check and finalize power's orders; resolves the turn in a live match once nobody is left to wait for | `FinalizeRequest` | `FinalizeResponse` |
 | `POST` | `/api/unfinalize` | Unlock finalized orders for subsequent editing | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/simulate` | Execute non-destructive tactical preview resolution | *None* | `SimulationResult` |
+| `POST` | `/api/simulate` | Execute non-destructive tactical preview resolution (in a live match, from the caller's own orders with everyone else holding) | *None* | `SimulationResult` |
 | `POST` | `/api/adjudicate` | Commit orders, resolve combat, advance season/phase | *None* | `GameState` |
 | `POST` | `/api/scenario` | Reset board and load predefined tactical scenario (host only on a live match: `401` or `403`; `400` for an unknown scenario, `404` for an unknown game) | `ScenarioRequest` | `GameState` |
 
@@ -193,7 +193,7 @@ Concedes command of a Great Power into **Civil Disorder**. Surrendered units hol
 ---
 
 ### 8. `POST /api/games/save-sandbox`
-Saves an active solo sandbox into the persistent game summary registry.
+Saves an active solo sandbox into the persistent game summary registry. A saved copy is never masked, so a live match is copied only as the caller may see it: their own orders, everyone else holding, and no turn clock.
 
 #### Request (`SaveSandboxRequest`):
 ```json
@@ -216,7 +216,7 @@ The rules are in [the rulebook reference](../guides/rulebook-reference.md#9-turn
 
 Each answers `403` for a power that is not playing, and `409` if the clock is in a different stage.
 
-Nothing runs in the background. The game WebSocket and `GET /api/game` check the deadline (with clients sending an immediate WebSocket ping or fallback HTTP fetch on countdown expiry), so a deadline is acted on within seconds while anyone is connected. A game nobody is connected to does not advance until someone returns.
+Nothing runs in the background. The game WebSocket and `GET /api/game` check the deadline (with clients sending a WebSocket `refresh` on countdown expiry, or the fallback HTTP poll when there is no socket), so a deadline is acted on within seconds while anyone is connected. A game nobody is connected to does not advance until someone returns.
 
 ---
 
@@ -227,11 +227,11 @@ Bootstraps the client by returning the current `GameState` along with the comple
 
 - **Query Parameters**:
   - `game_id` *(optional, string)*: Scoped match identifier (defaults to `proto_1901`).
-  - `power` *(optional, Power)*: The viewer's claimed Great Power. In active multiplayer matches (`status: "active"`), foreign unadjudicated moves are masked to default `HOLD`s and foreign diagnostic issues are excluded to preserve simultaneous turn secrecy (Fog of War).
+  - `power` *(optional, Power)*: Picks which of the caller's own seats to view. It is checked against the caller's seat and never shows another power's orders: naming a seat you do not hold gives the same view as not naming one. In active multiplayer matches (`status: "active"`), foreign unadjudicated moves are masked to default `HOLD`s, foreign diagnostic issues are excluded, and `last_resolution` (the turn preview) is rebuilt from the viewer's own orders with everyone else holding (Fog of War).
   - `passcode` *(optional, string)*: Passcode for private campaigns (compared using timing-safe `hmac.compare_digest`).
 - **Headers**:
   - `X-Passcode` *(optional, string)*: Header alternative for campaign passcode.
-  - `Authorization: Bearer <token>` *(optional)*: Authenticated user token; automatically determines viewer's claimed seat if `power` query parameter is omitted.
+  - `Authorization: Bearer <token>` *(optional)*: Identifies the caller, whose seat decides which orders they see. Signed out, a caller sees only seats claimed without an account.
 
 #### Response (`GameBootstrapResponse`):
 ```json
@@ -274,11 +274,11 @@ Bootstraps the client by returning the current `GameState` along with the comple
 ### `POST /api/sandbox/enter`
 Starts a what-if session for `power`.
 
-- **Multiplayer match**: the match is not touched. The response is a private copy with its own `sbx_` `game_id`, in which every other power is on default orders. Use that id for all later calls in the session. Entering again replaces the same player's previous copy. The copy is held only in memory, so it is lost if the server restarts, and calls using its id then answer `404`.
+- **Multiplayer match**: only the player in `power`'s seat may open one (otherwise `403`), because the copy keeps that power's real orders. The match is not touched. The response is a private copy with its own `sbx_` `game_id`, in which every other power is on default orders. Use that id for all later calls in the session. Entering again replaces the same player's previous copy. The copy is held only in memory, so it is lost if the server restarts, and calls using its id then answer `404`.
 - **Solo or saved sandbox**: the response keeps the game's own `game_id`, and a checkpoint of the real state is stored.
 
 ### `POST /api/sandbox/exit`
-Ends the session. On a private copy, pass its `sbx_` id: the copy is discarded and the real match is returned. The player's own orders carry over only if the match is still on the same turn and the player still holds the seat, and changing them drops that player's finalization, as any other edit does. Calling this on a live match itself answers `409`.
+Ends the session. On a private copy, pass its `sbx_` id: the copy is discarded and the real match is returned, masked for that seat. The player's own orders carry over only if the caller is the player in that seat, the match is still on the same turn and they still hold it. Anyone else's exit only discards the copy, and changing them drops that player's finalization, as any other edit does. Calling this on a live match itself answers `409`.
 
 ### 8. `POST /api/sandbox/ai-orders`
 Generates DATC-compliant, intelligent tactical orders for specified Great Powers (or foreign powers by default) using the Chancellery Tactical AI engine. Answers `409` on a live multiplayer match, where it must be called on a private sandbox id. Avoids friendly self-bounces, coordinates multi-power attacks and supports, and prioritizes strategic supply centers.
@@ -333,7 +333,7 @@ Submits or modifies a single military instruction. Automatically triggers valida
 
 Returns `400` if the order names a province or coast that does not exist. A real but illegal move is accepted: the validator flags it, and the engine refuses it at adjudication.
 
-In multiplayer matches, callers must supply a valid `Authorization: Bearer <token>` matching the participant who claimed the Great Power (or game creator). Attempts by opponents or unauthenticated callers to issue orders for claimed powers return `403 Forbidden` or `401 Unauthorized`. Returned `GameState` is sanitized for the commanding power to preserve Fog of War.
+In multiplayer matches, callers must supply a valid `Authorization: Bearer <token>` matching the participant who claimed the Great Power (or game creator). Attempts by opponents or unauthenticated callers to issue orders for claimed powers return `403 Forbidden` or `401 Unauthorized`. An empty seat is in Civil Disorder, so only the host may order it. A build slot (`BUILD_<POWER>_<PROVINCE>`) belongs to the power it names, whatever the order's `power` says, and in `/api/orders/batch` every unit must belong to the batch's `power` (otherwise `403`). Returned `GameState` is sanitized for the commanding power to preserve Fog of War.
 
 ---
 
@@ -492,15 +492,18 @@ Unlocks and unfinalizes order submissions across all 7 Great Powers simultaneous
 Establishes a persistent, low-latency WebSocket connection scoped to a specific game room (`game_id`).
 
 - **Query Parameters**:
-  - `power` *(optional, Power)*: The viewer's claimed Great Power. When set, WebSocket broadcasts mask foreign unadjudicated moves to default `HOLD`s and hide foreign issues (Fog of War).
-  - `passcode` *(optional, string)*: Passcode for private campaigns. Connections with incorrect or missing passcodes are closed immediately with code `4403`.
+  - `handshake` *(optional, `1`)*: The client sends `{"type": "auth", "token": "<jwt or null>"}` as its first message, and the server waits up to 10 seconds for it. Browsers cannot set an `Authorization` header on a socket, and a token in the URL would end up in request logs. Without `handshake` the caller is treated as signed out.
+  - `power` *(optional, Power)*: Picks among the caller's own seats, as in `GET /api/game`. It never shows another power's orders. Broadcasts mask foreign unadjudicated moves to default `HOLD`s, hide foreign issues and rebuild the turn preview from what the viewer may see (Fog of War).
+  - `passcode` *(optional, string)*: Passcode for private campaigns. Players seated in the match do not need it.
 - **Connection Handshake**:
   - Validates that `game_id` exists. If the game is missing, closes with code `4004`.
-  - For private campaigns, verifies the provided passcode in constant time; if mismatched, closes with code `4403`.
+  - Accepts the socket, then reads the `auth` message when `handshake=1`.
+  - For private campaigns, a caller who holds no seat must give the passcode, checked in constant time; if it is missing or wrong, closes with code `4403`.
   - Immediately transmits the sanitized `game_update` payload tailored to the connected viewer's power.
 - **Client Heartbeats & Refresh**:
   - Send `{"type": "ping"}` -> Server replies `{"type": "pong"}` to maintain Cloud Run & proxy connections.
-  - Send `{"type": "refresh"}` -> Server resends the latest authoritative `game_update`.
+  - Send `{"type": "refresh"}` -> Server runs `tick_timer` (resolving a deadline that has passed), then resends the latest authoritative `game_update`. The client sends this when its countdown reaches zero; `ping` does not run the clock.
+- **Close codes**: `4004` (no such game) and `4403` (passcode refused) are permanent, and the client does not reconnect. `1013` means try again later (the database could not be read).
 - **Automatic Broadcast Triggers**:
   - Whenever an order is submitted or changed (`/api/order`, `/api/orders/batch`, `/api/orders/confirm-all`).
   - Whenever a power finalizes or unfinalizes (`/api/finalize`, `/api/unfinalize`).

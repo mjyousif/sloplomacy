@@ -51,8 +51,19 @@ Each Great Power has an authentic historical color token used for province fills
 
 ## Responsive & Layout Specifications
 
-- **Desktop (Split View)**:
-  - Left pane: `flex: 1` interactive Europe Map.
-  - Right pane: Fixed-width `460px` scrollable tactical Macro Sidebar.
-- **Header Bar**: Fixed height `60px` with nation crests, season pill, and sandbox toggle.
-- **Interactive Modals**: Centered backdrop overlay with blur (`backdrop-filter: blur(4px)`) and subtle elevation shadows.
+The app has two layouts. `useCompactLayout()` (`hooks/useCompactLayout.ts`) decides which one applies from a single media query, `COMPACT_LAYOUT_QUERY = '(max-width: 767px), (max-height: 500px)'`. The second half catches phones held sideways. `App.tsx` writes the answer on the shell as `data-layout="compact"` or `data-layout="wide"`.
+
+- **Wide (desktop and tablets)**: the original layout, styled by `App.css`.
+  - Header: a `60px` row with the brand, Solo Sandbox, the turn, the order check pill, Live Sync, display settings and the account.
+  - Workspace: the Left Tools Sidebar (`290px`, or a `44px` rail), the map (`flex: 1`), and the Right Tactical Sidebar (`360px`, between `340px` and `380px`, or a `44px` rail).
+- **Compact (phones)**: every phone rule lives in `src/compact.css` and starts with `[data-layout='compact']`. That file never writes its own width `@media` rule, so the breakpoint is defined only in `COMPACT_LAYOUT_QUERY`. Nothing in it changes the wide layout.
+  - **Viewport**: the shell is `100dvh` tall (falling back to `App.css`'s `100vh`), so mobile browser toolbars don't hide the bottom edge. `index.html` sets `viewport-fit=cover`, and the shell pads itself with `env(safe-area-inset-*)`.
+  - **Top bar**: `CompactTopBar.tsx` replaces the header. See [Phone Top Bar](sidebar-and-controls.md#phone-top-bar-compacttopbartsx).
+  - **Lobby**: one column, in this order: your games, open games, Host, Join, then the intro banner. Power slots wrap to as many columns as fit (about three on a phone), and rows of buttons wrap.
+  - **Modals**: cards fit the visible height and scroll. Footers stack into full-width buttons, with the main action on top and Cancel at the bottom. Close buttons are `44px` square. The admin console's tabs scroll sideways and its forms use one column.
+  - **Touch**: buttons in modals, the lobby and the top bar are at least `44px` tall. Inputs and selects use `16px` text so iOS doesn't zoom in on focus. Small pills and labels get at least `12px` text.
+  - **Not yet**: the game screen still uses the wide workspace, so the map has little or no room on a phone. A bottom sheet for orders and a tools drawer are planned (issue #54).
+- **`.compact-only`**: hidden in the wide layout and shown in the compact one. It carries text that a desktop tooltip already gives, such as what the two surrender buttons do.
+- **Touch screens**: `@media (hover: none)` hides the ConfirmModal's Shift tip, because Shift needs a keyboard.
+- **Header Bar (wide)**: fixed height `60px` with nation crests, season pill, and sandbox toggle.
+- **Interactive Modals**: centered backdrop overlay with blur (`backdrop-filter: blur(4px)`) and subtle elevation shadows.

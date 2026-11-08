@@ -19,7 +19,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `gameState` | `GameState \| null` | Global | Authoritative match state received from FastAPI. |
 | `provinces` | `Record<string, ProvinceInfo>` | Global | Static map topology metadata fetched once on bootstrap. |
 | `selectedUnitId` | `string \| null` | UI | Currently selected military unit on the map or in the sidebar. |
-| `hoveredUnitId` | `string \| null` | UI | Unit hovered for cross-component highlighting. |
+| `hoveredUnitId` | `string \| null` | UI | Unit hovered for cross-component highlighting. Set from `onPointerEnter`/`onPointerLeave` on map pieces and sidebar cards, which ignore `pointerType === 'touch'`: a finger has no hover, so a tap would otherwise leave the highlight on. |
 | `highlightedProvinces`| `string[]` | UI | Provinces highlighted during targeting or diagnostic inspection. |
 | `sandboxMode` | `boolean` | Mode | True when user is in Hypothetical Mode (Eye icon, guessing opponent moves). |
 | `sandboxGameId` | `string \| null` | Mode | Id of the private server-side copy used by a multiplayer sandbox, or `null`. Drafts, AI plans and previews go to `draftGameId`, which is this id when set and `activeGameId` otherwise. |
@@ -30,6 +30,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `leftSidebarCollapsed`| `boolean` | UI | Whether the Left Tools Sidebar is collapsed into a 44px rail. |
 | `rightSidebarCollapsed`| `boolean` | UI | Whether the Right Tactical Sidebar is collapsed into a 44px rail. |
 | `zoomPercent` | `number` | UI | Real-time map zoom percentage (default: `105`). |
+| `isCompact` | `boolean` | Layout | True on phone-sized screens, from `useCompactLayout()`. It follows rotation and resizes. App writes it on the shell as `data-layout`, which `compact.css` styles, and uses it to swap in `CompactTopBar`. `LobbyView` reads the same hook to say whether the Host form is "below" or "on the right". |
 | `surrenderModalOpen` | `boolean` | Modal | Controls visibility of the Surrender / Civil Disorder confirmation modal. |
 | `sanityModalOpen` | `boolean` | Modal | Controls visibility of pre-finalization warning modal. |
 | `sanityModalIssues` | `ValidationIssue[]` | Modal | Issues displayed inside the Sanity Check modal. |
@@ -157,9 +158,14 @@ To guarantee seamless multiplayer coordination, the frontend maintains a persist
 2. **Phase Advance Alerts**:
    - Automatically detects when `season`, `year`, or `phase` transitions occur and triggers a persistent toast announcement to notify the commander.
 3. **Connection Resilience**:
-   - Sends a `{ type: 'ping' }` heartbeat every 25 seconds to keep proxies and serverless Cloud Run instances active.
-   - Automatically reconnects with exponential backoff on unexpected connection drops.
-4. **Visual Telemetry**:
+   - Sends a `{ type: 'ping' }` heartbeat every 25 seconds to keep proxies and serverless Cloud Run instances active. Each socket owns its heartbeat, and a late close event from a replaced socket is ignored.
+   - Reconnects 2 seconds after an unexpected drop. It stops for good on `4004` (game deleted) and `4403` (passcode missing or wrong), because a retry cannot fix either (`shouldReconnect`). The fallback HTTP poll then takes over.
+   - Game sockets ask for the auth handshake (`?handshake=1`) and send `{ type: 'auth', token }` as their first message, with the token from `getAuthHeaders`. The server works out the player's seat from it, so it shows them their own orders and lets a seated player into a private match without the passcode. The socket reconnects when the player signs in or out (`authKey`).
+   - The passcode a player types when joining a private match is kept in `matchPasscodes` for this visit only and sent with the socket, for anyone not yet seated.
+   - When the turn clock reaches zero, `PhaseTimerWidget` calls `onExpire`, and the app sends `{ type: 'refresh' }`. Only `refresh` makes the server run the clock; `ping` just keeps the connection open. Without a socket, the fallback poll runs the clock within 4 seconds. The countdown keeps `onExpire` in a ref, so a new callback never restarts it from an old server value.
+5. **Stale replies**:
+   - `fetchGame` and joining a match bump `boardRequestSeq`. A `GET /api/game` reply that comes back after a newer request is dropped, so the startup load of `proto_1901` cannot replace a match the player has just joined.
+6. **Visual Telemetry**:
    - The header displays a real-time badge (`.header-ws-badge`):
      - `Live Sync` with a pulsating green indicator when actively connected.
      - `Connecting...` with amber indicator during connection attempts or fallbacks.

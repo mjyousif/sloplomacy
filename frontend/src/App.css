@@ -5235,3 +5235,134 @@
   font-size: 0.72rem;
   color: #a7f3d0;
 }
+
+/* In-app confirmation (ConfirmModal), shown above every other modal */
+.confirm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  background: rgba(8, 10, 15, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.confirm-modal-card {
+  width: 100%;
+  max-width: 440px;
+  background: #1c212b;
+  border: 2px solid #ef4444;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+}
+
+.confirm-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 10px;
+}
+
+.confirm-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.confirm-modal-title-group h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #f8fafc;
+}
+
+.confirm-modal-icon {
+  color: #f87171;
+  flex-shrink: 0;
+}
+
+.confirm-modal-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+}
+
+.confirm-modal-close:hover {
+  color: #ffffff;
+}
+
+.confirm-modal-message {
+  margin: 0;
+  padding: 0 20px;
+  color: #cbd5e1;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.confirm-modal-tip {
+  margin: 10px 20px 0;
+  color: #94a3b8;
+  font-size: 0.74rem;
+}
+
+.confirm-modal-tip kbd {
+  padding: 1px 6px;
+  border: 1px solid #455066;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #232936;
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 0.72rem;
+}
+
+.confirm-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px 20px;
+  background: #161a22;
+  border-top: 1px solid #2d3545;
+}
+
+.confirm-modal-cancel,
+.confirm-modal-confirm {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.confirm-modal-cancel {
+  border: 1px solid #64748b;
+  background: #283140;
+  color: #ffffff;
+}
+
+.confirm-modal-cancel:hover {
+  background: #364154;
+}
+
+.confirm-modal-confirm {
+  border: 1px solid #ef4444;
+  background: #b91c1c;
+  color: #ffffff;
+}
+
+.confirm-modal-confirm:hover {
+  background: #dc2626;
+}
+
+.confirm-modal-confirm:focus-visible,
+.confirm-modal-cancel:focus-visible {
+  outline: 2px solid #fca5a5;
+  outline-offset: 2px;
+}

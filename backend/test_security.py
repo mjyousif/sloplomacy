@@ -385,3 +385,220 @@ def test_timer_action_authorization():
         json={"power": "FRANCE", "choice": "15"},
     )
     assert res_unauth_vote.status_code == 401
+
+
+# ==============================================================================
+# SEC-09: Defense-in-Depth Security Response Headers
+# ==============================================================================
+
+def test_security_headers_present():
+    """Verify that HTTP responses include standard defensive security headers."""
+    res = client.get("/api/games")
+    assert res.status_code == 200
+    assert res.headers.get("x-content-type-options") == "nosniff"
+    assert res.headers.get("x-frame-options") == "DENY"
+    assert res.headers.get("referrer-policy") == "strict-origin-when-cross-origin"
+    assert res.headers.get("permissions-policy") == "geolocation=(), camera=(), microphone=()"
+
+    # Also check game endpoint response
+    res_game = client.get("/api/game?game_id=proto_1901")
+    assert res_game.status_code == 200
+    assert res_game.headers.get("x-content-type-options") == "nosniff"
+    assert res_game.headers.get("x-frame-options") == "DENY"
+
+
+# ==============================================================================
+# SEC-05: Hidden orders stay hidden on every path
+# ==============================================================================
+
+ALICE_ID = "00000000-0000-0000-0000-00000000a11c"
+BOB_ID = "00000000-0000-0000-0000-000000000b0b"
+
+
+def alice_headers() -> dict:
+    return auth_headers(ALICE_ID, "alice@test.com")
+
+
+def bob_headers() -> dict:
+    return auth_headers(BOB_ID, "bob@test.com")
+
+
+def secret_plan_match(private: bool = False) -> str:
+    """Alice (host, France) has secretly ordered Paris to Burgundy; Bob holds Germany."""
+    body = {"name": "Secrets", "creator_power": "FRANCE", "user_id": ALICE_ID, "email": "alice@test.com"}
+    if private:
+        body.update({"is_private": True, "passcode": "Secret1901"})
+    gid = client.post("/api/games", json=body, headers=alice_headers()).json()["game_id"]
+    joined = client.post(
+        f"/api/games/{gid}/join",
+        json={"power": "GERMANY", "user_id": BOB_ID, "email": "bob@test.com", "passcode": "Secret1901" if private else None},
+        headers=bob_headers(),
+    )
+    assert joined.status_code == 200, joined.text
+    res = client.post(
+        f"/api/order?game_id={gid}",
+        json={"order": {
+            "unit_id": "FRA_A_PAR", "power": "FRANCE", "unit_type": "A", "origin": "PAR",
+            "order_type": "MOVE", "target": "BUR", "is_explicit": True,
+        }},
+        headers=alice_headers(),
+    )
+    assert res.status_code == 200, res.text
+    assert GAMES[gid].orders["FRA_A_PAR"].order_type == OrderType.MOVE
+    return gid
+
+
+def assert_plan_hidden(state: dict) -> None:
+    assert state["orders"]["FRA_A_PAR"]["order_type"] == "HOLD"
+    preview = state.get("last_resolution")
+    if preview:
+        assert preview["resolutions"]["FRA_A_PAR"]["order_type"] == "HOLD"
+
+
+def test_naming_a_power_in_get_game_does_not_show_its_orders():
+    gid = secret_plan_match()
+    for headers in (bob_headers(), {}):
+        res = client.get(f"/api/game?game_id={gid}&power=FRANCE", headers=headers)
+        assert res.status_code == 200
+        assert_plan_hidden(res.json()["state"])
+
+    own = client.get(f"/api/game?game_id={gid}", headers=alice_headers()).json()["state"]
+    assert own["orders"]["FRA_A_PAR"]["order_type"] == "MOVE"
+    assert own["last_resolution"]["resolutions"]["FRA_A_PAR"]["order_type"] == "MOVE"
+
+
+def test_turn_preview_is_built_only_from_what_the_viewer_may_see():
+    gid = secret_plan_match()
+    state = client.get(f"/api/game?game_id={gid}", headers=bob_headers()).json()["state"]
+    assert state["last_resolution"]["resolutions"]["FRA_A_PAR"]["order_type"] == "HOLD"
+
+    for headers in (bob_headers(), {}):
+        res = client.post(f"/api/simulate?game_id={gid}", headers=headers)
+        assert res.status_code == 200
+        assert res.json()["resolutions"]["FRA_A_PAR"]["order_type"] == "HOLD"
+
+
+def test_set_power_does_not_return_hidden_orders():
+    gid = secret_plan_match()
+    res = client.post(f"/api/power?game_id={gid}", json={"power": "FRANCE"})
+    assert res.status_code == 200
+    assert_plan_hidden(res.json())
+
+
+def test_saving_a_live_match_copies_only_what_the_caller_sees():
+    gid = secret_plan_match()
+    res = client.post(
+        f"/api/games/save-sandbox?game_id={gid}",
+        json={"name": "Peek", "user_id": BOB_ID, "email": "bob@test.com"},
+        headers=bob_headers(),
+    )
+    assert res.status_code == 200
+    copy_id = res.json()["game_id"]
+    assert GAMES[copy_id].orders["FRA_A_PAR"].order_type == OrderType.HOLD
+
+
+def test_private_sandbox_opens_only_for_your_own_seat():
+    gid = secret_plan_match()
+    for headers in (bob_headers(), {}):
+        res = client.post(f"/api/sandbox/enter?game_id={gid}", json={"power": "FRANCE"}, headers=headers)
+        assert res.status_code == 403
+
+    own = client.post(f"/api/sandbox/enter?game_id={gid}", json={"power": "GERMANY"}, headers=bob_headers())
+    assert own.status_code == 200
+    assert own.json()["orders"]["FRA_A_PAR"]["order_type"] == "HOLD"
+
+
+def test_only_the_seat_holder_carries_sandbox_orders_into_the_match():
+    gid = secret_plan_match()
+    sandbox_id = client.post(
+        f"/api/sandbox/enter?game_id={gid}", json={"power": "GERMANY"}, headers=bob_headers()
+    ).json()["game_id"]
+    GAMES[sandbox_id].orders["GER_A_BER"] = GAMES[sandbox_id].orders["GER_A_BER"].model_copy(
+        update={"order_type": OrderType.MOVE, "target": "SIL", "is_explicit": True}
+    )
+
+    res = client.post(f"/api/sandbox/exit?game_id={sandbox_id}", json={"power": "GERMANY"})
+    assert res.status_code == 200
+    assert sandbox_id not in GAMES
+    assert GAMES[gid].orders["GER_A_BER"].order_type == OrderType.HOLD
+
+
+def test_a_batch_cannot_order_another_powers_units():
+    gid = secret_plan_match()
+    res = client.post(
+        f"/api/orders/batch?game_id={gid}",
+        json={"power": "GERMANY", "orders": [{
+            "unit_id": "FRA_A_PAR", "power": "GERMANY", "unit_type": "A", "origin": "PAR",
+            "order_type": "HOLD", "is_explicit": True,
+        }]},
+        headers=bob_headers(),
+    )
+    assert res.status_code == 403
+    assert GAMES[gid].orders["FRA_A_PAR"].order_type == OrderType.MOVE
+
+
+def test_a_build_slot_belongs_to_the_power_it_names():
+    gid = secret_plan_match()
+    res = client.post(
+        f"/api/order?game_id={gid}",
+        json={"order": {
+            "unit_id": "BUILD_FRANCE_PAR", "power": "GERMANY", "unit_type": "A", "origin": "PAR",
+            "order_type": "BUILD", "is_explicit": True,
+        }},
+        headers=bob_headers(),
+    )
+    assert res.status_code == 403
+    assert "BUILD_FRANCE_PAR" not in GAMES[gid].orders
+
+
+def test_nobody_orders_an_empty_seat():
+    gid = secret_plan_match()
+    order = {"order": {
+        "unit_id": "RUS_A_MOS", "power": "RUSSIA", "unit_type": "A", "origin": "MOS",
+        "order_type": "MOVE", "target": "UKR", "is_explicit": True,
+    }}
+    for headers in (bob_headers(), {}):
+        assert client.post(f"/api/order?game_id={gid}", json=order, headers=headers).status_code == 403
+    assert GAMES[gid].orders["RUS_A_MOS"].order_type == OrderType.HOLD
+
+
+def socket_state(path: str, token: str | None = None) -> dict:
+    with client.websocket_connect(path) as ws:
+        if "handshake=1" in path:
+            ws.send_json({"type": "auth", "token": token})
+        msg = ws.receive_json()
+        assert msg["type"] == "game_update"
+        return msg["state"]
+
+
+def test_socket_shows_hidden_orders_only_to_their_seat():
+    gid = secret_plan_match()
+    assert_plan_hidden(socket_state(f"/ws/games/{gid}?power=FRANCE"))
+    assert_plan_hidden(socket_state(f"/ws/games/{gid}?power=FRANCE&handshake=1", make_jwt(BOB_ID, "bob@test.com")))
+    assert_plan_hidden(socket_state(f"/ws/games/{gid}?power=FRANCE&handshake=1", "not-a-token"))
+
+    own = socket_state(f"/ws/games/{gid}?handshake=1", make_jwt(ALICE_ID, "alice@test.com"))
+    assert own["orders"]["FRA_A_PAR"]["order_type"] == "MOVE"
+
+
+def test_private_match_socket_admits_seated_players_without_the_passcode():
+    from starlette.websockets import WebSocketDisconnect
+
+    gid = secret_plan_match(private=True)
+    own = socket_state(f"/ws/games/{gid}?handshake=1", make_jwt(BOB_ID, "bob@test.com"))
+    assert own["orders"]["GER_A_BER"]["order_type"] == "HOLD"
+
+    with pytest.raises(WebSocketDisconnect) as refused:
+        socket_state(f"/ws/games/{gid}?handshake=1", None)
+    assert refused.value.code == 4403
+
+    assert_plan_hidden(socket_state(f"/ws/games/{gid}?passcode=Secret1901"))
+
+
+def test_admin_check_fails_closed_for_a_game_that_is_not_loaded():
+    from fastapi import HTTPException
+    from main import verify_admin_access
+
+    with pytest.raises(HTTPException) as denied:
+        verify_admin_access("mp_never_loaded", None)
+    assert denied.value.status_code == 404

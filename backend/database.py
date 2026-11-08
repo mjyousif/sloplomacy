@@ -1,3 +1,5 @@
+import base64
+import json
 import logging
 import os
 import re
@@ -56,13 +58,76 @@ def get_supabase_url() -> str:
     return url.rstrip("/")
 
 
+# The keys the backend has already complained about, so each problem is logged once per process
+# instead of on every request.
+_REJECTED_KEYS_LOGGED: set = set()
+
+
+def _key_role(key: str) -> Optional[str]:
+    """
+    The Postgres role a Supabase API key acts as, or None if it can't be told from the key.
+    New keys say so in their prefix. Legacy keys are JWTs with a `role` claim.
+    """
+    if key.startswith("sb_publishable_"):
+        return "anon"
+    if key.startswith("sb_secret_"):
+        return "service_role"
+    parts = key.split(".")
+    if len(parts) != 3:
+        return None
+    try:
+        payload = parts[1] + "=" * (-len(parts[1]) % 4)
+        claims = json.loads(base64.urlsafe_b64decode(payload))
+    except (ValueError, TypeError):
+        return None
+    role = claims.get("role") if isinstance(claims, dict) else None
+    return role if isinstance(role, str) else None
+
+
+def _log_rejected_key_once(reason: str, message: str) -> None:
+    if reason in _REJECTED_KEYS_LOGGED:
+        return
+    _REJECTED_KEYS_LOGGED.add(reason)
+    logger.error(message)
+
+
 def get_supabase_key() -> str:
+    """
+    The service role key, or "" if there isn't one.
+
+    Games are saved only with the service role key, never the anon key. RLS on multiplayer_games
+    allows only service_role, so with the anon key every read succeeds with zero rows: the lobby
+    sync would then take every saved game for deleted and drop it.
+    """
     key = (
         os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
         or os.environ.get("SUPABASE_KEY")
-        or os.environ.get("VITE_SUPABASE_ANON_KEY")
         or ""
     ).strip()
+    if not key:
+        if get_supabase_url():
+            _log_rejected_key_once(
+                "missing",
+                "SUPABASE_URL is set but SUPABASE_SERVICE_ROLE_KEY is not. Game persistence is OFF: "
+                "games live in memory only and are lost when the server restarts. The anon key is "
+                "never used for persistence.",
+            )
+        return ""
+
+    anon_keys = {
+        (os.environ.get("VITE_SUPABASE_ANON_KEY") or "").strip(),
+        (os.environ.get("SUPABASE_ANON_KEY") or "").strip(),
+    } - {""}
+    role = _key_role(key)
+    if key in anon_keys or (role is not None and role != "service_role"):
+        _log_rejected_key_once(
+            "anon",
+            "The Supabase key the backend was given is not a service role key "
+            f"(role: {role or 'same as the anon key'}). Game persistence is OFF: RLS would give "
+            "this key zero rows, and the lobby would drop every saved game. Set "
+            "SUPABASE_SERVICE_ROLE_KEY to the service_role key.",
+        )
+        return ""
     return key
 
 

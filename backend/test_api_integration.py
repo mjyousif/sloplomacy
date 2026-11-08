@@ -978,46 +978,19 @@ def test_unclaimed_powers_retreat_phase_plays_out_without_anyone():
 def test_a_retreat_that_concerns_a_player_still_waits_for_them():
     game_id = _seated_game()
     _place_unit(game_id, "GER_A_BER", "SIL")
-    client.post(
-        f"/api/orders/batch?game_id={game_id}",
-        json={
-            "power": "RUSSIA",
-            "orders": [
-                {
-                    "unit_id": "RUS_A_WAR",
-                    "power": "RUSSIA",
-                    "unit_type": "A",
-                    "origin": "WAR",
-                    "order_type": "MOVE",
-                    "target": "SIL",
-                    "is_explicit": True,
-                },
-                {
-                    "unit_id": "RUS_F_SEV",
-                    "power": "RUSSIA",
-                    "unit_type": "F",
-                    "origin": "SEV",
-                    "order_type": "HOLD",
-                    "is_explicit": True,
-                },
-            ],
-        },
-    )
+    # Russia's seat is empty, so nobody may order it through the API. Set its moves directly.
     _place_unit(game_id, "RUS_A_MOS", "GAL")
-    client.post(
-        f"/api/order?game_id={game_id}",
-        json={
-            "order": {
-                "unit_id": "RUS_A_MOS",
-                "power": "RUSSIA",
-                "unit_type": "A",
-                "origin": "GAL",
-                "order_type": "SUPPORT",
-                "aux_unit_origin": "WAR",
-                "target": "SIL",
-                "is_explicit": True,
-            }
-        },
+    orders = GAMES[game_id].orders
+    orders["RUS_A_WAR"] = orders["RUS_A_WAR"].model_copy(
+        update={"order_type": OrderType.MOVE, "target": "SIL", "is_explicit": True}
+    )
+    orders["RUS_A_MOS"] = orders["RUS_A_MOS"].model_copy(
+        update={
+            "order_type": OrderType.SUPPORT,
+            "aux_unit_origin": "WAR",
+            "target": "SIL",
+            "is_explicit": True,
+        }
     )
 
     _finalize(game_id, "FRANCE")

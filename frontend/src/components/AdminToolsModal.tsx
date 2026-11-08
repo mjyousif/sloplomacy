@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getAuthHeaders } from '../lib/supabase';
+import { useConfirm } from './ConfirmModal';
 import {
   ALL_POWERS,
   AuthUser,
@@ -66,6 +67,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
   const [canRollback, setCanRollback] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const { confirm, confirmModal } = useConfirm();
 
   // Time & Turn Form State
   const [selectedSeason, setSelectedSeason] = useState<string>(gameState.season);
@@ -116,18 +118,27 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
     }
   };
 
+  // Reset the turn form only when the console opens or the game reaches another turn.
+  // Every order anyone sends also updates gameState, and resetting on those would
+  // undo what the admin is typing and clear the error from their last action.
+  const turnKey = `${gameState.season}|${gameState.year}|${gameState.phase}`;
   useEffect(() => {
     if (isOpen) {
       fetchAdminStatus();
       setSelectedSeason(gameState.season);
       setSelectedYear(gameState.year);
       setSelectedPhase(gameState.phase);
-      if (gameState.units.length > 0 && !moveUnitId) {
-        setMoveUnitId(gameState.units[0].id);
-      }
       setActionError(null);
     }
-  }, [isOpen, gameId, gameState]);
+  }, [isOpen, gameId, turnKey]);
+
+  // Keep the relocation choice on a unit that still exists.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!gameState.units.some((u) => u.id === moveUnitId)) {
+      setMoveUnitId(gameState.units[0]?.id ?? '');
+    }
+  }, [isOpen, gameState.units, moveUnitId]);
 
   if (!isOpen) return null;
 
@@ -139,15 +150,18 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
   const moveProvInfo = provinces[moveTargetProvince];
   const spawnProvInfo = provinces[spawnProvince];
 
-  const handleRollback = async () => {
+  const handleRollback = async (event: React.MouseEvent) => {
     if (!canRollback) return;
-    if (
-      !window.confirm(
-        'Roll back the game to the previous turn state? Any moves or changes in the current turn will be reverted.'
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm(
+      {
+        title: 'Roll back to the previous turn?',
+        message:
+          'The game returns to the previous turn state. Any moves or changes in the current turn will be reverted.',
+        confirmLabel: 'Roll back',
+      },
+      event
+    );
+    if (!ok) return;
     setLoading(true);
     setActionError(null);
     try {
@@ -303,16 +317,18 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
     }
   };
 
-  const handleDestroyUnit = async (unit: Unit) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to destroy ${POWER_METADATA[unit.power].shortName} ${
+  const handleDestroyUnit = async (unit: Unit, event: React.MouseEvent) => {
+    const ok = await confirm(
+      {
+        title: 'Destroy this unit?',
+        message: `${POWER_METADATA[unit.power].shortName} ${
           unit.unit_type === 'A' ? 'Army' : 'Fleet'
-        } in ${unit.province}?`
-      )
-    ) {
-      return;
-    }
+        } in ${unit.province} will be removed from the board.`,
+        confirmLabel: 'Destroy',
+      },
+      event
+    );
+    if (!ok) return;
     setLoading(true);
     setActionError(null);
     try {
@@ -386,6 +402,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
   });
 
   return (
+    <>
     <div className="admin-modal-backdrop" onClick={onClose}>
       <div
         className="admin-modal-card"
@@ -841,7 +858,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
                           type="button"
                           className="admin-destroy-btn"
                           disabled={loading}
-                          onClick={() => handleDestroyUnit(u)}
+                          onClick={(e) => handleDestroyUnit(u, e)}
                           title={`Destroy ${pMeta.shortName} unit in ${u.province}`}
                         >
                           <Trash2 size={13} />
@@ -932,12 +949,17 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
                   <button
                     type="button"
                     className="admin-danger-outline-btn"
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          'Reset this game to initial Spring 1901? All orders and moves will be reset.'
-                        )
-                      ) {
+                    onClick={async (e) => {
+                      const ok = await confirm(
+                        {
+                          title: 'Reset to Spring 1901?',
+                          message:
+                            'This game goes back to the standard Spring 1901 layout. All orders and moves will be reset.',
+                          confirmLabel: 'Reset game',
+                        },
+                        e
+                      );
+                      if (ok) {
                         onResetScenario();
                         onClose();
                       }
@@ -964,5 +986,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
         </div>
       </div>
     </div>
+    {confirmModal}
+    </>
   );
 };

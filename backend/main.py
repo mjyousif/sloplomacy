@@ -1,3 +1,4 @@
+import asyncio
 import os
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -7,9 +8,11 @@ from collections import defaultdict
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 import uuid
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
 from auth import AuthUser, get_current_user
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
 from adjudicator import adjudicate_turn, compute_current_builds, create_diplomacy_game
@@ -92,6 +95,20 @@ else:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """
+    Defense-in-depth HTTP security headers to protect against clickjacking,
+    MIME-sniffing, referrer leakage, and unauthorized browser feature access.
+    """
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
+    return response
 
 SCENARIO_IDS = {"standard_1901", "tactical_blunders_demo"}
 FIRST_YEAR = 1901
@@ -634,6 +651,13 @@ def verify_admin_access(
         return
 
     summary = GAME_SUMMARIES.get(gid)
+    if not summary and gid not in GAMES:
+        # Without its summary a match would look like a sandbox, so fail closed. Callers load the
+        # game first (resolve_game), which brings its summary with it.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Game '{gid}' is not loaded.",
+        )
     if not summary or summary.is_sandbox:
         # Standalone or sandbox games allow local play
         return
@@ -693,12 +717,11 @@ def verify_power_authorization(
 
     part = summary.participants.get(power.value)
     if not part:
-        if current_user:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"{power.value} has no active envoy in this match.",
-            )
-        return
+        # An empty seat is in Civil Disorder: nobody gives it orders.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"{power.value} has no active envoy in this match.",
+        )
 
     if current_user:
         if part.user_id == current_user.user_id:
@@ -715,6 +738,74 @@ def verify_power_authorization(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication required: Provide a valid Bearer token to command {power.value}.",
+        )
+
+
+def caller_holds_seat(
+    summary: Optional[MultiplayerGameSummary],
+    power: Power,
+    current_user: Optional[AuthUser],
+) -> bool:
+    """
+    True when the caller sits in `power`'s seat. Unlike `verify_power_authorization`, being the host
+    is not enough: this decides whose hidden orders the caller may see.
+
+    A signed-in caller must match the seat. A caller with no token can only hold a seat that was
+    claimed without an account (no UUID), as `verify_power_authorization` already allows.
+    """
+    if not summary:
+        return False
+    part = summary.participants.get(power.value)
+    if not part:
+        return False
+    if current_user:
+        if part.user_id and part.user_id == current_user.user_id:
+            return True
+        return bool(part.email and current_user.email and part.email.lower() == current_user.email.lower())
+    return not (part.user_id and is_valid_uuid(part.user_id))
+
+
+def viewer_power_for(
+    game_id: str,
+    current_user: Optional[AuthUser],
+    requested: Optional[Power] = None,
+) -> Optional[Power]:
+    """
+    The power whose hidden orders this caller may see in a live match: always one of their own
+    seats, never one they merely name. `requested` only picks among seats they hold.
+    """
+    summary = GAME_SUMMARIES.get(game_id)
+    if not summary:
+        return None
+    if requested and caller_holds_seat(summary, requested, current_user):
+        return requested
+    if not current_user:
+        return None
+    for part in summary.participants.values():
+        if caller_holds_seat(summary, part.power, current_user):
+            return part.power
+    return None
+
+
+def build_slot_power(slot_id: str) -> Optional[Power]:
+    """The power a build slot (`BUILD_<POWER>_<PROVINCE>`) belongs to, whatever an order claims."""
+    parts = slot_id.split("_")
+    if len(parts) < 3 or parts[0] != "BUILD":
+        return None
+    try:
+        return Power(parts[1])
+    except ValueError:
+        return None
+
+
+def require_own_seat(game_id: str, power: Power, current_user: Optional[AuthUser]) -> None:
+    """Refuse anything that would show `power`'s hidden orders to someone not in that seat."""
+    if is_multiplayer_match(game_id) and not caller_holds_seat(
+        GAME_SUMMARIES.get(game_id), power, current_user
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"You do not hold {power.value}'s seat in this match.",
         )
 
 
@@ -752,6 +843,19 @@ def sanitize_game_state_for_viewer(
         masked_game.orders = defaults
         masked_game.issues = []
 
+    # The preview is worked out from everyone's real orders, so rebuild it from what this viewer
+    # may see: their own orders and everyone else on defaults.
+    if game.last_resolution is not None:
+        masked_game.last_resolution = adjudicate_turn(
+            game.units,
+            masked_game.orders,
+            game.ownership,
+            game.season,
+            game.year,
+            game.phase,
+            retreats=game.retreats,
+        )
+
     return masked_game
 
 
@@ -779,6 +883,10 @@ class ConnectionManager:
 
     async def connect_game(self, game_id: str, websocket: WebSocket, power: Optional[Power] = None) -> None:
         await websocket.accept()
+        self.game_connections[game_id][websocket] = power
+
+    def register_game(self, game_id: str, websocket: WebSocket, power: Optional[Power] = None) -> None:
+        """Add a socket that has already been accepted."""
         self.game_connections[game_id][websocket] = power
 
     def disconnect_game(self, game_id: str, websocket: WebSocket) -> None:
@@ -1292,8 +1400,13 @@ async def save_sandbox_to_account(
     new_gid = f"saved_{uuid.uuid4().hex[:8]}"
     now_iso = datetime.now(timezone.utc).isoformat()
 
-    cloned_state = source_game.model_copy(deep=True)
+    # A saved copy is unmasked, so copy a live match only as the caller is allowed to see it.
+    visible = sanitize_game_state_for_viewer(
+        source_game, viewer_power_for(source_game.game_id, current_user)
+    )
+    cloned_state = visible.model_copy(deep=True)
     cloned_state.game_id = new_gid
+    cloned_state.timer = None
     GAMES[new_gid] = cloned_state
     SANDBOX_CHECKPOINTS[new_gid] = None
     GAME_HISTORY[new_gid] = []
@@ -1356,17 +1469,8 @@ async def get_game(
                 detail="Passcode required or incorrect for this private campaign.",
             )
 
-    viewer_power = power
-    if not viewer_power and current_user and summary:
-        for p_key, part in summary.participants.items():
-            if (part.user_id and part.user_id == current_user.user_id) or (
-                part.email and current_user.email and part.email.lower() == current_user.email.lower()
-            ):
-                try:
-                    viewer_power = Power(p_key)
-                    break
-                except ValueError:
-                    pass
+    # `power` only picks among the caller's own seats; naming another power shows nothing extra.
+    viewer_power = viewer_power_for(gid, current_user, power)
 
     return GameBootstrapResponse(
         state=sanitize_game_state_for_viewer(game, viewer_power),
@@ -1376,7 +1480,11 @@ async def get_game(
 
 
 @app.post("/api/power", response_model=GameState)
-async def set_active_power(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
+async def set_active_power(
+    req: SetPowerRequest,
+    game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     game = await resolve_game(game_id)
     gid = game.game_id
     game.active_power = req.power
@@ -1384,8 +1492,9 @@ async def set_active_power(req: SetPowerRequest, game_id: Optional[str] = Query(
     if checkpoint is not None:
         checkpoint.active_power = req.power
     refresh_diagnostics_and_simulation(game)
+    await persist_game(gid)
     await broadcast_game_update(gid, game)
-    return game
+    return sanitize_game_state_for_viewer(game, viewer_power_for(gid, current_user, req.power))
 
 
 def put_into_civil_disorder(game: GameState, power: Power) -> None:
@@ -1474,7 +1583,11 @@ async def close_private_sandbox(sandbox: GameState) -> GameState:
 
 
 @app.post("/api/sandbox/enter", response_model=GameState)
-async def enter_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
+async def enter_sandbox_mode(
+    req: SetPowerRequest,
+    game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     """
     Enter Sandbox Pre-Move Mode.
 
@@ -1486,6 +1599,8 @@ async def enter_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Quer
     game = await resolve_game(game_id)
     gid = game.game_id
     if is_multiplayer_match(gid):
+        # The copy keeps this power's real orders, so only its own player may open one.
+        require_own_seat(gid, req.power, current_user)
         return open_private_sandbox(game, req.power)
 
     game.active_power = req.power
@@ -1496,7 +1611,11 @@ async def enter_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Quer
 
 
 @app.post("/api/sandbox/exit", response_model=GameState)
-async def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query(default=None)):
+async def exit_sandbox_mode(
+    req: SetPowerRequest,
+    game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     """
     Exit Sandbox Pre-Move Mode:
     - A private sandbox of a multiplayer match is discarded and the real match is returned.
@@ -1506,7 +1625,15 @@ async def exit_sandbox_mode(req: SetPowerRequest, game_id: Optional[str] = Query
     game = await resolve_game(game_id)
     gid = game.game_id
     if gid in PRIVATE_SANDBOXES:
-        return await close_private_sandbox(game)
+        match_id, power = PRIVATE_SANDBOXES[gid]
+        if caller_holds_seat(GAME_SUMMARIES.get(match_id), power, current_user):
+            match = await close_private_sandbox(game)
+            return sanitize_game_state_for_viewer(match, power)
+        # Only the seat's player may carry orders into the match. Anyone else, such as a player
+        # who has since left that seat, just discards the copy.
+        evict_game(gid)
+        match = await resolve_game(match_id)
+        return sanitize_game_state_for_viewer(match, viewer_power_for(match_id, current_user))
     reject_on_multiplayer_match(gid)
 
     checkpoint = SANDBOX_CHECKPOINTS.get(gid)
@@ -1630,7 +1757,11 @@ async def update_single_order(
     if req.order.unit_id in unit_map:
         target_power = unit_map[req.order.unit_id].power
     elif req.order.unit_id.startswith("BUILD_"):
-        target_power = req.order.power
+        # The slot decides whose build it is, so nobody can fill another power's slot.
+        slot_power = build_slot_power(req.order.unit_id)
+        if slot_power is None:
+            raise HTTPException(status_code=404, detail=f"Unit or build order {req.order.unit_id} not found.")
+        target_power = slot_power
     verify_power_authorization(game.game_id, target_power, current_user)
 
     if req.order.unit_id in unit_map:
@@ -1669,6 +1800,7 @@ async def update_single_order(
             game.finalized_powers.remove(unit.power)
     elif req.order.unit_id.startswith("BUILD_"):
         updated_build = req.order.model_copy()
+        updated_build.power = target_power
         if updated_build.unit_type == UnitType.ARMY:
             updated_build.origin_coast = None
         game.orders[req.order.unit_id] = updated_build
@@ -1697,8 +1829,8 @@ async def update_single_order(
                     to_waive = other_builds.pop(0)
                     to_waive.order_type = OrderType.WAIVE
 
-        if req.order.power in game.finalized_powers:
-            game.finalized_powers.remove(req.order.power)
+        if target_power in game.finalized_powers:
+            game.finalized_powers.remove(target_power)
     else:
         raise HTTPException(status_code=404, detail=f"Unit or build order {req.order.unit_id} not found.")
 
@@ -1720,10 +1852,18 @@ async def update_batch_orders(
 ):
     game = await resolve_game(game_id)
     verify_power_authorization(game.game_id, req.power, current_user)
+    unit_map = {u.id: u for u in game.units}
     # Check the whole batch first so that one bad order cannot leave it half applied.
     for o in req.orders:
         validate_order_references(o)
-    unit_map = {u.id: u for u in game.units}
+        if is_multiplayer_match(game.game_id):
+            # Being allowed to order req.power says nothing about the units in the batch.
+            owner = unit_map[o.unit_id].power if o.unit_id in unit_map else build_slot_power(o.unit_id)
+            if owner is not None and owner != req.power:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"{o.unit_id} belongs to {owner.value}, not {req.power.value}.",
+                )
     for o in req.orders:
         if o.unit_id in unit_map:
             u = unit_map[o.unit_id]
@@ -1737,6 +1877,9 @@ async def update_batch_orders(
             game.orders[u.id] = updated
         elif o.unit_id.startswith("BUILD_"):
             updated_b = o.model_copy()
+            slot_power = build_slot_power(o.unit_id)
+            if slot_power is not None:
+                updated_b.power = slot_power
             if updated_b.unit_type == UnitType.ARMY:
                 updated_b.origin_coast = None
             game.orders[o.unit_id] = updated_b
@@ -1885,11 +2028,15 @@ async def unfinalize_power_orders(
 
 
 @app.post("/api/simulate", response_model=SimulationResult)
-async def simulate_current_orders(game_id: Optional[str] = Query(default=None)):
+async def simulate_current_orders(
+    game_id: Optional[str] = Query(default=None),
+    current_user: Optional[AuthUser] = Depends(get_current_user),
+):
     game = await resolve_game(game_id)
     refresh_diagnostics_and_simulation(game)
-    assert game.last_resolution is not None
-    return game.last_resolution
+    visible = sanitize_game_state_for_viewer(game, viewer_power_for(game.game_id, current_user))
+    assert visible.last_resolution is not None
+    return visible.last_resolution
 
 
 def everyone_is_ready(game: GameState) -> bool:
@@ -2031,6 +2178,8 @@ async def tick_timer(game: GameState) -> None:
             logger.exception("Could not resolve %s when its clock ran out.", game.game_id)
             timer.stage = TimerStage.PAUSED
             timer.deadline = None
+            # Save and announce the pause, or a restart would bring the expired clock back.
+            await publish_timer(game)
         return
     close_vote(timer, time.time())
     await publish_timer(game)
@@ -2102,7 +2251,7 @@ async def vote_on_timer(
     game = await require_timer_player(game_id, req.power, TimerStage.VOTING, current_user)
     game.timer.votes[req.power] = req.choice
     settle_timer(game, timer_players(game), time.time())
-    return await publish_timer(game)
+    return sanitize_game_state_for_viewer(await publish_timer(game), req.power)
 
 
 @app.post("/api/games/{game_id}/timer/extend", response_model=GameState)
@@ -2119,7 +2268,7 @@ async def request_timer_extension(
     elif not req.active and req.power in requests:
         requests.remove(req.power)
     settle_timer(game, timer_players(game), time.time())
-    return await publish_timer(game)
+    return sanitize_game_state_for_viewer(await publish_timer(game), req.power)
 
 
 @app.post("/api/games/{game_id}/timer/ready", response_model=GameState)
@@ -2136,7 +2285,7 @@ async def ready_up_timer(
     elif not req.active and req.power in ready:
         ready.remove(req.power)
     settle_timer(game, timer_players(game), time.time())
-    return await publish_timer(game)
+    return sanitize_game_state_for_viewer(await publish_timer(game), req.power)
 
 
 @app.post("/api/scenario", response_model=GameState)
@@ -2214,6 +2363,8 @@ async def admin_rollback_turn(
 ):
     """Roll back to the previous turn snapshot in history (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
+    # Load first: the check needs the game's summary, and fails closed without it.
+    await resolve_game(gid)
     verify_admin_access(gid, current_user)
 
     history_stack = GAME_HISTORY.get(gid, [])
@@ -2252,8 +2403,9 @@ async def admin_set_turn(
 ):
     """Arbitrarily adjust season, year, or phase (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, current_user)
+    # Load first: the check needs the game's summary, and fails closed without it.
     game = await resolve_game(gid)
+    verify_admin_access(gid, current_user)
 
     valid_seasons = ["Spring", "Fall", "Winter"]
     valid_phases = ["Movement", "Retreats", "Adjustments"]
@@ -2290,8 +2442,9 @@ async def admin_move_unit(
 ):
     """Arbitrarily teleport/move any unit to any valid province on the map (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, current_user)
+    # Load first: the check needs the game's summary, and fails closed without it.
     game = await resolve_game(gid)
+    verify_admin_access(gid, current_user)
 
     target_unit = next((u for u in game.units if u.id == req.unit_id), None)
     if not target_unit:
@@ -2352,8 +2505,9 @@ async def admin_spawn_unit(
 ):
     """Arbitrarily spawn a unit anywhere on the board (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, current_user)
+    # Load first: the check needs the game's summary, and fails closed without it.
     game = await resolve_game(gid)
+    verify_admin_access(gid, current_user)
 
     prov_id = req.province.upper()
     prov_info = PROVINCES.get(prov_id)
@@ -2423,8 +2577,9 @@ async def admin_destroy_unit(
 ):
     """Arbitrarily destroy/disband any unit on the board (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, current_user)
+    # Load first: the check needs the game's summary, and fails closed without it.
     game = await resolve_game(gid)
+    verify_admin_access(gid, current_user)
 
     target_unit = next((u for u in game.units if u.id == req.unit_id), None)
     if not target_unit:
@@ -2454,8 +2609,9 @@ async def admin_set_ownership(
 ):
     """Arbitrarily reassign province/supply center ownership (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, current_user)
+    # Load first: the check needs the game's summary, and fails closed without it.
     game = await resolve_game(gid)
+    verify_admin_access(gid, current_user)
 
     prov_id = req.province.upper()
     if prov_id not in PROVINCES:
@@ -2487,8 +2643,9 @@ async def admin_unfinalize_all(
 ):
     """Unlock and unfinalize orders for all Great Powers (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
-    verify_admin_access(gid, current_user)
+    # Load first: the check needs the game's summary, and fails closed without it.
     game = await resolve_game(gid)
+    verify_admin_access(gid, current_user)
     game.finalized_powers = []
     game.turn_history.insert(0, "[ADMIN OVERRIDE] Unlocked orders for all Great Powers.")
     refresh_diagnostics_and_simulation(game)
@@ -2499,12 +2656,38 @@ async def admin_unfinalize_all(
     return game
 
 
+SOCKET_AUTH_TIMEOUT_SECONDS = 10.0
+
+
+async def receive_socket_identity(websocket: WebSocket) -> Optional[AuthUser]:
+    """
+    Read who is on an accepted game socket.
+
+    Browsers cannot put an Authorization header on a WebSocket, and a token in the URL would end
+    up in request logs, so the client sends `{"type": "auth", "token": ...}` as its first message
+    (it asks for this with `?handshake=1`). A missing, late or invalid token means signed out.
+    """
+    try:
+        data = await asyncio.wait_for(websocket.receive_json(), timeout=SOCKET_AUTH_TIMEOUT_SECONDS)
+    except (asyncio.TimeoutError, ValueError, KeyError, WebSocketDisconnect):
+        # A socket that is already gone fails on its first send, which unregisters it.
+        return None
+    if not isinstance(data, dict) or data.get("type") != "auth" or not data.get("token"):
+        return None
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=str(data["token"]))
+    try:
+        return await run_in_threadpool(get_current_user, credentials)
+    except HTTPException:
+        return None
+
+
 @app.websocket("/ws/games/{game_id}")
 async def ws_game_endpoint(
     websocket: WebSocket,
     game_id: str,
     power: Optional[str] = Query(default=None),
     passcode: Optional[str] = Query(default=None),
+    handshake: bool = Query(default=False),
 ):
     if game_id not in GAMES and is_persistence_enabled():
         try:
@@ -2519,27 +2702,33 @@ async def ws_game_endpoint(
         await websocket.close(code=4004)
         return
 
+    await websocket.accept()
+    current_user = await receive_socket_identity(websocket) if handshake else None
+
+    requested: Optional[Power] = None
+    if power:
+        try:
+            requested = Power(power.upper())
+        except ValueError:
+            pass
+    # `power` only picks among the caller's own seats; naming another power shows nothing extra.
+    power_enum = viewer_power_for(game_id, current_user, requested)
+
     summary = GAME_SUMMARIES.get(game_id)
     if summary and summary.has_passcode and is_multiplayer_match(game_id):
         expected_pw = GAME_PASSCODES.get(game_id, "")
         provided_pw = (passcode or "").strip()
-        if not expected_pw or not hmac.compare_digest(provided_pw, expected_pw):
+        # Seated players are let in without it, as GET /api/game does.
+        if power_enum is None and (not expected_pw or not hmac.compare_digest(provided_pw, expected_pw)):
             await websocket.close(code=4403)
             return
 
-    power_enum: Optional[Power] = None
-    if power:
-        try:
-            power_enum = Power(power.upper())
-        except ValueError:
-            pass
-
-    await manager.connect_game(game_id, websocket, power=power_enum)
+    manager.register_game(game_id, websocket, power=power_enum)
     sync_summary(game_id)
     game = GAMES[game_id]
-    await tick_timer(game)
-    summary = GAME_SUMMARIES.get(game_id)
     try:
+        await tick_timer(game)
+        summary = GAME_SUMMARIES.get(game_id)
         sanitized = sanitize_game_state_for_viewer(game, power_enum)
         await websocket.send_json({
             "type": "game_update",
