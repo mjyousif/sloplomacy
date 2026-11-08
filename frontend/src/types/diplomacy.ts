@@ -337,3 +337,14 @@ export type WebSocketMessage =
   | WebSocketGameUpdate
   | WebSocketLobbyUpdate
   | { type: 'pong' };
+
+export interface ScenarioRequest {
+  scenario_id: string;
+  active_power?: Power | null;
+}
+
+export interface SeedScenarioRequest {
+  scenario_id: string;
+  game_id?: string | null;
+  active_power?: Power | null;
+}

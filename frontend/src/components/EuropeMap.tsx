@@ -286,6 +286,8 @@ const ProvincePolygon = memo<ProvincePolygonProps>(
           }
           strokeWidth={isHighlighted || isReachable || hasWarning ? 3.5 : 0}
           className="province-interactive-path"
+          data-testid="province-path"
+          data-province-id={geom.id}
           onClick={() => onClickProvince(geom.id)}
           onPointerEnter={(e) => {
             if (e.pointerType !== 'touch') onHoverProvince(geom.id);
@@ -310,6 +312,9 @@ const ProvincePolygon = memo<ProvincePolygonProps>(
                 stroke="#15803d"
                 strokeWidth="3"
                 className="coast-interactive-path"
+                data-testid="province-coast-selector"
+                data-province-id={geom.id}
+                data-coast={coastKey}
                 onClick={(e) => {
                   e.stopPropagation();
                   onClickProvince(geom.id, coastKey);
@@ -322,6 +327,8 @@ const ProvincePolygon = memo<ProvincePolygonProps>(
         {showMoveReticle && (
           <g
             className="reachable-target-reticle"
+            data-testid="reachable-reticle"
+            data-province-id={geom.id}
             onClick={(e) => {
               e.stopPropagation();
               onClickProvince(geom.id);
@@ -1336,7 +1343,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
   }, [units, orders, isUnitOrderVisible, getUnitPoint, getProvincePoint, arrowScale]);
 
   return (
-    <div ref={containerRef} className="map-viewport-container">
+    <div ref={containerRef} className="map-viewport-container" data-testid="map-viewport-container">
       {/* Live Hypothetical / Simulation Active Banner */}
       {(showSimulationOverlay || sandboxMode) && simulationResult && (
         <div className="simulation-map-banner">
@@ -1918,7 +1925,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
               const hasIssue = Boolean(issuesByUnit[u.id]?.length);
 
               return (
-                <g key={`convoy_${u.id}`} pointerEvents="none">
+                <g key={`convoy_${u.id}`} pointerEvents="none" data-testid="order-arrow" data-order-unit={u.id} data-order-type="CONVOY" data-order-target={o.target || ""}>
                   <path
                     d={`M ${armyPt.x},${armyPt.y} L ${fleetPt.x},${fleetPt.y} L ${destPt.x},${destPt.y}`}
                     fill="none"
@@ -1968,7 +1975,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                 : '#0d9488';
 
               return (
-                <g key={`support_${u.id}`} pointerEvents="none">
+                <g key={`support_${u.id}`} pointerEvents="none" data-testid="order-arrow" data-order-unit={u.id} data-order-type="SUPPORT" data-order-target={o.target || ""}>
                   <line
                     x1={supporterPt.x}
                     y1={supporterPt.y}
@@ -2076,7 +2083,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
               const ghostPiece = describePiece(o.target, o.target_coast, false);
 
               return (
-                <g key={`move_${u.id}`} pointerEvents="none">
+                <g key={`move_${u.id}`} pointerEvents="none" data-testid="order-arrow" data-order-unit={u.id} data-order-type={o.order_type} data-order-target={o.target || ""}>
                   <path
                     d={path}
                     fill="none"
@@ -2192,6 +2199,10 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                     key={bId}
                     transform={`translate(${pt.x}, ${pt.y})`}
                     className="map-unit-token"
+                    data-testid="build-token"
+                    data-build-id={bId}
+                    data-home-province={homeProv}
+                    data-power={pwr}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (dragMovedRef.current) return;
@@ -2343,6 +2354,12 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   className={`map-unit-token ${isSelected ? 'selected' : ''} ${
                     isHovered ? 'hovered' : ''
                   } ${!isControllable ? 'foreign-locked' : ''}`}
+                  data-testid="unit-token"
+                  data-unit-id={u.id}
+                  data-unit-power={u.power}
+                  data-unit-type={u.unit_type}
+                  data-province={u.province}
+                  data-controllable={isControllable ? 'true' : 'false'}
                   opacity={isAdvancingInSim && !isSelected ? 0.62 : 1}
                   onClick={(e) => handleSelectUnitOnMap(u, e)}
                   onPointerEnter={(e) => {
@@ -2366,14 +2383,16 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(function Eu
                   )}
 
                   {u.is_dislodged && (
-                    <PieceOutline
-                      frame={frame}
-                      radius={24}
-                      fill="rgba(234, 88, 12, 0.28)"
-                      stroke="#ea580c"
-                      strokeWidth="3"
-                      strokeDasharray="5 3"
-                    />
+                    <g data-testid="dislodged-unit-indicator" data-unit-id={u.id}>
+                      <PieceOutline
+                        frame={frame}
+                        radius={24}
+                        fill="rgba(234, 88, 12, 0.28)"
+                        stroke="#ea580c"
+                        strokeWidth="3"
+                        strokeDasharray="5 3"
+                      />
+                    </g>
                   )}
 
                   {isDisbanding && (

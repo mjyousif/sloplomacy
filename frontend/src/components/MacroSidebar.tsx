@@ -431,6 +431,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         {onToggleCollapse && (
           <button
             type="button"
+            data-testid="macro-sidebar-expand-btn"
             className="sidebar-rail-btn rail-toggle-btn"
             onClick={onToggleCollapse}
             title="Expand Tactical Command & Orders"
@@ -481,7 +482,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
   // Expanded Core-Gameplay Sidebar
   return (
-    <aside className="macro-sidebar macro-sidebar-expanded" aria-label="Tactical Command & Orders">
+    <aside className="macro-sidebar macro-sidebar-expanded" data-testid="macro-sidebar" aria-label="Tactical Command & Orders">
       {/* 1. ACTIVE POWER HEADER & TELEMETRY */}
       <div
         className="active-power-banner"
@@ -522,6 +523,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
             {onToggleCollapse && (
               <button
                 type="button"
+                data-testid="macro-sidebar-collapse-btn"
                 className="sidebar-collapse-toggle-btn"
                 onClick={onToggleCollapse}
                 title="Collapse Tactical Orders"
@@ -537,6 +539,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           <button
             type="button"
             className="quick-action-btn"
+            data-testid="btn-confirm-all"
             title="Mark all current orders as confirmed"
             onClick={onConfirmAllHolds}
           >
@@ -604,6 +607,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                 <div
                   key={homeProv}
                   className={`unit-macro-card ${isSelected ? 'selected' : ''}`}
+                  data-testid="build-macro-card"
+                  data-home-province={homeProv}
                   style={{
                     borderLeft: `4px solid ${isWaived ? '#64748b' : '#16a34a'}`,
                   }}
@@ -663,6 +668,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                     <div className="order-type-tabs">
                       <button
                         type="button"
+                        data-testid="btn-build-army"
                         className={`order-tab-btn ${isArmy ? 'active' : ''}`}
                         style={
                           isArmy
@@ -693,6 +699,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                               <button
                                 key={cst}
                                 type="button"
+                                data-testid={`btn-build-fleet-${cst}`}
                                 className={`order-tab-btn ${isThisCoastFleet ? 'active' : ''}`}
                                 style={
                                   isThisCoastFleet
@@ -723,6 +730,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         ) : (
                           <button
                             type="button"
+                            data-testid="btn-build-fleet"
                             className={`order-tab-btn ${isFleet ? 'active' : ''}`}
                             style={
                               isFleet
@@ -752,6 +760,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
                       <button
                         type="button"
+                        data-testid="btn-build-waive"
                         className={`order-tab-btn ${isWaived ? 'active' : ''}`}
                         onClick={() =>
                           onUpdateOrder({
@@ -806,6 +815,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
               className={`unit-macro-card ${isSelected ? 'selected' : ''} ${
                 isHovered ? 'hovered' : ''
               } ${hasError ? 'card-error' : hasWarn ? 'card-warning' : ''}`}
+              data-testid="unit-macro-card"
+              data-unit-id={unit.id}
               style={
                 unit.is_dislodged
                   ? { borderLeft: '4px solid #ea580c' }
@@ -911,6 +922,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         {validRetreats.length > 0 && (
                           <button
                             type="button"
+                            data-testid="btn-order-retreat"
                             className={`order-tab-btn ${order?.order_type === 'RETREAT' ? 'active' : ''}`}
                             style={
                               order?.order_type === 'RETREAT'
@@ -924,6 +936,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         )}
                         <button
                           type="button"
+                          data-testid="btn-order-disband"
                           className={`order-tab-btn ${order?.order_type === 'DISBAND' ? 'active' : ''}`}
                           style={
                             order?.order_type === 'DISBAND'
@@ -940,6 +953,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         <div className="order-param-row">
                           <label>Retreat To:</label>
                           <select
+                            data-testid="select-retreat-target"
                             value={
                               order.target
                                 ? `${order.target}${order.target_coast ? `/${order.target_coast}` : ''}`
@@ -981,6 +995,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                     <div className="order-type-tabs">
                       <button
                         type="button"
+                        data-testid="btn-adjustment-keep"
                         className={`order-tab-btn ${!isDisbanding ? 'active' : ''}`}
                         onClick={() => handleOrderTypeChange(unit, 'HOLD')}
                       >
@@ -988,6 +1003,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                       </button>
                       <button
                         type="button"
+                        data-testid="btn-adjustment-disband"
                         className={`order-tab-btn ${isDisbanding ? 'active' : ''}`}
                         style={
                           isDisbanding
@@ -1016,6 +1032,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                             key={oType}
                             type="button"
                             className={`order-tab-btn ${active ? 'active' : ''}`}
+                            data-testid={`btn-order-type-${oType}`}
                             onClick={() => handleOrderTypeChange(unit, oType)}
                           >
                             {oType === 'HOLD' && <Shield size={11} />}
@@ -1032,6 +1049,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                       <div className="order-param-row">
                         <label>Destination:</label>
                         <select
+                          data-testid="select-order-target"
                           value={
                             order.target
                               ? `${order.target}${order.target_coast ? `/${order.target_coast}` : ''}`
@@ -1092,6 +1110,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         <div className="order-param-row">
                           <label>Unit:</label>
                           <select
+                            data-testid="select-support-unit"
                             value={order.aux_unit_origin || ''}
                             onChange={(e) => {
                               const newAux = e.target.value;
@@ -1122,6 +1141,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
                         <div className="order-param-row">
                           <label>Into:</label>
                           <select
+                            data-testid="select-support-target"
                             value={order.target || ''}
                             onChange={(e) => {
                               onUpdateOrder({
@@ -1231,6 +1251,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         {!isFinalized ? (
           <button
             type="button"
+            data-testid="btn-finalize-orders"
             className={`finalize-primary-btn ${
               myIssues.length > 0 ? 'has-warning-state' : ''
             }`}
@@ -1254,7 +1275,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
             )}
           </button>
         ) : (
-          <button type="button" className="unfinalize-btn" onClick={onUnfinalizeClick}>
+          <button type="button" data-testid="btn-unfinalize-orders" className="unfinalize-btn" onClick={onUnfinalizeClick}>
             <Unlock size={15} />
             <span>Orders Finalized — Click to Unlock</span>
           </button>
@@ -1263,6 +1284,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         {!isMultiplayer ? (
           <button
             type="button"
+            data-testid="btn-adjudicate-phase"
             className="adjudicate-turn-btn"
             title="Execute turn adjudication and advance to the next season"
             onClick={onAdjudicateTurn}

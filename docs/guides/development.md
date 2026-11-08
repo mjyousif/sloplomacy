@@ -163,6 +163,49 @@ npm run build
 
 ---
 
+## LLM-Driven E2E Interactive Testing
+
+Sloplomacy includes an interactive end-to-end (E2E) testing framework designed for AI coding agents and human developers. Unlike rigid visual regression tests that break when styling changes, this framework executes realistic user journeys, captures viewport screenshots at each step, logs runtime console/page telemetry, and allows visual and semantic inspection.
+
+### Browser Prerequisites
+By default, `frontend/playwright.config.ts` uses system Google Chrome (`channel: 'chrome'`). If Google Chrome is not installed on your machine, you can override the browser channel with `PLAYWRIGHT_CHANNEL=none` (or `PLAYWRIGHT_CHANNEL=chromium`) after installing Playwright's Chromium binary (`npx playwright install chromium` in `frontend/`).
+
+### Running Interactive Scenarios
+Use the cross-platform runner (`scripts/e2e_runner.py`), which auto-detects and launches the backend (with `ENVIRONMENT=development`) and frontend dev servers if not already running:
+
+```bash
+# List all available scenarios:
+python scripts/e2e_runner.py list
+
+# Run a specific scenario:
+python scripts/e2e_runner.py run movement
+python scripts/e2e_runner.py run sandbox
+python scripts/e2e_runner.py run blunder
+python scripts/e2e_runner.py run retreats
+python scripts/e2e_runner.py run builds
+python scripts/e2e_runner.py run mobile
+
+# Watch the browser interactively (headed mode):
+python scripts/e2e_runner.py run movement --headed
+
+# Run the complete E2E scenario suite:
+python scripts/e2e_runner.py run --all
+```
+
+### Scenario Catalog & Artifacts
+| Scenario | Focus Area | Step Screenshots Saved In |
+| :--- | :--- | :--- |
+| `movement` | Map reticle moves, Support vectors, Hold toggles, turn advance, Admin rollback | `artifacts/e2e/movement_and_orders/` |
+| `sandbox` | Lobby launch, Hypothetical Mode foreign pre-move isolation | `artifacts/e2e/sandbox_isolation/` |
+| `blunder` | Self-bounce detection, Sanity Check modal, override flow | `artifacts/e2e/blunder_sanity_modal/` |
+| `retreats` | Dislodged unit ring, valid retreat selection, Fall advance | `artifacts/e2e/retreats_dislodgement/` |
+| `builds` | Winter adjustments, Army/Fleet builds, bicoastal STP/NC Fleet build, deficit disband | `artifacts/e2e/winter_builds/` |
+| `mobile` | Phone layout (390x844), CompactTopBar, issue badge modal, 3-dots menu | `artifacts/e2e/mobile_compact_hud/` |
+
+Each scenario exports a `summary.json` containing the execution status (`PASSED`/`FAILED`), step-by-step screenshot paths, and any browser console or uncaught page runtime errors.
+
+---
+
 ## Repository Governance & Branch Protection (`main`)
 
 The `main` branch is protected with automated quality gates and configuration-as-code managed via [`.github/settings.yml`](../../.github/settings.yml):

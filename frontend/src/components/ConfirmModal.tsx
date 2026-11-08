@@ -72,7 +72,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <button type="button" className="confirm-modal-cancel" onClick={onCancel}>
             Cancel
           </button>
-          <button type="button" ref={confirmRef} className="confirm-modal-confirm" onClick={onConfirm}>
+          <button type="button" ref={confirmRef} data-testid="btn-confirm-modal-confirm" className="confirm-modal-confirm" onClick={onConfirm}>
             {confirmLabel}
           </button>
         </div>

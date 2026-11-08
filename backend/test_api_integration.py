@@ -6,6 +6,7 @@ from main import (
     GAMES,
     app,
     create_default_orders,
+    evict_game,
     get_required_finalizing_powers,
     resolve_static_path,
 )
@@ -1291,3 +1292,115 @@ def test_a_power_that_misses_its_disbands_still_loses_units():
 
     assert state["phase"] == "Movement"
     assert sum(u["power"] == "FRANCE" for u in state["units"]) == 2
+
+
+def test_api_test_seed_scenarios_and_security(monkeypatch):
+    # 1. Production environment (no ENVIRONMENT or ENABLE_TEST_SEED_ENDPOINT) -> 403 Forbidden
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    monkeypatch.delenv("ALLOW_INSECURE_DEV_AUTH", raising=False)
+    monkeypatch.delenv("ENABLE_TEST_SEED_ENDPOINT", raising=False)
+    res_prod = client.post(
+        "/api/test/seed",
+        json={"scenario_id": "standard_1901", "game_id": "test_seed_game"},
+    )
+    assert res_prod.status_code == 403
+
+    # 2. Enable via ENVIRONMENT=test
+    monkeypatch.setenv("ENVIRONMENT", "test")
+
+    # Test seeding standard 1901
+    res = client.post(
+        "/api/test/seed",
+        json={"scenario_id": "standard_1901", "game_id": "test_seed_game"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["season"] == "Spring"
+    assert data["phase"] == "Movement"
+    assert data["year"] == 1901
+    assert data["active_power"] == "FRANCE"
+
+    # Test seeding spring retreats demo (defaults to GERMANY, legal DATC retreats include MUN, GAS, PIC)
+    res_ret = client.post(
+        "/api/test/seed",
+        json={"scenario_id": "spring_retreats_demo", "game_id": "test_seed_game"},
+    )
+    assert res_ret.status_code == 200
+    ret_data = res_ret.json()
+    assert ret_data["season"] == "Spring"
+    assert ret_data["phase"] == "Retreats"
+    assert ret_data["active_power"] == "GERMANY"
+    assert ret_data["retreats"] is not None
+    assert set(ret_data["retreats"]["GERMANY"]["A BUR"]) == {"RUH", "BEL", "MUN", "PIC", "GAS"}
+    assert any(u.get("is_dislodged") for u in ret_data["units"])
+
+    # Verify active_power does not leak when re-seeding standard_1901 without active_power
+    res_reseed = client.post(
+        "/api/test/seed",
+        json={"scenario_id": "standard_1901", "game_id": "test_seed_game"},
+    )
+    assert res_reseed.status_code == 200
+    assert res_reseed.json()["active_power"] == "FRANCE"
+
+    # Verify explicit active_power override is respected even on spring_retreats_demo
+    res_override = client.post(
+        "/api/test/seed",
+        json={
+            "scenario_id": "spring_retreats_demo",
+            "game_id": "test_seed_game",
+            "active_power": "FRANCE",
+        },
+    )
+    assert res_override.status_code == 200
+    assert res_override.json()["active_power"] == "FRANCE"
+
+    # Test seeding winter adjustments demo
+    res_adj = client.post(
+        "/api/test/seed",
+        json={"scenario_id": "winter_adjustments_demo", "game_id": "test_seed_game"},
+    )
+    assert res_adj.status_code == 200
+    adj_data = res_adj.json()
+    assert adj_data["season"] == "Winter"
+    assert adj_data["phase"] == "Adjustments"
+    assert adj_data["active_power"] == "FRANCE"
+    assert adj_data["builds"] is not None
+    assert adj_data["builds"]["FRANCE"]["count"] == 2
+
+    # Test unknown scenario
+    res_bad = client.post(
+        "/api/test/seed",
+        json={"scenario_id": "nonexistent_scenario", "game_id": "test_seed_game"},
+    )
+    assert res_bad.status_code == 400
+
+    # Verify Russia (+1 bicoastal STP build) and Austria (-1 deficit disband) in winter_adjustments_demo
+    assert adj_data["builds"]["RUSSIA"]["count"] == 1
+    assert "STP" in adj_data["builds"]["RUSSIA"]["homes"]
+    assert adj_data["builds"]["AUSTRIA"]["count"] == -1
+
+    # Test refusing to overwrite a multiplayer match
+    mp_gid = _seated_game()
+    res_mp = client.post(
+        "/api/test/seed",
+        json={"scenario_id": "standard_1901", "game_id": mp_gid},
+    )
+    assert res_mp.status_code == 403
+
+    # Test refusing to overwrite an unloaded multiplayer match loaded from persistence
+    saved_state = GAMES[mp_gid]
+    saved_summary = GAME_SUMMARIES[mp_gid]
+    evict_game(mp_gid)
+    monkeypatch.setattr("main.is_persistence_enabled", lambda: True)
+
+    async def _fake_load(gid: str):
+        if gid == mp_gid:
+            return (saved_state, saved_summary, [], None)
+        return None
+
+    monkeypatch.setattr("main.load_saved_game", _fake_load)
+    res_unloaded_mp = client.post(
+        "/api/test/seed",
+        json={"scenario_id": "standard_1901", "game_id": mp_gid},
+    )
+    assert res_unloaded_mp.status_code == 403

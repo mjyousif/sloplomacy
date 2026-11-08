@@ -26,8 +26,8 @@ export const SanityCheckModal: React.FC<SanityCheckModalProps> = ({
   const warningCount = issues.filter((i) => i.severity === 'warning').length;
 
   return (
-    <div className="sanity-modal-backdrop" onClick={onClose}>
-      <div className="sanity-modal-card" onClick={(e) => e.stopPropagation()}>
+    <div className="sanity-modal-backdrop" data-testid="sanity-modal-backdrop" onClick={onClose}>
+      <div className="sanity-modal-card" data-testid="sanity-check-modal" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="sanity-modal-header">
           <div className="sanity-header-title-group">
@@ -82,6 +82,7 @@ export const SanityCheckModal: React.FC<SanityCheckModalProps> = ({
                 </div>
                 <button
                   className="sanity-inspect-btn"
+                  data-testid="btn-sanity-inspect"
                   onClick={() => onInspectIssue(issue)}
                   title="Highlight and edit this unit on the map"
                 >
@@ -95,10 +96,10 @@ export const SanityCheckModal: React.FC<SanityCheckModalProps> = ({
 
         {/* Modal Footer */}
         <div className="sanity-modal-footer">
-          <button className="sanity-back-btn" onClick={onClose}>
+          <button className="sanity-back-btn" data-testid="btn-sanity-back" onClick={onClose}>
             Go Back &amp; Revise Orders
           </button>
-          <button className="sanity-force-confirm-btn" onClick={onConfirmFinalizeAnyway}>
+          <button className="sanity-force-confirm-btn" data-testid="btn-sanity-force-confirm" onClick={onConfirmFinalizeAnyway}>
             <CheckCircle2 size={16} />
             <span>Yes, I&apos;m Sure — Finalize Anyway</span>
           </button>
