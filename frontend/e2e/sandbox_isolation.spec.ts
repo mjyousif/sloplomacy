@@ -1,3 +1,5 @@
+// @scenario sandbox
+// @description Lobby launch, Hypothetical Mode foreign pre-move isolation, and order retention check.
 import { test, expect } from '@playwright/test';
 import { ScenarioRecorder, seedScenario } from './helpers';
 

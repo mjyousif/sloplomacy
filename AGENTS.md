@@ -40,7 +40,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```bash
   python -m pytest backend/ -v
   ```
-  *(Runs all 11 test suites: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_database_persistence.py`, `test_phase_timer.py`, `test_security.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
+  *(Runs every `backend/test_*.py` suite, including: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_database_persistence.py`, `test_phase_timer.py`, `test_security.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
 
 ### Frontend Commands (`frontend/`)
 - **Install Dependencies**:
@@ -71,13 +71,13 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```bash
   python scripts/e2e_runner.py list
   ```
-- **Run Specific Scenario** (`movement`, `sandbox`, `blunder`, `retreats`, `builds`, `mobile`):
+- **Run Specific Scenario** (names come from `list`, e.g. `movement`, `sandbox`, `blunder`, `retreats`, `builds`, `mobile`):
   ```bash
   python scripts/e2e_runner.py run movement
   # Or run in a visible browser window:
   python scripts/e2e_runner.py run movement --headed
   ```
-- **Execute Full E2E Scenario Suite**:
+- **Execute Full E2E Scenario Suite** (only for broad changes; prefer one scenario):
   ```bash
   python scripts/e2e_runner.py run --all
   ```
@@ -167,7 +167,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   ├── map_data.py            # Complete 76-province graph, dual coasts, 34 SC definitions
 │   ├── requirements.txt       # Python dependencies
 │   ├── conftest.py            # Shared pytest fixtures (resets the in-memory game registry)
-│   └── test_*.py              # Comprehensive pytest test harness (11 test suites)
+│   └── test_*.py              # Comprehensive pytest test harness (one suite per area)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx            # Main state container, viewMode controller & API coordinator
@@ -312,7 +312,7 @@ The game cycles through three standard phases per year:
 - Always run `npx tsc --noEmit` before committing frontend modifications.
 
 ### 3. Run Comprehensive Verification
-- **Backend Tests**: Run python -m pytest backend/ -v (must pass all 11 test suites: adjudicator, admin, ai_and_private_lobbies, api_integration, database_persistence, engine, phase_timer, security, surrender_leave, validator, websocket_sync).
+- **Backend Tests**: Run python -m pytest backend/ -v (must pass every suite, currently: adjudicator, admin, ai_and_private_lobbies, api_integration, database_persistence, engine, phase_timer, security, surrender_leave, validator, websocket_sync).
 - **Frontend Verification**: Run `npm test` (Vitest) and `npm run build` (Vite + TypeScript) in `frontend/`.
 
 ### 4. Preserve Documentation & Code Integrity
@@ -320,14 +320,39 @@ The game cycles through three standard phases per year:
 - Do not produce stale or misleading documentation when authoring or refactoring features.
 
 ### 5. LLM-Driven Interactive E2E Verification Protocol
-AI coding agents and contributors should run the relevant interactive E2E scenario whenever touching the SVG map canvas (`EuropeMap.tsx`), tactical HUD/sidebars (`MacroSidebar.tsx`, `ToolsSidebar.tsx`), modal dialogs, or adjudication state flows.
+AI coding agents and contributors should run the **one relevant** interactive E2E scenario whenever touching the SVG map canvas (`EuropeMap.tsx`), tactical HUD/sidebars (`MacroSidebar.tsx`, `ToolsSidebar.tsx`), modal dialogs, or adjudication state flows. This includes backend changes to API responses, adjudication, phase flow, sandbox, validator or auth behavior, because the scenarios run against the real backend.
 - **Workflow**:
   1. Run scenario: `python scripts/e2e_runner.py run <scenario_name>`.
   2. Inspect the generated step screenshots in `artifacts/e2e/<scenario_name>/` using multimodal vision (`read_file`).
   3. Verify visual sanity: ensure order vectors point to intended provinces, unit tokens and retreat rings render cleanly, and no console or page exceptions are logged in `summary.json`.
   4. Attach passing screenshot paths or summaries to the task review or PR.
+- **Keep it targeted.** Pick the single scenario that covers the change and look only at the screenshots for the affected steps. Skip E2E only when nothing a user can see or click could change (docs, comments, test-only changes, fully covered refactors, infra scripts, or internals such as persistence or security headers that leave responses unchanged). Reserve un --all for broad changes (shared layout, App.tsx state flow, map rendering), since it is slow and reading screenshots costs tokens.
 
-### 6. Pull Request & Branch Protection Governance
+### 6. Project Skills & Working Style
+Reusable playbooks live in .agents/skills/. Read the matching SKILL.md before starting that kind of work:
+
+| Skill | Use when |
+| :--- | :--- |
+| verify-change | Finishing any change: picks the right pytest / tsc / vitest / build / E2E checks and the docs checklist |
+| secrecy-review | Adding or changing an endpoint, WebSocket message, broadcast, save path, sandbox or admin action (fog of war and seat authorization) |
+| frontend-change | Editing the map, sidebars, top bar, modals, CSS, display settings or phone layout |
+| open-pr | Committing, opening or updating a PR, or resolving conflicts on a stacked PR |
+| supabase, supabase-postgres-best-practices | Anything touching the database, RLS, migrations or Supabase Auth |
+
+Working rules for agents:
+- **Fetch first.** main moves quickly. Run git fetch origin and base your work on origin/main. Read the code as it is now, not as your checkout last saw it.
+- **Reproduce before fixing.** For a bug, write the failing test (backend: pytest, frontend: Vitest, UI: E2E scenario) first, then fix it.
+- **Test the adversary.** For any multiplayer feature, test with two players, where one tries to see or change the other's state.
+- **A new path is a new leak.** Every response, broadcast, or save of a live match's state must go through sanitize_game_state_for_viewer. Fixes in #90, #91 and #101 were each for a path that skipped it.
+- **Keep PRs single-topic** and say what you ran and what you could not run. Don't claim a check passed that you didn't run.
+- **Record invariants you discover.** If a bug taught you a rule that isn't obvious from the code, add one bold **Invariant** line to the right subsection of section 4.
+- **Grow the checks with the product.** If a change adds user-visible behavior no E2E scenario covers, add a scenario (or extend the closest one) in the same PR and register it by adding the two `// @scenario` and `// @description` header comments (the runner discovers specs in `frontend/e2e/`). The steps are in `verify-change` section 6. Add a new test for every bug you fix.
+- **Keep skills current.** If you learn a rule the skills or invariants don't state, or find one that is wrong, update the matching skill or section 4 in the same PR and say so in the PR description.
+- **Never hardcode counts** (tests, endpoints, scenarios) in prose when a list will do. They go stale.
+- **Don't commit generated output**: rtifacts/, .pr_body.md, .venv, 
+ode_modules, dist.
+
+### 7. Pull Request & Branch Protection Governance
 - **Branch Protection on `main`**: Direct pushes to `main` are prohibited. All modifications must be submitted via pull request.
 - **Mandatory Review**: PRs require at least 1 approving code review before merging (`required_approving_review_count: 1`). Pushing new commits automatically dismisses previous reviews.
 - **CI Quality Gates**: PRs must pass `Backend Tests (Pytest)` and `Frontend Tests & Build Check` before they are eligible for merge.
