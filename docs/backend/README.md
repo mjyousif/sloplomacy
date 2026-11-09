@@ -57,9 +57,9 @@ backend/
 │   └── presets.py           # SCENARIO_IDS, build_scenario, and default lobby seeds
 ├── ws/                      # WebSocket connection management & broadcasts
 │   └── connection_manager.py # Thread-safe connection tracking & JSON message delivery
-├── tests/                   # Categorized pytest test suite
-│   ├── unit/                # Unit test suites (adjudicator, engine, validator, phase_timer)
-│   └── integration/         # Integration test suites (api, database, admin, security, websocket, etc.)
+├── tests/                   # pytest suites, laid out as described in "Running Backend Tests"
+│   ├── unit/                # One module at a time, mirroring the packages (unit/engine/adjudicator/, ...)
+│   └── integration/         # The app through HTTP and the game socket (integration/api/, ...)
 ├── requirements-runtime.txt # Python runtime dependencies (what the Docker image installs)
 ├── requirements.txt         # Runtime dependencies plus test tools, for CI tests
 └── requirements-dev.txt     # Runtime + test + code quality tools (Ruff) for development
@@ -158,19 +158,11 @@ Once running, OpenAPI documentation is automatically served by Swagger UI at:
 
 ## Running Backend Tests
 
-The backend includes 11 comprehensive pytest suites:
-- `test_engine.py`: 76-province graph symmetry, split coasts, and adjacency.
-- `test_adjudicator.py`: Official DATC combat scenarios, dislodgements, and retreat paths.
-- `test_admin.py`: Creator authorization, timeline rollback, and board editing.
-- `test_ai_and_private_lobbies.py`: Heuristic AI orders, auto-step, and private lobby passcode tests.
-- `test_api_integration.py`: Route contracts, query parameter scoping, and state persistence.
-- `test_database_persistence.py`: Supabase database persistence & cold-start recovery tests.
-- `test_match_guards.py`: A lone player's hidden orders, saved sandboxes kept to their owner, and one resolve per turn.
-- `test_phase_timer.py`: Turn clock votes, pauses, extensions, deadlines and late requests.
-- `test_security.py`: JWT cryptographic validation, seat authorization, Fog of War secrecy, and IDOR protection.
-- `test_surrender_leave.py`: Seat vacating, player surrender, and civil disorder mechanics.
-- `test_validator.py`: Pre-flight blunder diagnostics across all three game phases.
-- `test_websocket_sync.py`: Real-time WebSocket room & lobby synchronization tests.
+Tests live in `backend/tests/` and follow the code they cover:
+- `tests/unit/` tests one module directly and mirrors its package: `tests/unit/engine/adjudicator/test_movement.py` covers `engine/adjudicator/movement.py`, and `tests/unit/engine/test_phase_timer.py` covers `engine/phase_timer.py`.
+- `tests/integration/` drives the FastAPI app through `TestClient` and the game socket. API flows go under `tests/integration/api/`, grouped by router or feature (the turn clock's are in `tests/integration/api/turn_clock/`).
+- Fixtures shared by a folder go in its `conftest.py`, plain helpers in a `helpers.py` next to the tests that use them. Every test folder is a package (`__init__.py`), because file names repeat across packages (`test_retreats.py` exists for both the adjudicator and the validator).
+- Every test file passes on its own (`python -m pytest backend/tests/path/to/test_file.py`), not only in the full run. A test that needs seeded lobbies or a fresh board sets them up itself.
 
 Run all tests from the repository root:
 ```bash
