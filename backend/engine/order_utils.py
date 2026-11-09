@@ -10,7 +10,7 @@ from domain.models import (
     Unit,
     UnitType,
 )
-from engine.adjudicator import (
+from engine.adjudicator.resolver import (
     adjudicate_turn,
     compute_current_builds,
     create_diplomacy_game,
