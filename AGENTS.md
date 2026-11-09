@@ -164,11 +164,13 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
 - **Application Assembler (`backend/main.py`)**: Root FastAPI application initialization, CORS configuration, security headers, lifespan hooks, and router inclusion.
   - **Invariant**: `main.py` is an assembler (< 350 lines); never add route handlers (`@app.get`, `@app.post`) directly here, and never re-export names from it. Tests import and patch a name in the module that owns it (`storage.supabase.<fn>` for every Supabase call).
 - **API Routers (`backend/api/`)**: Domain-partitioned FastAPI routers. Every HTTP endpoint and WebSocket connection belongs in its domain router:
-  - `games.py`: Match lifecycle, lobby creation, seat claiming, leaving, and surrender.
+  - `games.py`: Match lifecycle: lobby list, creation, loading, deletion, and saving a sandbox to an account.
+  - `seats.py`: Seat claiming (join), leaving, surrender, and picking the active power.
   - `orders.py`: Move/retreat/build order submission, atomic batch updates, and order confirmation.
   - `turns.py`: Finalization, turn adjudication, phase timer voting, and extension requests.
   - `sandbox.py`: Sandbox sessions, speculative simulation, and AI heuristics.
-  - `admin.py`: Creator/admin overrides (teleport, turn rollback, unit spawning/deletion).
+  - `admin.py`: Creator/admin turn controls (status, rollback, set-turn, unfinalize-all, test seeding).
+  - `admin_units.py`: Creator/admin board overrides (teleport, unit spawning/deletion, ownership).
   - `history.py`: Read-only turn history for the turn selector (resolved phases and their records).
   - `websocket.py`: Live turn synchronization and WebSocket subscriptions.
 - **Domain Models (`backend/domain/`)**: Authoritative Pydantic v2 schemas (`models.py`) defining `GameState`, `Order`, `Issue`, and request/response DTOs.
