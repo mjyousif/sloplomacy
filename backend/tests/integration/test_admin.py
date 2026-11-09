@@ -4,7 +4,9 @@ import jwt
 import pytest
 from domain.models import UnitType
 from fastapi.testclient import TestClient
-from main import GAMES, app, seed_initial_multiplayer_lobbies
+from main import app
+from scenarios.presets import seed_initial_multiplayer_lobbies
+from storage.store import GAMES
 from tests.ws_testing import receive_json
 
 TEST_JWT_SECRET = "test-secret-at-least-32-chars-long-12345"

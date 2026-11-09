@@ -8,13 +8,9 @@ import jwt
 import pytest
 from domain.models import OrderType
 from fastapi.testclient import TestClient
-from main import (
-    GAME_SUMMARIES,
-    GAMES,
-    MAX_ACTIVE_GAMES,
-    app,
-    seed_initial_multiplayer_lobbies,
-)
+from main import app
+from scenarios.presets import seed_initial_multiplayer_lobbies
+from storage.store import GAME_SUMMARIES, GAMES, MAX_ACTIVE_GAMES
 from storage.supabase import is_valid_room_code
 
 JWT_SECRET = "test-secret-at-least-32-chars-long-12345"
@@ -363,11 +359,11 @@ def test_private_game_passcode_enforced():
 
 def test_game_capacity_limit_enforced(monkeypatch):
     from fastapi import HTTPException
-    from main import check_game_capacity
+    from storage.store import check_game_capacity
 
     # Simulate room capacity reached
     fake_games = {f"game_{i}": None for i in range(MAX_ACTIVE_GAMES + 1)}
-    monkeypatch.setattr("main.GAMES", fake_games)
+    monkeypatch.setattr("storage.store.GAMES", fake_games)
 
     with pytest.raises(HTTPException) as exc_info:
         check_game_capacity()
@@ -707,7 +703,7 @@ def test_private_match_socket_admits_seated_players_without_the_passcode():
 
 def test_admin_check_fails_closed_for_a_game_that_is_not_loaded():
     from fastapi import HTTPException
-    from main import verify_admin_access
+    from security.secrecy import verify_admin_access
 
     with pytest.raises(HTTPException) as denied:
         verify_admin_access("mp_never_loaded", None)

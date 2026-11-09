@@ -14,8 +14,10 @@ import time
 import jwt
 import pytest
 from fastapi.testclient import TestClient
-from main import GAMES, app, seed_initial_multiplayer_lobbies
+from main import app
+from scenarios.presets import seed_initial_multiplayer_lobbies
 from starlette.websockets import WebSocketDisconnect
+from storage.store import GAMES
 
 JWT_SECRET = "test-secret-at-least-32-chars-long-12345"
 ALICE_ID = "00000000-0000-0000-0000-00000000a11c"
