@@ -2,16 +2,41 @@ from collections import defaultdict
 from typing import Any
 
 import diplomacy
-from map_data import PROVINCES, split_province_code
-from models import (
-    Order,
-    OrderResolution,
-    OrderType,
-    Power,
-    SimulationResult,
-    Unit,
-    UnitType,
-)
+
+try:
+    from backend.domain.models import (
+        Order,
+        OrderResolution,
+        OrderType,
+        Power,
+        SimulationResult,
+        Unit,
+        UnitType,
+    )
+    from backend.engine.topology import PROVINCES, split_province_code
+except ModuleNotFoundError:
+    try:
+        from domain.models import (
+            Order,
+            OrderResolution,
+            OrderType,
+            Power,
+            SimulationResult,
+            Unit,
+            UnitType,
+        )
+        from engine.topology import PROVINCES, split_province_code
+    except ModuleNotFoundError:
+        from map_data import PROVINCES, split_province_code
+        from models import (
+            Order,
+            OrderResolution,
+            OrderType,
+            Power,
+            SimulationResult,
+            Unit,
+            UnitType,
+        )
 
 
 def to_diplomacy_phase_code(season: str, year: int, phase: str) -> str:

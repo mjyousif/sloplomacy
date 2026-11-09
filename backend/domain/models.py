@@ -204,6 +204,10 @@ class OrderSubmissionRequest(BaseModel):
     orders: list[Order]
 
 
+class SetPowerRequest(BaseModel):
+    power: Power
+
+
 class SingleOrderUpdateRequest(BaseModel):
     order: Order
     active_power: Power | None = None
@@ -386,3 +390,11 @@ class WebSocketGameUpdate(BaseModel):
 class WebSocketLobbyUpdate(BaseModel):
     type: str = "lobby_update"
     games: list[MultiplayerGameSummary]
+
+
+FIRST_YEAR = 1901
+PHASES_BY_SEASON: dict[str, list[str]] = {
+    "Spring": ["Movement", "Retreats"],
+    "Fall": ["Movement", "Retreats"],
+    "Winter": ["Adjustments"],
+}

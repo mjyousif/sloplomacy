@@ -1,9 +1,19 @@
 import re
 from typing import Any
 
-from adjudicator import create_diplomacy_game
-from map_data import PROVINCES, split_province_code
-from models import Order, OrderType, Power, Unit, UnitType
+try:
+    from backend.domain.models import Order, OrderType, Power, Unit, UnitType
+    from backend.engine.adjudicator import create_diplomacy_game
+    from backend.engine.topology import PROVINCES, split_province_code
+except ModuleNotFoundError:
+    try:
+        from domain.models import Order, OrderType, Power, Unit, UnitType
+        from engine.adjudicator import create_diplomacy_game
+        from engine.topology import PROVINCES, split_province_code
+    except ModuleNotFoundError:
+        from adjudicator import create_diplomacy_game
+        from map_data import PROVINCES, split_province_code
+        from models import Order, OrderType, Power, Unit, UnitType
 
 
 def parse_diplomacy_order_str(order_str: str, power: Power, unit_id: str) -> Order | None:

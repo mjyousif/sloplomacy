@@ -1,24 +1,64 @@
 from collections import defaultdict
 from typing import Any
 
-from map_data import (
-    PROVINCES,
-    can_army_be_convoyed_theoretically,
-    can_unit_move_directly,
-    can_unit_support_province,
-    split_province_code,
-)
-from models import (
-    IssueCode,
-    IssueSeverity,
-    Order,
-    OrderType,
-    Power,
-    ProvinceType,
-    Unit,
-    UnitType,
-    ValidationIssue,
-)
+try:
+    from backend.domain.models import (
+        IssueCode,
+        IssueSeverity,
+        Order,
+        OrderType,
+        Power,
+        ProvinceType,
+        Unit,
+        UnitType,
+        ValidationIssue,
+    )
+    from backend.engine.topology import (
+        PROVINCES,
+        can_army_be_convoyed_theoretically,
+        can_unit_move_directly,
+        can_unit_support_province,
+        split_province_code,
+    )
+except ModuleNotFoundError:
+    try:
+        from domain.models import (
+            IssueCode,
+            IssueSeverity,
+            Order,
+            OrderType,
+            Power,
+            ProvinceType,
+            Unit,
+            UnitType,
+            ValidationIssue,
+        )
+        from engine.topology import (
+            PROVINCES,
+            can_army_be_convoyed_theoretically,
+            can_unit_move_directly,
+            can_unit_support_province,
+            split_province_code,
+        )
+    except ModuleNotFoundError:
+        from map_data import (
+            PROVINCES,
+            can_army_be_convoyed_theoretically,
+            can_unit_move_directly,
+            can_unit_support_province,
+            split_province_code,
+        )
+        from models import (
+            IssueCode,
+            IssueSeverity,
+            Order,
+            OrderType,
+            Power,
+            ProvinceType,
+            Unit,
+            UnitType,
+            ValidationIssue,
+        )
 
 
 def has_active_convoy_chain(

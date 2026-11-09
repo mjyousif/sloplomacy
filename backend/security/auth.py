@@ -11,7 +11,14 @@ import os
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from models import AuthUser
+
+try:
+    from backend.domain.models import AuthUser
+except ModuleNotFoundError:
+    try:
+        from domain.models import AuthUser
+    except ModuleNotFoundError:
+        from models import AuthUser
 
 logger = logging.getLogger("diplomacy.auth")
 
