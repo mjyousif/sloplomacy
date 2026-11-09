@@ -1,6 +1,6 @@
 # Diplomacy 1901 Rulebook Reference & Tactical Interpretation
 
-This document provides a direct mapping between the official standard rules of Diplomacy (1901) and their implementation inside this engine's validator (`validator.py`) and adjudicator (`adjudicator.py`).
+This document provides a direct mapping between the official standard rules of Diplomacy (1901) and their implementation inside this engine's validator (`validator.py`) and adjudicator (`engine/adjudicator/`).
 
 ---
 
@@ -25,7 +25,7 @@ In 1901, seven Great Powers contest Europe with 22 initial units:
 ### 1. Equal Strength Standoffs (Bounces)
 - **Rule**: If two or more units with equal attack strength attempt to enter the same province, none of them succeed. The province remains unoccupied (or occupied by whatever unit was already holding there).
 - **Engine Behavior**:
-  - `adjudicator.py` flags both units with `bounced = true`, `succeeded = false`.
+  - The adjudicator flags both units with `bounced = true`, `succeeded = false`.
   - If both units belong to the same power, `validator.py` alerts with `SELF_BOUNCE` before turn execution.
 
 ### 2. Head-to-Head Movement vs Passing
@@ -47,7 +47,7 @@ In 1901, seven Great Powers contest Europe with 22 initial units:
   - *Example*: `FRA A PAR S FRA A BUR -> RUH`. If `GER A RUH -> PAR`, RUH's attack does NOT cut `A PAR`'s support!
   - *Exception*: If `RUH` achieves superior strength and actually **dislodges** `A PAR`, the support is cut upon dislodgement.
 - **Engine Behavior**:
-  - Modeled in `adjudicator.py` during the iterative resolution loop.
+  - Modeled in the adjudicator during the iterative resolution loop.
 
 ### 5. Maritime Convoys
 - **Convoy Bridges**: Only Armies can be convoyed. Convoys must take place exclusively through `SEA` provinces (not coastal land provinces).
@@ -58,7 +58,7 @@ In 1901, seven Great Powers contest Europe with 22 initial units:
 ### 6. Self-Dislodgement Prohibition
 - **Rule**: A player can never dislodge one of their own units, even if an attack against it is supported with overwhelming force.
 - **Engine Behavior**:
-  - `adjudicator.py` checks ownership of attacker and defender. If they match, `dislodged` is barred from being set to `true`.
+  - The adjudicator checks ownership of attacker and defender. If they match, `dislodged` is barred from being set to `true`.
   - `validator.py` flags this scenario with `FRIENDLY_FIRE`.
 
 ### 7. Fall Adjustments & Supply Center Control
