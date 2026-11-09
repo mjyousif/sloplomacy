@@ -25,6 +25,7 @@ import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
 import { GameRoomCard } from './lobby/GameRoomCard';
 import { PasscodePromptModal } from './lobby/PasscodePromptModal';
 import { PrivateCampaignCreatedModal } from './lobby/PrivateCampaignCreatedModal';
+import { PowerFlag } from './PowerFlag';
 import { VersionBadge } from './VersionBadge';
 
 interface LobbyViewProps {
@@ -412,7 +413,13 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                               color: pMeta.color,
                             }}
                           >
-                            {pMeta.crest} Playing as {pMeta.shortName} (Locked)
+                            <PowerFlag
+                              power={myPower}
+                              width={18}
+                              height={12}
+                              style={{ marginRight: 6 }}
+                            />
+                            Playing as {pMeta.shortName} (Locked)
                           </span>
                           <span
                             className={`my-finalize-status ${

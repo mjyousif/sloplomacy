@@ -6,6 +6,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../../types/diplomacy';
+import { PowerFlag } from '../PowerFlag';
 
 export interface CreateCampaignPanelProps {
   user: AuthUser | null;
@@ -142,7 +143,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
                       backgroundColor: selected ? meta.lightBg : undefined,
                     }}
                   >
-                    <span>{meta.crest}</span>
+                    <PowerFlag power={pwr} width={22} height={15} />
                     <span>{meta.shortName}</span>
                   </button>
                 );
@@ -231,7 +232,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
                       backgroundColor: selected ? meta.lightBg : undefined,
                     }}
                   >
-                    <span>{meta.crest}</span>
+                    <PowerFlag power={pwr} width={22} height={15} />
                     <span>{meta.shortName}</span>
                   </button>
                 );

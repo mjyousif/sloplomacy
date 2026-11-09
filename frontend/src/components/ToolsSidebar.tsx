@@ -26,13 +26,15 @@ import {
 import type React from 'react';
 import { useEffect, useRef } from 'react';
 import {
-  ALL_POWERS,
+  type GameParticipant,
   POWER_METADATA,
   type Power,
   type Unit,
   type ValidationIssue,
 } from '../types/diplomacy';
+import { rankPowers } from '../utils/powerHelpers';
 import { CollapsibleSection } from './CollapsibleSection';
+import { PowerFlag } from './PowerFlag';
 
 export interface ToolsSidebarProps {
   collapsed: boolean;
@@ -51,6 +53,7 @@ export interface ToolsSidebarProps {
   surrenderedPowers?: Power[];
   issues: ValidationIssue[];
   isMultiplayer?: boolean;
+  participants?: Record<string, GameParticipant>;
   // Sandbox & AI
   sandboxMode: boolean;
   onToggleSandboxMode: () => void;
@@ -94,6 +97,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   surrenderedPowers = [],
   issues,
   isMultiplayer = false,
+  participants,
   sandboxMode,
   onToggleSandboxMode,
   onClearForeignPreMoves,
@@ -373,89 +377,110 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           defaultOpen={true}
         >
           <div className="powers-standing-list">
-            {ALL_POWERS.map((pwr) => {
-              const meta = POWER_METADATA[pwr];
-              const isSelected = pwr === activePower;
-              const isFinal = finalizedPowers.includes(pwr);
-              const isSurr = surrenderedPowers.includes(pwr);
-              const pwrIssues = issues.filter((i) => i.power === pwr);
-              const scs = scCountByPower[pwr] || 0;
-              const un = unitCountByPower[pwr] || 0;
+            {rankPowers(scCountByPower, unitCountByPower).map(
+              ({ power: pwr, rank, scCount: scs, unitCount: un }) => {
+                const meta = POWER_METADATA[pwr];
+                const isSelected = pwr === activePower;
+                const isFinal = finalizedPowers.includes(pwr);
+                const isSurr = surrenderedPowers.includes(pwr);
+                const pwrIssues = issues.filter((i) => i.power === pwr);
+                const occupant = participants?.[pwr];
+                const playerName =
+                  occupant?.display_name ||
+                  (isMultiplayer && !occupant ? 'Open' : undefined);
 
-              return (
-                <div
-                  key={pwr}
-                  data-testid="power-standing-card"
-                  data-power={pwr}
-                  className={`power-standing-card ${isSelected ? 'selected' : ''} ${!isMultiplayer ? 'clickable' : ''}`}
-                  onClick={() => {
-                    if (!isMultiplayer) onSelectPower(pwr);
-                  }}
-                  title={
-                    !isMultiplayer
-                      ? `Click to command ${meta.name}`
-                      : `${meta.name}: ${isFinal ? 'Orders Finalized' : 'Drafting'}`
-                  }
-                  style={{
-                    borderLeftColor: meta.color,
-                    background: isSelected ? meta.lightBg : undefined,
-                  }}
-                >
-                  <div className="power-card-left">
-                    <span className="power-card-crest">{meta.crest}</span>
-                    <div className="power-card-info">
-                      <div className="power-card-name">
-                        <span
-                          className="power-dot"
-                          style={{ backgroundColor: meta.color }}
-                        />
-                        <strong>{meta.shortName}</strong>
-                        {isSelected && (
-                          <span className="active-tag">Active</span>
-                        )}
-                      </div>
-                      <div className="power-card-metrics">
-                        <span>{scs} SC</span>
-                        <span className="metric-dot">•</span>
-                        <span>{un} Units</span>
+                return (
+                  <div
+                    key={pwr}
+                    data-testid="power-standing-card"
+                    data-power={pwr}
+                    className={`power-standing-card ${isSelected ? 'selected' : ''} ${!isMultiplayer ? 'clickable' : ''}`}
+                    onClick={() => {
+                      if (!isMultiplayer) onSelectPower(pwr);
+                    }}
+                    title={
+                      !isMultiplayer
+                        ? `Click to command ${meta.name}`
+                        : `${meta.name}${playerName ? ` (${playerName})` : ''}: ${isFinal ? 'Orders Finalized' : 'Drafting'}`
+                    }
+                    style={{
+                      borderLeftColor: meta.color,
+                      background: isSelected ? meta.lightBg : undefined,
+                    }}
+                  >
+                    <div className="power-card-left">
+                      <span
+                        className="power-card-rank"
+                        data-testid="power-rank"
+                        title={`Rank ${rank}`}
+                      >
+                        {rank}
+                      </span>
+                      <span className="power-card-crest">
+                        <PowerFlag power={pwr} width={20} height={14} />
+                      </span>
+                      <div className="power-card-info">
+                        <div className="power-card-name">
+                          <span
+                            className="power-dot"
+                            style={{ backgroundColor: meta.color }}
+                          />
+                          <strong>{meta.shortName}</strong>
+                          {playerName && (
+                            <span
+                              className="power-card-player"
+                              title={`Player: ${playerName}`}
+                            >
+                              ({playerName})
+                            </span>
+                          )}
+                          {isSelected && (
+                            <span className="active-tag">Active</span>
+                          )}
+                        </div>
+                        <div className="power-card-metrics">
+                          <span>{scs} SC</span>
+                          <span className="metric-dot">•</span>
+                          <span>{un} Units</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="power-card-status">
-                    {isSurr ? (
-                      <span
-                        className="mini-status-tag surrendered"
-                        title="Civil Disorder"
-                      >
-                        <Flag size={10} /> CD
-                      </span>
-                    ) : isFinal ? (
-                      <span
-                        className="mini-status-tag finalized"
-                        title="Finalized"
-                      >
-                        <CheckCircle2 size={11} />
-                      </span>
-                    ) : pwrIssues.length > 0 ? (
-                      <span
-                        className="mini-status-tag warning"
-                        title={`${pwrIssues.length} issues`}
-                      >
-                        {pwrIssues.length}⚠
-                      </span>
-                    ) : (
-                      <span
-                        className="mini-status-tag pending"
-                        title="Drafting Orders"
-                      >
-                        Draft
-                      </span>
-                    )}
+                    <div className="power-card-status">
+                      {isSurr ? (
+                        <span
+                          className="mini-status-tag surrendered"
+                          title="Civil Disorder"
+                        >
+                          <Flag size={10} /> CD
+                        </span>
+                      ) : isFinal ? (
+                        <span
+                          className="mini-status-tag finalized"
+                          title="Finalized"
+                        >
+                          <CheckCircle2 size={11} />
+                        </span>
+                      ) : pwrIssues.length > 0 ? (
+                        <span
+                          className="mini-status-tag warning"
+                          title={`${pwrIssues.length} issues`}
+                        >
+                          {pwrIssues.length}⚠
+                        </span>
+                      ) : (
+                        <span
+                          className="mini-status-tag pending"
+                          title="Drafting Orders"
+                        >
+                          Draft
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              },
+            )}
           </div>
         </CollapsibleSection>
 
