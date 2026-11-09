@@ -324,7 +324,7 @@ export function App() {
     fetchGame('proto_1901');
     fetchGamesList();
     return () => unsub();
-  }, [fetchGame, fetchGamesList]);
+  }, []);
 
   // Only a `refresh` makes the server run the clock; a `ping` is just a heartbeat.
   // Without a socket the fallback poll below runs the clock every few seconds, and
@@ -393,14 +393,7 @@ export function App() {
         );
       }
     };
-  }, [
-    viewMode,
-    activeGameId,
-    sandboxGameId,
-    wsConnected,
-    playerPower,
-    applyServerState,
-  ]);
+  }, [viewMode, activeGameId, sandboxGameId, wsConnected, playerPower]);
 
   // Leaving the match board by any route closes its private sandbox.
   useEffect(() => {
@@ -416,7 +409,7 @@ export function App() {
     setSandboxGameId(null);
     setSandboxMode(false);
     setShowSimulationOverlay(false);
-  }, [viewMode, sandboxGameId, playerPower]);
+  }, [viewMode, sandboxGameId]);
 
   const handleEnterSoloSandbox = async (event?: React.MouseEvent) => {
     if (viewMode === 'multiplayer' && activeGameSummary) {
