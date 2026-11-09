@@ -156,100 +156,39 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 
 ---
 
-## 3. Directory Layout & Key Files
+## 3. Architecture Blueprint & Package Boundaries
 
-```
-.
-├── AGENTS.md                  # This operational guide for AI agents
-├── README.md                  # Project overview, quickstart & attribution
-├── quickstart.py              # Cross-platform Python runner
-├── start.ps1 / start.sh       # Native shell runners
-├── Dockerfile                 # Multi-stage build (Vite build + FastAPI runner)
-├── cloudbuild.yaml            # Google Cloud Build build & push pipeline
-├── scripts/                  # Developer automation & operational QoL scripts
-│   ├── dev.ps1 / dev.sh       # Local fullstack development launcher
-│   ├── test.ps1 / test.sh     # Unified full test suite runner (pytest + vitest + build)
-│   ├── setup.ps1 / setup.sh   # Environment bootstrap (Python venv & npm install)
-│   ├── deploy.ps1 / deploy.sh # Scale-to-zero Cloud Run deployment scripts
-│   └── setup-ci-cd.ps1 / .sh  # GCP IAM & GitHub Actions credentials setup
-├── terraform/                 # Terraform GCP Cloud Run & Artifact Registry IaC
-│   ├── main.tf
-│   ├── variables.tf
-│   └── outputs.tf
-├── supabase/
-│   └── migrations/            # Supabase PostgreSQL schema & profiles RLS
-├── backend/
-│   ├── main.py                # FastAPI app instance, CORS/security headers, router inclusion & root facades
-│   ├── api/                   # Modular FastAPI routers
-│   │   ├── games.py           # Match room creation, seat join/claim/leave/surrender, public & private lobbies
-│   │   ├── orders.py          # Single order submission, atomic batch updates, confirm-all
-│   │   ├── turns.py           # Finalization, turn adjudication, phase timer voting & extension
-│   │   ├── sandbox.py         # Isolated sandbox mode, simulation, AI orders & scenario presets
-│   │   ├── admin.py           # Administrator controls: turn rollback/jumps, unit spawner/teleport, ownership
-│   │   └── websocket.py       # Live turn state & multiplayer lobby WebSockets
-│   ├── domain/                # Pydantic v2 domain models & schemas (GameState, Order, Issues, Admin schemas)
-│   ├── engine/                # Adjudicator, validator, graph topology, phase clock, AI, order utils
-│   ├── storage/               # Authoritative in-memory state store (store.py) and Supabase PostgREST (supabase.py)
-│   ├── security/              # Auth & JWT verification (auth.py), viewer secrecy sanitization (secrecy.py)
-│   ├── scenarios/             # Scenario definitions & initial multiplayer lobby seeding (presets.py)
-│   ├── ws/                    # Thread-safe WebSocket connection manager & broadcast dispatch
-│   ├── tests/                 # Categorized pytest harness (unit/ and integration/ test suites)
-│   ├── models.py              # Root backward-compatible facade aliasing domain/models
-│   ├── adjudicator.py         # Root backward-compatible facade aliasing engine/adjudicator
-│   ├── phase_timer.py         # Root backward-compatible facade aliasing engine/phase_timer
-│   ├── validator.py           # Root backward-compatible facade aliasing engine/validator
-│   ├── ai_engine.py           # Root backward-compatible facade aliasing engine/ai
-│   ├── map_data.py            # Root backward-compatible facade aliasing engine/topology
-│   ├── database.py            # Root backward-compatible facade aliasing storage/supabase
-│   ├── auth.py                # Root backward-compatible facade aliasing security/auth
-│   ├── requirements.txt       # Python dependencies
-├── frontend/
-│   ├── src/
-│   │   ├── App.tsx            # Main state container, viewMode controller & API coordinator
-│   │   ├── compact.css        # Phone layout rules, all under [data-layout='compact']
-│   │   ├── components/
-│   │   │   ├── EuropeMap.tsx        # High-performance interactive SVG board & order arrows
-│   │   │   ├── map/                 # Decomposed SVG layers (StaticLayers, ProvincePolygon, SupplyCenters, MapNames, curveGeometry)
-│   │   │   ├── ToolsSidebar.tsx     # Left sidebar: legend, powers, sandbox & admin entry points
-│   │   │   ├── MacroSidebar.tsx     # Order builder, phase controls, diagnostics, admin/surrender
-│   │   │   ├── macro/               # Decomposed unit order cards (UnitMacroCard) and build quota cards (BuildSlotCard)
-│   │   │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
-│   │   │   ├── lobby/               # Decomposed lobby cards (GameRoomCard, CreateCampaignPanel, Passcode modals)
-│   │   │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
-│   │   │   ├── admin/               # Decomposed creator console tabs (TurnControl, UnitTeleport, UnitSpawner, TerritoryControl)
-│   │   │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
-│   │   │   ├── BottomSheet.tsx      # Phone pull-up panel (peek, half, full) that holds the order sheet
-│   │   │   ├── CompactTopBar.tsx    # Phone top bar: back, ≡ tools, turn, order-problem count & ⋯ menu
-│   │   │   ├── DisplaySettingsMenu.tsx # Top bar menu for this player's piece style and marks
-│   │   │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every style
-│   │   │   ├── PhaseTimerWidget.tsx # Bottom-left turn clock, votes, ready-up & +5 minutes
-│   │   │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
-│   │   │   ├── ConfirmModal.tsx     # In-app confirmation for destructive actions (Shift+click skips it)
-│   │   │   ├── VersionBadge.tsx     # Commit short SHA badge & link
-│   │   │   └── SanityCheckModal.tsx # Pre-finalization blunder gatekeeper modal
-│   │   ├── data/
-│   │   │   ├── europeMapGeometry.ts # Authentic cartographic SVG paths & province coordinates
-│   │   │   ├── mapLayouts.ts        # Unit, star and name placements for each piece style
-│   │   │   └── mapTextMetrics.ts    # Libre Baskerville widths for sizing names without the DOM
-│   │   ├── hooks/
-│   │   │   ├── useDiplomacyWebSocket.ts # Live Sync socket: heartbeat, reconnect rules & clock refresh
-│   │   │   ├── useCompactLayout.ts  # The phone breakpoint (COMPACT_LAYOUT_QUERY) as a live boolean
-│   │   │   └── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
-│   │   ├── lib/
-│   │   │   └── supabase.ts          # Supabase client singleton & auth helpers
-│   │   ├── types/
-│   │   │   └── diplomacy.ts         # TypeScript interfaces synchronized with models.py
-│   │   └── utils/
-│   │       ├── orderHelpers.ts      # Move reachability, support targeting & retreat calculations
-│   │       ├── adminHelpers.ts      # Admin permission checks & payload formatters
-│   │       ├── timerHelpers.ts      # Turn clock labels, vote counts & formatting
-│   │       ├── mapCameraHelpers.ts  # Map pan and zoom bounds, zoom-at-point, pinch, phone camera & tap targets
-│   │       ├── sheetHelpers.ts      # Phone order sheet stops: snap heights, release and tap stepping
-│   │       └── displayPrefs.ts      # Display preference types, defaults, sanitizing & sign-in rules
-│   ├── package.json         # Vitest suites sit next to their code as *.test.ts
-│   └── vite.config.ts
-└── docs/                      # Exhaustive technical documentation suite
-```
+Rather than maintaining a brittle, exhaustive file list that rots as features are added, this section defines the authoritative package boundaries, directory responsibilities, and structural invariants.
+
+### Backend Packages (`backend/`)
+- **Application Assembler (`backend/main.py`)**: Root FastAPI application initialization, CORS configuration, security headers, lifespan hooks, and router inclusion.
+  - **Invariant**: `main.py` is an assembler (< 350 lines); never add route handlers (`@app.get`, `@app.post`) directly here.
+- **API Routers (`backend/api/`)**: Domain-partitioned FastAPI routers. Every HTTP endpoint and WebSocket connection belongs in its domain router:
+  - `games.py`: Match lifecycle, lobby creation, seat claiming, leaving, and surrender.
+  - `orders.py`: Move/retreat/build order submission, atomic batch updates, and order confirmation.
+  - `turns.py`: Finalization, turn adjudication, phase timer voting, and extension requests.
+  - `sandbox.py`: Sandbox sessions, speculative simulation, and AI heuristics.
+  - `admin.py`: Creator/admin overrides (teleport, turn rollback, unit spawning/deletion).
+  - `websocket.py`: Live turn synchronization and WebSocket subscriptions.
+- **Domain Models (`backend/domain/`)**: Authoritative Pydantic v2 schemas (`models.py`) defining `GameState`, `Order`, `Issue`, and request/response DTOs.
+- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator.py`), DATC/rulebook validation (`validator.py`), topological graph (`topology.py`), phase timer (`phase_timer.py`), AI heuristics (`ai.py`), and order helpers (`orders.py`). Completely decoupled from HTTP transport.
+- **Persistence Layer (`backend/storage/`)**: Authoritative in-memory state store (`store.py`) and Supabase PostgREST client (`supabase.py`).
+- **Security & Authorization (`backend/security/`)**: JWT verification and auth dependencies (`auth.py`) and viewer state secrecy sanitization (`secrecy.py`).
+- **Scenarios & Presets (`backend/scenarios/`)**: Scenario definitions and match presets (`presets.py`).
+- **Real-Time WebSockets (`backend/ws/`)**: Thread-safe WebSocket connection manager and broadcast dispatch (`manager.py`).
+- **Test Harness (`backend/tests/`)**: Categorized test suites (`unit/` and `integration/`).
+- **Root Facades (`models.py`, `adjudicator.py`, etc.)**: Backward-compatible module aliases (`sys.modules[__name__] = ...`) pointing to their canonical domain packages.
+
+### Frontend Packages (`frontend/src/`)
+- **State Coordinator (`App.tsx`)**: Root state container, view mode switcher (Lobby, Game, Sandbox), and API coordination.
+- **Components (`components/`)**:
+  - Top-level feature views (`EuropeMap.tsx`, `MacroSidebar.tsx`, `ToolsSidebar.tsx`, `LobbyView.tsx`, `AdminToolsModal.tsx`).
+  - Feature subdirectories (`map/`, `macro/`, `lobby/`, `admin/`) decomposing complex views into focused, single-responsibility subcomponents (e.g. SVG layers, card items, tab views).
+- **Cartographic Data & Metrics (`data/`)**: Static map geometry paths (`europeMapGeometry.ts`), layout coordinates (`mapLayouts.ts`), and font metrics (`mapTextMetrics.ts`).
+- **Custom Hooks (`hooks/`)**: Reusable React hooks for WebSockets (`useDiplomacyWebSocket`), phone layout media queries (`useCompactLayout`), and display settings (`useDisplayPrefs`).
+- **Types (`types/`)**: TypeScript type contracts (`diplomacy.ts`), strictly synchronized with `backend/domain/models.py`.
+- **Pure Utilities (`utils/`)**: Pure algorithmic helpers and math (`orderHelpers.ts`, `adminHelpers.ts`, `timerHelpers.ts`, `mapCameraHelpers.ts`, `sheetHelpers.ts`, `displayPrefs.ts`).
+- **Responsive Layout (`compact.css`)**: Phone-specific styles grouped exclusively under `[data-layout='compact']`.
 
 ---
 
@@ -349,20 +288,28 @@ The game cycles through three standard phases per year:
   - **Developer Tools or Test Harness Changed**: Update [docs/guides/development.md](docs/guides/development.md) and [docs/backend/README.md](docs/backend/README.md).
   - **Top-Level Navigation**: Ensure newly added documents are indexed in both [README.md](README.md) and [docs/README.md](docs/README.md).
 
-### 2. Preserve Type Contracts
+### 2. Monolith Prevention & File Size Guardrails
+To prevent files from growing into unmaintainable monoliths, agents and contributors must observe these modular architectural rules:
+- **File Size Ceiling**: Target 150–350 lines per file. Any logic or component file exceeding **500 lines** must be decomposed into sub-modules, subcomponents, or hooks. (Static declarative data constants, such as `europeMapGeometry.ts` or `topology.py`, are exempted if they contain zero tangled logic).
+- **Backend Router Separation**: Never add new route handlers directly to `backend/main.py`. Add them to their respective router in `backend/api/` or create a new modular router.
+- **Frontend Subcomponent Extraction**: High-complexity UI components must extract sub-layers, modals, or tab views into subdirectories under `frontend/src/components/<feature>/` (e.g. `map/`, `macro/`, `lobby/`, `admin/`).
+- **The Ratchet Rule for Legacy Files**: When modifying an existing file that exceeds 500 lines (e.g., `EuropeMap.tsx`, `App.tsx`, `MacroSidebar.tsx`), do NOT append monolithic logic blocks. Extract touched features into helper modules, hooks, or subcomponents. Leave the file smaller or unchanged in size.
+- **Skill Playbook**: Follow the detailed guide in `.agents/skills/codebase-modularity/SKILL.md`.
+
+### 3. Preserve Type Contracts
 - `frontend/src/types/diplomacy.ts` must strictly mirror `backend/models.py`.
 - Whenever adding fields or modifying schemas, update both files concurrently.
 - Always run `npx tsc --noEmit` before committing frontend modifications.
 
-### 3. Run Comprehensive Verification
+### 4. Run Comprehensive Verification
 - **Backend Tests**: Run python -m pytest backend/ -v (must pass every suite, currently: adjudicator, admin, ai_and_private_lobbies, api_integration, database_persistence, engine, phase_timer, security, surrender_leave, validator, websocket_sync).
 - **Frontend Verification**: Run `npm test` (Vitest) and `npm run build` (Vite + TypeScript) in `frontend/`.
 
-### 4. Preserve Documentation & Code Integrity
+### 5. Preserve Documentation & Code Integrity
 - Retain all existing code comments, docstrings, and architectural explanations unless directly superseded by new logic.
 - Do not produce stale or misleading documentation when authoring or refactoring features.
 
-### 5. LLM-Driven Interactive E2E Verification Protocol
+### 6. LLM-Driven Interactive E2E Verification Protocol
 AI coding agents and contributors should run the **one relevant** interactive E2E scenario whenever touching the SVG map canvas (`EuropeMap.tsx`), tactical HUD/sidebars (`MacroSidebar.tsx`, `ToolsSidebar.tsx`), modal dialogs, or adjudication state flows. This includes backend changes to API responses, adjudication, phase flow, sandbox, validator or auth behavior, because the scenarios run against the real backend.
 - **Workflow**:
   1. Run scenario: `python scripts/e2e_runner.py run <scenario_name>`.
@@ -371,12 +318,13 @@ AI coding agents and contributors should run the **one relevant** interactive E2
   4. Attach passing screenshot paths or summaries to the task review or PR.
 - **Keep it targeted.** Pick the single scenario that covers the change and look only at the screenshots for the affected steps. Skip E2E only when nothing a user can see or click could change (docs, comments, test-only changes, fully covered refactors, infra scripts, or internals such as persistence or security headers that leave responses unchanged). Reserve `run --all` for broad changes (shared layout, App.tsx state flow, map rendering), since it is slow and reading screenshots costs tokens.
 
-### 6. Project Skills & Working Style
+### 7. Project Skills & Working Style
 Reusable playbooks live in `.agents/skills/`. Read the matching `SKILL.md` before starting that kind of work:
 
 | Skill | Use when |
 | :--- | :--- |
 | `verify-change` | Finishing any change: picks the right pytest / tsc / vitest / build / E2E checks and the docs checklist |
+| `codebase-modularity` | Adding, refactoring, or reviewing code to enforce file size ceilings and prevent monolithic files |
 | `secrecy-review` | Adding or changing an endpoint, WebSocket message, broadcast, save path, sandbox or admin action (fog of war and seat authorization) |
 | `frontend-change` | Editing the map, sidebars, top bar, modals, CSS, display settings or phone layout |
 | `open-pr` | Committing, opening or updating a PR, or resolving conflicts on a stacked PR |
@@ -394,7 +342,7 @@ Working rules for agents:
 - **Never hardcode counts** (tests, endpoints, scenarios) in prose when a list will do. They go stale.
 - **Don't commit generated output**: `artifacts/`, `.pr_body.md`, `.venv`, `node_modules`, `dist`.
 
-### 7. Pull Request & Branch Protection Governance
+### 8. Pull Request & Branch Protection Governance
 - **Branch Protection on `main`**: Direct pushes to `main` are prohibited. All modifications must be submitted via pull request.
 - **Mandatory Review**: PRs require at least 1 approving code review before merging (`required_approving_review_count: 1`). Pushing new commits automatically dismisses previous reviews.
 - **CI Quality Gates**: PRs must pass `Backend Tests (Pytest)` and `Frontend Tests & Build Check` before they are eligible for merge.
