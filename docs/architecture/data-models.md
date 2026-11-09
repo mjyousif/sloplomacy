@@ -155,6 +155,29 @@ The clock of a live multiplayer match. Times are absolute, so it survives a rest
 | `remaining_seconds` | `number?` | Computed when sent: time left, so that a wrong device clock cannot matter. |
 | `extensions_needed` | `number` | Computed: 5 of 7, scaled up to `ceil(5n/7)` for `n` players. |
 
+### 7. `TurnHistoryEntry` and `TurnRecord`
+The turn selector's data, from `GET /api/history` and `GET /api/history/{index}`. Both live in `backend/domain/models.py` and `frontend/src/types/diplomacy.ts`.
+
+`TurnHistoryEntry` names one resolved phase:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `index` | `number` | Position in the game's history, oldest first. A rollback or the 30-phase cap can move it, so the client finds a turn again by season, year and phase. |
+| `season` | `string` | `'Spring'`, `'Fall'`, or `'Winter'`. |
+| `year` | `number` | Game year. |
+| `phase` | `string` | `'Movement'`, `'Retreats'`, or `'Adjustments'`. |
+
+`TurnRecord` extends it with the phase as it began. Its orders are public, since the phase has resolved, so it holds every power's:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `units` | `Unit[]` | The board before the phase resolved. |
+| `orders` | `Record<string, Order>` | Every power's orders for the phase. |
+| `ownership` | `Record<string, Power>` | Supply centre owners before the phase resolved. |
+| `builds` | `Record<string, Any>?` | Build quotas, for an Adjustments phase. |
+| `retreats` | `Record<string, Any>?` | Retreat options, for a Retreats phase. |
+| `resolution` | `SimulationResult` | How each order resolved (succeeded, bounced, cut, dislodged). |
+
 ---
 
 ## Lobby & Multiplayer Schemas

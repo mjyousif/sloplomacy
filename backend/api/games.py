@@ -20,11 +20,12 @@ from engine.order_utils import (
     refresh_diagnostics_and_simulation,
 )
 from engine.topology import PROVINCES
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel
 from scenarios.presets import build_scenario
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
+    require_view_access,
     sanitize_game_state_for_viewer,
     viewer_power_for,
 )
@@ -40,7 +41,6 @@ from storage.store import (
     check_game_capacity,
     evict_game,
     get_main_attr,
-    is_multiplayer_match,
     load_saved_game,
     persist_game,
     resolve_game,
@@ -595,21 +595,7 @@ async def get_game(
     sync_summary(gid)
     summary = GAME_SUMMARIES.get(gid)
 
-    if summary and summary.has_passcode and is_multiplayer_match(gid):
-        expected_pw = GAME_PASSCODES.get(gid, "")
-        provided_pw = (passcode or x_passcode or "").strip()
-        is_participant = False
-        if current_user and any(
-            p.user_id == current_user.user_id for p in summary.participants.values()
-        ):
-            is_participant = True
-        if not is_participant and (
-            not expected_pw or not hmac.compare_digest(provided_pw, expected_pw)
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Passcode required or incorrect for this private campaign.",
-            )
+    require_view_access(gid, current_user, passcode or x_passcode)
 
     viewer_power = viewer_power_for(gid, current_user, power)
 

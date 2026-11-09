@@ -90,6 +90,9 @@ This is a house rule for live multiplayer matches. Nothing is timed until the ho
 
 Surrendered and eliminated players do not count. The host can still resolve a phase by force, which is also the way out of a pause if someone has gone missing.
 
+### 10. Orders Become Public Once Resolved
+Orders are secret until their phase resolves, then everyone sees them, as when the orders are read out at a table. The turn selector at the foot of the tools pane shows any of the last 30 resolved phases with every nation's orders and how each resolved. The phase being played is never in it.
+
 ---
 
 ## Winning the Game

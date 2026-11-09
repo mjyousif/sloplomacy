@@ -199,6 +199,31 @@ class GameState(BaseModel):
     timer: PhaseTimer | None = None  # None until the host starts the clock
 
 
+class TurnHistoryEntry(BaseModel):
+    """One resolved phase in a game's history, as the turn selector lists it."""
+
+    index: int  # Position in the game's history, oldest first
+    season: str
+    year: int
+    phase: str
+
+
+class TurnRecord(TurnHistoryEntry):
+    """
+    A resolved phase as it began, with every power's orders and what they did.
+
+    Orders are public once their phase has resolved. This holds only what the map needs, so a
+    snapshot's clock, log and finalize marks never leave the server.
+    """
+
+    units: list[Unit]
+    orders: dict[str, Order]
+    ownership: dict[str, Power]
+    builds: dict[str, Any] | None = None
+    retreats: dict[str, Any] | None = None
+    resolution: SimulationResult
+
+
 class OrderSubmissionRequest(BaseModel):
     power: Power
     orders: list[Order]

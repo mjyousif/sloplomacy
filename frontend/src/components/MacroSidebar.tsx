@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   Clock,
   Flag,
+  History,
   Lock,
   PanelRightClose,
   PanelRightOpen,
@@ -89,6 +90,12 @@ export interface MacroSidebarProps {
   variant?: 'panel' | 'sheet';
   sheetSnap?: SheetSnap;
   onSheetSnapChange?: (snap: SheetSnap) => void;
+  /**
+   * Set while the map shows a past turn, e.g. "Fall 1901 Movement". The orders are dimmed and
+   * inert under a bar that leads back to the live turn, so nothing is edited out of sight.
+   */
+  historyLabel?: string | null;
+  onReturnToLive?: () => void;
 }
 
 export const MacroSidebar: React.FC<MacroSidebarProps> = ({
@@ -128,6 +135,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   variant = 'panel',
   sheetSnap = 'peek',
   onSheetSnapChange,
+  historyLabel = null,
+  onReturnToLive,
 }) => {
   const powerMeta = POWER_METADATA[activePower];
   const isFinalized = finalizedPowers.includes(activePower);
@@ -774,6 +783,24 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     </>
   );
 
+  const locked = historyLabel !== null;
+  const lockBar = locked && (
+    <div className="history-lock-bar" data-testid="history-lock-bar">
+      <History size={13} aria-hidden="true" />
+      <span className="history-lock-label">
+        Viewing <strong>{historyLabel}</strong>
+      </span>
+      <button
+        type="button"
+        className="history-lock-live-btn"
+        data-testid="history-lock-live-btn"
+        onClick={onReturnToLive}
+      >
+        Back to live
+      </button>
+    </div>
+  );
+
   // Phone: the same pieces in a pull-up sheet. The peek holds what a player needs every turn,
   // and spells out the counts the desktop rail only gives in tooltips.
   if (variant === 'sheet') {
@@ -785,10 +812,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         testId="macro-sidebar"
         peek={
           <div
-            className="macro-sheet-peek"
+            className={`macro-sheet-peek ${locked ? 'history-locked' : ''}`.trim()}
             style={{ borderLeftColor: powerMeta.color }}
           >
-            <div className="macro-sheet-status-row">
+            {lockBar}
+            <div className="macro-sheet-status-row" inert={locked || undefined}>
               <span className="power-crest-icon">{powerMeta.crest}</span>
               <div className="macro-sheet-power">
                 <span className="power-name-text">{powerMeta.shortName}</span>
@@ -805,14 +833,18 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
               </div>
               {statusBadge}
             </div>
-            <div className="macro-sheet-controls">
+            <div className="macro-sheet-controls" inert={locked || undefined}>
               {confirmAllButton}
               {footerActions}
             </div>
           </div>
         }
       >
-        <div className="macro-sheet-body" ref={sheetBodyRef}>
+        <div
+          className={`macro-sheet-body ${locked ? 'history-locked' : ''}`.trim()}
+          ref={sheetBodyRef}
+          inert={locked || undefined}
+        >
           {phaseContext}
           <div className="macro-units-scroll-area">{unitList}</div>
           {surrenderButton && (
@@ -894,12 +926,14 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   // Expanded Core-Gameplay Sidebar
   return (
     <aside
-      className="macro-sidebar macro-sidebar-expanded"
+      className={`macro-sidebar macro-sidebar-expanded ${locked ? 'history-locked' : ''}`.trim()}
       data-testid="macro-sidebar"
       aria-label="Tactical Command & Orders"
     >
+      {lockBar}
       {/* 1. ACTIVE POWER HEADER & TELEMETRY */}
       <div
+        inert={locked || undefined}
         className="active-power-banner"
         style={{ borderLeft: `4px solid ${powerMeta.color}` }}
       >
@@ -945,10 +979,14 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       </div>
 
       {/* 2. UNIT ORDERS LIST (BUILDS + FIELD UNITS) */}
-      <div className="macro-units-scroll-area">{unitList}</div>
+      <div className="macro-units-scroll-area" inert={locked || undefined}>
+        {unitList}
+      </div>
 
       {/* 3. STICKY FOOTER: FINALIZE & ADJUDICATE */}
-      <div className="sidebar-footer-actions">{footerActions}</div>
+      <div className="sidebar-footer-actions" inert={locked || undefined}>
+        {footerActions}
+      </div>
       <div className="sidebar-version-footer">
         <VersionBadge />
       </div>

@@ -32,6 +32,9 @@ MAX_ACTIVE_GAMES = 250
 
 GAMES: dict[str, GameState] = {}
 SANDBOX_CHECKPOINTS: dict[str, GameState | None] = {DEFAULT_GAME_ID: None}
+# The history a solo sandbox started from. Leaving the sandbox puts it back, so turns played
+# hypothetically never show up as real ones or become a rollback target.
+SANDBOX_HISTORY_CHECKPOINTS: dict[str, list[GameState]] = {}
 GAME_HISTORY: dict[str, list[GameState]] = {DEFAULT_GAME_ID: []}
 GAME_SUMMARIES: dict[str, MultiplayerGameSummary] = {}
 GAME_PASSCODES: dict[str, str] = {}
@@ -69,6 +72,7 @@ def evict_game(game_id: str) -> None:
     GAME_HISTORY.pop(game_id, None)
     GAME_PASSCODES.pop(game_id, None)
     SANDBOX_CHECKPOINTS.pop(game_id, None)
+    SANDBOX_HISTORY_CHECKPOINTS.pop(game_id, None)
     UNSAVED_GAMES.discard(game_id)
     HISTORY_UNSAVED.discard(game_id)
     PRIVATE_SANDBOXES.pop(game_id, None)

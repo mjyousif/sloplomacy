@@ -4624,6 +4624,187 @@
   margin: 6px 0 8px 0;
 }
 
+/* Turn history: the left pane's footer, pinned under the scrolling sections. */
+.turn-history {
+  flex-shrink: 0;
+  padding: 8px 10px 9px;
+  border-top: 1px solid #2d3646;
+  background: #141820;
+}
+
+.turn-history.viewing-past {
+  background: #1b1a16;
+  border-top-color: #6b5426;
+}
+
+.turn-history-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.turn-history-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #2d3646;
+  border-radius: 5px;
+  background: #1c222d;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.turn-history-step:hover:not(:disabled) {
+  background: #2d3648;
+  color: #ffffff;
+}
+
+.turn-history-step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.turn-history-select {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 2px 0 5px;
+  border: 1px solid #2d3646;
+  border-radius: 5px;
+  background: #1c222d;
+  color: #e2e8f0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.turn-history-select:focus-visible,
+.turn-history-step:focus-visible,
+.turn-history-live:focus-visible,
+.turn-history-chip:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 1px;
+}
+
+.turn-history-live,
+.turn-history-live-tag {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+}
+
+.turn-history-live-tag {
+  color: #34d399;
+  border: 1px solid transparent;
+}
+
+.turn-history-live {
+  border: 1px solid #b45309;
+  background: #78350f;
+  color: #fde68a;
+  cursor: pointer;
+}
+
+.turn-history-live:hover {
+  background: #92400e;
+}
+
+.turn-history-powers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 7px 0 0;
+  padding: 0;
+  border: none;
+}
+
+.turn-history-chip {
+  --chip-color: #94a3b8;
+  flex: 1 0 auto;
+  min-width: 30px;
+  height: 21px;
+  padding: 0 5px;
+  border: 1px solid #2d3646;
+  border-bottom: 2px solid var(--chip-color);
+  border-radius: 4px;
+  background: #1c222d;
+  color: #94a3b8;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.turn-history-chip:hover {
+  color: #ffffff;
+}
+
+.turn-history-chip.active {
+  background: #2d3648;
+  border-color: var(--chip-color);
+  color: #ffffff;
+}
+
+/* The orders panel while the map shows a past turn: read-only under a bar back to live. */
+.history-lock-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 7px 10px;
+  border-bottom: 1px solid #6b5426;
+  background: #1b1a16;
+  color: #f59e0b;
+  font-size: 0.72rem;
+}
+
+.history-lock-label {
+  flex: 1;
+  min-width: 0;
+  color: #e2d5b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-lock-label strong {
+  color: #fde68a;
+}
+
+.history-lock-live-btn {
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border: 1px solid #b45309;
+  border-radius: 5px;
+  background: #78350f;
+  color: #fde68a;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.history-lock-live-btn:hover {
+  background: #92400e;
+}
+
+.history-locked > [inert],
+.macro-sheet-body.history-locked {
+  opacity: 0.4;
+  filter: grayscale(0.5);
+}
+
 .tools-ai-block {
   background: #151a22;
   border: 1px solid #283141;

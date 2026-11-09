@@ -144,6 +144,18 @@ Hovering a province brightens a reachable one, and hovering a unit rings it and 
 
 ---
 
+## Past Turns (`historyView`)
+
+With `historyView` set, `App.tsx` feeds the map a `TurnRecord` from the turn selector instead of the live state: its units, orders, ownership, phase, builds and retreats, and its `resolution` as the `simulationResult`, with `showSimulationOverlay` on.
+
+- `isUnitOrderVisible` draws every power's orders, or only `historyPower`'s when a nation chip is picked, instead of only the player's own.
+- `canEditAnyPower` is false and `controlPower` is `null`, so no unit, build slot or province click selects anything. App also passes no-op handlers and no selection.
+- In an Adjustments phase the build tokens are the builds that were ordered (`adjustmentOrdersFor`), for every power. Waived slots are not drawn.
+- The Hypothetical banner stays hidden.
+- On phones the `TurnHistoryPill` goes into the `overlay` beside the clock.
+
+---
+
 ## Floating Unit Menu
 - **Highlighted Button**: `getActiveOrderButton` lights exactly one of Move, Hold, Support, or Convoy. The menu opens on Move, or on Hold if the unit has an explicit `HOLD` order. Pressing Move, Support, or Convoy takes the highlight from a saved Hold. The saved order itself stays until a new one replaces it.
 - **Dragging**: Press and hold the menu header, then drag. The header captures the pointer, so the drag follows the cursor over the menu and outside the map, and it ends on release. Buttons in the header do not start a drag.

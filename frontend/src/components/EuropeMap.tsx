@@ -43,6 +43,7 @@ import {
   type ValidationIssue,
 } from '../types/diplomacy';
 import type { PieceStyle, UnitMark } from '../utils/displayPrefs';
+import { adjustmentOrdersFor } from '../utils/historyHelpers';
 import {
   type CameraBoundsOptions,
   COMPACT_MAX_ZOOM,
@@ -129,6 +130,13 @@ export interface EuropeMapProps {
    * out of its way. The bar sits at the bottom of the map, just above the sheet's peek.
    */
   onDockedBarChange?: (visible: boolean) => void;
+  /**
+   * A past turn from the turn selector. Every power's orders are drawn with how they resolved,
+   * nothing can be selected or edited, and the hypothetical banner stays hidden.
+   */
+  historyView?: boolean;
+  /** History only: draw just this power's orders. Null draws everyone's. */
+  historyPower?: Power | null;
 }
 
 /** How far the docked unit bar sits above the bottom of the map (`.unit-docked-bar` in compact.css). */
@@ -178,6 +186,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       unitMark,
       compact = false,
       onDockedBarChange,
+      historyView = false,
+      historyPower = null,
     },
     ref,
   ) {
@@ -375,11 +385,13 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         ? unitsById[selectedUnitId]
         : null;
     // A player may only command foreign units in the sandbox, or as host with Direct-Edit on
-    const canEditAnyPower = sandboxMode || directEditActive;
+    // A past turn is read-only: no power's units can be picked up, not even the player's own.
+    const canEditAnyPower = !historyView && (sandboxMode || directEditActive);
+    const controlPower: Power | null = historyView ? null : activePower;
     // Strictly disallow controlling or showing the menu for foreign units otherwise
     const selectedUnit =
       rawSelectedUnit &&
-      (rawSelectedUnit.power === activePower || canEditAnyPower) &&
+      (rawSelectedUnit.power === controlPower || canEditAnyPower) &&
       (!isRetreatPhase || rawSelectedUnit.is_dislodged)
         ? rawSelectedUnit
         : null;
@@ -422,13 +434,25 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
 
     // Filter which units' orders are visible on the map:
     const isUnitOrderVisible = useCallback(
-      (u: Unit) => canEditAnyPower || u.power === activePower,
-      [canEditAnyPower, activePower],
+      (u: Unit) =>
+        historyView
+          ? historyPower === null || u.power === historyPower
+          : canEditAnyPower || u.power === activePower,
+      [historyView, historyPower, canEditAnyPower, activePower],
     );
 
     // Build homes map for Adjustments phase
     const controllableBuildHomes = useMemo(() => {
       const homes: Record<string, Power> = {};
+      // A past winter shows the builds that were ordered, by every power (or the chosen one).
+      if (historyView) {
+        if (isAdjustmentPhase) {
+          for (const o of adjustmentOrdersFor(orders, historyPower)) {
+            if (o.order_type === 'BUILD') homes[o.origin] = o.power;
+          }
+        }
+        return homes;
+      }
       if (isAdjustmentPhase && builds) {
         for (const [pwrStr, bInfo] of Object.entries(builds)) {
           const pwr = pwrStr as Power;
@@ -440,7 +464,15 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         }
       }
       return homes;
-    }, [isAdjustmentPhase, builds, activePower, canEditAnyPower]);
+    }, [
+      historyView,
+      historyPower,
+      orders,
+      isAdjustmentPhase,
+      builds,
+      activePower,
+      canEditAnyPower,
+    ]);
 
     // Phone: how far each piece's tap target may grow before it would reach a neighbour's.
     const touchHitCaps = useMemo(() => {
@@ -527,7 +559,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         if (!u.is_dislodged) {
           // If there is also a dislodged unit in this province, select the dislodged unit!
           const dis = dislodgedByProv[u.province];
-          if (dis && (dis.power === activePower || canEditAnyPower)) {
+          if (dis && (dis.power === controlPower || canEditAnyPower)) {
             onSelectUnit(dis.id);
             setInteractionMode('MOVE');
             return;
@@ -535,7 +567,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
           clearSelection();
           return;
         }
-        const canControl = u.power === activePower || canEditAnyPower;
+        const canControl = u.power === controlPower || canEditAnyPower;
         if (!canControl) {
           clearSelection();
           return;
@@ -550,7 +582,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       }
 
       if (isAdjustmentPhase) {
-        const canControl = u.power === activePower || canEditAnyPower;
+        const canControl = u.power === controlPower || canEditAnyPower;
         if (!canControl) {
           clearSelection();
           return;
@@ -642,7 +674,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       }
 
       // 6. Check if the clicked unit is controllable (belongs to activePower, OR foreign units can be edited)
-      const canControlClickedUnit = u.power === activePower || canEditAnyPower;
+      const canControlClickedUnit = u.power === controlPower || canEditAnyPower;
       if (!canControlClickedUnit) {
         if (
           selectedUnit &&
@@ -724,7 +756,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         const occ = unitsByProv[provId];
         if (
           occ &&
-          (occ.power === activePower || canEditAnyPower) &&
+          (occ.power === controlPower || canEditAnyPower) &&
           (builds?.[occ.power]?.count ?? 0) < 0
         ) {
           onSelectUnit(selectedUnitId === occ.id ? null : occ.id);
@@ -737,7 +769,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       if (isRetreatPhase) {
         if (!selectedUnit) {
           const dis = dislodgedByProv[provId];
-          if (dis && (dis.power === activePower || canEditAnyPower)) {
+          if (dis && (dis.power === controlPower || canEditAnyPower)) {
             onSelectUnit(dis.id);
             setInteractionMode('MOVE');
           }
@@ -765,7 +797,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
           return;
         }
         const dis = dislodgedByProv[provId];
-        if (dis && (dis.power === activePower || canEditAnyPower)) {
+        if (dis && (dis.power === controlPower || canEditAnyPower)) {
           onSelectUnit(dis.id);
           setInteractionMode('MOVE');
         } else {
@@ -776,7 +808,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
 
       if (!selectedUnit) {
         const occupant = unitsByProv[provId];
-        if (occupant && (occupant.power === activePower || canEditAnyPower)) {
+        if (occupant && (occupant.power === controlPower || canEditAnyPower)) {
           onSelectUnit(occupant.id);
           setInteractionMode('MOVE');
         }
@@ -814,7 +846,10 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
 
         if (!isReachable && !canConvoyMove) {
           const occupant = unitsByProv[provId];
-          if (occupant && (occupant.power === activePower || canEditAnyPower)) {
+          if (
+            occupant &&
+            (occupant.power === controlPower || canEditAnyPower)
+          ) {
             onSelectUnit(occupant.id);
             setInteractionMode('MOVE');
             setPendingAuxOrigin(null);
@@ -1474,39 +1509,42 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         data-testid="map-viewport-container"
       >
         {/* Live Hypothetical / Simulation Active Banner */}
-        {(showSimulationOverlay || sandboxMode) && simulationResult && (
-          <div className="simulation-map-banner">
-            <Eye size={16} />
-            <span>
-              {compact ? (
-                // A phone has room for one short line here.
-                <>
-                  <strong>HYPOTHETICAL</strong> · guesses are discarded on exit
-                </>
-              ) : (
-                <>
-                  <strong>HYPOTHETICAL PLANNING &amp; OUTCOME PREVIEW</strong> —
-                  Foreign guesses are discarded upon exit
-                </>
-              )}
-            </span>
-            <button
-              className="sim-advance-btn"
-              onClick={onAdjudicateTurn}
-              title="Step forward one phase in Sandbox to plan follow-up turns"
-            >
-              <Play size={12} /> Step Turn Forward
-            </button>
-            {showSimulationOverlay && !sandboxMode && (
+        {(showSimulationOverlay || sandboxMode) &&
+          simulationResult &&
+          !historyView && (
+            <div className="simulation-map-banner">
+              <Eye size={16} />
+              <span>
+                {compact ? (
+                  // A phone has room for one short line here.
+                  <>
+                    <strong>HYPOTHETICAL</strong> · guesses are discarded on
+                    exit
+                  </>
+                ) : (
+                  <>
+                    <strong>HYPOTHETICAL PLANNING &amp; OUTCOME PREVIEW</strong>{' '}
+                    — Foreign guesses are discarded upon exit
+                  </>
+                )}
+              </span>
               <button
-                className="sim-close-btn"
-                onClick={onClearSimulationOverlay}
+                className="sim-advance-btn"
+                onClick={onAdjudicateTurn}
+                title="Step forward one phase in Sandbox to plan follow-up turns"
               >
-                Hide Preview
+                <Play size={12} /> Step Turn Forward
               </button>
-            )}
-          </div>
-        )}
+              {showSimulationOverlay && !sandboxMode && (
+                <button
+                  className="sim-close-btn"
+                  onClick={onClearSimulationOverlay}
+                >
+                  Hide Preview
+                </button>
+              )}
+            </div>
+          )}
 
         {overlay}
 
@@ -2573,7 +2611,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
                 const meta = POWER_METADATA[u.power];
                 const order = orders[u.id];
                 const isControllable =
-                  u.power === activePower || canEditAnyPower;
+                  u.power === controlPower || canEditAnyPower;
                 const isSelected = Boolean(
                   selectedUnit && u.id === selectedUnit.id,
                 );

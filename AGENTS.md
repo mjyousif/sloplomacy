@@ -169,6 +169,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - `turns.py`: Finalization, turn adjudication, phase timer voting, and extension requests.
   - `sandbox.py`: Sandbox sessions, speculative simulation, and AI heuristics.
   - `admin.py`: Creator/admin overrides (teleport, turn rollback, unit spawning/deletion).
+  - `history.py`: Read-only turn history for the turn selector (resolved phases and their records).
   - `websocket.py`: Live turn synchronization and WebSocket subscriptions.
 - **Domain Models (`backend/domain/`)**: Authoritative Pydantic v2 schemas (`models.py`) defining `GameState`, `Order`, `Issue`, and request/response DTOs.
 - **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator.py`), DATC/rulebook validation (`validator.py`), topological graph (`topology.py`), phase timer (`phase_timer.py`), AI heuristics (`ai.py`), and order helpers (`orders.py`). Completely decoupled from HTTP transport.
@@ -185,9 +186,9 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - Top-level feature views (`EuropeMap.tsx`, `MacroSidebar.tsx`, `ToolsSidebar.tsx`, `LobbyView.tsx`, `AdminToolsModal.tsx`).
   - Feature subdirectories (`map/`, `macro/`, `lobby/`, `admin/`) decomposing complex views into focused, single-responsibility subcomponents (e.g. SVG layers, card items, tab views).
 - **Cartographic Data & Metrics (`data/`)**: Static map geometry paths (`europeMapGeometry.ts`), layout coordinates (`mapLayouts.ts`), and font metrics (`mapTextMetrics.ts`).
-- **Custom Hooks (`hooks/`)**: Reusable React hooks for WebSockets (`useDiplomacyWebSocket`), phone layout media queries (`useCompactLayout`), and display settings (`useDisplayPrefs`).
+- **Custom Hooks (`hooks/`)**: Reusable React hooks for WebSockets (`useDiplomacyWebSocket`), phone layout media queries (`useCompactLayout`), display settings (`useDisplayPrefs`), and the turn selector (`useTurnHistory`).
 - **Types (`types/`)**: TypeScript type contracts (`diplomacy.ts`), strictly synchronized with `backend/domain/models.py`.
-- **Pure Utilities (`utils/`)**: Pure algorithmic helpers and math (`orderHelpers.ts`, `adminHelpers.ts`, `timerHelpers.ts`, `mapCameraHelpers.ts`, `sheetHelpers.ts`, `displayPrefs.ts`).
+- **Pure Utilities (`utils/`)**: Pure algorithmic helpers and math (`orderHelpers.ts`, `adminHelpers.ts`, `timerHelpers.ts`, `mapCameraHelpers.ts`, `sheetHelpers.ts`, `historyHelpers.ts`, `displayPrefs.ts`).
 - **Responsive Layout (`compact.css`)**: Phone-specific styles grouped exclusively under `[data-layout='compact']`.
 
 ---
@@ -221,6 +222,7 @@ The game cycles through three standard phases per year:
 - All mutation endpoints (`/api/order`, `/api/finalize`, `/api/adjudicate`, etc.) accept an optional `?game_id=<id>` query parameter (defaults to `'proto_1901'`).
 - Always pass `activeGameId` in frontend API requests.
 - **Invariant**: A caller sees hidden orders only for a seat they hold. The server finds it from their token (`viewer_power_for`, `caller_holds_seat`); a `power` a client names only picks among its own seats. `sanitize_game_state_for_viewer` masks foreign orders and issues and rebuilds `last_resolution` from what the viewer may see. Every response or broadcast of a live match's `GameState` goes through it. The game socket learns who is connecting from an `auth` first message (`?handshake=1`), never from the URL.
+- **Invariant**: Orders are public once their phase has resolved. `GET /api/history` serves only the `GAME_HISTORY` snapshots `_execute_adjudication` takes just before a phase resolves, so the phase being played is never among them (rollback pops the one it restores). It never serves a private sandbox (`sbx_`) id, whose snapshots hold its owner's live orders for the match's current turn, and it uses the same passcode rule as `GET /api/game` (`require_view_access`).
 - **Invariant**: `GameState.active_power` is shared by everyone in a game, so it never identifies a multiplayer player. The client takes the player's power from `resolvePlayerPower` (their claimed seat), and `join` reports the joiner's power only in its own response.
 - **Invariant**: Memory is authoritative for a loaded game. Supabase only supplies games this process has not loaded, so never replace `GAMES` or `GAME_SUMMARIES` entries for a loaded game with a database copy. Call `persist_game` after every change to a game.
 - **Invariant**: A failed Supabase read raises `SupabaseUnavailable`, and must never be treated as "no such game". Only a successful read that lacks an already saved game means it was deleted; `UNSAVED_GAMES` marks the games that may have no row yet.
@@ -231,7 +233,8 @@ The game cycles through three standard phases per year:
 ### 4. Sandbox ("War Room") Mode Isolation
 - Sandbox mode allows a player to test orders for all 7 Great Powers without submitting real moves.
 - **Multiplayer matches** are shared, so `POST /api/sandbox/enter` gives the player a private copy under its own `sbx_` game id, recorded in `PRIVATE_SANDBOXES`. Other powers start on default orders so the copy cannot reveal their plans, and it is never saved, listed or shown to other players. Later sandbox calls use that id. `POST /api/sandbox/exit` discards the copy and carries over the player's own changed orders if the match is still on the same turn and they still hold the seat.
-- **Solo and saved sandboxes** have one player. Entering checkpoints an in-memory clone in `SANDBOX_CHECKPOINTS[game_id]`; exiting restores it, strips foreign hypothetical moves, and merges back only the active power's orders.
+- **Solo and saved sandboxes** have one player. Entering checkpoints an in-memory clone in `SANDBOX_CHECKPOINTS[game_id]` and its history in `SANDBOX_HISTORY_CHECKPOINTS[game_id]`; exiting restores both, strips foreign hypothetical moves, and merges back only the active power's orders.
+- **Invariant**: Turns stepped through in a solo sandbox are hypothetical, so leaving it restores `GAME_HISTORY` too. Otherwise they would show in the turn selector as real turns and become admin rollback targets.
 - **Invariant**: Never write foreign sandbox moves into authoritative non-sandbox match state. The sandbox write endpoints answer `409` when called on a live multiplayer match.
 
 ### 5. Surrender & Civil Disorder

@@ -35,6 +35,7 @@ from storage.store import (
     HISTORY_UNSAVED,
     PRIVATE_SANDBOXES,
     SANDBOX_CHECKPOINTS,
+    SANDBOX_HISTORY_CHECKPOINTS,
     check_game_capacity,
     evict_game,
     is_multiplayer_match,
@@ -123,6 +124,9 @@ async def enter_sandbox_mode(
 
     game.active_power = req.power
     SANDBOX_CHECKPOINTS[gid] = game.model_copy(deep=True)
+    SANDBOX_HISTORY_CHECKPOINTS[gid] = [
+        snap.model_copy(deep=True) for snap in GAME_HISTORY.get(gid, [])
+    ]
     refresh_diagnostics_and_simulation(game)
     await broadcast_game_update(gid, game)
     return game
@@ -171,6 +175,9 @@ async def exit_sandbox_mode(
         GAMES[gid] = restored
         game = restored
         SANDBOX_CHECKPOINTS[gid] = None
+        # Turns stepped in the sandbox were hypothetical, so they leave the history with it.
+        GAME_HISTORY[gid] = SANDBOX_HISTORY_CHECKPOINTS.pop(gid, GAME_HISTORY.get(gid, []))
+        HISTORY_UNSAVED.add(gid)
 
     reset_foreign_orders(game, req.power)
 

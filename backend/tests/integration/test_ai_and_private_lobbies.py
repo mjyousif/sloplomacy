@@ -125,3 +125,32 @@ def test_private_lobby_passcode_flow():
         },
     )
     assert rejoin_ok.status_code == 200
+
+
+def test_leaving_a_solo_sandbox_drops_the_turns_it_played():
+    from main import GAME_HISTORY
+
+    client = TestClient(app)
+    gid = "proto_1901"
+    assert (
+        client.post(
+            f"/api/scenario?game_id={gid}", json={"scenario_id": "standard_1901"}
+        ).status_code
+        == 200
+    )
+    assert client.post(f"/api/adjudicate?game_id={gid}").status_code == 200
+    assert len(GAME_HISTORY[gid]) == 1
+
+    assert (
+        client.post(f"/api/sandbox/enter?game_id={gid}", json={"power": "FRANCE"}).status_code
+        == 200
+    )
+    assert client.post(f"/api/sandbox/ai-step?game_id={gid}").status_code == 200
+    assert len(GAME_HISTORY[gid]) == 2
+
+    assert (
+        client.post(f"/api/sandbox/exit?game_id={gid}", json={"power": "FRANCE"}).status_code == 200
+    )
+
+    entries = client.get(f"/api/history?game_id={gid}").json()
+    assert [(e["season"], e["year"], e["phase"]) for e in entries] == [("Spring", 1901, "Movement")]

@@ -37,6 +37,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `sanityModalOpen` | `boolean` | Modal | Controls visibility of pre-finalization warning modal. |
 | `sanityModalIssues` | `ValidationIssue[]` | Modal | Issues displayed inside the Sanity Check modal. |
 | `hypotheticalMatchTimer` | `PhaseTimer \| null` | Multiplayer | The real match's clock while `sandboxGameId` is set, because the private copy has none. Components read the derived `matchTimer`. |
+| `turnHistory` | `TurnHistory` | History | From `useTurnHistory`: the resolved phases (`entries`), the one on show (`viewIndex`, `null` = live), its `TurnRecord` (`turn`) and the nation chip (`power`). The list is refetched whenever the live turn changes, which covers WebSocket updates and rollbacks. If the phase on show has moved it is found again by season, year and phase, and if it is gone the view goes back to live. Records are cached until the list is refetched. It always reads `activeGameId`, never `sandboxGameId`, and sends the passcode the player typed for a private match as `X-Passcode`. While `turn` is set, the map shows that turn read-only and the orders panel is dimmed (`viewingHistory`). |
 | `toastBanner` | `string \| null` | Banner | Auto-expiring toast message for user notifications. |
 | `wsConnected` | `boolean` | Network | Active real-time WebSocket connection to room feed or lobby. |
 

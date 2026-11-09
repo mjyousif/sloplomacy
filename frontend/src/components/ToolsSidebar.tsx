@@ -75,6 +75,8 @@ export interface ToolsSidebarProps {
   open?: boolean;
   /** Drawer only: closes it (backdrop tap, Escape or the close button). */
   onClose?: () => void;
+  /** The turn selector, pinned below the scrolling sections (not shown on the collapsed rail). */
+  historyFooter?: React.ReactNode;
 }
 
 export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
@@ -107,6 +109,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   variant = 'panel',
   open = false,
   onClose,
+  historyFooter,
 }) => {
   const isDrawer = variant === 'drawer';
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -612,6 +615,8 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           </CollapsibleSection>
         )}
       </div>
+
+      {historyFooter}
     </aside>
   );
 

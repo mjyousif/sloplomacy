@@ -110,3 +110,59 @@ export async function seedScenario(
   }
   return await res.json();
 }
+
+/** Sets one unit's order through the API, as if its player had made it. */
+export async function postOrder(
+  order: Record<string, unknown>,
+  gameId: string = 'proto_1901',
+  apiBase: string = 'http://localhost:8000',
+) {
+  const res = await fetch(`${apiBase}/api/order?game_id=${gameId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order: { is_explicit: true, ...order } }),
+  });
+  if (!res.ok)
+    throw new Error(`Order failed (${res.status}): ${await res.text()}`);
+}
+
+/** Resolves the current phase through the API. */
+export async function resolvePhase(
+  gameId: string = 'proto_1901',
+  apiBase: string = 'http://localhost:8000',
+) {
+  const res = await fetch(`${apiBase}/api/adjudicate?game_id=${gameId}`, {
+    method: 'POST',
+  });
+  if (!res.ok)
+    throw new Error(`Adjudication failed (${res.status}): ${await res.text()}`);
+}
+
+/**
+ * Spring 1901 resolved: France and Germany both moved to Burgundy and bounced, and England
+ * sailed into the North Sea. The game is left on Fall 1901 Movement.
+ */
+export async function playBurgundyBounce(gameId: string = 'proto_1901') {
+  await seedScenario('standard_1901', gameId, 'FRANCE');
+  const army = { unit_type: 'A', order_type: 'MOVE', target: 'BUR' };
+  await postOrder(
+    { ...army, unit_id: 'FRA_A_PAR', power: 'FRANCE', origin: 'PAR' },
+    gameId,
+  );
+  await postOrder(
+    { ...army, unit_id: 'GER_A_MUN', power: 'GERMANY', origin: 'MUN' },
+    gameId,
+  );
+  await postOrder(
+    {
+      unit_id: 'ENG_F_LON',
+      power: 'ENGLAND',
+      unit_type: 'F',
+      origin: 'LON',
+      order_type: 'MOVE',
+      target: 'NTH',
+    },
+    gameId,
+  );
+  await resolvePhase(gameId);
+}
