@@ -1,8 +1,8 @@
 // @scenario mobile
 // @order 6
-// @description Phone (390x844, touch): full-width map, order sheet, ≡ tools drawer, docked unit bar, card-to-map selection, a move by tap, a winter build, and back to the lobby.
+// @description Phone (390x844, touch): full-width map, order sheet, ≡ tools drawer, docked unit bar, card-to-map selection, a move by tap, a winter build, a past turn from the drawer, and back to the lobby.
 import { test, expect, Page } from '@playwright/test';
-import { ScenarioRecorder, seedScenario } from './helpers';
+import { ScenarioRecorder, playBurgundyBounce, seedScenario } from './helpers';
 
 /** The page never scrolls sideways, the most common way a phone layout breaks. */
 async function expectNoSidewaysScroll(page: Page) {
@@ -170,6 +170,67 @@ test.describe('Scenario 06: Phone game screen', () => {
       const parBuild = page.locator('[data-testid="build-macro-card"][data-home-province="PAR"]');
       await expect(parBuild.locator('[data-testid="btn-build-army"]')).toHaveClass(/active/);
       await recorder.recordStep(page, '02_army_built_in_paris');
+
+      recorder.finalize('PASSED');
+    } catch (err) {
+      recorder.finalize('FAILED');
+      throw err;
+    }
+  });
+
+  test('looks back at a past turn from the tools drawer', async ({ page }) => {
+    const recorder = new ScenarioRecorder('mobile_turn_history');
+    recorder.attachListeners(page);
+
+    try {
+      await playBurgundyBounce();
+      await page.goto('/?view=sandbox');
+      await page.waitForSelector('[data-testid="unit-token"]', {
+        timeout: 15000,
+      });
+
+      // The selector sits at the foot of the ≡ drawer.
+      await page.locator('[data-testid="compact-tools-toggle"]').tap();
+      await expect(page.locator('.tools-drawer-layer')).toHaveClass(/open/);
+      await expect(
+        page.locator(
+          '[data-testid="tools-drawer"] [data-testid="turn-history"]',
+        ),
+      ).toBeVisible();
+      await recorder.recordStep(page, '01_history_in_drawer');
+
+      // Picking a turn closes the drawer and puts a pill on the map to step or go back.
+      await page
+        .locator('[data-testid="turn-history-select"]')
+        .selectOption('0');
+      await expect(page.locator('.tools-drawer-layer')).not.toHaveClass(/open/);
+      const pill = page.locator('[data-testid="turn-history-pill"]');
+      await expect(pill).toContainText('S1901 M');
+      await expect(
+        page.locator(
+          '[data-testid="order-arrow"][data-order-unit="GER_A_MUN"]',
+        ),
+      ).toContainText('BOUNCED');
+      await expect(
+        page.locator('[data-testid="history-lock-bar"]'),
+      ).toBeVisible();
+      await expectNoSidewaysScroll(page);
+
+      // Nothing on a past turn can be picked up.
+      await page
+        .locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"]')
+        .tap();
+      await expect(page.locator('[data-testid="unit-docked-bar"]')).toHaveCount(
+        0,
+      );
+      await recorder.recordStep(page, '02_past_turn_with_map_pill');
+
+      await page.locator('[data-testid="turn-history-pill-live"]').tap();
+      await expect(pill).toHaveCount(0);
+      await expect(
+        page.locator('[data-testid="history-lock-bar"]'),
+      ).toHaveCount(0);
+      await recorder.recordStep(page, '03_back_to_live');
 
       recorder.finalize('PASSED');
     } catch (err) {

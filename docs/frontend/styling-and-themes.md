@@ -67,6 +67,7 @@ The app has two layouts. `useCompactLayout()` (`hooks/useCompactLayout.ts`) deci
     - **Tools drawer** (`ToolsSidebar`'s `variant="drawer"`): slides over the game area from the left when ≡ in the top bar is tapped, with a backdrop. It has no zoom section.
     - **Docked unit bar**: the unit, build and coast menus sit in one full-width bar at the bottom of the map instead of floating beside the unit.
     - **Turn clock**: a pill at the top of the map that opens into the full widget.
+    - **Turn history**: the selector sits at the foot of the tools drawer with 40px controls. A past turn puts an amber `‹ S1901 M › Live` pill at the top of the map, below the clock pill when there is one.
     - **Hypothetical banner**: one short line at the top of the map, below the clock pill when there is one.
     - **Toasts**: drop from under the top bar at full width, and taps pass through them, so they never cover Finalize.
     - **No scrolling**: `.war-room-workspace` uses `overflow: clip`, because the lowered sheet runs off the bottom of the screen and `overflow: hidden` would still let focus or script scroll the whole game screen up.

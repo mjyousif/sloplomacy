@@ -70,6 +70,9 @@ In the compact layout the game screen is the map, with everything else layered o
 - The camera pans just enough to keep what was selected clear of the bar (`keepPointInView`). It only does this when the selection changes, so a pan afterwards is left alone.
 - The selected card lights up its provinces, the way hovering a card does on desktop. Raising the sheet while a unit is selected brings its card to the top of the list.
 
+### Turn history
+The selector sits at the foot of the ≡ drawer with 40px controls and the nation chips in a 4 × 2 grid, and the static Live tag is hidden to leave room for the turn's name. Picking a past turn closes the drawer and puts a pill on the map (`TurnHistoryPill`: ‹ `S1901 M` › Live), below the clock pill when there is one, so the player can step through turns or go back without reopening the drawer. The order sheet is dimmed under the same "Viewing … · Back to live" bar as on desktop, and nothing on the map can be picked up.
+
 ### Turn clock
 `PhaseTimerWidget` gets `compact`. It starts as a pill at the top of the map that says what the clock is doing ("14:05", "Vote · 0:42", "Paused · 1/3 ready", "Start the clock"). Tapping it opens the full widget, which has a button to fold it back. An amber dot on the pill means the real clock is running behind Hypothetical Mode.
 
@@ -122,6 +125,14 @@ In the compact layout the game screen is the map, with everything else layered o
   - The turn form resets only when the console opens or the game reaches another turn, not on every order update, so typing is not undone and an error from the last action stays visible.
 - **"Solo Sandbox"** (top bar): leaving a multiplayer match for the solo board asks through the same `ConfirmModal`.
 - **"Direct-Edit Board Override"**: While on, the host can select and order any power's units on the map, and sees all their orders. Other players are unaffected, and the toggle has no effect in a game the player does not host.
+
+### 6. Turn History footer (`TurnHistorySelector.tsx`)
+- Pinned below the scrolling sections, so it is always in reach. It only appears once the game has a resolved phase, and it is not on the collapsed rail.
+- **‹ [turn] ›**: steps through, or picks from, the resolved phases (newest first in the menu, after the current turn). **Live** is a quiet tag while the current turn is on show and an amber button while a past one is.
+- A past turn shows on the map as it began, with every nation's orders coloured by how they resolved: green arrows succeeded, red dashed ones bounced with a "BOUNCED" label, and broken supports carry "CUT". Past winters show the builds that were ordered. Nothing can be selected or ordered on it.
+- **Nation chips** (All, AUS … TUR) narrow a past turn's arrows to one nation. The row is always there, greyed out and disabled on the live turn, so picking a past turn never shifts the arrows above it and a quick run of clicks on ‹ can't land on a chip.
+- While a past turn is on show, the right sidebar is dimmed and `inert` under a "Viewing Spring 1901 Movement · Back to live" bar, so no order is changed out of sight. Entering Hypothetical Mode, opening the admin console or switching games returns to live. A turn resolving does not move the player off what they are looking at.
+- The data comes from `GET /api/history` and `GET /api/history/{index}` through `useTurnHistory`, always for the real game, never a private sandbox copy.
 
 ---
 

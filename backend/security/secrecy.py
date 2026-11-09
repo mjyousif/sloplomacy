@@ -1,3 +1,5 @@
+import hmac
+
 from domain.models import GameState, MultiplayerGameSummary, Power
 from engine.adjudicator import adjudicate_turn
 from engine.order_utils import create_default_orders
@@ -5,11 +7,34 @@ from fastapi import HTTPException, status
 from security.auth import AuthUser
 from storage.store import (
     DEFAULT_GAME_ID,
+    GAME_PASSCODES,
     GAME_SUMMARIES,
     GAMES,
     is_multiplayer_match,
 )
 from storage.supabase import is_valid_uuid
+
+
+def require_view_access(
+    game_id: str,
+    current_user: AuthUser | None,
+    passcode: str | None,
+) -> None:
+    """Refuse to show a private match to anyone who is neither seated in it nor has its passcode."""
+    summary = GAME_SUMMARIES.get(game_id)
+    if not (summary and summary.has_passcode and is_multiplayer_match(game_id)):
+        return
+    if current_user and any(
+        p.user_id == current_user.user_id for p in summary.participants.values()
+    ):
+        return
+    expected_pw = GAME_PASSCODES.get(game_id, "")
+    provided_pw = (passcode or "").strip()
+    if not expected_pw or not hmac.compare_digest(provided_pw, expected_pw):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Passcode required or incorrect for this private campaign.",
+        )
 
 
 def verify_admin_access(

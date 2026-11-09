@@ -15,6 +15,7 @@ backend/
 │   ├── turns.py             # Finalization, turn adjudication, phase timer votes and extensions
 │   ├── sandbox.py           # Isolated sandbox mode ("War Room"), hypothetical simulation, AI order generation
 │   ├── admin.py             # Administrator controls (turn rollback, jumps, unit spawner/teleport, ownership)
+│   ├── history.py           # Read-only turn history: resolved phases with every power's orders and outcomes
 │   └── websocket.py         # Real-time WebSockets for turn state updates and lobby room events
 ├── domain/                  # Core Pydantic domain models & schemas
 │   └── models.py            # GameState, Order, Unit, Resolution, Diagnostics, Timer schemas

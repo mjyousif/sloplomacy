@@ -712,3 +712,71 @@ def test_admin_check_fails_closed_for_a_game_that_is_not_loaded():
     with pytest.raises(HTTPException) as denied:
         verify_admin_access("mp_never_loaded", None)
     assert denied.value.status_code == 404
+
+
+# ==============================================================================
+# Turn history: resolved orders are public, the current turn's never are
+# ==============================================================================
+
+
+def test_turn_history_never_shows_the_current_turns_orders():
+    gid = secret_plan_match()
+    # Nothing has resolved, so Alice's plan is in no history entry.
+    assert client.get(f"/api/history?game_id={gid}", headers=bob_headers()).json() == []
+
+    assert client.post(f"/api/adjudicate?game_id={gid}", headers=alice_headers()).status_code == 200
+    # Alice plans her fall move; Bob must not see it.
+    res = client.post(
+        f"/api/order?game_id={gid}",
+        json={
+            "order": {
+                "unit_id": "FRA_A_PAR",
+                "power": "FRANCE",
+                "unit_type": "A",
+                "origin": "BUR",
+                "order_type": "MOVE",
+                "target": "MUN",
+                "is_explicit": True,
+            }
+        },
+        headers=alice_headers(),
+    )
+    assert res.status_code == 200, res.text
+
+    for headers in (bob_headers(), {}):
+        entries = client.get(f"/api/history?game_id={gid}", headers=headers).json()
+        assert [(e["season"], e["phase"]) for e in entries] == [("Spring", "Movement")]
+        # The resolved spring move is public now.
+        past = client.get(f"/api/history/0?game_id={gid}", headers=headers).json()
+        assert past["orders"]["FRA_A_PAR"]["target"] == "BUR"
+        assert past["resolution"]["resolutions"]["FRA_A_PAR"]["succeeded"] is True
+        assert client.get(f"/api/history/1?game_id={gid}", headers=headers).status_code == 404
+        french_targets = {o["target"] for o in past["orders"].values() if o["power"] == "FRANCE"}
+        assert "MUN" not in french_targets
+
+
+def test_turn_history_of_a_private_sandbox_is_never_served():
+    gid = secret_plan_match()
+    sandbox_id = client.post(
+        f"/api/sandbox/enter?game_id={gid}", json={"power": "FRANCE"}, headers=alice_headers()
+    ).json()["game_id"]
+    # Alice steps her private copy forward, so its history holds her live plan.
+    client.post(f"/api/adjudicate?game_id={sandbox_id}", headers=alice_headers())
+
+    for headers in (bob_headers(), alice_headers(), {}):
+        assert client.get(f"/api/history?game_id={sandbox_id}", headers=headers).status_code == 404
+        assert (
+            client.get(f"/api/history/0?game_id={sandbox_id}", headers=headers).status_code == 404
+        )
+
+
+def test_turn_history_of_a_private_match_needs_the_passcode():
+    gid = secret_plan_match(private=True)
+    client.post(f"/api/adjudicate?game_id={gid}", headers=alice_headers())
+
+    for path in (f"/api/history?game_id={gid}", f"/api/history/0?game_id={gid}"):
+        assert client.get(path).status_code == 403
+        assert client.get(f"{path}&passcode=wrong").status_code == 403
+        assert client.get(f"{path}&passcode=Secret1901").status_code == 200
+        # Seated players need no passcode, as with GET /api/game.
+        assert client.get(path, headers=alice_headers()).status_code == 200

@@ -145,6 +145,27 @@ export interface GameState {
   timer?: PhaseTimer | null;
 }
 
+/** One resolved phase in a game's history, as the turn selector lists it (oldest first). */
+export interface TurnHistoryEntry {
+  index: number;
+  season: string;
+  year: number;
+  phase: string;
+}
+
+/**
+ * A resolved phase as it began, with every power's orders and how each resolved. Orders are
+ * public once their phase has resolved, so this holds all seven powers' orders.
+ */
+export interface TurnRecord extends TurnHistoryEntry {
+  units: Unit[];
+  orders: Record<string, Order>;
+  ownership: Record<string, Power>;
+  builds?: Record<Power, { count: number; homes: string[] }> | null;
+  retreats?: Record<Power, Record<string, string[]>> | null;
+  resolution: SimulationResult;
+}
+
 export interface FinalizeResponse {
   finalized: boolean;
   requires_confirmation: boolean;

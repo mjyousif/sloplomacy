@@ -16,7 +16,7 @@ for _p in (str(_BACKEND_DIR), str(_REPO_ROOT)):
         sys.path.insert(0, _p)
 
 # Package imports with local fallback
-from api import admin, games, orders, sandbox, turns, websocket
+from api import admin, games, history, orders, sandbox, turns, websocket
 from api.sandbox import close_private_sandbox, open_private_sandbox
 from api.turns import _execute_adjudication, tick_timer, timer_players
 from domain.models import FIRST_YEAR, PHASES_BY_SEASON
@@ -156,6 +156,7 @@ app.include_router(orders.router)
 app.include_router(turns.router)
 app.include_router(sandbox.router)
 app.include_router(admin.router)
+app.include_router(history.router)
 app.include_router(websocket.router)
 
 

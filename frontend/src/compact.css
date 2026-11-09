@@ -1119,3 +1119,98 @@
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+/* Turn history: the drawer's footer gets finger-sized controls, and a past turn puts a pill on
+   the map (under the clock, if there is one), because the drawer closes when a turn is picked. */
+[data-layout="compact"] .turn-history {
+  padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+[data-layout="compact"] .turn-history-step,
+[data-layout="compact"] .turn-history-select,
+[data-layout="compact"] .turn-history-live,
+[data-layout="compact"] .turn-history-live-tag {
+  height: 40px;
+}
+
+[data-layout="compact"] .turn-history-step {
+  width: 40px;
+}
+
+[data-layout="compact"] .turn-history-select {
+  font-size: 0.85rem;
+}
+
+/* The menu already names the turn on show, and a phone needs the width for it. */
+[data-layout="compact"] .turn-history-live-tag {
+  display: none;
+}
+
+/* Eight chips don't fit one row at a finger's width, so they sit in an even 4 × 2 grid. */
+[data-layout="compact"] .turn-history-powers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+[data-layout="compact"] .turn-history-chip {
+  height: 34px;
+  min-width: 40px;
+  font-size: 0.72rem;
+}
+
+[data-layout="compact"] .turn-history-pill {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 21;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid #b45309;
+  border-radius: 999px;
+  background: rgba(27, 26, 22, 0.95);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+
+[data-layout="compact"]
+  .map-viewport-container:has(.phase-timer-pill, .phase-timer-widget)
+  .turn-history-pill {
+  top: 58px;
+}
+
+[data-layout="compact"] .turn-history-pill .turn-history-step {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+}
+
+[data-layout="compact"] .turn-history-pill .turn-history-live {
+  height: 36px;
+  border-radius: 999px;
+  padding: 0 12px;
+}
+
+[data-layout="compact"] .turn-history-pill-label {
+  padding: 0 4px;
+  color: #fde68a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+[data-layout="compact"] .history-lock-bar {
+  padding: 4px 10px;
+  margin: -2px 0 6px;
+  border: 1px solid #6b5426;
+  border-radius: 8px;
+}
+
+[data-layout="compact"] .history-lock-live-btn {
+  min-height: 36px;
+}
