@@ -105,11 +105,14 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
   - **Tactical Warning / Dislodgement**: Red/amber alert indicating illegal orders, cut supports, or retreats.
 
 ### 3. Great Powers Diplomatic Standing & Command Selector
-- Lists all 7 Great Powers (Austria-Hungary, England, France, Germany, Italy, Russia, Turkey) with their authentic World War I (1901–1918) SVG flags, dynamic numeric ranking (1–7), player names in multiplayer, national colors, controlled Supply Centers, and active field units.
-- **Victory Points Ranking & Sorting**:
-  - The diplomatic standings automatically shuffle based on victory points: nations with the most controlled Supply Centers (SC) appear at the top.
-  - Ties in Supply Centers are broken by total active unit count descending.
-  - If still tied, countries share the exact same numeric rank (1–7) displayed to the left of their flag.
+- Lists all 7 Great Powers (Austria-Hungary, England, France, Germany, Italy, Russia, Turkey) with their authentic World War I (1901–1918) SVG flags, toggleable sorting (`By Score` vs `Default`), dynamic numeric ranking (1–7), player names in multiplayer, national colors, controlled Supply Centers, and active field units.
+- **Toggleable Standings Sort**:
+  - Segmented toggle at the top of the standings list allows commanders to switch between:
+    - **By Score**: Dynamically sorted by victory points (Supply Centers descending, tiebreak by active unit count descending, then canonical order), with numeric ranks `1`–`7` on the left of each flag.
+    - **Default**: Standard canonical order (`ALL_POWERS`: Austria, England, France, Germany, Italy, Russia, Turkey) with flush flags.
+  - The commander's preference is preserved in browser storage.
+- **Compact Layout & Overflow Prevention**:
+  - The `Active` badge is positioned on the metrics row (`SC • Units`) rather than the country name row, preventing long commander names from crowding or pushing the `Draft` / `Finalized` / `CD` status tags outside the card.
 - **Player Names**:
   - In multiplayer campaigns, each standing entry displays the claimed commander's player name (e.g. `(AdmiralNelson)`) or indicates `(Open)` if unclaimed.
 - **Historical WWI Flag SVGs (`PowerFlag.tsx`)**:

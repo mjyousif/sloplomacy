@@ -158,6 +158,21 @@ describe('ToolsSidebar', () => {
     expect(html).toContain('data-testid="power-flag-france"');
     expect(html).toContain('data-testid="power-flag-england"');
     expect(html).toContain('data-testid="power-flag-russia"');
+    expect(html).toContain('data-testid="standings-sort-score"');
+    expect(html).toContain('data-testid="standings-sort-default"');
+    expect(html).toContain('By Score');
+    expect(html).toContain('Default');
+  });
+
+  it('places active tag inside power-card-metrics to prevent status overflow', () => {
+    const html = renderToString(
+      React.createElement(ToolsSidebar, {
+        ...baseToolsProps,
+        activePower: 'FRANCE',
+      }),
+    );
+    expect(html).toContain('power-card-metrics');
+    expect(html).toContain('active-tag');
   });
 
   it('renders player names in diplomatic standings when participants are provided (issue 122)', () => {
