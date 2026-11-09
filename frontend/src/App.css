@@ -4468,6 +4468,45 @@
 }
 
 /* Powers Standing List */
+.powers-sort-segmented {
+  display: flex;
+  background: #141820;
+  border: 1px solid #28303e;
+  border-radius: 5px;
+  padding: 2px;
+  margin-bottom: 6px;
+  gap: 2px;
+}
+
+.powers-sort-pill {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  color: #8b99ad;
+  font-size: 0.64rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.powers-sort-pill:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.powers-sort-pill.active {
+  background: #262f3e;
+  color: #60a5fa;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
 .powers-standing-list {
   display: flex;
   flex-direction: column;
@@ -4484,6 +4523,7 @@
   border-left: 3px solid #64748b;
   background: #1c222c;
   transition: all 0.12s ease;
+  overflow: hidden;
 }
 
 .power-standing-card.clickable {
@@ -4504,7 +4544,9 @@
 .power-card-left {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
 }
 
 .power-card-rank {
@@ -4522,52 +4564,71 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .power-card-info {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  flex: 1;
 }
 
 .power-card-name {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   font-size: 0.72rem;
   color: #e2e8f0;
+  min-width: 0;
+}
+
+.power-card-name strong {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .power-card-player {
   font-size: 0.62rem;
   color: #94a3b8;
   font-weight: 500;
-  max-width: 76px;
+  max-width: 68px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 1;
 }
 
 .active-tag {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   padding: 1px 4px;
+  line-height: 1.2;
   border-radius: 3px;
-  background: #3b82f6;
+  background: #2563eb;
   color: #ffffff;
+  margin-left: 2px;
+  flex-shrink: 0;
 }
 
 .power-card-metrics {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.65rem;
+  font-size: 0.63rem;
   color: #8b99ad;
+  white-space: nowrap;
 }
 
 .metric-dot {
   opacity: 0.6;
+}
+
+.power-card-status {
+  flex-shrink: 0;
+  margin-left: 6px;
 }
 
 .mini-status-tag {

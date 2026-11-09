@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   Anchor,
+  ArrowUpDown,
   Bot,
   CheckCircle2,
   ChevronRight,
@@ -24,8 +25,9 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ALL_POWERS,
   type GameParticipant,
   POWER_METADATA,
   type Power,
@@ -158,6 +160,42 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
       unitCountByPower[u.power]++;
     }
   }
+
+  // Standings sort mode (Score / Victory Points vs Default standard order)
+  const [sortMode, setSortMode] = useState<'score' | 'default'>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('sloplomacy_standings_sort');
+        if (saved === 'default' || saved === 'score') return saved;
+      } catch {
+        // Ignore storage errors in sandbox/incognito
+      }
+    }
+    return 'score';
+  });
+
+  const handleSetSortMode = (mode: 'score' | 'default') => {
+    setSortMode(mode);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('sloplomacy_standings_sort', mode);
+      } catch {
+        // Ignore storage errors
+      }
+    }
+  };
+
+  const displayedPowers = useMemo(() => {
+    if (sortMode === 'score') {
+      return rankPowers(scCountByPower, unitCountByPower);
+    }
+    return ALL_POWERS.map((pwr) => ({
+      power: pwr,
+      rank: null,
+      scCount: scCountByPower[pwr] || 0,
+      unitCount: unitCountByPower[pwr] || 0,
+    }));
+  }, [sortMode, scCountByPower, unitCountByPower]);
 
   // Collapsed Minimalist Rail
   if (collapsed && !isDrawer) {
@@ -376,8 +414,35 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           collapsible={true}
           defaultOpen={true}
         >
+          {/* Standings sort toggle */}
+          <div
+            className="powers-sort-segmented"
+            role="group"
+            aria-label="Sort standings"
+          >
+            <button
+              type="button"
+              className={`powers-sort-pill ${sortMode === 'score' ? 'active' : ''}`}
+              data-testid="standings-sort-score"
+              onClick={() => handleSetSortMode('score')}
+              title="Sort by Victory Points (Supply Centers & Units)"
+            >
+              <ArrowUpDown size={10} />
+              <span>By Score</span>
+            </button>
+            <button
+              type="button"
+              className={`powers-sort-pill ${sortMode === 'default' ? 'active' : ''}`}
+              data-testid="standings-sort-default"
+              onClick={() => handleSetSortMode('default')}
+              title="Standard canonical power order"
+            >
+              <span>Default</span>
+            </button>
+          </div>
+
           <div className="powers-standing-list">
-            {rankPowers(scCountByPower, unitCountByPower).map(
+            {displayedPowers.map(
               ({ power: pwr, rank, scCount: scs, unitCount: un }) => {
                 const meta = POWER_METADATA[pwr];
                 const isSelected = pwr === activePower;
@@ -409,13 +474,15 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
                     }}
                   >
                     <div className="power-card-left">
-                      <span
-                        className="power-card-rank"
-                        data-testid="power-rank"
-                        title={`Rank ${rank}`}
-                      >
-                        {rank}
-                      </span>
+                      {rank !== null && (
+                        <span
+                          className="power-card-rank"
+                          data-testid="power-rank"
+                          title={`Rank ${rank}`}
+                        >
+                          {rank}
+                        </span>
+                      )}
                       <span className="power-card-crest">
                         <PowerFlag power={pwr} width={20} height={14} />
                       </span>
@@ -434,14 +501,14 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
                               ({playerName})
                             </span>
                           )}
-                          {isSelected && (
-                            <span className="active-tag">Active</span>
-                          )}
                         </div>
                         <div className="power-card-metrics">
                           <span>{scs} SC</span>
                           <span className="metric-dot">•</span>
                           <span>{un} Units</span>
+                          {isSelected && (
+                            <span className="active-tag">Active</span>
+                          )}
                         </div>
                       </div>
                     </div>
