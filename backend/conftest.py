@@ -1,8 +1,6 @@
-import pytest
+"""Shared pytest fixtures."""
 
-TEST_JWT_SECRET = "test-secret-at-least-32-chars-long-12345"
-
-
-@pytest.fixture(autouse=True)
-def configure_test_environment(monkeypatch):
-    monkeypatch.setenv("SUPABASE_JWT_SECRET", TEST_JWT_SECRET)
+try:
+    from backend.tests.conftest import *  # noqa: F403
+except ModuleNotFoundError:
+    from tests.conftest import *  # noqa: F403

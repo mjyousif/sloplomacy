@@ -182,15 +182,20 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   ├── main.py                # FastAPI endpoints, multi-game room registry & static SPA mount
 │   ├── auth.py                # Supabase JWT verification (HS256 secret, ES256 key or JWKS)
 │   ├── database.py            # Supabase PostgREST persistence: save, load, lobby columns, SupabaseUnavailable
-│   ├── models.py              # Pydantic v2 models (GameState, Order, Issues, Admin schemas)
-│   ├── adjudicator.py         # Official DATC adjudication wrapper over `diplomacy` package
-│   ├── phase_timer.py         # Multiplayer turn clock rules: votes, pausing, extensions & deadlines
-│   ├── validator.py           # Real-time pre-flight legality and tactical blunder checks
-│   ├── ai_engine.py           # Heuristic order generation for sandbox AI planning
-│   ├── map_data.py            # Complete 76-province graph, dual coasts, 34 SC definitions
+│   ├── domain/                # Domain models & schemas (GameState, Order, Issues, Admin schemas)
+│   ├── engine/                # DATC adjudication wrapper, validator, graph topology, phase clock, AI
+│   ├── storage/               # Supabase PostgREST persistence and local store
+│   ├── security/              # Auth & JWT verification, viewer state sanitization
+│   ├── tests/                 # Categorized pytest harness (unit/ and integration/ test suites)
+│   ├── models.py              # Root backward-compatible facade re-exporting domain/
+│   ├── adjudicator.py         # Root backward-compatible facade re-exporting engine/
+│   ├── phase_timer.py         # Root backward-compatible facade re-exporting engine/
+│   ├── validator.py           # Root backward-compatible facade re-exporting engine/
+│   ├── ai_engine.py           # Root backward-compatible facade re-exporting engine/
+│   ├── map_data.py            # Root backward-compatible facade re-exporting engine/
+│   ├── database.py            # Root backward-compatible facade re-exporting storage/
+│   ├── auth.py                # Root backward-compatible facade re-exporting security/
 │   ├── requirements.txt       # Python dependencies
-│   ├── conftest.py            # Shared pytest fixtures (resets the in-memory game registry)
-│   └── test_*.py              # Comprehensive pytest test harness (one suite per area)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx            # Main state container, viewMode controller & API coordinator
