@@ -34,10 +34,10 @@ import {
 } from '../utils/orderHelpers';
 import type { SheetSnap } from '../utils/sheetHelpers';
 import { BottomSheet } from './BottomSheet';
-import { PowerFlag } from './PowerFlag';
-import { VersionBadge } from './VersionBadge';
 import { BuildSlotCard } from './macro/BuildSlotCard';
 import { UnitMacroCard } from './macro/UnitMacroCard';
+import { PowerFlag } from './PowerFlag';
+import { VersionBadge } from './VersionBadge';
 
 export interface MacroSidebarProps {
   provinces: Record<string, ProvinceInfo>;

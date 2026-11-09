@@ -21,11 +21,11 @@ import {
   type Power,
 } from '../types/diplomacy';
 import { defaultCampaignName } from '../utils/campaignName';
-import { PowerFlag } from './PowerFlag';
 import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
 import { GameRoomCard } from './lobby/GameRoomCard';
 import { PasscodePromptModal } from './lobby/PasscodePromptModal';
 import { PrivateCampaignCreatedModal } from './lobby/PrivateCampaignCreatedModal';
+import { PowerFlag } from './PowerFlag';
 import { VersionBadge } from './VersionBadge';
 
 interface LobbyViewProps {
