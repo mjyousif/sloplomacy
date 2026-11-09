@@ -7,6 +7,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../../types/diplomacy';
+import { PowerFlag } from '../PowerFlag';
 
 export interface GameRoomCardProps {
   game: MultiplayerGameSummary;
@@ -71,7 +72,12 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
             <span>
               You are commanding{' '}
               <strong>
-                {POWER_METADATA[myExistingClaim.power].crest}{' '}
+                <PowerFlag
+                  power={myExistingClaim.power}
+                  width={18}
+                  height={12}
+                  style={{ marginRight: 5 }}
+                />
                 {POWER_METADATA[myExistingClaim.power].shortName}
               </strong>{' '}
               in this campaign. Click your country below to enter, or select an
@@ -129,7 +135,9 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
               }}
             >
               <div className="power-slot-top">
-                <span className="power-slot-crest">{meta.crest}</span>
+                <span className="power-slot-crest">
+                  <PowerFlag power={pwr} width={18} height={12} />
+                </span>
                 <span
                   className="power-slot-name"
                   style={{

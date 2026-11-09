@@ -769,6 +769,9 @@
 }
 
 [data-layout="compact"] .macro-sheet-status-row .power-crest-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1.3rem;
 }
 

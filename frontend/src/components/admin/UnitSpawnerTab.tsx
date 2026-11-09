@@ -9,6 +9,7 @@ import {
   type Unit,
   type UnitType,
 } from '../../types/diplomacy';
+import { PowerFlag } from '../PowerFlag';
 
 export interface UnitSpawnerTabProps {
   spawnPower: Power;
@@ -184,7 +185,13 @@ export const UnitSpawnerTab: React.FC<UnitSpawnerTabProps> = ({
                     className="admin-unit-country-badge"
                     style={{ backgroundColor: pMeta.color }}
                   >
-                    {pMeta.crest} {pMeta.shortName}
+                    <PowerFlag
+                      power={u.power}
+                      width={16}
+                      height={11}
+                      style={{ marginRight: 5 }}
+                    />
+                    {pMeta.shortName}
                   </span>
                   <span className="admin-unit-type-label">
                     {u.unit_type === 'A' ? 'Army' : 'Fleet'} in {u.province}

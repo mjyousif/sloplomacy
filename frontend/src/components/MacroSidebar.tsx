@@ -36,6 +36,7 @@ import type { SheetSnap } from '../utils/sheetHelpers';
 import { BottomSheet } from './BottomSheet';
 import { BuildSlotCard } from './macro/BuildSlotCard';
 import { UnitMacroCard } from './macro/UnitMacroCard';
+import { PowerFlag } from './PowerFlag';
 import { VersionBadge } from './VersionBadge';
 
 export interface MacroSidebarProps {
@@ -817,7 +818,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           >
             {lockBar}
             <div className="macro-sheet-status-row" inert={locked || undefined}>
-              <span className="power-crest-icon">{powerMeta.crest}</span>
+              <span className="power-crest-icon">
+                <PowerFlag power={activePower} width={24} height={16} />
+              </span>
               <div className="macro-sheet-power">
                 <span className="power-name-text">{powerMeta.shortName}</span>
                 <span
@@ -884,7 +887,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           title={`Commanding ${powerMeta.name} (${myActiveFieldUnits.length} Units, ${scCountByPower[activePower]} SC)`}
           style={{ borderColor: powerMeta.color }}
         >
-          <span>{powerMeta.crest}</span>
+          <PowerFlag power={activePower} width={18} height={12} />
         </div>
 
         <div
@@ -940,7 +943,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         <div className="power-banner-top">
           <div className="power-banner-main-col">
             <div className="power-banner-title">
-              <span className="power-crest-icon">{powerMeta.crest}</span>
+              <span className="power-crest-icon">
+                <PowerFlag power={activePower} width={22} height={15} />
+              </span>
               <span className="power-name-text">{powerMeta.name}</span>
             </div>
             <div className="power-banner-sub">

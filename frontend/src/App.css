@@ -4507,8 +4507,20 @@
   gap: 7px;
 }
 
+.power-card-rank {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94a3b8;
+  min-width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
 .power-card-crest {
-  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
 }
 
@@ -4523,6 +4535,16 @@
   gap: 5px;
   font-size: 0.72rem;
   color: #e2e8f0;
+}
+
+.power-card-player {
+  font-size: 0.62rem;
+  color: #94a3b8;
+  font-weight: 500;
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .active-tag {
