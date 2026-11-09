@@ -120,39 +120,44 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
         )}
       </div>
 
-      {viewingPast && (
-        <fieldset className="turn-history-powers" aria-label="Nations shown">
+      {/* Always laid out, so the arrows above never move when a past turn is picked and a
+          quick run of clicks on ‹ can't land on a chip. On the live turn it is greyed out. */}
+      <fieldset
+        className="turn-history-powers"
+        aria-label="Nations shown"
+        disabled={!viewingPast}
+        title={viewingPast ? undefined : 'Pick a past turn to filter by nation'}
+      >
+        <button
+          type="button"
+          className={`turn-history-chip ${power === null ? 'active' : ''}`}
+          data-testid="turn-history-power"
+          data-power="ALL"
+          aria-pressed={power === null}
+          onClick={() => onSelectPower(null)}
+        >
+          All
+        </button>
+        {ALL_POWERS.map((p) => (
           <button
+            key={p}
             type="button"
-            className={`turn-history-chip ${power === null ? 'active' : ''}`}
+            className={`turn-history-chip ${power === p ? 'active' : ''}`}
             data-testid="turn-history-power"
-            data-power="ALL"
-            aria-pressed={power === null}
-            onClick={() => onSelectPower(null)}
+            data-power={p}
+            aria-pressed={power === p}
+            title={`Show only ${POWER_METADATA[p].name}'s orders`}
+            style={
+              {
+                '--chip-color': POWER_METADATA[p].color,
+              } as React.CSSProperties
+            }
+            onClick={() => onSelectPower(power === p ? null : p)}
           >
-            All
+            {powerCode(p)}
           </button>
-          {ALL_POWERS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              className={`turn-history-chip ${power === p ? 'active' : ''}`}
-              data-testid="turn-history-power"
-              data-power={p}
-              aria-pressed={power === p}
-              title={`Show only ${POWER_METADATA[p].name}'s orders`}
-              style={
-                {
-                  '--chip-color': POWER_METADATA[p].color,
-                } as React.CSSProperties
-              }
-              onClick={() => onSelectPower(power === p ? null : p)}
-            >
-              {powerCode(p)}
-            </button>
-          ))}
-        </fieldset>
-      )}
+        ))}
+      </fieldset>
     </section>
   );
 };

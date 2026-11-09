@@ -4747,8 +4747,16 @@
   cursor: pointer;
 }
 
-.turn-history-chip:hover {
+.turn-history-chip:hover:not(:disabled) {
   color: #ffffff;
+}
+
+.turn-history-powers:disabled {
+  opacity: 0.35;
+}
+
+.turn-history-chip:disabled {
+  cursor: default;
 }
 
 .turn-history-chip.active {

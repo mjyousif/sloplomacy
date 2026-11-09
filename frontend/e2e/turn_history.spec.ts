@@ -24,6 +24,13 @@ test.describe('Scenario 07: Turn history', () => {
       await expect(
         page.locator('[data-testid="turn-history-select"]'),
       ).toHaveValue('live');
+      // The nation chips are laid out but off on the live turn.
+      // (Playwright reads disabled from the chips, which inherit it from their fieldset.)
+      const chips = page.locator(
+        '[data-testid="turn-history-power"][data-power="ALL"]',
+      );
+      await expect(chips).toBeVisible();
+      await expect(chips).toBeDisabled();
       // Live: only France's own orders are drawn, and nobody else's.
       await expect(
         page.locator(
@@ -32,10 +39,17 @@ test.describe('Scenario 07: Turn history', () => {
       ).toHaveCount(0);
       await recorder.recordStep(page, '01_live_turn_with_history_footer');
 
-      // 2. Pick Spring 1901: every nation's orders, coloured by how they resolved.
-      await page
-        .locator('[data-testid="turn-history-select"]')
-        .selectOption('0');
+      // 2. Step back to Spring 1901 with ‹: every nation's orders, coloured by how they resolved.
+      // The arrows must not move as the turn changes, so a quick run of clicks on ‹ never
+      // lands on something else (the chips row used to pop in and push them up).
+      const prev = page.locator('[data-testid="turn-history-prev"]');
+      const prevBoxLive = await prev.boundingBox();
+      await prev.click();
+      await expect(
+        page.locator('[data-testid="turn-history-select"]'),
+      ).toHaveValue('0');
+      await expect(chips).toBeEnabled();
+      expect(await prev.boundingBox()).toEqual(prevBoxLive);
       const germanMove = page.locator(
         '[data-testid="order-arrow"][data-order-unit="GER_A_MUN"][data-order-target="BUR"]',
       );
@@ -79,9 +93,8 @@ test.describe('Scenario 07: Turn history', () => {
         page.locator('[data-testid="turn-history-select"]'),
       ).toHaveValue('live');
       await expect(germanMove).toHaveCount(0);
-      await expect(
-        page.locator('[data-testid="turn-history-power"]'),
-      ).toHaveCount(0);
+      await expect(chips).toBeDisabled();
+      expect(await prev.boundingBox()).toEqual(prevBoxLive);
       await recorder.recordStep(page, '04_back_to_live');
 
       recorder.finalize('PASSED');

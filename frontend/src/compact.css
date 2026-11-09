@@ -1146,6 +1146,13 @@
   display: none;
 }
 
+/* Eight chips don't fit one row at a finger's width, so they sit in an even 4 × 2 grid. */
+[data-layout="compact"] .turn-history-powers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
 [data-layout="compact"] .turn-history-chip {
   height: 34px;
   min-width: 40px;
