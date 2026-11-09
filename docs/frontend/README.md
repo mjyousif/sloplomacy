@@ -38,6 +38,8 @@ frontend/
     │   ├── SanityCheckModal.tsx # Pre-finalization tactical blunder warning dialogue
     │   ├── ConfirmModal.tsx     # In-app confirmation for destructive actions; Shift+click skips it
     │   ├── ConfirmModal.test.ts # Vitest suite for the confirmation and its Shift rule
+    │   ├── PowerFlag.tsx        # Vector SVG historical World War I (1901-1918) flags for all 7 Great Powers
+    │   ├── PowerFlag.test.tsx   # Vitest suite for historical flag rendering and accessibility
     │   └── VersionBadge.tsx     # Git commit short SHA indicator, clipboard copy & GitHub commit link
     ├── data/
     │   ├── europeMapGeometry.ts # Authentic SVG vector paths, province centers & defs
@@ -61,6 +63,8 @@ frontend/
         ├── adminHelpers.test.ts # Vitest suite for admin authorization and mutations
         ├── displayPrefs.ts      # Display preference types, defaults, sanitizing & sign-in rules
         ├── displayPrefs.test.ts # Vitest suite for display preferences
+        ├── powerHelpers.ts      # Great Power ranking (SC descending, unit tiebreaker, tied rank sharing)
+        ├── powerHelpers.test.ts # Vitest suite for diplomatic standing ranking
         ├── sheetHelpers.ts      # Phone order sheet stops: snap heights, release and tap stepping
         └── sheetHelpers.test.ts # Vitest suite for the sheet's snap math
 ```

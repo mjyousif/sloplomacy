@@ -150,6 +150,44 @@ describe('ToolsSidebar', () => {
     expect(html).toContain('Open Admin Console');
   });
 
+  it('renders SVG flags and rank badges in diplomatic standings', () => {
+    const html = renderToString(
+      React.createElement(ToolsSidebar, baseToolsProps),
+    );
+    expect(html).toContain('data-testid="power-rank"');
+    expect(html).toContain('data-testid="power-flag-france"');
+    expect(html).toContain('data-testid="power-flag-england"');
+    expect(html).toContain('data-testid="power-flag-russia"');
+  });
+
+  it('renders player names in diplomatic standings when participants are provided (issue 122)', () => {
+    const html = renderToString(
+      React.createElement(ToolsSidebar, {
+        ...baseToolsProps,
+        isMultiplayer: true,
+        participants: {
+          FRANCE: {
+            user_id: 'u1',
+            email: 'napoleon@example.com',
+            display_name: 'Napoleon',
+            power: 'FRANCE',
+            joined_at: '2026-11-06T00:00:00Z',
+          },
+          ENGLAND: {
+            user_id: 'u2',
+            email: 'nelson@example.com',
+            display_name: 'AdmiralNelson',
+            power: 'ENGLAND',
+            joined_at: '2026-11-06T00:00:00Z',
+          },
+        },
+      }),
+    );
+    expect(html).toContain('Napoleon');
+    expect(html).toContain('AdmiralNelson');
+    expect(html).toContain('Open'); // Unclaimed seat
+  });
+
   describe('as the phone drawer', () => {
     const drawer = (props: Partial<ToolsSidebarProps>) =>
       renderToString(

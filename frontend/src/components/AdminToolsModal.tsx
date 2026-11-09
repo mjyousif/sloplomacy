@@ -29,6 +29,7 @@ import {
   type UnitType,
 } from '../types/diplomacy';
 import { useConfirm } from './ConfirmModal';
+import { PowerFlag } from './PowerFlag';
 
 const API_BASE = '/api';
 
@@ -896,7 +897,13 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
                               className="admin-unit-country-badge"
                               style={{ backgroundColor: pMeta.color }}
                             >
-                              {pMeta.crest} {pMeta.shortName}
+                              <PowerFlag
+                                power={u.power}
+                                width={16}
+                                height={11}
+                                style={{ marginRight: 5 }}
+                              />
+                              {pMeta.shortName}
                             </span>
                             <span className="admin-unit-type-label">
                               {u.unit_type === 'A' ? 'Army' : 'Fleet'} in{' '}

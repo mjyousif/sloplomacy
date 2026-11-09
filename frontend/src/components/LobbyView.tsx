@@ -28,6 +28,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../types/diplomacy';
+import { PowerFlag } from './PowerFlag';
 import { VersionBadge } from './VersionBadge';
 
 interface LobbyViewProps {
@@ -414,7 +415,13 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                               color: pMeta.color,
                             }}
                           >
-                            {pMeta.crest} Playing as {pMeta.shortName} (Locked)
+                            <PowerFlag
+                              power={myPower}
+                              width={18}
+                              height={12}
+                              style={{ marginRight: 6 }}
+                            />
+                            Playing as {pMeta.shortName} (Locked)
                           </span>
                           <span
                             className={`my-finalize-status ${
@@ -556,7 +563,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                             <span>
                               You are commanding{' '}
                               <strong>
-                                {POWER_METADATA[myExistingClaim.power].crest}{' '}
+                                <PowerFlag
+                                  power={myExistingClaim.power}
+                                  width={18}
+                                  height={12}
+                                  style={{ marginRight: 5 }}
+                                />
                                 {
                                   POWER_METADATA[myExistingClaim.power]
                                     .shortName
@@ -629,7 +641,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                             >
                               <div className="power-slot-top">
                                 <span className="power-slot-crest">
-                                  {meta.crest}
+                                  <PowerFlag
+                                    power={pwr}
+                                    width={18}
+                                    height={12}
+                                  />
                                 </span>
                                 <span
                                   className="power-slot-name"
@@ -762,7 +778,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                           backgroundColor: selected ? meta.lightBg : undefined,
                         }}
                       >
-                        <span>{meta.crest}</span>
+                        <PowerFlag power={pwr} width={22} height={15} />
                         <span>{meta.shortName}</span>
                       </button>
                     );
@@ -851,7 +867,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                           backgroundColor: selected ? meta.lightBg : undefined,
                         }}
                       >
-                        <span>{meta.crest}</span>
+                        <PowerFlag power={pwr} width={22} height={15} />
                         <span>{meta.shortName}</span>
                       </button>
                     );

@@ -1412,6 +1412,7 @@ export function App() {
             surrenderedPowers={gameState.surrendered_powers}
             issues={gameState.issues}
             isMultiplayer={viewMode === 'multiplayer'}
+            participants={activeGameSummary?.participants}
             sandboxMode={sandboxMode}
             onToggleSandboxMode={handleToggleSandboxMode}
             onClearForeignPreMoves={handleClearForeignPreMoves}

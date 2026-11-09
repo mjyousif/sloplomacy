@@ -102,7 +102,15 @@ In the compact layout the game screen is the map, with everything else layered o
   - **Tactical Warning / Dislodgement**: Red/amber alert indicating illegal orders, cut supports, or retreats.
 
 ### 3. Great Powers Diplomatic Standing & Command Selector
-- Lists all 7 Great Powers (Austria, England, France, Germany, Italy, Russia, Turkey) with their heraldic crests, national colors, controlled Supply Centers, and active field units.
+- Lists all 7 Great Powers (Austria-Hungary, England, France, Germany, Italy, Russia, Turkey) with their authentic World War I (1901–1918) SVG flags, dynamic numeric ranking (1–7), player names in multiplayer, national colors, controlled Supply Centers, and active field units.
+- **Victory Points Ranking & Sorting**:
+  - The diplomatic standings automatically shuffle based on victory points: nations with the most controlled Supply Centers (SC) appear at the top.
+  - Ties in Supply Centers are broken by total active unit count descending.
+  - If still tied, countries share the exact same numeric rank (1–7) displayed to the left of their flag.
+- **Player Names**:
+  - In multiplayer campaigns, each standing entry displays the claimed commander's player name (e.g. `(AdmiralNelson)`) or indicates `(Open)` if unclaimed.
+- **Historical WWI Flag SVGs (`PowerFlag.tsx`)**:
+  - Replaces emojis with crisp vector SVGs representing 1901–1918 flags: Austro-Hungarian dual civil ensign with Austrian and Hungarian coats of arms, British Union Flag, French Tricolour, German Empire black-white-red tricolour, Kingdom of Italy tricolour with crowned Savoy shield, Russian Empire tricolour with the 1914 imperial eagle canton, and Ottoman Empire crescent and star.
 - **Sandbox Mode**: Clicking any power immediately switches active command to that nation for hypothetical experimentation.
 - **Multiplayer Mode**: Displays diplomatic status (Orders Finalized, Drafting, or Civil Disorder).
 

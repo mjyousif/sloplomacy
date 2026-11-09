@@ -6,6 +6,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../types/diplomacy';
+import { PowerFlag } from './PowerFlag';
 
 interface SurrenderModalProps {
   isOpen: boolean;
@@ -117,7 +118,9 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
             backgroundColor: meta.lightBg,
           }}
         >
-          <div className="surrender-power-crest">{meta.crest}</div>
+          <div className="surrender-power-crest">
+            <PowerFlag power={power} width={42} height={28} />
+          </div>
           <div className="surrender-power-info">
             <strong style={{ color: meta.color }}>
               {meta.name} ({meta.shortName})
