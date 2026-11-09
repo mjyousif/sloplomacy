@@ -202,7 +202,8 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   │   │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
 │   │   │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
 │   │   │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
-│   │   │   ├── CompactTopBar.tsx    # Phone top bar: back, turn, order-problem count & ⋯ menu
+│   │   │   ├── BottomSheet.tsx      # Phone pull-up panel (peek, half, full) that holds the order sheet
+│   │   │   ├── CompactTopBar.tsx    # Phone top bar: back, ≡ tools, turn, order-problem count & ⋯ menu
 │   │   │   ├── DisplaySettingsMenu.tsx # Top bar menu for this player's piece style and marks
 │   │   │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every style
 │   │   │   ├── PhaseTimerWidget.tsx # Bottom-left turn clock, votes, ready-up & +5 minutes
@@ -226,7 +227,8 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   │       ├── orderHelpers.ts      # Move reachability, support targeting & retreat calculations
 │   │       ├── adminHelpers.ts      # Admin permission checks & payload formatters
 │   │       ├── timerHelpers.ts      # Turn clock labels, vote counts & formatting
-│   │       ├── mapCameraHelpers.ts  # Map pan and zoom bounds, zoom-at-point, pinch & phone camera
+│   │       ├── mapCameraHelpers.ts  # Map pan and zoom bounds, zoom-at-point, pinch, phone camera & tap targets
+│   │       ├── sheetHelpers.ts      # Phone order sheet stops: snap heights, release and tap stepping
 │   │       └── displayPrefs.ts      # Display preference types, defaults, sanitizing & sign-in rules
 │   ├── package.json         # Vitest suites sit next to their code as *.test.ts
 │   └── vite.config.ts
@@ -310,6 +312,8 @@ The game cycles through three standard phases per year:
 - Phones get a compact layout, chosen by `useCompactLayout()` from `COMPACT_LAYOUT_QUERY` and written on the shell as `data-layout`. The rules are in [docs/frontend/styling-and-themes.md](docs/frontend/styling-and-themes.md#responsive--layout-specifications).
 - **Invariant**: Every phone style lives in `src/compact.css` under `[data-layout='compact']`. Don't add width `@media` rules, so the breakpoint stays in one place.
 - **Invariant**: The compact layout must not change the wide one. Check a change by comparing every element's box at 1440×900 before and after.
+- **Invariant**: Phones have no sidebar rails. Orders live in the pull-up sheet (`MacroSidebar` with `variant="sheet"`, inside `BottomSheet`) and tools in the ≡ drawer (`ToolsSidebar` with `variant="drawer"`). Both variants arrange the desktop components' own pieces, so a change to an order control reaches both layouts. Don't copy one into the other.
+- **Invariant**: The phone game area must never scroll. `.war-room-workspace` uses `overflow: clip`, because the lowered sheet runs off the bottom and a box with `overflow: hidden` can still be scrolled by focus, `scrollIntoView` or script, which slides the whole game screen up.
 - Hover handlers use `onPointerEnter`/`onPointerLeave` and ignore `pointerType === 'touch'`, so a tap never leaves a hover highlight behind.
 
 ---

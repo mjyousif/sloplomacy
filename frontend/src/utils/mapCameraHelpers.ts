@@ -228,3 +228,97 @@ export function getPhoneDefaultCamera(
     options,
   );
 }
+
+/** The part of the map element that isn't covered, in element pixels. */
+export interface VisibleArea {
+  top: number;
+  bottom: number;
+  left?: number;
+  right?: number;
+}
+
+/**
+ * Pans, without zooming, so the board point `point` sits at least `margin` element pixels inside
+ * `visible`. Each axis that is out of range is centred in the visible area, and an axis already
+ * in range is left alone, so a point that is comfortably in view doesn't move the camera at all
+ * (the same object comes back). On a phone this keeps a selected unit, and the provinces around
+ * it, clear of the docked unit bar.
+ */
+export function keepPointInView(
+  camera: CameraState,
+  point: Point2D,
+  width: number,
+  height: number,
+  visible: VisibleArea,
+  margin: number,
+  options?: CameraBoundsOptions,
+): CameraState {
+  if (!(width > 0) || !(height > 0)) return camera;
+  const { scale, offsetX, offsetY } = getViewportFit(width, height);
+  const cx = options?.centerX ?? MAP_CENTER_X;
+  const cy = options?.centerY ?? MAP_CENTER_Y;
+  const screenX =
+    offsetX + (cx + (point.x - cx) * camera.zoom + camera.x) * scale;
+  const screenY =
+    offsetY + (cy + (point.y - cy) * camera.zoom + camera.y) * scale;
+
+  const left = visible.left ?? 0;
+  const right = visible.right ?? width;
+  const xInView = screenX >= left + margin && screenX <= right - margin;
+  const yInView =
+    screenY >= visible.top + margin && screenY <= visible.bottom - margin;
+  if (xInView && yInView) return camera;
+
+  return clampCamera(
+    {
+      x: xInView ? camera.x : camera.x + ((left + right) / 2 - screenX) / scale,
+      y: yInView
+        ? camera.y
+        : camera.y + ((visible.top + visible.bottom) / 2 - screenY) / scale,
+      zoom: camera.zoom,
+    },
+    options,
+  );
+}
+
+/** The smallest tap target a piece gets on a phone, as a radius in screen pixels (44px across). */
+export const MIN_TOUCH_RADIUS_PX = 22;
+
+/**
+ * Half the distance from each point to its nearest neighbour, so circles of those radii never
+ * overlap. A point with no neighbour gets Infinity.
+ */
+export function halfNearestDistances(
+  points: Record<string, Point2D>,
+): Record<string, number> {
+  const ids = Object.keys(points);
+  const result: Record<string, number> = {};
+  for (const id of ids) {
+    let nearest = Infinity;
+    const p = points[id];
+    for (const other of ids) {
+      if (other === id) continue;
+      const q = points[other];
+      const d = Math.hypot(p.x - q.x, p.y - q.y);
+      if (d < nearest) nearest = d;
+    }
+    result[id] = nearest / 2;
+  }
+  return result;
+}
+
+/**
+ * The hit-area radius, in board units, for a piece on a phone. It grows until the piece is at
+ * least `minScreenRadius` pixels across on screen (`pxPerUnit` is screen pixels per board unit at
+ * the current zoom), but stops at `cap` so it never reaches into a neighbour's target. It never
+ * shrinks below the style's own `baseRadius`.
+ */
+export function compactHitRadius(
+  baseRadius: number,
+  pxPerUnit: number,
+  cap: number,
+  minScreenRadius: number = MIN_TOUCH_RADIUS_PX,
+): number {
+  if (!(pxPerUnit > 0)) return baseRadius;
+  return Math.max(baseRadius, Math.min(minScreenRadius / pxPerUnit, cap));
+}

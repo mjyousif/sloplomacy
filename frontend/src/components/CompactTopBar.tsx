@@ -9,6 +9,7 @@ import {
   FlaskConical,
   LogIn,
   LogOut,
+  Menu,
   MoreHorizontal,
   ShieldCheck,
   SlidersHorizontal,
@@ -42,6 +43,11 @@ export interface CompactTopBarProps {
   authUser: AuthUser | null;
   onSignIn: () => void;
   onSignOut: () => void;
+  /** In a game, ≡ opens the tools drawer. */
+  toolsOpen?: boolean;
+  onToggleTools?: () => void;
+  /** So the drawer can hand focus back to ≡ when it closes. */
+  toolsToggleRef?: React.Ref<HTMLButtonElement>;
 }
 
 /** "2 errors, 1 warning", for the problem badge's label. */
@@ -79,6 +85,9 @@ export function CompactTopBar({
   authUser,
   onSignIn,
   onSignOut,
+  toolsOpen = false,
+  onToggleTools,
+  toolsToggleRef,
 }: CompactTopBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuView, setMenuView] = useState<'main' | 'display'>('main');
@@ -137,9 +146,29 @@ export function CompactTopBar({
         </div>
       )}
 
+      {inGame && onToggleTools && (
+        <button
+          ref={toolsToggleRef}
+          type="button"
+          data-testid="compact-tools-toggle"
+          className={`compact-bar-icon-btn ${toolsOpen ? 'open' : ''}`}
+          onClick={onToggleTools}
+          aria-label={toolsOpen ? 'Close tools' : 'Tools'}
+          aria-expanded={toolsOpen}
+        >
+          <Menu size={20} />
+        </button>
+      )}
+
       {turn && (
+        // Two lines, so the full phase name still fits beside ←, ≡, the problem badge and ⋯ at 360px.
+        // The separator is only hidden from sight, so the text still reads "Spring 1901 · Movement".
         <span className="compact-turn-text" data-testid="compact-turn-text">
-          {turn.season} {turn.year} · {turn.phase}
+          <span className="compact-turn-season">
+            {turn.season} {turn.year}
+          </span>
+          <span className="compact-turn-sep"> · </span>
+          <span className="compact-turn-phase">{turn.phase}</span>
         </span>
       )}
 

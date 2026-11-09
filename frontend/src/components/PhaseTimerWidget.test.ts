@@ -48,6 +48,43 @@ function render(props: Partial<PhaseTimerWidgetProps>): string {
   );
 }
 
+describe('PhaseTimerWidget on a phone', () => {
+  it('starts as a pill that says what the clock is doing', () => {
+    const html = render({ compact: true, timer: running });
+    expect(html).toContain('data-testid="phase-timer-pill"');
+    expect(html).toContain('14:05');
+    expect(html).not.toContain('5 Minutes');
+    expect(html).not.toContain('phase-timer-widget');
+  });
+
+  it('labels each stage in one short line', () => {
+    expect(render({ compact: true, timer: voting })).toContain('Vote · 0:42');
+    expect(render({ compact: true, timer: paused })).toContain(
+      'Paused · 1/3 ready',
+    );
+    expect(render({ compact: true, isHost: true })).toContain(
+      'Start the clock',
+    );
+    expect(render({ compact: true })).toContain('No clock yet');
+  });
+
+  it('marks the pill while the real clock runs behind Hypothetical Mode', () => {
+    expect(
+      render({ compact: true, timer: running, hypothetical: true }),
+    ).toContain('phase-timer-pill-dot');
+    expect(render({ compact: true, timer: running })).not.toContain(
+      'phase-timer-pill-dot',
+    );
+  });
+
+  it('is unchanged on a wide screen', () => {
+    const html = render({ timer: running });
+    expect(html).toContain('phase-timer-widget');
+    expect(html).not.toContain('phase-timer-pill');
+    expect(html).not.toContain('phase-timer-collapse');
+  });
+});
+
 describe('PhaseTimerWidget', () => {
   it('offers the start button to the host only', () => {
     expect(render({ isHost: true })).toContain('Start First Vote');

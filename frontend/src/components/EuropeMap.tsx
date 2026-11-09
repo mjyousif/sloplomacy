@@ -57,10 +57,13 @@ import {
   type CameraBoundsOptions,
   COMPACT_MAX_ZOOM,
   clampCamera,
+  compactHitRadius,
   DEFAULT_CAMERA,
   elementPointToViewBox,
   getPhoneDefaultCamera,
   getViewportFit,
+  halfNearestDistances,
+  keepPointInView,
   MAP_CENTER_X,
   MAP_CENTER_Y,
   pinchStep,
@@ -77,6 +80,7 @@ import {
   getPieceFrame,
   MapPiece,
   makePiecePill,
+  type PieceFrame,
   PieceHitArea,
   PieceHoldOutline,
   PieceOutline,
@@ -122,7 +126,21 @@ export interface EuropeMapProps {
    * around the player's own units, and puts zoom buttons on the map.
    */
   compact?: boolean;
+  /**
+   * Phone only: told when the docked unit bar appears or goes, so App can lower the order sheet
+   * out of its way. The bar sits at the bottom of the map, just above the sheet's peek.
+   */
+  onDockedBarChange?: (visible: boolean) => void;
 }
+
+/** How far the docked unit bar sits above the bottom of the map (`.unit-docked-bar` in compact.css). */
+const DOCKED_BAR_INSET = 8;
+
+/** On a phone, a selected unit is kept at least this far (px) from the edges of the uncovered map. */
+const SELECTION_VIEW_MARGIN = 80;
+
+/** How long the zoom must stay still before a phone's tap targets are resized for it. */
+const TOUCH_TARGET_SETTLE_MS = 150;
 
 type MapInteractionMode =
   | 'MOVE'
@@ -499,6 +517,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       pieceStyle,
       unitMark,
       compact = false,
+      onDockedBarChange,
     },
     ref,
   ) {
@@ -506,6 +525,30 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
     const svgRef = useRef<SVGSVGElement | null>(null);
     const cameraGroupRef = useRef<SVGGElement | null>(null);
     const floatingMenuRef = useRef<HTMLDivElement | null>(null);
+
+    // On a phone the unit menu, build menu and coast picker dock as one bar at the bottom of the
+    // map instead of floating beside the unit. The space the bar takes (its height plus the 8px
+    // it sits above the map's edge, see compact.css) goes on the map as --docked-bar-h, so the
+    // zoom buttons can sit above it.
+    const dockObserverRef = useRef<ResizeObserver | null>(null);
+    const dockRef = useCallback((el: HTMLDivElement | null) => {
+      dockObserverRef.current?.disconnect();
+      dockObserverRef.current = null;
+      const container = containerRef.current;
+      if (!el) {
+        container?.style.removeProperty('--docked-bar-h');
+        return;
+      }
+      const apply = () =>
+        container?.style.setProperty(
+          '--docked-bar-h',
+          `${Math.ceil(el.getBoundingClientRect().height) + DOCKED_BAR_INSET}px`,
+        );
+      apply();
+      if (typeof ResizeObserver === 'undefined') return;
+      dockObserverRef.current = new ResizeObserver(apply);
+      dockObserverRef.current.observe(el);
+    }, []);
 
     // Camera state stored in a mutable ref for zero-re-render 60fps+ pan & zoom via requestAnimationFrame
     const cameraRef = useRef<{ x: number; y: number; zoom: number }>({
@@ -738,6 +781,33 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       }
       return homes;
     }, [isAdjustmentPhase, builds, activePower, canEditAnyPower]);
+
+    // Phone: how far each piece's tap target may grow before it would reach a neighbour's.
+    const touchHitCaps = useMemo(() => {
+      if (!compact) return null;
+      const points: Record<string, Point> = {};
+      for (const u of units) points[u.id] = getUnitPoint(u);
+      for (const [homeProv, pwr] of Object.entries(controllableBuildHomes)) {
+        points[`BUILD_${pwr}_${homeProv}`] = getProvincePoint(homeProv);
+      }
+      return halfNearestDistances(points);
+    }, [
+      compact,
+      units,
+      controllableBuildHomes,
+      getUnitPoint,
+      getProvincePoint,
+    ]);
+
+    /** The extra tap radius a piece gets on a phone, or 0 on a wide screen. */
+    const touchHitRadius = (pieceId: string, frame: PieceFrame): number =>
+      touchHitCaps
+        ? compactHitRadius(
+            frame.hitRadius,
+            touchPxPerUnit,
+            touchHitCaps[pieceId] ?? Infinity,
+          )
+        : 0;
 
     // Count how many valid supports each moving/holding unit receives among visible orders
     const supportCountByUnitId = useMemo(() => {
@@ -1312,12 +1382,45 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
 
     // Tells App the zoom, but only when the rounded figure changes, so a wheel spin or a pinch
     // doesn't re-render the whole app on every frame.
+    // Phone: screen pixels per board unit once the zoom settles, which sizes the tap targets.
+    // It updates after the zoom stops changing, not on every frame of a pinch.
+    const [touchPxPerUnit, setTouchPxPerUnit] = useState(0);
+    const touchSettleTimerRef = useRef<number | null>(null);
+    const compactRef = useRef(compact);
+    compactRef.current = compact;
+    const settleTouchTargets = useCallback(() => {
+      if (!compactRef.current) return;
+      if (touchSettleTimerRef.current !== null)
+        window.clearTimeout(touchSettleTimerRef.current);
+      touchSettleTimerRef.current = window.setTimeout(() => {
+        touchSettleTimerRef.current = null;
+        const rect = svgRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        setTouchPxPerUnit(
+          getViewportFit(rect.width, rect.height).scale *
+            cameraRef.current.zoom,
+        );
+      }, TOUCH_TARGET_SETTLE_MS);
+    }, []);
+
+    useEffect(() => {
+      if (!compact) return;
+      settleTouchTargets();
+      window.addEventListener('resize', settleTouchTargets);
+      return () => {
+        window.removeEventListener('resize', settleTouchTargets);
+        if (touchSettleTimerRef.current !== null)
+          window.clearTimeout(touchSettleTimerRef.current);
+      };
+    }, [compact, settleTouchTargets]);
+
     const reportZoom = useCallback(() => {
       const percent = Math.round(cameraRef.current.zoom * 100);
       if (percent === reportedZoomRef.current) return;
       reportedZoomRef.current = percent;
       onZoomChangeRef.current?.(percent);
-    }, []);
+      settleTouchTargets();
+    }, [settleTouchTargets]);
 
     const scheduleCameraSync = useCallback(() => {
       if (rafIdRef.current !== null) return;
@@ -1598,7 +1701,78 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       reportZoom();
     }, [reportZoom]);
 
-    const floatingPos = getSelectedUnitFloatingPosition();
+    // Phones dock the menus instead, so they skip the placement math.
+    const floatingPos = compact ? null : getSelectedUnitFloatingPosition();
+    const floatingStyle = floatingPos
+      ? { left: floatingPos.left, top: floatingPos.top }
+      : undefined;
+    const menuRef = compact ? dockRef : floatingMenuRef;
+    const menuClassName = compact
+      ? 'unit-floating-menu unit-docked-bar'
+      : 'unit-floating-menu';
+    // Only the floating menu can be dragged. A docked bar stays put.
+    const dragHeaderProps = compact
+      ? {}
+      : {
+          title: 'Drag to move this menu anywhere',
+          onPointerDown: handleMenuDragStart,
+          onPointerMove: handleMenuDragMove,
+          onLostPointerCapture: handleMenuDragEnd,
+        };
+    const tap = compact ? 'Tap' : 'Click';
+    const tapLower = tap.toLowerCase();
+    const showBuildMenu = Boolean(
+      selectedBuildProv && selectedUnitId && (compact || floatingPos),
+    );
+    // A phone shows the coast picker in the bar's place while it is open.
+    const showUnitMenu = Boolean(
+      selectedUnit && (compact ? !pendingCoastChoice : floatingPos),
+    );
+    const dockedBarVisible =
+      compact && (showBuildMenu || Boolean(selectedUnit));
+
+    const onDockedBarChangeRef = useRef(onDockedBarChange);
+    onDockedBarChangeRef.current = onDockedBarChange;
+    useEffect(() => {
+      if (compact) onDockedBarChangeRef.current?.(dockedBarVisible);
+    }, [compact, dockedBarVisible]);
+
+    // Phone: whatever was just selected, from the map or from its card in the order sheet, is
+    // panned clear of the docked bar with room around it for the provinces to tap. It only runs
+    // when the selection changes, so panning away afterwards is left alone.
+    const selectionAnchorRef = useRef<Point | null>(null);
+    selectionAnchorRef.current = selectedUnit
+      ? getUnitPoint(selectedUnit)
+      : selectedBuildProv
+        ? getProvincePoint(selectedBuildProv)
+        : null;
+    // Through a ref, so a re-render that changes syncCameraDOM can't re-run this and undo a pan.
+    const syncCameraDOMRef = useRef(syncCameraDOM);
+    syncCameraDOMRef.current = syncCameraDOM;
+    useEffect(() => {
+      if (!compact) return;
+      const anchor = selectionAnchorRef.current;
+      const svg = svgRef.current;
+      if (!anchor || !svg) return;
+      const rect = svg.getBoundingClientRect();
+      // The dock ref has already put the bar's space on the map by the time effects run.
+      const barSpace =
+        parseFloat(
+          containerRef.current?.style.getPropertyValue('--docked-bar-h') ?? '',
+        ) || 0;
+      const next = keepPointInView(
+        cameraRef.current,
+        anchor,
+        rect.width,
+        rect.height,
+        { top: 0, bottom: rect.height - barSpace },
+        SELECTION_VIEW_MARGIN,
+        cameraOptionsRef.current,
+      );
+      if (next === cameraRef.current) return;
+      cameraRef.current = next;
+      syncCameraDOMRef.current();
+    }, [compact, selectedUnitId, selectedBuildProv]);
     const activeOrderButton = getActiveOrderButton(
       interactionMode,
       selectedUnit ? orders[selectedUnit.id] : undefined,
@@ -1644,8 +1818,17 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
           <div className="simulation-map-banner">
             <Eye size={16} />
             <span>
-              <strong>HYPOTHETICAL PLANNING &amp; OUTCOME PREVIEW</strong> —
-              Foreign guesses are discarded upon exit
+              {compact ? (
+                // A phone has room for one short line here.
+                <>
+                  <strong>HYPOTHETICAL</strong> · guesses are discarded on exit
+                </>
+              ) : (
+                <>
+                  <strong>HYPOTHETICAL PLANNING &amp; OUTCOME PREVIEW</strong> —
+                  Foreign guesses are discarded upon exit
+                </>
+              )}
             </span>
             <button
               className="sim-advance-btn"
@@ -1670,7 +1853,12 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         {/* Coast Disambiguation Popup */}
         {selectedUnit && pendingCoastChoice && (
           <div
-            className="coast-picker-modal"
+            ref={compact ? dockRef : undefined}
+            className={
+              compact
+                ? 'coast-picker-modal unit-docked-bar'
+                : 'coast-picker-modal'
+            }
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1704,25 +1892,19 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         )}
 
         {/* DRAGGABLE COMPACT FLOATING TACTICAL MENU (FOR BUILD SLOTS IN WINTER ADJUSTMENTS) */}
-        {selectedBuildProv && selectedUnitId && floatingPos && (
+        {showBuildMenu && selectedBuildProv && selectedUnitId && (
           <div
-            ref={floatingMenuRef}
-            className="unit-floating-menu"
+            ref={menuRef}
+            className={menuClassName}
+            data-testid={compact ? 'unit-docked-bar' : undefined}
             style={{
-              left: floatingPos.left,
-              top: floatingPos.top,
+              ...floatingStyle,
               borderColor: '#22c55e',
             }}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
-            <div
-              className="floating-menu-header"
-              title="Drag to move this menu anywhere"
-              onPointerDown={handleMenuDragStart}
-              onPointerMove={handleMenuDragMove}
-              onLostPointerCapture={handleMenuDragEnd}
-            >
+            <div className="floating-menu-header" {...dragHeaderProps}>
               <div className="floating-unit-title">
                 <GripHorizontal size={13} className="floating-drag-grip" />
                 <PlusCircle size={13} style={{ color: '#4ade80' }} />
@@ -1734,6 +1916,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
                 title="Close (Esc)"
               >
                 <X size={14} />
+                {compact && <span>Cancel</span>}
               </button>
             </div>
 
@@ -1857,24 +2040,16 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         )}
 
         {/* DRAGGABLE COMPACT FLOATING TACTICAL MENU (FOR UNITS) */}
-        {selectedUnit && floatingPos && (
+        {showUnitMenu && selectedUnit && (
           <div
-            ref={floatingMenuRef}
-            className="unit-floating-menu"
-            style={{
-              left: floatingPos.left,
-              top: floatingPos.top,
-            }}
+            ref={menuRef}
+            className={menuClassName}
+            data-testid={compact ? 'unit-docked-bar' : undefined}
+            style={floatingStyle}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
-            <div
-              className="floating-menu-header"
-              title="Drag to move this menu anywhere"
-              onPointerDown={handleMenuDragStart}
-              onPointerMove={handleMenuDragMove}
-              onLostPointerCapture={handleMenuDragEnd}
-            >
+            <div className="floating-menu-header" {...dragHeaderProps}>
               <div className="floating-unit-title">
                 <GripHorizontal size={13} className="floating-drag-grip" />
                 <span
@@ -1895,6 +2070,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
                 title="Close (Esc)"
               >
                 <X size={14} />
+                {compact && <span>Cancel</span>}
               </button>
             </div>
 
@@ -1944,7 +2120,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
                   </button>
                 </div>
                 <div className="floating-menu-hint">
-                  Click a green province on the map to Retreat, or click Disband
+                  {`${tap} a green province on the map to Retreat, or ${tapLower} Disband`}
                 </div>
               </>
             ) : isAdjustmentPhase ? (
@@ -2084,15 +2260,17 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
 
                 <div className="floating-menu-hint">
                   {interactionMode === 'MOVE' &&
-                    'Click a green province to Move • Drag header to move'}
+                    (compact
+                      ? 'Tap a green province to Move'
+                      : 'Click a green province to Move • Drag header to move')}
                   {interactionMode === 'SUPPORT_PICK_UNIT' &&
-                    'Step 1/2: Click unit to Support'}
+                    `Step 1/2: ${tap} unit to Support`}
                   {interactionMode === 'SUPPORT_PICK_TARGET' &&
-                    `Step 2/2: Click destination for ${pendingAuxOrigin} (or click ${pendingAuxOrigin} to Hold)`}
+                    `Step 2/2: ${tap} destination for ${pendingAuxOrigin} (or ${tapLower} ${pendingAuxOrigin} to Hold)`}
                   {interactionMode === 'CONVOY_PICK_ARMY' &&
-                    'Step 1/2: Click coastal Army to Convoy'}
+                    `Step 1/2: ${tap} coastal Army to Convoy`}
                   {interactionMode === 'CONVOY_PICK_TARGET' &&
-                    `Step 2/2: Click destination coast for Army ${pendingAuxOrigin}`}
+                    `Step 2/2: ${tap} destination coast for Army ${pendingAuxOrigin}`}
                 </div>
               </>
             )}
@@ -2631,7 +2809,10 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
                           if (e.pointerType !== 'touch') onHoverUnit(null);
                         }}
                       >
-                        <PieceHitArea frame={buildPiece.frame} />
+                        <PieceHitArea
+                          frame={buildPiece.frame}
+                          minRadius={touchHitRadius(bId, buildPiece.frame)}
+                        />
                         {(isSelected || isHovered) && (
                           <PieceOutline
                             frame={buildPiece.frame}
@@ -2812,7 +2993,10 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
                       if (e.pointerType !== 'touch') onHoverUnit(null);
                     }}
                   >
-                    <PieceHitArea frame={frame} />
+                    <PieceHitArea
+                      frame={frame}
+                      minRadius={touchHitRadius(u.id, frame)}
+                    />
 
                     {(isSelected || isHovered) && (
                       <PieceOutline

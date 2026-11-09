@@ -22,14 +22,15 @@ frontend/
     │   ├── EuropeMap.tsx        # High-performance interactive SVG game board & order arrows
     │   ├── CollapsibleSection.tsx # Reusable collapsible/static section container with accessible toggles
     │   ├── CollapsibleSection.test.tsx # Vitest suite for CollapsibleSection behavior and accessibility
-    │   ├── ToolsSidebar.tsx     # Left collapsible sidebar: legend, zoom options, powers, sandbox & admin
-    │   ├── MacroSidebar.tsx     # Right collapsible sidebar: core gameplay orders, builds, finalize & adjudicate
+    │   ├── ToolsSidebar.tsx     # Left collapsible sidebar: legend, zoom options, powers, sandbox & admin (a ≡ drawer on phones)
+    │   ├── MacroSidebar.tsx     # Right collapsible sidebar: core gameplay orders, builds, finalize & adjudicate (the order sheet on phones)
     │   ├── sidebars.test.ts     # Vitest suite for ToolsSidebar and MacroSidebar collapsible views
-    │   ├── PhaseTimerWidget.tsx # Bottom-left map widget: turn clock, votes, ready-up & +5 button
+    │   ├── PhaseTimerWidget.tsx # Bottom-left map widget: turn clock, votes, ready-up & +5 button (a pill on phones)
     │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
     │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
     │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
-    │   ├── CompactTopBar.tsx    # Phone top bar: back, turn, order-problem count and a ⋯ menu
+    │   ├── BottomSheet.tsx      # Phone pull-up panel with peek, half and full stops (holds the order sheet)
+    │   ├── CompactTopBar.tsx    # Phone top bar: back, ≡ tools, turn, order-problem count and a ⋯ menu
     │   ├── CompactTopBar.test.ts # Vitest suite for the phone top bar and the surrender note
     │   ├── DisplaySettingsMenu.tsx # Top bar menu for this player's piece style and army and fleet marks
     │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every display style
@@ -59,7 +60,9 @@ frontend/
         ├── adminHelpers.ts      # Admin permission verification & payload formatters
         ├── adminHelpers.test.ts # Vitest suite for admin authorization and mutations
         ├── displayPrefs.ts      # Display preference types, defaults, sanitizing & sign-in rules
-        └── displayPrefs.test.ts # Vitest suite for display preferences
+        ├── displayPrefs.test.ts # Vitest suite for display preferences
+        ├── sheetHelpers.ts      # Phone order sheet stops: snap heights, release and tap stepping
+        └── sheetHelpers.test.ts # Vitest suite for the sheet's snap math
 ```
 
 ---
@@ -80,14 +83,14 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   └── User Auth Header & Profile Switcher
 │
 ├── View 2: Tactical Workspace (when viewMode === 'multiplayer' | 'sandbox')
-│   ├── Imperial Header Bar (CompactTopBar.tsx on phones: back, turn, problem count, ⋯ menu)
+│   ├── Imperial Header Bar (CompactTopBar.tsx on phones: back, ≡ tools, turn, problem count, ⋯ menu)
 │   │   ├── Return to Lobby (Clickable Brand Emblem & Title)
 │   │   ├── Turn Chronicle Pill (Season, Year, Phase & Winner)
 │   │   ├── Sanity Check Diagnostics Warning Pill
 │   │   ├── Real-Time WebSocket Synchronization Badge
 │   │   └── User Auth Profile / Guest Mode
 │   │
-│   ├── ToolsSidebar.tsx (Left Collapsible Tools & Intel Panel)
+│   ├── ToolsSidebar.tsx (Left Collapsible Tools & Intel Panel; a ≡ drawer on phones)
 │   │   ├── Collapse / Expand Rail Toggle (44px collapsed rail)
 │   │   ├── Map View & Camera Controls (Zoom In, Zoom Out, Fit Map 105% - CollapsibleSection static)
 │   │   ├── Tactical Map Legend (Move, Support, Convoy, Conflict vectors - CollapsibleSection toggle)
@@ -108,7 +111,7 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   │   ├── Interactive Unit Radial Menu & Coast Picker
 │   │   └── Imperative Camera Control Handle (`EuropeMapHandle`)
 │   │
-│   └── MacroSidebar.tsx (Right Collapsible Tactical Command Panel)
+│   └── MacroSidebar.tsx (Right Collapsible Tactical Command Panel; the pull-up order sheet on phones)
 │       ├── Collapse / Expand Rail Toggle (44px collapsed rail)
 │       ├── Active Sovereign Command Header & Supply Center Telemetry
 │       ├── Phase Context Alerts (Winter Adjustments Quota, Retreats Dislodgements)

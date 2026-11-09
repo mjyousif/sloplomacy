@@ -14,6 +14,8 @@ Read the matching doc first: `docs/frontend/map-renderer.md`, `sidebar-and-contr
 - **Player power** comes from `resolvePlayerPower` (claimed seat), never from `GameState.active_power`.
 - **Phone styles** all live in `src/compact.css` under `[data-layout='compact']`. No width `@media` queries elsewhere. The compact layout must not change the wide one: compare element boxes at 1440×900 before and after.
 - **Hover**: use `onPointerEnter` / `onPointerLeave` and ignore `pointerType === 'touch'`, so taps leave no stuck highlight.
+- **Phone game screen**: no rails. Orders are `MacroSidebar variant="sheet"` in `BottomSheet`, tools are `ToolsSidebar variant="drawer"`, and `EuropeMap` docks its unit menus. Change the shared pieces, not a copy. Something that runs off an edge on purpose needs `overflow: clip` on its container, not `hidden`, which focus and `scrollIntoView` can still scroll.
+- **Checking motion in the browser pane**: while the pane is hidden it renders no animation frames, so a CSS transition can sit at its first frame. Read positions with `getBoundingClientRect` after the transition, or use the E2E screenshots, before deciding something is stuck.
 - **Map pieces**: drawn by `MapPiece`, sized by `PieceFrame`. No hardcoded ring radii or badge offsets in `EuropeMap.tsx`. Classic style with `letters` must stay pixel-identical; fix layout in the other styles' rows in `mapLayouts.ts`.
 - **Display preferences** are per player and never enter `GameState` or the backend. Run everything read from `localStorage` or `user_metadata` through `sanitizeDisplayPrefs`. A failed account read is not "nothing saved".
 - **No redundant UI**: see the anti-redundancy rules in `sidebar-and-controls.md` before adding a toggle, badge or legend entry.
