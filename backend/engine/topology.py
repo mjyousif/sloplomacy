@@ -1,0 +1,899 @@
+from domain.models import Power, ProvinceInfo, ProvinceType, Unit, UnitType
+
+# Complete 75-province standard 1901 Diplomacy map definition + Switzerland
+RAW_PROVINCES = [
+    # --- ENGLAND HOME & BRITISH ISLES ---
+    (
+        "CLY",
+        "Clyde",
+        ProvinceType.COAST,
+        False,
+        Power.ENGLAND,
+        [],
+        ["EDI", "LVP"],
+        {"": ["NAO", "NWG", "EDI", "LVP"]},
+    ),
+    (
+        "EDI",
+        "Edinburgh",
+        ProvinceType.COAST,
+        True,
+        Power.ENGLAND,
+        [],
+        ["CLY", "LVP", "YOR"],
+        {"": ["NWG", "NTH", "YOR", "CLY"]},
+    ),
+    (
+        "LVP",
+        "Liverpool",
+        ProvinceType.COAST,
+        True,
+        Power.ENGLAND,
+        [],
+        ["CLY", "EDI", "YOR", "WAL"],
+        {"": ["NAO", "CLY", "WAL", "IRI"]},
+    ),
+    (
+        "YOR",
+        "Yorkshire",
+        ProvinceType.COAST,
+        False,
+        Power.ENGLAND,
+        [],
+        ["EDI", "LVP", "WAL", "LON"],
+        {"": ["EDI", "NTH", "LON"]},
+    ),
+    (
+        "WAL",
+        "Wales",
+        ProvinceType.COAST,
+        False,
+        Power.ENGLAND,
+        [],
+        ["LVP", "YOR", "LON"],
+        {"": ["LVP", "IRI", "ENG", "LON"]},
+    ),
+    (
+        "LON",
+        "London",
+        ProvinceType.COAST,
+        True,
+        Power.ENGLAND,
+        [],
+        ["YOR", "WAL"],
+        {"": ["YOR", "NTH", "ENG", "WAL"]},
+    ),
+    # --- FRANCE & IBERIA & LOW COUNTRIES ---
+    (
+        "BRE",
+        "Brest",
+        ProvinceType.COAST,
+        True,
+        Power.FRANCE,
+        [],
+        ["PIC", "PAR", "GAS"],
+        {"": ["ENG", "PIC", "GAS", "MAO"]},
+    ),
+    (
+        "PIC",
+        "Picardy",
+        ProvinceType.COAST,
+        False,
+        Power.FRANCE,
+        [],
+        ["BEL", "BUR", "PAR", "BRE"],
+        {"": ["ENG", "BEL", "BRE"]},
+    ),
+    ("PAR", "Paris", ProvinceType.LAND, True, Power.FRANCE, [], ["PIC", "BUR", "GAS", "BRE"], {}),
+    (
+        "BUR",
+        "Burgundy",
+        ProvinceType.LAND,
+        False,
+        Power.FRANCE,
+        [],
+        ["BEL", "RUH", "MUN", "MAR", "GAS", "PAR", "PIC"],
+        {},
+    ),
+    (
+        "GAS",
+        "Gascony",
+        ProvinceType.COAST,
+        False,
+        Power.FRANCE,
+        [],
+        ["BRE", "PAR", "BUR", "MAR", "SPA"],
+        {"": ["BRE", "MAO", "SPA/NC"]},
+    ),
+    (
+        "MAR",
+        "Marseilles",
+        ProvinceType.COAST,
+        True,
+        Power.FRANCE,
+        [],
+        ["BUR", "PIE", "SPA", "GAS"],
+        {"": ["SPA/SC", "LYO", "PIE"]},
+    ),
+    (
+        "SPA",
+        "Spain",
+        ProvinceType.COAST,
+        True,
+        None,
+        ["NC", "SC"],
+        ["GAS", "MAR", "POR"],
+        {
+            "NC": ["MAO", "GAS", "POR"],
+            "SC": ["MAO", "POR", "WES", "LYO", "MAR"],
+        },
+    ),
+    (
+        "POR",
+        "Portugal",
+        ProvinceType.COAST,
+        True,
+        None,
+        [],
+        ["SPA"],
+        {"": ["MAO", "SPA/NC", "SPA/SC"]},
+    ),
+    (
+        "BEL",
+        "Belgium",
+        ProvinceType.COAST,
+        True,
+        None,
+        [],
+        ["HOL", "RUH", "BUR", "PIC"],
+        {"": ["NTH", "HOL", "PIC", "ENG"]},
+    ),
+    (
+        "HOL",
+        "Holland",
+        ProvinceType.COAST,
+        True,
+        None,
+        [],
+        ["KIE", "RUH", "BEL"],
+        {"": ["NTH", "HEL", "KIE", "BEL"]},
+    ),
+    # --- GERMANY & CENTRAL EUROPE & SCANDINAVIA ---
+    (
+        "KIE",
+        "Kiel",
+        ProvinceType.COAST,
+        True,
+        Power.GERMANY,
+        [],
+        ["DEN", "BER", "MUN", "RUH", "HOL"],
+        {"": ["HEL", "DEN", "BAL", "BER", "HOL"]},
+    ),
+    (
+        "RUH",
+        "Ruhr",
+        ProvinceType.LAND,
+        False,
+        Power.GERMANY,
+        [],
+        ["HOL", "KIE", "MUN", "BUR", "BEL"],
+        {},
+    ),
+    (
+        "MUN",
+        "Munich",
+        ProvinceType.LAND,
+        True,
+        Power.GERMANY,
+        [],
+        ["KIE", "BER", "SIL", "BOH", "TYR", "BUR", "RUH"],
+        {},
+    ),
+    (
+        "BER",
+        "Berlin",
+        ProvinceType.COAST,
+        True,
+        Power.GERMANY,
+        [],
+        ["KIE", "PRU", "SIL", "MUN"],
+        {"": ["BAL", "PRU", "KIE"]},
+    ),
+    (
+        "PRU",
+        "Prussia",
+        ProvinceType.COAST,
+        False,
+        Power.GERMANY,
+        [],
+        ["LVN", "WAR", "SIL", "BER"],
+        {"": ["BAL", "LVN", "BER"]},
+    ),
+    (
+        "SIL",
+        "Silesia",
+        ProvinceType.LAND,
+        False,
+        Power.GERMANY,
+        [],
+        ["BER", "PRU", "WAR", "GAL", "BOH", "MUN"],
+        {},
+    ),
+    (
+        "DEN",
+        "Denmark",
+        ProvinceType.COAST,
+        True,
+        None,
+        [],
+        ["SWE", "KIE"],
+        {"": ["SKA", "SWE", "BAL", "KIE", "HEL", "NTH"]},
+    ),
+    (
+        "NWY",
+        "Norway",
+        ProvinceType.COAST,
+        True,
+        None,
+        [],
+        ["FIN", "SWE", "STP"],
+        {"": ["NWG", "BAR", "STP/NC", "SWE", "SKA", "NTH"]},
+    ),
+    (
+        "SWE",
+        "Sweden",
+        ProvinceType.COAST,
+        True,
+        None,
+        [],
+        ["NWY", "FIN", "DEN"],
+        {"": ["NWY", "SKA", "DEN", "BAL", "BOT", "FIN"]},
+    ),
+    (
+        "FIN",
+        "Finland",
+        ProvinceType.COAST,
+        False,
+        Power.RUSSIA,
+        [],
+        ["NWY", "SWE", "STP"],
+        {"": ["SWE", "BOT", "STP/SC"]},
+    ),
+    # --- ITALY & NORTH AFRICA ---
+    (
+        "PIE",
+        "Piedmont",
+        ProvinceType.COAST,
+        False,
+        Power.ITALY,
+        [],
+        ["MAR", "TYR", "VEN", "TUS"],
+        {"": ["MAR", "LYO", "TUS"]},
+    ),
+    (
+        "VEN",
+        "Venice",
+        ProvinceType.COAST,
+        True,
+        Power.ITALY,
+        [],
+        ["TYR", "TRI", "APU", "ROM", "TUS", "PIE"],
+        {"": ["TRI", "ADR", "APU"]},
+    ),
+    (
+        "TUS",
+        "Tuscany",
+        ProvinceType.COAST,
+        False,
+        Power.ITALY,
+        [],
+        ["PIE", "VEN", "ROM"],
+        {"": ["PIE", "LYO", "TYS", "ROM"]},
+    ),
+    (
+        "ROM",
+        "Rome",
+        ProvinceType.COAST,
+        True,
+        Power.ITALY,
+        [],
+        ["TUS", "VEN", "APU", "NAP"],
+        {"": ["TUS", "TYS", "NAP"]},
+    ),
+    (
+        "APU",
+        "Apulia",
+        ProvinceType.COAST,
+        False,
+        Power.ITALY,
+        [],
+        ["VEN", "ROM", "NAP"],
+        {"": ["VEN", "ADR", "ION", "NAP"]},
+    ),
+    (
+        "NAP",
+        "Naples",
+        ProvinceType.COAST,
+        True,
+        Power.ITALY,
+        [],
+        ["ROM", "APU"],
+        {"": ["ROM", "TYS", "ION", "APU"]},
+    ),
+    (
+        "TUN",
+        "Tunis",
+        ProvinceType.COAST,
+        True,
+        None,
+        [],
+        ["NAF"],
+        {"": ["NAF", "WES", "TYS", "ION"]},
+    ),
+    (
+        "NAF",
+        "North Africa",
+        ProvinceType.COAST,
+        False,
+        None,
+        [],
+        ["TUN"],
+        {"": ["MAO", "WES", "TUN"]},
+    ),
+    # --- AUSTRIA-HUNGARY & BALKANS ---
+    (
+        "TYR",
+        "Tyrolia",
+        ProvinceType.LAND,
+        False,
+        Power.AUSTRIA,
+        [],
+        ["MUN", "BOH", "VIE", "TRI", "VEN", "PIE"],
+        {},
+    ),
+    (
+        "BOH",
+        "Bohemia",
+        ProvinceType.LAND,
+        False,
+        Power.AUSTRIA,
+        [],
+        ["MUN", "SIL", "GAL", "VIE", "TYR"],
+        {},
+    ),
+    (
+        "VIE",
+        "Vienna",
+        ProvinceType.LAND,
+        True,
+        Power.AUSTRIA,
+        [],
+        ["BOH", "GAL", "BUD", "TRI", "TYR"],
+        {},
+    ),
+    (
+        "GAL",
+        "Galicia",
+        ProvinceType.LAND,
+        False,
+        Power.AUSTRIA,
+        [],
+        ["WAR", "UKR", "RUM", "BUD", "VIE", "BOH", "SIL"],
+        {},
+    ),
+    (
+        "BUD",
+        "Budapest",
+        ProvinceType.LAND,
+        True,
+        Power.AUSTRIA,
+        [],
+        ["VIE", "GAL", "RUM", "SER", "TRI"],
+        {},
+    ),
+    (
+        "TRI",
+        "Trieste",
+        ProvinceType.COAST,
+        True,
+        Power.AUSTRIA,
+        [],
+        ["TYR", "VIE", "BUD", "SER", "ALB", "VEN"],
+        {"": ["VEN", "ADR", "ALB"]},
+    ),
+    (
+        "SER",
+        "Serbia",
+        ProvinceType.LAND,
+        True,
+        None,
+        [],
+        ["BUD", "RUM", "BUL", "GRE", "ALB", "TRI"],
+        {},
+    ),
+    (
+        "ALB",
+        "Albania",
+        ProvinceType.COAST,
+        False,
+        None,
+        [],
+        ["TRI", "SER", "GRE"],
+        {"": ["TRI", "ADR", "ION", "GRE"]},
+    ),
+    (
+        "GRE",
+        "Greece",
+        ProvinceType.COAST,
+        True,
+        None,
+        [],
+        ["ALB", "SER", "BUL"],
+        {"": ["ALB", "ION", "AEG", "BUL/SC"]},
+    ),
+    (
+        "RUM",
+        "Rumania",
+        ProvinceType.COAST,
+        True,
+        None,
+        [],
+        ["GAL", "UKR", "SEV", "BUL", "SER", "BUD"],
+        {"": ["SEV", "BLA", "BUL/EC"]},
+    ),
+    (
+        "BUL",
+        "Bulgaria",
+        ProvinceType.COAST,
+        True,
+        None,
+        ["EC", "SC"],
+        ["SER", "RUM", "CON", "GRE"],
+        {
+            "EC": ["RUM", "BLA", "CON"],
+            "SC": ["CON", "AEG", "GRE"],
+        },
+    ),
+    # --- RUSSIA ---
+    (
+        "STP",
+        "St. Petersburg",
+        ProvinceType.COAST,
+        True,
+        Power.RUSSIA,
+        ["NC", "SC"],
+        ["NWY", "FIN", "LVN", "MOS"],
+        {
+            "NC": ["BAR", "NWY"],
+            "SC": ["FIN", "BOT", "LVN"],
+        },
+    ),
+    (
+        "LVN",
+        "Livonia",
+        ProvinceType.COAST,
+        False,
+        Power.RUSSIA,
+        [],
+        ["STP", "MOS", "WAR", "PRU"],
+        {"": ["STP/SC", "BOT", "BAL", "PRU"]},
+    ),
+    (
+        "MOS",
+        "Moscow",
+        ProvinceType.LAND,
+        True,
+        Power.RUSSIA,
+        [],
+        ["STP", "LVN", "WAR", "UKR", "SEV"],
+        {},
+    ),
+    (
+        "WAR",
+        "Warsaw",
+        ProvinceType.LAND,
+        True,
+        Power.RUSSIA,
+        [],
+        ["PRU", "LVN", "MOS", "UKR", "GAL", "SIL"],
+        {},
+    ),
+    (
+        "UKR",
+        "Ukraine",
+        ProvinceType.LAND,
+        False,
+        Power.RUSSIA,
+        [],
+        ["WAR", "MOS", "SEV", "RUM", "GAL"],
+        {},
+    ),
+    (
+        "SEV",
+        "Sevastopol",
+        ProvinceType.COAST,
+        True,
+        Power.RUSSIA,
+        [],
+        ["MOS", "UKR", "RUM", "ARM"],
+        {"": ["RUM", "BLA", "ARM"]},
+    ),
+    # --- TURKEY & MIDDLE EAST ---
+    (
+        "CON",
+        "Constantinople",
+        ProvinceType.COAST,
+        True,
+        Power.TURKEY,
+        [],
+        ["BUL", "ANK", "SMY"],
+        {"": ["BUL/EC", "BUL/SC", "BLA", "ANK", "SMY", "AEG"]},
+    ),
+    (
+        "ANK",
+        "Ankara",
+        ProvinceType.COAST,
+        True,
+        Power.TURKEY,
+        [],
+        ["CON", "ARM", "SMY"],
+        {"": ["CON", "BLA", "ARM"]},
+    ),
+    (
+        "SMY",
+        "Smyrna",
+        ProvinceType.COAST,
+        True,
+        Power.TURKEY,
+        [],
+        ["CON", "ANK", "ARM", "SYR"],
+        {"": ["CON", "AEG", "EAS", "SYR"]},
+    ),
+    (
+        "ARM",
+        "Armenia",
+        ProvinceType.COAST,
+        False,
+        Power.TURKEY,
+        [],
+        ["SEV", "ANK", "SMY", "SYR"],
+        {"": ["SEV", "BLA", "ANK"]},
+    ),
+    (
+        "SYR",
+        "Syria",
+        ProvinceType.COAST,
+        False,
+        Power.TURKEY,
+        [],
+        ["SMY", "ARM"],
+        {"": ["SMY", "EAS"]},
+    ),
+    # --- SEA ZONES (19) ---
+    (
+        "NAO",
+        "North Atlantic Ocean",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["NWG", "CLY", "LVP", "IRI", "MAO"]},
+    ),
+    (
+        "NWG",
+        "Norwegian Sea",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["NAO", "BAR", "NWY", "NTH", "EDI", "CLY"]},
+    ),
+    ("BAR", "Barents Sea", ProvinceType.SEA, False, None, [], [], {"": ["NWG", "STP/NC", "NWY"]}),
+    (
+        "NTH",
+        "North Sea",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["NWG", "NWY", "SKA", "DEN", "HEL", "HOL", "BEL", "ENG", "LON", "YOR", "EDI"]},
+    ),
+    (
+        "IRI",
+        "Irish Sea",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["NAO", "LVP", "WAL", "ENG", "MAO"]},
+    ),
+    (
+        "ENG",
+        "English Channel",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["IRI", "WAL", "LON", "NTH", "BEL", "PIC", "BRE", "MAO"]},
+    ),
+    (
+        "MAO",
+        "Mid-Atlantic Ocean",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["NAO", "IRI", "ENG", "BRE", "GAS", "SPA/NC", "POR", "SPA/SC", "WES", "NAF"]},
+    ),
+    ("SKA", "Skagerrak", ProvinceType.SEA, False, None, [], [], {"": ["NTH", "NWY", "SWE", "DEN"]}),
+    (
+        "HEL",
+        "Helgoland Bight",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["NTH", "DEN", "KIE", "HOL"]},
+    ),
+    (
+        "BAL",
+        "Baltic Sea",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["DEN", "SWE", "BOT", "LVN", "PRU", "BER", "KIE"]},
+    ),
+    (
+        "BOT",
+        "Gulf of Bothnia",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["SWE", "FIN", "STP/SC", "LVN", "BAL"]},
+    ),
+    (
+        "WES",
+        "Western Mediterranean",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["MAO", "SPA/SC", "LYO", "TYS", "TUN", "NAF"]},
+    ),
+    (
+        "LYO",
+        "Gulf of Lyon",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["SPA/SC", "MAR", "PIE", "TUS", "TYS", "WES"]},
+    ),
+    (
+        "TYS",
+        "Tyrrhenian Sea",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["LYO", "TUS", "ROM", "NAP", "ION", "TUN", "WES"]},
+    ),
+    (
+        "ADR",
+        "Adriatic Sea",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["VEN", "TRI", "ALB", "ION", "APU"]},
+    ),
+    (
+        "ION",
+        "Ionian Sea",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["TYS", "NAP", "APU", "ADR", "ALB", "GRE", "AEG", "EAS", "TUN"]},
+    ),
+    (
+        "AEG",
+        "Aegean Sea",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["GRE", "BUL/SC", "CON", "SMY", "EAS", "ION"]},
+    ),
+    (
+        "EAS",
+        "Eastern Mediterranean",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["ION", "AEG", "SMY", "SYR"]},
+    ),
+    (
+        "BLA",
+        "Black Sea",
+        ProvinceType.SEA,
+        False,
+        None,
+        [],
+        [],
+        {"": ["RUM", "SEV", "ARM", "ANK", "CON", "BUL/EC"]},
+    ),
+    # --- IMPASSABLE ---
+    ("SWI", "Switzerland", ProvinceType.IMPASSABLE, False, None, [], [], {}),
+]
+
+PROVINCES: dict[str, ProvinceInfo] = {}
+for pid, name, ptype, is_sc, home_power, coasts, army_adj, fleet_adj in RAW_PROVINCES:
+    cleaned_fleet_adj = {k: [x for x in v if x] for k, v in fleet_adj.items()}
+    PROVINCES[pid] = ProvinceInfo(
+        id=pid,
+        name=name,
+        type=ptype,
+        is_supply_center=is_sc,
+        home_power=home_power,
+        coasts=coasts,
+        army_adj=army_adj,
+        fleet_adj=cleaned_fleet_adj,
+    )
+
+
+def split_province_code(code: str) -> tuple[str, str | None]:
+    if "/" in code:
+        parts = code.split("/", 1)
+        return parts[0].upper(), parts[1].upper()
+    return code.upper(), None
+
+
+def can_unit_move_directly(
+    unit_type: UnitType,
+    origin: str,
+    origin_coast: str | None,
+    target: str,
+    target_coast: str | None = None,
+) -> tuple[bool, str]:
+    """Check if a unit at origin (with optional coast) can move directly to target (without convoy)."""
+    if origin not in PROVINCES:
+        return False, f"Unknown origin province '{origin}'."
+    if target not in PROVINCES:
+        return False, f"Unknown target province '{target}'."
+    if origin == target:
+        return False, "Move target cannot be the same as origin (use HOLD instead)."
+
+    orig_prov = PROVINCES[origin]
+    targ_prov = PROVINCES[target]
+
+    if targ_prov.type == ProvinceType.IMPASSABLE:
+        return False, f"{targ_prov.name} is impassable."
+
+    if unit_type == UnitType.ARMY:
+        if targ_prov.type == ProvinceType.SEA:
+            return False, f"Army in {orig_prov.name} cannot enter sea zone {targ_prov.name}."
+        if target in orig_prov.army_adj:
+            return True, ""
+        return False, f"Army in {orig_prov.name} is not adjacent to {targ_prov.name}."
+
+    # Fleet logic
+    if targ_prov.type == ProvinceType.LAND:
+        return False, f"Fleet in {orig_prov.name} cannot move inland to {targ_prov.name}."
+
+    coast_key = origin_coast or ""
+    if orig_prov.coasts and not coast_key:
+        # Fallback if coast wasn't specified on origin: check union of coasts
+        possible_targets: list[str] = []
+        for c_list in orig_prov.fleet_adj.values():
+            possible_targets.extend(c_list)
+    else:
+        possible_targets = orig_prov.fleet_adj.get(coast_key, [])
+
+    # Check if target or target/coast is in possible_targets
+    matching_entries = [
+        entry for entry in possible_targets if split_province_code(entry)[0] == target
+    ]
+    if not matching_entries:
+        coast_label = f" ({origin_coast})" if origin_coast else ""
+        return False, f"Fleet in {orig_prov.name}{coast_label} cannot move to {targ_prov.name}."
+
+    # If target has multiple coasts and multiple coasts are reachable (e.g., CON -> BUL/EC or BUL/SC, MAO -> SPA/NC or SPA/SC)
+    if targ_prov.coasts and target_coast:
+        expected = f"{target}/{target_coast}"
+        if expected not in matching_entries:
+            return (
+                False,
+                f"Fleet in {orig_prov.name} cannot reach {targ_prov.name} ({target_coast}).",
+            )
+
+    return True, ""
+
+
+def can_unit_support_province(
+    unit_type: UnitType,
+    origin: str,
+    origin_coast: str | None,
+    target_province: str,
+) -> tuple[bool, str]:
+    """
+    A unit can support an action in target_province if it could move into target_province directly
+    (ignoring which coast of target_province a fleet would land on).
+    """
+    return can_unit_move_directly(unit_type, origin, origin_coast, target_province, None)
+
+
+def can_army_be_convoyed_theoretically(origin: str, target: str) -> bool:
+    """Check if both origin and target are coastal provinces connected by at least one sea zone."""
+    if origin not in PROVINCES or target not in PROVINCES or origin == target:
+        return False
+    orig_p = PROVINCES[origin]
+    targ_p = PROVINCES[target]
+    if orig_p.type != ProvinceType.COAST or targ_p.type != ProvinceType.COAST:
+        return False
+    return True
+
+
+def get_initial_1901_units() -> list[Unit]:
+    raw_units = [
+        # England
+        ("ENG_F_LON", Power.ENGLAND, UnitType.FLEET, "LON", None),
+        ("ENG_F_EDI", Power.ENGLAND, UnitType.FLEET, "EDI", None),
+        ("ENG_A_LVP", Power.ENGLAND, UnitType.ARMY, "LVP", None),
+        # France
+        ("FRA_A_PAR", Power.FRANCE, UnitType.ARMY, "PAR", None),
+        ("FRA_A_MAR", Power.FRANCE, UnitType.ARMY, "MAR", None),
+        ("FRA_F_BRE", Power.FRANCE, UnitType.FLEET, "BRE", None),
+        # Germany
+        ("GER_A_BER", Power.GERMANY, UnitType.ARMY, "BER", None),
+        ("GER_A_MUN", Power.GERMANY, UnitType.ARMY, "MUN", None),
+        ("GER_F_KIE", Power.GERMANY, UnitType.FLEET, "KIE", None),
+        # Italy
+        ("ITA_A_ROM", Power.ITALY, UnitType.ARMY, "ROM", None),
+        ("ITA_A_VEN", Power.ITALY, UnitType.ARMY, "VEN", None),
+        ("ITA_F_NAP", Power.ITALY, UnitType.FLEET, "NAP", None),
+        # Austria
+        ("AUS_A_VIE", Power.AUSTRIA, UnitType.ARMY, "VIE", None),
+        ("AUS_A_BUD", Power.AUSTRIA, UnitType.ARMY, "BUD", None),
+        ("AUS_F_TRI", Power.AUSTRIA, UnitType.FLEET, "TRI", None),
+        # Russia
+        ("RUS_A_MOS", Power.RUSSIA, UnitType.ARMY, "MOS", None),
+        ("RUS_A_WAR", Power.RUSSIA, UnitType.ARMY, "WAR", None),
+        ("RUS_F_SEV", Power.RUSSIA, UnitType.FLEET, "SEV", None),
+        ("RUS_F_STP", Power.RUSSIA, UnitType.FLEET, "STP", "SC"),
+        # Turkey
+        ("TUR_A_CON", Power.TURKEY, UnitType.ARMY, "CON", None),
+        ("TUR_A_SMY", Power.TURKEY, UnitType.ARMY, "SMY", None),
+        ("TUR_F_ANK", Power.TURKEY, UnitType.FLEET, "ANK", None),
+    ]
+    return [
+        Unit(id=uid, power=pwr, unit_type=ut, province=prov, coast=cst)
+        for uid, pwr, ut, prov, cst in raw_units
+    ]
+
+
+def get_initial_ownership() -> dict[str, Power]:
+    ownership: dict[str, Power] = {}
+    for pid, pinfo in PROVINCES.items():
+        if pinfo.home_power and pinfo.is_supply_center:
+            ownership[pid] = pinfo.home_power
+    return ownership
