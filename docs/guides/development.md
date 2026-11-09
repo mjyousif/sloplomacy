@@ -175,11 +175,13 @@ python -m pytest backend/ -v
 ```
 
 ### Running Frontend Tests (`Vitest`)
-Run frontend unit tests verifying order reachability and admin utilities:
+Run every frontend unit test:
 ```bash
 cd frontend
 npm test
 ```
+
+Tests run in node by default. A hook or component test that needs a DOM starts with `// @vitest-environment jsdom` and uses Testing Library (`renderHook`, `render`, `screen` and `userEvent`). `src/test/setup.ts` loads the jest-dom matchers and cleans up after each test. `src/hooks/useDisplayPrefs.test.ts` is a worked example that mocks `lib/supabase` and uses fake timers. See [docs/frontend/README.md](../frontend/README.md#unit-testing-vitest).
 
 ### Running Frontend Typechecks & Build Verification
 Ensure zero type regressions or API model drifts exist:

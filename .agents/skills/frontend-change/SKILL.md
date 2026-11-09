@@ -26,6 +26,6 @@ Read the matching doc first: `docs/frontend/map-renderer.md`, `sidebar-and-contr
 ## Verify
 
 1. `cd frontend; npx tsc --noEmit; npm test; npm run build`.
-2. Add or extend a Vitest test next to the component (`*.test.ts[x]`). Pure helpers in `utils/` are the easiest to cover.
+2. Add or extend a Vitest test next to the component (`*.test.ts[x]`). Pure helpers in `utils/` are the easiest to cover. Hooks and clicks need a DOM: start the file with `// @vitest-environment jsdom` and use Testing Library (`renderHook`, `render`, `userEvent`). Mock `lib/supabase` with `vi.mock` instead of reaching the network.
 3. Run the matching `python scripts/e2e_runner.py run <scenario>` and open the screenshots. Any change to phone layout also needs `mobile`.
 4. Update the frontend docs listed in AGENTS.md section 5.1.
