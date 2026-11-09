@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
-from main import app, seed_initial_multiplayer_lobbies
+from main import app
+from scenarios.presets import seed_initial_multiplayer_lobbies
 
 
 @pytest.fixture(autouse=True)

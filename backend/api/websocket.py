@@ -14,6 +14,7 @@ from security.secrecy import (
     sanitize_game_state_for_viewer,
     viewer_power_for,
 )
+from storage import supabase
 from storage.store import (
     GAME_PASSCODES,
     GAME_SUMMARIES,
@@ -22,11 +23,7 @@ from storage.store import (
     is_multiplayer_match,
     sync_summary,
 )
-from storage.supabase import (
-    SupabaseUnavailable,
-    is_persistence_enabled,
-    load_game_from_db,
-)
+from storage.supabase import SupabaseUnavailable
 from ws.connection_manager import manager
 
 router = APIRouter()
@@ -63,9 +60,9 @@ async def ws_game_endpoint(
     passcode: str | None = Query(default=None),
     handshake: bool = Query(default=False),
 ):
-    if game_id not in GAMES and is_persistence_enabled():
+    if game_id not in GAMES and supabase.is_persistence_enabled():
         try:
-            loaded = await load_game_from_db(game_id)
+            loaded = await supabase.load_game_from_db(game_id)
         except SupabaseUnavailable:
             await websocket.close(code=1013)
             return

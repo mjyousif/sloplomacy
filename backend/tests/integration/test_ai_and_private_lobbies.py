@@ -128,7 +128,7 @@ def test_private_lobby_passcode_flow():
 
 
 def test_leaving_a_solo_sandbox_drops_the_turns_it_played():
-    from main import GAME_HISTORY
+    from storage.store import GAME_HISTORY
 
     client = TestClient(app)
     gid = "proto_1901"

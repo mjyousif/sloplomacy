@@ -92,7 +92,7 @@ HTTP Request (e.g. POST /api/order?game_id=...)
 
 ### In-Memory State & Supabase Persistence
 
-The backend maintains active match sessions in scoped memory dictionaries acting as an L1 fast-access cache in `backend/storage/store.py` (re-exported by `main.py`):
+The backend maintains active match sessions in scoped memory dictionaries acting as an L1 fast-access cache in `backend/storage/store.py`:
 - `GAMES: Dict[str, GameState]`: Live game states keyed by `game_id`.
 - `SANDBOX_CHECKPOINTS: Dict[str, Optional[GameState]]`: Checkpoints stored when entering Sandbox mode.
 - `GAME_HISTORY: Dict[str, List[GameState]]`: Historical snapshots preserved for creator rollback operations.

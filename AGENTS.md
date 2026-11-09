@@ -162,7 +162,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
 
 ### Backend Packages (`backend/`)
 - **Application Assembler (`backend/main.py`)**: Root FastAPI application initialization, CORS configuration, security headers, lifespan hooks, and router inclusion.
-  - **Invariant**: `main.py` is an assembler (< 350 lines); never add route handlers (`@app.get`, `@app.post`) directly here.
+  - **Invariant**: `main.py` is an assembler (< 350 lines); never add route handlers (`@app.get`, `@app.post`) directly here, and never re-export names from it. Tests import and patch a name in the module that owns it (`storage.supabase.<fn>` for every Supabase call).
 - **API Routers (`backend/api/`)**: Domain-partitioned FastAPI routers. Every HTTP endpoint and WebSocket connection belongs in its domain router:
   - `games.py`: Match lifecycle, lobby creation, seat claiming, leaving, and surrender.
   - `orders.py`: Move/retreat/build order submission, atomic batch updates, and order confirmation.

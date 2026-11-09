@@ -15,87 +15,26 @@ for _p in (str(_BACKEND_DIR), str(_REPO_ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-# Package imports with local fallback
 from api import admin, games, history, orders, sandbox, turns, websocket
-from api.sandbox import close_private_sandbox, open_private_sandbox
-from api.turns import _execute_adjudication, tick_timer, timer_players
-from domain.models import FIRST_YEAR, PHASES_BY_SEASON
-from engine.order_utils import (
-    build_slot_power,
-    create_default_orders,
-    everyone_is_ready,
-    get_required_finalizing_powers,
-    put_into_civil_disorder,
-    refresh_diagnostics_and_simulation,
-    reject_stale_turn,
-    reset_foreign_orders,
-    resolve_static_path,
-    validate_order_references,
-)
-from engine.phase_timer import start_phase_clock
+from engine.order_utils import resolve_static_path
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from scenarios.presets import (
-    SCENARIO_IDS,
-    build_scenario,
-    seed_initial_multiplayer_lobbies,
-)
-from security.secrecy import (
-    caller_holds_seat,
-    reject_on_multiplayer_match,
-    require_own_seat,
-    sanitize_game_state_for_viewer,
-    saved_sandbox_guard,
-    verify_admin_access,
-    verify_power_authorization,
-    viewer_power_for,
-)
-from storage.store import (
-    DEFAULT_GAME_ID,
-    GAME_HISTORY,
-    GAME_PASSCODES,
-    GAME_SUMMARIES,
-    GAMES,
-    HISTORY_UNSAVED,
-    MAX_ACTIVE_GAMES,
-    PRIVATE_SANDBOXES,
-    SANDBOX_CHECKPOINTS,
-    SAVES_RUNNING,
-    UNSAVED_GAMES,
-    cache_loaded_game,
-    check_game_capacity,
-    evict_game,
-    is_multiplayer_match,
-    load_saved_game,
-    persist_game,
-    resolve_game,
-    sync_summary,
-)
-from storage.supabase import (
-    delete_game_from_db,
-    is_persistence_enabled,
-    load_all_summaries_from_db,
-    load_game_from_db,
-    save_game_to_db,
-)
-from ws.connection_manager import (
-    broadcast_game_update,
-    broadcast_lobby_update,
-    manager,
-)
+from security.secrecy import saved_sandbox_guard
+from storage import supabase
+from storage.store import GAME_SUMMARIES
 
 logger = logging.getLogger("diplomacy.api")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if is_persistence_enabled():
+    if supabase.is_persistence_enabled():
         logger.info("Supabase database persistence enabled. Synchronizing active games...")
         try:
-            summaries = await load_all_summaries_from_db()
+            summaries = await supabase.load_all_summaries_from_db()
             for gid, summary in summaries.items():
                 if gid not in GAME_SUMMARIES:
                     GAME_SUMMARIES[gid] = summary
@@ -190,64 +129,3 @@ if os.path.exists(STATIC_DIR):
         if os.path.isfile(index_file):
             return FileResponse(index_file, headers={"Cache-Control": "no-cache, must-revalidate"})
         raise HTTPException(status_code=404, detail="Frontend index.html not found")
-
-
-__all__ = [
-    "app",
-    "CachedStaticFiles",
-    "FIRST_YEAR",
-    "PHASES_BY_SEASON",
-    "SCENARIO_IDS",
-    "build_scenario",
-    "seed_initial_multiplayer_lobbies",
-    "DEFAULT_GAME_ID",
-    "MAX_ACTIVE_GAMES",
-    "GAMES",
-    "GAME_HISTORY",
-    "GAME_PASSCODES",
-    "GAME_SUMMARIES",
-    "HISTORY_UNSAVED",
-    "PRIVATE_SANDBOXES",
-    "SANDBOX_CHECKPOINTS",
-    "SAVES_RUNNING",
-    "UNSAVED_GAMES",
-    "cache_loaded_game",
-    "check_game_capacity",
-    "evict_game",
-    "is_multiplayer_match",
-    "load_saved_game",
-    "persist_game",
-    "resolve_game",
-    "sync_summary",
-    "delete_game_from_db",
-    "is_persistence_enabled",
-    "load_all_summaries_from_db",
-    "load_game_from_db",
-    "save_game_to_db",
-    "broadcast_game_update",
-    "broadcast_lobby_update",
-    "manager",
-    "close_private_sandbox",
-    "open_private_sandbox",
-    "_execute_adjudication",
-    "tick_timer",
-    "timer_players",
-    "build_slot_power",
-    "create_default_orders",
-    "everyone_is_ready",
-    "get_required_finalizing_powers",
-    "put_into_civil_disorder",
-    "refresh_diagnostics_and_simulation",
-    "reject_stale_turn",
-    "reset_foreign_orders",
-    "resolve_static_path",
-    "validate_order_references",
-    "start_phase_clock",
-    "caller_holds_seat",
-    "reject_on_multiplayer_match",
-    "require_own_seat",
-    "sanitize_game_state_for_viewer",
-    "verify_admin_access",
-    "verify_power_authorization",
-    "viewer_power_for",
-]
