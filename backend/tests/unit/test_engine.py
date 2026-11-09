@@ -6,7 +6,7 @@ from engine.topology import (
     get_initial_ownership,
     split_province_code,
 )
-from engine.validator import validate_orders
+from engine.validator.orchestrator import validate_orders
 
 
 def test_map_symmetry_and_75_provinces():

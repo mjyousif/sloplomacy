@@ -174,7 +174,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - `history.py`: Read-only turn history for the turn selector (resolved phases and their records).
   - `websocket.py`: Live turn synchronization and WebSocket subscriptions.
 - **Domain Models (`backend/domain/`)**: Authoritative Pydantic v2 schemas (`models.py`) defining `GameState`, `Order`, `Issue`, and request/response DTOs.
-- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator/`, one module per phase), DATC/rulebook validation (`validator.py`), topological graph (`topology.py`), phase timer (`phase_timer.py`), AI heuristics (`ai.py`), and order helpers (`order_utils.py`). Completely decoupled from HTTP transport.
+- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator/`, one module per phase), DATC/rulebook validation (`validator/`, one module per phase or concern), topological graph (`topology.py`), phase timer (`phase_timer.py`), AI heuristics (`ai.py`), and order helpers (`order_utils.py`). Completely decoupled from HTTP transport.
 - **Persistence Layer (`backend/storage/`)**: Authoritative in-memory state store (`store.py`) and Supabase PostgREST client (`supabase.py`).
 - **Security & Authorization (`backend/security/`)**: JWT verification and auth dependencies (`auth.py`) and viewer state secrecy sanitization (`secrecy.py`).
 - **Scenarios & Presets (`backend/scenarios/`)**: Scenario definitions and match presets (`presets.py`).

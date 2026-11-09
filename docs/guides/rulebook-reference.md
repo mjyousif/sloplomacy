@@ -1,6 +1,6 @@
 # Diplomacy 1901 Rulebook Reference & Tactical Interpretation
 
-This document provides a direct mapping between the official standard rules of Diplomacy (1901) and their implementation inside this engine's validator (`validator.py`) and adjudicator (`engine/adjudicator/`).
+This document provides a direct mapping between the official standard rules of Diplomacy (1901) and their implementation inside this engine's validator (`engine/validator/`) and adjudicator (`engine/adjudicator/`).
 
 ---
 
@@ -26,7 +26,7 @@ In 1901, seven Great Powers contest Europe with 22 initial units:
 - **Rule**: If two or more units with equal attack strength attempt to enter the same province, none of them succeed. The province remains unoccupied (or occupied by whatever unit was already holding there).
 - **Engine Behavior**:
   - The adjudicator flags both units with `bounced = true`, `succeeded = false`.
-  - If both units belong to the same power, `validator.py` alerts with `SELF_BOUNCE` before turn execution.
+  - If both units belong to the same power, the validator alerts with `SELF_BOUNCE` before turn execution.
 
 ### 2. Head-to-Head Movement vs Passing
 - **Head-to-Head Clash**: `A PAR -> BUR` vs `A BUR -> PAR`.
@@ -39,7 +39,7 @@ In 1901, seven Great Powers contest Europe with 22 initial units:
 - **Destination Reachability**: A supporting unit only needs to be capable of moving into the *destination* province. It does NOT need to reach the province where the supported unit is originating from.
   - Example: `F IRI` can support `F MAO -> ENG` because `IRI` touches `ENG`, even though `IRI` also touches `MAO`.
 - **Engine Behavior**:
-  - If a unit orders support into a province it cannot legally reach, `validator.py` raises `ILLEGAL_SUPPORT` (severity: `error`).
+  - If a unit orders support into a province it cannot legally reach, the validator raises `ILLEGAL_SUPPORT` (severity: `error`).
 
 ### 4. Support Cutting Mechanics
 - **Standard Cut**: An attack on a supporting unit cuts its support, reducing the support contribution to 0.
@@ -59,7 +59,7 @@ In 1901, seven Great Powers contest Europe with 22 initial units:
 - **Rule**: A player can never dislodge one of their own units, even if an attack against it is supported with overwhelming force.
 - **Engine Behavior**:
   - The adjudicator checks ownership of attacker and defender. If they match, `dislodged` is barred from being set to `true`.
-  - `validator.py` flags this scenario with `FRIENDLY_FIRE`.
+  - The validator flags this scenario with `FRIENDLY_FIRE`.
 
 ### 7. Fall Adjustments & Supply Center Control
 - In `Spring`, movements and dislodgements occur, but supply center ownership remains unchanged.
