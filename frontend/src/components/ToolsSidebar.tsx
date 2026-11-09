@@ -165,6 +165,9 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   const [sortMode, setSortMode] = useState<'score' | 'default'>(() => {
     if (typeof window !== 'undefined') {
       try {
+        const params = new URLSearchParams(window.location.search);
+        const urlSort = params.get('sort');
+        if (urlSort === 'default' || urlSort === 'score') return urlSort;
         const saved = localStorage.getItem('sloplomacy_standings_sort');
         if (saved === 'default' || saved === 'score') return saved;
       } catch {
