@@ -1,5 +1,6 @@
 import pytest
-from domain.models import Order, OrderType, Power, Unit, UnitType
+from domain.board import Power, Unit, UnitType
+from domain.orders import Order, OrderType
 from engine.order_utils import (
     create_default_orders,
     get_required_finalizing_powers,

@@ -1,6 +1,7 @@
 import hmac
 
-from domain.models import GameState, MultiplayerGameSummary, Power
+from domain.board import Power
+from domain.game_state import GameState, MultiplayerGameSummary
 from engine.adjudicator.resolver import adjudicate_turn
 from engine.order_utils import create_default_orders
 from fastapi import Depends, HTTPException, Request, status

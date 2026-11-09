@@ -1,16 +1,13 @@
 """Admin overrides on the board itself: moving, spawning and removing units, setting ownership."""
 
-from domain.models import (
+from domain.board import ProvinceType, Unit, UnitType
+from domain.game_state import GameState
+from domain.orders import Order, OrderType
+from domain.requests import (
     AdminDestroyUnitRequest,
     AdminMoveUnitRequest,
     AdminSetOwnershipRequest,
     AdminSpawnUnitRequest,
-    GameState,
-    Order,
-    OrderType,
-    ProvinceType,
-    Unit,
-    UnitType,
 )
 from engine.order_utils import (
     fleet_coast,

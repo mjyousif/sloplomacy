@@ -1,10 +1,7 @@
 import logging
 
-from domain.models import (
-    GameState,
-    MultiplayerGameSummary,
-    Power,
-)
+from domain.board import Power
+from domain.game_state import GameState, MultiplayerGameSummary
 from fastapi import HTTPException, status
 from storage import supabase
 from storage.supabase import SupabaseUnavailable

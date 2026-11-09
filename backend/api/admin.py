@@ -4,13 +4,11 @@ import os
 import time
 
 from api.turns import timer_players
-from domain.models import (
-    FIRST_YEAR,
-    PHASES_BY_SEASON,
+from domain.game_state import FIRST_YEAR, PHASES_BY_SEASON, GameState
+from domain.requests import (
     AdminRollbackRequest,
     AdminSetTurnRequest,
     AdminStatusResponse,
-    GameState,
     SeedScenarioRequest,
 )
 from engine.order_utils import (

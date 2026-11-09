@@ -1,4 +1,6 @@
-from domain.models import IssueCode, Order, OrderType, Power, UnitType
+from domain.board import Power, UnitType
+from domain.issues import IssueCode
+from domain.orders import Order, OrderType
 from engine.adjudicator.resolver import adjudicate_turn
 from engine.topology.graph import split_province_code
 from engine.topology.provinces import PROVINCES, get_initial_1901_units, get_initial_ownership

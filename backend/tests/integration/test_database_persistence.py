@@ -4,7 +4,8 @@ from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
-from domain.models import GameParticipant, GameState, MultiplayerGameSummary, Power
+from domain.board import Power
+from domain.game_state import GameParticipant, GameState, MultiplayerGameSummary
 from fastapi.testclient import TestClient
 from main import app
 from scenarios.presets import build_scenario

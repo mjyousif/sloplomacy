@@ -78,7 +78,7 @@ frontend/
     ├── lib/
     │   └── supabase.ts          # Supabase client singleton & auth helpers
     ├── types/
-    │   └── diplomacy.ts         # TypeScript definitions synchronized with backend/domain/models.py
+    │   └── diplomacy.ts         # TypeScript definitions synchronized with backend/domain/*.py
     └── utils/
         ├── orderHelpers.ts      # Reachability calculations, retreat targeting & symbolic formatters
         ├── orderHelpers.test.ts # Vitest suite for order parsing and valid destinations

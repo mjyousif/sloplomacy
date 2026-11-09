@@ -2,7 +2,9 @@
 
 from typing import Any
 
-from domain.models import Order, Power, Unit, ValidationIssue
+from domain.board import Power, Unit
+from domain.issues import ValidationIssue
+from domain.orders import Order
 from engine.validator.adjustments import validate_adjustments
 from engine.validator.diagnostics import check_friendly_bounces
 from engine.validator.issues import IssueCollector

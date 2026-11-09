@@ -1,5 +1,5 @@
 import pytest
-from domain.models import Power
+from domain.board import Power
 from main import app
 from scenarios.presets import build_scenario
 from starlette.testclient import TestClient

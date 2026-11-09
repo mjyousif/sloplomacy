@@ -9,7 +9,7 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
-from domain.models import GameState, MultiplayerGameSummary
+from domain.game_state import GameState, MultiplayerGameSummary
 
 logger = logging.getLogger("diplomacy.database")
 

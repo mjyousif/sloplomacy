@@ -7,7 +7,8 @@ import api.turns as turns_api
 import jwt
 import pytest
 from api.turns import tick_timer
-from domain.models import GameState, PhaseTimer, Power, TimerChoice, TimerStage
+from domain.board import Power
+from domain.game_state import GameState, PhaseTimer, TimerChoice, TimerStage
 from engine.phase_timer import (
     FIXED_PHASE_MINUTES,
     VOTE_WINDOW_SECONDS,

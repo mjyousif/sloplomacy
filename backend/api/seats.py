@@ -3,13 +3,13 @@
 import hmac
 from datetime import datetime, timezone
 
-from api.games import GameBootstrapResponse
-from domain.models import (
-    GameParticipant,
-    GameState,
+from domain.board import Power
+from domain.game_state import GameParticipant, GameState
+from domain.requests import (
+    GameBootstrapResponse,
     JoinGameRequest,
     LeaveGameRequest,
-    Power,
+    SetPowerRequest,
     SurrenderRequest,
 )
 from engine.order_utils import (
@@ -19,7 +19,6 @@ from engine.order_utils import (
 )
 from engine.topology.provinces import PROVINCES
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
     sanitize_game_state_for_viewer,
@@ -42,10 +41,6 @@ from ws.connection_manager import (
 )
 
 router = APIRouter(tags=["Lobby & Match Management"])
-
-
-class SetPowerRequest(BaseModel):
-    power: Power
 
 
 @router.post(

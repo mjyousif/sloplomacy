@@ -1,6 +1,7 @@
 """Whether fleets ordered to convoy form a connected chain for an army."""
 
-from domain.models import Order, OrderType, ProvinceType, Unit, UnitType
+from domain.board import ProvinceType, Unit, UnitType
+from domain.orders import Order, OrderType
 from engine.topology.graph import split_province_code
 from engine.topology.provinces import PROVINCES
 

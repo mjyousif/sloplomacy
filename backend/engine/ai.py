@@ -1,7 +1,8 @@
 import re
 from typing import Any
 
-from domain.models import Order, OrderType, Power, Unit, UnitType
+from domain.board import Power, Unit, UnitType
+from domain.orders import Order, OrderType
 from engine.adjudicator.resolver import create_diplomacy_game
 from engine.topology.graph import split_province_code
 from engine.topology.provinces import PROVINCES

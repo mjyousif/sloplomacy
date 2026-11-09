@@ -173,7 +173,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - `admin_units.py`: Creator/admin board overrides (teleport, unit spawning/deletion, ownership).
   - `history.py`: Read-only turn history for the turn selector (resolved phases and their records).
   - `websocket.py`: Live turn synchronization and WebSocket subscriptions.
-- **Domain Models (`backend/domain/`)**: Authoritative Pydantic v2 schemas (`models.py`) defining `GameState`, `Order`, `Issue`, and request/response DTOs.
+- **Domain Models (`backend/domain/`)**: Authoritative Pydantic v2 schemas: `board.py` (powers, provinces, units), `orders.py` (orders and adjudication results), `issues.py` (validation issues), `game_state.py` (`GameState`, clock, history, seats) and `requests.py` (request/response DTOs and WebSocket messages).
 - **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator/`, one module per phase), DATC/rulebook validation (`validator/`, one module per phase or concern), map topology (`topology/`: `provinces.py` data, `graph.py` movement rules), phase timer (`phase_timer.py`), AI heuristics (`ai.py`), and order helpers (`order_utils.py`). Completely decoupled from HTTP transport.
 - **Persistence Layer (`backend/storage/`)**: Authoritative in-memory state store (`store.py`) and Supabase PostgREST client (`supabase.py`).
 - **Security & Authorization (`backend/security/`)**: JWT verification and auth dependencies (`auth.py`) and viewer state secrecy sanitization (`secrecy.py`).
@@ -188,7 +188,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - Feature subdirectories (`map/`, `macro/`, `lobby/`, `admin/`) decomposing complex views into focused, single-responsibility subcomponents (e.g. SVG layers, card items, tab views).
 - **Cartographic Data & Metrics (`data/`)**: Static map geometry paths (`europeMapGeometry.ts`), layout coordinates (`mapLayouts.ts`), and font metrics (`mapTextMetrics.ts`).
 - **Custom Hooks (`hooks/`)**: Reusable React hooks for WebSockets (`useDiplomacyWebSocket`), phone layout media queries (`useCompactLayout`), display settings (`useDisplayPrefs`), and the turn selector (`useTurnHistory`).
-- **Types (`types/`)**: TypeScript type contracts (`diplomacy.ts`), strictly synchronized with `backend/domain/models.py`.
+- **Types (`types/`)**: TypeScript type contracts (`diplomacy.ts`), strictly synchronized with the models in `backend/domain/`.
 - **Pure Utilities (`utils/`)**: Pure algorithmic helpers and math (`orderHelpers.ts`, `adminHelpers.ts`, `timerHelpers.ts`, `mapCameraHelpers.ts`, `sheetHelpers.ts`, `historyHelpers.ts`, `displayPrefs.ts`).
 - **Responsive Layout (`compact.css`)**: Phone-specific styles grouped exclusively under `[data-layout='compact']`.
 
@@ -303,7 +303,7 @@ To prevent files from growing into unmaintainable monoliths, agents and contribu
 - **Skill Playbook**: Follow the detailed guide in `.agents/skills/codebase-modularity/SKILL.md`.
 
 ### 3. Preserve Type Contracts
-- `frontend/src/types/diplomacy.ts` must strictly mirror `backend/domain/models.py`.
+- `frontend/src/types/diplomacy.ts` must strictly mirror the models in `backend/domain/`.
 - Whenever adding fields or modifying schemas, update both files concurrently.
 - Always run `npx tsc --noEmit` before committing frontend modifications.
 

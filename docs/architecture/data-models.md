@@ -1,6 +1,6 @@
 # Data Models & Schemas
 
-The Diplomacy 1901 Tactical Engine maintains synchronized data contracts between the Python FastAPI backend (using Pydantic v2 in `backend/domain/models.py`) and the TypeScript frontend (defined in `frontend/src/types/diplomacy.ts`).
+The Diplomacy 1901 Tactical Engine maintains synchronized data contracts between the Python FastAPI backend (using Pydantic v2 in `backend/domain/`: `board.py`, `orders.py`, `issues.py`, `game_state.py` and `requests.py`) and the TypeScript frontend (defined in `frontend/src/types/diplomacy.ts`).
 
 ---
 
@@ -156,7 +156,7 @@ The clock of a live multiplayer match. Times are absolute, so it survives a rest
 | `extensions_needed` | `number` | Computed: 5 of 7, scaled up to `ceil(5n/7)` for `n` players. |
 
 ### 7. `TurnHistoryEntry` and `TurnRecord`
-The turn selector's data, from `GET /api/history` and `GET /api/history/{index}`. Both live in `backend/domain/models.py` and `frontend/src/types/diplomacy.ts`.
+The turn selector's data, from `GET /api/history` and `GET /api/history/{index}`. Both live in `backend/domain/game_state.py` and `frontend/src/types/diplomacy.ts`.
 
 `TurnHistoryEntry` names one resolved phase:
 
@@ -250,7 +250,7 @@ interface AuthUser {
 }
 ```
 
-Backend (`backend/security/auth.py`):
+Backend (`backend/domain/requests.py`, returned by `security/auth.py`):
 ```python
 class AuthUser(BaseModel):
     user_id: str
@@ -259,7 +259,7 @@ class AuthUser(BaseModel):
 ```
 
 ### `DisplayPrefs`
-A player's own map display choice. It's frontend only, so it has no counterpart in `backend/domain/models.py`. It's stored in `localStorage` and in Supabase `user_metadata.display_prefs`, and is defined in `frontend/src/utils/displayPrefs.ts`:
+A player's own map display choice. It's frontend only, so it has no counterpart in `backend/domain/`. It's stored in `localStorage` and in Supabase `user_metadata.display_prefs`, and is defined in `frontend/src/utils/displayPrefs.ts`:
 
 ```typescript
 type PieceStyle = 'classic' | 'seated' | 'compact' | 'flags' | 'nameplate';

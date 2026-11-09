@@ -1,6 +1,7 @@
 """Retreat phases: the engine orders to submit, and reading back where each unit went."""
 
-from domain.models import Order, OrderResolution, OrderType, Unit
+from domain.board import Unit
+from domain.orders import Order, OrderResolution, OrderType
 from engine.adjudicator.context import ResolutionContext
 from engine.adjudicator.translator import order_to_diplomacy_str
 

@@ -2,7 +2,8 @@
 
 from collections import defaultdict
 
-from domain.models import Order, OrderResolution, OrderType, Unit, UnitType
+from domain.board import Unit, UnitType
+from domain.orders import Order, OrderResolution, OrderType
 from engine.adjudicator.context import ResolutionContext
 from engine.adjudicator.translator import order_to_diplomacy_str
 from engine.topology.provinces import PROVINCES

@@ -4,7 +4,7 @@ import asyncio
 import hmac
 
 from api.turns import tick_timer
-from domain.models import Power
+from domain.board import Power
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials

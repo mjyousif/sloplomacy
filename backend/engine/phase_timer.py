@@ -13,7 +13,8 @@ request.
 
 from collections import Counter
 
-from domain.models import GameState, PhaseTimer, Power, TimerChoice, TimerStage
+from domain.board import Power
+from domain.game_state import GameState, PhaseTimer, TimerChoice, TimerStage
 
 VOTE_WINDOW_SECONDS = 60
 FIXED_PHASE_MINUTES = 5  # Retreats and Adjustments

@@ -1,6 +1,6 @@
 """Movement rules over the map: who can move, support or be convoyed where, coasts included."""
 
-from domain.models import ProvinceType, UnitType
+from domain.board import ProvinceType, UnitType
 from engine.topology.provinces import PROVINCES
 
 

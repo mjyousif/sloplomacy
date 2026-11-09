@@ -9,7 +9,7 @@ import logging
 import os
 
 import jwt
-from domain.models import AuthUser
+from domain.requests import AuthUser
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 

@@ -1,15 +1,8 @@
 from datetime import datetime, timezone
 
-from domain.models import (
-    GameParticipant,
-    GameState,
-    MultiplayerGameSummary,
-    Order,
-    OrderType,
-    Power,
-    Unit,
-    UnitType,
-)
+from domain.board import Power, Unit, UnitType
+from domain.game_state import GameParticipant, GameState, MultiplayerGameSummary
+from domain.orders import Order, OrderType
 from engine.order_utils import (
     create_default_orders,
     refresh_diagnostics_and_simulation,
