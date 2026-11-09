@@ -13,9 +13,11 @@ import time
 
 import jwt
 import pytest
+from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from main import app
 from scenarios.presets import seed_initial_multiplayer_lobbies
+from security.secrecy import saved_sandbox_guard
 from starlette.websockets import WebSocketDisconnect
 from storage.store import GAMES
 
@@ -183,6 +185,33 @@ def test_a_stranger_cannot_touch_someone_elses_saved_sandbox(method, path, body)
     assert game.season == "Spring"
     assert game.orders["FRA_A_PAR"].target == "BUR"
     assert all(u.province != "PIC" for u in game.units)
+
+
+def _api_routes_and_guard():
+    """Yield (path, guarded) for every HTTP route, however FastAPI stores included routers."""
+    for route in app.routes:
+        include = getattr(route, "include_context", None)
+        if include is not None:
+            guarded = any(d.dependency is saved_sandbox_guard for d in include.dependencies)
+            for sub in route.original_router.routes:
+                yield sub.path, guarded
+        elif isinstance(route, APIRoute):
+            yield (
+                route.path,
+                any(d.call is saved_sandbox_guard for d in route.dependant.dependencies),
+            )
+
+
+def test_every_api_route_is_behind_the_saved_sandbox_guard():
+    # main.py adds the guard to each router it includes. A router added without it would let
+    # anyone reach a saved sandbox through that router's routes.
+    routes = list(_api_routes_and_guard())
+    api_paths = {path for path, _ in routes if path.startswith("/api")}
+    assert api_paths == {path for path in app.openapi()["paths"] if path.startswith("/api")}
+    unguarded = sorted(
+        {path for path, guarded in routes if path.startswith("/api") and not guarded}
+    )
+    assert not unguarded, f"Routes without saved_sandbox_guard: {unguarded}"
 
 
 def test_saved_sandboxes_socket_refuses_a_stranger():

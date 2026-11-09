@@ -10,11 +10,13 @@ The backend service is located in the `backend/` directory. It is built with **F
 backend/
 ├── main.py                  # FastAPI app instance, CORS/security headers, router inclusion
 ├── api/                     # Modular FastAPI routers
-│   ├── games.py             # Match room creation, seat joining/claiming/surrendering, public/private lobbies
+│   ├── games.py             # Match rooms: lobby list, creation, loading, deletion, saving a sandbox
+│   ├── seats.py             # Seats: joining/claiming, leaving, surrendering, picking the active power
 │   ├── orders.py            # Single order submission, batch atomic updates, confirm-all
 │   ├── turns.py             # Finalization, turn adjudication, phase timer votes and extensions
 │   ├── sandbox.py           # Isolated sandbox mode ("War Room"), hypothetical simulation, AI order generation
-│   ├── admin.py             # Administrator controls (turn rollback, jumps, unit spawner/teleport, ownership)
+│   ├── admin.py             # Administrator turn controls (status, rollback, jumps, unfinalize-all, test seed)
+│   ├── admin_units.py       # Administrator board overrides (unit spawner/teleport/destroy, ownership)
 │   ├── history.py           # Read-only turn history: resolved phases with every power's orders and outcomes
 │   └── websocket.py         # Real-time WebSockets for turn state updates and lobby room events
 ├── domain/                  # Core Pydantic domain models & schemas

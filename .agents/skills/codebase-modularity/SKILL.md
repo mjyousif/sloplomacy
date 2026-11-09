@@ -25,13 +25,15 @@ This repository enforces strict modularity and separation of concerns to prevent
   - Don't re-export names from `main.py` for tests. Tests import a name from the module that owns it and patch it there: `storage.supabase.<fn>` for the Supabase calls (production calls them through the `supabase` module, so one patch covers every caller, the game socket included), `storage.store.GAMES` for the store, `api.turns.<fn>` for turn helpers.
 - **Domain-Driven Modular Routers (`backend/api/`)**:
   - All endpoints belong in domain routers:
-    - `api/games.py`: Game room lifecycle, lobby creation, seat claiming, leaving, surrendering.
+    - `api/games.py`: Game room lifecycle: lobby list, creation, loading, deletion, saving a sandbox.
+    - `api/seats.py`: Seats in a match: joining, leaving, surrendering, picking the active power.
     - `api/orders.py`: Move/retreat/build order submission, atomic batch orders.
     - `api/turns.py`: Finalization, turn adjudication, timer votes/extensions.
     - `api/sandbox.py`: Sandbox sessions, simulation, AI moves.
-    - `api/admin.py`: Creator/admin overrides (teleport, turn rollback, unit spawning).
+    - `api/admin.py`: Creator/admin turn controls (status, rollback, set-turn, unfinalize-all, test seeding).
+    - `api/admin_units.py`: Creator/admin board overrides (teleport, unit spawning/deletion, ownership).
     - `api/websocket.py`: Live turn synchronization and WebSocket subscriptions.
-  - When adding a new feature area or resource, create a new router in `backend/api/<resource>.py` and include it in `main.py`.
+  - When adding a new feature area or resource, create a new router in `backend/api/<resource>.py` and include it in `main.py`'s guarded router loop, so `saved_sandbox_guard` covers it. `test_every_api_route_is_behind_the_saved_sandbox_guard` fails otherwise.
 - **Pure Core Engine (`backend/engine/`)**:
   - Keep adjudication, graph topology, AI calculation, and blunder validation independent of HTTP/FastAPI request contexts.
 - **Data & Models (`backend/domain/`)**:
