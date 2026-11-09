@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getPieceFrame } from '../components/MapPiece';
-import { PIECE_STYLES, PieceStyle } from '../utils/displayPrefs';
-import { EUROPE_PROVINCE_GEOMETRY, Point } from './europeMapGeometry';
+import { PIECE_STYLES, type PieceStyle } from '../utils/displayPrefs';
+import { EUROPE_PROVINCE_GEOMETRY, type Point } from './europeMapGeometry';
 import {
   getMapLayout,
   SEA_SHORT_NAMES,

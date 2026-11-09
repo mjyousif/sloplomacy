@@ -5,4 +5,4 @@ param(
     [string[]]$RemainingArgs
 )
 
-& "$PSScriptRoot\scripts\dev.ps1" @PSBoundParameters
+& "$PSScriptRoot\dev.ps1" @PSBoundParameters

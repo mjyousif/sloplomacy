@@ -2,24 +2,18 @@ import {
   AlertTriangle,
   ArrowRight,
   Calendar,
-  Check,
   Crown,
   MapPin,
   PlusCircle,
-  RefreshCw,
   RotateCcw,
   ShieldAlert,
   Sliders,
-  Trash2,
-  Undo2,
-  Unlock,
   X,
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { getAuthHeaders } from '../lib/supabase';
 import {
-  ALL_POWERS,
   type AuthUser,
   type GameState,
   POWER_METADATA,
@@ -28,8 +22,11 @@ import {
   type Unit,
   type UnitType,
 } from '../types/diplomacy';
+import { TerritoryControlTab } from './admin/TerritoryControlTab';
+import { TurnControlTab } from './admin/TurnControlTab';
+import { UnitSpawnerTab } from './admin/UnitSpawnerTab';
+import { UnitTeleportTab } from './admin/UnitTeleportTab';
 import { useConfirm } from './ConfirmModal';
-import { PowerFlag } from './PowerFlag';
 
 const API_BASE = '/api';
 
@@ -531,511 +528,80 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
           <div className="admin-tab-body">
             {/* TAB 1: TURN ROLLBACK & CLOCK */}
             {activeTab === 'turn' && (
-              <div className="admin-tab-panel">
-                <div className="admin-card-section">
-                  <div className="admin-card-title-row">
-                    <Undo2 size={16} className="section-icon-gold" />
-                    <h4>Roll Back Adjudicated Turn</h4>
-                  </div>
-                  <p className="admin-section-desc">
-                    Revert to the state immediately before the last
-                    adjudication. Use this if a player forgot to enter orders,
-                    or an unintended turn advance occurred.
-                  </p>
-
-                  <div className="admin-rollback-action-box">
-                    <div>
-                      <span className="rollback-status-text">
-                        {canRollback
-                          ? `Previous snapshot is ready to restore (${historyCount} saved).`
-                          : 'No previous turn history available (game is at initial state).'}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      data-testid="btn-admin-rollback"
-                      className="admin-primary-btn rollback"
-                      disabled={!canRollback || loading}
-                      onClick={handleRollback}
-                    >
-                      <RotateCcw size={15} />
-                      <span>Roll Back to Previous Turn</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="admin-card-section">
-                  <div className="admin-card-title-row">
-                    <Calendar size={16} className="section-icon-gold" />
-                    <h4>Adjust Game Clock &amp; Season</h4>
-                  </div>
-                  <p className="admin-section-desc">
-                    Directly adjust the current season, year, or phase to fix
-                    scheduling or timeline mistakes.
-                  </p>
-
-                  <div className="admin-form-grid-3">
-                    <div className="admin-form-group">
-                      <label>Season</label>
-                      <select
-                        value={selectedSeason}
-                        onChange={(e) => setSelectedSeason(e.target.value)}
-                      >
-                        <option value="Spring">Spring</option>
-                        <option value="Fall">Fall</option>
-                        <option value="Winter">Winter</option>
-                      </select>
-                    </div>
-                    <div className="admin-form-group">
-                      <label>Year</label>
-                      <input
-                        type="number"
-                        min={1901}
-                        max={1950}
-                        value={selectedYear}
-                        onChange={(e) =>
-                          setSelectedYear(parseInt(e.target.value, 10) || 1901)
-                        }
-                      />
-                    </div>
-                    <div className="admin-form-group">
-                      <label>Phase</label>
-                      <select
-                        value={selectedPhase}
-                        onChange={(e) => setSelectedPhase(e.target.value)}
-                      >
-                        <option value="Movement">Movement</option>
-                        <option value="Retreats">Retreats</option>
-                        <option value="Adjustments">Adjustments</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="admin-form-actions-row">
-                    <button
-                      type="button"
-                      className="admin-secondary-btn"
-                      disabled={loading}
-                      onClick={handleSetTurn}
-                    >
-                      <Check size={14} />
-                      <span>Apply Clock Changes</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="admin-card-section">
-                  <div className="admin-card-title-row">
-                    <Unlock size={16} className="section-icon-gold" />
-                    <h4>Unlock All Power Orders</h4>
-                  </div>
-                  <p className="admin-section-desc">
-                    If powers have locked / finalized their turns, unlock them
-                    all so players can freely edit and re-confirm their orders.
-                  </p>
-                  <button
-                    type="button"
-                    className="admin-secondary-btn"
-                    disabled={loading}
-                    onClick={handleUnfinalizeAll}
-                  >
-                    <Unlock size={14} />
-                    <span>Unlock / Unfinalize All Powers</span>
-                  </button>
-                </div>
-              </div>
+              <TurnControlTab
+                canRollback={canRollback}
+                historyCount={historyCount}
+                loading={loading}
+                handleRollback={handleRollback}
+                selectedSeason={selectedSeason}
+                setSelectedSeason={setSelectedSeason}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
+                selectedPhase={selectedPhase}
+                setSelectedPhase={setSelectedPhase}
+                handleSetTurn={handleSetTurn}
+                handleUnfinalizeAll={handleUnfinalizeAll}
+              />
             )}
 
             {/* TAB 2: MOVE UNITS ANYWHERE */}
             {activeTab === 'move' && (
-              <div className="admin-tab-panel">
-                <div className="admin-card-section">
-                  <div className="admin-card-title-row">
-                    <ArrowRight size={16} className="section-icon-gold" />
-                    <h4>Relocate / Teleport Any Unit</h4>
-                  </div>
-                  <p className="admin-section-desc">
-                    Move any existing unit anywhere on the board. Bypasses
-                    regular adjacency and movement rules to fix erroneous unit
-                    placements.
-                  </p>
-
-                  <div className="admin-form-grid-2">
-                    <div className="admin-form-group">
-                      <label>Select Unit on Board</label>
-                      <select
-                        value={moveUnitId}
-                        onChange={(e) => setMoveUnitId(e.target.value)}
-                      >
-                        {gameState.units.map((u) => {
-                          const pMeta = POWER_METADATA[u.power];
-                          const prov = provinces[u.province];
-                          return (
-                            <option key={u.id} value={u.id}>
-                              {pMeta.shortName}{' '}
-                              {u.unit_type === 'A' ? 'Army' : 'Fleet'} —{' '}
-                              {u.province} ({prov?.name || u.province})
-                              {u.coast ? ` [${u.coast}]` : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label>Destination Province</label>
-                      <select
-                        value={moveTargetProvince}
-                        onChange={(e) => {
-                          setMoveTargetProvince(e.target.value);
-                          setMoveTargetCoast('');
-                        }}
-                      >
-                        {sortedProvinces.map((p) => {
-                          return (
-                            <option key={p.id} value={p.id}>
-                              {p.id} — {p.name} ({p.type})
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  </div>
-
-                  {moveProvInfo &&
-                    moveProvInfo.coasts &&
-                    moveProvInfo.coasts.length > 0 &&
-                    selectedMoveUnit?.unit_type === 'F' && (
-                      <div
-                        className="admin-form-group"
-                        style={{ marginTop: 12 }}
-                      >
-                        <label>Fleet Coast in {moveProvInfo.name}</label>
-                        <select
-                          value={moveTargetCoast || moveProvInfo.coasts[0]}
-                          onChange={(e) => setMoveTargetCoast(e.target.value)}
-                        >
-                          {moveProvInfo.coasts.map((c) => (
-                            <option key={c} value={c}>
-                              {c} Coast
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                  <div className="admin-relocate-preview">
-                    {selectedMoveUnit && moveProvInfo && (
-                      <span>
-                        Relocating{' '}
-                        <strong>
-                          {POWER_METADATA[selectedMoveUnit.power].shortName}{' '}
-                          {selectedMoveUnit.unit_type === 'A'
-                            ? 'Army'
-                            : 'Fleet'}
-                        </strong>{' '}
-                        from <strong>{selectedMoveUnit.province}</strong> to{' '}
-                        <strong>
-                          {moveProvInfo.name} ({moveTargetProvince})
-                        </strong>
-                        .
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="admin-form-actions-row">
-                    <button
-                      type="button"
-                      className="admin-primary-btn"
-                      disabled={!moveUnitId || loading}
-                      onClick={handleMoveUnit}
-                    >
-                      <ArrowRight size={14} />
-                      <span>Relocate Unit Now</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <UnitTeleportTab
+                moveUnitId={moveUnitId}
+                setMoveUnitId={setMoveUnitId}
+                moveTargetProvince={moveTargetProvince}
+                setMoveTargetProvince={setMoveTargetProvince}
+                moveTargetCoast={moveTargetCoast}
+                setMoveTargetCoast={setMoveTargetCoast}
+                gameState={gameState}
+                provinces={provinces}
+                sortedProvinces={sortedProvinces}
+                selectedMoveUnit={selectedMoveUnit}
+                moveProvInfo={moveProvInfo}
+                loading={loading}
+                handleMoveUnit={handleMoveUnit}
+              />
             )}
 
             {/* TAB 3: SPAWN / DESTROY UNITS */}
             {activeTab === 'spawn' && (
-              <div className="admin-tab-panel">
-                {/* SECTION A: SPAWN */}
-                <div className="admin-card-section">
-                  <div className="admin-card-title-row">
-                    <PlusCircle size={16} className="section-icon-gold" />
-                    <h4>Spawn New Unit</h4>
-                  </div>
-                  <p className="admin-section-desc">
-                    Create a unit for any Great Power at any valid location on
-                    the board.
-                  </p>
-
-                  <div className="admin-form-grid-3">
-                    <div className="admin-form-group">
-                      <label>Great Power</label>
-                      <select
-                        value={spawnPower}
-                        onChange={(e) => setSpawnPower(e.target.value as Power)}
-                      >
-                        {ALL_POWERS.map((p) => (
-                          <option key={p} value={p}>
-                            {POWER_METADATA[p].name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label>Unit Type</label>
-                      <select
-                        value={spawnUnitType}
-                        onChange={(e) =>
-                          setSpawnUnitType(e.target.value as UnitType)
-                        }
-                      >
-                        <option value="A">Army (A)</option>
-                        <option value="F">Fleet (F)</option>
-                      </select>
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label>Province</label>
-                      <select
-                        value={spawnProvince}
-                        onChange={(e) => {
-                          setSpawnProvince(e.target.value);
-                          setSpawnCoast('');
-                        }}
-                      >
-                        {sortedProvinces.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.id} — {p.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {spawnProvInfo &&
-                    spawnProvInfo.coasts &&
-                    spawnProvInfo.coasts.length > 0 &&
-                    spawnUnitType === 'F' && (
-                      <div
-                        className="admin-form-group"
-                        style={{ marginTop: 12 }}
-                      >
-                        <label>Coast in {spawnProvInfo.name}</label>
-                        <select
-                          value={spawnCoast || spawnProvInfo.coasts[0]}
-                          onChange={(e) => setSpawnCoast(e.target.value)}
-                        >
-                          {spawnProvInfo.coasts.map((c) => (
-                            <option key={c} value={c}>
-                              {c} Coast
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                  <div className="admin-form-actions-row">
-                    <button
-                      type="button"
-                      className="admin-primary-btn"
-                      disabled={loading}
-                      onClick={handleSpawnUnit}
-                    >
-                      <PlusCircle size={14} />
-                      <span>Spawn Unit</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* SECTION B: DESTROY / DISBAND */}
-                <div className="admin-card-section">
-                  <div className="admin-card-title-row">
-                    <Trash2 size={16} className="section-icon-crimson" />
-                    <h4>Destroy / Disband Units Arbitrarily</h4>
-                  </div>
-                  <p className="admin-section-desc">
-                    Immediately delete any unit from the board. Useful if an
-                    extra unit was spawned or dislodged erroneously.
-                  </p>
-
-                  <div className="admin-filter-bar">
-                    <label>Filter by Country:</label>
-                    <select
-                      value={destroyFilterPower}
-                      onChange={(e) => setDestroyFilterPower(e.target.value)}
-                    >
-                      <option value="ALL">
-                        All Great Powers ({gameState.units.length} units)
-                      </option>
-                      {ALL_POWERS.map((p) => {
-                        const count = gameState.units.filter(
-                          (u) => u.power === p,
-                        ).length;
-                        return (
-                          <option key={p} value={p}>
-                            {POWER_METADATA[p].shortName} ({count} units)
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-
-                  <div className="admin-units-destroy-list">
-                    {filteredUnitsToDestroy.map((u) => {
-                      const pMeta = POWER_METADATA[u.power];
-                      const prov = provinces[u.province];
-                      return (
-                        <div key={u.id} className="admin-unit-destroy-row">
-                          <div className="admin-unit-badge-block">
-                            <span
-                              className="admin-unit-country-badge"
-                              style={{ backgroundColor: pMeta.color }}
-                            >
-                              <PowerFlag
-                                power={u.power}
-                                width={16}
-                                height={11}
-                                style={{ marginRight: 5 }}
-                              />
-                              {pMeta.shortName}
-                            </span>
-                            <span className="admin-unit-type-label">
-                              {u.unit_type === 'A' ? 'Army' : 'Fleet'} in{' '}
-                              {u.province}
-                              {u.coast ? ` (${u.coast})` : ''} —{' '}
-                              {prov?.name || u.province}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            className="admin-destroy-btn"
-                            disabled={loading}
-                            onClick={(e) => handleDestroyUnit(u, e)}
-                            title={`Destroy ${pMeta.shortName} unit in ${u.province}`}
-                          >
-                            <Trash2 size={13} />
-                            <span>Destroy</span>
-                          </button>
-                        </div>
-                      );
-                    })}
-                    {filteredUnitsToDestroy.length === 0 && (
-                      <div className="admin-empty-list-notice">
-                        No units found matching selection.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <UnitSpawnerTab
+                spawnPower={spawnPower}
+                setSpawnPower={setSpawnPower}
+                spawnUnitType={spawnUnitType}
+                setSpawnUnitType={setSpawnUnitType}
+                spawnProvince={spawnProvince}
+                setSpawnProvince={setSpawnProvince}
+                spawnCoast={spawnCoast}
+                setSpawnCoast={setSpawnCoast}
+                spawnProvInfo={spawnProvInfo}
+                sortedProvinces={sortedProvinces}
+                loading={loading}
+                handleSpawnUnit={handleSpawnUnit}
+                destroyFilterPower={destroyFilterPower}
+                setDestroyFilterPower={setDestroyFilterPower}
+                gameState={gameState}
+                provinces={provinces}
+                filteredUnitsToDestroy={filteredUnitsToDestroy}
+                handleDestroyUnit={handleDestroyUnit}
+              />
             )}
 
             {/* TAB 4: TERRITORY & POWERS */}
             {activeTab === 'territory' && (
-              <div className="admin-tab-panel">
-                <div className="admin-card-section">
-                  <div className="admin-card-title-row">
-                    <MapPin size={16} className="section-icon-gold" />
-                    <h4>Supply Center &amp; Province Ownership</h4>
-                  </div>
-                  <p className="admin-section-desc">
-                    Arbitrarily reassign province controller/ownership. Useful
-                    for fixing supply center capture errors.
-                  </p>
-
-                  <div className="admin-form-grid-2">
-                    <div className="admin-form-group">
-                      <label>Province</label>
-                      <select
-                        value={territoryProvince}
-                        onChange={(e) => setTerritoryProvince(e.target.value)}
-                      >
-                        {sortedProvinces
-                          .filter((p) => p.is_supply_center)
-                          .map((p) => {
-                            const currentOwner = gameState.ownership[p.id];
-                            return (
-                              <option key={p.id} value={p.id}>
-                                {p.id} — {p.name} [
-                                {currentOwner
-                                  ? POWER_METADATA[currentOwner].shortName
-                                  : 'Neutral'}
-                                ]
-                              </option>
-                            );
-                          })}
-                      </select>
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label>New Owner</label>
-                      <select
-                        value={territoryOwner}
-                        onChange={(e) => setTerritoryOwner(e.target.value)}
-                      >
-                        <option value="NEUTRAL">Neutral (Unclaimed)</option>
-                        {ALL_POWERS.map((p) => (
-                          <option key={p} value={p}>
-                            {POWER_METADATA[p].name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="admin-form-actions-row">
-                    <button
-                      type="button"
-                      className="admin-primary-btn"
-                      disabled={loading}
-                      onClick={handleSetOwnership}
-                    >
-                      <Check size={14} />
-                      <span>Set Province Ownership</span>
-                    </button>
-                  </div>
-                </div>
-
-                {onResetScenario && (
-                  <div className="admin-card-section">
-                    <div className="admin-card-title-row">
-                      <RefreshCw size={16} className="section-icon-crimson" />
-                      <h4>Hard Reset Scenario</h4>
-                    </div>
-                    <p className="admin-section-desc">
-                      Reset this entire board state back to the standard Spring
-                      1901 starting layout.
-                    </p>
-                    <button
-                      type="button"
-                      className="admin-danger-outline-btn"
-                      onClick={async (e) => {
-                        const ok = await confirm(
-                          {
-                            title: 'Reset to Spring 1901?',
-                            message:
-                              'This game goes back to the standard Spring 1901 layout. All orders and moves will be reset.',
-                            confirmLabel: 'Reset game',
-                          },
-                          e,
-                        );
-                        if (ok) {
-                          onResetScenario();
-                          onClose();
-                        }
-                      }}
-                    >
-                      <RefreshCw size={14} />
-                      <span>Hard Reset to Standard Spring 1901</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+              <TerritoryControlTab
+                territoryProvince={territoryProvince}
+                setTerritoryProvince={setTerritoryProvince}
+                territoryOwner={territoryOwner}
+                setTerritoryOwner={setTerritoryOwner}
+                sortedProvinces={sortedProvinces}
+                gameState={gameState}
+                loading={loading}
+                handleSetOwnership={handleSetOwnership}
+                onResetScenario={onResetScenario}
+                confirm={confirm}
+                onClose={onClose}
+              />
             )}
           </div>
 

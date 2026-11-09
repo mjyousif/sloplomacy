@@ -45,31 +45,35 @@ The browser pane sends mouse events. The `mobile` E2E scenario turns on Playwrig
 
 ## SVG Rendering Layers
 
-The map is rendered as a layered SVG pipeline:
+The map is rendered as a layered SVG pipeline decomposed into memoized subcomponents under `src/components/map/`:
 
 ```
 <svg viewBox="0 0 1524 1357">
   │
-  ├── 1. Static Defs Layer (<defs>): Drop shadows, glow filters, arrow markers
-  ├── 2. Background Map Layer: Landmass contours, ocean bathymetry, topography
-  ├── 3. Dynamic Province Fill Layer:
+  ├── 1. Static Defs Layer (StaticLayers.tsx: StaticDefsLayer):
+  │      - Drop shadows, glow filters, arrow markers
+  │
+  ├── 2. Background Map Layer (StaticLayers.tsx: StaticBackgroundLayer, StaticForegroundLayer):
+  │      - Landmass contours, ocean bathymetry, topography
+  │
+  ├── 3. Dynamic Province Fill Layer (ProvincePolygon.tsx: ProvincePolygon):
   │      - Semi-transparent fills colored by owning Great Power
   │      - Hover highlighting for candidate destinations
   │      - Pulsing red highlights for provinces with tactical errors
   │      - Amber glow on valid retreat destinations during Retreats phase
   │      - Gold pulsing border on vacant home SCs during Winter Adjustments
   │
-  ├── 4. Province Names Layer (MapNamesLayer):
-  │      - Classic: the original typesetting from AUTHENTIC_NAMES_SVG
+  ├── 4. Province Names Layer (MapNamesLayer.tsx: MapNamesLayer):
+  │      - Classic: the original typesetting from StaticNamesLayer (AUTHENTIC_NAMES_SVG)
   │      - Other styles: shared sea names and coast tags, plus land names
   │        placed by the active layout, with a parchment halo
   │
-  ├── 5. Supply Center Layer:
+  ├── 5. Supply Center Layer (SupplyCentersLayer.tsx: SupplyCentersLayer):
   │      - Circular markers with gold star / power crest
   │      - Distinguishes neutral vs power-owned centers
   │      - Position, size and presence follow the active piece style
   │
-  ├── 6. Order Vector Layer:
+  ├── 6. Order Vector Layer (curveGeometry.ts: computeQuadraticCurve):
   │      - Blue curved bezier arrows for MOVE orders
   │      - Teal dashed arrows with target reticles for SUPPORT orders
   │      - Purple wavy arrows for CONVOY paths
@@ -137,6 +141,18 @@ Hovering a province brightens a reachable one, and hovering a unit rings it and 
 ## Map Overlay
 
 `EuropeMap` renders its `overlay` prop inside the map viewport, outside the SVG, so panning and zooming do not move it and it does not trigger them. `App.tsx` uses it to place `PhaseTimerWidget` over the bottom left of the map, where it stays visible with both sidebars collapsed. Toasts are centered at the bottom of the window to keep clear of it.
+
+---
+
+## Past Turns (`historyView`)
+
+With `historyView` set, `App.tsx` feeds the map a `TurnRecord` from the turn selector instead of the live state: its units, orders, ownership, phase, builds and retreats, and its `resolution` as the `simulationResult`, with `showSimulationOverlay` on.
+
+- `isUnitOrderVisible` draws every power's orders, or only `historyPower`'s when a nation chip is picked, instead of only the player's own.
+- `canEditAnyPower` is false and `controlPower` is `null`, so no unit, build slot or province click selects anything. App also passes no-op handlers and no selection.
+- In an Adjustments phase the build tokens are the builds that were ordered (`adjustmentOrdersFor`), for every power. Waived slots are not drawn.
+- The Hypothetical banner stays hidden.
+- On phones the `TurnHistoryPill` goes into the `overlay` beside the clock.
 
 ---
 

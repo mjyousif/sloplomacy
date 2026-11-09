@@ -17,7 +17,6 @@ import {
 import type React from 'react';
 import {
   forwardRef,
-  memo,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -27,21 +26,12 @@ import {
   useState,
 } from 'react';
 import {
-  AUTHENTIC_BACKGROUND_SVG,
-  AUTHENTIC_DEFS_SVG,
-  AUTHENTIC_FOREGROUND_SVG,
-  AUTHENTIC_NAMES_SVG,
+  ALL_PROVINCE_GEOMETRIES,
   EUROPE_PROVINCE_GEOMETRY,
   MAP_VIEWBOX,
   type Point,
-  type ProvinceGeometry,
 } from '../data/europeMapGeometry';
-import {
-  getMapLayout,
-  SEA_SHORT_NAMES,
-  SHARED_MAP_NAMES_SVG,
-} from '../data/mapLayouts';
-import { MAP_NAME_FONT, measureMapName } from '../data/mapTextMetrics';
+import { getMapLayout, SEA_SHORT_NAMES } from '../data/mapLayouts';
 import {
   type IssueSeverity,
   type Order,
@@ -53,6 +43,7 @@ import {
   type ValidationIssue,
 } from '../types/diplomacy';
 import type { PieceStyle, UnitMark } from '../utils/displayPrefs';
+import { adjustmentOrdersFor } from '../utils/historyHelpers';
 import {
   type CameraBoundsOptions,
   COMPACT_MAX_ZOOM,
@@ -84,8 +75,16 @@ import {
   PieceHitArea,
   PieceHoldOutline,
   PieceOutline,
-  SupplyStar,
 } from './MapPiece';
+import { MapNamesLayer } from './map/layers/MapNamesLayer';
+import { ProvincePolygon } from './map/layers/ProvincePolygon';
+import {
+  StaticBackgroundLayer,
+  StaticDefsLayer,
+  StaticForegroundLayer,
+} from './map/layers/StaticLayers';
+import { SupplyCentersLayer } from './map/layers/SupplyCentersLayer';
+import { computeQuadraticCurve } from './map/utils/curveGeometry';
 
 export interface EuropeMapHandle {
   stepZoom: (delta: number) => void;
@@ -131,6 +130,13 @@ export interface EuropeMapProps {
    * out of its way. The bar sits at the bottom of the map, just above the sheet's peek.
    */
   onDockedBarChange?: (visible: boolean) => void;
+  /**
+   * A past turn from the turn selector. Every power's orders are drawn with how they resolved,
+   * nothing can be selected or edited, and the hypothetical banner stays hidden.
+   */
+  historyView?: boolean;
+  /** History only: draw just this power's orders. Null draws everyone's. */
+  historyPower?: Power | null;
 }
 
 /** How far the docked unit bar sits above the bottom of the map (`.unit-docked-bar` in compact.css). */
@@ -148,344 +154,6 @@ type MapInteractionMode =
   | 'SUPPORT_PICK_TARGET'
   | 'CONVOY_PICK_ARMY'
   | 'CONVOY_PICK_TARGET';
-
-const StaticBackgroundLayer = memo(() => (
-  <g
-    className="authentic-background-layer"
-    pointerEvents="none"
-    dangerouslySetInnerHTML={{ __html: AUTHENTIC_BACKGROUND_SVG }}
-  />
-));
-
-const StaticForegroundLayer = memo(() => (
-  <g
-    className="authentic-foreground-layer"
-    pointerEvents="none"
-    dangerouslySetInnerHTML={{ __html: AUTHENTIC_FOREGROUND_SVG }}
-  />
-));
-
-const StaticNamesLayer = memo(() => (
-  <g
-    className="authentic-names-layer"
-    pointerEvents="none"
-    dangerouslySetInnerHTML={{ __html: AUTHENTIC_NAMES_SVG }}
-  />
-));
-
-// Room kept beside a name for its star in the Name as piece style
-const NAME_STAR_ROOM = 6;
-
-/**
- * Province names, fitted around the active piece style. Classic keeps the original
- * typesetting. The other styles share its sea names and place land names themselves.
- */
-const MapNamesLayer = memo<{
-  pieceStyle: PieceStyle;
-  provinces: Record<string, ProvinceInfo>;
-  ownership: Record<string, Power>;
-  occupied: string;
-}>(({ pieceStyle, provinces, ownership, occupied }) => {
-  if (pieceStyle === 'classic') return <StaticNamesLayer />;
-
-  const layout = getMapLayout(pieceStyle);
-  const isNameplate = pieceStyle === 'nameplate';
-  const hidden = isNameplate ? new Set(occupied.split(',')) : null;
-
-  return (
-    <g className="authentic-names-layer" pointerEvents="none">
-      <g dangerouslySetInnerHTML={{ __html: SHARED_MAP_NAMES_SVG }} />
-      {ALL_PROVINCE_GEOMETRIES.map((geom) => {
-        const placement = layout[geom.id]?.name;
-        const pInfo = provinces[geom.id];
-        if (!placement || !pInfo || hidden?.has(geom.id)) return null;
-
-        const hasStar = isNameplate && pInfo.is_supply_center;
-        const owner = ownership[geom.id] || pInfo.home_power;
-        const nameWidth = measureMapName(pInfo.name, placement.size);
-        return (
-          <g
-            key={`name_${geom.id}`}
-            transform={`translate(${placement.x}, ${placement.y}) rotate(${placement.angle})`}
-          >
-            <text
-              className="map-province-name"
-              x={hasStar ? NAME_STAR_ROOM : 0}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fontFamily={MAP_NAME_FONT}
-              fontWeight="700"
-              fontSize={placement.size}
-            >
-              {pInfo.name}
-            </text>
-            {hasStar && (
-              <g
-                transform={`translate(${NAME_STAR_ROOM - nameWidth / 2 - 8}, 0)`}
-              >
-                <SupplyStar
-                  ownerColor={owner ? POWER_METADATA[owner].color : undefined}
-                  scale={0.5}
-                />
-              </g>
-            )}
-          </g>
-        );
-      })}
-    </g>
-  );
-});
-
-const StaticDefsLayer = memo(() => (
-  <g dangerouslySetInnerHTML={{ __html: AUTHENTIC_DEFS_SVG }} />
-));
-
-const ALL_PROVINCE_GEOMETRIES: ProvinceGeometry[] = Object.values(
-  EUROPE_PROVINCE_GEOMETRY,
-);
-
-interface ProvincePolygonProps {
-  geom: ProvinceGeometry;
-  isSea: boolean;
-  owner: Power | null;
-  isReachable: boolean;
-  allowedCoastsStr: string;
-  showFleetCoasts: boolean;
-  showMoveReticle: boolean;
-  reticlePoint: Point;
-  isHovered: boolean;
-  isHighlighted: boolean;
-  hasWarning: boolean;
-  onClickProvince: (provId: string, explicitCoast?: string | null) => void;
-  onHoverProvince: (provId: string | null) => void;
-}
-
-const ProvincePolygon = memo<ProvincePolygonProps>(
-  ({
-    geom,
-    isSea,
-    owner,
-    isReachable,
-    allowedCoastsStr,
-    showFleetCoasts,
-    showMoveReticle,
-    reticlePoint,
-    isHovered,
-    isHighlighted,
-    hasWarning,
-    onClickProvince,
-    onHoverProvince,
-  }) => {
-    let fill = 'transparent';
-    let fillOpacity = 0;
-
-    if (isSea) {
-      if (isHighlighted) {
-        fill = '#fde047';
-        fillOpacity = 0.45;
-      } else if (isReachable && isHovered) {
-        fill = '#22c55e';
-        fillOpacity = 0.42;
-      } else if (isReachable) {
-        fill = '#4ade80';
-        fillOpacity = 0.25;
-      } else if (isHovered) {
-        fill = '#ffffff';
-        fillOpacity = 0.22;
-      } else {
-        fill = '#9ec5d6';
-        fillOpacity = 0.28;
-      }
-    } else {
-      if (owner && POWER_METADATA[owner]) {
-        fill = POWER_METADATA[owner].fillColor;
-        fillOpacity = isHovered ? 0.68 : 0.48;
-      } else {
-        fill = isHovered ? '#fffbeb' : '#f4d7b5';
-        fillOpacity = isHovered ? 0.55 : 0.15;
-      }
-
-      if (isHighlighted) {
-        fill = '#facc15';
-        fillOpacity = 0.58;
-      } else if (isReachable && isHovered) {
-        fill = '#22c55e';
-        fillOpacity = 0.55;
-      } else if (isReachable) {
-        fill = '#4ade80';
-        fillOpacity = 0.32;
-      }
-    }
-
-    const allowedCoasts = allowedCoastsStr ? allowedCoastsStr.split(',') : [];
-
-    return (
-      <g>
-        <path
-          d={geom.path}
-          fill={fill}
-          fillOpacity={fillOpacity}
-          stroke={
-            isHighlighted
-              ? '#eab308'
-              : isReachable
-                ? '#15803d'
-                : hasWarning
-                  ? '#d97706'
-                  : 'none'
-          }
-          strokeWidth={isHighlighted || isReachable || hasWarning ? 3.5 : 0}
-          className="province-interactive-path"
-          data-testid="province-path"
-          data-province-id={geom.id}
-          onClick={() => onClickProvince(geom.id)}
-          onPointerEnter={(e) => {
-            if (e.pointerType !== 'touch') onHoverProvince(geom.id);
-          }}
-          onPointerLeave={(e) => {
-            if (e.pointerType !== 'touch') onHoverProvince(null);
-          }}
-        />
-
-        {/* Split-coast interactive sub-polygons for Fleets */}
-        {showFleetCoasts &&
-          isReachable &&
-          geom.coastPaths &&
-          Object.entries(geom.coastPaths).map(([coastKey, cPath]) => {
-            if (!allowedCoasts.includes(coastKey)) return null;
-            return (
-              <path
-                key={`${geom.id}/${coastKey}`}
-                d={cPath}
-                fill="#22c55e"
-                fillOpacity={0.42}
-                stroke="#15803d"
-                strokeWidth="3"
-                className="coast-interactive-path"
-                data-testid="province-coast-selector"
-                data-province-id={geom.id}
-                data-coast={coastKey}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClickProvince(geom.id, coastKey);
-                }}
-              />
-            );
-          })}
-
-        {/* Reachable Target Reticle */}
-        {showMoveReticle && (
-          <g
-            className="reachable-target-reticle"
-            data-testid="reachable-reticle"
-            data-province-id={geom.id}
-            onClick={(e) => {
-              e.stopPropagation();
-              onClickProvince(geom.id);
-            }}
-          >
-            <circle
-              cx={reticlePoint.x}
-              cy={reticlePoint.y}
-              r={24}
-              fill="rgba(22, 163, 74, 0.22)"
-              stroke="#15803d"
-              strokeWidth="2.8"
-              strokeDasharray="6 3"
-            />
-          </g>
-        )}
-      </g>
-    );
-  },
-);
-
-const STAR_SCALE: Record<PieceStyle, number> = {
-  classic: 1,
-  seated: 0.85,
-  compact: 0.65,
-  flags: 0.72,
-  nameplate: 0.5,
-};
-
-const SupplyCentersLayer = memo<{
-  provinces: Record<string, ProvinceInfo>;
-  ownership: Record<string, Power>;
-  pieceStyle: PieceStyle;
-  occupied: string;
-}>(({ provinces, ownership, pieceStyle, occupied }) => {
-  // Name as piece draws each star beside its name or inside the pill instead
-  if (pieceStyle === 'nameplate') return null;
-
-  const layout = getMapLayout(pieceStyle);
-  const sharesUnitPoint = pieceStyle === 'seated' || pieceStyle === 'flags';
-  // In Star seat the unit carries the star, so only empty centers are drawn here
-  const carried = pieceStyle === 'seated' ? new Set(occupied.split(',')) : null;
-
-  return (
-    <g className="supply-centers-layer" pointerEvents="none">
-      {ALL_PROVINCE_GEOMETRIES.map((geom) => {
-        const pInfo = provinces[geom.id];
-        const entry = layout[geom.id];
-        const point = sharesUnitPoint ? entry?.unit : entry?.star;
-        if (
-          !pInfo ||
-          !pInfo.is_supply_center ||
-          !point ||
-          carried?.has(geom.id)
-        )
-          return null;
-        const owner = ownership[geom.id] || pInfo.home_power;
-        return (
-          <g
-            key={`sc_${geom.id}`}
-            transform={`translate(${point.x}, ${point.y})`}
-          >
-            <SupplyStar
-              ownerColor={owner ? POWER_METADATA[owner].color : undefined}
-              scale={STAR_SCALE[pieceStyle]}
-            />
-          </g>
-        );
-      })}
-    </g>
-  );
-});
-
-function computeQuadraticCurve(
-  p1: Point,
-  p2: Point,
-  curvature = 0.14,
-  insetScale = 1,
-): { path: string; mid: Point } {
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  const dist = Math.hypot(dx, dy) || 1;
-  const shrink = Math.min(26 * insetScale, dist * 0.22);
-  const startShrink = Math.min(18 * insetScale, dist * 0.15);
-  const sx = p1.x + (dx / dist) * startShrink;
-  const sy = p1.y + (dy / dist) * startShrink;
-  const ex = p2.x - (dx / dist) * shrink;
-  const ey = p2.y - (dy / dist) * shrink;
-
-  const mx = (sx + ex) / 2;
-  const my = (sy + ey) / 2;
-  const nx = -dy / dist;
-  const ny = dx / dist;
-  const offset = dist * curvature;
-  const cx = mx + nx * offset;
-  const cy = my + ny * offset;
-
-  const qx = 0.25 * sx + 0.5 * cx + 0.25 * ex;
-  const qy = 0.25 * sy + 0.5 * cy + 0.25 * ey;
-
-  return {
-    path: `M ${sx.toFixed(1)},${sy.toFixed(1)} Q ${cx.toFixed(1)},${cy.toFixed(1)} ${ex.toFixed(
-      1,
-    )},${ey.toFixed(1)}`,
-    mid: { x: qx, y: qy },
-  };
-}
 
 export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
   function EuropeMap(
@@ -518,6 +186,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       unitMark,
       compact = false,
       onDockedBarChange,
+      historyView = false,
+      historyPower = null,
     },
     ref,
   ) {
@@ -715,11 +385,13 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         ? unitsById[selectedUnitId]
         : null;
     // A player may only command foreign units in the sandbox, or as host with Direct-Edit on
-    const canEditAnyPower = sandboxMode || directEditActive;
+    // A past turn is read-only: no power's units can be picked up, not even the player's own.
+    const canEditAnyPower = !historyView && (sandboxMode || directEditActive);
+    const controlPower: Power | null = historyView ? null : activePower;
     // Strictly disallow controlling or showing the menu for foreign units otherwise
     const selectedUnit =
       rawSelectedUnit &&
-      (rawSelectedUnit.power === activePower || canEditAnyPower) &&
+      (rawSelectedUnit.power === controlPower || canEditAnyPower) &&
       (!isRetreatPhase || rawSelectedUnit.is_dislodged)
         ? rawSelectedUnit
         : null;
@@ -762,13 +434,25 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
 
     // Filter which units' orders are visible on the map:
     const isUnitOrderVisible = useCallback(
-      (u: Unit) => canEditAnyPower || u.power === activePower,
-      [canEditAnyPower, activePower],
+      (u: Unit) =>
+        historyView
+          ? historyPower === null || u.power === historyPower
+          : canEditAnyPower || u.power === activePower,
+      [historyView, historyPower, canEditAnyPower, activePower],
     );
 
     // Build homes map for Adjustments phase
     const controllableBuildHomes = useMemo(() => {
       const homes: Record<string, Power> = {};
+      // A past winter shows the builds that were ordered, by every power (or the chosen one).
+      if (historyView) {
+        if (isAdjustmentPhase) {
+          for (const o of adjustmentOrdersFor(orders, historyPower)) {
+            if (o.order_type === 'BUILD') homes[o.origin] = o.power;
+          }
+        }
+        return homes;
+      }
       if (isAdjustmentPhase && builds) {
         for (const [pwrStr, bInfo] of Object.entries(builds)) {
           const pwr = pwrStr as Power;
@@ -780,7 +464,15 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         }
       }
       return homes;
-    }, [isAdjustmentPhase, builds, activePower, canEditAnyPower]);
+    }, [
+      historyView,
+      historyPower,
+      orders,
+      isAdjustmentPhase,
+      builds,
+      activePower,
+      canEditAnyPower,
+    ]);
 
     // Phone: how far each piece's tap target may grow before it would reach a neighbour's.
     const touchHitCaps = useMemo(() => {
@@ -867,7 +559,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         if (!u.is_dislodged) {
           // If there is also a dislodged unit in this province, select the dislodged unit!
           const dis = dislodgedByProv[u.province];
-          if (dis && (dis.power === activePower || canEditAnyPower)) {
+          if (dis && (dis.power === controlPower || canEditAnyPower)) {
             onSelectUnit(dis.id);
             setInteractionMode('MOVE');
             return;
@@ -875,7 +567,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
           clearSelection();
           return;
         }
-        const canControl = u.power === activePower || canEditAnyPower;
+        const canControl = u.power === controlPower || canEditAnyPower;
         if (!canControl) {
           clearSelection();
           return;
@@ -890,7 +582,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       }
 
       if (isAdjustmentPhase) {
-        const canControl = u.power === activePower || canEditAnyPower;
+        const canControl = u.power === controlPower || canEditAnyPower;
         if (!canControl) {
           clearSelection();
           return;
@@ -982,7 +674,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       }
 
       // 6. Check if the clicked unit is controllable (belongs to activePower, OR foreign units can be edited)
-      const canControlClickedUnit = u.power === activePower || canEditAnyPower;
+      const canControlClickedUnit = u.power === controlPower || canEditAnyPower;
       if (!canControlClickedUnit) {
         if (
           selectedUnit &&
@@ -1064,7 +756,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         const occ = unitsByProv[provId];
         if (
           occ &&
-          (occ.power === activePower || canEditAnyPower) &&
+          (occ.power === controlPower || canEditAnyPower) &&
           (builds?.[occ.power]?.count ?? 0) < 0
         ) {
           onSelectUnit(selectedUnitId === occ.id ? null : occ.id);
@@ -1077,7 +769,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       if (isRetreatPhase) {
         if (!selectedUnit) {
           const dis = dislodgedByProv[provId];
-          if (dis && (dis.power === activePower || canEditAnyPower)) {
+          if (dis && (dis.power === controlPower || canEditAnyPower)) {
             onSelectUnit(dis.id);
             setInteractionMode('MOVE');
           }
@@ -1105,7 +797,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
           return;
         }
         const dis = dislodgedByProv[provId];
-        if (dis && (dis.power === activePower || canEditAnyPower)) {
+        if (dis && (dis.power === controlPower || canEditAnyPower)) {
           onSelectUnit(dis.id);
           setInteractionMode('MOVE');
         } else {
@@ -1116,7 +808,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
 
       if (!selectedUnit) {
         const occupant = unitsByProv[provId];
-        if (occupant && (occupant.power === activePower || canEditAnyPower)) {
+        if (occupant && (occupant.power === controlPower || canEditAnyPower)) {
           onSelectUnit(occupant.id);
           setInteractionMode('MOVE');
         }
@@ -1154,7 +846,10 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
 
         if (!isReachable && !canConvoyMove) {
           const occupant = unitsByProv[provId];
-          if (occupant && (occupant.power === activePower || canEditAnyPower)) {
+          if (
+            occupant &&
+            (occupant.power === controlPower || canEditAnyPower)
+          ) {
             onSelectUnit(occupant.id);
             setInteractionMode('MOVE');
             setPendingAuxOrigin(null);
@@ -1814,39 +1509,42 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         data-testid="map-viewport-container"
       >
         {/* Live Hypothetical / Simulation Active Banner */}
-        {(showSimulationOverlay || sandboxMode) && simulationResult && (
-          <div className="simulation-map-banner">
-            <Eye size={16} />
-            <span>
-              {compact ? (
-                // A phone has room for one short line here.
-                <>
-                  <strong>HYPOTHETICAL</strong> · guesses are discarded on exit
-                </>
-              ) : (
-                <>
-                  <strong>HYPOTHETICAL PLANNING &amp; OUTCOME PREVIEW</strong> —
-                  Foreign guesses are discarded upon exit
-                </>
-              )}
-            </span>
-            <button
-              className="sim-advance-btn"
-              onClick={onAdjudicateTurn}
-              title="Step forward one phase in Sandbox to plan follow-up turns"
-            >
-              <Play size={12} /> Step Turn Forward
-            </button>
-            {showSimulationOverlay && !sandboxMode && (
+        {(showSimulationOverlay || sandboxMode) &&
+          simulationResult &&
+          !historyView && (
+            <div className="simulation-map-banner">
+              <Eye size={16} />
+              <span>
+                {compact ? (
+                  // A phone has room for one short line here.
+                  <>
+                    <strong>HYPOTHETICAL</strong> · guesses are discarded on
+                    exit
+                  </>
+                ) : (
+                  <>
+                    <strong>HYPOTHETICAL PLANNING &amp; OUTCOME PREVIEW</strong>{' '}
+                    — Foreign guesses are discarded upon exit
+                  </>
+                )}
+              </span>
               <button
-                className="sim-close-btn"
-                onClick={onClearSimulationOverlay}
+                className="sim-advance-btn"
+                onClick={onAdjudicateTurn}
+                title="Step forward one phase in Sandbox to plan follow-up turns"
               >
-                Hide Preview
+                <Play size={12} /> Step Turn Forward
               </button>
-            )}
-          </div>
-        )}
+              {showSimulationOverlay && !sandboxMode && (
+                <button
+                  className="sim-close-btn"
+                  onClick={onClearSimulationOverlay}
+                >
+                  Hide Preview
+                </button>
+              )}
+            </div>
+          )}
 
         {overlay}
 
@@ -2913,7 +2611,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
                 const meta = POWER_METADATA[u.power];
                 const order = orders[u.id];
                 const isControllable =
-                  u.power === activePower || canEditAnyPower;
+                  u.power === controlPower || canEditAnyPower;
                 const isSelected = Boolean(
                   selectedUnit && u.id === selectedUnit.id,
                 );

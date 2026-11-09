@@ -27,9 +27,14 @@ import { PhaseTimerWidget } from './components/PhaseTimerWidget';
 import { SanityCheckModal } from './components/SanityCheckModal';
 import { SurrenderModal } from './components/SurrenderModal';
 import { ToolsSidebar } from './components/ToolsSidebar';
+import {
+  TurnHistoryPill,
+  TurnHistorySelector,
+} from './components/TurnHistorySelector';
 import { useCompactLayout } from './hooks/useCompactLayout';
 import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
 import { useDisplayPrefs } from './hooks/useDisplayPrefs';
+import { useTurnHistory } from './hooks/useTurnHistory';
 import {
   getAuthHeaders,
   getInitialAuthUser,
@@ -56,6 +61,9 @@ import type { SheetSnap } from './utils/sheetHelpers';
 import { turnLabel } from './utils/timerHelpers';
 
 const API_BASE = '/api';
+// Stable empties for a past turn, so the map's memoized layers are not rebuilt every render.
+const NO_ISSUES: ValidationIssue[] = [];
+const NO_PROVINCES: string[] = [];
 
 export function App() {
   // Navigation & Mode State
@@ -162,6 +170,14 @@ export function App() {
   const [matchPasscodes, setMatchPasscodes] = useState<Record<string, string>>(
     {},
   );
+
+  // The turn selector. It always reads the real game, even from a private sandbox copy.
+  const turnHistory = useTurnHistory({
+    gameId: activeGameId,
+    liveTurnKey: gameState ? turnLabel(gameState) : '',
+    passcode: matchPasscodes[activeGameId] ?? null,
+    enabled: viewMode !== 'lobby',
+  });
 
   // Surrender & Leave Modal State
   const [surrenderModalOpen, setSurrenderModalOpen] = useState<boolean>(false);
@@ -876,6 +892,7 @@ export function App() {
   const handleToggleSandboxMode = async () => {
     if (!gameState) return;
     const entering = !sandboxMode;
+    if (entering) turnHistory.goLive();
     try {
       if (entering) {
         const res = await fetch(
@@ -1131,8 +1148,31 @@ export function App() {
   }
 
   const openAdminTools = () => {
-    if (requireRealBoard('use the admin tools')) setAdminModalOpen(true);
+    if (!requireRealBoard('use the admin tools')) return;
+    turnHistory.goLive();
+    setAdminModalOpen(true);
   };
+
+  // A past turn on the map. Nothing on it can be selected, so any selection is dropped.
+  const historyTurn = turnHistory.turn;
+  const viewingHistory = historyTurn !== null;
+  const viewedEntry =
+    turnHistory.viewIndex === null
+      ? null
+      : (turnHistory.entries[turnHistory.viewIndex] ?? null);
+  const showPastTurn = (index: number | null) => {
+    if (index !== null) {
+      setSelectedUnitId(null);
+      setHighlightedProvinces([]);
+    }
+    turnHistory.select(index);
+  };
+  const stepPastTurn = (delta: -1 | 1) => {
+    setSelectedUnitId(null);
+    setHighlightedProvinces([]);
+    turnHistory.step(delta);
+  };
+  const ignore = () => {};
 
   const activePowerIssues = gameState.issues.filter(
     (i) => i.power === playerPower,
@@ -1400,6 +1440,18 @@ export function App() {
             variant={isCompact ? 'drawer' : 'panel'}
             open={toolsDrawerOpen}
             onClose={closeToolsDrawer}
+            historyFooter={
+              <TurnHistorySelector
+                entries={turnHistory.entries}
+                viewIndex={turnHistory.viewIndex}
+                liveLabel={turnLabel(gameState)}
+                power={turnHistory.power}
+                onSelect={showPastTurn}
+                onStep={stepPastTurn}
+                onSelectPower={turnHistory.setPower}
+                onPickedTurn={isCompact ? closeToolsDrawer : undefined}
+              />
+            }
             zoomPercent={zoomPercent}
             onZoomIn={() => mapRef.current?.stepZoom(0.2)}
             onZoomOut={() => mapRef.current?.stepZoom(-0.2)}
@@ -1445,50 +1497,71 @@ export function App() {
             pieceStyle={displayPrefs.pieceStyle}
             unitMark={displayPrefs.unitMark}
             provinces={provinces}
-            units={gameState.units}
-            orders={gameState.orders}
-            ownership={gameState.ownership}
+            units={historyTurn?.units ?? gameState.units}
+            orders={historyTurn?.orders ?? gameState.orders}
+            ownership={historyTurn?.ownership ?? gameState.ownership}
             activePower={playerPower}
             sandboxMode={sandboxMode}
             directEditActive={directEditActive}
-            selectedUnitId={selectedUnitId}
-            hoveredUnitId={hoveredUnitId}
-            highlightedProvinces={highlightedProvinces}
-            issues={gameState.issues}
-            simulationResult={simulationResult}
-            showSimulationOverlay={showSimulationOverlay}
-            onSelectUnit={setSelectedUnitId}
-            onHoverUnit={setHoveredUnitId}
-            onUpdateOrder={handleUpdateOrder}
-            phase={gameState.phase}
-            season={gameState.season}
-            builds={gameState.builds}
-            retreats={gameState.retreats}
+            selectedUnitId={viewingHistory ? null : selectedUnitId}
+            hoveredUnitId={viewingHistory ? null : hoveredUnitId}
+            highlightedProvinces={
+              viewingHistory ? NO_PROVINCES : highlightedProvinces
+            }
+            issues={viewingHistory ? NO_ISSUES : gameState.issues}
+            simulationResult={historyTurn?.resolution ?? simulationResult}
+            showSimulationOverlay={viewingHistory || showSimulationOverlay}
+            onSelectUnit={viewingHistory ? ignore : setSelectedUnitId}
+            onHoverUnit={viewingHistory ? ignore : setHoveredUnitId}
+            onUpdateOrder={viewingHistory ? ignore : handleUpdateOrder}
+            historyView={viewingHistory}
+            historyPower={turnHistory.power}
+            phase={historyTurn?.phase ?? gameState.phase}
+            season={historyTurn?.season ?? gameState.season}
+            builds={
+              historyTurn ? (historyTurn.builds ?? null) : gameState.builds
+            }
+            retreats={
+              historyTurn ? (historyTurn.retreats ?? null) : gameState.retreats
+            }
             onClearSimulationOverlay={() => setShowSimulationOverlay(false)}
             onAdjudicateTurn={handleAdjudicateTurn}
             overlay={
-              viewMode === 'multiplayer' &&
-              activeGameSummary?.status === 'active' &&
-              !gameState.winner && (
-                <PhaseTimerWidget
-                  compact={isCompact}
-                  timer={matchTimer}
-                  seatPower={lockedPower}
-                  isHost={isGameCreator}
-                  hypothetical={!!sandboxGameId}
-                  onStart={() => postTimerAction('start')}
-                  onVote={(choice) =>
-                    postTimerAction('vote', { power: lockedPower, choice })
-                  }
-                  onExtend={(active) =>
-                    postTimerAction('extend', { power: lockedPower, active })
-                  }
-                  onReady={(active) =>
-                    postTimerAction('ready', { power: lockedPower, active })
-                  }
-                  onExpire={handleTimerExpired}
-                />
-              )
+              <>
+                {viewMode === 'multiplayer' &&
+                  activeGameSummary?.status === 'active' &&
+                  !gameState.winner && (
+                    <PhaseTimerWidget
+                      compact={isCompact}
+                      timer={matchTimer}
+                      seatPower={lockedPower}
+                      isHost={isGameCreator}
+                      hypothetical={!!sandboxGameId}
+                      onStart={() => postTimerAction('start')}
+                      onVote={(choice) =>
+                        postTimerAction('vote', { power: lockedPower, choice })
+                      }
+                      onExtend={(active) =>
+                        postTimerAction('extend', {
+                          power: lockedPower,
+                          active,
+                        })
+                      }
+                      onReady={(active) =>
+                        postTimerAction('ready', { power: lockedPower, active })
+                      }
+                      onExpire={handleTimerExpired}
+                    />
+                  )}
+                {isCompact && viewedEntry && (
+                  <TurnHistoryPill
+                    entry={viewedEntry}
+                    isOldest={turnHistory.viewIndex === 0}
+                    onStep={stepPastTurn}
+                    onGoLive={turnHistory.goLive}
+                  />
+                )}
+              </>
             }
           />
 
@@ -1499,6 +1572,8 @@ export function App() {
             variant={isCompact ? 'sheet' : 'panel'}
             sheetSnap={sheetSnap}
             onSheetSnapChange={setSheetSnap}
+            historyLabel={viewedEntry ? turnLabel(viewedEntry) : null}
+            onReturnToLive={turnHistory.goLive}
             provinces={provinces}
             units={gameState.units}
             orders={gameState.orders}

@@ -32,6 +32,7 @@ In a fresh worktree run `npm ci` in `frontend/` (and `pip install -r backend/req
 - retreats or dislodgement → `retreats`
 - winter builds or disbands → `builds`
 - anything phone or `compact` → `mobile`
+- turn selector, past turns on the map, `/api/history` → `history`
 
 **Run only the one scenario that covers your change.** Backend changes count: E2E runs against the real backend, so run the matching scenario when you change API responses, adjudication, phase flow, sandbox, validator or auth behavior (for example adjudication or retreats -> `retreats`, `builds`, `movement`; validator -> `blunder`; sandbox endpoints -> `sandbox`). Skip E2E only when nothing a user can see or click could change: docs, comments, refactors fully covered by tests, infra scripts, or internals such as persistence or security headers with no change to responses. Avoid `run --all` unless the change is broad (shared layout, App.tsx state flow, map rendering across phases), because it is slow and the screenshots cost tokens to read. Look only at the screenshots from the steps your change affects.
 
@@ -51,7 +52,8 @@ Don't commit `artifacts/`.
 Walk the checklist in AGENTS.md section 5.1 against `git diff --stat`. The ones people forget:
 
 - New or changed endpoint → both the summary table and the detail section of `docs/backend/api-reference.md`.
-- New file or component → AGENTS.md section 3 tree and `docs/frontend/README.md`.
+- New file, component, or package → verify package boundaries in `AGENTS.md` section 3 and update `docs/frontend/README.md` or `docs/backend/README.md` if applicable.
+- File size & modularity: ensure no touched file grew into an unmaintainable monolith (> 500 lines). Follow `.agents/skills/codebase-modularity/SKILL.md` and decompose when necessary.
 - Test counts: don't hardcode a new number in prose. If you add a `test_*.py`, update the list in AGENTS.md.
 - A new invariant you had to learn the hard way belongs in AGENTS.md section 4, one bold **Invariant** line.
 

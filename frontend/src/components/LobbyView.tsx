@@ -1,34 +1,31 @@
 import {
-  AlertTriangle,
-  Check,
   Compass,
-  Copy,
   Crown,
   Flag,
   FlaskConical,
   Globe,
-  KeyRound,
   Lock,
   LogIn,
   Play,
-  PlusCircle,
   RefreshCw,
   Shield,
   Sparkles,
-  Users,
-  X,
 } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { useCompactLayout } from '../hooks/useCompactLayout';
 import {
-  ALL_POWERS,
   type AuthUser,
   type MultiplayerGameSummary,
   POWER_METADATA,
   type Power,
 } from '../types/diplomacy';
+import { defaultCampaignName } from '../utils/campaignName';
 import { PowerFlag } from './PowerFlag';
+import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
+import { GameRoomCard } from './lobby/GameRoomCard';
+import { PasscodePromptModal } from './lobby/PasscodePromptModal';
+import { PrivateCampaignCreatedModal } from './lobby/PrivateCampaignCreatedModal';
 import { VersionBadge } from './VersionBadge';
 
 interface LobbyViewProps {
@@ -97,7 +94,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     power: Power;
   } | null>(null);
   const [enteredModalPasscode, setEnteredModalPasscode] = useState('');
-  const [passcodeModalSubmitting, setPasscodeModalSubmitting] = useState(false);
+  const [_passcodeModalSubmitting, setPasscodeModalSubmitting] =
+    useState(false);
   const [passcodeModalError, setPasscodeModalError] = useState<string | null>(
     null,
   );
@@ -138,7 +136,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     setCreateError(null);
     try {
       const summary = await onCreateGame(
-        newGameName.trim() || `${user.displayName}'s 1901 Campaign`,
+        newGameName.trim() || defaultCampaignName(user.displayName),
         selectedCreatePower,
         isPrivate,
         passcode.trim(),
@@ -508,181 +506,16 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   </div>
                 </div>
               ) : (
-                multiplayerLobbies.map((game) => {
-                  const participants = game.participants || {};
-                  const claimedCount = Object.keys(participants).length;
-                  const myExistingClaim = user
-                    ? Object.values(participants).find(
-                        (p) => p.user_id === user.id,
-                      )
-                    : undefined;
-
-                  return (
-                    <div key={game.game_id} className="lobby-game-card">
-                      <div className="lobby-game-card-header">
-                        <div>
-                          <div className="lobby-game-title-row">
-                            <h3 className="lobby-game-title">{game.name}</h3>
-                            {game.is_private && (
-                              <span
-                                className="game-status-pill private"
-                                title="Private lobby protected by passcode"
-                              >
-                                <Lock size={11} /> Private
-                              </span>
-                            )}
-                          </div>
-                          <span className="lobby-game-meta">
-                            {game.season} {game.year} ({game.phase}) · Hosted by{' '}
-                            {game.created_by} ·{' '}
-                            <span className="game-id-mono">
-                              ID: {game.game_id}
-                            </span>
-                          </span>
-                        </div>
-                        <div className="lobby-game-badges">
-                          <span className="players-count-pill">
-                            <Users size={13} /> {claimedCount} / 7 Powers
-                            Claimed
-                          </span>
-                          <span
-                            className={`game-status-pill ${
-                              game.status === 'active' ? 'active' : 'waiting'
-                            }`}
-                          >
-                            {game.status === 'active'
-                              ? 'Active Match'
-                              : 'Recruiting Envoys'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="lobby-powers-instruction">
-                        {myExistingClaim ? (
-                          <div className="lobby-claim-alert-flex">
-                            <span>
-                              You are commanding{' '}
-                              <strong>
-                                <PowerFlag
-                                  power={myExistingClaim.power}
-                                  width={18}
-                                  height={12}
-                                  style={{ marginRight: 5 }}
-                                />
-                                {
-                                  POWER_METADATA[myExistingClaim.power]
-                                    .shortName
-                                }
-                              </strong>{' '}
-                              in this campaign. Click your country below to
-                              enter, or select an unclaimed nation to switch.
-                            </span>
-                            <button
-                              type="button"
-                              className="lobby-claim-leave-btn"
-                              title="Surrender command and leave this match"
-                              onClick={() =>
-                                onOpenSurrenderModal(
-                                  game,
-                                  myExistingClaim.power,
-                                )
-                              }
-                            >
-                              <Flag size={12} />
-                              <span>
-                                {game.status === 'active'
-                                  ? 'Surrender & Leave'
-                                  : 'Leave Match'}
-                              </span>
-                            </button>
-                          </div>
-                        ) : (
-                          <span>
-                            Select an available Great Power below to claim it
-                            and enter the match
-                            {game.has_passcode ? ' (Passcode Required)' : ''}:
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="lobby-power-slots-grid">
-                        {ALL_POWERS.map((pwr) => {
-                          const meta = POWER_METADATA[pwr];
-                          const occupant = participants[pwr];
-                          const isMine =
-                            Boolean(user) && occupant?.user_id === user?.id;
-                          const isTakenByOther = Boolean(occupant) && !isMine;
-                          const isBusy =
-                            joiningKey === `${game.game_id}_${pwr}`;
-
-                          return (
-                            <button
-                              key={pwr}
-                              type="button"
-                              disabled={isTakenByOther || isBusy}
-                              onClick={() => handlePowerSlotClick(game, pwr)}
-                              className={`power-slot-btn ${
-                                isMine
-                                  ? 'slot-mine'
-                                  : isTakenByOther
-                                    ? 'slot-taken'
-                                    : 'slot-open'
-                              }`}
-                              style={{
-                                borderColor: isMine
-                                  ? meta.color
-                                  : isTakenByOther
-                                    ? 'rgba(0,0,0,0.12)'
-                                    : meta.color,
-                                backgroundColor: isMine
-                                  ? meta.lightBg
-                                  : undefined,
-                              }}
-                            >
-                              <div className="power-slot-top">
-                                <span className="power-slot-crest">
-                                  <PowerFlag
-                                    power={pwr}
-                                    width={18}
-                                    height={12}
-                                  />
-                                </span>
-                                <span
-                                  className="power-slot-name"
-                                  style={{
-                                    color: isTakenByOther
-                                      ? '#7a756c'
-                                      : meta.color,
-                                  }}
-                                >
-                                  {meta.shortName}
-                                </span>
-                              </div>
-                              <div className="power-slot-status">
-                                {isBusy ? (
-                                  'Entering...'
-                                ) : isMine ? (
-                                  <span className="slot-yours-label">
-                                    ★ Your Country (Enter)
-                                  </span>
-                                ) : isTakenByOther ? (
-                                  <span className="slot-taken-label">
-                                    🔒 {occupant.display_name}
-                                  </span>
-                                ) : (
-                                  <span className="slot-claim-label">
-                                    {game.has_passcode ? '🔒' : '+'} Claim{' '}
-                                    {meta.shortName}
-                                  </span>
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })
+                multiplayerLobbies.map((game) => (
+                  <GameRoomCard
+                    key={game.game_id}
+                    game={game}
+                    user={user}
+                    joiningKey={joiningKey}
+                    onOpenSurrenderModal={onOpenSurrenderModal}
+                    handlePowerSlotClick={handlePowerSlotClick}
+                  />
+                ))
               )}
             </div>
           </section>
@@ -691,213 +524,29 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         {/* Right Column: Host New Multiplayer Campaign & Join with Code */}
         <aside className="lobby-create-column">
           {/* 1. Host New Campaign Card */}
-          <div className="lobby-create-card">
-            <div className="lobby-create-header">
-              <PlusCircle size={18} />
-              <h3>Host New Multiplayer Game</h3>
-            </div>
-            <p className="lobby-create-desc">
-              Create a new 1901 European theater as either a public match or a
-              private campaign with a secret passcode.
-            </p>
-
-            <form onSubmit={handleCreateMatch} className="lobby-create-form">
-              <div className="lobby-field">
-                <label htmlFor="new-game-name">Campaign Name</label>
-                <input
-                  id="new-game-name"
-                  type="text"
-                  placeholder="e.g. Congress of Vienna #42"
-                  value={newGameName}
-                  onChange={(e) => setNewGameName(e.target.value)}
-                />
-              </div>
-
-              {/* Public vs Private Campaign Toggle */}
-              <div className="lobby-field">
-                <label>Campaign Access</label>
-                <div className="privacy-toggle-row">
-                  <button
-                    type="button"
-                    className={`privacy-toggle-btn ${!isPrivate ? 'active' : ''}`}
-                    onClick={() => {
-                      setIsPrivate(false);
-                      setPasscode('');
-                    }}
-                  >
-                    <Globe size={13} />
-                    <span>Public Lobby</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`privacy-toggle-btn ${isPrivate ? 'active' : ''}`}
-                    onClick={() => setIsPrivate(true)}
-                  >
-                    <Lock size={13} />
-                    <span>Private (Passcode)</span>
-                  </button>
-                </div>
-              </div>
-
-              {isPrivate && (
-                <div className="lobby-field">
-                  <label htmlFor="private-passcode">
-                    Campaign Passcode / PIN
-                  </label>
-                  <input
-                    id="private-passcode"
-                    type="text"
-                    placeholder="Enter secret passcode (e.g. Vienna1901)"
-                    value={passcode}
-                    onChange={(e) => setPasscode(e.target.value)}
-                    required={isPrivate}
-                  />
-                  <span className="field-hint">
-                    Players will need to enter this passcode to join your
-                    private campaign.
-                  </span>
-                </div>
-              )}
-
-              <div className="lobby-field">
-                <label>Pick Your Sovereign Country</label>
-                <div className="create-power-picker">
-                  {ALL_POWERS.map((pwr) => {
-                    const meta = POWER_METADATA[pwr];
-                    const selected = selectedCreatePower === pwr;
-                    return (
-                      <button
-                        key={pwr}
-                        type="button"
-                        onClick={() => setSelectedCreatePower(pwr)}
-                        className={`create-power-option ${
-                          selected ? 'selected' : ''
-                        }`}
-                        style={{
-                          borderColor: selected ? meta.color : undefined,
-                          backgroundColor: selected ? meta.lightBg : undefined,
-                        }}
-                      >
-                        <PowerFlag power={pwr} width={22} height={15} />
-                        <span>{meta.shortName}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {createError && (
-                <div className="lobby-error-alert">
-                  <AlertTriangle size={14} />
-                  <span>{createError}</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="lobby-create-submit-btn"
-                disabled={creating}
-              >
-                <PlusCircle size={16} />
-                <span>
-                  {creating
-                    ? 'Creating Campaign...'
-                    : user
-                      ? `Create ${isPrivate ? 'Private' : ''} & Play as ${POWER_METADATA[selectedCreatePower].shortName}`
-                      : 'Sign In to Host Campaign'}
-                </span>
-              </button>
-            </form>
-          </div>
-
-          {/* 2. Join Private Campaign by Game ID & Passcode */}
-          <div
-            className="lobby-create-card join-card"
-            style={{ marginTop: '20px' }}
-          >
-            <div className="lobby-create-header">
-              <KeyRound size={18} />
-              <h3>Join Private Campaign</h3>
-            </div>
-            <p className="lobby-create-desc">
-              Have a Game ID and passcode from a host? Enter them below to claim
-              your nation and join the war room.
-            </p>
-
-            <form onSubmit={handleJoinCodeSubmit} className="lobby-create-form">
-              <div className="lobby-field">
-                <label htmlFor="join-code-id">Game ID</label>
-                <input
-                  id="join-code-id"
-                  type="text"
-                  placeholder="e.g. mp_3d8f2b"
-                  value={joinCodeGameId}
-                  onChange={(e) => setJoinCodeGameId(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="lobby-field">
-                <label htmlFor="join-code-passcode">Lobby Passcode</label>
-                <input
-                  id="join-code-passcode"
-                  type="text"
-                  placeholder="Enter lobby passcode"
-                  value={joinCodePasscode}
-                  onChange={(e) => setJoinCodePasscode(e.target.value)}
-                />
-              </div>
-
-              <div className="lobby-field">
-                <label>Nation to Claim</label>
-                <div className="create-power-picker">
-                  {ALL_POWERS.map((pwr) => {
-                    const meta = POWER_METADATA[pwr];
-                    const selected = joinCodePower === pwr;
-                    return (
-                      <button
-                        key={pwr}
-                        type="button"
-                        onClick={() => setJoinCodePower(pwr)}
-                        className={`create-power-option ${
-                          selected ? 'selected' : ''
-                        }`}
-                        style={{
-                          borderColor: selected ? meta.color : undefined,
-                          backgroundColor: selected ? meta.lightBg : undefined,
-                        }}
-                      >
-                        <PowerFlag power={pwr} width={22} height={15} />
-                        <span>{meta.shortName}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {joinCodeError && (
-                <div className="lobby-error-alert">
-                  <AlertTriangle size={14} />
-                  <span>{joinCodeError}</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="lobby-join-submit-btn"
-                disabled={joinCodeLoading || !joinCodeGameId.trim()}
-              >
-                <KeyRound size={15} />
-                <span>
-                  {joinCodeLoading
-                    ? 'Verifying & Joining...'
-                    : user
-                      ? `Unlock & Claim ${POWER_METADATA[joinCodePower].shortName}`
-                      : 'Sign In to Join Campaign'}
-                </span>
-              </button>
-            </form>
-          </div>
+          <CreateCampaignPanel
+            user={user}
+            newGameName={newGameName}
+            setNewGameName={setNewGameName}
+            isPrivate={isPrivate}
+            setIsPrivate={setIsPrivate}
+            passcode={passcode}
+            setPasscode={setPasscode}
+            selectedCreatePower={selectedCreatePower}
+            setSelectedCreatePower={setSelectedCreatePower}
+            createError={createError}
+            creating={creating}
+            handleCreateMatch={handleCreateMatch}
+            joinCodeGameId={joinCodeGameId}
+            setJoinCodeGameId={setJoinCodeGameId}
+            joinCodePasscode={joinCodePasscode}
+            setJoinCodePasscode={setJoinCodePasscode}
+            joinCodePower={joinCodePower}
+            setJoinCodePower={setJoinCodePower}
+            joinCodeLoading={joinCodeLoading}
+            joinCodeError={joinCodeError}
+            handleJoinCodeSubmit={handleJoinCodeSubmit}
+          />
         </aside>
       </div>
 
@@ -910,168 +559,23 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       </footer>
 
       {/* CONFIRMATION MODAL: PRIVATE CAMPAIGN CREATED */}
-      {createdPrivateModal && (
-        <div className="modal-backdrop">
-          <div className="private-created-modal-card">
-            <div className="created-modal-header">
-              <div className="created-modal-title">
-                <Lock size={18} />
-                <h3>Private Campaign Created!</h3>
-              </div>
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={() => setCreatedPrivateModal(null)}
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <p className="created-modal-desc">
-              Your private campaign{' '}
-              <strong>&ldquo;{createdPrivateModal.name}&rdquo;</strong> has been
-              created. Share this <strong>Game ID</strong> and{' '}
-              <strong>Passcode</strong> with other players so they can enter:
-            </p>
+      <PrivateCampaignCreatedModal
+        createdPrivateModal={createdPrivateModal}
+        onClose={() => setCreatedPrivateModal(null)}
+        handleCopy={handleCopy}
+        copiedGameId={copiedField === 'gid'}
+        copiedPasscode={copiedField === 'pw'}
+      />
 
-            <div className="credential-box-wrap">
-              <div className="credential-row">
-                <span className="cred-label">Game ID:</span>
-                <span className="cred-value">{createdPrivateModal.gameId}</span>
-                <button
-                  type="button"
-                  className="cred-copy-btn"
-                  onClick={() => handleCopy(createdPrivateModal.gameId, 'gid')}
-                >
-                  {copiedField === 'gid' ? (
-                    <Check size={14} />
-                  ) : (
-                    <Copy size={14} />
-                  )}
-                  <span>{copiedField === 'gid' ? 'Copied!' : 'Copy ID'}</span>
-                </button>
-              </div>
-
-              <div className="credential-row">
-                <span className="cred-label">Passcode:</span>
-                <span className="cred-value highlight">
-                  {createdPrivateModal.passcode}
-                </span>
-                <button
-                  type="button"
-                  className="cred-copy-btn"
-                  onClick={() => handleCopy(createdPrivateModal.passcode, 'pw')}
-                >
-                  {copiedField === 'pw' ? (
-                    <Check size={14} />
-                  ) : (
-                    <Copy size={14} />
-                  )}
-                  <span>
-                    {copiedField === 'pw' ? 'Copied!' : 'Copy Passcode'}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <div className="created-modal-actions">
-              <button
-                type="button"
-                className="created-enter-btn"
-                onClick={async () => {
-                  const m = createdPrivateModal;
-                  setCreatedPrivateModal(null);
-                  await onJoinOrEnterGame(m.gameId, m.power, m.passcode);
-                }}
-              >
-                <Play size={15} />
-                <span>Enter Campaign War Room</span>
-              </button>
-              <button
-                type="button"
-                className="created-close-secondary-btn"
-                onClick={() => setCreatedPrivateModal(null)}
-              >
-                Stay in Lobby
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PASSCODE MODAL: ENTERING PRIVATE GAME FROM LIST */}
-      {passcodeModalTarget && (
-        <div className="modal-backdrop">
-          <div className="passcode-prompt-card">
-            <div className="created-modal-header">
-              <div className="created-modal-title">
-                <Lock size={18} />
-                <h3>Private Campaign Passcode</h3>
-              </div>
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={() => setPasscodeModalTarget(null)}
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <p className="created-modal-desc">
-              <strong>&ldquo;{passcodeModalTarget.game.name}&rdquo;</strong> is
-              a private campaign. Enter the passcode set by the host to claim{' '}
-              <strong>
-                {POWER_METADATA[passcodeModalTarget.power].shortName}
-              </strong>
-              :
-            </p>
-            <form
-              onSubmit={handlePasscodeModalSubmit}
-              className="passcode-modal-form"
-            >
-              <div className="lobby-field">
-                <label htmlFor="modal-passcode-input">Passcode</label>
-                <input
-                  id="modal-passcode-input"
-                  type="text"
-                  autoFocus
-                  placeholder="Enter lobby passcode"
-                  value={enteredModalPasscode}
-                  onChange={(e) => setEnteredModalPasscode(e.target.value)}
-                  required
-                />
-              </div>
-              {passcodeModalError && (
-                <div className="lobby-error-alert">
-                  <AlertTriangle size={14} />
-                  <span>{passcodeModalError}</span>
-                </div>
-              )}
-              <div className="passcode-modal-actions">
-                <button
-                  type="submit"
-                  className="created-enter-btn"
-                  disabled={
-                    passcodeModalSubmitting || !enteredModalPasscode.trim()
-                  }
-                >
-                  <KeyRound size={14} />
-                  <span>
-                    {passcodeModalSubmitting
-                      ? 'Verifying...'
-                      : `Unlock & Claim ${POWER_METADATA[passcodeModalTarget.power].shortName}`}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="created-close-secondary-btn"
-                  onClick={() => setPasscodeModalTarget(null)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <PasscodePromptModal
+        passcodeModalTarget={passcodeModalTarget}
+        onClose={() => setPasscodeModalTarget(null)}
+        enteredModalPasscode={enteredModalPasscode}
+        setEnteredModalPasscode={setEnteredModalPasscode}
+        passcodeModalError={passcodeModalError}
+        handlePasscodeModalSubmit={handlePasscodeModalSubmit}
+        joiningKey={joiningKey}
+      />
     </div>
   );
 };

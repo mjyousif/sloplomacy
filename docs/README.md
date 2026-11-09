@@ -66,4 +66,4 @@ docs/
 | **Frontend UI** | React 19, TypeScript, Vite, Lucide React | High-performance cartographic SVG map, reactive sidebar & sanity checks |
 | **Data Protocol** | JSON REST over HTTP with CORS | Full state hydration and real-time diagnostic push/pull |
 | **Testing** | Pytest (Backend engine tests), TypeScript (`tsc` check) | Verifies topology symmetry, bounce resolutions, and syntax contracts |
-| **Orchestration** | Python `quickstart.py`, PowerShell `start.ps1`, Bash `start.sh` | One-command cross-platform multi-process runner |
+| **Orchestration** | Python `scripts/quickstart.py`, PowerShell `scripts/dev.ps1`, Bash `scripts/dev.sh` | One-command cross-platform multi-process runner |

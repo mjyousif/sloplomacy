@@ -34,6 +34,12 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/adjudicate` | Commit orders, resolve combat, advance season/phase | *None* | `GameState` |
 | `POST` | `/api/scenario` | Reset board and load predefined tactical scenario (host only on live match) | `ScenarioRequest` | `GameState` |
 
+### Turn History
+| Method | Endpoint | Description | Request Body | Response Model |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/api/history` | List the game's resolved phases, oldest first (up to the last 30) | *None* | `List[TurnHistoryEntry]` |
+| `GET` | `/api/history/{index}` | One resolved phase as it began, with every power's orders and how each resolved | *None* | `TurnRecord` |
+
 ### Sandbox & AI Planning
 | Method | Endpoint | Description | Request Body | Response Model |
 | :--- | :--- | :--- | :--- | :--- |
@@ -288,10 +294,10 @@ Bootstraps the client by returning the current `GameState` along with the comple
 Starts a what-if session for `power`.
 
 - **Multiplayer match**: only the player in `power`'s seat may open one (otherwise `403`), because the copy keeps that power's real orders. The match is not touched. The response is a private copy with its own `sbx_` `game_id`, in which every other power is on default orders. Use that id for all later calls in the session. Entering again replaces the same player's previous copy. The copy is held only in memory, so it is lost if the server restarts, and calls using its id then answer `404`.
-- **Solo or saved sandbox**: the response keeps the game's own `game_id`, and a checkpoint of the real state is stored.
+- **Solo or saved sandbox**: the response keeps the game's own `game_id`, and a checkpoint of the real state and of its turn history is stored.
 
 ### `POST /api/sandbox/exit`
-Ends the session. On a private copy, pass its `sbx_` id: the copy is discarded and the real match is returned, masked for that seat. The player's own orders carry over only if the caller is the player in that seat, the match is still on the same turn and they still hold it. Anyone else's exit only discards the copy, and changing them drops that player's finalization, as any other edit does. Calling this on a live match itself answers `409`.
+Ends the session. On a private copy, pass its `sbx_` id: the copy is discarded and the real match is returned, masked for that seat. The player's own orders carry over only if the caller is the player in that seat, the match is still on the same turn and they still hold it. Anyone else's exit only discards the copy, and changing them drops that player's finalization, as any other edit does. Calling this on a live match itself answers `409`. On a solo or saved sandbox the checkpoint is restored, including the turn history, so phases stepped through hypothetically never show up in `/api/history` or become a rollback target.
 
 ### 8. `POST /api/sandbox/ai-orders`
 Generates DATC-compliant, intelligent tactical orders for specified Great Powers (or foreign powers by default) using the Chancellery Tactical AI engine. Answers `409` on a live multiplayer match, where it must be called on a private sandbox id. Avoids friendly self-bounces, coordinates multi-power attacks and supports, and prioritizes strategic supply centers.
@@ -396,6 +402,52 @@ In a live match, a retreat or adjustment phase that no player is involved in the
 
 - **Multiplayer Security**: In multiplayer campaigns (`!is_sandbox`), manual adjudication requires authentic game creator authorization via a cryptographically signed Supabase JSON Web Token (`Authorization: Bearer <token>`). Missing, invalid, or expired tokens receive `401 Unauthorized`. Authenticated users who are not the game creator receive `403 Forbidden`. In normal multiplayer play, turns advance automatically upon consensus finalization; this endpoint acts as an administrative host override. Solo sandbox mode (`proto_1901`) and personal sandboxes retain zero-friction anonymous access.
 - A unit whose order the engine rejects holds in place. When a power reaches 18 supply centers the response carries `winner`, the clock stays on the deciding phase, and further calls return `409`.
+
+---
+
+### `GET /api/history`
+Lists the phases of a game that have resolved, oldest first, for the turn selector. They come from the snapshots `/api/adjudicate` takes just before each phase resolves (the same ones admin rollback uses), so at most the last 30 phases are kept and a rollback removes the phase it restores.
+
+- **Query Parameters**: `game_id` *(optional)*, `passcode` *(optional)*. Header `X-Passcode` and `Authorization: Bearer <token>` work as for `GET /api/game`.
+- **Access**: the same as `GET /api/game`. A private match needs its passcode unless the caller is seated in it (`403`). A private sandbox id (`sbx_…`) answers `404` for everyone, because its snapshots hold its owner's live orders for the match's current turn.
+- **Secrecy**: every phase listed has resolved, so its orders are public. The current phase is never in the list.
+
+#### Response (`List[TurnHistoryEntry]`):
+```json
+[
+  { "index": 0, "season": "Spring", "year": 1901, "phase": "Movement" },
+  { "index": 1, "season": "Fall", "year": 1901, "phase": "Movement" }
+]
+```
+
+### `GET /api/history/{index}`
+Returns one resolved phase from `GET /api/history`, as the board stood when it began, with **every** power's orders and how each resolved. `resolution` comes from running the snapshot through the adjudicator again. Adjudication is deterministic, so it is exactly what happened. Same parameters and access rules as the list, and `404` for an index out of range. Only what the map needs is returned: the snapshot's clock, log and finalize marks stay on the server.
+
+#### Response (`TurnRecord`):
+```json
+{
+  "index": 0,
+  "season": "Spring",
+  "year": 1901,
+  "phase": "Movement",
+  "units": [...],
+  "orders": {
+    "FRA_A_PAR": { "power": "FRANCE", "origin": "PAR", "order_type": "MOVE", "target": "BUR", ... },
+    "GER_A_MUN": { "power": "GERMANY", "origin": "MUN", "order_type": "MOVE", "target": "BUR", ... }
+  },
+  "ownership": {...},
+  "builds": null,
+  "retreats": null,
+  "resolution": {
+    "resolutions": {
+      "FRA_A_PAR": { "succeeded": false, "bounced": true, ... },
+      "GER_A_MUN": { "succeeded": false, "bounced": true, ... }
+    },
+    "summary": [...],
+    ...
+  }
+}
+```
 
 ---
 

@@ -18,39 +18,39 @@ Launch both the FastAPI backend (`:8000`) and the Vite React frontend (`:5173`) 
 
 ### Windows (PowerShell)
 ```powershell
-.\start.ps1
+.\scripts\dev.ps1
 ```
 > To run each server in its own separate terminal window:
 > ```powershell
-> .\start.ps1 -SeparateWindows
+> .\scripts\dev.ps1 -SeparateWindows
 > ```
 
 ### macOS / Linux / WSL / Git Bash
 ```bash
-./start.sh
+./scripts/dev.sh
 ```
 
 ### Cross-Platform Python Runner
 ```bash
-python quickstart.py
+python scripts/quickstart.py
 ```
 
 ### CLI Flags for `quickstart.py`
-- `python quickstart.py --no-open`: Run servers without launching the web browser.
-- `python quickstart.py --backend-only`: Start only the FastAPI backend on port `8000`.
-- `python quickstart.py --frontend-only`: Start only the Vite dev server on port `5173`.
-- `python quickstart.py --setup-only`: Install Python venv and npm packages without launching servers.
-- `python quickstart.py --test`: Run the complete backend test suite and verify frontend build.
+- `python scripts/quickstart.py --no-open`: Run servers without launching the web browser.
+- `python scripts/quickstart.py --backend-only`: Start only the FastAPI backend on port `8000`.
+- `python scripts/quickstart.py --frontend-only`: Start only the Vite dev server on port `5173`.
+- `python scripts/quickstart.py --setup-only`: Install Python venv and npm packages without launching servers.
+- `python scripts/quickstart.py --test`: Run the complete backend test suite and verify frontend build.
 
 ### Local Demo Sign-In
 When Supabase is not configured, the sign-in form creates a local demo account. It is stored in the browser, and the frontend sends it to the backend as an unsigned `alg: none` token.
 
 `backend/auth.py` rejects those tokens unless `ENVIRONMENT` is `development` or `test`, or `ALLOW_INSECURE_DEV_AUTH=true`. Every launcher above sets `ENVIRONMENT=development` for the backend it starts, so a demo sign-in works out of the box:
 
-- `quickstart.py` sets it in `backend_env()`. `start.sh`, `start.bat`, `scripts/dev.sh` and the default path of `start.ps1` and `scripts/dev.ps1` all run `quickstart.py`.
+- `scripts/quickstart.py` sets it in `backend_env()`. `scripts/start.sh`, `scripts/start.bat`, `scripts/dev.sh` and the default path of `scripts/start.ps1` and `scripts/dev.ps1` all run `scripts/quickstart.py`.
 - `scripts/dev.ps1` sets it in the backend window for `-SeparateWindows`, which starts Uvicorn directly.
 
-A value already in your shell wins. To try the production behaviour locally, run `ENVIRONMENT=production python quickstart.py`, and a demo sign-in gets a `401`.
+A value already in your shell wins. To try the production behaviour locally, run `ENVIRONMENT=production python scripts/quickstart.py`, and a demo sign-in gets a `401`.
 
 > [!WARNING]
 > With this flag the backend trusts unsigned tokens, and it also reads other tokens without checking their signature if it has no Supabase keys, so anyone who can reach it can act as any player. It belongs on a local machine only. Never set `ENVIRONMENT=development`, `ENVIRONMENT=test` or `ALLOW_INSECURE_DEV_AUTH=true` in `scripts/deploy.*`, `terraform/`, the `Dockerfile` or CI. The deployed container runs Uvicorn directly, so it never gets the flag from these launchers.
@@ -249,7 +249,8 @@ Use the file name (without `.spec.ts`) as the `ScenarioRecorder` name, because t
 | `blunder` | Self-bounce detection, Sanity Check modal, override flow | `artifacts/e2e/blunder_sanity_modal/` |
 | `retreats` | Dislodged unit ring, valid retreat selection, Fall advance | `artifacts/e2e/retreats_dislodgement/` |
 | `builds` | Winter adjustments, Army/Fleet builds, bicoastal STP/NC Fleet build, deficit disband | `artifacts/e2e/winter_builds/` |
-| `mobile` | Phone (390x844, touch taps): full-width map, order sheet, ≡ tools drawer, docked unit bar, card-to-map selection, a move by tap, a winter build | `artifacts/e2e/mobile_compact_hud/`, `artifacts/e2e/mobile_winter_build/` |
+| `mobile` | Phone (390x844, touch taps): full-width map, order sheet, ≡ tools drawer, docked unit bar, card-to-map selection, a move by tap, a winter build, a past turn from the drawer with its map pill | `artifacts/e2e/mobile_compact_hud/`, `artifacts/e2e/mobile_winter_build/`, `artifacts/e2e/mobile_turn_history/` |
+| `history` | Turn history: a resolved bounce shown with every nation's orders, nation chips, the read-only orders panel, back to live | `artifacts/e2e/turn_history/` |
 
 Each scenario exports a `summary.json` containing the execution status (`PASSED`/`FAILED`), step-by-step screenshot paths, and any browser console or uncaught page runtime errors.
 
@@ -284,7 +285,7 @@ The `main` branch is protected with automated quality gates and configuration-as
   ```
 
 ### Backend Virtual Environment Not Found
-- Run `python quickstart.py --setup-only` to automatically regenerate `.venv` and install all required packages.
+- Run `python scripts/quickstart.py --setup-only` to automatically regenerate `.venv` and install all required packages.
 
 ### "Backend Connection Required" / "Backend returned 401" After a Demo Sign-In
 - The backend is rejecting the unsigned demo token. See [Local Demo Sign-In](#local-demo-sign-in).

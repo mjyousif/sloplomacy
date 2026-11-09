@@ -20,14 +20,36 @@ frontend/
     ├── index.css                # Base reset & typography
     ├── components/
     │   ├── EuropeMap.tsx        # High-performance interactive SVG game board & order arrows
+    │   ├── map/                 # Decomposed SVG map sub-layers & utilities
+    │   │   ├── layers/
+    │   │   │   ├── StaticLayers.tsx       # Gradients, sea textures & pass-through background defs
+    │   │   │   ├── ProvincePolygon.tsx    # Memoized individual SVG province polygons & boundaries
+    │   │   │   ├── SupplyCentersLayer.tsx # Memoized supply center stars & markers
+    │   │   │   └── MapNamesLayer.tsx      # Memoized typography & province label placements
+    │   │   └── utils/
+    │   │       └── curveGeometry.ts       # Quadratic Bezier control point math for order arrows
     │   ├── CollapsibleSection.tsx # Reusable collapsible/static section container with accessible toggles
     │   ├── CollapsibleSection.test.tsx # Vitest suite for CollapsibleSection behavior and accessibility
     │   ├── ToolsSidebar.tsx     # Left collapsible sidebar: legend, zoom options, powers, sandbox & admin (a ≡ drawer on phones)
     │   ├── MacroSidebar.tsx     # Right collapsible sidebar: core gameplay orders, builds, finalize & adjudicate (the order sheet on phones)
+    │   ├── macro/               # Decomposed order sheet and unit management cards
+    │   │   ├── UnitMacroCard.tsx # Unit order card: move, hold, support, convoy & retreat selectors
+    │   │   └── BuildSlotCard.tsx # Winter adjustment build/disband quota cards
     │   ├── sidebars.test.ts     # Vitest suite for ToolsSidebar and MacroSidebar collapsible views
+    │   ├── TurnHistorySelector.tsx # Left pane footer to pick a resolved turn, nation chips, and the phone's map pill
     │   ├── PhaseTimerWidget.tsx # Bottom-left map widget: turn clock, votes, ready-up & +5 button (a pill on phones)
     │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
+    │   ├── lobby/               # Decomposed match browser and lobby dialogs
+    │   │   ├── GameRoomCard.tsx              # Match listing card with power indicators and join buttons
+    │   │   ├── CreateCampaignPanel.tsx       # Public/private campaign creation form
+    │   │   ├── PasscodePromptModal.tsx       # Passcode entry dialog for private matches
+    │   │   └── PrivateCampaignCreatedModal.tsx # Shareable credentials modal after creating private room
     │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
+    │   ├── admin/               # Decomposed creator console tabs
+    │   │   ├── TurnControlTab.tsx      # Timeline rollback and turn jump controls
+    │   │   ├── UnitTeleportTab.tsx     # Move units instantly across provinces
+    │   │   ├── UnitSpawnerTab.tsx      # Unit creation and disband tools
+    │   │   └── TerritoryControlTab.tsx # Supply center ownership modifier
     │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
     │   ├── BottomSheet.tsx      # Phone pull-up panel with peek, half and full stops (holds the order sheet)
     │   ├── CompactTopBar.tsx    # Phone top bar: back, ≡ tools, turn, order-problem count and a ⋯ menu
@@ -50,6 +72,7 @@ frontend/
     ├── hooks/
     │   ├── useDiplomacyWebSocket.ts # Live Sync socket: heartbeat, reconnect rules & clock refresh
     │   ├── useDiplomacyWebSocket.test.ts # Vitest suite for socket URLs and reconnect rules
+    │   ├── useTurnHistory.ts    # Turn selector state: resolved phases, the one on show, its record and the nation chip
     │   ├── useCompactLayout.ts  # The phone breakpoint (COMPACT_LAYOUT_QUERY) as a live boolean
     │   └── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
     ├── lib/
@@ -63,6 +86,8 @@ frontend/
         ├── adminHelpers.test.ts # Vitest suite for admin authorization and mutations
         ├── displayPrefs.ts      # Display preference types, defaults, sanitizing & sign-in rules
         ├── displayPrefs.test.ts # Vitest suite for display preferences
+        ├── historyHelpers.ts    # Turn selector stepping, short labels and past build orders
+        ├── historyHelpers.test.ts # Vitest suite for the turn selector helpers
         ├── powerHelpers.ts      # Great Power ranking (SC descending, unit tiebreaker, tied rank sharing)
         ├── powerHelpers.test.ts # Vitest suite for diplomatic standing ranking
         ├── sheetHelpers.ts      # Phone order sheet stops: snap heights, release and tap stepping
@@ -101,7 +126,8 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   │   ├── Great Powers Standing & Command Selector (SC & Unit tallies - CollapsibleSection toggle)
 │   │   ├── Hypothetical Mode (What-If Opponent Guesses) & Tactical General Staff AI
 │   │   ├── Foreign Guesses Count & Discard Actions
-│   │   └── Creator Admin Console & Direct-Edit Override Trigger
+│   │   ├── Creator Admin Console & Direct-Edit Override Trigger
+│   │   └── Turn History footer (TurnHistorySelector.tsx: ‹ turn › Live, nation chips)
 │   │
 │   ├── EuropeMap.tsx (Center Interactive SVG Board)
 │   │   ├── Authentic Cartographic Background Layer
@@ -112,6 +138,7 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   │   ├── Dislodged Unit Retreat Badges
 │   │   ├── Dynamic SVG Order Vectors & Bezier Arrows
 │   │   ├── Combat Clashes, Bounces & Cut Indicators
+│   │   ├── Past Turns (`historyView`): every nation's orders with their outcomes, read-only
 │   │   ├── Interactive Unit Radial Menu & Coast Picker
 │   │   └── Imperative Camera Control Handle (`EuropeMapHandle`)
 │   │
@@ -123,7 +150,8 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │       ├── Home Supply Center Builds (Army / Fleet / Waive)
 │       ├── Unit Order Cards (Hold, Move, Support, Convoy, Retreat, Disband)
 │       ├── Inline Validation Diagnostics & Combat Simulation Badges
-│       └── Sticky Footer: Order Finalization & Phase Adjudication Actions
+│       ├── Sticky Footer: Order Finalization & Phase Adjudication Actions
+│       └── Past-turn bar ("Viewing … · Back to live"), with everything below it dimmed and inert
 │
 ├── Modals & Overlays
 │   ├── DisplaySettingsMenu.tsx (Top bar popover for piece style and marks)
