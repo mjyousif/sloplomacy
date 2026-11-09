@@ -8,25 +8,44 @@ The backend service is located in the `backend/` directory. It is built with **F
 
 ```
 backend/
-├── main.py                  # FastAPI app instance, route handlers, multi-room registry & SPA static mount
-├── models.py                # Pydantic v2 schemas and enumerations
-├── database.py              # Supabase PostgreSQL persistence layer (PostgREST upsert & read-through cache)
-├── adjudicator.py           # DATC turn adjudication & simulation wrapper over python 'diplomacy'
-├── ai_engine.py             # Authoritative Diplomacy Tactical AI engine (DATC-compliant heuristics)
-├── phase_timer.py           # Multiplayer turn clock rules: votes, pausing, extensions & deadlines
-├── validator.py             # Real-time tactical sanity checker across Movement, Retreats, & Builds
-├── map_data.py              # Europe 1901 graph topology, province records & coastline rules
-├── test_engine.py           # Topology symmetry, connectivity, and basic resolution tests
-├── test_adjudicator.py      # Official DATC adjudication, dislodgements, and retreat paths
-├── test_admin.py            # Creator privilege enforcement and admin board mutations
-├── test_ai_and_private_lobbies.py # AI orders, auto-step, and private lobby passcode tests
-├── test_api_integration.py  # Full-stack API endpoint integration tests
-├── test_database_persistence.py # Supabase database persistence & cold-start recovery tests
-├── test_phase_timer.py      # Turn clock votes, pauses, extensions, deadlines and late requests
-├── test_surrender_leave.py  # Concession, civil disorder, and seat-vacating tests
-├── test_validator.py        # Blunder detection, friendly fire, and phase-specific validations
-├── test_websocket_sync.py   # Real-time WebSocket room & lobby synchronization tests
-├── ws_testing.py            # Test helper: WebSocket receive with a time limit
+├── main.py                  # FastAPI app instance, CORS/security headers, router inclusion & root facades
+├── api/                     # Modular FastAPI routers
+│   ├── games.py             # Match room creation, seat joining/claiming/surrendering, public/private lobbies
+│   ├── orders.py            # Single order submission, batch atomic updates, confirm-all
+│   ├── turns.py             # Finalization, turn adjudication, phase timer votes and extensions
+│   ├── sandbox.py           # Isolated sandbox mode ("War Room"), hypothetical simulation, AI order generation
+│   ├── admin.py             # Administrator controls (turn rollback, jumps, unit spawner/teleport, ownership)
+│   └── websocket.py         # Real-time WebSockets for turn state updates and lobby room events
+├── domain/                  # Core Pydantic domain models & schemas
+│   └── models.py            # GameState, Order, Unit, Resolution, Diagnostics, Timer schemas
+├── engine/                  # Authoritative rules & simulation engine
+│   ├── adjudicator.py       # DATC turn adjudication & simulation wrapper over python 'diplomacy'
+│   ├── validator.py         # Pre-flight tactical blunder checker (Movement, Retreats, Builds)
+│   ├── topology.py          # Europe 1901 graph topology, province records & coastline rules
+│   ├── phase_timer.py       # Multiplayer turn clock rules: votes, pausing, extensions & deadlines
+│   ├── ai.py                # Authoritative Diplomacy Tactical AI engine (DATC-compliant heuristics)
+│   └── order_utils.py       # Civil disorder rules, default orders, and build/disband calculations
+├── storage/                 # Persistence layer & authoritative in-memory state store
+│   ├── store.py             # Global room dictionaries (GAMES, GAME_SUMMARIES, etc.) & lifecycle helpers
+│   └── supabase.py          # Supabase PostgreSQL PostgREST upsert & read-through cache
+├── security/                # Authentication, authorization, and viewer secrecy
+│   ├── auth.py              # Supabase JWT token verification (HS256/ES256/JWKS)
+│   └── secrecy.py           # Fog-of-war spectator masking & seat privilege validation
+├── scenarios/               # Historical scenario presets & multiplayer lobby seeding
+│   └── presets.py           # SCENARIO_IDS, build_scenario, and default lobby seeds
+├── ws/                      # WebSocket connection management & broadcasts
+│   └── connection_manager.py # Thread-safe connection tracking & JSON message delivery
+├── tests/                   # Categorized pytest test suite
+│   ├── unit/                # Unit test suites (adjudicator, engine, validator, phase_timer)
+│   └── integration/         # Integration test suites (api, database, admin, security, websocket, etc.)
+├── models.py                # Root backward-compatible facade re-exporting domain/
+├── adjudicator.py           # Root backward-compatible facade re-exporting engine/
+├── database.py              # Root backward-compatible facade re-exporting storage/
+├── auth.py                  # Root backward-compatible facade re-exporting security/
+├── map_data.py              # Root backward-compatible facade re-exporting engine/
+├── validator.py             # Root backward-compatible facade re-exporting engine/
+├── phase_timer.py           # Root backward-compatible facade re-exporting engine/
+├── ai_engine.py             # Root backward-compatible facade re-exporting engine/
 ├── requirements-runtime.txt # Python runtime dependencies (what the Docker image installs)
 ├── requirements.txt         # Runtime dependencies plus test tools, for CI tests
 └── requirements-dev.txt     # Runtime + test + code quality tools (Ruff) for development
@@ -56,15 +75,15 @@ cryptography>=42.0.0,<51.0
 HTTP Request (e.g. POST /api/order?game_id=...)
                │
                ▼
-        FastAPI Router (main.py)
+        FastAPI Router (main.py -> api/*.py)
                │
-               ├─► Update in-memory GAMES[game_id].orders
+               ├─► Update in-memory GAMES[game_id].orders (backend/storage/store.py)
                │
                ├─► refresh_diagnostics_and_simulation(game)
                │     ├── 1. validator.validate_orders(...) -> list[ValidationIssue]
                │     └── 2. adjudicator.adjudicate_turn(..., is_simulation=True) -> SimulationResult
                │
-               ├─► persist_game(game_id) -> database.py (Supabase PostgreSQL JSONB upsert)
+               ├─► persist_game(game_id) -> backend/storage/supabase.py (Supabase PostgreSQL JSONB upsert)
                │
                ├─► ConnectionManager.broadcast_game(...) (WebSocket /ws/games/{id})
                │
@@ -74,7 +93,7 @@ HTTP Request (e.g. POST /api/order?game_id=...)
 
 ### In-Memory State & Supabase Persistence
 
-The backend maintains active match sessions in scoped memory dictionaries acting as an L1 fast-access cache:
+The backend maintains active match sessions in scoped memory dictionaries acting as an L1 fast-access cache in `backend/storage/store.py` (re-exported by `main.py`):
 - `GAMES: Dict[str, GameState]`: Live game states keyed by `game_id`.
 - `SANDBOX_CHECKPOINTS: Dict[str, Optional[GameState]]`: Checkpoints stored when entering Sandbox mode.
 - `GAME_HISTORY: Dict[str, List[GameState]]`: Historical snapshots preserved for creator rollback operations.
@@ -84,7 +103,7 @@ The backend maintains active match sessions in scoped memory dictionaries acting
 - `SAVES_RUNNING: Dict[str, bool]`: Games with a save running, and whether that save must repeat because the game changed during it.
 - `HISTORY_UNSAVED: Set[str]`: Games whose rollback history differs from what is saved.
 
-When `SUPABASE_URL` and the service role key (`SUPABASE_SERVICE_ROLE_KEY`, or `SUPABASE_KEY` holding the service role key) are configured, the backend automatically operates a **read-through / write-through** persistence layer via [`database.py`](database.py):
+When `SUPABASE_URL` and the service role key (`SUPABASE_SERVICE_ROLE_KEY`, or `SUPABASE_KEY` holding the service role key) are configured, the backend automatically operates a **read-through / write-through** persistence layer via [`backend/storage/supabase.py`](database.py) (re-exported via `database.py`):
 - On state mutation, the game state, summary, history, and passcodes are serialized to JSONB and persisted to Supabase's `public.multiplayer_games` table. Only one save runs per game, so an older write cannot land after a newer one, and a change made during a save is written when that save repeats.
 - On container cold start (such as Google Cloud Run scale-to-zero wakeups), any request for a game absent from RAM is transparently fetched and restored from Supabase.
 - Memory is authoritative for a loaded game. `GET /api/games` uses Supabase only to pick up games this process has not loaded and to drop games deleted from Supabase, never to replace a loaded game.
