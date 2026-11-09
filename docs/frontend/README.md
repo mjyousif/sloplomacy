@@ -9,8 +9,8 @@ The frontend application is located in `frontend/`. It is built with **React 19*
 ```
 frontend/
 ├── index.html                   # HTML entry point with viewport & typography imports
-├── package.json                 # Dependencies (React 19, Lucide, Supabase, Vitest)
-├── vite.config.ts               # Vite bundler config with /api -> :8000 proxy
+├── package.json                 # Dependencies (React 19, Lucide, Supabase, Vitest, Testing Library)
+├── vite.config.ts               # Vite bundler config with /api -> :8000 proxy, and the Vitest setup
 ├── tsconfig.json                # TypeScript compiler configuration
 └── src/
     ├── main.tsx                 # React DOM bootstrapping
@@ -60,6 +60,7 @@ frontend/
     │   ├── SanityCheckModal.tsx # Pre-finalization tactical blunder warning dialogue
     │   ├── ConfirmModal.tsx     # In-app confirmation for destructive actions; Shift+click skips it
     │   ├── ConfirmModal.test.ts # Vitest suite for the confirmation and its Shift rule
+    │   ├── useConfirm.test.tsx  # Asking, confirming, dismissing and Shift-skipping in the DOM
     │   ├── PowerFlag.tsx        # Vector SVG historical World War I (1901-1918) flags for all 7 Great Powers
     │   ├── PowerFlag.test.tsx   # Vitest suite for historical flag rendering and accessibility
     │   └── VersionBadge.tsx     # Git commit short SHA indicator, clipboard copy & GitHub commit link
@@ -73,10 +74,15 @@ frontend/
     │   ├── useDiplomacyWebSocket.ts # Live Sync socket: heartbeat, reconnect rules & clock refresh
     │   ├── useDiplomacyWebSocket.test.ts # Vitest suite for socket URLs and reconnect rules
     │   ├── useTurnHistory.ts    # Turn selector state: resolved phases, the one on show, its record and the nation chip
+    │   ├── useTurnHistory.test.ts # Loading, stepping, caching and keeping the viewed turn across refetches
     │   ├── useCompactLayout.ts  # The phone breakpoint (COMPACT_LAYOUT_QUERY) as a live boolean
-    │   └── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
+    │   ├── useCompactLayout.test.ts # Follows the media query, including older Safari listeners
+    │   ├── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
+    │   └── useDisplayPrefs.test.ts # Device and account saving, failed reads and edits during a read
     ├── lib/
     │   └── supabase.ts          # Supabase client singleton & auth helpers
+    ├── test/
+    │   └── setup.ts             # Runs before every test file: jest-dom matchers and Testing Library cleanup
     ├── types/
     │   └── diplomacy.ts         # TypeScript definitions synchronized with backend/domain/*.py
     └── utils/
@@ -203,4 +209,7 @@ This triggers `tsc && vite build`, ensuring zero TypeScript type discrepancies w
 ```bash
 npm test
 ```
-Runs the Vitest test suites (`orderHelpers.test.ts`, `adminHelpers.test.ts`, `supabase.test.ts`, `europeMapGeometry.test.ts` and `useDiplomacyWebSocket.test.ts`), verifying order reachability algorithms, retreat validation, and administrative permission checks.
+Runs every `src/**/*.test.ts[x]` file. Tests sit next to the code they cover and come in two kinds:
+
+- **Pure logic and static markup** run in node. Helpers in `utils/` and `data/` are called directly, and a few components are checked with `renderToString`.
+- **Hooks and interaction** run in [jsdom](https://github.com/jsdom/jsdom). The file opts in with `// @vitest-environment jsdom` as its first line, then uses [Testing Library](https://testing-library.com/): `renderHook` for hooks, `render` and `screen` for components, and `@testing-library/user-event` for clicks and typing. `src/test/setup.ts` adds the `@testing-library/jest-dom` matchers (`toBeInTheDocument`, `toHaveFocus` and so on) and unmounts after each test, because Vitest's globals are off and Testing Library can't register that itself.

@@ -191,6 +191,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
 - **Types (`types/`)**: TypeScript type contracts (`diplomacy.ts`), strictly synchronized with the models in `backend/domain/`.
 - **Pure Utilities (`utils/`)**: Pure algorithmic helpers and math (`orderHelpers.ts`, `adminHelpers.ts`, `timerHelpers.ts`, `mapCameraHelpers.ts`, `sheetHelpers.ts`, `historyHelpers.ts`, `displayPrefs.ts`).
 - **Responsive Layout (`compact.css`)**: Phone-specific styles grouped exclusively under `[data-layout='compact']`.
+- **Tests**: co-located `*.test.ts[x]` files. Hook and component tests opt into jsdom with a `// @vitest-environment jsdom` first line and use Testing Library. `test/setup.ts` adds the jest-dom matchers and cleanup.
 
 ---
 

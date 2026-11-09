@@ -34,5 +34,7 @@ export default defineConfig({
   test: {
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['e2e/**', 'node_modules/**'],
+    // Tests run in node unless a file opts into the DOM with `// @vitest-environment jsdom`.
+    setupFiles: ['src/test/setup.ts'],
   },
 });
