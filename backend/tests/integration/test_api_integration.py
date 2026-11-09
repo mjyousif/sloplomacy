@@ -1,17 +1,14 @@
 import pytest
 from domain.models import Order, OrderType, Power, Unit, UnitType
-from engine.topology import PROVINCES
-from fastapi.testclient import TestClient
-from main import (
-    GAME_HISTORY,
-    GAME_SUMMARIES,
-    GAMES,
-    app,
+from engine.order_utils import (
     create_default_orders,
-    evict_game,
     get_required_finalizing_powers,
     resolve_static_path,
 )
+from engine.topology import PROVINCES
+from fastapi.testclient import TestClient
+from main import app
+from storage.store import GAME_HISTORY, GAME_SUMMARIES, GAMES, evict_game
 
 client = TestClient(app)
 
@@ -1441,14 +1438,14 @@ def test_api_test_seed_scenarios_and_security(monkeypatch):
     saved_state = GAMES[mp_gid]
     saved_summary = GAME_SUMMARIES[mp_gid]
     evict_game(mp_gid)
-    monkeypatch.setattr("main.is_persistence_enabled", lambda: True)
+    monkeypatch.setattr("storage.supabase.is_persistence_enabled", lambda: True)
 
     async def _fake_load(gid: str):
         if gid == mp_gid:
             return (saved_state, saved_summary, [], None)
         return None
 
-    monkeypatch.setattr("main.load_saved_game", _fake_load)
+    monkeypatch.setattr("storage.supabase.load_game_from_db", _fake_load)
     res_unloaded_mp = client.post(
         "/api/test/seed",
         json={"scenario_id": "standard_1901", "game_id": mp_gid},

@@ -6,7 +6,9 @@ import httpx
 import pytest
 from domain.models import GameParticipant, GameState, MultiplayerGameSummary, Power
 from fastapi.testclient import TestClient
-from main import (
+from main import app
+from scenarios.presets import build_scenario
+from storage.store import (
     GAME_HISTORY,
     GAME_PASSCODES,
     GAME_SUMMARIES,
@@ -14,8 +16,6 @@ from main import (
     HISTORY_UNSAVED,
     SAVES_RUNNING,
     UNSAVED_GAMES,
-    app,
-    build_scenario,
     cache_loaded_game,
     persist_game,
 )
@@ -37,7 +37,7 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def restore_seeded_lobbies():
-    from main import seed_initial_multiplayer_lobbies
+    from scenarios.presets import seed_initial_multiplayer_lobbies
 
     yield
     seed_initial_multiplayer_lobbies()
@@ -315,7 +315,7 @@ def test_cold_start_container_recovery_integration():
         os.environ,
         {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"},
     ):
-        with patch("main.load_game_from_db", side_effect=mock_load):
+        with patch("storage.supabase.load_game_from_db", side_effect=mock_load):
             res = client.get(f"/api/game?game_id={gid}")
             assert res.status_code == 200
             data = res.json()
@@ -350,7 +350,7 @@ def test_list_games_evicts_games_deleted_from_supabase():
         os.environ,
         {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"},
     ):
-        with patch("main.load_all_summaries_from_db", side_effect=mock_load_empty):
+        with patch("storage.supabase.load_all_summaries_from_db", side_effect=mock_load_empty):
             res = client.get("/api/games")
             assert res.status_code == 200
             returned_ids = [g["game_id"] for g in res.json()]
@@ -382,7 +382,7 @@ def test_delete_game_api_endpoint():
         os.environ,
         {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"},
     ):
-        with patch("main.delete_game_from_db", side_effect=mock_delete):
+        with patch("storage.supabase.delete_game_from_db", side_effect=mock_delete):
             res = client.delete(f"/api/games/{gid}")
             assert res.status_code == 200
             assert res.json()["status"] == "deleted"
@@ -424,7 +424,7 @@ def test_proto_1901_never_persisted_or_listed_in_lobbies():
         os.environ,
         {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"},
     ):
-        with patch("main.load_all_summaries_from_db", side_effect=mock_load_with_proto):
+        with patch("storage.supabase.load_all_summaries_from_db", side_effect=mock_load_with_proto):
             res = client.get("/api/games")
             assert res.status_code == 200
             ids = [g["game_id"] for g in res.json()]
@@ -433,7 +433,7 @@ def test_proto_1901_never_persisted_or_listed_in_lobbies():
 
 
 class FakeSupabase:
-    """Stands in for Supabase behind main.py, holding each game as a serialized row."""
+    """Stands in for Supabase behind storage.supabase, holding each game as a serialized row."""
 
     def __init__(self):
         self.rows = {}
@@ -490,10 +490,10 @@ def supabase():
     env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
     with (
         patch.dict(os.environ, env),
-        patch("main.save_game_to_db", side_effect=db.save),
-        patch("main.load_game_from_db", side_effect=db.load),
-        patch("main.load_all_summaries_from_db", side_effect=db.load_all),
-        patch("main.delete_game_from_db", side_effect=db.delete),
+        patch("storage.supabase.save_game_to_db", side_effect=db.save),
+        patch("storage.supabase.load_game_from_db", side_effect=db.load),
+        patch("storage.supabase.load_all_summaries_from_db", side_effect=db.load_all),
+        patch("storage.supabase.delete_game_from_db", side_effect=db.delete),
     ):
         yield db
     UNSAVED_GAMES.clear()
@@ -633,7 +633,9 @@ def test_lobby_read_overlapping_a_first_save_does_not_evict_the_game(supabase):
         rows_seen_by_read.pop(game_id, None)
         return rows_seen_by_read
 
-    with patch("main.load_all_summaries_from_db", side_effect=save_finishes_during_read):
+    with patch(
+        "storage.supabase.load_all_summaries_from_db", side_effect=save_finishes_during_read
+    ):
         client.get("/api/games")
 
     assert game_id in GAMES
@@ -733,7 +735,10 @@ def test_saves_never_overlap_and_the_last_one_has_the_newest_state():
             return True
 
         env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
-        with patch.dict(os.environ, env), patch("main.save_game_to_db", side_effect=slow_save):
+        with (
+            patch.dict(os.environ, env),
+            patch("storage.supabase.save_game_to_db", side_effect=slow_save),
+        ):
             first = asyncio.create_task(persist_game(game_id))
             await first_save_started.wait()
             # These return at once, as the running save picks them up. The timeout turns a
@@ -910,7 +915,10 @@ def test_a_turn_resolved_during_a_save_still_saves_its_history():
             return True
 
         env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
-        with patch.dict(os.environ, env), patch("main.save_game_to_db", side_effect=slow_save):
+        with (
+            patch.dict(os.environ, env),
+            patch("storage.supabase.save_game_to_db", side_effect=slow_save),
+        ):
             first = asyncio.create_task(persist_game(game_id))
             await started.wait()
             GAME_HISTORY[game_id].append(GAMES[game_id].model_copy(deep=True))

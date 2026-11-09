@@ -29,6 +29,7 @@ from security.secrecy import (
     sanitize_game_state_for_viewer,
     viewer_power_for,
 )
+from storage import supabase
 from storage.store import (
     DEFAULT_GAME_ID,
     GAME_HISTORY,
@@ -40,20 +41,12 @@ from storage.store import (
     cache_loaded_game,
     check_game_capacity,
     evict_game,
-    get_main_attr,
     load_saved_game,
     persist_game,
     resolve_game,
     sync_summary,
 )
-from storage.supabase import (
-    SupabaseUnavailable,
-    delete_game_from_db,
-    is_persistence_enabled,
-    is_valid_uuid,
-    load_all_summaries_from_db,
-    load_game_from_db,
-)
+from storage.supabase import SupabaseUnavailable, is_valid_uuid
 from ws.connection_manager import (
     broadcast_game_update,
     broadcast_lobby_update,
@@ -61,20 +54,6 @@ from ws.connection_manager import (
 )
 
 router = APIRouter(tags=["Lobby & Match Management"])
-
-
-def _is_persistence_enabled() -> bool:
-    return get_main_attr("is_persistence_enabled", is_persistence_enabled)()
-
-
-async def _load_all_summaries_from_db():
-    fn = get_main_attr("load_all_summaries_from_db", load_all_summaries_from_db)
-    return await fn()
-
-
-async def _delete_game_from_db(game_id: str):
-    fn = get_main_attr("delete_game_from_db", delete_game_from_db)
-    return await fn(game_id)
 
 
 class GameBootstrapResponse(BaseModel):
@@ -90,7 +69,7 @@ class SetPowerRequest(BaseModel):
 async def sync_lobby_with_db() -> None:
     unsaved_at_read = set(UNSAVED_GAMES)
     try:
-        db_summaries = await _load_all_summaries_from_db()
+        db_summaries = await supabase.load_all_summaries_from_db()
     except SupabaseUnavailable:
         return
 
@@ -116,7 +95,7 @@ async def sync_lobby_with_db() -> None:
 async def list_games():
     GAME_SUMMARIES.pop(DEFAULT_GAME_ID, None)
     GAME_SUMMARIES.pop("proto_1901", None)
-    if _is_persistence_enabled():
+    if supabase.is_persistence_enabled():
         await sync_lobby_with_db()
 
     for gid in list(GAME_SUMMARIES.keys()):
@@ -131,11 +110,10 @@ async def list_games():
     summary="Get Game Lobby Details",
 )
 async def get_game_details(game_id: str):
-    if _is_persistence_enabled():
+    if supabase.is_persistence_enabled():
         unsaved_at_read = game_id in UNSAVED_GAMES
         try:
-            load_fn = get_main_attr("load_game_from_db", load_game_from_db)
-            loaded = await load_fn(game_id)
+            loaded = await supabase.load_game_from_db(game_id)
         except SupabaseUnavailable:
             if game_id not in GAME_SUMMARIES:
                 raise HTTPException(
@@ -167,7 +145,7 @@ async def delete_game(
         raise HTTPException(status_code=403, detail="The shared sandbox board cannot be deleted.")
 
     summary = GAME_SUMMARIES.get(game_id)
-    if not summary and _is_persistence_enabled():
+    if not summary and supabase.is_persistence_enabled():
         loaded = await load_saved_game(game_id)
         if loaded:
             _, summary, _, _ = loaded
@@ -185,8 +163,8 @@ async def delete_game(
                 )
 
     evict_game(game_id)
-    if _is_persistence_enabled():
-        await _delete_game_from_db(game_id)
+    if supabase.is_persistence_enabled():
+        await supabase.delete_game_from_db(game_id)
 
     await manager.broadcast_lobby()
     return {"status": "deleted", "game_id": game_id}
@@ -371,8 +349,8 @@ async def leave_game(
             current_user.email if current_user else req.email
         ):
             evict_game(game_id)
-            if _is_persistence_enabled():
-                await _delete_game_from_db(game_id)
+            if supabase.is_persistence_enabled():
+                await supabase.delete_game_from_db(game_id)
             await broadcast_lobby_update()
             return GameBootstrapResponse(
                 state=game_state,
@@ -413,8 +391,8 @@ async def leave_game(
 
     if len(summary.participants) == 0:
         evict_game(game_id)
-        if _is_persistence_enabled():
-            await _delete_game_from_db(game_id)
+        if supabase.is_persistence_enabled():
+            await supabase.delete_game_from_db(game_id)
         await broadcast_lobby_update()
         return GameBootstrapResponse(
             state=game_state,

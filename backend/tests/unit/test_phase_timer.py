@@ -3,9 +3,10 @@
 import asyncio
 import time
 
+import api.turns as turns_api
 import jwt
-import main
 import pytest
+from api.turns import tick_timer
 from domain.models import GameState, PhaseTimer, Power, TimerChoice, TimerStage
 from engine.phase_timer import (
     FIXED_PHASE_MINUTES,
@@ -14,7 +15,8 @@ from engine.phase_timer import (
     tally_votes,
 )
 from fastapi.testclient import TestClient
-from main import GAME_HISTORY, GAME_SUMMARIES, GAMES, PRIVATE_SANDBOXES, app, tick_timer
+from main import app
+from storage.store import GAME_HISTORY, GAME_SUMMARIES, GAMES, PRIVATE_SANDBOXES
 
 TEST_JWT_SECRET = "test-secret-at-least-32-chars-long-12345"
 ALL_POWERS = ["FRANCE", "ENGLAND", "GERMANY", "ITALY", "AUSTRIA", "RUSSIA", "TURKEY"]
@@ -286,13 +288,13 @@ def test_two_requests_cannot_resolve_one_deadline_twice(client, monkeypatch):
     run_vote(client, gid)
     run_out(gid)
 
-    real_persist = main.persist_game
+    real_persist = turns_api.persist_game
 
     async def slow_persist(game_id):
         await asyncio.sleep(0)
         await real_persist(game_id)
 
-    monkeypatch.setattr(main, "persist_game", slow_persist)
+    monkeypatch.setattr(turns_api, "persist_game", slow_persist)
 
     async def both():
         await asyncio.gather(tick_timer(GAMES[gid]), tick_timer(GAMES[gid]))
@@ -331,14 +333,14 @@ def test_a_deadline_that_cannot_resolve_pauses_and_is_saved(client, monkeypatch)
         raise RuntimeError("adjudicator exploded")
 
     saved = []
-    real_persist = main.persist_game
+    real_persist = turns_api.persist_game
 
     async def recording_persist(game_id):
         saved.append(GAMES[game_id].timer.stage if GAMES[game_id].timer else None)
         await real_persist(game_id)
 
-    monkeypatch.setattr(main, "_execute_adjudication", broken)
-    monkeypatch.setattr(main, "persist_game", recording_persist)
+    monkeypatch.setattr(turns_api, "_execute_adjudication", broken)
+    monkeypatch.setattr(turns_api, "persist_game", recording_persist)
     asyncio.run(tick_timer(GAMES[gid]))
 
     assert GAMES[gid].timer.stage == TimerStage.PAUSED

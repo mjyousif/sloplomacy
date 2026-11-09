@@ -22,6 +22,7 @@ This repository enforces strict modularity and separation of concerns to prevent
 - **`backend/main.py` is an Assembler, Not a Dumping Ground**:
   - `main.py` must only configure CORS, security headers, middleware, lifetime events, and include routers via `app.include_router()`.
   - **Never add route handlers (`@app.get`, `@app.post`) directly to `main.py`**.
+  - Don't re-export names from `main.py` for tests. Tests import a name from the module that owns it and patch it there: `storage.supabase.<fn>` for the Supabase calls (production calls them through the `supabase` module, so one patch covers every caller, the game socket included), `storage.store.GAMES` for the store, `api.turns.<fn>` for turn helpers.
 - **Domain-Driven Modular Routers (`backend/api/`)**:
   - All endpoints belong in domain routers:
     - `api/games.py`: Game room lifecycle, lobby creation, seat claiming, leaving, surrendering.

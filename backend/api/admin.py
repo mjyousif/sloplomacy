@@ -32,6 +32,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from scenarios.presets import SCENARIO_IDS, build_scenario
 from security.auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
 from security.secrecy import verify_admin_access
+from storage import supabase
 from storage.store import (
     DEFAULT_GAME_ID,
     GAME_HISTORY,
@@ -41,9 +42,7 @@ from storage.store import (
     SANDBOX_CHECKPOINTS,
     cache_loaded_game,
     check_game_capacity,
-    get_main_attr,
     is_multiplayer_match,
-    is_persistence_enabled,
     load_saved_game,
     persist_game,
     resolve_game,
@@ -85,10 +84,8 @@ async def seed_test_scenario(req: SeedScenarioRequest):
             detail=f"Unknown scenario '{req.scenario_id}'. Available: {sorted(SCENARIO_IDS)}",
         )
     gid = req.game_id or DEFAULT_GAME_ID
-    persist_fn = get_main_attr("is_persistence_enabled", is_persistence_enabled)
-    if gid not in GAMES and persist_fn():
-        load_fn = get_main_attr("load_saved_game", load_saved_game)
-        loaded = await load_fn(gid)
+    if gid not in GAMES and supabase.is_persistence_enabled():
+        loaded = await load_saved_game(gid)
         if loaded is not None:
             cache_loaded_game(gid, loaded)
     if is_multiplayer_match(gid):
