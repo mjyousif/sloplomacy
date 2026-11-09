@@ -29,5 +29,5 @@ npm install
 echo "[✓] Frontend environment ready!"
 
 echo -e "\n================================================="
-echo "  SETUP COMPLETE! Run ./start.sh to launch dev."
+echo "  SETUP COMPLETE! Run ./scripts/dev.sh to launch dev."
 echo "================================================="

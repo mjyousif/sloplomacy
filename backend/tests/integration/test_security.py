@@ -70,13 +70,17 @@ def load_quickstart():
     current = Path(__file__).resolve().parent
     path = None
     while current.parent != current:
-        candidate = current / "quickstart.py"
+        candidate = current / "scripts" / "quickstart.py"
         if candidate.exists():
             path = candidate
             break
+        candidate_legacy = current / "quickstart.py"
+        if candidate_legacy.exists():
+            path = candidate_legacy
+            break
         current = current.parent
     if path is None:
-        path = Path(__file__).resolve().parents[3] / "quickstart.py"
+        path = Path(__file__).resolve().parents[3] / "scripts" / "quickstart.py"
     spec = importlib.util.spec_from_file_location("quickstart", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

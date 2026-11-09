@@ -121,7 +121,7 @@ When `SUPABASE_URL` and the service role key (`SUPABASE_SERVICE_ROLE_KEY`, or `S
 
 ### Using the Python Quickstart
 ```bash
-python quickstart.py --backend-only
+python scripts/quickstart.py --backend-only
 ```
 
 ### Manual Execution with Uvicorn
