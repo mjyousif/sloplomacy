@@ -52,7 +52,7 @@ The **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** is designed as 
 |                 |                       |                       |                       |
 |                 v                       v                       v                       |
 |     +----------------------+  +--------------------+  +--------------------------+      |
-|     |     validator.py     |  |    supabase.py     |  |      adjudicator.py      |      |
+|     |     validator.py     |  |    supabase.py     |  |      adjudicator/        |      |
 |     |  - Legality checks   |  |  - PostgREST REST  |  |  - 'diplomacy' engine    |      |
 |     |  - Blunder detection |  |  - JSONB upserts   |  |  - Movement, Retreats,   |      |
 |     |  - Movement, Retreats|  |  - Read-thru cache |  |    and Winter Adjustments|      |

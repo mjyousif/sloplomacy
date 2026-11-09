@@ -12,7 +12,7 @@ from domain.models import (
     TimerToggleRequest,
     TimerVoteRequest,
 )
-from engine.adjudicator import adjudicate_turn
+from engine.adjudicator.resolver import adjudicate_turn
 from engine.order_utils import (
     create_default_orders,
     everyone_is_ready,

@@ -20,7 +20,13 @@ backend/
 ├── domain/                  # Core Pydantic domain models & schemas
 │   └── models.py            # GameState, Order, Unit, Resolution, Diagnostics, Timer schemas
 ├── engine/                  # Authoritative rules & simulation engine
-│   ├── adjudicator.py       # DATC turn adjudication & simulation wrapper over python 'diplomacy'
+│   ├── adjudicator/         # DATC turn adjudication over python 'diplomacy', one module per phase
+│   │   ├── resolver.py      # create_diplomacy_game, compute_current_builds, adjudicate_turn
+│   │   ├── translator.py    # Order and phase name <-> engine string conversion
+│   │   ├── context.py       # ResolutionContext shared by the phase modules
+│   │   ├── movement.py      # Movement: engine orders, strengths, dislodgements
+│   │   ├── retreats.py      # Retreats: engine orders and where each unit went
+│   │   └── adjustments.py   # Builds, disbands, waivers and civil disorder disbands
 │   ├── validator.py         # Pre-flight tactical blunder checker (Movement, Retreats, Builds)
 │   ├── topology.py          # Europe 1901 graph topology, province records & coastline rules
 │   ├── phase_timer.py       # Multiplayer turn clock rules: votes, pausing, extensions & deadlines
