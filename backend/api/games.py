@@ -257,7 +257,7 @@ async def join_multiplayer_game(
     req: JoinGameRequest,
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    from backend.api.turns import refresh_timer
+    from api.turns import refresh_timer
 
     game_state = await resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
@@ -343,7 +343,7 @@ async def leave_game(
     req: LeaveGameRequest,
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    from backend.api.turns import _execute_adjudication, refresh_timer
+    from api.turns import _execute_adjudication, refresh_timer
 
     game_state = await resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
@@ -450,7 +450,7 @@ async def surrender_power(
     req: SurrenderRequest,
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    from backend.api.turns import _execute_adjudication, refresh_timer
+    from api.turns import _execute_adjudication, refresh_timer
 
     game_state = await resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
