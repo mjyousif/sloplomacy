@@ -263,7 +263,7 @@ export function useDiplomacyWebSocket({
       }
       setIsConnected(false);
     };
-  }, [viewMode, activeGameId, power, passcode]);
+  }, [viewMode, activeGameId, power, passcode, authKey]);
 
   const sendPing = useCallback(() => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {

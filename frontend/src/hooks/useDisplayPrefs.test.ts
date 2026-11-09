@@ -189,3 +189,82 @@ describe('useDisplayPrefs for a signed-in player', () => {
     expect(result.current.prefs.pieceStyle).toBe('compact');
   });
 });
+
+describe('useDisplayPrefs when the player signs in or out', () => {
+  const BOB: AuthUser = {
+    id: 'user-bob',
+    email: 'bob@example.test',
+    displayName: 'Bob',
+  };
+
+  it("reads the account's choice when the player signs in after the page has loaded", async () => {
+    supabase.fetchAccountDisplayPrefs.mockResolvedValue({
+      prefs: SEATED,
+      error: null,
+    });
+    const { result, rerender } = renderHook(
+      ({ user }) => useDisplayPrefs(user),
+      { initialProps: { user: null as AuthUser | null } },
+    );
+    expect(supabase.fetchAccountDisplayPrefs).not.toHaveBeenCalled();
+
+    rerender({ user: ALICE });
+    await waitFor(() => expect(result.current.saveState).toBe('account'));
+    expect(supabase.fetchAccountDisplayPrefs).toHaveBeenCalledWith(ALICE);
+    expect(result.current.prefs).toEqual(SEATED);
+  });
+
+  it('reads the new account when the player switches accounts', async () => {
+    supabase.fetchAccountDisplayPrefs.mockImplementation(
+      async (user: AuthUser) => ({
+        prefs: user.id === ALICE.id ? SEATED : FLAGS,
+        error: null,
+      }),
+    );
+    const { result, rerender } = renderHook(
+      ({ user }) => useDisplayPrefs(user),
+      { initialProps: { user: ALICE as AuthUser | null } },
+    );
+    await waitFor(() => expect(result.current.prefs).toEqual(SEATED));
+
+    rerender({ user: BOB });
+    await waitFor(() => expect(result.current.prefs).toEqual(FLAGS));
+    expect(supabase.fetchAccountDisplayPrefs).toHaveBeenLastCalledWith(BOB);
+  });
+
+  it('goes back to saving on the device once the player signs out', async () => {
+    supabase.fetchAccountDisplayPrefs.mockResolvedValue({
+      prefs: SEATED,
+      error: null,
+    });
+    const { result, rerender } = renderHook(
+      ({ user }) => useDisplayPrefs(user),
+      { initialProps: { user: ALICE as AuthUser | null } },
+    );
+    await waitFor(() => expect(result.current.saveState).toBe('account'));
+
+    rerender({ user: null });
+    expect(result.current.saveState).toBe('device');
+    // The choice stays on show and on this device.
+    expect(result.current.prefs).toEqual(SEATED);
+    expect(storedPrefs()).toEqual(SEATED);
+  });
+
+  it('ignores a read that finishes after the player has switched accounts', async () => {
+    const aliceRead = deferred<{ prefs: unknown; error: string | null }>();
+    supabase.fetchAccountDisplayPrefs.mockImplementation((user: AuthUser) =>
+      user.id === ALICE.id
+        ? aliceRead.promise
+        : Promise.resolve({ prefs: FLAGS, error: null }),
+    );
+    const { result, rerender } = renderHook(
+      ({ user }) => useDisplayPrefs(user),
+      { initialProps: { user: ALICE as AuthUser | null } },
+    );
+    rerender({ user: BOB });
+    await waitFor(() => expect(result.current.prefs).toEqual(FLAGS));
+
+    await act(async () => aliceRead.resolve({ prefs: SEATED, error: null }));
+    expect(result.current.prefs).toEqual(FLAGS);
+  });
+});

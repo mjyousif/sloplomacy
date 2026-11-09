@@ -53,7 +53,8 @@ export function useDisplayPrefs(user: AuthUser | null): UseDisplayPrefsResult {
     [],
   );
 
-  const _userId = user?.id ?? null;
+  // Signing in, out or into another account reads that account again.
+  const userId = user?.id ?? null;
 
   useEffect(() => {
     const account = userRef.current;
@@ -94,7 +95,7 @@ export function useDisplayPrefs(user: AuthUser | null): UseDisplayPrefsResult {
     return () => {
       cancelled = true;
     };
-  }, [saveToAccount]);
+  }, [userId, saveToAccount]);
 
   useEffect(
     () => () => {
