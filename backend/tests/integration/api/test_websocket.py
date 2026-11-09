@@ -1,3 +1,5 @@
+"""The game and lobby sockets: connecting, and the broadcasts that follow orders and turns."""
+
 import pytest
 from domain.board import Power
 from main import app
@@ -9,6 +11,9 @@ from tests.ws_testing import receive_json
 
 def test_ws_game_connect_and_ping():
     client = TestClient(app)
+    # Start from Spring 1901 like the tests below. This one used to rely on earlier tests
+    # leaving the shared board there.
+    GAMES["proto_1901"] = build_scenario("standard_1901", Power.FRANCE, "proto_1901")
     with client.websocket_connect("/ws/games/proto_1901") as ws:
         init_msg = receive_json(ws)
         assert init_msg["type"] == "game_update"
