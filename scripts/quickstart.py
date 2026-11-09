@@ -15,7 +15,7 @@ import time
 import webbrowser
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parent
+ROOT_DIR = Path(__file__).resolve().parent.parent
 BACKEND_DIR = ROOT_DIR / "backend"
 FRONTEND_DIR = ROOT_DIR / "frontend"
 
@@ -147,7 +147,7 @@ def backend_env() -> dict:
 
     Demo sign-ins send unsigned `alg: none` tokens, which backend/auth.py only
     accepts when ENVIRONMENT is `development` or `test`. A value already set in
-    the shell wins, so `ENVIRONMENT=production python quickstart.py` still rejects
+    the shell wins, so `ENVIRONMENT=production python scripts/quickstart.py` still rejects
     them. Nothing that deploys the app runs this launcher or may set this flag.
     """
     env = os.environ.copy()

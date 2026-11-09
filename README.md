@@ -82,26 +82,26 @@ You can launch both the **FastAPI backend** (`http://127.0.0.1:8000`) and the **
 
 ### Windows (PowerShell)
 ```powershell
-.\start.ps1
+.\scripts\dev.ps1
 ```
 > Or run in separate terminal windows:
 > ```powershell
-> .\start.ps1 -SeparateWindows
+> .\scripts\dev.ps1 -SeparateWindows
 > ```
 
 ### Windows (Command Prompt / Double Click)
 ```cmd
-start.bat
+scripts\start.bat
 ```
 
 ### macOS / Linux / WSL / Git Bash
 ```bash
-./start.sh
+./scripts/dev.sh
 ```
 
 ### Cross-Platform (Python)
 ```bash
-python quickstart.py
+python scripts/quickstart.py
 ```
 
 ---
@@ -115,11 +115,11 @@ python quickstart.py
 6. **Graceful Shutdown**: Press `Ctrl+C` in the terminal to cleanly terminate both processes.
 
 ### Additional Command Line Options
-- `python quickstart.py --no-open`: Run servers without opening a browser window.
-- `python quickstart.py --backend-only`: Run only the FastAPI backend server.
-- `python quickstart.py --frontend-only`: Run only the Vite frontend dev server.
-- `python quickstart.py --setup-only`: Install dependencies without starting servers.
-- `python quickstart.py --test`: Run the backend test suite and verify the frontend build.
+- `python scripts/quickstart.py --no-open`: Run servers without opening a browser window.
+- `python scripts/quickstart.py --backend-only`: Run only the FastAPI backend server.
+- `python scripts/quickstart.py --frontend-only`: Run only the Vite frontend dev server.
+- `python scripts/quickstart.py --setup-only`: Install dependencies without starting servers.
+- `python scripts/quickstart.py --test`: Run the backend test suite and verify the frontend build.
 
 ### Developer Scripts & QoL Tools (`scripts/`)
 Dedicated scripts for development and operations are available under [`scripts/`](scripts/):
