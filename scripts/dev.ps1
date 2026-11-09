@@ -39,7 +39,7 @@ if (-not (Test-Path (Join-Path $FrontendDir "node_modules"))) {
 
 if ($SeparateWindows) {
     Write-Host "`nLaunching Backend and Frontend in separate windows..." -ForegroundColor Green
-    # Lets a local demo sign-in work, same as backend_env() in quickstart.py. It is set in the
+    # Lets a local demo sign-in work, same as backend_env() in scripts/quickstart.py. It is set in the
     # backend window so it cannot stay behind in the shell that ran this script.
     $BackendEnv = "if (-not `$env:ENVIRONMENT) { `$env:ENVIRONMENT = 'development' }"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$BackendDir'; $BackendEnv; Write-Host 'FastAPI Backend running on http://127.0.0.1:8000' -ForegroundColor Cyan; & '$PythonCmd' -m uvicorn main:app --reload --port 8000"
@@ -64,7 +64,7 @@ if ($SeparateWindows) {
     $PythonCmd = if (Test-Path $VenvPython) { $VenvPython } else { "python" }
     Push-Location $RepoRoot
     try {
-        & $PythonCmd (Join-Path $RepoRoot "quickstart.py") $extraArgs
+        & $PythonCmd (Join-Path $PSScriptRoot "quickstart.py") $extraArgs
     } finally {
         Pop-Location
     }

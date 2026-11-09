@@ -9,18 +9,18 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 ### Running Locally
 - **Single-command fullstack launcher (Windows PowerShell)**:
   ```powershell
-  .\start.ps1
+  .\scripts\dev.ps1
   # Or run in separate terminal windows:
-  .\start.ps1 -SeparateWindows
+  .\scripts\dev.ps1 -SeparateWindows
   ```
 - **Single-command cross-platform runner (Python)**:
   ```bash
-  python quickstart.py
+  python scripts/quickstart.py
   # Flags: --no-open, --backend-only, --frontend-only, --setup-only, --test
   ```
 - **macOS / Linux / WSL**:
   ```bash
-  ./start.sh
+  ./scripts/dev.sh
   ```
 
 ### Backend Commands (`backend/`)

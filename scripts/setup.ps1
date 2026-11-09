@@ -38,5 +38,5 @@ try {
 }
 
 Write-Host "`n=================================================" -ForegroundColor Green
-Write-Host "  SETUP COMPLETE! Run .\start.ps1 to launch dev." -ForegroundColor Green
+Write-Host "  SETUP COMPLETE! Run .\scripts\dev.ps1 to launch dev." -ForegroundColor Green
 Write-Host "=================================================" -ForegroundColor Green

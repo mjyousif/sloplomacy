@@ -13,4 +13,4 @@ else
     exit 1
 fi
 
-"$PYTHON_CMD" quickstart.py "$@"
+"$PYTHON_CMD" scripts/quickstart.py "$@"
