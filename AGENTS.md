@@ -162,7 +162,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
 
 ### Backend Packages (`backend/`)
 - **Application Assembler (`backend/main.py`)**: Root FastAPI application initialization, CORS configuration, security headers, lifespan hooks, and router inclusion.
-  - **Invariant**: `main.py` is an assembler (< 350 lines); never add route handlers (`@app.get`, `@app.post`) directly here.
+  - **Invariant**: `main.py` is an assembler (< 350 lines); never add route handlers (`@app.get`, `@app.post`) directly here, and never re-export names from it. Tests import and patch a name in the module that owns it (`storage.supabase.<fn>` for every Supabase call).
 - **API Routers (`backend/api/`)**: Domain-partitioned FastAPI routers. Every HTTP endpoint and WebSocket connection belongs in its domain router:
   - `games.py`: Match lifecycle, lobby creation, seat claiming, leaving, and surrender.
   - `orders.py`: Move/retreat/build order submission, atomic batch updates, and order confirmation.
@@ -172,7 +172,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - `history.py`: Read-only turn history for the turn selector (resolved phases and their records).
   - `websocket.py`: Live turn synchronization and WebSocket subscriptions.
 - **Domain Models (`backend/domain/`)**: Authoritative Pydantic v2 schemas (`models.py`) defining `GameState`, `Order`, `Issue`, and request/response DTOs.
-- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator.py`), DATC/rulebook validation (`validator/`, one module per phase or concern), topological graph (`topology.py`), phase timer (`phase_timer.py`), AI heuristics (`ai.py`), and order helpers (`order_utils.py`). Completely decoupled from HTTP transport.
+- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator/`, one module per phase), DATC/rulebook validation (`validator/`, one module per phase or concern), topological graph (`topology.py`), phase timer (`phase_timer.py`), AI heuristics (`ai.py`), and order helpers (`order_utils.py`). Completely decoupled from HTTP transport.
 - **Persistence Layer (`backend/storage/`)**: Authoritative in-memory state store (`store.py`) and Supabase PostgREST client (`supabase.py`).
 - **Security & Authorization (`backend/security/`)**: JWT verification and auth dependencies (`auth.py`) and viewer state secrecy sanitization (`secrecy.py`).
 - **Scenarios & Presets (`backend/scenarios/`)**: Scenario definitions and match presets (`presets.py`).
@@ -212,9 +212,9 @@ The game cycles through three standard phases per year:
    - Advances to `Spring <Year + 1> Movement`.
 
 ### 2. Adjudication Library (`diplomacy>=1.1.2`)
-- Turn adjudication in `backend/engine/adjudicator.py` interfaces with the standard Python `diplomacy` package (`diplomacy.Game`).
-- Custom conversions exist in `order_to_diplomacy_str` to translate internal Pydantic `Order` objects into official DATC order strings (e.g. `A PAR - BUR`, `F NTH S A BEL - HOL`, `A LON R WAL`, `A BUD B`).
-- Do not bypass `create_diplomacy_game()` or hardcode ad-hoc combat resolution logic without verifying against the test suite.
+- Turn adjudication in `backend/engine/adjudicator/` interfaces with the standard Python `diplomacy` package (`diplomacy.Game`). `resolver.adjudicate_turn` runs a phase and hands the readback to `movement.py`, `retreats.py` or `adjustments.py`, which share a `ResolutionContext` (`context.py`).
+- Custom conversions exist in `translator.order_to_diplomacy_str` to translate internal Pydantic `Order` objects into official DATC order strings (e.g. `A PAR - BUR`, `F NTH S A BEL - HOL`, `A LON R WAL`, `A BUD B`).
+- Do not bypass `resolver.create_diplomacy_game()` or hardcode ad-hoc combat resolution logic without verifying against the test suite.
 
 ### 3. Multi-Game Rooms & Scoped State
 - The backend supports multiple concurrent games, lobbies, and sandboxes in `GAMES: Dict[str, GameState]`.

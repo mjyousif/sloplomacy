@@ -41,7 +41,7 @@ docs/
 ### 2. Backend Engine (FastAPI & Python)
 - [Backend Overview](backend/README.md): FastAPI service architecture, entry points, and test harness.
 - [REST API Reference](backend/api-reference.md): Endpoints for fetching state, dispatching orders, pre-move simulation, turn adjudication, and sandbox checkpoints.
-- [Adjudication Engine (adjudicator.py)](backend/adjudicator.md): Iterative DATC-inspired resolver for supports, support cuts, convoys, bounces, and dislodgements.
+- [Adjudication Engine (adjudicator/)](backend/adjudicator.md): Iterative DATC-inspired resolver for supports, support cuts, convoys, bounces, and dislodgements.
 - [Order Validator & Sanity Checks (validator/)](backend/validator.md): Diagnostics engine detecting illegal moves, self-bounces, friendly fire, and broken convoys.
 - [Map Data & Adjacencies (topology.py)](backend/map-data.md): Topology of all 75 playable European provinces, 34 supply centers, and complex split coasts (STP, SPA, BUL).
 

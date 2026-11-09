@@ -12,7 +12,7 @@ from domain.models import (
     TimerToggleRequest,
     TimerVoteRequest,
 )
-from engine.adjudicator import adjudicate_turn
+from engine.adjudicator.resolver import adjudicate_turn
 from engine.order_utils import (
     create_default_orders,
     everyone_is_ready,
@@ -38,7 +38,6 @@ from storage.store import (
     GAME_HISTORY,
     GAME_SUMMARIES,
     HISTORY_UNSAVED,
-    get_main_attr,
     persist_game,
     resolve_game,
     sync_summary,
@@ -81,8 +80,7 @@ def refresh_timer(game: GameState) -> None:
 
 
 async def publish_timer(game: GameState) -> GameState:
-    persist_fn = get_main_attr("persist_game", persist_game)
-    await persist_fn(game.game_id)
+    await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
     return game
 
@@ -162,8 +160,7 @@ async def tick_timer(game: GameState) -> None:
         return
     if timer.stage == TimerStage.RUNNING:
         try:
-            adjudicate_fn = get_main_attr("_execute_adjudication", _execute_adjudication)
-            await adjudicate_fn(game)
+            await _execute_adjudication(game)
         except Exception:
             logger.exception("Could not resolve %s when its clock ran out.", game.game_id)
             timer.stage = TimerStage.PAUSED

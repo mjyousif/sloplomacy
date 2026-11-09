@@ -1,5 +1,5 @@
 from domain.models import IssueCode, Order, OrderType, Power, UnitType
-from engine.adjudicator import adjudicate_turn
+from engine.adjudicator.resolver import adjudicate_turn
 from engine.topology import (
     PROVINCES,
     get_initial_1901_units,

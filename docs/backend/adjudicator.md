@@ -1,6 +1,6 @@
-# Tactical Adjudication Engine (`adjudicator.py`)
+# Tactical Adjudication Engine (`adjudicator/`)
 
-The adjudication engine (`backend/engine/adjudicator.py`) evaluates orders, manages phase transitions, and resolves tactical movements, combat conflicts, support cuts, maritime convoys, bounces, dislodgements, retreats, and winter supply center builds/disbands under standard Diplomacy rules.
+The adjudication engine (`backend/engine/adjudicator/`) evaluates orders, manages phase transitions, and resolves tactical movements, combat conflicts, support cuts, maritime convoys, bounces, dislodgements, retreats, and winter supply center builds/disbands under standard Diplomacy rules.
 
 It interfaces with the authoritative **Python `diplomacy` package** (`diplomacy>=1.1.2`), which implements standard Diplomacy Adjudicator Test Cases (DATC) resolution semantics.
 
@@ -8,7 +8,16 @@ It interfaces with the authoritative **Python `diplomacy` package** (`diplomacy>
 
 ## 1. Engine Architecture & Integration
 
-Instead of relying on fragile ad-hoc combat heuristics, `adjudicator.py` synchronizes the server's `GameState` with an authoritative `diplomacy.Game` instance:
+Instead of relying on fragile ad-hoc combat heuristics, the adjudicator synchronizes the server's `GameState` with an authoritative `diplomacy.Game` instance.
+
+| Module | Holds |
+| :--- | :--- |
+| `resolver.py` | `create_diplomacy_game`, `compute_current_builds` and `adjudicate_turn`, which submits the orders, records which ones the engine kept, processes the phase, reads the units back and returns the next phase and ownership |
+| `translator.py` | `to_diplomacy_phase_code`, `parse_diplomacy_phase` and `order_to_diplomacy_str` |
+| `context.py` | `ResolutionContext`: what a phase reads back from the engine (results, surviving and dislodged units, kept orders) and the results it adds to (resolutions, summary lines, new units) |
+| `movement.py`, `retreats.py`, `adjustments.py` | For each phase, the engine orders to submit (`build_*_orders`) and the readback into resolutions and units (`resolve_*`). Civil disorder deficit disbands are worded in `adjustments.py`; putting a power into civil disorder is `engine/order_utils.put_into_civil_disorder` |
+
+The flow:
 
 ```
 +-------------------------------------------------------------------------+
@@ -117,7 +126,7 @@ The internal Pydantic `Order` model is serialized into standard DATC order notat
 
 ## 4. Simulation Preview vs. Commit Adjudication
 
-`adjudicator.adjudicate_turn()` operates in two modes:
+`resolver.adjudicate_turn()` operates in two modes:
 
 1. **Simulation Mode (`is_simulation=True`)**:
    - Clones current state into a temporary `diplomacy.Game` instance.
@@ -141,7 +150,7 @@ Before a commit, `_execute_adjudication` saves a snapshot of the phase as it beg
 
 ## Orders Nobody Gave
 
-`create_default_orders` in `backend/engine/order_utils.py` (re-exported by `main.py`) decides what happens to anything left unordered, and it follows the rulebook. Empty seats, surrendered powers and players who run out of time all get the same result:
+`create_default_orders` in `backend/engine/order_utils.py` decides what happens to anything left unordered, and it follows the rulebook. Empty seats, surrendered powers and players who run out of time all get the same result:
 
 | Phase | Left unordered | Result |
 | :--- | :--- | :--- |

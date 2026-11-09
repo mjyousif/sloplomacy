@@ -1,7 +1,9 @@
 import pytest
 from domain.models import Power
-from main import GAMES, app, build_scenario
+from main import app
+from scenarios.presets import build_scenario
 from starlette.testclient import TestClient
+from storage.store import GAMES
 from tests.ws_testing import receive_json
 
 

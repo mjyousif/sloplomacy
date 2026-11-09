@@ -2,7 +2,8 @@ import random
 
 import pytest
 from domain.models import Order, OrderType, Power, ProvinceType, Unit, UnitType
-from engine.adjudicator import adjudicate_turn, create_diplomacy_game, order_to_diplomacy_str
+from engine.adjudicator.resolver import adjudicate_turn, create_diplomacy_game
+from engine.adjudicator.translator import order_to_diplomacy_str
 from engine.topology import (
     PROVINCES,
     can_unit_support_province,
