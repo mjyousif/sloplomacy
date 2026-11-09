@@ -5,19 +5,18 @@ import os
 import re
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from urllib.parse import quote
 
 import httpx
-
-from models import GameParticipant, GameState, MultiplayerGameSummary, Power
+from models import GameState, MultiplayerGameSummary
 
 logger = logging.getLogger("diplomacy.database")
 
 ROOM_CODE_REGEX = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 
 
-def is_valid_room_code(code: Optional[str]) -> bool:
+def is_valid_room_code(code: str | None) -> bool:
     """Verify that a game_id / room_code conforms to safe alphanumeric syntax."""
     if not code:
         return False
@@ -63,7 +62,7 @@ def get_supabase_url() -> str:
 _REJECTED_KEYS_LOGGED: set = set()
 
 
-def _key_role(key: str) -> Optional[str]:
+def _key_role(key: str) -> str | None:
     """
     The Postgres role a Supabase API key acts as, or None if it can't be told from the key.
     New keys say so in their prefix. Legacy keys are JWTs with a `role` claim.
@@ -139,7 +138,7 @@ def is_persistence_enabled() -> bool:
     return True
 
 
-def is_valid_uuid(val: Optional[str]) -> bool:
+def is_valid_uuid(val: str | None) -> bool:
     if not val:
         return False
     try:
@@ -149,7 +148,7 @@ def is_valid_uuid(val: Optional[str]) -> bool:
         return False
 
 
-def get_headers() -> Dict[str, str]:
+def get_headers() -> dict[str, str]:
     key = get_supabase_key()
     return {
         "apikey": key,
@@ -166,7 +165,7 @@ def to_app_status(db_status: str) -> str:
     return DB_TO_APP_STATUS.get(db_status, "waiting")
 
 
-def build_summary_from_row(row: Dict[str, Any]) -> MultiplayerGameSummary:
+def build_summary_from_row(row: dict[str, Any]) -> MultiplayerGameSummary:
     room_code = row.get("room_code", "")
     raw_state_blob = row.get("game_state") or {}
 
@@ -208,8 +207,8 @@ def build_summary_from_row(row: Dict[str, Any]) -> MultiplayerGameSummary:
 
 async def load_game_from_db(
     game_id: str,
-    client: Optional[httpx.AsyncClient] = None,
-) -> Optional[Tuple[GameState, Optional[MultiplayerGameSummary], List[GameState], Optional[str]]]:
+    client: httpx.AsyncClient | None = None,
+) -> tuple[GameState, MultiplayerGameSummary | None, list[GameState], str | None] | None:
     """
     Load a game from Supabase PostgreSQL by room_code.
     Returns (state, summary, history, passcode), or None if Supabase has no such game.
@@ -256,7 +255,7 @@ async def load_game_from_db(
 
         state = GameState.model_validate(state_data)
 
-        summary: Optional[MultiplayerGameSummary] = None
+        summary: MultiplayerGameSummary | None = None
         if summary_data and isinstance(summary_data, dict):
             try:
                 summary = MultiplayerGameSummary.model_validate(summary_data)
@@ -265,7 +264,7 @@ async def load_game_from_db(
         if not summary:
             summary = build_summary_from_row(row)
 
-        history: List[GameState] = []
+        history: list[GameState] = []
         if isinstance(history_data, list):
             for h in history_data:
                 try:
@@ -281,8 +280,8 @@ async def load_game_from_db(
 
 
 async def load_all_summaries_from_db(
-    client: Optional[httpx.AsyncClient] = None,
-) -> Dict[str, MultiplayerGameSummary]:
+    client: httpx.AsyncClient | None = None,
+) -> dict[str, MultiplayerGameSummary]:
     """
     Fetch all games from Supabase to warm up or synchronize lobby listings.
     Raises SupabaseUnavailable if the read fails: an empty result always means Supabase has no games.
@@ -291,7 +290,7 @@ async def load_all_summaries_from_db(
         return {}
 
     headers = get_headers()
-    summaries: Dict[str, MultiplayerGameSummary] = {}
+    summaries: dict[str, MultiplayerGameSummary] = {}
 
     async def read_rows(columns: str) -> httpx.Response:
         url = f"{get_supabase_url()}/rest/v1/multiplayer_games?select={columns}"
@@ -327,10 +326,10 @@ async def load_all_summaries_from_db(
 async def save_game_to_db(
     game_id: str,
     state: GameState,
-    summary: Optional[MultiplayerGameSummary] = None,
-    history: Optional[List[GameState]] = None,
-    passcode: Optional[str] = None,
-    client: Optional[httpx.AsyncClient] = None,
+    summary: MultiplayerGameSummary | None = None,
+    history: list[GameState] | None = None,
+    passcode: str | None = None,
+    client: httpx.AsyncClient | None = None,
 ) -> bool:
     """
     Persist game state, metadata, and history into Supabase PostgreSQL.
@@ -351,7 +350,7 @@ async def save_game_to_db(
     app_status = summary.status if summary else "waiting"
     db_status = to_db_status(app_status)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "room_code": game_id,
         "name": (summary.name if summary and summary.name else f"Match {game_id}").strip(),
         "status": db_status,
@@ -397,7 +396,7 @@ async def save_game_to_db(
 
 async def delete_game_from_db(
     game_id: str,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> bool:
     """Delete a game room from Supabase PostgreSQL."""
     if not is_persistence_enabled():

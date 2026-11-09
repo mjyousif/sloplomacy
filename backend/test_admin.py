@@ -1,10 +1,10 @@
 import time
+
 import jwt
 import pytest
 from fastapi.testclient import TestClient
-
-from main import app, GAMES, GAME_HISTORY, GAME_SUMMARIES, seed_initial_multiplayer_lobbies
-from models import Power, UnitType
+from main import GAMES, app, seed_initial_multiplayer_lobbies
+from models import UnitType
 from ws_testing import receive_json
 
 TEST_JWT_SECRET = "test-secret-at-least-32-chars-long-12345"
@@ -536,8 +536,9 @@ def test_army_placed_by_admin_is_a_real_unit_that_captures_its_province():
 def test_admin_es256_asymmetric_jwt_verification(monkeypatch):
     """Verify that ES256 tokens signed with ECC (P-256) are cryptographically validated."""
     import time
-    from cryptography.hazmat.primitives.asymmetric import ec
+
     from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
 
     # Generate an EC key pair for testing
     private_key = ec.generate_private_key(ec.SECP256R1())

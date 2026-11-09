@@ -1,5 +1,6 @@
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
+
 from map_data import (
     PROVINCES,
     can_army_be_convoyed_theoretically,
@@ -23,14 +24,14 @@ from models import (
 def has_active_convoy_chain(
     army_origin: str,
     army_target: str,
-    units: List[Unit],
-    orders: Dict[str, Order],
+    units: list[Unit],
+    orders: dict[str, Order],
 ) -> bool:
     """
     Check if there is a connected chain of Fleets in SEA provinces ordered to CONVOY
     the army from army_origin to army_target.
     """
-    convoying_sea_provs: Set[str] = set()
+    convoying_sea_provs: set[str] = set()
     for u in units:
         if u.unit_type == UnitType.FLEET and PROVINCES[u.province].type == ProvinceType.SEA:
             order = orders.get(u.id)
@@ -56,7 +57,7 @@ def has_active_convoy_chain(
     if not start_seas or not end_seas:
         return False
 
-    visited: Set[str] = set()
+    visited: set[str] = set()
     queue = list(start_seas)
     while queue:
         curr = queue.pop(0)
@@ -74,22 +75,22 @@ def has_active_convoy_chain(
 
 
 def validate_orders(
-    units: List[Unit],
-    orders: Dict[str, Order],
+    units: list[Unit],
+    orders: dict[str, Order],
     include_unassigned_warnings: bool = False,
-    target_power: Optional[Power] = None,
+    target_power: Power | None = None,
     phase: str = "Movement",
-    builds: Optional[Dict[str, Any]] = None,
-    retreats: Optional[Dict[str, Any]] = None,
-) -> List[ValidationIssue]:
+    builds: dict[str, Any] | None = None,
+    retreats: dict[str, Any] | None = None,
+) -> list[ValidationIssue]:
     """
     Perform comprehensive legality & tactical sanity checks on all current orders.
     Supports Movement, Retreats, and Winter Adjustments phases.
     """
-    issues: List[ValidationIssue] = []
-    unit_by_prov: Dict[str, Unit] = {u.province: u for u in units if not u.is_dislodged}
+    issues: list[ValidationIssue] = []
+    unit_by_prov: dict[str, Unit] = {u.province: u for u in units if not u.is_dislodged}
 
-    def p_name(code: Optional[str]) -> str:
+    def p_name(code: str | None) -> str:
         if not code:
             return "Unknown"
         return PROVINCES[code].name if code in PROVINCES else code
@@ -101,8 +102,8 @@ def validate_orders(
         code: IssueCode,
         title: str,
         message: str,
-        unit_ids: List[str],
-        provinces: List[str],
+        unit_ids: list[str],
+        provinces: list[str],
         power: Power,
     ):
         nonlocal issue_counter
@@ -124,7 +125,7 @@ def validate_orders(
 
     # --- RETREATS PHASE VALIDATION ---
     if phase == "Retreats":
-        retreats_by_power_and_dest: Dict[Power, Dict[str, List[Unit]]] = defaultdict(
+        retreats_by_power_and_dest: dict[Power, dict[str, list[Unit]]] = defaultdict(
             lambda: defaultdict(list)
         )
         for unit in units:
@@ -506,7 +507,7 @@ def validate_orders(
                     )
 
     # 2. Check Friendly Self-Bounces & Friendly Occupied Bounces per Great Power
-    move_support_counts: Dict[str, int] = defaultdict(int)
+    move_support_counts: dict[str, int] = defaultdict(int)
     for u in units:
         if u.is_dislodged:
             continue
@@ -530,7 +531,7 @@ def validate_orders(
                     if can_s:
                         move_support_counts[sup_unit.id] += 1
 
-    moves_by_power_and_target: Dict[Power, Dict[str, List[Unit]]] = defaultdict(
+    moves_by_power_and_target: dict[Power, dict[str, list[Unit]]] = defaultdict(
         lambda: defaultdict(list)
     )
     for u in units:

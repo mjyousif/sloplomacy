@@ -3,10 +3,10 @@ import {
   fetchAccountDisplayPrefs,
   saveAccountDisplayPrefs,
 } from '../lib/supabase';
-import { AuthUser } from '../types/diplomacy';
+import type { AuthUser } from '../types/diplomacy';
 import {
   DEFAULT_DISPLAY_PREFS,
-  DisplayPrefs,
+  type DisplayPrefs,
   readStoredDisplayPrefs,
   resolveSignInPrefs,
   writeStoredDisplayPrefs,
@@ -53,7 +53,7 @@ export function useDisplayPrefs(user: AuthUser | null): UseDisplayPrefsResult {
     [],
   );
 
-  const userId = user?.id ?? null;
+  const _userId = user?.id ?? null;
 
   useEffect(() => {
     const account = userRef.current;
@@ -94,7 +94,7 @@ export function useDisplayPrefs(user: AuthUser | null): UseDisplayPrefsResult {
     return () => {
       cancelled = true;
     };
-  }, [userId, saveToAccount]);
+  }, [saveToAccount]);
 
   useEffect(
     () => () => {

@@ -1,4 +1,3 @@
-import os
 import pytest
 
 TEST_JWT_SECRET = "test-secret-at-least-32-chars-long-12345"

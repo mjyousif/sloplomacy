@@ -12,7 +12,6 @@ request.
 """
 
 from collections import Counter
-from typing import Dict, List, Optional
 
 from models import GameState, PhaseTimer, Power, TimerChoice, TimerStage
 
@@ -24,7 +23,7 @@ EXTENSION_MINUTES = 5
 CHOICES_BY_LENGTH = [TimerChoice.MIN_15, TimerChoice.MIN_20, TimerChoice.MIN_30, TimerChoice.PAUSE]
 
 
-def tally_votes(votes: Dict[Power, TimerChoice]) -> TimerChoice:
+def tally_votes(votes: dict[Power, TimerChoice]) -> TimerChoice:
     """Most votes wins and a tie goes to the longer option. Nobody voting pauses the game."""
     if not votes:
         return TimerChoice.PAUSE
@@ -34,11 +33,11 @@ def tally_votes(votes: Dict[Power, TimerChoice]) -> TimerChoice:
     )
 
 
-def open_vote(players: List[Power], now: float) -> PhaseTimer:
+def open_vote(players: list[Power], now: float) -> PhaseTimer:
     return PhaseTimer(stage=TimerStage.VOTING, deadline=now + VOTE_WINDOW_SECONDS, players=players)
 
 
-def start_phase_clock(game: GameState, players: List[Power], now: float) -> None:
+def start_phase_clock(game: GameState, players: list[Power], now: float) -> None:
     """Set the clock for the phase the game has just entered."""
     if game.winner or not players:
         game.timer = None
@@ -66,7 +65,7 @@ def close_vote(timer: PhaseTimer, now: float) -> None:
         timer.deadline = now + timer.minutes * 60
 
 
-def settle_timer(game: GameState, players: List[Power], now: float) -> None:
+def settle_timer(game: GameState, players: list[Power], now: float) -> None:
     """
     Apply whatever the current players have now agreed.
 
@@ -93,5 +92,5 @@ def settle_timer(game: GameState, players: List[Power], now: float) -> None:
         timer.extend_requests = []
 
 
-def has_expired(timer: Optional[PhaseTimer], now: float) -> bool:
+def has_expired(timer: PhaseTimer | None, now: float) -> bool:
     return bool(timer and timer.deadline is not None and now >= timer.deadline)

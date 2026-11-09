@@ -1,10 +1,8 @@
-import pytest
-from fastapi.testclient import TestClient
-
 from ai_engine import generate_tactical_orders
-from main import app, GAMES, GAME_SUMMARIES, GAME_PASSCODES
+from fastapi.testclient import TestClient
+from main import app
 from map_data import get_initial_1901_units, get_initial_ownership
-from models import OrderType, Power
+from models import OrderType
 
 
 def test_ai_engine_generates_valid_non_conflicting_orders():

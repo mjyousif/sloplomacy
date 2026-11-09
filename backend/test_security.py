@@ -2,23 +2,20 @@ import base64
 import importlib.util
 import json
 import time
-import hmac
 from pathlib import Path
 
-import pytest
 import jwt
+import pytest
+from database import is_valid_room_code
 from fastapi.testclient import TestClient
-
 from main import (
-    app,
-    GAMES,
     GAME_SUMMARIES,
-    GAME_PASSCODES,
+    GAMES,
     MAX_ACTIVE_GAMES,
+    app,
     seed_initial_multiplayer_lobbies,
 )
-from models import Order, OrderType, Power, UnitType
-from database import is_valid_room_code
+from models import OrderType
 
 JWT_SECRET = "test-secret-at-least-32-chars-long-12345"
 client = TestClient(app)
@@ -352,8 +349,8 @@ def test_private_game_passcode_enforced():
 
 
 def test_game_capacity_limit_enforced(monkeypatch):
-    from main import check_game_capacity, MAX_ACTIVE_GAMES
     from fastapi import HTTPException
+    from main import check_game_capacity
 
     # Simulate room capacity reached
     fake_games = {f"game_{i}": None for i in range(MAX_ACTIVE_GAMES + 1)}

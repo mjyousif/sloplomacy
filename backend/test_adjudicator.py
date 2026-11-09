@@ -1,7 +1,6 @@
 import random
 
 import pytest
-
 from adjudicator import adjudicate_turn, create_diplomacy_game, order_to_diplomacy_str
 from map_data import (
     PROVINCES,

@@ -1,9 +1,9 @@
+import type { PieceStyle } from '../utils/displayPrefs';
 import {
   AUTHENTIC_NAMES_SVG,
   EUROPE_PROVINCE_GEOMETRY,
-  Point,
+  type Point,
 } from './europeMapGeometry';
-import { PieceStyle } from '../utils/displayPrefs';
 
 /**
  * Where each piece style puts things on the map. Tokens and stars are drawn first

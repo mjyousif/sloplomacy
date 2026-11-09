@@ -1,8 +1,7 @@
 import pytest
+from main import GAMES, app, build_scenario
+from models import Power
 from starlette.testclient import TestClient
-
-from main import app, GAMES, build_scenario
-from models import Order, OrderType, Power, UnitType
 from ws_testing import receive_json
 
 
@@ -162,8 +161,9 @@ def test_ws_lobby_hears_about_resolved_turns():
     with client.websocket_connect("/ws/lobby") as ws:
         _ = receive_json(ws)  # Initial lobby
 
-        import jwt
         import os
+
+        import jwt
 
         secret = os.getenv("SUPABASE_JWT_SECRET", "test-secret-at-least-32-chars-long-12345")
         token = jwt.encode(

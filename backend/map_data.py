@@ -1,4 +1,3 @@
-from typing import Dict, List, Optional, Tuple
 from models import Power, ProvinceInfo, ProvinceType, Unit, UnitType
 
 # Complete 75-province standard 1901 Diplomacy map definition + Switzerland
@@ -747,7 +746,7 @@ RAW_PROVINCES = [
     ("SWI", "Switzerland", ProvinceType.IMPASSABLE, False, None, [], [], {}),
 ]
 
-PROVINCES: Dict[str, ProvinceInfo] = {}
+PROVINCES: dict[str, ProvinceInfo] = {}
 for pid, name, ptype, is_sc, home_power, coasts, army_adj, fleet_adj in RAW_PROVINCES:
     cleaned_fleet_adj = {k: [x for x in v if x] for k, v in fleet_adj.items()}
     PROVINCES[pid] = ProvinceInfo(
@@ -762,7 +761,7 @@ for pid, name, ptype, is_sc, home_power, coasts, army_adj, fleet_adj in RAW_PROV
     )
 
 
-def split_province_code(code: str) -> Tuple[str, Optional[str]]:
+def split_province_code(code: str) -> tuple[str, str | None]:
     if "/" in code:
         parts = code.split("/", 1)
         return parts[0].upper(), parts[1].upper()
@@ -772,10 +771,10 @@ def split_province_code(code: str) -> Tuple[str, Optional[str]]:
 def can_unit_move_directly(
     unit_type: UnitType,
     origin: str,
-    origin_coast: Optional[str],
+    origin_coast: str | None,
     target: str,
-    target_coast: Optional[str] = None,
-) -> Tuple[bool, str]:
+    target_coast: str | None = None,
+) -> tuple[bool, str]:
     """Check if a unit at origin (with optional coast) can move directly to target (without convoy)."""
     if origin not in PROVINCES:
         return False, f"Unknown origin province '{origin}'."
@@ -804,7 +803,7 @@ def can_unit_move_directly(
     coast_key = origin_coast or ""
     if orig_prov.coasts and not coast_key:
         # Fallback if coast wasn't specified on origin: check union of coasts
-        possible_targets: List[str] = []
+        possible_targets: list[str] = []
         for c_list in orig_prov.fleet_adj.values():
             possible_targets.extend(c_list)
     else:
@@ -833,9 +832,9 @@ def can_unit_move_directly(
 def can_unit_support_province(
     unit_type: UnitType,
     origin: str,
-    origin_coast: Optional[str],
+    origin_coast: str | None,
     target_province: str,
-) -> Tuple[bool, str]:
+) -> tuple[bool, str]:
     """
     A unit can support an action in target_province if it could move into target_province directly
     (ignoring which coast of target_province a fleet would land on).
@@ -854,7 +853,7 @@ def can_army_be_convoyed_theoretically(origin: str, target: str) -> bool:
     return True
 
 
-def get_initial_1901_units() -> List[Unit]:
+def get_initial_1901_units() -> list[Unit]:
     raw_units = [
         # England
         ("ENG_F_LON", Power.ENGLAND, UnitType.FLEET, "LON", None),
@@ -892,8 +891,8 @@ def get_initial_1901_units() -> List[Unit]:
     ]
 
 
-def get_initial_ownership() -> Dict[str, Power]:
-    ownership: Dict[str, Power] = {}
+def get_initial_ownership() -> dict[str, Power]:
+    ownership: dict[str, Power] = {}
     for pid, pinfo in PROVINCES.items():
         if pinfo.home_power and pinfo.is_supply_center:
             ownership[pid] = pinfo.home_power

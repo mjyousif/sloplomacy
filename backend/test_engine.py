@@ -1,7 +1,7 @@
+from adjudicator import adjudicate_turn
 from map_data import PROVINCES, get_initial_1901_units, get_initial_ownership, split_province_code
 from models import IssueCode, Order, OrderType, Power, UnitType
 from validator import validate_orders
-from adjudicator import adjudicate_turn
 
 
 def test_map_symmetry_and_75_provinces():

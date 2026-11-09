@@ -1,30 +1,9 @@
-import React, { useMemo } from 'react';
-import { VersionBadge } from './VersionBadge';
-import {
-  GameParticipant,
-  Order,
-  OrderType,
-  POWER_METADATA,
-  Power,
-  ProvinceInfo,
-  SimulationResult,
-  Unit,
-  ValidationIssue,
-} from '../types/diplomacy';
-import {
-  canUnitSupportInto,
-  formatOrderSummary,
-  getConsensusStatusInfo,
-  getReachableDestinations,
-  getValidRetreatDestinations,
-} from '../utils/orderHelpers';
 import {
   AlertCircle,
   AlertTriangle,
   Anchor,
   CheckCircle2,
   ChevronLeft,
-  ChevronRight,
   Clock,
   Crosshair,
   Flag,
@@ -40,6 +19,27 @@ import {
   Unlock,
   Users,
 } from 'lucide-react';
+import type React from 'react';
+import { useMemo } from 'react';
+import {
+  type GameParticipant,
+  type Order,
+  type OrderType,
+  POWER_METADATA,
+  type Power,
+  type ProvinceInfo,
+  type SimulationResult,
+  type Unit,
+  type ValidationIssue,
+} from '../types/diplomacy';
+import {
+  canUnitSupportInto,
+  formatOrderSummary,
+  getConsensusStatusInfo,
+  getReachableDestinations,
+  getValidRetreatDestinations,
+} from '../utils/orderHelpers';
+import { VersionBadge } from './VersionBadge';
 
 export interface MacroSidebarProps {
   provinces: Record<string, ProvinceInfo>;
@@ -187,7 +187,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   }, [
     isMultiplayer,
     participants,
-    lobbyStatus,
     surrenderedPowers,
     isAdjustmentPhase,
     isRetreatPhase,
@@ -196,11 +195,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     units,
   ]);
 
-  const requiredFinalizedCount = requiredPowersInMatch.filter((p) =>
+  const _requiredFinalizedCount = requiredPowersInMatch.filter((p) =>
     finalizedPowers.includes(p),
   ).length;
-  const totalRequiredCount = requiredPowersInMatch.length;
-  const missingPowers = requiredPowersInMatch.filter(
+  const _totalRequiredCount = requiredPowersInMatch.length;
+  const _missingPowers = requiredPowersInMatch.filter(
     (p) => !finalizedPowers.includes(p),
   );
 

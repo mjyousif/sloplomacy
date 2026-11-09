@@ -7,7 +7,6 @@ for multiplayer admin operations and player action authentication.
 
 import logging
 import os
-from typing import Optional
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -24,12 +23,12 @@ JWT_PUBLIC_KEY = os.getenv("SUPABASE_JWT_PUBLIC_KEY")
 _JWKS_CLIENTS = {}
 
 
-def get_jwt_secret() -> Optional[str]:
+def get_jwt_secret() -> str | None:
     """Retrieve the Supabase JWT secret from the environment with module fallback."""
     return os.getenv("SUPABASE_JWT_SECRET") or JWT_SECRET
 
 
-def get_jwt_public_key() -> Optional[str]:
+def get_jwt_public_key() -> str | None:
     """Retrieve the Supabase JWT public key (for ES256/asymmetric) from the environment."""
     return os.getenv("SUPABASE_JWT_PUBLIC_KEY") or JWT_PUBLIC_KEY
 
@@ -47,7 +46,7 @@ def is_insecure_dev_auth_allowed() -> bool:
     ).lower() in ("test", "development")
 
 
-def get_jwks_client(supabase_url: str) -> Optional[jwt.PyJWKClient]:
+def get_jwks_client(supabase_url: str) -> jwt.PyJWKClient | None:
     """Return a cached PyJWKClient for the given Supabase URL."""
     if not supabase_url:
         return None
@@ -58,8 +57,8 @@ def get_jwks_client(supabase_url: str) -> Optional[jwt.PyJWKClient]:
 
 
 def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-) -> Optional[AuthUser]:
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> AuthUser | None:
     """Extract and cryptographically verify the Supabase JWT Bearer token (supports ES256 and HS256)."""
     if not credentials:
         return None

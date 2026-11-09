@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import {
   KeyRound,
   LogIn,
@@ -8,6 +7,8 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
+import type React from 'react';
+import { useState } from 'react';
 import {
   isSupabaseConfigured,
   sendMagicLink,
@@ -15,7 +16,7 @@ import {
   signInWithOAuthProvider,
   signUpWithEmailPassword,
 } from '../lib/supabase';
-import { AuthUser } from '../types/diplomacy';
+import type { AuthUser } from '../types/diplomacy';
 
 interface AuthModalProps {
   isOpen: boolean;

@@ -1,23 +1,12 @@
-import React from 'react';
-import { CollapsibleSection } from './CollapsibleSection';
-import {
-  ALL_POWERS,
-  POWER_METADATA,
-  Power,
-  Unit,
-  ValidationIssue,
-} from '../types/diplomacy';
 import {
   AlertTriangle,
   Anchor,
   Bot,
   CheckCircle2,
-  ChevronLeft,
   ChevronRight,
   Crosshair,
   Eye,
   Flag,
-  HelpCircle,
   Maximize2,
   MoveRight,
   PanelLeftClose,
@@ -33,6 +22,15 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
+import type React from 'react';
+import {
+  ALL_POWERS,
+  POWER_METADATA,
+  type Power,
+  type Unit,
+  type ValidationIssue,
+} from '../types/diplomacy';
+import { CollapsibleSection } from './CollapsibleSection';
 
 export interface ToolsSidebarProps {
   collapsed: boolean;

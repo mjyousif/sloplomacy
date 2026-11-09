@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
-import React, { useState } from 'react';
+import React from 'react';
 import { renderToString } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
 import { CollapsibleSection } from './CollapsibleSection';
 
 describe('CollapsibleSection', () => {

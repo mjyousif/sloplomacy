@@ -1,4 +1,3 @@
-import { useEffect, useId, useRef, useState } from 'react';
 import {
   AlertOctagon,
   AlertTriangle,
@@ -15,9 +14,10 @@ import {
   SlidersHorizontal,
   User as UserIcon,
 } from 'lucide-react';
-import { DisplayPrefsSaveState } from '../hooks/useDisplayPrefs';
-import { AuthUser, POWER_METADATA, Power } from '../types/diplomacy';
-import { DisplayPrefs } from '../utils/displayPrefs';
+import { useEffect, useId, useRef, useState } from 'react';
+import type { DisplayPrefsSaveState } from '../hooks/useDisplayPrefs';
+import { type AuthUser, POWER_METADATA, type Power } from '../types/diplomacy';
+import type { DisplayPrefs } from '../utils/displayPrefs';
 import { DisplaySettingsOptions } from './DisplaySettingsMenu';
 
 export interface CompactTopBarProps {
@@ -110,7 +110,7 @@ export function CompactTopBar({
       document.removeEventListener('pointerdown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [menuOpen]);
+  }, [menuOpen, closeMenu]);
 
   return (
     <header

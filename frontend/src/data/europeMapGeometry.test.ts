@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { POWER_METADATA } from '../types/diplomacy';
 import {
   AUTHENTIC_BACKGROUND_SVG,
-  AUTHENTIC_DEFS_SVG,
   AUTHENTIC_FOREGROUND_SVG,
   AUTHENTIC_NAMES_SVG,
   EUROPE_PROVINCE_GEOMETRY,
 } from './europeMapGeometry';
-import { POWER_METADATA } from '../types/diplomacy';
 
 describe('Map Cartography & Aesthetics (Issues #42-#48)', () => {
   it('defines England with darker navy blue matching Wales (#46)', () => {

@@ -1,8 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-
-from main import app, GAMES, GAME_SUMMARIES, seed_initial_multiplayer_lobbies
-from models import OrderType, Power
+from main import app, seed_initial_multiplayer_lobbies
 
 
 @pytest.fixture(autouse=True)

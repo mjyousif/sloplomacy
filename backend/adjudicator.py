@@ -1,5 +1,6 @@
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
+
 import diplomacy
 from map_data import PROVINCES, split_province_code
 from models import (
@@ -7,7 +8,6 @@ from models import (
     OrderResolution,
     OrderType,
     Power,
-    ProvinceType,
     SimulationResult,
     Unit,
     UnitType,
@@ -26,7 +26,7 @@ def to_diplomacy_phase_code(season: str, year: int, phase: str) -> str:
     return f"{s_abbr}{year}{p_abbr}"
 
 
-def parse_diplomacy_phase(phase_str: str) -> Tuple[str, int, str]:
+def parse_diplomacy_phase(phase_str: str) -> tuple[str, int, str]:
     # e.g. "SPRING 1901 MOVEMENT", "FALL 1901 MOVEMENT", "WINTER 1901 ADJUSTMENTS", "SPRING 1901 RETREATS"
     parts = phase_str.strip().split()
     if len(parts) >= 3:
@@ -40,7 +40,7 @@ def parse_diplomacy_phase(phase_str: str) -> Tuple[str, int, str]:
     return "Spring", 1901, "Movement"
 
 
-def order_to_diplomacy_str(order: Order, units_by_prov: Dict[str, Unit]) -> Optional[str]:
+def order_to_diplomacy_str(order: Order, units_by_prov: dict[str, Unit]) -> str | None:
     """Translate an order for the engine, or return None if it is incomplete and cannot be."""
     u_type = order.unit_type.value if hasattr(order.unit_type, "value") else str(order.unit_type)
     orig = f"{order.origin}/{order.origin_coast}" if order.origin_coast else order.origin
@@ -103,12 +103,12 @@ def order_to_diplomacy_str(order: Order, units_by_prov: Dict[str, Unit]) -> Opti
 
 
 def create_diplomacy_game(
-    units: List[Unit],
-    ownership: Dict[str, Power],
+    units: list[Unit],
+    ownership: dict[str, Power],
     season: str,
     year: int,
     phase: str,
-    retreats: Optional[Dict[str, Any]] = None,
+    retreats: dict[str, Any] | None = None,
 ) -> diplomacy.Game:
     game = diplomacy.Game()
     game.clear_units()
@@ -118,7 +118,7 @@ def create_diplomacy_game(
     game.set_current_phase(phase_code)
 
     # Set supply centers first so adjustment calculations have accurate ownership
-    centers_by_pwr: Dict[str, List[str]] = {}
+    centers_by_pwr: dict[str, list[str]] = {}
     for prov, pwr in ownership.items():
         p_name = pwr.value if hasattr(pwr, "value") else str(pwr)
         centers_by_pwr.setdefault(p_name, []).append(prov)
@@ -127,7 +127,7 @@ def create_diplomacy_game(
         game.set_centers(p_name, c_list)
 
     # Set units (regular units first, then dislodged units prefixed with '*' during Retreats phase)
-    units_by_pwr: Dict[str, List[str]] = {}
+    units_by_pwr: dict[str, list[str]] = {}
     for u in units:
         if u.is_dislodged and not phase_code.endswith("R"):
             continue
@@ -155,23 +155,23 @@ def create_diplomacy_game(
 
 
 def compute_current_builds(
-    units: List[Unit],
-    ownership: Dict[str, Power],
+    units: list[Unit],
+    ownership: dict[str, Power],
     year: int = 1901,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Compute the exact DATC build/disband counts and unoccupied home centers for a Winter Adjustments phase."""
     game = create_diplomacy_game(units, ownership, "Winter", year, "Adjustments")
     return game.get_state().get("builds", {})
 
 
 def adjudicate_turn(
-    units: List[Unit],
-    orders: Dict[str, Order],
-    ownership: Dict[str, Power],
+    units: list[Unit],
+    orders: dict[str, Order],
+    ownership: dict[str, Power],
     season: str = "Spring",
     year: int = 1901,
     phase: str = "Movement",
-    retreats: Optional[Dict[str, Any]] = None,
+    retreats: dict[str, Any] | None = None,
 ) -> SimulationResult:
     """
     Resolve a Diplomacy phase using the official DATC-compliant `diplomacy` engine.
@@ -187,7 +187,7 @@ def adjudicate_turn(
     unit_by_id = {u.id: u for u in units}
 
     # Format orders for diplomacy engine based on phase type
-    power_orders: Dict[str, List[str]] = {}
+    power_orders: dict[str, list[str]] = {}
 
     if phase_code.endswith("M"):
         for u in units:
@@ -241,7 +241,7 @@ def adjudicate_turn(
                         power_orders.setdefault(p_name, []).append(d_str)
             elif count > 0 and homes:
                 max_b = min(count, len(homes))
-                build_candidates: List[Order] = []
+                build_candidates: list[Order] = []
                 for ord_key, ord_obj in orders.items():
                     ord_pwr = (
                         ord_obj.power.value
@@ -273,7 +273,7 @@ def adjudicate_turn(
     # The engine silently drops orders it finds illegal and the unit simply holds, with no
     # result code to show for it. Record what it kept, so that a dropped order is never
     # applied or reported as a success.
-    kept_orders: Set[Tuple[str, str, str]] = set()
+    kept_orders: set[tuple[str, str, str]] = set()
     for p_name in power_orders:
         for kept in game.get_orders(p_name):
             parts = kept.split()
@@ -290,8 +290,8 @@ def adjudicate_turn(
     engine_units_by_pwr = game.get_units()
 
     # Parse surviving regular and dislodged units from the engine after process()
-    engine_regular_by_pwr: Dict[str, List[Tuple[str, str, Optional[str]]]] = defaultdict(list)
-    engine_dislodged_by_pwr: Dict[str, List[Tuple[str, str, Optional[str]]]] = defaultdict(list)
+    engine_regular_by_pwr: dict[str, list[tuple[str, str, str | None]]] = defaultdict(list)
+    engine_dislodged_by_pwr: dict[str, list[tuple[str, str, str | None]]] = defaultdict(list)
     for p_name, u_strs in engine_units_by_pwr.items():
         for u_str in u_strs:
             is_dis = u_str.startswith("*")
@@ -306,21 +306,21 @@ def adjudicate_turn(
             else:
                 engine_regular_by_pwr[p_name].append((ut_str, base_prov, prov_coast))
 
-    resolutions: Dict[str, OrderResolution] = {}
-    summary: List[str] = []
+    resolutions: dict[str, OrderResolution] = {}
+    summary: list[str] = []
 
-    def p_name_fn(code: Optional[str]) -> str:
+    def p_name_fn(code: str | None) -> str:
         if not code:
             return ""
         return PROVINCES[code].name if code in PROVINCES else code
 
-    new_units: List[Unit] = []
-    used_unit_ids: Set[str] = set()
+    new_units: list[Unit] = []
+    used_unit_ids: set[str] = set()
 
     if phase_code.endswith("M"):
         # Compute uncut supports for calculating attack/defense strengths
-        uncut_supports_for_move: Dict[Tuple[str, str], int] = defaultdict(int)
-        uncut_supports_for_hold: Dict[str, int] = defaultdict(int)
+        uncut_supports_for_move: dict[tuple[str, str], int] = defaultdict(int)
+        uncut_supports_for_hold: dict[str, int] = defaultdict(int)
 
         for u in units:
             if u.is_dislodged:
@@ -623,12 +623,12 @@ def adjudicate_turn(
 
     elif phase_code.endswith("A"):
         # Winter Adjustments Phase Resolution (Disbands & Builds)
-        surviving_provs_by_pwr: Dict[str, Set[str]] = defaultdict(set)
+        surviving_provs_by_pwr: dict[str, set[str]] = defaultdict(set)
         for p_name, reg_list in engine_regular_by_pwr.items():
             for _, bp, _ in reg_list:
                 surviving_provs_by_pwr[p_name].add(bp)
 
-        existing_provs: Set[str] = set()
+        existing_provs: set[str] = set()
         for u in units:
             p_name = u.power.value if hasattr(u.power, "value") else str(u.power)
             ord_obj = orders.get(u.id)
@@ -722,7 +722,7 @@ def adjudicate_turn(
 
     # Next phase info from diplomacy game. A finished game has no next phase (its phase is the
     # bare word "COMPLETED"), so the clock stays on the phase that decided it.
-    winner: Optional[Power] = None
+    winner: Power | None = None
     if game.is_game_done:
         next_season, next_year, next_phase = season, year, phase
         if len(game.outcome) > 1:
@@ -731,7 +731,7 @@ def adjudicate_turn(
         next_season, next_year, next_phase = parse_diplomacy_phase(game.phase)
 
     # Supply center ownership from diplomacy engine
-    new_ownership: Dict[str, Power] = {}
+    new_ownership: dict[str, Power] = {}
     engine_centers = game.get_centers()
     for p_name, c_list in engine_centers.items():
         pwr = Power(p_name)

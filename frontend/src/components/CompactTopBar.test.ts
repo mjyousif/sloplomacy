@@ -1,14 +1,14 @@
-import { describe, expect, it } from 'vitest';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
+import type { MultiplayerGameSummary } from '../types/diplomacy';
+import { DEFAULT_DISPLAY_PREFS } from '../utils/displayPrefs';
 import {
   CompactTopBar,
-  CompactTopBarProps,
+  type CompactTopBarProps,
   describeIssueCount,
 } from './CompactTopBar';
 import { SurrenderModal } from './SurrenderModal';
-import { DEFAULT_DISPLAY_PREFS } from '../utils/displayPrefs';
-import { MultiplayerGameSummary } from '../types/diplomacy';
 
 const noop = () => {};
 

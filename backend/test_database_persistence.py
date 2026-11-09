@@ -1,37 +1,36 @@
 import asyncio
 import os
 from unittest.mock import AsyncMock, patch
-import pytest
-from fastapi.testclient import TestClient
-import httpx
 
-from main import (
-    app,
-    GAMES,
-    GAME_SUMMARIES,
-    GAME_HISTORY,
-    GAME_PASSCODES,
-    DEFAULT_GAME_ID,
-    HISTORY_UNSAVED,
-    SAVES_RUNNING,
-    UNSAVED_GAMES,
-    build_scenario,
-    cache_loaded_game,
-    persist_game,
-)
-from models import GameState, MultiplayerGameSummary, GameParticipant, Power, UnitType
+import httpx
+import pytest
 from database import (
     LOBBY_COLUMNS,
     SupabaseUnavailable,
     build_summary_from_row,
-    is_persistence_enabled,
-    to_db_status,
-    to_app_status,
-    save_game_to_db,
-    load_game_from_db,
-    load_all_summaries_from_db,
     delete_game_from_db,
+    is_persistence_enabled,
+    load_all_summaries_from_db,
+    load_game_from_db,
+    save_game_to_db,
+    to_app_status,
+    to_db_status,
 )
+from fastapi.testclient import TestClient
+from main import (
+    GAME_HISTORY,
+    GAME_PASSCODES,
+    GAME_SUMMARIES,
+    GAMES,
+    HISTORY_UNSAVED,
+    SAVES_RUNNING,
+    UNSAVED_GAMES,
+    app,
+    build_scenario,
+    cache_loaded_game,
+    persist_game,
+)
+from models import GameParticipant, GameState, MultiplayerGameSummary, Power
 
 client = TestClient(app)
 
@@ -820,8 +819,9 @@ def _resolve_turn(game_id):
 
 
 def _rollback_headers():
-    import jwt
     import os
+
+    import jwt
 
     secret = os.getenv("SUPABASE_JWT_SECRET", "k" * 32)
     return {

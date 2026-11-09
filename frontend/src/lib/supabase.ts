@@ -1,5 +1,5 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { AuthUser } from '../types/diplomacy';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { AuthUser } from '../types/diplomacy';
 
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();

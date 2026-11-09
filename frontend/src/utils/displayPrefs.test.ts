@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_DISPLAY_PREFS,
-  DisplayPrefs,
-  PIECE_STYLES,
+  type DisplayPrefs,
   PIECE_STYLE_LABELS,
+  PIECE_STYLES,
   readStoredDisplayPrefs,
   resolveSignInPrefs,
   sanitizeDisplayPrefs,
-  UNIT_MARKS,
   UNIT_MARK_LABELS,
+  UNIT_MARKS,
   writeStoredDisplayPrefs,
 } from './displayPrefs';
 

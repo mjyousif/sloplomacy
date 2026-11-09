@@ -1,13 +1,3 @@
-import React, { useState } from 'react';
-import { VersionBadge } from './VersionBadge';
-import { useCompactLayout } from '../hooks/useCompactLayout';
-import {
-  ALL_POWERS,
-  AuthUser,
-  MultiplayerGameSummary,
-  POWER_METADATA,
-  Power,
-} from '../types/diplomacy';
 import {
   AlertTriangle,
   Check,
@@ -28,6 +18,17 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import type React from 'react';
+import { useState } from 'react';
+import { useCompactLayout } from '../hooks/useCompactLayout';
+import {
+  ALL_POWERS,
+  type AuthUser,
+  type MultiplayerGameSummary,
+  POWER_METADATA,
+  type Power,
+} from '../types/diplomacy';
+import { VersionBadge } from './VersionBadge';
 
 interface LobbyViewProps {
   user: AuthUser | null;

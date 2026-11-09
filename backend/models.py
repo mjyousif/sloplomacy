@@ -1,7 +1,8 @@
-from enum import Enum
 import math
 import time
-from typing import Any, Dict, List, Optional
+from enum import Enum
+from typing import Any
+
 from pydantic import BaseModel, Field, computed_field
 
 
@@ -75,10 +76,10 @@ class ProvinceInfo(BaseModel):
     name: str
     type: ProvinceType
     is_supply_center: bool = False
-    home_power: Optional[Power] = None
-    coasts: List[str] = Field(default_factory=list)
-    army_adj: List[str] = Field(default_factory=list)
-    fleet_adj: Dict[str, List[str]] = Field(
+    home_power: Power | None = None
+    coasts: list[str] = Field(default_factory=list)
+    army_adj: list[str] = Field(default_factory=list)
+    fleet_adj: dict[str, list[str]] = Field(
         default_factory=dict
     )  # key "" or coast like "NC", "SC", "EC"
 
@@ -88,7 +89,7 @@ class Unit(BaseModel):
     power: Power
     unit_type: UnitType
     province: str  # Base 3-letter code e.g. "STP", "LON"
-    coast: Optional[str] = None  # e.g. "NC", "SC", "EC"
+    coast: str | None = None  # e.g. "NC", "SC", "EC"
     is_dislodged: bool = False
 
 
@@ -97,13 +98,11 @@ class Order(BaseModel):
     power: Power
     unit_type: UnitType
     origin: str  # Base province e.g. "LON"
-    origin_coast: Optional[str] = None
+    origin_coast: str | None = None
     order_type: OrderType = OrderType.HOLD
-    target: Optional[str] = (
-        None  # Target province for MOVE, or destination of supported/convoyed unit
-    )
-    target_coast: Optional[str] = None
-    aux_unit_origin: Optional[str] = (
+    target: str | None = None  # Target province for MOVE, or destination of supported/convoyed unit
+    target_coast: str | None = None
+    aux_unit_origin: str | None = (
         None  # For SUPPORT or CONVOY: the province of the unit being supported/convoyed
     )
     via_convoy: bool = False
@@ -116,8 +115,8 @@ class ValidationIssue(BaseModel):
     code: IssueCode
     title: str
     message: str
-    unit_ids: List[str] = Field(default_factory=list)
-    provinces: List[str] = Field(default_factory=list)
+    unit_ids: list[str] = Field(default_factory=list)
+    provinces: list[str] = Field(default_factory=list)
     power: Power
 
 
@@ -125,28 +124,28 @@ class OrderResolution(BaseModel):
     unit_id: str
     origin: str
     order_type: OrderType
-    target: Optional[str] = None
+    target: str | None = None
     succeeded: bool
     bounced: bool = False
     cut: bool = False
     dislodged: bool = False
-    dislodged_by: Optional[str] = None
+    dislodged_by: str | None = None
     attack_strength: int = 1
     defense_strength: int = 1
     reason: str = ""
 
 
 class SimulationResult(BaseModel):
-    resolutions: Dict[str, OrderResolution]
-    summary: List[str]
-    new_units: List[Unit]
-    new_ownership: Dict[str, Power]
-    next_season: Optional[str] = None
-    next_year: Optional[int] = None
-    next_phase: Optional[str] = None
-    builds: Optional[Dict[str, Any]] = None
-    retreats: Optional[Dict[str, Any]] = None
-    winner: Optional[Power] = None  # Set when these orders would end the game
+    resolutions: dict[str, OrderResolution]
+    summary: list[str]
+    new_units: list[Unit]
+    new_ownership: dict[str, Power]
+    next_season: str | None = None
+    next_year: int | None = None
+    next_phase: str | None = None
+    builds: dict[str, Any] | None = None
+    retreats: dict[str, Any] | None = None
+    winner: Power | None = None  # Set when these orders would end the game
 
 
 class PhaseTimer(BaseModel):
@@ -157,16 +156,16 @@ class PhaseTimer(BaseModel):
     """
 
     stage: TimerStage
-    deadline: Optional[float] = None  # Unix time the vote or phase ends; None while paused
-    minutes: Optional[int] = None  # Length the running phase was given
-    players: List[Power] = Field(default_factory=list)  # Who votes, readies up and extends
-    votes: Dict[Power, TimerChoice] = Field(default_factory=dict)
-    extend_requests: List[Power] = Field(default_factory=list)
-    ready_powers: List[Power] = Field(default_factory=list)
+    deadline: float | None = None  # Unix time the vote or phase ends; None while paused
+    minutes: int | None = None  # Length the running phase was given
+    players: list[Power] = Field(default_factory=list)  # Who votes, readies up and extends
+    votes: dict[Power, TimerChoice] = Field(default_factory=dict)
+    extend_requests: list[Power] = Field(default_factory=list)
+    ready_powers: list[Power] = Field(default_factory=list)
 
     @computed_field
     @property
-    def remaining_seconds(self) -> Optional[float]:
+    def remaining_seconds(self) -> float | None:
         """Time left when this was sent, which lets clients count down without trusting their own clock."""
         if self.deadline is None:
             return None
@@ -186,37 +185,37 @@ class GameState(BaseModel):
     phase: str  # "Movement", "Retreats", or "Adjustments"
     scenario_id: str = "standard_1901"
     active_power: Power = Power.FRANCE
-    units: List[Unit]
-    orders: Dict[str, Order]  # key: unit_id or order_id
-    ownership: Dict[str, Power]  # key: province_id -> Power
-    finalized_powers: List[Power] = Field(default_factory=list)
-    surrendered_powers: List[Power] = Field(default_factory=list)
-    issues: List[ValidationIssue] = Field(default_factory=list)
-    last_resolution: Optional[SimulationResult] = None
-    turn_history: List[str] = Field(default_factory=list)
-    builds: Optional[Dict[str, Any]] = None
-    retreats: Optional[Dict[str, Any]] = None
-    winner: Optional[Power] = None  # Set once the game has been won; no further turns resolve
-    timer: Optional[PhaseTimer] = None  # None until the host starts the clock
+    units: list[Unit]
+    orders: dict[str, Order]  # key: unit_id or order_id
+    ownership: dict[str, Power]  # key: province_id -> Power
+    finalized_powers: list[Power] = Field(default_factory=list)
+    surrendered_powers: list[Power] = Field(default_factory=list)
+    issues: list[ValidationIssue] = Field(default_factory=list)
+    last_resolution: SimulationResult | None = None
+    turn_history: list[str] = Field(default_factory=list)
+    builds: dict[str, Any] | None = None
+    retreats: dict[str, Any] | None = None
+    winner: Power | None = None  # Set once the game has been won; no further turns resolve
+    timer: PhaseTimer | None = None  # None until the host starts the clock
 
 
 class OrderSubmissionRequest(BaseModel):
     power: Power
-    orders: List[Order]
+    orders: list[Order]
 
 
 class SingleOrderUpdateRequest(BaseModel):
     order: Order
-    active_power: Optional[Power] = None
+    active_power: Power | None = None
     # The turn the player was looking at, e.g. "Spring 1901 Movement". A request for an older
     # turn is refused, because a clock can resolve the phase while it is on its way.
-    turn: Optional[str] = None
+    turn: str | None = None
 
 
 class FinalizeRequest(BaseModel):
     power: Power
     force: bool = False
-    turn: Optional[str] = None  # See SingleOrderUpdateRequest.turn
+    turn: str | None = None  # See SingleOrderUpdateRequest.turn
 
 
 class TimerVoteRequest(BaseModel):
@@ -234,19 +233,19 @@ class TimerToggleRequest(BaseModel):
 class FinalizeResponse(BaseModel):
     finalized: bool
     requires_confirmation: bool
-    issues: List[ValidationIssue]
+    issues: list[ValidationIssue]
     state: GameState
 
 
 class ScenarioRequest(BaseModel):
     scenario_id: str
-    active_power: Optional[Power] = None
+    active_power: Power | None = None
 
 
 class SeedScenarioRequest(BaseModel):
     scenario_id: str
-    game_id: Optional[str] = None
-    active_power: Optional[Power] = None
+    game_id: str | None = None
+    active_power: Power | None = None
 
 
 class GameParticipant(BaseModel):
@@ -256,7 +255,7 @@ class GameParticipant(BaseModel):
     power: Power
     joined_at: str
     surrendered: bool = False
-    surrendered_at: Optional[str] = None
+    surrendered_at: str | None = None
 
 
 class MultiplayerGameSummary(BaseModel):
@@ -267,11 +266,11 @@ class MultiplayerGameSummary(BaseModel):
     year: int = 1901
     phase: str = "Movement"
     created_by: str
-    creator_id: Optional[str] = None
+    creator_id: str | None = None
     created_at: str
-    participants: Dict[str, GameParticipant] = Field(default_factory=dict)
-    finalized_powers: List[Power] = Field(default_factory=list)
-    surrendered_powers: List[Power] = Field(default_factory=list)
+    participants: dict[str, GameParticipant] = Field(default_factory=dict)
+    finalized_powers: list[Power] = Field(default_factory=list)
+    surrendered_powers: list[Power] = Field(default_factory=list)
     is_sandbox: bool = False
     is_private: bool = False
     has_passcode: bool = False
@@ -282,34 +281,34 @@ class CreateGameRequest(BaseModel):
     creator_power: Power
     user_id: str = "guest"
     email: str = "player@diplomacy.local"
-    display_name: Optional[str] = None
+    display_name: str | None = None
     is_private: bool = False
-    passcode: Optional[str] = None
+    passcode: str | None = None
 
 
 class JoinGameRequest(BaseModel):
     power: Power
     user_id: str = "guest"
     email: str = "player@diplomacy.local"
-    display_name: Optional[str] = None
-    passcode: Optional[str] = None
+    display_name: str | None = None
+    passcode: str | None = None
 
 
 class GenerateAIOrdersRequest(BaseModel):
-    powers: Optional[List[Power]] = None
+    powers: list[Power] | None = None
     include_active: bool = False
 
 
 class LeaveGameRequest(BaseModel):
     user_id: str
-    email: Optional[str] = None
-    power: Optional[Power] = None
+    email: str | None = None
+    power: Power | None = None
 
 
 class SurrenderRequest(BaseModel):
     power: Power
     user_id: str
-    email: Optional[str] = None
+    email: str | None = None
     leave: bool = True
 
 
@@ -317,56 +316,56 @@ class SaveSandboxRequest(BaseModel):
     name: str
     user_id: str
     email: str = "player@diplomacy.local"
-    display_name: Optional[str] = None
+    display_name: str | None = None
 
 
 class AuthUser(BaseModel):
     user_id: str
-    email: Optional[str] = None
+    email: str | None = None
     is_authenticated: bool = True
 
 
 class AdminRollbackRequest(BaseModel):
-    user_id: Optional[str] = None
-    email: Optional[str] = None
+    user_id: str | None = None
+    email: str | None = None
 
 
 class AdminSetTurnRequest(BaseModel):
     season: str
     year: int
     phase: str
-    user_id: Optional[str] = None
-    email: Optional[str] = None
+    user_id: str | None = None
+    email: str | None = None
 
 
 class AdminMoveUnitRequest(BaseModel):
     unit_id: str
     new_province: str
-    new_coast: Optional[str] = None
-    user_id: Optional[str] = None
-    email: Optional[str] = None
+    new_coast: str | None = None
+    user_id: str | None = None
+    email: str | None = None
 
 
 class AdminSpawnUnitRequest(BaseModel):
     power: Power
     unit_type: UnitType
     province: str
-    coast: Optional[str] = None
-    user_id: Optional[str] = None
-    email: Optional[str] = None
+    coast: str | None = None
+    user_id: str | None = None
+    email: str | None = None
 
 
 class AdminDestroyUnitRequest(BaseModel):
     unit_id: str
-    user_id: Optional[str] = None
-    email: Optional[str] = None
+    user_id: str | None = None
+    email: str | None = None
 
 
 class AdminSetOwnershipRequest(BaseModel):
     province: str
-    power: Optional[Power] = None
-    user_id: Optional[str] = None
-    email: Optional[str] = None
+    power: Power | None = None
+    user_id: str | None = None
+    email: str | None = None
 
 
 class AdminStatusResponse(BaseModel):
@@ -374,16 +373,16 @@ class AdminStatusResponse(BaseModel):
     can_rollback: bool
     history_count: int
     creator_email: str
-    creator_id: Optional[str] = None
+    creator_id: str | None = None
 
 
 class WebSocketGameUpdate(BaseModel):
     type: str = "game_update"
     game_id: str
     state: GameState
-    summary: Optional[MultiplayerGameSummary] = None
+    summary: MultiplayerGameSummary | None = None
 
 
 class WebSocketLobbyUpdate(BaseModel):
     type: str = "lobby_update"
-    games: List[MultiplayerGameSummary]
+    games: list[MultiplayerGameSummary]

@@ -17,7 +17,32 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"preset": "recommended"
+			"preset": "recommended",
+			"a11y": {
+				"recommended": false
+			},
+			"complexity": {
+				"noImportantStyles": "off",
+				"useOptionalChain": "off"
+			},
+			"correctness": {
+				"useExhaustiveDependencies": "off",
+				"useParseIntRadix": "warn"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "off"
+			},
+			"style": {
+				"noDescendingSpecificity": "off",
+				"noNonNullAssertion": "off"
+			},
+			"suspicious": {
+				"noDuplicateProperties": "off",
+				"noExplicitAny": "off",
+				"noConfusingVoidType": "off",
+				"noArrayIndexKey": "warn",
+				"useIterableCallbackReturn": "off"
+			}
 		}
 	},
 	"javascript": {
@@ -32,18 +57,5 @@
 				"organizeImports": "on"
 			}
 		}
-	},
-	// Phase 2: Formatter is enabled all around.
-	// Linter and assist are scoped for Phase 3 rule tightening and autofixes.
-	"overrides": [
-		{
-			"includes": ["src/**"],
-			"linter": {
-				"enabled": false
-			},
-			"assist": {
-				"enabled": false
-			}
-		}
-	]
+	}
 }
