@@ -115,7 +115,7 @@ const COMPACT_ROWS: Record<string, LayoutRow> = {
   ANK: { name: [1259.6, 1085.4, -14, 16] },
   APU: { name: [776, 1132, 25, 16], unit: [740, 1110] },
   ARM: { name: [1437, 1111, 0, 16] },
-  BEL: { name: [511, 774.5, 35, 16], unit: [538, 768], star: [515, 754] },
+  BEL: { name: [511, 774.5, 35, 16], unit: [538, 768], star: [516, 760] },
   BER: { name: [700.5, 723.5, 5, 16] },
   BOH: { name: [754.1, 831, 0, 16] },
   BRE: { name: [350, 835, 0, 16] },
