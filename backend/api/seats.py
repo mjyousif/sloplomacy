@@ -17,7 +17,7 @@ from engine.order_utils import (
     put_into_civil_disorder,
     refresh_diagnostics_and_simulation,
 )
-from engine.topology import PROVINCES
+from engine.topology.provinces import PROVINCES
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from security.auth import AuthUser, get_current_user

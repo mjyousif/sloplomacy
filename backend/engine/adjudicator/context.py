@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from domain.models import Order, OrderResolution, Unit
-from engine.topology import PROVINCES
+from engine.topology.provinces import PROVINCES
 
 # A unit as the engine reports it after processing: (unit type, base province, coast).
 EngineUnit = tuple[str, str, str | None]

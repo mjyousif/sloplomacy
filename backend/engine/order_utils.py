@@ -15,7 +15,7 @@ from engine.adjudicator.resolver import (
     compute_current_builds,
     create_diplomacy_game,
 )
-from engine.topology import PROVINCES
+from engine.topology.provinces import PROVINCES
 from engine.validator.orchestrator import validate_orders
 from fastapi import HTTPException
 

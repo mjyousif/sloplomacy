@@ -1,7 +1,8 @@
 """Whether fleets ordered to convoy form a connected chain for an army."""
 
 from domain.models import Order, OrderType, ProvinceType, Unit, UnitType
-from engine.topology import PROVINCES, split_province_code
+from engine.topology.graph import split_province_code
+from engine.topology.provinces import PROVINCES
 
 
 def has_active_convoy_chain(

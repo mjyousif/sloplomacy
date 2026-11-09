@@ -4,7 +4,8 @@ from collections import defaultdict
 from typing import Any
 
 from domain.models import IssueCode, IssueSeverity, Order, OrderType, Power, Unit
-from engine.topology import PROVINCES, split_province_code
+from engine.topology.graph import split_province_code
+from engine.topology.provinces import PROVINCES
 from engine.validator.issues import IssueCollector, province_name
 
 

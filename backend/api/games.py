@@ -15,7 +15,7 @@ from domain.models import (
 from engine.order_utils import (
     refresh_diagnostics_and_simulation,
 )
-from engine.topology import PROVINCES
+from engine.topology.provinces import PROVINCES
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel
 from scenarios.presets import build_scenario

@@ -12,7 +12,7 @@ This repository enforces strict modularity and separation of concerns to prevent
 - **Target Size**: 150 – 350 lines per file for most business logic, components, routers, and test suites.
 - **Ceiling / Hard Threshold**: **500 lines**.
   - Any new file exceeding 500 lines is a code smell and must be decomposed before merging.
-  - Large declarative data tables (e.g. `frontend/src/data/europeMapGeometry.ts` holding SVG coordinates or `backend/engine/topology.py` holding the 76-province adjacency map) are explicit exceptions, provided they contain pure static declarations with zero tangled logic.
+  - Large declarative data tables (e.g. `frontend/src/data/europeMapGeometry.ts` holding SVG coordinates or `backend/engine/topology/provinces.py` holding the 76-province adjacency map) are explicit exceptions, provided they contain pure static declarations with zero tangled logic.
 - **The Ratchet Rule for Existing Large Files**:
   - Existing files that exceed the ceiling (e.g., `EuropeMap.tsx`, `App.tsx`, `MacroSidebar.tsx`) must NOT receive new monolithic blocks of logic.
   - When modifying an existing large file, follow the ratchet principle: extract touched features, handlers, subcomponents, or hooks into separate files under the appropriate sub-package or feature folder. Every PR touching a large file should leave it smaller or at least no more bloated.

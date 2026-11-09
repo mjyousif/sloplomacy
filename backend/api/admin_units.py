@@ -16,7 +16,7 @@ from engine.order_utils import (
     fleet_coast,
     refresh_diagnostics_and_simulation,
 )
-from engine.topology import PROVINCES
+from engine.topology.provinces import PROVINCES
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from security.auth import AuthUser, get_current_user
 from security.secrecy import verify_admin_access

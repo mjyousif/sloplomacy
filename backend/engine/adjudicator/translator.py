@@ -1,7 +1,7 @@
 """Translate between this app's orders and phase names and the `diplomacy` engine's strings."""
 
 from domain.models import Order, OrderType, Unit
-from engine.topology import PROVINCES
+from engine.topology.provinces import PROVINCES
 
 
 def to_diplomacy_phase_code(season: str, year: int, phase: str) -> str:

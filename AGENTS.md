@@ -174,7 +174,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - `history.py`: Read-only turn history for the turn selector (resolved phases and their records).
   - `websocket.py`: Live turn synchronization and WebSocket subscriptions.
 - **Domain Models (`backend/domain/`)**: Authoritative Pydantic v2 schemas (`models.py`) defining `GameState`, `Order`, `Issue`, and request/response DTOs.
-- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator/`, one module per phase), DATC/rulebook validation (`validator/`, one module per phase or concern), topological graph (`topology.py`), phase timer (`phase_timer.py`), AI heuristics (`ai.py`), and order helpers (`order_utils.py`). Completely decoupled from HTTP transport.
+- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator/`, one module per phase), DATC/rulebook validation (`validator/`, one module per phase or concern), map topology (`topology/`: `provinces.py` data, `graph.py` movement rules), phase timer (`phase_timer.py`), AI heuristics (`ai.py`), and order helpers (`order_utils.py`). Completely decoupled from HTTP transport.
 - **Persistence Layer (`backend/storage/`)**: Authoritative in-memory state store (`store.py`) and Supabase PostgREST client (`supabase.py`).
 - **Security & Authorization (`backend/security/`)**: JWT verification and auth dependencies (`auth.py`) and viewer state secrecy sanitization (`secrecy.py`).
 - **Scenarios & Presets (`backend/scenarios/`)**: Scenario definitions and match presets (`presets.py`).
@@ -296,7 +296,7 @@ The game cycles through three standard phases per year:
 
 ### 2. Monolith Prevention & File Size Guardrails
 To prevent files from growing into unmaintainable monoliths, agents and contributors must observe these modular architectural rules:
-- **File Size Ceiling**: Target 150–350 lines per file. Any logic or component file exceeding **500 lines** must be decomposed into sub-modules, subcomponents, or hooks. (Static declarative data constants, such as `europeMapGeometry.ts` or `topology.py`, are exempted if they contain zero tangled logic).
+- **File Size Ceiling**: Target 150–350 lines per file. Any logic or component file exceeding **500 lines** must be decomposed into sub-modules, subcomponents, or hooks. (Static declarative data constants, such as `europeMapGeometry.ts` or `topology/provinces.py`, are exempted if they contain zero tangled logic).
 - **Backend Router Separation**: Never add new route handlers directly to `backend/main.py`. Add them to their respective router in `backend/api/` or create a new modular router.
 - **Frontend Subcomponent Extraction**: High-complexity UI components must extract sub-layers, modals, or tab views into subdirectories under `frontend/src/components/<feature>/` (e.g. `map/`, `macro/`, `lobby/`, `admin/`).
 - **The Ratchet Rule for Legacy Files**: When modifying an existing file that exceeds 500 lines (e.g., `EuropeMap.tsx`, `App.tsx`, `MacroSidebar.tsx`), do NOT append monolithic logic blocks. Extract touched features into helper modules, hooks, or subcomponents. Leave the file smaller or unchanged in size.

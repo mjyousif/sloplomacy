@@ -1,7 +1,7 @@
 """Collect validation issues, numbered in the order they are found."""
 
 from domain.models import IssueCode, IssueSeverity, Power, ValidationIssue
-from engine.topology import PROVINCES
+from engine.topology.provinces import PROVINCES
 
 
 def province_name(code: str | None) -> str:

@@ -43,7 +43,7 @@ docs/
 - [REST API Reference](backend/api-reference.md): Endpoints for fetching state, dispatching orders, pre-move simulation, turn adjudication, and sandbox checkpoints.
 - [Adjudication Engine (adjudicator/)](backend/adjudicator.md): Iterative DATC-inspired resolver for supports, support cuts, convoys, bounces, and dislodgements.
 - [Order Validator & Sanity Checks (validator/)](backend/validator.md): Diagnostics engine detecting illegal moves, self-bounces, friendly fire, and broken convoys.
-- [Map Data & Adjacencies (topology.py)](backend/map-data.md): Topology of all 75 playable European provinces, 34 supply centers, and complex split coasts (STP, SPA, BUL).
+- [Map Data & Adjacencies (topology/)](backend/map-data.md): Topology of all 75 playable European provinces, 34 supply centers, and complex split coasts (STP, SPA, BUL).
 
 ### 3. Frontend Application (React 19, TypeScript, Vite)
 - [Frontend Architecture](frontend/README.md): React 19 structure, directory layout, and component interaction hierarchy.

@@ -1,5 +1,5 @@
 from domain.models import IssueCode, IssueSeverity, Order, OrderType, Power, Unit, UnitType
-from engine.topology import get_initial_1901_units
+from engine.topology.provinces import get_initial_1901_units
 from engine.validator.convoys import has_active_convoy_chain
 from engine.validator.orchestrator import validate_orders
 

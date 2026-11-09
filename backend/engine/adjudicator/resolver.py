@@ -10,7 +10,7 @@ from engine.adjudicator.context import ResolutionContext
 from engine.adjudicator.movement import build_movement_orders, resolve_movement
 from engine.adjudicator.retreats import build_retreat_orders, resolve_retreats
 from engine.adjudicator.translator import parse_diplomacy_phase, to_diplomacy_phase_code
-from engine.topology import split_province_code
+from engine.topology.graph import split_province_code
 
 
 def create_diplomacy_game(

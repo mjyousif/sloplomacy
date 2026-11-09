@@ -1,13 +1,13 @@
 """Movement phase, per unit: is each order legal, and is it a likely blunder."""
 
 from domain.models import IssueCode, IssueSeverity, Order, OrderType, ProvinceType, Unit, UnitType
-from engine.topology import (
-    PROVINCES,
+from engine.topology.graph import (
     can_army_be_convoyed_theoretically,
     can_unit_move_directly,
     can_unit_support_province,
     split_province_code,
 )
+from engine.topology.provinces import PROVINCES
 from engine.validator.convoys import has_active_convoy_chain
 from engine.validator.issues import IssueCollector, province_name
 
