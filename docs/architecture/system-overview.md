@@ -52,7 +52,7 @@ The **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** is designed as 
 |                 |                       |                       |                       |
 |                 v                       v                       v                       |
 |     +----------------------+  +--------------------+  +--------------------------+      |
-|     |     validator.py     |  |    database.py     |  |      adjudicator.py      |      |
+|     |     validator.py     |  |    supabase.py     |  |      adjudicator.py      |      |
 |     |  - Legality checks   |  |  - PostgREST REST  |  |  - 'diplomacy' engine    |      |
 |     |  - Blunder detection |  |  - JSONB upserts   |  |  - Movement, Retreats,   |      |
 |     |  - Movement, Retreats|  |  - Read-thru cache |  |    and Winter Adjustments|      |
@@ -62,7 +62,7 @@ The **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** is designed as 
 |                 +-----------------------+---------------------------+                   |
 |                                         |                                               |
 |                              +----------v-----------+                                   |
-|                              |     map_data.py      |                                   |
+|                              |     topology.py      |                                   |
 |                              |  - 76 Provinces      |                                   |
 |                              |  - Army/Fleet graph  |                                   |
 |                              |  - Coasts & Centers  |                                   |
@@ -95,7 +95,7 @@ POST /api/order?game_id={id} { order: Order }
              ├──► 1. Update order in GAMES[game_id].orders
              ├──► 2. Execute validator.validate_orders()
              ├──► 3. Execute adjudicator.adjudicate_turn(..., is_simulation=True)
-             ├──► 4. Persist to Supabase database.py (JSONB upsert into public.multiplayer_games)
+             ├──► 4. Persist to Supabase storage/supabase.py (JSONB upsert into public.multiplayer_games)
              └──► 5. Return updated GameState
              │
              ▼

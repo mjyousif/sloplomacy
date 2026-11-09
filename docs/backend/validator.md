@@ -1,6 +1,6 @@
 # Pre-Flight Validator & Sanity Checks (`validator.py`)
 
-The validator module (`backend/validator.py`) runs in real time on every order dispatch and before turn finalization. It serves two distinct functions:
+The validator module (`backend/engine/validator.py`) runs in real time on every order dispatch and before turn finalization. It serves two distinct functions:
 1. **Rule Legality Checking**: Prevents invalid orders that violate game mechanics.
 2. **Tactical Blunder Detection ("Sanity Checks")**: Proactively warns players when an order is technically legal, but strategically self-destructive, mismatched, or incomplete.
 

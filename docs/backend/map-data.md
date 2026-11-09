@@ -1,6 +1,6 @@
-# Europe 1901 Map Data & Topology (`map_data.py`)
+# Europe 1901 Map Data & Topology (`topology.py`)
 
-The spatial topology of the European theatre is defined in `backend/map_data.py`. It establishes a symmetric, bidirectional graph for land and maritime movement, supply center ownership, and dual-coast mechanics.
+The spatial topology of the European theatre is defined in `backend/engine/topology.py`. It establishes a symmetric, bidirectional graph for land and maritime movement, supply center ownership, and dual-coast mechanics.
 
 ---
 

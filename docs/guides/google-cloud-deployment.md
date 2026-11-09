@@ -131,6 +131,6 @@ Add the following **Repository Secrets** under **Settings > Secrets and variable
 
 The root [`Dockerfile`](../../Dockerfile) uses a multi-stage build:
 1. **Stage 1 (Frontend Builder)**: Node.js 22 builds the React 19 application via `npm run build`, baking in Supabase environment arguments (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
-2. **Stage 2 (FastAPI Runner)**: Python 3.11-slim installs `backend/requirements-runtime.txt` (no test tools), copies backend Python modules (`main.py`, `database.py`, `adjudicator.py`, `auth.py`, etc.), mounts the compiled React bundle into `./static`, and launches Uvicorn on `${PORT}`.
+2. **Stage 2 (FastAPI Runner)**: Python 3.11-slim installs `backend/requirements-runtime.txt` (no test tools), copies the backend packages (`main.py`, `api/`, `engine/`, `storage/`, `security/`, etc.), mounts the compiled React bundle into `./static`, and launches Uvicorn on `${PORT}`.
 
-Test files (`backend/test_*.py`, `conftest.py`, `ws_testing.py`) are left out of the image by [`.dockerignore`](../../.dockerignore).
+The test suite (`backend/tests/`) is left out of the image by [`.dockerignore`](../../.dockerignore).

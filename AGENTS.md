@@ -45,7 +45,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```bash
   python -m pytest backend/ -v
   ```
-  *(Runs every `backend/test_*.py` suite, including: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_database_persistence.py`, `test_match_guards.py`, `test_phase_timer.py`, `test_security.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
+  *(Runs every `backend/tests/**/test_*.py` suite, including: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_database_persistence.py`, `test_match_guards.py`, `test_phase_timer.py`, `test_security.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
 
 ### Frontend Commands (`frontend/`)
 - **Install Dependencies**:
@@ -172,13 +172,12 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - `history.py`: Read-only turn history for the turn selector (resolved phases and their records).
   - `websocket.py`: Live turn synchronization and WebSocket subscriptions.
 - **Domain Models (`backend/domain/`)**: Authoritative Pydantic v2 schemas (`models.py`) defining `GameState`, `Order`, `Issue`, and request/response DTOs.
-- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator.py`), DATC/rulebook validation (`validator.py`), topological graph (`topology.py`), phase timer (`phase_timer.py`), AI heuristics (`ai.py`), and order helpers (`orders.py`). Completely decoupled from HTTP transport.
+- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator.py`), DATC/rulebook validation (`validator.py`), topological graph (`topology.py`), phase timer (`phase_timer.py`), AI heuristics (`ai.py`), and order helpers (`order_utils.py`). Completely decoupled from HTTP transport.
 - **Persistence Layer (`backend/storage/`)**: Authoritative in-memory state store (`store.py`) and Supabase PostgREST client (`supabase.py`).
 - **Security & Authorization (`backend/security/`)**: JWT verification and auth dependencies (`auth.py`) and viewer state secrecy sanitization (`secrecy.py`).
 - **Scenarios & Presets (`backend/scenarios/`)**: Scenario definitions and match presets (`presets.py`).
-- **Real-Time WebSockets (`backend/ws/`)**: Thread-safe WebSocket connection manager and broadcast dispatch (`manager.py`).
+- **Real-Time WebSockets (`backend/ws/`)**: Thread-safe WebSocket connection manager and broadcast dispatch (`connection_manager.py`).
 - **Test Harness (`backend/tests/`)**: Categorized test suites (`unit/` and `integration/`).
-- **Root Facades (`models.py`, `adjudicator.py`, etc.)**: Backward-compatible module aliases (`sys.modules[__name__] = ...`) pointing to their canonical domain packages.
 
 ### Frontend Packages (`frontend/src/`)
 - **State Coordinator (`App.tsx`)**: Root state container, view mode switcher (Lobby, Game, Sandbox), and API coordination.
@@ -213,7 +212,7 @@ The game cycles through three standard phases per year:
    - Advances to `Spring <Year + 1> Movement`.
 
 ### 2. Adjudication Library (`diplomacy>=1.1.2`)
-- Turn adjudication in `backend/adjudicator.py` interfaces with the standard Python `diplomacy` package (`diplomacy.Game`).
+- Turn adjudication in `backend/engine/adjudicator.py` interfaces with the standard Python `diplomacy` package (`diplomacy.Game`).
 - Custom conversions exist in `order_to_diplomacy_str` to translate internal Pydantic `Order` objects into official DATC order strings (e.g. `A PAR - BUR`, `F NTH S A BEL - HOL`, `A LON R WAL`, `A BUD B`).
 - Do not bypass `create_diplomacy_game()` or hardcode ad-hoc combat resolution logic without verifying against the test suite.
 
@@ -246,7 +245,7 @@ The game cycles through three standard phases per year:
 - Empty seats behave the same way, because nobody ever gave those powers orders.
 
 ### 6. Turn Clock
-- `GameState.timer` is `None` until the host starts the clock, so matches without one are untimed. The rules are in `backend/phase_timer.py` and [docs/guides/rulebook-reference.md](docs/guides/rulebook-reference.md).
+- `GameState.timer` is `None` until the host starts the clock, so matches without one are untimed. The rules are in `backend/engine/phase_timer.py` and [docs/guides/rulebook-reference.md](docs/guides/rulebook-reference.md).
 - **Invariant**: Nothing runs in the background, because Cloud Run scales to zero and only gives CPU during requests. Deadlines are absolute times in the saved game, and `tick_timer` acts on them from `GET /api/game` and the game WebSocket.
 - **Invariant**: `_execute_adjudication` resets the clock before its first `await`, so two polls can never both resolve one deadline.
 - **Invariant**: The clock never holds a phase back. A phase still resolves as soon as everyone has finalized.
@@ -302,7 +301,7 @@ To prevent files from growing into unmaintainable monoliths, agents and contribu
 - **Skill Playbook**: Follow the detailed guide in `.agents/skills/codebase-modularity/SKILL.md`.
 
 ### 3. Preserve Type Contracts
-- `frontend/src/types/diplomacy.ts` must strictly mirror `backend/models.py`.
+- `frontend/src/types/diplomacy.ts` must strictly mirror `backend/domain/models.py`.
 - Whenever adding fields or modifying schemas, update both files concurrently.
 - Always run `npx tsc --noEmit` before committing frontend modifications.
 

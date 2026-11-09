@@ -1,4 +1,6 @@
 import pytest
+from domain.models import Order, OrderType, Power, Unit, UnitType
+from engine.topology import PROVINCES
 from fastapi.testclient import TestClient
 from main import (
     GAME_HISTORY,
@@ -10,8 +12,6 @@ from main import (
     get_required_finalizing_powers,
     resolve_static_path,
 )
-from map_data import PROVINCES
-from models import Order, OrderType, Power, Unit, UnitType
 
 client = TestClient(app)
 
