@@ -54,7 +54,7 @@ Walk the checklist in AGENTS.md section 5.1 against `git diff --stat`. The ones 
 - New or changed endpoint → both the summary table and the detail section of `docs/backend/api-reference.md`.
 - New file, component, or package → verify package boundaries in `AGENTS.md` section 3 and update `docs/frontend/README.md` or `docs/backend/README.md` if applicable.
 - File size & modularity: ensure no touched file grew into an unmaintainable monolith (> 500 lines). Follow `.agents/skills/codebase-modularity/SKILL.md` and decompose when necessary.
-- Test counts: don't hardcode a new number in prose. If you add a `test_*.py`, update the list in AGENTS.md.
+- Test counts: don't hardcode a new number in prose. A new `test_*.py` goes where the layout in `docs/backend/README.md` (Running Backend Tests) puts it; there is no list of suites to update. Run it on its own once to make sure it doesn't lean on tests that happen to run before it.
 - A new invariant you had to learn the hard way belongs in AGENTS.md section 4, one bold **Invariant** line.
 
 ## 4. Migrations

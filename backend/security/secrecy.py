@@ -166,17 +166,6 @@ def viewer_power_for(
     return None
 
 
-def build_slot_power(slot_id: str) -> Power | None:
-    """The power a build slot (`BUILD_<POWER>_<PROVINCE>`) belongs to."""
-    parts = slot_id.split("_")
-    if len(parts) < 3 or parts[0] != "BUILD":
-        return None
-    try:
-        return Power(parts[1])
-    except ValueError:
-        return None
-
-
 def require_own_seat(game_id: str, power: Power, current_user: AuthUser | None) -> None:
     """Refuse anything that would show `power`'s hidden orders to someone not in that seat."""
     if is_multiplayer_match(game_id) and not caller_holds_seat(
