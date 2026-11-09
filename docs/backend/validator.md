@@ -1,10 +1,20 @@
-# Pre-Flight Validator & Sanity Checks (`validator.py`)
+# Pre-Flight Validator & Sanity Checks (`validator/`)
 
-The validator module (`backend/engine/validator.py`) runs in real time on every order dispatch and before turn finalization. It serves two distinct functions:
+The validator package (`backend/engine/validator/`) runs in real time on every order dispatch and before turn finalization. It serves two distinct functions:
 1. **Rule Legality Checking**: Prevents invalid orders that violate game mechanics.
 2. **Tactical Blunder Detection ("Sanity Checks")**: Proactively warns players when an order is technically legal, but strategically self-destructive, mismatched, or incomplete.
 
 The validator is **phase-aware**, adjusting its checks dynamically for **Movement**, **Retreats**, and **Winter Adjustments**.
+
+| Module | Checks |
+| :--- | :--- |
+| `orchestrator.py` | `validate_orders` runs the checks for the current phase, always in the same order |
+| `issues.py` | `IssueCollector` numbers issues as they are found (`issue_<n>_<code>`) and keeps only `target_power`'s |
+| `retreats.py` | Retreat destinations and two retreats into one province |
+| `adjustments.py` | Build and disband quotas, unused builds |
+| `legality.py` | Movement, one unit at a time: destinations, coasts, supports, convoys, unconfirmed orders |
+| `diagnostics.py` | Movement, across units: self-bounces, bounces off your own units, direct swaps |
+| `convoys.py` | `has_active_convoy_chain`, whether ordered fleets connect an army's origin to its target |
 
 ---
 
