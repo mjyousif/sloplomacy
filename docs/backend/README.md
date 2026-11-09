@@ -21,7 +21,14 @@ backend/
 │   └── models.py            # GameState, Order, Unit, Resolution, Diagnostics, Timer schemas
 ├── engine/                  # Authoritative rules & simulation engine
 │   ├── adjudicator.py       # DATC turn adjudication & simulation wrapper over python 'diplomacy'
-│   ├── validator.py         # Pre-flight tactical blunder checker (Movement, Retreats, Builds)
+│   ├── validator/           # Pre-flight tactical blunder checker (Movement, Retreats, Builds)
+│   │   ├── orchestrator.py  # validate_orders: runs the phase's checks in a fixed order
+│   │   ├── issues.py        # IssueCollector: numbers issues and filters by power
+│   │   ├── retreats.py      # Retreat destinations, retreat self-bounces
+│   │   ├── adjustments.py   # Build and disband quotas
+│   │   ├── legality.py      # Movement, per unit: legality, supports, convoys
+│   │   ├── diagnostics.py   # Movement, across units: self-bounces and direct swaps
+│   │   └── convoys.py       # has_active_convoy_chain
 │   ├── topology.py          # Europe 1901 graph topology, province records & coastline rules
 │   ├── phase_timer.py       # Multiplayer turn clock rules: votes, pausing, extensions & deadlines
 │   ├── ai.py                # Authoritative Diplomacy Tactical AI engine (DATC-compliant heuristics)

@@ -24,7 +24,7 @@ from engine.phase_timer import (
     settle_timer,
     start_phase_clock,
 )
-from engine.validator import validate_orders
+from engine.validator.orchestrator import validate_orders
 from fastapi import APIRouter, Depends, HTTPException, Query
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
