@@ -57,7 +57,9 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
     } else {
       if (owner && POWER_METADATA[owner]) {
         fill = POWER_METADATA[owner].fillColor;
-        fillOpacity = isHovered ? 0.68 : 0.48;
+        const baseOpacity = owner === 'ENGLAND' ? 0.65 : 0.48;
+        const hoverOpacity = owner === 'ENGLAND' ? 0.8 : 0.68;
+        fillOpacity = isHovered ? hoverOpacity : baseOpacity;
       } else {
         fill = isHovered ? '#fffbeb' : '#f4d7b5';
         fillOpacity = isHovered ? 0.55 : 0.15;

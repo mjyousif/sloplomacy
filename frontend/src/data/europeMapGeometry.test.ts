@@ -42,9 +42,22 @@ describe('Map Cartography & Aesthetics (Issues #42-#48)', () => {
     expect(standardSeaLabels.length).toBeGreaterThanOrEqual(10); // reduced from 16px
   });
 
-  it('centers the Helgoland Bight text within the dashed boundary lines (#42)', () => {
+  it('centers the Helgoland Bight text within the dashed boundary lines (#42, #71)', () => {
     expect(AUTHENTIC_NAMES_SVG).toContain(
-      'transform="translate(-7 8) rotate(-8)" id="Helgoland-Bight"',
+      'transform="translate(-18 8) rotate(-8)" id="Helgoland-Bight"',
+    );
+  });
+
+  it('moves Skagerrak text away from the dashed boundary (#70)', () => {
+    expect(AUTHENTIC_NAMES_SVG).toContain(
+      'transform="translate(6 0) rotate(-13)" id="SKA"',
+    );
+  });
+
+  it('keeps Belgium star decoupled from the Belgium text label (#74)', () => {
+    expect(EUROPE_PROVINCE_GEOMETRY.BEL.scPos).toEqual({ x: 515.0, y: 754.0 });
+    expect(AUTHENTIC_NAMES_SVG).toContain(
+      '<tspan id="tspan48" y="392.0" x="798.0">Belgium</tspan>',
     );
   });
 });
@@ -94,7 +107,7 @@ const seaLabels = labels.filter(isSea);
 
 describe('map label typography', () => {
   it('finds every label', () => {
-    expect(labels).toHaveLength(82);
+    expect(labels).toHaveLength(81);
     expect(seaLabels).toHaveLength(19);
   });
 
@@ -123,12 +136,18 @@ describe('map label typography', () => {
     expect([...fonts]).toHaveLength(1);
   });
 
-  it('keeps land names at the standard size, apart from the one under an abbreviation', () => {
+  it('keeps all land names at the standard 16px size (#85)', () => {
     const provinceNames = landLabels.filter((label) => label.text.length > 3);
     const unusual = provinceNames
       .filter((label) => label.size !== '16px')
       .map((label) => label.text);
-    expect(unusual).toEqual(['Liverpool']);
+    expect(unusual).toEqual([]);
+  });
+
+  it('labels Liverpool by name alone at standard size (#85)', () => {
+    const names = labels.map((label) => label.text);
+    expect(names).toContain('Liverpool');
+    expect(names).not.toContain('LVP');
   });
 
   it('spells out North Africa', () => {
