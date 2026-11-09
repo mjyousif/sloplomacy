@@ -45,35 +45,31 @@ The browser pane sends mouse events. The `mobile` E2E scenario turns on Playwrig
 
 ## SVG Rendering Layers
 
-The map is rendered as a layered SVG pipeline decomposed into memoized subcomponents under `src/components/map/`:
+The map is rendered as a layered SVG pipeline:
 
 ```
 <svg viewBox="0 0 1524 1357">
   │
-  ├── 1. Static Defs Layer (StaticLayers.tsx: StaticDefsLayer):
-  │      - Drop shadows, glow filters, arrow markers
-  │
-  ├── 2. Background Map Layer (StaticLayers.tsx: StaticBackgroundLayer, StaticForegroundLayer):
-  │      - Landmass contours, ocean bathymetry, topography
-  │
-  ├── 3. Dynamic Province Fill Layer (ProvincePolygon.tsx: ProvincePolygon):
+  ├── 1. Static Defs Layer (<defs>): Drop shadows, glow filters, arrow markers
+  ├── 2. Background Map Layer: Landmass contours, ocean bathymetry, topography
+  ├── 3. Dynamic Province Fill Layer:
   │      - Semi-transparent fills colored by owning Great Power
   │      - Hover highlighting for candidate destinations
   │      - Pulsing red highlights for provinces with tactical errors
   │      - Amber glow on valid retreat destinations during Retreats phase
   │      - Gold pulsing border on vacant home SCs during Winter Adjustments
   │
-  ├── 4. Province Names Layer (MapNamesLayer.tsx: MapNamesLayer):
-  │      - Classic: the original typesetting from StaticNamesLayer (AUTHENTIC_NAMES_SVG)
+  ├── 4. Province Names Layer (MapNamesLayer):
+  │      - Classic: the original typesetting from AUTHENTIC_NAMES_SVG
   │      - Other styles: shared sea names and coast tags, plus land names
   │        placed by the active layout, with a parchment halo
   │
-  ├── 5. Supply Center Layer (SupplyCentersLayer.tsx: SupplyCentersLayer):
+  ├── 5. Supply Center Layer:
   │      - Circular markers with gold star / power crest
   │      - Distinguishes neutral vs power-owned centers
   │      - Position, size and presence follow the active piece style
   │
-  ├── 6. Order Vector Layer (curveGeometry.ts: computeQuadraticCurve):
+  ├── 6. Order Vector Layer:
   │      - Blue curved bezier arrows for MOVE orders
   │      - Teal dashed arrows with target reticles for SUPPORT orders
   │      - Purple wavy arrows for CONVOY paths

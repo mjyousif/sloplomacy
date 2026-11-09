@@ -139,7 +139,7 @@ The internal Pydantic `Order` model is serialized into standard DATC order notat
 
 ## Orders Nobody Gave
 
-`create_default_orders` in `backend/engine/order_utils.py` (re-exported by `main.py`) decides what happens to anything left unordered, and it follows the rulebook. Empty seats, surrendered powers and players who run out of time all get the same result:
+`create_default_orders` in `main.py` decides what happens to anything left unordered, and it follows the rulebook. Empty seats, surrendered powers and players who run out of time all get the same result:
 
 | Phase | Left unordered | Result |
 | :--- | :--- | :--- |
