@@ -9,7 +9,11 @@ from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconn
 from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials
 from security.auth import AuthUser, get_current_user
-from security.secrecy import sanitize_game_state_for_viewer, viewer_power_for
+from security.secrecy import (
+    caller_owns_saved_sandbox,
+    sanitize_game_state_for_viewer,
+    viewer_power_for,
+)
 from storage.store import (
     GAME_PASSCODES,
     GAME_SUMMARIES,
@@ -84,6 +88,9 @@ async def ws_game_endpoint(
     power_enum = viewer_power_for(game_id, current_user, requested)
 
     summary = GAME_SUMMARIES.get(game_id)
+    if summary and summary.is_sandbox and not caller_owns_saved_sandbox(summary, current_user):
+        await websocket.close(code=4403)
+        return
     if summary and summary.has_passcode and is_multiplayer_match(game_id):
         expected_pw = GAME_PASSCODES.get(game_id, "")
         provided_pw = (passcode or "").strip()

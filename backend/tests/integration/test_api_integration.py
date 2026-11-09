@@ -532,7 +532,8 @@ def test_previewing_a_winning_turn_does_not_end_the_game():
     game_id = _new_game()
     _put_game_one_center_from_a_solo(game_id)
 
-    state = client.get(f"/api/game?game_id={game_id}").json()["state"]
+    # France's own preview: other viewers see the turn played out with France's orders hidden.
+    state = client.get(f"/api/game?game_id={game_id}&power=FRANCE").json()["state"]
 
     assert state["last_resolution"]["winner"] == "FRANCE"
     assert state["winner"] is None

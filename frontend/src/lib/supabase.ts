@@ -85,6 +85,21 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   return {};
 }
 
+/**
+ * `fetch` with the signed-in player's token attached. The server finds a player's seat and
+ * their saved sandboxes from it, so a call without it is treated as a stranger's.
+ */
+export async function authedFetch(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const headers = {
+    ...(init.headers as Record<string, string> | undefined),
+    ...(await getAuthHeaders()),
+  };
+  return fetch(url, { ...init, headers });
+}
+
 export async function getInitialAuthUser(): Promise<AuthUser | null> {
   if (supabase) {
     const { data } = await supabase.auth.getSession();

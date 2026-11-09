@@ -31,7 +31,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/finalize` | Pre-flight sanity check and finalize power's orders; auto-adjudicates when all are ready | `FinalizeRequest` | `FinalizeResponse` |
 | `POST` | `/api/unfinalize` | Unlock finalized orders for subsequent editing | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/simulate` | Execute non-destructive tactical preview resolution using official DATC rules | *None* | `SimulationResult` |
-| `POST` | `/api/adjudicate` | Commit orders, resolve combat, advance season/phase | *None* | `GameState` |
+| `POST` | `/api/adjudicate` | Commit orders, resolve combat, advance season/phase (`?turn=` guards against a double resolve) | *None* | `GameState` |
 | `POST` | `/api/scenario` | Reset board and load predefined tactical scenario (host only on live match) | `ScenarioRequest` | `GameState` |
 
 ### Turn History
@@ -214,6 +214,8 @@ Concedes command of a Great Power into **Civil Disorder**. Surrendered units hol
 ### 8. `POST /api/games/save-sandbox`
 Saves an active solo sandbox into the persistent game summary registry. A saved copy is never masked, so a live match is copied only as the caller may see it: their own orders, everyone else holding, and no turn clock.
 
+A saved sandbox belongs to the account that saved it (`creator_id`). Every HTTP route that names it, by path or `?game_id=`, answers `401` without a token and `403` for anyone else, and its game socket closes with `4403`. That covers viewing, orders, resolving, the sandbox and admin tools, joining, copying and deleting. A sandbox saved by a guest (no account id) stays open, as a guest's seat does.
+
 #### Request (`SaveSandboxRequest`):
 ```json
 {
@@ -246,7 +248,7 @@ Bootstraps the client by returning the current `GameState` along with the comple
 
 - **Query Parameters**:
   - `game_id` *(optional, string)*: Scoped match identifier (defaults to `proto_1901`).
-  - `power` *(optional, Power)*: Picks which of the caller's own seats to view. It is checked against the caller's seat and never shows another power's orders: naming a seat you do not hold gives the same view as not naming one. In active multiplayer matches (`status: "active"`), foreign unadjudicated moves are masked to default `HOLD`s, foreign diagnostic issues are excluded, and `last_resolution` (the turn preview) is rebuilt from the viewer's own orders with everyone else holding (Fog of War).
+  - `power` *(optional, Power)*: Picks which of the caller's own seats to view. It is checked against the caller's seat and never shows another power's orders: naming a seat you do not hold gives the same view as not naming one. In multiplayer matches, whether `waiting` or `active`, foreign unadjudicated moves are masked to default `HOLD`s, foreign diagnostic issues are excluded, and `last_resolution` (the turn preview) is rebuilt from the viewer's own orders with everyone else holding (Fog of War).
   - `passcode` *(optional, string)*: Passcode for private campaigns (compared using timing-safe `hmac.compare_digest`).
 - **Headers**:
   - `X-Passcode` *(optional, string)*: Header alternative for campaign passcode.
@@ -400,7 +402,10 @@ Permanently commits all submitted moves, resolves conflicts using the DATC `dipl
 
 In a live match, a retreat or adjustment phase that no player is involved in then plays out at once, so the response may be one or two phases further on. Movement phases always wait for the players. The same happens when `/api/finalize`, `/leave` or `/surrender` completes the set of players being waited for, so a match never stalls on a player who has gone.
 
-- **Multiplayer Security**: In multiplayer campaigns (`!is_sandbox`), manual adjudication requires authentic game creator authorization via a cryptographically signed Supabase JSON Web Token (`Authorization: Bearer <token>`). Missing, invalid, or expired tokens receive `401 Unauthorized`. Authenticated users who are not the game creator receive `403 Forbidden`. In normal multiplayer play, turns advance automatically upon consensus finalization; this endpoint acts as an administrative host override. Solo sandbox mode (`proto_1901`) and personal sandboxes retain zero-friction anonymous access.
+- **Multiplayer Security**: In multiplayer campaigns (`!is_sandbox`), manual adjudication requires authentic game creator authorization via a cryptographically signed Supabase JSON Web Token (`Authorization: Bearer <token>`). Missing, invalid, or expired tokens receive `401 Unauthorized`. Authenticated users who are not the game creator receive `403 Forbidden`. In normal multiplayer play, turns advance automatically upon consensus finalization; this endpoint acts as an administrative host override. Solo sandbox mode (`proto_1901`) keeps anonymous access, and a saved sandbox is open to its owner only (see `POST /api/games/save-sandbox`).
+- **Query Parameters**:
+  - `game_id` *(optional, string)*: Scoped match identifier (defaults to `proto_1901`).
+  - `turn` *(optional, string)*: The turn the caller means to resolve, e.g. `Spring 1901 Movement`. If the game has already moved past it the call answers `409` and changes nothing, so a double-click or a second tab never resolves two phases. The app always sends it.
 - A unit whose order the engine rejects holds in place. When a power reaches 18 supply centers the response carries `winner`, the clock stays on the deciding phase, and further calls return `409`.
 
 ---
