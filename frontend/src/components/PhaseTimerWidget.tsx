@@ -1,8 +1,9 @@
-import { Clock, Pause, Play, Plus } from 'lucide-react';
+import { ChevronUp, Clock, Pause, Play, Plus } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import type { PhaseTimer, Power, TimerChoice } from '../types/diplomacy';
 import {
+  clockPillLabel,
   countVotes,
   formatClock,
   powerNames,
@@ -21,6 +22,8 @@ export interface PhaseTimerWidgetProps {
   onExtend: (active: boolean) => void;
   onReady: (active: boolean) => void;
   onExpire?: () => void;
+  /** Phone: start as a small pill at the top of the map, and open the full widget on a tap. */
+  compact?: boolean;
 }
 
 const LOW_TIME_SECONDS = 60;
@@ -75,8 +78,10 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
   onExtend,
   onReady,
   onExpire,
+  compact = false,
 }) => {
   const seconds = useCountdown(timer?.remaining_seconds, onExpire);
+  const [expanded, setExpanded] = useState(false);
   const isPlayer = !!timer && !!seatPower && timer.players.includes(seatPower);
   // The whole vote is shorter than this, so only a phase clock can run low.
   const lowTime =
@@ -203,8 +208,40 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
     );
   };
 
+  if (compact && !expanded) {
+    const Icon = timer?.stage === 'paused' ? Pause : Clock;
+    return (
+      <button
+        type="button"
+        data-testid="phase-timer-pill"
+        className={`phase-timer-pill ${lowTime ? 'phase-timer-low' : ''}`}
+        aria-label={`Turn clock: ${clockPillLabel(timer, seconds, isHost)}. Show details.`}
+        aria-expanded={false}
+        onClick={() => setExpanded(true)}
+      >
+        <Icon size={14} />
+        <span role="timer">{clockPillLabel(timer, seconds, isHost)}</span>
+        {hypothetical && timer && (
+          <span className="phase-timer-pill-dot" aria-hidden="true" />
+        )}
+      </button>
+    );
+  }
+
   return (
     <aside className="phase-timer-widget" aria-label="Turn clock">
+      {compact && (
+        <button
+          type="button"
+          data-testid="phase-timer-collapse"
+          className="phase-timer-collapse"
+          aria-label="Hide turn clock"
+          aria-expanded={true}
+          onClick={() => setExpanded(false)}
+        >
+          <ChevronUp size={18} />
+        </button>
+      )}
       {renderBody()}
       {hypothetical && timer && (
         <p className="phase-timer-note phase-timer-warning">

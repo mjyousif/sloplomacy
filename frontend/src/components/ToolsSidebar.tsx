@@ -19,10 +19,12 @@ import {
   Sliders,
   Sparkles,
   Trash2,
+  X,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
 import type React from 'react';
+import { useEffect, useRef } from 'react';
 import {
   ALL_POWERS,
   POWER_METADATA,
@@ -63,6 +65,16 @@ export interface ToolsSidebarProps {
   onOpenAdminTools?: () => void;
   adminOverrideActive?: boolean;
   onToggleAdminOverride?: () => void;
+  /**
+   * 'panel' is the desktop sidebar with its rail. 'drawer' is the phone's slide-over, opened from
+   * the top bar's ≡ button: always expanded, with a backdrop, and without the zoom section,
+   * because a phone's zoom buttons sit on the map.
+   */
+  variant?: 'panel' | 'drawer';
+  /** Drawer only: whether it is showing. */
+  open?: boolean;
+  /** Drawer only: closes it (backdrop tap, Escape or the close button). */
+  onClose?: () => void;
 }
 
 export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
@@ -92,7 +104,24 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   onOpenAdminTools,
   adminOverrideActive = false,
   onToggleAdminOverride,
+  variant = 'panel',
+  open = false,
+  onClose,
 }) => {
+  const isDrawer = variant === 'drawer';
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  // A drawer takes focus when it opens and closes on Escape, like the other phone overlays.
+  useEffect(() => {
+    if (!isDrawer || !open) return;
+    closeButtonRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose?.();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isDrawer, open, onClose]);
+
   // Compute Supply Centers per power
   const scCountByPower: Record<Power, number> = {
     AUSTRIA: 0,
@@ -124,7 +153,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   }
 
   // Collapsed Minimalist Rail
-  if (collapsed) {
+  if (collapsed && !isDrawer) {
     return (
       <aside
         className="tools-sidebar tools-sidebar-collapsed"
@@ -210,10 +239,13 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   }
 
   // Expanded Tools Sidebar
-  return (
+  const panel = (
     <aside
-      className="tools-sidebar tools-sidebar-expanded"
+      className={`tools-sidebar tools-sidebar-expanded ${isDrawer ? 'tools-drawer' : ''}`.trim()}
       aria-label="Chancellery Tools & Intel"
+      data-testid={isDrawer ? 'tools-drawer' : undefined}
+      role={isDrawer ? 'dialog' : undefined}
+      aria-modal={isDrawer ? true : undefined}
     >
       {/* 1. SIDEBAR HEADER */}
       <div className="tools-sidebar-header">
@@ -226,54 +258,70 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
             </span>
           </div>
         </div>
-        <button
-          type="button"
-          data-testid="tools-sidebar-collapse-btn"
-          className="sidebar-collapse-toggle-btn"
-          onClick={onToggleCollapse}
-          title="Collapse Tools Sidebar"
-        >
-          <PanelLeftClose size={16} />
-        </button>
+        {isDrawer ? (
+          <button
+            ref={closeButtonRef}
+            type="button"
+            data-testid="tools-drawer-close-btn"
+            className="sidebar-collapse-toggle-btn tools-drawer-close-btn"
+            onClick={onClose}
+            aria-label="Close tools"
+          >
+            <X size={20} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            data-testid="tools-sidebar-collapse-btn"
+            className="sidebar-collapse-toggle-btn"
+            onClick={onToggleCollapse}
+            title="Collapse Tools Sidebar"
+          >
+            <PanelLeftClose size={16} />
+          </button>
+        )}
       </div>
 
       <div className="tools-sidebar-content">
         {/* 2. CAMERA & MAP CONTROLS */}
-        <CollapsibleSection
-          title="MAP VIEW & CAMERA"
-          badge={<span className="tools-zoom-badge">{zoomPercent}%</span>}
-          collapsible={false}
-        >
-          <div className="tools-zoom-toolbar">
-            <button
-              type="button"
-              className="tools-btn"
-              onClick={onZoomOut}
-              title="Zoom Out"
-            >
-              <ZoomOut size={13} />
-              <span>Out</span>
-            </button>
-            <button
-              type="button"
-              className="tools-btn"
-              onClick={onZoomIn}
-              title="Zoom In"
-            >
-              <ZoomIn size={13} />
-              <span>In</span>
-            </button>
-            <button
-              type="button"
-              className="tools-btn"
-              onClick={onResetCamera}
-              title="Reset Map to 105% Default View"
-            >
-              <Maximize2 size={13} />
-              <span>Fit Map</span>
-            </button>
-          </div>
-        </CollapsibleSection>
+        {/* Phones zoom with the buttons on the map instead. */}
+        {!isDrawer && (
+          <CollapsibleSection
+            title="MAP VIEW & CAMERA"
+            badge={<span className="tools-zoom-badge">{zoomPercent}%</span>}
+            collapsible={false}
+          >
+            <div className="tools-zoom-toolbar">
+              <button
+                type="button"
+                className="tools-btn"
+                onClick={onZoomOut}
+                title="Zoom Out"
+              >
+                <ZoomOut size={13} />
+                <span>Out</span>
+              </button>
+              <button
+                type="button"
+                className="tools-btn"
+                onClick={onZoomIn}
+                title="Zoom In"
+              >
+                <ZoomIn size={13} />
+                <span>In</span>
+              </button>
+              <button
+                type="button"
+                className="tools-btn"
+                onClick={onResetCamera}
+                title="Reset Map to 105% Default View"
+              >
+                <Maximize2 size={13} />
+                <span>Fit Map</span>
+              </button>
+            </div>
+          </CollapsibleSection>
+        )}
 
         {/* 3. CARTOGRAPHIC TACTICAL LEGEND */}
         <CollapsibleSection
@@ -565,5 +613,20 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
         )}
       </div>
     </aside>
+  );
+
+  if (!isDrawer) return panel;
+
+  // Kept mounted so it can slide in and out. While closed it is inert: hidden from taps,
+  // focus and screen readers.
+  return (
+    <div className={`tools-drawer-layer ${open ? 'open' : ''}`} inert={!open}>
+      <div
+        className="tools-drawer-backdrop"
+        data-testid="tools-drawer-backdrop"
+        onClick={onClose}
+      />
+      {panel}
+    </div>
   );
 };

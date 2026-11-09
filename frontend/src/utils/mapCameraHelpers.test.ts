@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   COMPACT_MAX_ZOOM,
   clampCamera,
+  compactHitRadius,
   DEFAULT_CAMERA,
   DEFAULT_MARGIN_X,
   DEFAULT_MARGIN_Y,
@@ -9,10 +10,13 @@ import {
   getCameraBounds,
   getPhoneDefaultCamera,
   getViewportFit,
+  halfNearestDistances,
+  keepPointInView,
   MAP_CENTER_X,
   MAP_CENTER_Y,
   MAP_VIEWBOX_HEIGHT,
   MAX_ZOOM,
+  MIN_TOUCH_RADIUS_PX,
   MIN_ZOOM,
   pinchStep,
   zoomAtPoint,
@@ -244,5 +248,123 @@ describe('touch camera helpers (issue #54)', () => {
   it('getPhoneDefaultCamera keeps the usual view on a wide screen or with no size', () => {
     expect(getPhoneDefaultCamera(812, 330, null)).toEqual(DEFAULT_CAMERA);
     expect(getPhoneDefaultCamera(0, 0, null)).toEqual(DEFAULT_CAMERA);
+  });
+});
+
+describe('keepPointInView', () => {
+  // A 390×599 phone map at the phone's fill-height zoom, as on an iPhone 14 with the sheet lowered.
+  const W = 390;
+  const H = 599;
+  const options = { maxZoom: COMPACT_MAX_ZOOM };
+  const camera = getPhoneDefaultCamera(W, H, { x: 400, y: 900 }, options);
+  const toScreen = (
+    cam: { x: number; y: number; zoom: number },
+    p: { x: number; y: number },
+  ) => {
+    const { scale, offsetX, offsetY } = getViewportFit(W, H);
+    return {
+      x:
+        offsetX +
+        (MAP_CENTER_X + (p.x - MAP_CENTER_X) * cam.zoom + cam.x) * scale,
+      y:
+        offsetY +
+        (MAP_CENTER_Y + (p.y - MAP_CENTER_Y) * cam.zoom + cam.y) * scale,
+    };
+  };
+
+  it('leaves the camera alone when the point is already comfortably in view', () => {
+    const centre = { x: 400, y: 900 };
+    const before = toScreen(camera, centre);
+    expect(before.y).toBeGreaterThan(80);
+    const same = keepPointInView(
+      camera,
+      centre,
+      W,
+      H,
+      { top: 0, bottom: H },
+      80,
+      options,
+    );
+    expect(same).toBe(camera);
+  });
+
+  it('lifts a point the docked bar would cover into the middle of what is left', () => {
+    // Find a board point that lands under a 150px bar at the bottom.
+    const hidden = { x: 400, y: 900 };
+    const barTop = H - 150;
+    const start = toScreen(camera, hidden);
+    const pushed = {
+      ...camera,
+      y: camera.y + (barTop + 20 - start.y) / getViewportFit(W, H).scale,
+    };
+    expect(toScreen(pushed, hidden).y).toBeGreaterThan(barTop);
+
+    const next = keepPointInView(
+      pushed,
+      hidden,
+      W,
+      H,
+      { top: 0, bottom: barTop },
+      80,
+      options,
+    );
+    const after = toScreen(next, hidden);
+    expect(after.y).toBeCloseTo(barTop / 2, 0);
+    // Sideways it was already in view, so it didn't move that way.
+    expect(after.x).toBeCloseTo(toScreen(pushed, hidden).x, 5);
+    expect(next.zoom).toBe(pushed.zoom);
+  });
+
+  it('never pans past the edge of the board', () => {
+    // The very bottom of the board can't be lifted to the middle, so it stops at the edge.
+    const bottomEdge = { x: MAP_CENTER_X, y: MAP_VIEWBOX_HEIGHT };
+    const next = keepPointInView(
+      camera,
+      bottomEdge,
+      W,
+      H,
+      { top: 0, bottom: H - 150 },
+      80,
+      options,
+    );
+    expect(next).toEqual(clampCamera(next, options));
+  });
+
+  it('does nothing before the map has a size', () => {
+    expect(
+      keepPointInView(camera, { x: 0, y: 0 }, 0, 0, { top: 0, bottom: 0 }, 80),
+    ).toBe(camera);
+  });
+});
+
+describe('phone tap targets', () => {
+  it('halves the distance to the nearest neighbour, so targets never overlap', () => {
+    const caps = halfNearestDistances({
+      a: { x: 0, y: 0 },
+      b: { x: 30, y: 40 },
+      c: { x: 300, y: 0 },
+    });
+    expect(caps.a).toBe(25);
+    expect(caps.b).toBe(25);
+    expect(caps.c).toBeCloseTo(Math.hypot(270, 40) / 2, 6);
+    expect(halfNearestDistances({ lone: { x: 1, y: 1 } }).lone).toBe(Infinity);
+  });
+
+  it('grows a target until it is 44px across on screen', () => {
+    // At half a pixel per board unit, 22px on screen is 44 board units.
+    expect(compactHitRadius(17, 0.5, Infinity)).toBe(MIN_TOUCH_RADIUS_PX / 0.5);
+  });
+
+  it('stops at the cap so neighbours keep their own targets', () => {
+    expect(compactHitRadius(17, 0.5, 30)).toBe(30);
+  });
+
+  it('never shrinks below the style radius, even zoomed far in or crowded', () => {
+    expect(compactHitRadius(21, 4, Infinity)).toBe(21);
+    expect(compactHitRadius(21, 0.5, 10)).toBe(21);
+  });
+
+  it('keeps the style radius until the zoom is known', () => {
+    expect(compactHitRadius(0, 0, 30)).toBe(0);
   });
 });

@@ -58,9 +58,12 @@ describe('CompactTopBar', () => {
   it('shows the way back, the turn and a tappable problem count in a game', () => {
     const html = renderBar({ errorCount: 1, warningCount: 2 });
     expect(html).toContain('aria-label="Back to lobby"');
+    // Two lines: the season and year above the phase, with a separator that only screen readers see.
     expect(html).toContain(
-      'Spring<!-- --> <!-- -->1901<!-- --> · <!-- -->Movement',
+      'class="compact-turn-season">Spring<!-- --> <!-- -->1901</span>',
     );
+    expect(html).toContain('class="compact-turn-sep"> · </span>');
+    expect(html).toContain('class="compact-turn-phase">Movement</span>');
     expect(html).toMatch(/<button[^>]*class="compact-issue-badge has-errors"/);
     expect(html).toContain('1 error, 2 warnings. Open the order check.');
     expect(html).toContain('<span>3</span>');
@@ -89,6 +92,18 @@ describe('CompactTopBar', () => {
     expect(html).toContain('Menu (live sync is reconnecting)');
     expect(html).toContain('compact-menu-alert-dot');
     expect(renderBar()).not.toContain('compact-menu-alert-dot');
+  });
+
+  it('offers ≡ for the tools drawer in a game, but not in the lobby', () => {
+    const inGame = renderBar({ onToggleTools: noop });
+    expect(inGame).toContain('data-testid="compact-tools-toggle"');
+    expect(inGame).toContain('aria-label="Tools"');
+    expect(renderBar({ onToggleTools: noop, toolsOpen: true })).toContain(
+      'aria-label="Close tools"',
+    );
+    expect(
+      renderBar({ viewMode: 'lobby', turn: null, onToggleTools: noop }),
+    ).not.toContain('compact-tools-toggle');
   });
 
   it('starts with the menu closed', () => {

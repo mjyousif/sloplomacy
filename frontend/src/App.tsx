@@ -52,6 +52,7 @@ import {
   type WebSocketLobbyUpdate,
 } from './types/diplomacy';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
+import type { SheetSnap } from './utils/sheetHelpers';
 import { turnLabel } from './utils/timerHelpers';
 
 const API_BASE = '/api';
@@ -122,19 +123,31 @@ export function App() {
   const [zoomPercent, setZoomPercent] = useState<number>(105);
   // Phone-sized screens get the compact layout, styled from compact.css.
   const isCompact = useCompactLayout();
-  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState<boolean>(
-    () => isCompact,
-  );
-  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState<boolean>(
-    () => isCompact,
-  );
+  // The desktop sidebars' rails. Phones have no rails: orders live in a sheet and tools in a drawer.
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] =
+    useState<boolean>(false);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] =
+    useState<boolean>(false);
+  // The phone order sheet starts lowered, so the map gets as much room as it can.
+  const [sheetSnap, setSheetSnap] = useState<SheetSnap>('peek');
+  const [toolsDrawerOpen, setToolsDrawerOpen] = useState<boolean>(false);
+  const toolsToggleRef = useRef<HTMLButtonElement | null>(null);
+  // While the map's docked unit bar is up, the sheet drops to its peek so the bar and the
+  // provinces to tap stay in view.
+  const handleDockedBarChange = useCallback((visible: boolean) => {
+    if (visible) setSheetSnap('peek');
+  }, []);
+  const closeToolsDrawer = useCallback(() => {
+    setToolsDrawerOpen(false);
+    toolsToggleRef.current?.focus();
+  }, []);
 
+  // Every visit to a game starts with the sheet lowered and the drawer shut, and leaving the
+  // phone layout (rotating a tablet, widening a window) shuts the drawer too.
   useEffect(() => {
-    if (isCompact) {
-      setLeftSidebarCollapsed(true);
-      setRightSidebarCollapsed(true);
-    }
-  }, [isCompact]);
+    setSheetSnap('peek');
+    setToolsDrawerOpen(false);
+  }, [viewMode, activeGameId, isCompact]);
   const mapRef = useRef<EuropeMapHandle | null>(null);
 
   // Sanity Check Modal State
@@ -1173,6 +1186,9 @@ export function App() {
           authUser={authUser}
           onSignIn={() => openAuthPrompt(undefined, 'signin')}
           onSignOut={handleSignOut}
+          toolsOpen={toolsDrawerOpen}
+          onToggleTools={() => setToolsDrawerOpen((open) => !open)}
+          toolsToggleRef={toolsToggleRef}
         />
       ) : (
         <header className="imperial-top-header">
@@ -1381,6 +1397,9 @@ export function App() {
           <ToolsSidebar
             collapsed={leftSidebarCollapsed}
             onToggleCollapse={() => setLeftSidebarCollapsed((prev) => !prev)}
+            variant={isCompact ? 'drawer' : 'panel'}
+            open={toolsDrawerOpen}
+            onClose={closeToolsDrawer}
             zoomPercent={zoomPercent}
             onZoomIn={() => mapRef.current?.stepZoom(0.2)}
             onZoomOut={() => mapRef.current?.stepZoom(-0.2)}
@@ -1421,6 +1440,7 @@ export function App() {
             ref={mapRef}
             onZoomChange={setZoomPercent}
             compact={isCompact}
+            onDockedBarChange={handleDockedBarChange}
             pieceStyle={displayPrefs.pieceStyle}
             unitMark={displayPrefs.unitMark}
             provinces={provinces}
@@ -1450,6 +1470,7 @@ export function App() {
               activeGameSummary?.status === 'active' &&
               !gameState.winner && (
                 <PhaseTimerWidget
+                  compact={isCompact}
                   timer={matchTimer}
                   seatPower={lockedPower}
                   isHost={isGameCreator}
@@ -1474,6 +1495,9 @@ export function App() {
           <MacroSidebar
             collapsed={rightSidebarCollapsed}
             onToggleCollapse={() => setRightSidebarCollapsed((prev) => !prev)}
+            variant={isCompact ? 'sheet' : 'panel'}
+            sheetSnap={sheetSnap}
+            onSheetSnapChange={setSheetSnap}
             provinces={provinces}
             units={gameState.units}
             orders={gameState.orders}

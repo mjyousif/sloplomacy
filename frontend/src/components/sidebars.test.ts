@@ -149,6 +149,53 @@ describe('ToolsSidebar', () => {
     expect(html).toContain('CREATOR ADMIN TOOLS');
     expect(html).toContain('Open Admin Console');
   });
+
+  describe('as the phone drawer', () => {
+    const drawer = (props: Partial<ToolsSidebarProps>) =>
+      renderToString(
+        React.createElement(ToolsSidebar, {
+          ...baseToolsProps,
+          variant: 'drawer',
+          onClose: vi.fn(),
+          ...props,
+        }),
+      );
+
+    it('shows the full tools, even when the desktop rail was collapsed, but no zoom section', () => {
+      const html = drawer({ open: true, collapsed: true });
+      expect(html).toContain('data-testid="tools-drawer"');
+      expect(html).toContain('TACTICAL MAP LEGEND');
+      expect(html).toContain('Enter Hypothetical Mode');
+      expect(html).not.toContain('tools-sidebar-collapsed');
+      // The zoom buttons are on the map on a phone.
+      expect(html).not.toContain('MAP VIEW &amp; CAMERA');
+      expect(html).not.toContain('tools-zoom-toolbar');
+    });
+
+    it('closes with its own button instead of collapsing to a rail', () => {
+      const html = drawer({ open: true });
+      expect(html).toContain('aria-label="Close tools"');
+      expect(html).not.toContain('tools-sidebar-collapse-btn');
+      expect(html).toContain('data-testid="tools-drawer-backdrop"');
+    });
+
+    it('stays mounted but inert while shut, so it can slide both ways', () => {
+      expect(drawer({ open: false })).toMatch(
+        /class="tools-drawer-layer "[^>]*inert/,
+      );
+      expect(drawer({ open: true })).not.toMatch(
+        /tools-drawer-layer[^>]*inert/,
+      );
+    });
+
+    it('leaves the desktop panel as it was', () => {
+      const html = renderToString(
+        React.createElement(ToolsSidebar, baseToolsProps),
+      );
+      expect(html).not.toContain('tools-drawer');
+      expect(html).toContain('MAP VIEW &amp; CAMERA');
+    });
+  });
 });
 
 describe('MacroSidebar', () => {
@@ -181,6 +228,74 @@ describe('MacroSidebar', () => {
     collapsed: false,
     onToggleCollapse: vi.fn(),
   };
+
+  describe('as the phone order sheet', () => {
+    const sheet = (props: Partial<MacroSidebarProps>) =>
+      renderToString(
+        React.createElement(MacroSidebar, {
+          ...baseMacroProps,
+          variant: 'sheet',
+          sheetSnap: 'peek',
+          onSheetSnapChange: vi.fn(),
+          ...props,
+        }),
+      );
+
+    it('puts the power, its counts, Confirm All, Finalize and Resolve in the peek', () => {
+      const html = sheet({});
+      const peek = html.slice(
+        html.indexOf('bottom-sheet-peek'),
+        html.indexOf('bottom-sheet-body'),
+      );
+      expect(peek).toContain('France');
+      // The desktop rail only gives the unconfirmed count in a tooltip. React's text
+      // separators move whenever the JSX is re-wrapped, so compare the text without them.
+      expect(peek.replace(/<!-- -->/g, '')).toContain(
+        '2 units · 2 SCs · 1 unconfirmed',
+      );
+      expect(peek).toContain('data-testid="btn-confirm-all"');
+      expect(peek).toContain('data-testid="btn-finalize-orders"');
+      expect(peek).toContain('data-testid="btn-adjudicate-phase"');
+    });
+
+    it('keeps the unit cards in the body, and never shows a rail', () => {
+      const html = sheet({ collapsed: true });
+      const body = html.slice(html.indexOf('bottom-sheet-body'));
+      expect(body).toContain('ACTIVE FORCE ORDERS (2 UNITS)');
+      expect(body).toContain('data-unit-id="A_PAR"');
+      expect(html).not.toContain('macro-sidebar-collapsed');
+      expect(html).not.toContain('macro-sidebar-collapse-btn');
+    });
+
+    it('makes the body inert while lowered, since it is off screen', () => {
+      expect(sheet({ sheetSnap: 'peek' })).toMatch(
+        /class="bottom-sheet-body"[^>]*inert/,
+      );
+      expect(sheet({ sheetSnap: 'half' })).not.toMatch(
+        /class="bottom-sheet-body"[^>]*inert/,
+      );
+    });
+
+    it('moves Surrender into the body in a match', () => {
+      const html = sheet({ isMultiplayer: true, onSurrenderClick: vi.fn() });
+      const peek = html.slice(
+        html.indexOf('bottom-sheet-peek'),
+        html.indexOf('bottom-sheet-body'),
+      );
+      expect(peek).not.toContain('Surrender');
+      expect(html.slice(html.indexOf('bottom-sheet-body'))).toContain(
+        'macro-sheet-surrender',
+      );
+    });
+
+    it('leaves the desktop panel as it was', () => {
+      const html = renderToString(
+        React.createElement(MacroSidebar, baseMacroProps),
+      );
+      expect(html).not.toContain('bottom-sheet');
+      expect(html).toContain('aria-label="Tactical Command &amp; Orders"');
+    });
+  });
 
   it('renders collapsed rail view when collapsed is true', () => {
     const html = renderToString(

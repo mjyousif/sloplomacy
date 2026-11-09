@@ -26,6 +26,23 @@ export function formatClock(totalSeconds: number): string {
   return `${minutes}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
+/**
+ * The phone's collapsed turn clock: one short line that says what the clock is doing. Tapping
+ * the pill opens the full widget.
+ */
+export function clockPillLabel(
+  timer: PhaseTimer | null,
+  seconds: number | null,
+  isHost: boolean,
+): string {
+  const clock = seconds === null ? '--:--' : formatClock(seconds);
+  if (!timer) return isHost ? 'Start the clock' : 'No clock yet';
+  if (timer.stage === 'voting') return `Vote · ${clock}`;
+  if (timer.stage === 'paused')
+    return `Paused · ${timer.ready_powers.length}/${timer.players.length} ready`;
+  return clock;
+}
+
 export function powersYetToVote(timer: PhaseTimer): Power[] {
   return timer.players.filter((power) => !timer.votes[power]);
 }

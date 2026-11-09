@@ -408,14 +408,25 @@ export function PieceHoldOutline({
   return <polygon points={points} {...paint} />;
 }
 
-/** Keeps a small piece as easy to click as the original token. */
-export function PieceHitArea({ frame }: { frame: PieceFrame }) {
-  if (frame.hitRadius === 0) return null;
+/**
+ * Keeps a small piece as easy to click as the original token. On a phone `minRadius` makes it
+ * finger-sized, and every style gets one, Classic included; it is transparent, so nothing
+ * looks different.
+ */
+export function PieceHitArea({
+  frame,
+  minRadius = 0,
+}: {
+  frame: PieceFrame;
+  minRadius?: number;
+}) {
+  const radius = Math.max(frame.hitRadius, minRadius);
+  if (radius === 0) return null;
   return (
     <circle
       cx={frame.center.x}
       cy={frame.center.y}
-      r={frame.hitRadius}
+      r={radius}
       fill="transparent"
     />
   );

@@ -32,10 +32,14 @@ App passes `compact` from `useCompactLayout()`. On a phone the map:
 - **Zooms to `6.0x`** (`COMPACT_MAX_ZOOM`), because pieces are only about 27px across at `3.0x`.
 - **Shows zoom buttons on the map**: zoom in, zoom out (each by 1.5×) and "Back to my units", 44px square in the bottom-right corner (`.map-zoom-controls` in `compact.css`).
 - **Drops `backdrop-filter`** from the cartouche and the unit popup, since blurring what is behind them repaints the board on every pan frame.
+- **Docks the unit menus**: the unit popup, the build popup and the coast picker render as one full-width `.unit-docked-bar` at the bottom of the map, with no drag header and no placement math. The bar's height goes on the map as `--docked-bar-h`, and the zoom buttons ride above it. `onDockedBarChange(visible)` tells App, which lowers the order sheet.
+- **Keeps a new selection in view**: when the selected unit or build slot changes, `keepPointInView` pans (without zooming) so it sits at least 80px inside the part of the map the bar leaves uncovered. An axis already in range doesn't move, and a later pan is left alone.
+- **Makes pieces finger-sized**: every piece gets a transparent hit circle at least 22px in radius on screen (`compactHitRadius`), capped at half the distance to the nearest other piece (`halfNearestDistances`) so neighbours keep their own targets. Classic and Name as piece get one too, which they don't need on desktop. It is resized once the zoom has been still for 150ms, not on every frame of a pinch.
+- **Says "Tap"** instead of "Click" in its hints.
 
-The wide layout is unchanged: it starts on `DEFAULT_CAMERA`, keeps the `3.0x` ceiling and renders no zoom buttons.
+The wide layout is unchanged: it starts on `DEFAULT_CAMERA`, keeps the `3.0x` ceiling, renders no zoom buttons, floats its popups and keeps the styles' own hit areas.
 
-The browser pane and Playwright's phone emulation send mouse events, so drag and pinch have unit tests (`mapCameraHelpers.test.ts`) but need a real phone to check by hand.
+The browser pane sends mouse events. The `mobile` E2E scenario turns on Playwright's touch emulation, so its taps arrive as touch, but neither can drag or pinch: those have unit tests (`mapCameraHelpers.test.ts`, `sheetHelpers.test.ts`) and need a real phone to check by hand.
 
 ---
 

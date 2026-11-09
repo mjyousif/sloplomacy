@@ -27,8 +27,10 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `showSimulationOverlay`| `boolean` | UI | Whether combat resolutions (arrows, bounces, cuts) are projected on the map. |
 | `adminModalOpen` | `boolean` | Modal | Controls visibility of the game creator's Admin Tools modal. |
 | `adminOverrideActive`| `boolean` | Admin | The host's Direct-Edit toggle. It only takes effect through the derived `directEditActive`, which also requires `isGameCreator`, so it does nothing in a game the player does not host. |
-| `leftSidebarCollapsed`| `boolean` | UI | Whether the Left Tools Sidebar is collapsed into a 44px rail. |
-| `rightSidebarCollapsed`| `boolean` | UI | Whether the Right Tactical Sidebar is collapsed into a 44px rail. |
+| `leftSidebarCollapsed`| `boolean` | UI | Whether the Left Tools Sidebar is collapsed into a 44px rail. Desktop only: phones have no rails. |
+| `rightSidebarCollapsed`| `boolean` | UI | Whether the Right Tactical Sidebar is collapsed into a 44px rail. Desktop only. |
+| `sheetSnap` | `'peek' \| 'half' \| 'full'` | UI (phone) | Where the phone order sheet sits. It goes back to `'peek'` whenever the game, the view or the layout changes, and drops to `'peek'` when `EuropeMap` reports through `onDockedBarChange` that its docked unit bar is up. |
+| `toolsDrawerOpen` | `boolean` | UI (phone) | Whether the tools drawer is open. ≡ toggles it, and it shuts when the game, the view or the layout changes. Closing it hands focus back to ≡ (`toolsToggleRef`). |
 | `zoomPercent` | `number` | UI | Map zoom percentage (default: `105`, more on a phone). `EuropeMap` reports it at most once per frame and after a pinch ends, so zooming doesn't re-render App on every event. |
 | `isCompact` | `boolean` | Layout | True on phone-sized screens, from `useCompactLayout()`. It follows rotation and resizes. App writes it on the shell as `data-layout`, which `compact.css` styles, and uses it to swap in `CompactTopBar`. `LobbyView` reads the same hook to say whether the Host form is "below" or "on the right". |
 | `surrenderModalOpen` | `boolean` | Modal | Controls visibility of the Surrender / Civil Disorder confirmation modal. |
