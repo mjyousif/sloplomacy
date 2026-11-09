@@ -62,7 +62,7 @@ The **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** is designed as 
 |                 +-----------------------+---------------------------+                   |
 |                                         |                                               |
 |                              +----------v-----------+                                   |
-|                              |     topology.py      |                                   |
+|                              |     topology/        |                                   |
 |                              |  - 76 Provinces      |                                   |
 |                              |  - Army/Fleet graph  |                                   |
 |                              |  - Coasts & Centers  |                                   |

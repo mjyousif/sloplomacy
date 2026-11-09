@@ -5,7 +5,7 @@ from collections import defaultdict
 from domain.models import Order, OrderResolution, OrderType, Unit, UnitType
 from engine.adjudicator.context import ResolutionContext
 from engine.adjudicator.translator import order_to_diplomacy_str
-from engine.topology import PROVINCES
+from engine.topology.provinces import PROVINCES
 
 
 def build_movement_orders(

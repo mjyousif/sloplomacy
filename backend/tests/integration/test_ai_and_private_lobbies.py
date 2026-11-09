@@ -1,6 +1,6 @@
 from domain.models import OrderType
 from engine.ai import generate_tactical_orders
-from engine.topology import get_initial_1901_units, get_initial_ownership
+from engine.topology.provinces import get_initial_1901_units, get_initial_ownership
 from fastapi.testclient import TestClient
 from main import app
 

@@ -37,7 +37,9 @@ backend/
 │   │   ├── legality.py      # Movement, per unit: legality, supports, convoys
 │   │   ├── diagnostics.py   # Movement, across units: self-bounces and direct swaps
 │   │   └── convoys.py       # has_active_convoy_chain
-│   ├── topology.py          # Europe 1901 graph topology, province records & coastline rules
+│   ├── topology/            # Europe 1901 map
+│   │   ├── provinces.py     # Province records, adjacencies & coasts, 1901 units and ownership (data)
+│   │   └── graph.py         # Movement, support & convoy reachability rules, coast parsing
 │   ├── phase_timer.py       # Multiplayer turn clock rules: votes, pausing, extensions & deadlines
 │   ├── ai.py                # Authoritative Diplomacy Tactical AI engine (DATC-compliant heuristics)
 │   └── order_utils.py       # Civil disorder rules, default orders, and build/disband calculations

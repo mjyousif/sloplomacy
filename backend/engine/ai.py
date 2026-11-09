@@ -3,7 +3,8 @@ from typing import Any
 
 from domain.models import Order, OrderType, Power, Unit, UnitType
 from engine.adjudicator.resolver import create_diplomacy_game
-from engine.topology import PROVINCES, split_province_code
+from engine.topology.graph import split_province_code
+from engine.topology.provinces import PROVINCES
 
 
 def parse_diplomacy_order_str(order_str: str, power: Power, unit_id: str) -> Order | None:

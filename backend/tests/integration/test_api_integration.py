@@ -5,7 +5,7 @@ from engine.order_utils import (
     get_required_finalizing_powers,
     resolve_static_path,
 )
-from engine.topology import PROVINCES
+from engine.topology.provinces import PROVINCES
 from fastapi.testclient import TestClient
 from main import app
 from storage.store import GAME_HISTORY, GAME_SUMMARIES, GAMES, evict_game

@@ -14,7 +14,7 @@ from engine.order_utils import (
     create_default_orders,
     refresh_diagnostics_and_simulation,
 )
-from engine.topology import get_initial_1901_units, get_initial_ownership
+from engine.topology.provinces import get_initial_1901_units, get_initial_ownership
 
 SCENARIO_IDS = {
     "standard_1901",

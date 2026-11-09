@@ -4,13 +4,8 @@ import pytest
 from domain.models import Order, OrderType, Power, ProvinceType, Unit, UnitType
 from engine.adjudicator.resolver import adjudicate_turn, create_diplomacy_game
 from engine.adjudicator.translator import order_to_diplomacy_str
-from engine.topology import (
-    PROVINCES,
-    can_unit_support_province,
-    get_initial_1901_units,
-    get_initial_ownership,
-    split_province_code,
-)
+from engine.topology.graph import can_unit_support_province, split_province_code
+from engine.topology.provinces import PROVINCES, get_initial_1901_units, get_initial_ownership
 
 
 def test_adjudicator_support_cut_by_attack():
