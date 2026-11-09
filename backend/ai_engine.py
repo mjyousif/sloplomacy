@@ -1,13 +1,12 @@
 import re
-from typing import Any, Dict, List, Optional, Set, Tuple
-import diplomacy
+from typing import Any
 
 from adjudicator import create_diplomacy_game
 from map_data import PROVINCES, split_province_code
 from models import Order, OrderType, Power, Unit, UnitType
 
 
-def parse_diplomacy_order_str(order_str: str, power: Power, unit_id: str) -> Optional[Order]:
+def parse_diplomacy_order_str(order_str: str, power: Power, unit_id: str) -> Order | None:
     """Parse a DATC order string from python diplomacy library into our Pydantic Order model."""
     s = order_str.strip()
     if not s:
@@ -167,21 +166,21 @@ def parse_diplomacy_order_str(order_str: str, power: Power, unit_id: str) -> Opt
 
 
 def generate_tactical_orders(
-    units: List[Unit],
-    ownership: Dict[str, Power],
+    units: list[Unit],
+    ownership: dict[str, Power],
     season: str,
     year: int,
     phase: str,
-    target_powers: Optional[List[Power]] = None,
-    retreats: Optional[Dict[str, Any]] = None,
-    builds: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Order]:
+    target_powers: list[Power] | None = None,
+    retreats: dict[str, Any] | None = None,
+    builds: dict[str, Any] | None = None,
+) -> dict[str, Order]:
     """
     Authoritative Diplomacy Tactical AI Engine.
     Generates intelligent, DATC-compliant, non-colliding tactical orders
     for specified Great Powers (or all powers if target_powers is None).
     """
-    ai_orders: Dict[str, Order] = {}
+    ai_orders: dict[str, Order] = {}
     powers_to_plan = target_powers or list(Power)
 
     # 1. Adjustments Phase AI
@@ -323,7 +322,7 @@ def generate_tactical_orders(
     d_game = create_diplomacy_game(units, ownership, season, year, "Movement")
     all_possible = d_game.get_all_possible_orders()
 
-    units_by_prov: Dict[str, Unit] = {u.province: u for u in units}
+    units_by_prov: dict[str, Unit] = {u.province: u for u in units}
     neutral_scs = {
         pid for pid, pinfo in PROVINCES.items() if pinfo.is_supply_center and pid not in ownership
     }
@@ -349,16 +348,16 @@ def generate_tactical_orders(
         if not p_units:
             continue
 
-        assigned_targets: Set[str] = set()
-        planned_moves: Dict[str, Tuple[str, Optional[str]]] = {}
-        unit_orders: Dict[str, Order] = {}
+        assigned_targets: set[str] = set()
+        planned_moves: dict[str, tuple[str, str | None]] = {}
+        unit_orders: dict[str, Order] = {}
 
         # First pass: Score and assign primary MOVE or HOLD orders
         for u in p_units:
             loc_key = f"{u.province}/{u.coast}" if u.coast else u.province
             candidate_strs = all_possible.get(loc_key, all_possible.get(u.province, []))
 
-            scored_candidates: List[Tuple[float, str, Any]] = []
+            scored_candidates: list[tuple[float, str, Any]] = []
             for c_str in candidate_strs:
                 parsed = parse_diplomacy_order_str(c_str, p, u.id)
                 if not parsed:

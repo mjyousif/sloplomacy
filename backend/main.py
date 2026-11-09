@@ -1,13 +1,26 @@
 import asyncio
+import hmac
+import logging
 import os
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+import time
+import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from collections import defaultdict
-import time
-from typing import Any, Dict, List, Optional, Set, Tuple
-import uuid
+from typing import Any
+
+from adjudicator import adjudicate_turn, compute_current_builds, create_diplomacy_game
+from ai_engine import generate_tactical_orders
+from auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
+from database import (
+    SupabaseUnavailable,
+    delete_game_from_db,
+    is_persistence_enabled,
+    is_valid_uuid,
+    load_all_summaries_from_db,
+    load_game_from_db,
+    save_game_to_db,
+)
 from fastapi import (
     Depends,
     FastAPI,
@@ -19,14 +32,10 @@ from fastapi import (
     WebSocketDisconnect,
     status,
 )
-from auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials
-from starlette.concurrency import run_in_threadpool
-from pydantic import BaseModel
-
-from adjudicator import adjudicate_turn, compute_current_builds, create_diplomacy_game
+from fastapi.staticfiles import StaticFiles
 from map_data import PROVINCES, get_initial_1901_units, get_initial_ownership
 from models import (
     AdminDestroyUnitRequest,
@@ -60,25 +69,14 @@ from models import (
     TimerStage,
     TimerToggleRequest,
     TimerVoteRequest,
-    WebSocketGameUpdate,
-    WebSocketLobbyUpdate,
     Unit,
     UnitType,
 )
-from ai_engine import generate_tactical_orders
 from phase_timer import close_vote, has_expired, settle_timer, start_phase_clock
+from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
+from starlette.middleware.gzip import GZipMiddleware
 from validator import validate_orders
-import logging
-from database import (
-    SupabaseUnavailable,
-    delete_game_from_db,
-    is_persistence_enabled,
-    is_valid_uuid,
-    load_all_summaries_from_db,
-    load_game_from_db,
-    save_game_to_db,
-)
-import hmac
 
 logger = logging.getLogger("diplomacy.server")
 
@@ -213,9 +211,7 @@ def validate_order_references(order: Order) -> None:
             )
 
 
-def fleet_coast(
-    unit_type: UnitType, province: ProvinceInfo, requested: Optional[str]
-) -> Optional[str]:
+def fleet_coast(unit_type: UnitType, province: ProvinceInfo, requested: str | None) -> str | None:
     """
     Return the coast a unit stands on. Only a fleet on a split-coast province has one.
 
@@ -227,7 +223,7 @@ def fleet_coast(
     return requested if requested in province.coasts else province.coasts[0]
 
 
-def resolve_static_path(static_root: str, requested: str) -> Optional[str]:
+def resolve_static_path(static_root: str, requested: str) -> str | None:
     """Return the file `requested` names inside static_root, or None if it is missing or outside it."""
     root = Path(static_root).resolve()
     try:
@@ -253,15 +249,15 @@ def default_build_slot(power: Power, home: str) -> Order:
 
 
 def create_default_orders(
-    units: List[Unit],
+    units: list[Unit],
     phase: str = "Movement",
-    builds: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Order]:
+    builds: dict[str, Any] | None = None,
+) -> dict[str, Order]:
     """
     Return what every unit does if nobody orders it, which follows the rulebook: a unit holds, a
     dislodged unit disbands, and a build is waived. The same goes for empty seats and civil disorder.
     """
-    orders: Dict[str, Order] = {}
+    orders: dict[str, Order] = {}
     if phase == "Retreats":
         for u in units:
             orders[u.id] = Order(
@@ -358,7 +354,7 @@ def refresh_diagnostics_and_simulation(game: GameState) -> None:
 
 def build_scenario(
     scenario_id: str,
-    active_power: Optional[Power] = None,
+    active_power: Power | None = None,
     game_id: str = "proto_1901",
 ) -> GameState:
     units = get_initial_1901_units()
@@ -511,23 +507,23 @@ def build_scenario(
 
 
 DEFAULT_GAME_ID = "proto_1901"
-GAMES: Dict[str, GameState] = {
+GAMES: dict[str, GameState] = {
     DEFAULT_GAME_ID: build_scenario("standard_1901", Power.FRANCE, DEFAULT_GAME_ID)
 }
-SANDBOX_CHECKPOINTS: Dict[str, Optional[GameState]] = {DEFAULT_GAME_ID: None}
-GAME_HISTORY: Dict[str, List[GameState]] = {DEFAULT_GAME_ID: []}
-GAME_SUMMARIES: Dict[str, MultiplayerGameSummary] = {}
-GAME_PASSCODES: Dict[str, str] = {}
+SANDBOX_CHECKPOINTS: dict[str, GameState | None] = {DEFAULT_GAME_ID: None}
+GAME_HISTORY: dict[str, list[GameState]] = {DEFAULT_GAME_ID: []}
+GAME_SUMMARIES: dict[str, MultiplayerGameSummary] = {}
+GAME_PASSCODES: dict[str, str] = {}
 # Games whose newest state is not confirmed saved, so Supabase may not even have a row for them.
-UNSAVED_GAMES: Set[str] = set()
+UNSAVED_GAMES: set[str] = set()
 # Games with a save running. The value turns True if the game changes during it, so it repeats.
-SAVES_RUNNING: Dict[str, bool] = {}
+SAVES_RUNNING: dict[str, bool] = {}
 # Games whose rollback history differs from what is saved. History only changes when a turn does,
 # so other saves leave it out: it is the bulk of a save, and every order click saves.
-HISTORY_UNSAVED: Set[str] = set()
+HISTORY_UNSAVED: set[str] = set()
 # Private what-if copies of multiplayer matches: sandbox id -> (match id, the player's power).
 # They exist only in this process and are never saved, listed or shown to other players.
-PRIVATE_SANDBOXES: Dict[str, Tuple[str, Power]] = {}
+PRIVATE_SANDBOXES: dict[str, tuple[str, Power]] = {}
 
 
 def seed_initial_multiplayer_lobbies() -> None:
@@ -710,7 +706,7 @@ async def startup_event() -> None:
             logger.warning("Could not synchronize games on startup: %s", ex)
 
 
-async def load_saved_game(game_id: str) -> Optional[tuple]:
+async def load_saved_game(game_id: str) -> tuple | None:
     """Read a game from Supabase, answering 503 rather than treating a failed read as no game."""
     try:
         return await load_game_from_db(game_id)
@@ -744,7 +740,7 @@ def cache_loaded_game(game_id: str, loaded: tuple) -> GameState:
     return state
 
 
-async def resolve_game(game_id: Optional[str] = None) -> GameState:
+async def resolve_game(game_id: str | None = None) -> GameState:
     gid = game_id or DEFAULT_GAME_ID
     if gid in GAMES:
         return GAMES[gid]
@@ -775,7 +771,7 @@ def sync_summary(game_id: str) -> None:
 
 def verify_admin_access(
     game_id: str,
-    user: Optional[AuthUser] = None,
+    user: AuthUser | None = None,
 ) -> None:
     """Verify that the caller has game creator / administrator permissions for this game."""
     gid = game_id or DEFAULT_GAME_ID
@@ -824,7 +820,7 @@ def is_multiplayer_match(game_id: str) -> bool:
 def verify_power_authorization(
     game_id: str,
     power: Power,
-    current_user: Optional[AuthUser] = None,
+    current_user: AuthUser | None = None,
 ) -> None:
     """
     Verify that the caller is authorized to command `power` in this match.
@@ -879,9 +875,9 @@ def verify_power_authorization(
 
 
 def caller_holds_seat(
-    summary: Optional[MultiplayerGameSummary],
+    summary: MultiplayerGameSummary | None,
     power: Power,
-    current_user: Optional[AuthUser],
+    current_user: AuthUser | None,
 ) -> bool:
     """
     True when the caller sits in `power`'s seat. Unlike `verify_power_authorization`, being the host
@@ -906,9 +902,9 @@ def caller_holds_seat(
 
 def viewer_power_for(
     game_id: str,
-    current_user: Optional[AuthUser],
-    requested: Optional[Power] = None,
-) -> Optional[Power]:
+    current_user: AuthUser | None,
+    requested: Power | None = None,
+) -> Power | None:
     """
     The power whose hidden orders this caller may see in a live match: always one of their own
     seats, never one they merely name. `requested` only picks among seats they hold.
@@ -926,7 +922,7 @@ def viewer_power_for(
     return None
 
 
-def build_slot_power(slot_id: str) -> Optional[Power]:
+def build_slot_power(slot_id: str) -> Power | None:
     """The power a build slot (`BUILD_<POWER>_<PROVINCE>`) belongs to, whatever an order claims."""
     parts = slot_id.split("_")
     if len(parts) < 3 or parts[0] != "BUILD":
@@ -937,7 +933,7 @@ def build_slot_power(slot_id: str) -> Optional[Power]:
         return None
 
 
-def require_own_seat(game_id: str, power: Power, current_user: Optional[AuthUser]) -> None:
+def require_own_seat(game_id: str, power: Power, current_user: AuthUser | None) -> None:
     """Refuse anything that would show `power`'s hidden orders to someone not in that seat."""
     if is_multiplayer_match(game_id) and not caller_holds_seat(
         GAME_SUMMARIES.get(game_id), power, current_user
@@ -950,7 +946,7 @@ def require_own_seat(game_id: str, power: Power, current_user: Optional[AuthUser
 
 def sanitize_game_state_for_viewer(
     game: GameState,
-    viewer_power: Optional[Power] = None,
+    viewer_power: Power | None = None,
 ) -> GameState:
     """
     Preserve simultaneous move secrecy (Fog of War) in active multiplayer matches.
@@ -1011,18 +1007,16 @@ class ConnectionManager:
     """Manages active WebSocket connections for game rooms and lobby."""
 
     def __init__(self) -> None:
-        self.game_connections: Dict[str, Dict[WebSocket, Optional[Power]]] = defaultdict(dict)
-        self.lobby_connections: Set[WebSocket] = set()
+        self.game_connections: dict[str, dict[WebSocket, Power | None]] = defaultdict(dict)
+        self.lobby_connections: set[WebSocket] = set()
 
     async def connect_game(
-        self, game_id: str, websocket: WebSocket, power: Optional[Power] = None
+        self, game_id: str, websocket: WebSocket, power: Power | None = None
     ) -> None:
         await websocket.accept()
         self.game_connections[game_id][websocket] = power
 
-    def register_game(
-        self, game_id: str, websocket: WebSocket, power: Optional[Power] = None
-    ) -> None:
+    def register_game(self, game_id: str, websocket: WebSocket, power: Power | None = None) -> None:
         """Add a socket that has already been accepted."""
         self.game_connections[game_id][websocket] = power
 
@@ -1041,8 +1035,8 @@ class ConnectionManager:
     async def broadcast_game(
         self,
         game_id: str,
-        state: Optional[GameState] = None,
-        summary: Optional[MultiplayerGameSummary] = None,
+        state: GameState | None = None,
+        summary: MultiplayerGameSummary | None = None,
     ) -> None:
         connections = self.game_connections.get(game_id)
         if not connections:
@@ -1055,7 +1049,7 @@ class ConnectionManager:
         if state is None:
             return
 
-        dead: List[WebSocket] = []
+        dead: list[WebSocket] = []
         for ws, ws_power in list(connections.items()):
             ws_state = sanitize_game_state_for_viewer(state, ws_power)
             payload = {
@@ -1084,7 +1078,7 @@ class ConnectionManager:
             "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values()],
         }
 
-        dead: List[WebSocket] = []
+        dead: list[WebSocket] = []
         for ws in list(self.lobby_connections):
             try:
                 await ws.send_json(payload)
@@ -1100,8 +1094,8 @@ manager = ConnectionManager()
 
 async def broadcast_game_update(
     game_id: str,
-    state: Optional[GameState] = None,
-    summary: Optional[MultiplayerGameSummary] = None,
+    state: GameState | None = None,
+    summary: MultiplayerGameSummary | None = None,
 ) -> None:
     sync_summary(game_id)
     await manager.broadcast_game(game_id, state=state, summary=summary)
@@ -1113,8 +1107,8 @@ async def broadcast_lobby_update() -> None:
 
 class GameBootstrapResponse(BaseModel):
     state: GameState
-    provinces: Dict[str, ProvinceInfo]
-    summary: Optional[MultiplayerGameSummary] = None
+    provinces: dict[str, ProvinceInfo]
+    summary: MultiplayerGameSummary | None = None
 
 
 class SetPowerRequest(BaseModel):
@@ -1152,7 +1146,7 @@ async def sync_lobby_with_db() -> None:
 
 @app.get(
     "/api/games",
-    response_model=List[MultiplayerGameSummary],
+    response_model=list[MultiplayerGameSummary],
     tags=["Lobby & Match Management"],
     summary="List Games",
     description="Return all multiplayer games, open lobbies, and saved sessions.",
@@ -1211,7 +1205,7 @@ async def get_game_details(game_id: str):
 )
 async def delete_game(
     game_id: str,
-    user: Optional[AuthUser] = Depends(get_current_user),
+    user: AuthUser | None = Depends(get_current_user),
 ):
     """Delete a game lobby and its persisted state in Supabase."""
     if game_id == DEFAULT_GAME_ID:
@@ -1252,7 +1246,7 @@ async def delete_game(
 )
 async def create_multiplayer_game(
     req: CreateGameRequest,
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     """Create a new multiplayer game and assign creator_power to the user."""
     check_game_capacity()
@@ -1311,7 +1305,7 @@ async def create_multiplayer_game(
 async def join_multiplayer_game(
     game_id: str,
     req: JoinGameRequest,
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     """Claim a power in a multiplayer match (or re-enter if already claimed by this user)."""
     game_state = await resolve_game(game_id)
@@ -1402,7 +1396,7 @@ async def join_multiplayer_game(
 async def leave_game(
     game_id: str,
     req: LeaveGameRequest,
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     """Leave a multiplayer match (vacating claimed power) or remove a saved sandbox scenario."""
     game_state = await resolve_game(game_id)
@@ -1442,7 +1436,7 @@ async def leave_game(
             )
 
     # Locate participant entries for this user
-    leaving_powers: List[Power] = []
+    leaving_powers: list[Power] = []
     for p_key, part in list(summary.participants.items()):
         if part.user_id == effective_user_id and (req.power is None or part.power == req.power):
             leaving_powers.append(part.power)
@@ -1515,7 +1509,7 @@ async def leave_game(
 async def surrender_power(
     game_id: str,
     req: SurrenderRequest,
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     """Concede defeat/surrender sovereign command of a Great Power into Civil Disorder."""
     game_state = await resolve_game(game_id)
@@ -1525,7 +1519,6 @@ async def surrender_power(
 
     p_val = req.power.value if hasattr(req.power, "value") else str(req.power)
     part = summary.participants.get(p_val)
-    effective_user_id = current_user.user_id if current_user else req.user_id
     if part:
         if current_user:
             if part.user_id != current_user.user_id and (
@@ -1594,8 +1587,8 @@ async def surrender_power(
 )
 async def save_sandbox_to_account(
     req: SaveSandboxRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     """Save the current sandbox game state into the authenticated user's personal games."""
     check_game_capacity()
@@ -1654,11 +1647,11 @@ async def save_sandbox_to_account(
     description="Bootstrap client by returning current GameState (scoped by caller seat under Fog of War) and province topology dictionary.",
 )
 async def get_game(
-    game_id: Optional[str] = Query(default=None),
-    power: Optional[Power] = Query(default=None),
-    passcode: Optional[str] = Query(default=None),
-    x_passcode: Optional[str] = Header(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    game_id: str | None = Query(default=None),
+    power: Power | None = Query(default=None),
+    passcode: str | None = Query(default=None),
+    x_passcode: str | None = Header(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
     await tick_timer(game)
@@ -1702,8 +1695,8 @@ async def get_game(
 )
 async def set_active_power(
     req: SetPowerRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
     gid = game.game_id
@@ -1815,8 +1808,8 @@ async def close_private_sandbox(sandbox: GameState) -> GameState:
 )
 async def enter_sandbox_mode(
     req: SetPowerRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     """
     Enter Sandbox Pre-Move Mode.
@@ -1849,8 +1842,8 @@ async def enter_sandbox_mode(
 )
 async def exit_sandbox_mode(
     req: SetPowerRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     """
     Exit Sandbox Pre-Move Mode:
@@ -1879,7 +1872,7 @@ async def exit_sandbox_mode(
             and game.year == checkpoint.year
             and game.phase == checkpoint.phase
         )
-        saved_own_orders: Dict[str, Order] = {}
+        saved_own_orders: dict[str, Order] = {}
         if same_turn:
             for uid, ord_obj in game.orders.items():
                 if ord_obj.power == req.power:
@@ -1910,9 +1903,7 @@ async def exit_sandbox_mode(
     summary="Clear Foreign Pre-Moves",
     description="Reset all hypothetical orders in sandbox mode for powers other than req.power back to default HOLD.",
 )
-async def clear_foreign_pre_moves(
-    req: SetPowerRequest, game_id: Optional[str] = Query(default=None)
-):
+async def clear_foreign_pre_moves(req: SetPowerRequest, game_id: str | None = Query(default=None)):
     """Reset all hypothetical orders for powers other than req.power back to default."""
     game = await resolve_game(game_id)
     reject_on_multiplayer_match(game.game_id)
@@ -1931,8 +1922,8 @@ async def clear_foreign_pre_moves(
     description="Generate DATC-compliant heuristic tactical orders for specified Great Powers or foreign powers in sandbox mode.",
 )
 async def generate_sandbox_ai_orders(
-    req: Optional[GenerateAIOrdersRequest] = None,
-    game_id: Optional[str] = Query(default=None),
+    req: GenerateAIOrdersRequest | None = None,
+    game_id: str | None = Query(default=None),
 ):
     """Generate intelligent tactical orders for specified Great Powers or all foreign powers."""
     game = await resolve_game(game_id)
@@ -1971,7 +1962,7 @@ async def generate_sandbox_ai_orders(
     summary="Step Turn With AI",
     description="Auto-plan unassigned foreign powers with tactical AI and advance to next phase in sandbox mode.",
 )
-async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
+async def step_turn_with_ai(game_id: str | None = Query(default=None)):
     """Auto-plan unassigned foreign powers with tactical AI and advance to next phase."""
     game = await resolve_game(game_id)
     reject_on_multiplayer_match(game.game_id)
@@ -2012,8 +2003,8 @@ async def step_turn_with_ai(game_id: Optional[str] = Query(default=None)):
 )
 async def update_single_order(
     req: SingleOrderUpdateRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
     reject_stale_turn(game, req.turn)
@@ -2123,8 +2114,8 @@ async def update_single_order(
 )
 async def update_batch_orders(
     req: OrderSubmissionRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
     verify_power_authorization(game.game_id, req.power, current_user)
@@ -2182,12 +2173,12 @@ async def update_batch_orders(
 )
 async def confirm_all_power_orders(
     req: SetPowerRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
     verify_power_authorization(game.game_id, req.power, current_user)
-    for ord_id, ord_obj in game.orders.items():
+    for ord_obj in game.orders.values():
         if ord_obj.power == req.power:
             ord_obj.is_explicit = True
     refresh_diagnostics_and_simulation(game)
@@ -2197,14 +2188,14 @@ async def confirm_all_power_orders(
 
 
 def get_required_finalizing_powers(
-    game: GameState, summary: Optional[MultiplayerGameSummary] = None
-) -> List[Power]:
+    game: GameState, summary: MultiplayerGameSummary | None = None
+) -> list[Power]:
     """Determine which powers must finalize before auto-adjudication occurs in multiplayer."""
     if not summary or summary.is_sandbox:
         return []
 
-    claimed_powers: List[Power] = []
-    for p_key, part in summary.participants.items():
+    claimed_powers: list[Power] = []
+    for part in summary.participants.values():
         if not part.surrendered and part.power not in game.surrendered_powers:
             claimed_powers.append(part.power)
 
@@ -2227,7 +2218,7 @@ def get_required_finalizing_powers(
         return [p for p in claimed_powers if p in dislodged_powers]
 
     elif game.phase == "Adjustments":
-        adj_powers: Set[Power] = set()
+        adj_powers: set[Power] = set()
         if game.builds:
             for p_str, b_dict in game.builds.items():
                 count = b_dict.get("count", 0) if isinstance(b_dict, dict) else 0
@@ -2251,8 +2242,8 @@ def get_required_finalizing_powers(
 )
 async def finalize_power_orders(
     req: FinalizeRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
     reject_stale_turn(game, req.turn)
@@ -2276,7 +2267,7 @@ async def finalize_power_orders(
             state=sanitize_game_state_for_viewer(game, req.power),
         )
 
-    for ord_id, ord_obj in game.orders.items():
+    for ord_obj in game.orders.values():
         if ord_obj.power == req.power:
             ord_obj.is_explicit = True
 
@@ -2310,8 +2301,8 @@ async def finalize_power_orders(
 )
 async def unfinalize_power_orders(
     req: SetPowerRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
     verify_power_authorization(game.game_id, req.power, current_user)
@@ -2333,13 +2324,14 @@ async def unfinalize_power_orders(
     description="Execute non-destructive tactical preview resolution using official DATC rules.",
 )
 async def simulate_current_orders(
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
     refresh_diagnostics_and_simulation(game)
     visible = sanitize_game_state_for_viewer(game, viewer_power_for(game.game_id, current_user))
-    assert visible.last_resolution is not None
+    if visible.last_resolution is None:
+        raise HTTPException(status_code=500, detail="Tactical preview could not be computed.")
     return visible.last_resolution
 
 
@@ -2427,10 +2419,10 @@ async def _execute_adjudication(game: GameState) -> GameState:
     description="Commit orders, resolve combat, dislodgements, retreats, and adjustments, advancing the game phase (creator only in multiplayer).",
 )
 async def adjudicate_and_advance(
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
-    x_user_id: Optional[str] = Header(default=None),
-    x_user_email: Optional[str] = Header(default=None),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+    x_user_id: str | None = Header(default=None),
+    x_user_email: str | None = Header(default=None),
 ):
     game = await resolve_game(game_id)
     gid = game.game_id
@@ -2444,7 +2436,7 @@ async def adjudicate_and_advance(
     return await _execute_adjudication(game)
 
 
-def timer_players(game: GameState) -> List[Power]:
+def timer_players(game: GameState) -> list[Power]:
     """The powers that vote on and share the clock: everyone seated and still in the game."""
     summary = GAME_SUMMARIES.get(game.game_id)
     if not summary or summary.is_sandbox or summary.status != "active":
@@ -2507,7 +2499,7 @@ async def publish_timer(game: GameState) -> GameState:
     return game
 
 
-def reject_stale_turn(game: GameState, turn: Optional[str]) -> None:
+def reject_stale_turn(game: GameState, turn: str | None) -> None:
     """Refuse a request made for a turn that has since resolved."""
     current = f"{game.season} {game.year} {game.phase}"
     if turn and turn != current:
@@ -2520,7 +2512,7 @@ async def require_timer_player(
     game_id: str,
     power: Power,
     stage: TimerStage,
-    current_user: Optional[AuthUser] = None,
+    current_user: AuthUser | None = None,
 ) -> GameState:
     """Load a game for a player's action on the clock, which must be in the given stage."""
     game = await resolve_game(game_id)
@@ -2559,7 +2551,7 @@ async def require_timer_player(
     summary="Start Phase Clock",
     description="Start the turn clock for a match (creator only), opening the duration vote for Movement phases.",
 )
-async def start_timer(game_id: str, current_user: Optional[AuthUser] = Depends(get_current_user)):
+async def start_timer(game_id: str, current_user: AuthUser | None = Depends(get_current_user)):
     """Start the clock for a match (Creator Only). From here on it runs by itself."""
     game = await resolve_game(game_id)
     verify_admin_access(game.game_id, current_user)
@@ -2584,7 +2576,7 @@ async def start_timer(game_id: str, current_user: Optional[AuthUser] = Depends(g
 async def vote_on_timer(
     game_id: str,
     req: TimerVoteRequest,
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     """Choose this phase's length. The vote closes early once every player has voted."""
     game = await require_timer_player(game_id, req.power, TimerStage.VOTING, current_user)
@@ -2603,7 +2595,7 @@ async def vote_on_timer(
 async def request_timer_extension(
     game_id: str,
     req: TimerToggleRequest,
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     """Ask for 5 more minutes, which are added once 5 of 7 players have asked."""
     game = await require_timer_player(game_id, req.power, TimerStage.RUNNING, current_user)
@@ -2626,7 +2618,7 @@ async def request_timer_extension(
 async def ready_up_timer(
     game_id: str,
     req: TimerToggleRequest,
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     """Ready up in a paused game. Once every player is ready a new vote opens."""
     game = await require_timer_player(game_id, req.power, TimerStage.PAUSED, current_user)
@@ -2648,8 +2640,8 @@ async def ready_up_timer(
 )
 async def load_scenario(
     req: ScenarioRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     if req.scenario_id not in SCENARIO_IDS:
         raise HTTPException(status_code=400, detail=f"Unknown scenario '{req.scenario_id}'.")
@@ -2730,10 +2722,10 @@ async def seed_test_scenario(req: SeedScenarioRequest):
     description="Check creator/admin privileges and rollback history depth for the given game.",
 )
 def get_admin_status(
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
-    x_user_id: Optional[str] = Header(default=None),
-    x_user_email: Optional[str] = Header(default=None),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+    x_user_id: str | None = Header(default=None),
+    x_user_email: str | None = Header(default=None),
 ):
     """Check creator/admin privileges and rollback history depth for the given game."""
     gid = game_id or DEFAULT_GAME_ID
@@ -2775,11 +2767,11 @@ def get_admin_status(
     description="Roll back to the previous turn snapshot in history (creator only).",
 )
 async def admin_rollback_turn(
-    req: Optional[AdminRollbackRequest] = None,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
-    x_user_id: Optional[str] = Header(default=None),
-    x_user_email: Optional[str] = Header(default=None),
+    req: AdminRollbackRequest | None = None,
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+    x_user_id: str | None = Header(default=None),
+    x_user_email: str | None = Header(default=None),
 ):
     """Roll back to the previous turn snapshot in history (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
@@ -2825,10 +2817,10 @@ async def admin_rollback_turn(
 )
 async def admin_set_turn(
     req: AdminSetTurnRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
-    x_user_id: Optional[str] = Header(default=None),
-    x_user_email: Optional[str] = Header(default=None),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+    x_user_id: str | None = Header(default=None),
+    x_user_email: str | None = Header(default=None),
 ):
     """Arbitrarily adjust season, year, or phase (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
@@ -2877,10 +2869,10 @@ async def admin_set_turn(
 )
 async def admin_move_unit(
     req: AdminMoveUnitRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
-    x_user_id: Optional[str] = Header(default=None),
-    x_user_email: Optional[str] = Header(default=None),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+    x_user_id: str | None = Header(default=None),
+    x_user_email: str | None = Header(default=None),
 ):
     """Arbitrarily teleport/move any unit to any valid province on the map (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
@@ -2955,10 +2947,10 @@ async def admin_move_unit(
 )
 async def admin_spawn_unit(
     req: AdminSpawnUnitRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
-    x_user_id: Optional[str] = Header(default=None),
-    x_user_email: Optional[str] = Header(default=None),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+    x_user_id: str | None = Header(default=None),
+    x_user_email: str | None = Header(default=None),
 ):
     """Arbitrarily spawn a unit anywhere on the board (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
@@ -3039,10 +3031,10 @@ async def admin_spawn_unit(
 )
 async def admin_destroy_unit(
     req: AdminDestroyUnitRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
-    x_user_id: Optional[str] = Header(default=None),
-    x_user_email: Optional[str] = Header(default=None),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+    x_user_id: str | None = Header(default=None),
+    x_user_email: str | None = Header(default=None),
 ):
     """Arbitrarily destroy/disband any unit on the board (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
@@ -3078,10 +3070,10 @@ async def admin_destroy_unit(
 )
 async def admin_set_ownership(
     req: AdminSetOwnershipRequest,
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
-    x_user_id: Optional[str] = Header(default=None),
-    x_user_email: Optional[str] = Header(default=None),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+    x_user_id: str | None = Header(default=None),
+    x_user_email: str | None = Header(default=None),
 ):
     """Arbitrarily reassign province/supply center ownership (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
@@ -3122,10 +3114,10 @@ async def admin_set_ownership(
     description="Unlock and unfinalize orders for all Great Powers simultaneously (creator only).",
 )
 async def admin_unfinalize_all(
-    game_id: Optional[str] = Query(default=None),
-    current_user: Optional[AuthUser] = Depends(get_current_user),
-    x_user_id: Optional[str] = Header(default=None),
-    x_user_email: Optional[str] = Header(default=None),
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+    x_user_id: str | None = Header(default=None),
+    x_user_email: str | None = Header(default=None),
 ):
     """Unlock and unfinalize orders for all Great Powers (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
@@ -3145,7 +3137,7 @@ async def admin_unfinalize_all(
 SOCKET_AUTH_TIMEOUT_SECONDS = 10.0
 
 
-async def receive_socket_identity(websocket: WebSocket) -> Optional[AuthUser]:
+async def receive_socket_identity(websocket: WebSocket) -> AuthUser | None:
     """
     Read who is on an accepted game socket.
 
@@ -3171,8 +3163,8 @@ async def receive_socket_identity(websocket: WebSocket) -> Optional[AuthUser]:
 async def ws_game_endpoint(
     websocket: WebSocket,
     game_id: str,
-    power: Optional[str] = Query(default=None),
-    passcode: Optional[str] = Query(default=None),
+    power: str | None = Query(default=None),
+    passcode: str | None = Query(default=None),
     handshake: bool = Query(default=False),
 ):
     if game_id not in GAMES and is_persistence_enabled():
@@ -3191,7 +3183,7 @@ async def ws_game_endpoint(
     await websocket.accept()
     current_user = await receive_socket_identity(websocket) if handshake else None
 
-    requested: Optional[Power] = None
+    requested: Power | None = None
     if power:
         try:
             requested = Power(power.upper())

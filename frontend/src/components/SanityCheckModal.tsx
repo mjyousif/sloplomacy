@@ -1,5 +1,3 @@
-import React from 'react';
-import { POWER_METADATA, Power, ValidationIssue } from '../types/diplomacy';
 import {
   AlertOctagon,
   AlertTriangle,
@@ -8,6 +6,12 @@ import {
   ShieldAlert,
   X,
 } from 'lucide-react';
+import type React from 'react';
+import {
+  POWER_METADATA,
+  type Power,
+  type ValidationIssue,
+} from '../types/diplomacy';
 
 interface SanityCheckModalProps {
   isOpen: boolean;

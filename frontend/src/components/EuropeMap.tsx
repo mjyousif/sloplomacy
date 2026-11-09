@@ -1,4 +1,21 @@
-import React, {
+import {
+  Anchor,
+  Crosshair,
+  Eye,
+  GripHorizontal,
+  Maximize2,
+  MoveRight,
+  Play,
+  PlusCircle,
+  Shield,
+  Swords,
+  Trash2,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
+import type React from 'react';
+import {
   forwardRef,
   memo,
   useCallback,
@@ -16,8 +33,8 @@ import {
   AUTHENTIC_NAMES_SVG,
   EUROPE_PROVINCE_GEOMETRY,
   MAP_VIEWBOX,
-  Point,
-  ProvinceGeometry,
+  type Point,
+  type ProvinceGeometry,
 } from '../data/europeMapGeometry';
 import {
   getMapLayout,
@@ -26,25 +43,20 @@ import {
 } from '../data/mapLayouts';
 import { MAP_NAME_FONT, measureMapName } from '../data/mapTextMetrics';
 import {
-  IssueSeverity,
-  Order,
+  type IssueSeverity,
+  type Order,
   POWER_METADATA,
-  Power,
-  ProvinceInfo,
-  SimulationResult,
-  Unit,
-  ValidationIssue,
+  type Power,
+  type ProvinceInfo,
+  type SimulationResult,
+  type Unit,
+  type ValidationIssue,
 } from '../types/diplomacy';
+import type { PieceStyle, UnitMark } from '../utils/displayPrefs';
 import {
-  canUnitSupportInto,
-  getReachableDestinations,
-  getValidRetreatDestinations,
-  getActiveOrderButton,
-} from '../utils/orderHelpers';
-import {
-  CameraBoundsOptions,
-  clampCamera,
+  type CameraBoundsOptions,
   COMPACT_MAX_ZOOM,
+  clampCamera,
   DEFAULT_CAMERA,
   elementPointToViewBox,
   getPhoneDefaultCamera,
@@ -54,35 +66,22 @@ import {
   pinchStep,
   zoomAtPoint,
 } from '../utils/mapCameraHelpers';
-import { PieceStyle, UnitMark } from '../utils/displayPrefs';
+import {
+  canUnitSupportInto,
+  getActiveOrderButton,
+  getReachableDestinations,
+  getValidRetreatDestinations,
+} from '../utils/orderHelpers';
 import {
   getPieceArrowScale,
   getPieceFrame,
-  makePiecePill,
   MapPiece,
+  makePiecePill,
   PieceHitArea,
   PieceHoldOutline,
   PieceOutline,
   SupplyStar,
 } from './MapPiece';
-import {
-  AlertTriangle,
-  Anchor,
-  Compass,
-  Crosshair,
-  Eye,
-  GripHorizontal,
-  Maximize2,
-  MoveRight,
-  Play,
-  PlusCircle,
-  Shield,
-  Swords,
-  Trash2,
-  X,
-  ZoomIn,
-  ZoomOut,
-} from 'lucide-react';
 
 export interface EuropeMapHandle {
   stepZoom: (delta: number) => void;
@@ -552,7 +551,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
     useEffect(() => {
       menuDragOffsetRef.current = { x: 0, y: 0 };
       setMoveModeChosen(false);
-    }, [selectedUnitId]);
+    }, []);
 
     const isAdjustmentPhase = phase === 'Adjustments' || season === 'Winter';
     const isRetreatPhase = phase === 'Retreats';
@@ -1597,7 +1596,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       // App gave a new callback, so tell it the zoom even if the figure hasn't changed.
       reportedZoomRef.current = null;
       reportZoom();
-    }, [onZoomChange, reportZoom]);
+    }, [reportZoom]);
 
     const floatingPos = getSelectedUnitFloatingPosition();
     const activeOrderButton = getActiveOrderButton(

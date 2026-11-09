@@ -1,9 +1,9 @@
 import {
-  GameState,
-  PhaseTimer,
-  Power,
+  type GameState,
+  type PhaseTimer,
   POWER_METADATA,
-  TimerChoice,
+  type Power,
+  type TimerChoice,
 } from '../types/diplomacy';
 
 export const TIMER_OPTIONS: { choice: TimerChoice; label: string }[] = [

@@ -6,14 +6,14 @@ would hang the test run. `receive_json(ws)` fails the test instead.
 """
 
 import threading
-from typing import Any, Dict
+from typing import Any
 
 RECEIVE_TIMEOUT_SECONDS = 5.0
 
 
 def receive_json(ws: Any, timeout: float = RECEIVE_TIMEOUT_SECONDS) -> Any:
     """Return the next JSON message on `ws`, or fail if none arrives within `timeout` seconds."""
-    outcome: Dict[str, Any] = {}
+    outcome: dict[str, Any] = {}
 
     def read() -> None:
         try:

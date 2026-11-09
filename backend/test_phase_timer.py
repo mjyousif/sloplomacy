@@ -4,10 +4,9 @@ import asyncio
 import time
 
 import jwt
+import main
 import pytest
 from fastapi.testclient import TestClient
-
-import main
 from main import GAME_HISTORY, GAME_SUMMARIES, GAMES, PRIVATE_SANDBOXES, app, tick_timer
 from models import GameState, PhaseTimer, Power, TimerChoice, TimerStage
 from phase_timer import FIXED_PHASE_MINUTES, VOTE_WINDOW_SECONDS, start_phase_clock, tally_votes

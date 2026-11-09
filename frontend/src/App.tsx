@@ -1,44 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import './compact.css';
-import { AuthModal } from './components/AuthModal';
-import { CompactTopBar } from './components/CompactTopBar';
-import { DisplaySettingsMenu } from './components/DisplaySettingsMenu';
-import { EuropeMap, EuropeMapHandle } from './components/EuropeMap';
-import { LobbyView } from './components/LobbyView';
-import { MacroSidebar } from './components/MacroSidebar';
-import { ToolsSidebar } from './components/ToolsSidebar';
-import { AdminToolsModal } from './components/AdminToolsModal';
-import { SanityCheckModal } from './components/SanityCheckModal';
-import { SurrenderModal } from './components/SurrenderModal';
-import { useConfirm } from './components/ConfirmModal';
-import { PhaseTimerWidget } from './components/PhaseTimerWidget';
-import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
-import { turnLabel } from './utils/timerHelpers';
-import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
-import { useDisplayPrefs } from './hooks/useDisplayPrefs';
-import { useCompactLayout } from './hooks/useCompactLayout';
-import {
-  getAuthHeaders,
-  getInitialAuthUser,
-  signOutUser,
-  subscribeToAuthChanges,
-} from './lib/supabase';
-import {
-  AuthUser,
-  FinalizeResponse,
-  GameState,
-  MultiplayerGameSummary,
-  Order,
-  POWER_METADATA,
-  Power,
-  PhaseTimer,
-  ProvinceInfo,
-  SimulationResult,
-  ValidationIssue,
-  WebSocketGameUpdate,
-  WebSocketLobbyUpdate,
-} from './types/diplomacy';
 import {
   AlertOctagon,
   AlertTriangle,
@@ -46,15 +8,51 @@ import {
   CheckCircle2,
   Compass,
   Crown,
-  Flag,
   FlaskConical,
   LogIn,
   LogOut,
-  Save,
   ShieldAlert,
   ShieldCheck,
   User as UserIcon,
 } from 'lucide-react';
+import { AdminToolsModal } from './components/AdminToolsModal';
+import { AuthModal } from './components/AuthModal';
+import { CompactTopBar } from './components/CompactTopBar';
+import { useConfirm } from './components/ConfirmModal';
+import { DisplaySettingsMenu } from './components/DisplaySettingsMenu';
+import { EuropeMap, type EuropeMapHandle } from './components/EuropeMap';
+import { LobbyView } from './components/LobbyView';
+import { MacroSidebar } from './components/MacroSidebar';
+import { PhaseTimerWidget } from './components/PhaseTimerWidget';
+import { SanityCheckModal } from './components/SanityCheckModal';
+import { SurrenderModal } from './components/SurrenderModal';
+import { ToolsSidebar } from './components/ToolsSidebar';
+import { useCompactLayout } from './hooks/useCompactLayout';
+import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
+import { useDisplayPrefs } from './hooks/useDisplayPrefs';
+import {
+  getAuthHeaders,
+  getInitialAuthUser,
+  signOutUser,
+  subscribeToAuthChanges,
+} from './lib/supabase';
+import {
+  type AuthUser,
+  type FinalizeResponse,
+  type GameState,
+  type MultiplayerGameSummary,
+  type Order,
+  type PhaseTimer,
+  POWER_METADATA,
+  type Power,
+  type ProvinceInfo,
+  type SimulationResult,
+  type ValidationIssue,
+  type WebSocketGameUpdate,
+  type WebSocketLobbyUpdate,
+} from './types/diplomacy';
+import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
+import { turnLabel } from './utils/timerHelpers';
 
 const API_BASE = '/api';
 
@@ -239,7 +237,7 @@ export function App() {
         setSimulationResult(update.state.last_resolution);
       }
     },
-    [activeGameId, sandboxGameId],
+    [activeGameId, sandboxGameId, triggerToast],
   );
 
   const handleWsLobbyUpdate = useCallback(
@@ -326,7 +324,7 @@ export function App() {
     fetchGame('proto_1901');
     fetchGamesList();
     return () => unsub();
-  }, []);
+  }, [fetchGame, fetchGamesList]);
 
   // Only a `refresh` makes the server run the clock; a `ping` is just a heartbeat.
   // Without a socket the fallback poll below runs the clock every few seconds, and
@@ -395,7 +393,14 @@ export function App() {
         );
       }
     };
-  }, [viewMode, activeGameId, sandboxGameId, wsConnected, playerPower]);
+  }, [
+    viewMode,
+    activeGameId,
+    sandboxGameId,
+    wsConnected,
+    playerPower,
+    applyServerState,
+  ]);
 
   // Leaving the match board by any route closes its private sandbox.
   useEffect(() => {
@@ -411,7 +416,7 @@ export function App() {
     setSandboxGameId(null);
     setSandboxMode(false);
     setShowSimulationOverlay(false);
-  }, [viewMode, sandboxGameId]);
+  }, [viewMode, sandboxGameId, playerPower]);
 
   const handleEnterSoloSandbox = async (event?: React.MouseEvent) => {
     if (viewMode === 'multiplayer' && activeGameSummary) {
@@ -990,7 +995,7 @@ export function App() {
     }
   };
 
-  const handleSimulatePreMoves = async () => {
+  const _handleSimulatePreMoves = async () => {
     try {
       const res = await fetch(
         `${API_BASE}/simulate?game_id=${encodeURIComponent(draftGameId)}`,

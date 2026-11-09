@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
 import { Clock, Pause, Play, Plus } from 'lucide-react';
-import { PhaseTimer, Power, TimerChoice } from '../types/diplomacy';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { PhaseTimer, Power, TimerChoice } from '../types/diplomacy';
 import {
   countVotes,
   formatClock,

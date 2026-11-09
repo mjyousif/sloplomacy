@@ -1,5 +1,6 @@
-import React, { useId, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import type React from 'react';
+import { useId, useState } from 'react';
 
 export interface CollapsibleSectionProps {
   /** Title or header content displayed in the section overline */

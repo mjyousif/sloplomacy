@@ -1,15 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { ToolsSidebar, ToolsSidebarProps } from './ToolsSidebar';
-import { MacroSidebar, MacroSidebarProps } from './MacroSidebar';
-import {
-  Order,
-  Power,
-  ProvinceInfo,
-  Unit,
-  ValidationIssue,
-} from '../types/diplomacy';
+import { describe, expect, it, vi } from 'vitest';
+import type { Order, Power, ProvinceInfo, Unit } from '../types/diplomacy';
+import { MacroSidebar, type MacroSidebarProps } from './MacroSidebar';
+import { ToolsSidebar, type ToolsSidebarProps } from './ToolsSidebar';
 
 const mockProvinces: Record<string, ProvinceInfo> = {
   PAR: {

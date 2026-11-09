@@ -1,17 +1,11 @@
-import React, { useState } from 'react';
+import { Flag, LogOut, ShieldAlert, Trash2, X } from 'lucide-react';
+import type React from 'react';
+import { useState } from 'react';
 import {
-  MultiplayerGameSummary,
+  type MultiplayerGameSummary,
   POWER_METADATA,
-  Power,
+  type Power,
 } from '../types/diplomacy';
-import {
-  AlertTriangle,
-  Flag,
-  LogOut,
-  Trash2,
-  X,
-  ShieldAlert,
-} from 'lucide-react';
 
 interface SurrenderModalProps {
   isOpen: boolean;

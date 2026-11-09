@@ -1,7 +1,7 @@
-import { Point } from '../data/europeMapGeometry';
-import { FlagDirection } from '../data/mapLayouts';
+import type { Point } from '../data/europeMapGeometry';
+import type { FlagDirection } from '../data/mapLayouts';
 import { MAP_NAME_FONT, measureMapName } from '../data/mapTextMetrics';
-import { PieceStyle, UnitMark } from '../utils/displayPrefs';
+import type { PieceStyle, UnitMark } from '../utils/displayPrefs';
 
 export type PieceUnitType = 'A' | 'F';
 

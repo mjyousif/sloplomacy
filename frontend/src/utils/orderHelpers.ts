@@ -1,10 +1,10 @@
 import {
-  GameParticipant,
-  Order,
+  type GameParticipant,
+  type Order,
   POWER_METADATA,
-  Power,
-  ProvinceInfo,
-  Unit,
+  type Power,
+  type ProvinceInfo,
+  type Unit,
 } from '../types/diplomacy';
 
 export function splitProvinceCode(code: string): {

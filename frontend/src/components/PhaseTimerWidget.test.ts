@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { PhaseTimerWidget, PhaseTimerWidgetProps } from './PhaseTimerWidget';
-import { PhaseTimer } from '../types/diplomacy';
+import { describe, expect, it } from 'vitest';
+import type { PhaseTimer } from '../types/diplomacy';
+import {
+  PhaseTimerWidget,
+  type PhaseTimerWidgetProps,
+} from './PhaseTimerWidget';
 
 const voting: PhaseTimer = {
   stage: 'voting',

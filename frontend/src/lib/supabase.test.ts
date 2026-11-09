@@ -1,24 +1,23 @@
 import {
-  describe,
-  it,
-  expect,
-  beforeEach,
-  beforeAll,
   afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
   vi,
 } from 'vitest';
+import type { AuthUser } from '../types/diplomacy';
 import {
   fetchAccountDisplayPrefs,
-  saveAccountDisplayPrefs,
-  isSupabaseConfigured,
   getAuthHeaders,
-  signInWithEmailPassword,
-  signUpWithEmailPassword,
-  signOutUser,
   getInitialAuthUser,
+  saveAccountDisplayPrefs,
+  signInWithEmailPassword,
+  signOutUser,
+  signUpWithEmailPassword,
   subscribeToAuthChanges,
 } from './supabase';
-import { AuthUser } from '../types/diplomacy';
 
 const supabaseAuth = vi.hoisted(() => ({
   getUser: vi.fn(),

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAuthHeaders } from '../lib/supabase';
-import {
+import type {
   WebSocketGameUpdate,
   WebSocketLobbyUpdate,
   WebSocketMessage,
@@ -263,7 +263,7 @@ export function useDiplomacyWebSocket({
       }
       setIsConnected(false);
     };
-  }, [viewMode, activeGameId, power, passcode, authKey]);
+  }, [viewMode, activeGameId, power, passcode]);
 
   const sendPing = useCallback(() => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {

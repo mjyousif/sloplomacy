@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type {
+  AuthUser,
+  MultiplayerGameSummary,
+  ProvinceInfo,
+  Unit,
+} from '../types/diplomacy';
 import {
   canPlaceUnitTypeInProvince,
   checkIsGameCreator,
@@ -6,12 +12,6 @@ import {
   getAvailableCoasts,
   resolvePlayerPower,
 } from './adminHelpers';
-import {
-  AuthUser,
-  MultiplayerGameSummary,
-  ProvinceInfo,
-  Unit,
-} from '../types/diplomacy';
 
 describe('adminHelpers', () => {
   describe('checkIsGameCreator', () => {

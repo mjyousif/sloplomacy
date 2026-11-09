@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { GitCommit, Check, ExternalLink } from 'lucide-react';
+import { Check, ExternalLink, GitCommit } from 'lucide-react';
+import type React from 'react';
+import { useState } from 'react';
 
 interface VersionBadgeProps {
   className?: string;

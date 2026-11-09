@@ -1,20 +1,20 @@
-import { describe, it, expect } from 'vitest';
-import {
-  splitProvinceCode,
-  getReachableDestinations,
-  getValidRetreatDestinations,
-  canUnitSupportInto,
-  formatOrderSummary,
-  getActiveOrderButton,
-  getConsensusStatusInfo,
-} from './orderHelpers';
-import {
+import { describe, expect, it } from 'vitest';
+import type {
   GameParticipant,
   Order,
   Power,
   ProvinceInfo,
   Unit,
 } from '../types/diplomacy';
+import {
+  canUnitSupportInto,
+  formatOrderSummary,
+  getActiveOrderButton,
+  getConsensusStatusInfo,
+  getReachableDestinations,
+  getValidRetreatDestinations,
+  splitProvinceCode,
+} from './orderHelpers';
 
 describe('splitProvinceCode', () => {
   it('parses base province without coast', () => {

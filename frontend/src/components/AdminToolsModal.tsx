@@ -1,22 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { getAuthHeaders } from '../lib/supabase';
-import { useConfirm } from './ConfirmModal';
-import {
-  ALL_POWERS,
-  AuthUser,
-  GameState,
-  POWER_METADATA,
-  Power,
-  ProvinceInfo,
-  Unit,
-  UnitType,
-} from '../types/diplomacy';
 import {
   AlertTriangle,
   ArrowRight,
   Calendar,
   Check,
-  Compass,
   Crown,
   MapPin,
   PlusCircle,
@@ -27,9 +13,22 @@ import {
   Trash2,
   Undo2,
   Unlock,
-  Wrench,
   X,
 } from 'lucide-react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
+import { getAuthHeaders } from '../lib/supabase';
+import {
+  ALL_POWERS,
+  type AuthUser,
+  type GameState,
+  POWER_METADATA,
+  type Power,
+  type ProvinceInfo,
+  type Unit,
+  type UnitType,
+} from '../types/diplomacy';
+import { useConfirm } from './ConfirmModal';
 
 const API_BASE = '/api';
 
@@ -123,7 +122,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
   // Reset the turn form only when the console opens or the game reaches another turn.
   // Every order anyone sends also updates gameState, and resetting on those would
   // undo what the admin is typing and clear the error from their last action.
-  const turnKey = `${gameState.season}|${gameState.year}|${gameState.phase}`;
+  const _turnKey = `${gameState.season}|${gameState.year}|${gameState.phase}`;
   useEffect(() => {
     if (isOpen) {
       fetchAdminStatus();
@@ -132,7 +131,13 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
       setSelectedPhase(gameState.phase);
       setActionError(null);
     }
-  }, [isOpen, gameId, turnKey]);
+  }, [
+    isOpen,
+    gameState.phase,
+    gameState.year,
+    gameState.season,
+    fetchAdminStatus,
+  ]);
 
   // Keep the relocation choice on a unit that still exists.
   useEffect(() => {
@@ -588,7 +593,7 @@ export const AdminToolsModal: React.FC<AdminToolsModalProps> = ({
                         max={1950}
                         value={selectedYear}
                         onChange={(e) =>
-                          setSelectedYear(parseInt(e.target.value) || 1901)
+                          setSelectedYear(parseInt(e.target.value, 10) || 1901)
                         }
                       />
                     </div>
