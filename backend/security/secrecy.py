@@ -3,14 +3,15 @@ import hmac
 from domain.models import GameState, MultiplayerGameSummary, Power
 from engine.adjudicator import adjudicate_turn
 from engine.order_utils import create_default_orders
-from fastapi import HTTPException, status
-from security.auth import AuthUser
+from fastapi import Depends, HTTPException, Request, status
+from security.auth import AuthUser, get_current_user
 from storage.store import (
     DEFAULT_GAME_ID,
     GAME_PASSCODES,
     GAME_SUMMARIES,
     GAMES,
     is_multiplayer_match,
+    resolve_game,
 )
 from storage.supabase import is_valid_uuid
 
@@ -194,10 +195,8 @@ def sanitize_game_state_for_viewer(
     if not is_multiplayer_match(game.game_id) or game.winner:
         return game
 
-    summary = GAME_SUMMARIES.get(game.game_id)
-    if summary and summary.status == "waiting":
-        return game
-
+    # A lobby nobody has joined yet, or a match that dropped back to one player, is "waiting"
+    # but still has a player whose orders are theirs alone.
     masked_game = game.model_copy()
     defaults = create_default_orders(game.units, game.phase, game.builds)
 
@@ -231,3 +230,49 @@ def reject_on_multiplayer_match(game_id: str) -> None:
             status_code=409,
             detail="This is a live match. Hypothetical orders belong in a private sandbox.",
         )
+
+
+def caller_owns_saved_sandbox(
+    summary: MultiplayerGameSummary, current_user: AuthUser | None
+) -> bool:
+    """True when the caller saved this sandbox. A guest's sandbox stays open, like a guest's seat."""
+    if current_user:
+        if summary.creator_id and summary.creator_id == current_user.user_id:
+            return True
+        return bool(
+            summary.created_by
+            and current_user.email
+            and summary.created_by.lower() == current_user.email.lower()
+        )
+    return not is_valid_uuid(summary.creator_id)
+
+
+def require_saved_sandbox_owner(game_id: str, current_user: AuthUser | None) -> None:
+    """Refuse anyone but its owner on a saved sandbox (one player's private study board)."""
+    summary = GAME_SUMMARIES.get(game_id)
+    if summary and summary.is_sandbox and not caller_owns_saved_sandbox(summary, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN if current_user else status.HTTP_401_UNAUTHORIZED,
+            detail="This saved sandbox belongs to another player.",
+        )
+
+
+async def saved_sandbox_guard(
+    request: Request,
+    current_user: AuthUser | None = Depends(get_current_user),
+) -> None:
+    """Router dependency: any HTTP route naming a saved sandbox (path or `?game_id=`) is owner-only.
+
+    It runs for every route, so a new endpoint cannot forget the check.
+    """
+    gid = request.path_params.get("game_id") or request.query_params.get("game_id")
+    if not gid:
+        return
+    if gid not in GAME_SUMMARIES:
+        try:
+            await resolve_game(
+                gid
+            )  # Loads a saved game's summary; the route reports a missing one.
+        except HTTPException:
+            return
+    require_saved_sandbox_owner(gid, current_user)

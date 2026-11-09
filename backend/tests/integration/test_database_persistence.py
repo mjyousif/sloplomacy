@@ -587,7 +587,8 @@ def test_drafted_order_survives_a_restart(supabase):
 
     _restart_container(game_id)
 
-    orders = client.get(f"/api/game?game_id={game_id}").json()["state"]["orders"]
+    # Asked as France's seat: everyone else sees the hidden order as a hold.
+    orders = client.get(f"/api/game?game_id={game_id}&power=FRANCE").json()["state"]["orders"]
     assert orders["FRA_A_PAR"]["target"] == "BUR"
 
 

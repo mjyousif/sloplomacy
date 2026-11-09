@@ -314,6 +314,8 @@ async def simulate_current_orders(
 )
 async def adjudicate_and_advance(
     game_id: str | None = Query(default=None),
+    # The turn the caller meant to resolve. A second click arrives after it resolved and is refused.
+    turn: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
@@ -324,6 +326,7 @@ async def adjudicate_and_advance(
         if summary and not summary.is_sandbox:
             verify_admin_access(gid, current_user)
 
+    reject_stale_turn(game, turn)
     return await _execute_adjudication(game)
 
 

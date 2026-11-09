@@ -9,7 +9,7 @@ Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #
 
 ## Reads: does anything return or broadcast state?
 
-- [ ] Every response or broadcast of a live match's `GameState` goes through `sanitize_game_state_for_viewer`. This includes votes, extends, ready, `power`, `simulate`, save-as and WebSocket pushes. Returning `game` directly is a bug.
+- [ ] Every response or broadcast of a live match's `GameState` goes through `sanitize_game_state_for_viewer`. A `waiting` match (a lobby, or one that dropped to one player) is still live: never skip masking by status. This includes votes, extends, ready, `power`, `simulate`, save-as and WebSocket pushes. Returning `game` directly is a bug.
 - [ ] Derived fields are masked too: `last_resolution`, issues, diagnostics, history. Rebuild them from what the viewer may see, never filter after the fact.
 - [ ] A `?power=` query only selects among the caller's own seats. It never grants a view of another power.
 - [ ] The WebSocket learns the caller from the `auth` first message (`?handshake=1`). Never put a token in a URL (Cloud Run logs it).
@@ -22,6 +22,7 @@ Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #
 - [ ] Admin checks fail **closed**. If the game's summary is not loaded, load it first.
 - [ ] `GameState.active_power` is shared by all players. Never use it to identify a caller.
 - [ ] Sandbox write endpoints answer `409` on a live multiplayer match, and foreign hypothetical moves are never written into real state.
+- [ ] A saved sandbox is its owner's alone. New HTTP routes get this from `saved_sandbox_guard` (a router dependency in `main.py`) as long as they take the game as `game_id` in the path or query; a new socket or a differently named parameter needs its own check (`caller_owns_saved_sandbox`).
 
 ## Persistence
 

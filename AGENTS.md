@@ -45,7 +45,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```bash
   python -m pytest backend/ -v
   ```
-  *(Runs every `backend/test_*.py` suite, including: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_database_persistence.py`, `test_phase_timer.py`, `test_security.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
+  *(Runs every `backend/test_*.py` suite, including: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_database_persistence.py`, `test_match_guards.py`, `test_phase_timer.py`, `test_security.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
 
 ### Frontend Commands (`frontend/`)
 - **Install Dependencies**:
@@ -222,6 +222,7 @@ The game cycles through three standard phases per year:
 - All mutation endpoints (`/api/order`, `/api/finalize`, `/api/adjudicate`, etc.) accept an optional `?game_id=<id>` query parameter (defaults to `'proto_1901'`).
 - Always pass `activeGameId` in frontend API requests.
 - **Invariant**: A caller sees hidden orders only for a seat they hold. The server finds it from their token (`viewer_power_for`, `caller_holds_seat`); a `power` a client names only picks among its own seats. `sanitize_game_state_for_viewer` masks foreign orders and issues and rebuilds `last_resolution` from what the viewer may see. Every response or broadcast of a live match's `GameState` goes through it. The game socket learns who is connecting from an `auth` first message (`?handshake=1`), never from the URL.
+- **Invariant**: Masking does not depend on `status`. A lobby nobody has joined yet, or a match that dropped back to one player, is `waiting` but still hides that player's orders.
 - **Invariant**: Orders are public once their phase has resolved. `GET /api/history` serves only the `GAME_HISTORY` snapshots `_execute_adjudication` takes just before a phase resolves, so the phase being played is never among them (rollback pops the one it restores). It never serves a private sandbox (`sbx_`) id, whose snapshots hold its owner's live orders for the match's current turn, and it uses the same passcode rule as `GET /api/game` (`require_view_access`).
 - **Invariant**: `GameState.active_power` is shared by everyone in a game, so it never identifies a multiplayer player. The client takes the player's power from `resolvePlayerPower` (their claimed seat), and `join` reports the joiner's power only in its own response.
 - **Invariant**: Memory is authoritative for a loaded game. Supabase only supplies games this process has not loaded, so never replace `GAMES` or `GAME_SUMMARIES` entries for a loaded game with a database copy. Call `persist_game` after every change to a game.
@@ -234,6 +235,7 @@ The game cycles through three standard phases per year:
 - Sandbox mode allows a player to test orders for all 7 Great Powers without submitting real moves.
 - **Multiplayer matches** are shared, so `POST /api/sandbox/enter` gives the player a private copy under its own `sbx_` game id, recorded in `PRIVATE_SANDBOXES`. Other powers start on default orders so the copy cannot reveal their plans, and it is never saved, listed or shown to other players. Later sandbox calls use that id. `POST /api/sandbox/exit` discards the copy and carries over the player's own changed orders if the match is still on the same turn and they still hold the seat.
 - **Solo and saved sandboxes** have one player. Entering checkpoints an in-memory clone in `SANDBOX_CHECKPOINTS[game_id]` and its history in `SANDBOX_HISTORY_CHECKPOINTS[game_id]`; exiting restores both, strips foreign hypothetical moves, and merges back only the active power's orders.
+- **Invariant**: A saved sandbox (`saved_` id, `is_sandbox`) belongs to the account that saved it. `saved_sandbox_guard`, a dependency on every HTTP router in `main.py`, refuses anyone else on any route that names it (path or `?game_id=`), and the game socket closes with `4403`. A guest's saved sandbox stays open, like a guest's seat. Frontend calls go through `authedFetch` so the owner's token always reaches the server.
 - **Invariant**: Turns stepped through in a solo sandbox are hypothetical, so leaving it restores `GAME_HISTORY` too. Otherwise they would show in the turn selector as real turns and become admin rollback targets.
 - **Invariant**: Never write foreign sandbox moves into authoritative non-sandbox match state. The sandbox write endpoints answer `409` when called on a live multiplayer match.
 
@@ -305,7 +307,7 @@ To prevent files from growing into unmaintainable monoliths, agents and contribu
 - Always run `npx tsc --noEmit` before committing frontend modifications.
 
 ### 4. Run Comprehensive Verification
-- **Backend Tests**: Run python -m pytest backend/ -v (must pass every suite, currently: adjudicator, admin, ai_and_private_lobbies, api_integration, database_persistence, engine, phase_timer, security, surrender_leave, validator, websocket_sync).
+- **Backend Tests**: Run python -m pytest backend/ -v (must pass every suite, currently: adjudicator, admin, ai_and_private_lobbies, api_integration, database_persistence, engine, match_guards, phase_timer, security, surrender_leave, validator, websocket_sync).
 - **Frontend Verification**: Run `npm test` (Vitest) and `npm run build` (Vite + TypeScript) in `frontend/`.
 
 ### 5. Preserve Documentation & Code Integrity
