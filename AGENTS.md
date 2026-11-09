@@ -179,22 +179,29 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 ├── supabase/
 │   └── migrations/            # Supabase PostgreSQL schema & profiles RLS
 ├── backend/
-│   ├── main.py                # FastAPI endpoints, multi-game room registry & static SPA mount
-│   ├── auth.py                # Supabase JWT verification (HS256 secret, ES256 key or JWKS)
-│   ├── database.py            # Supabase PostgREST persistence: save, load, lobby columns, SupabaseUnavailable
-│   ├── domain/                # Domain models & schemas (GameState, Order, Issues, Admin schemas)
-│   ├── engine/                # DATC adjudication wrapper, validator, graph topology, phase clock, AI
-│   ├── storage/               # Supabase PostgREST persistence and local store
-│   ├── security/              # Auth & JWT verification, viewer state sanitization
+│   ├── main.py                # FastAPI app instance, CORS/security headers, router inclusion & root facades
+│   ├── api/                   # Modular FastAPI routers
+│   │   ├── games.py           # Match room creation, seat join/claim/leave/surrender, public & private lobbies
+│   │   ├── orders.py          # Single order submission, atomic batch updates, confirm-all
+│   │   ├── turns.py           # Finalization, turn adjudication, phase timer voting & extension
+│   │   ├── sandbox.py         # Isolated sandbox mode, simulation, AI orders & scenario presets
+│   │   ├── admin.py           # Administrator controls: turn rollback/jumps, unit spawner/teleport, ownership
+│   │   └── websocket.py       # Live turn state & multiplayer lobby WebSockets
+│   ├── domain/                # Pydantic v2 domain models & schemas (GameState, Order, Issues, Admin schemas)
+│   ├── engine/                # Adjudicator, validator, graph topology, phase clock, AI, order utils
+│   ├── storage/               # Authoritative in-memory state store (store.py) and Supabase PostgREST (supabase.py)
+│   ├── security/              # Auth & JWT verification (auth.py), viewer secrecy sanitization (secrecy.py)
+│   ├── scenarios/             # Scenario definitions & initial multiplayer lobby seeding (presets.py)
+│   ├── ws/                    # Thread-safe WebSocket connection manager & broadcast dispatch
 │   ├── tests/                 # Categorized pytest harness (unit/ and integration/ test suites)
-│   ├── models.py              # Root backward-compatible facade re-exporting domain/
-│   ├── adjudicator.py         # Root backward-compatible facade re-exporting engine/
-│   ├── phase_timer.py         # Root backward-compatible facade re-exporting engine/
-│   ├── validator.py           # Root backward-compatible facade re-exporting engine/
-│   ├── ai_engine.py           # Root backward-compatible facade re-exporting engine/
-│   ├── map_data.py            # Root backward-compatible facade re-exporting engine/
-│   ├── database.py            # Root backward-compatible facade re-exporting storage/
-│   ├── auth.py                # Root backward-compatible facade re-exporting security/
+│   ├── models.py              # Root backward-compatible facade aliasing domain/models
+│   ├── adjudicator.py         # Root backward-compatible facade aliasing engine/adjudicator
+│   ├── phase_timer.py         # Root backward-compatible facade aliasing engine/phase_timer
+│   ├── validator.py           # Root backward-compatible facade aliasing engine/validator
+│   ├── ai_engine.py           # Root backward-compatible facade aliasing engine/ai
+│   ├── map_data.py            # Root backward-compatible facade aliasing engine/topology
+│   ├── database.py            # Root backward-compatible facade aliasing storage/supabase
+│   ├── auth.py                # Root backward-compatible facade aliasing security/auth
 │   ├── requirements.txt       # Python dependencies
 ├── frontend/
 │   ├── src/
@@ -202,10 +209,14 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
 │   │   ├── compact.css        # Phone layout rules, all under [data-layout='compact']
 │   │   ├── components/
 │   │   │   ├── EuropeMap.tsx        # High-performance interactive SVG board & order arrows
+│   │   │   ├── map/                 # Decomposed SVG layers (StaticLayers, ProvincePolygon, SupplyCenters, MapNames, curveGeometry)
 │   │   │   ├── ToolsSidebar.tsx     # Left sidebar: legend, powers, sandbox & admin entry points
 │   │   │   ├── MacroSidebar.tsx     # Order builder, phase controls, diagnostics, admin/surrender
+│   │   │   ├── macro/               # Decomposed unit order cards (UnitMacroCard) and build quota cards (BuildSlotCard)
 │   │   │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
+│   │   │   ├── lobby/               # Decomposed lobby cards (GameRoomCard, CreateCampaignPanel, Passcode modals)
 │   │   │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
+│   │   │   ├── admin/               # Decomposed creator console tabs (TurnControl, UnitTeleport, UnitSpawner, TerritoryControl)
 │   │   │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
 │   │   │   ├── BottomSheet.tsx      # Phone pull-up panel (peek, half, full) that holds the order sheet
 │   │   │   ├── CompactTopBar.tsx    # Phone top bar: back, ≡ tools, turn, order-problem count & ⋯ menu

@@ -3,108 +3,56 @@
 import os
 import time
 
+from api.turns import timer_players
+from domain.models import (
+    FIRST_YEAR,
+    PHASES_BY_SEASON,
+    AdminDestroyUnitRequest,
+    AdminMoveUnitRequest,
+    AdminRollbackRequest,
+    AdminSetOwnershipRequest,
+    AdminSetTurnRequest,
+    AdminSpawnUnitRequest,
+    AdminStatusResponse,
+    GameState,
+    Order,
+    OrderType,
+    ProvinceType,
+    SeedScenarioRequest,
+    Unit,
+    UnitType,
+)
+from engine.order_utils import (
+    fleet_coast,
+    refresh_diagnostics_and_simulation,
+)
+from engine.phase_timer import start_phase_clock
+from engine.topology import PROVINCES
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
-
-try:
-    from backend.api.turns import timer_players
-    from backend.domain.models import (
-        FIRST_YEAR,
-        PHASES_BY_SEASON,
-        AdminDestroyUnitRequest,
-        AdminMoveUnitRequest,
-        AdminRollbackRequest,
-        AdminSetOwnershipRequest,
-        AdminSetTurnRequest,
-        AdminSpawnUnitRequest,
-        AdminStatusResponse,
-        GameState,
-        Order,
-        OrderType,
-        ProvinceType,
-        SeedScenarioRequest,
-        Unit,
-        UnitType,
-    )
-    from backend.engine.order_utils import (
-        fleet_coast,
-        refresh_diagnostics_and_simulation,
-    )
-    from backend.engine.phase_timer import start_phase_clock
-    from backend.engine.topology import PROVINCES
-    from backend.scenarios.presets import SCENARIO_IDS, build_scenario
-    from backend.security.auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
-    from backend.security.secrecy import verify_admin_access
-    from backend.storage.store import (
-        DEFAULT_GAME_ID,
-        GAME_HISTORY,
-        GAME_SUMMARIES,
-        GAMES,
-        HISTORY_UNSAVED,
-        SANDBOX_CHECKPOINTS,
-        cache_loaded_game,
-        check_game_capacity,
-        get_main_attr,
-        is_multiplayer_match,
-        is_persistence_enabled,
-        load_saved_game,
-        persist_game,
-        resolve_game,
-        sync_summary,
-    )
-    from backend.ws.connection_manager import (
-        broadcast_game_update,
-        broadcast_lobby_update,
-    )
-except ModuleNotFoundError:
-    from api.turns import timer_players
-    from domain.models import (
-        FIRST_YEAR,
-        PHASES_BY_SEASON,
-        AdminDestroyUnitRequest,
-        AdminMoveUnitRequest,
-        AdminRollbackRequest,
-        AdminSetOwnershipRequest,
-        AdminSetTurnRequest,
-        AdminSpawnUnitRequest,
-        AdminStatusResponse,
-        GameState,
-        Order,
-        OrderType,
-        ProvinceType,
-        SeedScenarioRequest,
-        Unit,
-        UnitType,
-    )
-    from engine.order_utils import (
-        fleet_coast,
-        refresh_diagnostics_and_simulation,
-    )
-    from engine.phase_timer import start_phase_clock
-    from engine.topology import PROVINCES
-    from scenarios.presets import SCENARIO_IDS, build_scenario
-    from security.auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
-    from security.secrecy import verify_admin_access
-    from storage.store import (
-        DEFAULT_GAME_ID,
-        GAME_HISTORY,
-        GAME_SUMMARIES,
-        GAMES,
-        HISTORY_UNSAVED,
-        SANDBOX_CHECKPOINTS,
-        cache_loaded_game,
-        check_game_capacity,
-        get_main_attr,
-        is_multiplayer_match,
-        is_persistence_enabled,
-        load_saved_game,
-        persist_game,
-        resolve_game,
-        sync_summary,
-    )
-    from ws.connection_manager import (
-        broadcast_game_update,
-        broadcast_lobby_update,
-    )
+from scenarios.presets import SCENARIO_IDS, build_scenario
+from security.auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
+from security.secrecy import verify_admin_access
+from storage.store import (
+    DEFAULT_GAME_ID,
+    GAME_HISTORY,
+    GAME_SUMMARIES,
+    GAMES,
+    HISTORY_UNSAVED,
+    SANDBOX_CHECKPOINTS,
+    cache_loaded_game,
+    check_game_capacity,
+    get_main_attr,
+    is_multiplayer_match,
+    is_persistence_enabled,
+    load_saved_game,
+    persist_game,
+    resolve_game,
+    sync_summary,
+)
+from ws.connection_manager import (
+    broadcast_game_update,
+    broadcast_lobby_update,
+)
 
 router = APIRouter(tags=["Administrator & Creator Controls"])
 

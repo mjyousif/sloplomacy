@@ -26,10 +26,10 @@ import {
   useState,
 } from 'react';
 import {
+  ALL_PROVINCE_GEOMETRIES,
   EUROPE_PROVINCE_GEOMETRY,
   MAP_VIEWBOX,
   type Point,
-  type ProvinceGeometry,
 } from '../data/europeMapGeometry';
 import { getMapLayout, SEA_SHORT_NAMES } from '../data/mapLayouts';
 import {
@@ -146,10 +146,6 @@ type MapInteractionMode =
   | 'SUPPORT_PICK_TARGET'
   | 'CONVOY_PICK_ARMY'
   | 'CONVOY_PICK_TARGET';
-
-const ALL_PROVINCE_GEOMETRIES: ProvinceGeometry[] = Object.values(
-  EUROPE_PROVINCE_GEOMETRY,
-);
 
 export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
   function EuropeMap(

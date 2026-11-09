@@ -1,10 +1,4 @@
-try:
-    from backend.domain.models import Power, ProvinceInfo, ProvinceType, Unit, UnitType
-except ModuleNotFoundError:
-    try:
-        from domain.models import Power, ProvinceInfo, ProvinceType, Unit, UnitType
-    except ModuleNotFoundError:
-        from models import Power, ProvinceInfo, ProvinceType, Unit, UnitType
+from domain.models import Power, ProvinceInfo, ProvinceType, Unit, UnitType
 
 # Complete 75-province standard 1901 Diplomacy map definition + Switzerland
 RAW_PROVINCES = [

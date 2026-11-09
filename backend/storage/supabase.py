@@ -9,14 +9,7 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
-
-try:
-    from backend.domain.models import GameState, MultiplayerGameSummary
-except ModuleNotFoundError:
-    try:
-        from domain.models import GameState, MultiplayerGameSummary
-    except ModuleNotFoundError:
-        from models import GameState, MultiplayerGameSummary
+from domain.models import GameState, MultiplayerGameSummary
 
 logger = logging.getLogger("diplomacy.database")
 

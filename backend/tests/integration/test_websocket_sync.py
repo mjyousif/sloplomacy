@@ -2,7 +2,7 @@ import pytest
 from main import GAMES, app, build_scenario
 from models import Power
 from starlette.testclient import TestClient
-from ws_testing import receive_json
+from tests.ws_testing import receive_json
 
 
 def test_ws_game_connect_and_ping():

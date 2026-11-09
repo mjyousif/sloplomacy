@@ -1,15 +1,9 @@
 from collections import defaultdict
 
+from domain.models import GameState, MultiplayerGameSummary, Power
 from fastapi import WebSocket
-
-try:
-    from backend.domain.models import GameState, MultiplayerGameSummary, Power
-    from backend.security.secrecy import sanitize_game_state_for_viewer
-    from backend.storage.store import GAME_SUMMARIES, GAMES, sync_summary
-except ModuleNotFoundError:
-    from domain.models import GameState, MultiplayerGameSummary, Power
-    from security.secrecy import sanitize_game_state_for_viewer
-    from storage.store import GAME_SUMMARIES, GAMES, sync_summary
+from security.secrecy import sanitize_game_state_for_viewer
+from storage.store import GAME_SUMMARIES, GAMES, sync_summary
 
 
 class ConnectionManager:

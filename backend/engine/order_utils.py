@@ -1,42 +1,23 @@
 from pathlib import Path
 from typing import Any
 
+from domain.models import (
+    GameState,
+    Order,
+    OrderType,
+    Power,
+    ProvinceInfo,
+    Unit,
+    UnitType,
+)
+from engine.adjudicator import (
+    adjudicate_turn,
+    compute_current_builds,
+    create_diplomacy_game,
+)
+from engine.topology import PROVINCES
+from engine.validator import validate_orders
 from fastapi import HTTPException
-
-try:
-    from backend.domain.models import (
-        GameState,
-        Order,
-        OrderType,
-        Power,
-        ProvinceInfo,
-        Unit,
-        UnitType,
-    )
-    from backend.engine.adjudicator import (
-        adjudicate_turn,
-        compute_current_builds,
-        create_diplomacy_game,
-    )
-    from backend.engine.topology import PROVINCES
-    from backend.engine.validator import validate_orders
-except ModuleNotFoundError:
-    from domain.models import (
-        GameState,
-        Order,
-        OrderType,
-        Power,
-        ProvinceInfo,
-        Unit,
-        UnitType,
-    )
-    from engine.adjudicator import (
-        adjudicate_turn,
-        compute_current_builds,
-        create_diplomacy_game,
-    )
-    from engine.topology import PROVINCES
-    from engine.validator import validate_orders
 
 
 def validate_order_references(order: Order) -> None:
@@ -221,10 +202,8 @@ def reset_foreign_orders(game: GameState, power: Power) -> None:
 def get_required_finalizing_powers(game: GameState, summary: Any | None = None) -> list[Power]:
     """Determine which powers must finalize before auto-adjudication occurs in multiplayer."""
     if summary is None:
-        try:
-            from backend.storage.store import GAME_SUMMARIES
-        except ModuleNotFoundError:
-            from storage.store import GAME_SUMMARIES
+        from storage.store import GAME_SUMMARIES
+
         summary = GAME_SUMMARIES.get(game.game_id)
 
     if not summary or getattr(summary, "is_sandbox", False):
@@ -270,10 +249,8 @@ def get_required_finalizing_powers(game: GameState, summary: Any | None = None) 
 
 def everyone_is_ready(game: GameState) -> bool:
     """True when a live multiplayer match has nobody left to wait for."""
-    try:
-        from backend.storage.store import GAME_SUMMARIES
-    except ModuleNotFoundError:
-        from storage.store import GAME_SUMMARIES
+    from storage.store import GAME_SUMMARIES
+
     summary = GAME_SUMMARIES.get(game.game_id)
     if not summary or summary.is_sandbox or summary.status != "active" or game.winner:
         return False

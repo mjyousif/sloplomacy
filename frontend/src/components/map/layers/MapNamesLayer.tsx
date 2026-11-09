@@ -1,8 +1,5 @@
 import { memo } from 'react';
-import {
-  EUROPE_PROVINCE_GEOMETRY,
-  type ProvinceGeometry,
-} from '../../../data/europeMapGeometry';
+import { ALL_PROVINCE_GEOMETRIES } from '../../../data/europeMapGeometry';
 import { getMapLayout, SHARED_MAP_NAMES_SVG } from '../../../data/mapLayouts';
 import { MAP_NAME_FONT, measureMapName } from '../../../data/mapTextMetrics';
 import {
@@ -14,12 +11,13 @@ import type { PieceStyle } from '../../../utils/displayPrefs';
 import { SupplyStar } from '../../MapPiece';
 import { StaticNamesLayer } from './StaticLayers';
 
-const ALL_PROVINCE_GEOMETRIES: ProvinceGeometry[] = Object.values(
-  EUROPE_PROVINCE_GEOMETRY,
-);
-
+// Room kept beside a name for its star in the Name as piece style
 const NAME_STAR_ROOM = 6;
 
+/**
+ * Province names, fitted around the active piece style. Classic keeps the original
+ * typesetting. The other styles share its sea names and place land names themselves.
+ */
 export const MapNamesLayer = memo<{
   pieceStyle: PieceStyle;
   provinces: Record<string, ProvinceInfo>;

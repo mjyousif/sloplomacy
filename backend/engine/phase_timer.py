@@ -13,13 +13,7 @@ request.
 
 from collections import Counter
 
-try:
-    from backend.domain.models import GameState, PhaseTimer, Power, TimerChoice, TimerStage
-except ModuleNotFoundError:
-    try:
-        from domain.models import GameState, PhaseTimer, Power, TimerChoice, TimerStage
-    except ModuleNotFoundError:
-        from models import GameState, PhaseTimer, Power, TimerChoice, TimerStage
+from domain.models import GameState, PhaseTimer, Power, TimerChoice, TimerStage
 
 VOTE_WINDOW_SECONDS = 60
 FIXED_PHASE_MINUTES = 5  # Retreats and Adjustments

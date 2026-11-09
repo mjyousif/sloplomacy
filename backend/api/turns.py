@@ -1,102 +1,53 @@
 import logging
 import time
 
+from domain.models import (
+    FinalizeRequest,
+    FinalizeResponse,
+    GameState,
+    Power,
+    SetPowerRequest,
+    SimulationResult,
+    TimerStage,
+    TimerToggleRequest,
+    TimerVoteRequest,
+)
+from engine.adjudicator import adjudicate_turn
+from engine.order_utils import (
+    create_default_orders,
+    everyone_is_ready,
+    refresh_diagnostics_and_simulation,
+)
+from engine.phase_timer import (
+    close_vote,
+    has_expired,
+    settle_timer,
+    start_phase_clock,
+)
+from engine.validator import validate_orders
 from fastapi import APIRouter, Depends, HTTPException, Query
-
-try:
-    from backend.api.games import SetPowerRequest
-    from backend.domain.models import (
-        FinalizeRequest,
-        FinalizeResponse,
-        GameState,
-        Power,
-        SimulationResult,
-        TimerStage,
-        TimerToggleRequest,
-        TimerVoteRequest,
-    )
-    from backend.engine.adjudicator import adjudicate_turn
-    from backend.engine.order_utils import (
-        create_default_orders,
-        everyone_is_ready,
-        refresh_diagnostics_and_simulation,
-    )
-    from backend.engine.phase_timer import (
-        close_vote,
-        has_expired,
-        settle_timer,
-        start_phase_clock,
-    )
-    from backend.engine.validator import validate_orders
-    from backend.security.auth import AuthUser, get_current_user
-    from backend.security.secrecy import (
-        sanitize_game_state_for_viewer,
-        verify_admin_access,
-        verify_power_authorization,
-        viewer_power_for,
-    )
-    from backend.storage.store import (
-        DEFAULT_GAME_ID,
-        GAME_HISTORY,
-        GAME_SUMMARIES,
-        HISTORY_UNSAVED,
-        get_main_attr,
-        persist_game,
-        resolve_game,
-        sync_summary,
-    )
-    from backend.storage.supabase import is_valid_uuid
-    from backend.ws.connection_manager import (
-        broadcast_game_update,
-        broadcast_lobby_update,
-    )
-except ModuleNotFoundError:
-    from api.games import SetPowerRequest
-    from domain.models import (
-        FinalizeRequest,
-        FinalizeResponse,
-        GameState,
-        Power,
-        SimulationResult,
-        TimerStage,
-        TimerToggleRequest,
-        TimerVoteRequest,
-    )
-    from engine.adjudicator import adjudicate_turn
-    from engine.order_utils import (
-        create_default_orders,
-        everyone_is_ready,
-        refresh_diagnostics_and_simulation,
-    )
-    from engine.phase_timer import (
-        close_vote,
-        has_expired,
-        settle_timer,
-        start_phase_clock,
-    )
-    from engine.validator import validate_orders
-    from security.auth import AuthUser, get_current_user
-    from security.secrecy import (
-        sanitize_game_state_for_viewer,
-        verify_admin_access,
-        verify_power_authorization,
-        viewer_power_for,
-    )
-    from storage.store import (
-        DEFAULT_GAME_ID,
-        GAME_HISTORY,
-        GAME_SUMMARIES,
-        HISTORY_UNSAVED,
-        get_main_attr,
-        persist_game,
-        resolve_game,
-        sync_summary,
-    )
-    from storage.supabase import is_valid_uuid
-    from ws.connection_manager import (
-        broadcast_game_update,
-        broadcast_lobby_update,
-    )
+from security.auth import AuthUser, get_current_user
+from security.secrecy import (
+    sanitize_game_state_for_viewer,
+    verify_admin_access,
+    verify_power_authorization,
+    viewer_power_for,
+)
+from storage.store import (
+    DEFAULT_GAME_ID,
+    GAME_HISTORY,
+    GAME_SUMMARIES,
+    HISTORY_UNSAVED,
+    get_main_attr,
+    persist_game,
+    resolve_game,
+    sync_summary,
+)
+from storage.supabase import is_valid_uuid
+from ws.connection_manager import (
+    broadcast_game_update,
+    broadcast_lobby_update,
+)
 
 logger = logging.getLogger("diplomacy.server")
 

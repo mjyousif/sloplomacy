@@ -1,6 +1,7 @@
 """Backward-compatible facade for engine.adjudicator."""
 
-try:
-    from backend.engine.adjudicator import *  # noqa: F403
-except ModuleNotFoundError:
-    from engine.adjudicator import *  # noqa: F403
+import sys
+
+from engine import adjudicator as _real_module
+
+sys.modules[__name__] = _real_module

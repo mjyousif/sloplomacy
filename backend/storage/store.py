@@ -1,32 +1,18 @@
 import logging
 from typing import Any
 
+from domain.models import (
+    GameState,
+    MultiplayerGameSummary,
+    Power,
+)
 from fastapi import HTTPException, status
-
-try:
-    from backend.domain.models import (
-        GameState,
-        MultiplayerGameSummary,
-        Power,
-    )
-    from backend.storage.supabase import (
-        SupabaseUnavailable,
-        is_persistence_enabled,
-        load_game_from_db,
-        save_game_to_db,
-    )
-except ModuleNotFoundError:
-    from domain.models import (
-        GameState,
-        MultiplayerGameSummary,
-        Power,
-    )
-    from storage.supabase import (
-        SupabaseUnavailable,
-        is_persistence_enabled,
-        load_game_from_db,
-        save_game_to_db,
-    )
+from storage.supabase import (
+    SupabaseUnavailable,
+    is_persistence_enabled,
+    load_game_from_db,
+    save_game_to_db,
+)
 
 logger = logging.getLogger("diplomacy.server")
 
@@ -57,10 +43,8 @@ PRIVATE_SANDBOXES: dict[str, tuple[str, Power]] = {}
 
 def init_default_game() -> None:
     if DEFAULT_GAME_ID not in GAMES:
-        try:
-            from backend.scenarios.presets import build_scenario
-        except ModuleNotFoundError:
-            from scenarios.presets import build_scenario
+        from scenarios.presets import build_scenario
+
         GAMES[DEFAULT_GAME_ID] = build_scenario("standard_1901", Power.FRANCE, DEFAULT_GAME_ID)
 
 

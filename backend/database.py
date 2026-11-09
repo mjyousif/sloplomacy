@@ -1,6 +1,7 @@
 """Backward-compatible facade for storage.supabase."""
 
-try:
-    from backend.storage.supabase import *  # noqa: F403
-except ModuleNotFoundError:
-    from storage.supabase import *  # noqa: F403
+import sys
+
+from storage import supabase as _real_module
+
+sys.modules[__name__] = _real_module

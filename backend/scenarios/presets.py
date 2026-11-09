@@ -1,37 +1,20 @@
 from datetime import datetime, timezone
 
-try:
-    from backend.domain.models import (
-        GameParticipant,
-        GameState,
-        MultiplayerGameSummary,
-        Order,
-        OrderType,
-        Power,
-        Unit,
-        UnitType,
-    )
-    from backend.engine.order_utils import (
-        create_default_orders,
-        refresh_diagnostics_and_simulation,
-    )
-    from backend.engine.topology import get_initial_1901_units, get_initial_ownership
-except ModuleNotFoundError:
-    from domain.models import (
-        GameParticipant,
-        GameState,
-        MultiplayerGameSummary,
-        Order,
-        OrderType,
-        Power,
-        Unit,
-        UnitType,
-    )
-    from engine.order_utils import (
-        create_default_orders,
-        refresh_diagnostics_and_simulation,
-    )
-    from engine.topology import get_initial_1901_units, get_initial_ownership
+from domain.models import (
+    GameParticipant,
+    GameState,
+    MultiplayerGameSummary,
+    Order,
+    OrderType,
+    Power,
+    Unit,
+    UnitType,
+)
+from engine.order_utils import (
+    create_default_orders,
+    refresh_diagnostics_and_simulation,
+)
+from engine.topology import get_initial_1901_units, get_initial_ownership
 
 SCENARIO_IDS = {
     "standard_1901",
@@ -197,20 +180,12 @@ def build_scenario(
 
 
 def seed_initial_multiplayer_lobbies() -> None:
-    try:
-        from backend.storage.store import (
-            GAME_HISTORY,
-            GAME_SUMMARIES,
-            GAMES,
-            SANDBOX_CHECKPOINTS,
-        )
-    except ModuleNotFoundError:
-        from storage.store import (
-            GAME_HISTORY,
-            GAME_SUMMARIES,
-            GAMES,
-            SANDBOX_CHECKPOINTS,
-        )
+    from storage.store import (
+        GAME_HISTORY,
+        GAME_SUMMARIES,
+        GAMES,
+        SANDBOX_CHECKPOINTS,
+    )
 
     now_iso = datetime.now(timezone.utc).isoformat()
 

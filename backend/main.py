@@ -15,139 +15,76 @@ for _p in (str(_BACKEND_DIR), str(_REPO_ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+# Package imports with local fallback
+from api import admin, games, orders, sandbox, turns, websocket
+from api.sandbox import close_private_sandbox, open_private_sandbox
+from api.turns import _execute_adjudication, tick_timer, timer_players
+from domain.models import FIRST_YEAR, PHASES_BY_SEASON
+from engine.order_utils import (
+    build_slot_power,
+    create_default_orders,
+    everyone_is_ready,
+    get_required_finalizing_powers,
+    put_into_civil_disorder,
+    refresh_diagnostics_and_simulation,
+    reject_stale_turn,
+    reset_foreign_orders,
+    resolve_static_path,
+    validate_order_references,
+)
+from engine.phase_timer import start_phase_clock
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
-# Package imports with local fallback
-try:
-    from backend.api import admin, games, orders, sandbox, turns, websocket
-    from backend.api.sandbox import close_private_sandbox, open_private_sandbox
-    from backend.api.turns import _execute_adjudication, tick_timer, timer_players
-    from backend.domain.models import FIRST_YEAR, PHASES_BY_SEASON
-    from backend.engine.order_utils import (
-        build_slot_power,
-        create_default_orders,
-        everyone_is_ready,
-        get_required_finalizing_powers,
-        put_into_civil_disorder,
-        refresh_diagnostics_and_simulation,
-        reject_stale_turn,
-        reset_foreign_orders,
-        resolve_static_path,
-        validate_order_references,
-    )
-    from backend.engine.phase_timer import start_phase_clock
-    from backend.scenarios.presets import (
-        SCENARIO_IDS,
-        build_scenario,
-        seed_initial_multiplayer_lobbies,
-    )
-    from backend.security.secrecy import (
-        caller_holds_seat,
-        reject_on_multiplayer_match,
-        require_own_seat,
-        sanitize_game_state_for_viewer,
-        verify_admin_access,
-        verify_power_authorization,
-        viewer_power_for,
-    )
-    from backend.storage.store import (
-        DEFAULT_GAME_ID,
-        GAME_HISTORY,
-        GAME_PASSCODES,
-        GAME_SUMMARIES,
-        GAMES,
-        HISTORY_UNSAVED,
-        MAX_ACTIVE_GAMES,
-        PRIVATE_SANDBOXES,
-        SANDBOX_CHECKPOINTS,
-        SAVES_RUNNING,
-        UNSAVED_GAMES,
-        cache_loaded_game,
-        check_game_capacity,
-        evict_game,
-        is_multiplayer_match,
-        load_saved_game,
-        persist_game,
-        resolve_game,
-        sync_summary,
-    )
-    from backend.storage.supabase import (
-        delete_game_from_db,
-        is_persistence_enabled,
-        load_all_summaries_from_db,
-        load_game_from_db,
-        save_game_to_db,
-    )
-    from backend.ws.connection_manager import (
-        broadcast_game_update,
-        broadcast_lobby_update,
-        manager,
-    )
-except ModuleNotFoundError:
-    from api import admin, games, orders, sandbox, turns, websocket
-    from api.sandbox import close_private_sandbox, open_private_sandbox
-    from api.turns import _execute_adjudication, tick_timer, timer_players
-    from domain.models import FIRST_YEAR, PHASES_BY_SEASON
-    from engine.order_utils import (
-        build_slot_power,
-        create_default_orders,
-        everyone_is_ready,
-        get_required_finalizing_powers,
-        put_into_civil_disorder,
-        refresh_diagnostics_and_simulation,
-        reject_stale_turn,
-        reset_foreign_orders,
-        resolve_static_path,
-        validate_order_references,
-    )
-    from engine.phase_timer import start_phase_clock
-    from scenarios.presets import SCENARIO_IDS, build_scenario, seed_initial_multiplayer_lobbies
-    from security.secrecy import (
-        caller_holds_seat,
-        reject_on_multiplayer_match,
-        require_own_seat,
-        sanitize_game_state_for_viewer,
-        verify_admin_access,
-        verify_power_authorization,
-        viewer_power_for,
-    )
-    from storage.store import (
-        DEFAULT_GAME_ID,
-        GAME_HISTORY,
-        GAME_PASSCODES,
-        GAME_SUMMARIES,
-        GAMES,
-        HISTORY_UNSAVED,
-        MAX_ACTIVE_GAMES,
-        PRIVATE_SANDBOXES,
-        SANDBOX_CHECKPOINTS,
-        SAVES_RUNNING,
-        UNSAVED_GAMES,
-        cache_loaded_game,
-        check_game_capacity,
-        evict_game,
-        is_multiplayer_match,
-        load_saved_game,
-        persist_game,
-        resolve_game,
-        sync_summary,
-    )
-    from storage.supabase import (
-        delete_game_from_db,
-        is_persistence_enabled,
-        load_all_summaries_from_db,
-        load_game_from_db,
-        save_game_to_db,
-    )
-    from ws.connection_manager import (
-        broadcast_game_update,
-        broadcast_lobby_update,
-        manager,
-    )
+from scenarios.presets import (
+    SCENARIO_IDS,
+    build_scenario,
+    seed_initial_multiplayer_lobbies,
+)
+from security.secrecy import (
+    caller_holds_seat,
+    reject_on_multiplayer_match,
+    require_own_seat,
+    sanitize_game_state_for_viewer,
+    verify_admin_access,
+    verify_power_authorization,
+    viewer_power_for,
+)
+from storage.store import (
+    DEFAULT_GAME_ID,
+    GAME_HISTORY,
+    GAME_PASSCODES,
+    GAME_SUMMARIES,
+    GAMES,
+    HISTORY_UNSAVED,
+    MAX_ACTIVE_GAMES,
+    PRIVATE_SANDBOXES,
+    SANDBOX_CHECKPOINTS,
+    SAVES_RUNNING,
+    UNSAVED_GAMES,
+    cache_loaded_game,
+    check_game_capacity,
+    evict_game,
+    is_multiplayer_match,
+    load_saved_game,
+    persist_game,
+    resolve_game,
+    sync_summary,
+)
+from storage.supabase import (
+    delete_game_from_db,
+    is_persistence_enabled,
+    load_all_summaries_from_db,
+    load_game_from_db,
+    save_game_to_db,
+)
+from ws.connection_manager import (
+    broadcast_game_update,
+    broadcast_lobby_update,
+    manager,
+)
 
 logger = logging.getLogger("diplomacy.api")
 

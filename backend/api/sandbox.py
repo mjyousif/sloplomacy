@@ -2,96 +2,50 @@
 
 import uuid
 
+from api.turns import _execute_adjudication
+from domain.models import (
+    GameState,
+    GenerateAIOrdersRequest,
+    Order,
+    OrderType,
+    Power,
+    ScenarioRequest,
+    SetPowerRequest,
+)
+from engine.ai import generate_tactical_orders
+from engine.order_utils import (
+    refresh_diagnostics_and_simulation,
+    reset_foreign_orders,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query
-
-try:
-    from backend.api.turns import _execute_adjudication
-    from backend.domain.models import (
-        GameState,
-        GenerateAIOrdersRequest,
-        Order,
-        OrderType,
-        Power,
-        ScenarioRequest,
-        SetPowerRequest,
-    )
-    from backend.engine.ai import generate_tactical_orders
-    from backend.engine.order_utils import (
-        refresh_diagnostics_and_simulation,
-        reset_foreign_orders,
-    )
-    from backend.scenarios.presets import SCENARIO_IDS, build_scenario
-    from backend.security.auth import AuthUser, get_current_user
-    from backend.security.secrecy import (
-        caller_holds_seat,
-        reject_on_multiplayer_match,
-        require_own_seat,
-        sanitize_game_state_for_viewer,
-        verify_admin_access,
-        viewer_power_for,
-    )
-    from backend.storage.store import (
-        GAME_HISTORY,
-        GAME_SUMMARIES,
-        GAMES,
-        HISTORY_UNSAVED,
-        PRIVATE_SANDBOXES,
-        SANDBOX_CHECKPOINTS,
-        check_game_capacity,
-        evict_game,
-        is_multiplayer_match,
-        persist_game,
-        resolve_game,
-        sync_summary,
-    )
-    from backend.ws.connection_manager import (
-        broadcast_game_update,
-        broadcast_lobby_update,
-    )
-except ModuleNotFoundError:
-    from api.turns import _execute_adjudication
-    from domain.models import (
-        GameState,
-        GenerateAIOrdersRequest,
-        Order,
-        OrderType,
-        Power,
-        ScenarioRequest,
-        SetPowerRequest,
-    )
-    from engine.ai import generate_tactical_orders
-    from engine.order_utils import (
-        refresh_diagnostics_and_simulation,
-        reset_foreign_orders,
-    )
-    from scenarios.presets import SCENARIO_IDS, build_scenario
-    from security.auth import AuthUser, get_current_user
-    from security.secrecy import (
-        caller_holds_seat,
-        reject_on_multiplayer_match,
-        require_own_seat,
-        sanitize_game_state_for_viewer,
-        verify_admin_access,
-        viewer_power_for,
-    )
-    from storage.store import (
-        GAME_HISTORY,
-        GAME_SUMMARIES,
-        GAMES,
-        HISTORY_UNSAVED,
-        PRIVATE_SANDBOXES,
-        SANDBOX_CHECKPOINTS,
-        check_game_capacity,
-        evict_game,
-        is_multiplayer_match,
-        persist_game,
-        resolve_game,
-        sync_summary,
-    )
-    from ws.connection_manager import (
-        broadcast_game_update,
-        broadcast_lobby_update,
-    )
+from scenarios.presets import SCENARIO_IDS, build_scenario
+from security.auth import AuthUser, get_current_user
+from security.secrecy import (
+    caller_holds_seat,
+    reject_on_multiplayer_match,
+    require_own_seat,
+    sanitize_game_state_for_viewer,
+    verify_admin_access,
+    viewer_power_for,
+)
+from storage.store import (
+    GAME_HISTORY,
+    GAME_SUMMARIES,
+    GAMES,
+    HISTORY_UNSAVED,
+    PRIVATE_SANDBOXES,
+    SANDBOX_CHECKPOINTS,
+    check_game_capacity,
+    evict_game,
+    is_multiplayer_match,
+    persist_game,
+    resolve_game,
+    sync_summary,
+)
+from ws.connection_manager import (
+    broadcast_game_update,
+    broadcast_lobby_update,
+)
 
 router = APIRouter(tags=["Sandbox & AI Planning"])
 

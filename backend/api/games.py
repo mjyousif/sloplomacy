@@ -2,121 +2,63 @@ import hmac
 import uuid
 from datetime import datetime, timezone
 
+from domain.models import (
+    CreateGameRequest,
+    GameParticipant,
+    GameState,
+    JoinGameRequest,
+    LeaveGameRequest,
+    MultiplayerGameSummary,
+    Power,
+    ProvinceInfo,
+    SaveSandboxRequest,
+    SurrenderRequest,
+)
+from engine.order_utils import (
+    everyone_is_ready,
+    put_into_civil_disorder,
+    refresh_diagnostics_and_simulation,
+)
+from engine.topology import PROVINCES
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel
-
-try:
-    from backend.domain.models import (
-        CreateGameRequest,
-        GameParticipant,
-        GameState,
-        JoinGameRequest,
-        LeaveGameRequest,
-        MultiplayerGameSummary,
-        Power,
-        ProvinceInfo,
-        SaveSandboxRequest,
-        SurrenderRequest,
-    )
-    from backend.engine.order_utils import (
-        everyone_is_ready,
-        put_into_civil_disorder,
-        refresh_diagnostics_and_simulation,
-    )
-    from backend.engine.topology import PROVINCES
-    from backend.scenarios.presets import build_scenario
-    from backend.security.auth import AuthUser, get_current_user
-    from backend.security.secrecy import (
-        sanitize_game_state_for_viewer,
-        viewer_power_for,
-    )
-    from backend.storage.store import (
-        DEFAULT_GAME_ID,
-        GAME_HISTORY,
-        GAME_PASSCODES,
-        GAME_SUMMARIES,
-        GAMES,
-        SANDBOX_CHECKPOINTS,
-        UNSAVED_GAMES,
-        cache_loaded_game,
-        check_game_capacity,
-        evict_game,
-        get_main_attr,
-        is_multiplayer_match,
-        load_saved_game,
-        persist_game,
-        resolve_game,
-        sync_summary,
-    )
-    from backend.storage.supabase import (
-        SupabaseUnavailable,
-        delete_game_from_db,
-        is_persistence_enabled,
-        is_valid_uuid,
-        load_all_summaries_from_db,
-        load_game_from_db,
-    )
-    from backend.ws.connection_manager import (
-        broadcast_game_update,
-        broadcast_lobby_update,
-        manager,
-    )
-except ModuleNotFoundError:
-    from domain.models import (
-        CreateGameRequest,
-        GameParticipant,
-        GameState,
-        JoinGameRequest,
-        LeaveGameRequest,
-        MultiplayerGameSummary,
-        Power,
-        ProvinceInfo,
-        SaveSandboxRequest,
-        SurrenderRequest,
-    )
-    from engine.order_utils import (
-        everyone_is_ready,
-        put_into_civil_disorder,
-        refresh_diagnostics_and_simulation,
-    )
-    from engine.topology import PROVINCES
-    from scenarios.presets import build_scenario
-    from security.auth import AuthUser, get_current_user
-    from security.secrecy import (
-        sanitize_game_state_for_viewer,
-        viewer_power_for,
-    )
-    from storage.store import (
-        DEFAULT_GAME_ID,
-        GAME_HISTORY,
-        GAME_PASSCODES,
-        GAME_SUMMARIES,
-        GAMES,
-        SANDBOX_CHECKPOINTS,
-        UNSAVED_GAMES,
-        cache_loaded_game,
-        check_game_capacity,
-        evict_game,
-        get_main_attr,
-        is_multiplayer_match,
-        load_saved_game,
-        persist_game,
-        resolve_game,
-        sync_summary,
-    )
-    from storage.supabase import (
-        SupabaseUnavailable,
-        delete_game_from_db,
-        is_persistence_enabled,
-        is_valid_uuid,
-        load_all_summaries_from_db,
-        load_game_from_db,
-    )
-    from ws.connection_manager import (
-        broadcast_game_update,
-        broadcast_lobby_update,
-        manager,
-    )
+from scenarios.presets import build_scenario
+from security.auth import AuthUser, get_current_user
+from security.secrecy import (
+    sanitize_game_state_for_viewer,
+    viewer_power_for,
+)
+from storage.store import (
+    DEFAULT_GAME_ID,
+    GAME_HISTORY,
+    GAME_PASSCODES,
+    GAME_SUMMARIES,
+    GAMES,
+    SANDBOX_CHECKPOINTS,
+    UNSAVED_GAMES,
+    cache_loaded_game,
+    check_game_capacity,
+    evict_game,
+    get_main_attr,
+    is_multiplayer_match,
+    load_saved_game,
+    persist_game,
+    resolve_game,
+    sync_summary,
+)
+from storage.supabase import (
+    SupabaseUnavailable,
+    delete_game_from_db,
+    is_persistence_enabled,
+    is_valid_uuid,
+    load_all_summaries_from_db,
+    load_game_from_db,
+)
+from ws.connection_manager import (
+    broadcast_game_update,
+    broadcast_lobby_update,
+    manager,
+)
 
 router = APIRouter(tags=["Lobby & Match Management"])
 
@@ -644,10 +586,7 @@ async def get_game(
     x_passcode: str | None = Header(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    try:
-        from backend.api.turns import tick_timer
-    except ModuleNotFoundError:
-        from api.turns import tick_timer
+    from api.turns import tick_timer
 
     game = await resolve_game(game_id)
     await tick_timer(game)

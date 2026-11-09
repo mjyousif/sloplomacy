@@ -1,6 +1,7 @@
 """Backward-compatible facade for engine.topology."""
 
-try:
-    from backend.engine.topology import *  # noqa: F403
-except ModuleNotFoundError:
-    from engine.topology import *  # noqa: F403
+import sys
+
+from engine import topology as _real_module
+
+sys.modules[__name__] = _real_module

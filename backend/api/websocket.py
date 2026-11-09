@@ -3,48 +3,27 @@
 import asyncio
 import hmac
 
+from api.turns import tick_timer
+from domain.models import Power
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials
-
-try:
-    from backend.api.turns import tick_timer
-    from backend.domain.models import Power
-    from backend.security.auth import AuthUser, get_current_user
-    from backend.security.secrecy import sanitize_game_state_for_viewer, viewer_power_for
-    from backend.storage.store import (
-        GAME_PASSCODES,
-        GAME_SUMMARIES,
-        GAMES,
-        cache_loaded_game,
-        is_multiplayer_match,
-        sync_summary,
-    )
-    from backend.storage.supabase import (
-        SupabaseUnavailable,
-        is_persistence_enabled,
-        load_game_from_db,
-    )
-    from backend.ws.connection_manager import manager
-except ModuleNotFoundError:
-    from api.turns import tick_timer
-    from domain.models import Power
-    from security.auth import AuthUser, get_current_user
-    from security.secrecy import sanitize_game_state_for_viewer, viewer_power_for
-    from storage.store import (
-        GAME_PASSCODES,
-        GAME_SUMMARIES,
-        GAMES,
-        cache_loaded_game,
-        is_multiplayer_match,
-        sync_summary,
-    )
-    from storage.supabase import (
-        SupabaseUnavailable,
-        is_persistence_enabled,
-        load_game_from_db,
-    )
-    from ws.connection_manager import manager
+from security.auth import AuthUser, get_current_user
+from security.secrecy import sanitize_game_state_for_viewer, viewer_power_for
+from storage.store import (
+    GAME_PASSCODES,
+    GAME_SUMMARIES,
+    GAMES,
+    cache_loaded_game,
+    is_multiplayer_match,
+    sync_summary,
+)
+from storage.supabase import (
+    SupabaseUnavailable,
+    is_persistence_enabled,
+    load_game_from_db,
+)
+from ws.connection_manager import manager
 
 router = APIRouter()
 

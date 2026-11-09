@@ -1,29 +1,15 @@
+from domain.models import GameState, MultiplayerGameSummary, Power
+from engine.adjudicator import adjudicate_turn
+from engine.order_utils import create_default_orders
 from fastapi import HTTPException, status
-
-try:
-    from backend.domain.models import GameState, MultiplayerGameSummary, Power
-    from backend.engine.adjudicator import adjudicate_turn
-    from backend.engine.order_utils import create_default_orders
-    from backend.security.auth import AuthUser
-    from backend.storage.store import (
-        DEFAULT_GAME_ID,
-        GAME_SUMMARIES,
-        GAMES,
-        is_multiplayer_match,
-    )
-    from backend.storage.supabase import is_valid_uuid
-except ModuleNotFoundError:
-    from domain.models import GameState, MultiplayerGameSummary, Power
-    from engine.adjudicator import adjudicate_turn
-    from engine.order_utils import create_default_orders
-    from security.auth import AuthUser
-    from storage.store import (
-        DEFAULT_GAME_ID,
-        GAME_SUMMARIES,
-        GAMES,
-        is_multiplayer_match,
-    )
-    from storage.supabase import is_valid_uuid
+from security.auth import AuthUser
+from storage.store import (
+    DEFAULT_GAME_ID,
+    GAME_SUMMARIES,
+    GAMES,
+    is_multiplayer_match,
+)
+from storage.supabase import is_valid_uuid
 
 
 def verify_admin_access(

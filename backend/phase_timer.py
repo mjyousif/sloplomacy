@@ -1,6 +1,7 @@
 """Backward-compatible facade for engine.phase_timer."""
 
-try:
-    from backend.engine.phase_timer import *  # noqa: F403
-except ModuleNotFoundError:
-    from engine.phase_timer import *  # noqa: F403
+import sys
+
+from engine import phase_timer as _real_module
+
+sys.modules[__name__] = _real_module

@@ -1,8 +1,5 @@
 import { memo } from 'react';
-import {
-  EUROPE_PROVINCE_GEOMETRY,
-  type ProvinceGeometry,
-} from '../../../data/europeMapGeometry';
+import { ALL_PROVINCE_GEOMETRIES } from '../../../data/europeMapGeometry';
 import { getMapLayout } from '../../../data/mapLayouts';
 import {
   POWER_METADATA,
@@ -11,10 +8,6 @@ import {
 } from '../../../types/diplomacy';
 import type { PieceStyle } from '../../../utils/displayPrefs';
 import { SupplyStar } from '../../MapPiece';
-
-const ALL_PROVINCE_GEOMETRIES: ProvinceGeometry[] = Object.values(
-  EUROPE_PROVINCE_GEOMETRY,
-);
 
 const STAR_SCALE: Record<PieceStyle, number> = {
   classic: 1,

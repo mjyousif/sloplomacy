@@ -1,67 +1,35 @@
 """FastAPI router for tactical orders and order confirmations."""
 
+from domain.models import (
+    GameState,
+    OrderSubmissionRequest,
+    OrderType,
+    SetPowerRequest,
+    SingleOrderUpdateRequest,
+    UnitType,
+)
+from engine.order_utils import (
+    build_slot_power,
+    refresh_diagnostics_and_simulation,
+    reject_stale_turn,
+    validate_order_references,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-
-try:
-    from backend.domain.models import (
-        GameState,
-        OrderSubmissionRequest,
-        OrderType,
-        SetPowerRequest,
-        SingleOrderUpdateRequest,
-        UnitType,
-    )
-    from backend.engine.order_utils import (
-        build_slot_power,
-        refresh_diagnostics_and_simulation,
-        reject_stale_turn,
-        validate_order_references,
-    )
-    from backend.security.auth import AuthUser, get_current_user
-    from backend.security.secrecy import (
-        sanitize_game_state_for_viewer,
-        verify_power_authorization,
-    )
-    from backend.storage.store import (
-        is_multiplayer_match,
-        persist_game,
-        resolve_game,
-        sync_summary,
-    )
-    from backend.ws.connection_manager import (
-        broadcast_game_update,
-        broadcast_lobby_update,
-    )
-except ModuleNotFoundError:
-    from domain.models import (
-        GameState,
-        OrderSubmissionRequest,
-        OrderType,
-        SetPowerRequest,
-        SingleOrderUpdateRequest,
-        UnitType,
-    )
-    from engine.order_utils import (
-        build_slot_power,
-        refresh_diagnostics_and_simulation,
-        reject_stale_turn,
-        validate_order_references,
-    )
-    from security.auth import AuthUser, get_current_user
-    from security.secrecy import (
-        sanitize_game_state_for_viewer,
-        verify_power_authorization,
-    )
-    from storage.store import (
-        is_multiplayer_match,
-        persist_game,
-        resolve_game,
-        sync_summary,
-    )
-    from ws.connection_manager import (
-        broadcast_game_update,
-        broadcast_lobby_update,
-    )
+from security.auth import AuthUser, get_current_user
+from security.secrecy import (
+    sanitize_game_state_for_viewer,
+    verify_power_authorization,
+)
+from storage.store import (
+    is_multiplayer_match,
+    persist_game,
+    resolve_game,
+    sync_summary,
+)
+from ws.connection_manager import (
+    broadcast_game_update,
+    broadcast_lobby_update,
+)
 
 router = APIRouter(tags=["Match & Tactical Operations"])
 

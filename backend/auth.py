@@ -1,6 +1,7 @@
 """Backward-compatible facade for security.auth."""
 
-try:
-    from backend.security.auth import *  # noqa: F403
-except ModuleNotFoundError:
-    from security.auth import *  # noqa: F403
+import sys
+
+from security import auth as _real_module
+
+sys.modules[__name__] = _real_module

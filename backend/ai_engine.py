@@ -1,6 +1,7 @@
 """Backward-compatible facade for engine.ai."""
 
-try:
-    from backend.engine.ai import *  # noqa: F403
-except ModuleNotFoundError:
-    from engine.ai import *  # noqa: F403
+import sys
+
+from engine import ai as _real_module
+
+sys.modules[__name__] = _real_module
