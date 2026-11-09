@@ -1,6 +1,6 @@
 # Tactical Adjudication Engine (`adjudicator.py`)
 
-The adjudication engine (`backend/adjudicator.py`) evaluates orders, manages phase transitions, and resolves tactical movements, combat conflicts, support cuts, maritime convoys, bounces, dislodgements, retreats, and winter supply center builds/disbands under standard Diplomacy rules.
+The adjudication engine (`backend/engine/adjudicator.py`) evaluates orders, manages phase transitions, and resolves tactical movements, combat conflicts, support cuts, maritime convoys, bounces, dislodgements, retreats, and winter supply center builds/disbands under standard Diplomacy rules.
 
 It interfaces with the authoritative **Python `diplomacy` package** (`diplomacy>=1.1.2`), which implements standard Diplomacy Adjudicator Test Cases (DATC) resolution semantics.
 

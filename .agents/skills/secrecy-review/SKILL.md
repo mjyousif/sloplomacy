@@ -32,6 +32,6 @@ Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #
 
 ## Tests
 
-Add to `backend/test_security.py` (or the nearest suite) a test with **two** players, where player B tries to read or change player A's orders through your new path. Assert on 403 or on the masked content. Passing for a single player proves nothing. Look at how `backend/ws_testing.py` and `backend/conftest.py` set up seats and sockets before writing your own.
+Add to `backend/tests/integration/test_security.py` (or the nearest suite) a test with **two** players, where player B tries to read or change player A's orders through your new path. Assert on 403 or on the masked content. Passing for a single player proves nothing. Look at how `backend/tests/ws_testing.py` and `backend/tests/conftest.py` set up seats and sockets before writing your own.
 
 Update `docs/backend/api-reference.md`, noting the auth requirement and masking behavior of the endpoint.

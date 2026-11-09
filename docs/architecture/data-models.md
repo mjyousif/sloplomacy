@@ -1,6 +1,6 @@
 # Data Models & Schemas
 
-The Diplomacy 1901 Tactical Engine maintains synchronized data contracts between the Python FastAPI backend (using Pydantic v2 in `backend/models.py`) and the TypeScript frontend (defined in `frontend/src/types/diplomacy.ts`).
+The Diplomacy 1901 Tactical Engine maintains synchronized data contracts between the Python FastAPI backend (using Pydantic v2 in `backend/domain/models.py`) and the TypeScript frontend (defined in `frontend/src/types/diplomacy.ts`).
 
 ---
 
@@ -141,7 +141,7 @@ Complete server snapshot of a game session.
 | `winner` | `Power?` | Set once a power has won. The clock stays on the deciding phase and no further turns resolve. |
 
 ### 6. `PhaseTimer`
-The clock of a live multiplayer match. Times are absolute, so it survives a restart. The rules are in `backend/phase_timer.py`.
+The clock of a live multiplayer match. Times are absolute, so it survives a restart. The rules are in `backend/engine/phase_timer.py`.
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
@@ -250,7 +250,7 @@ interface AuthUser {
 }
 ```
 
-Backend (`backend/auth.py`):
+Backend (`backend/security/auth.py`):
 ```python
 class AuthUser(BaseModel):
     user_id: str
@@ -259,7 +259,7 @@ class AuthUser(BaseModel):
 ```
 
 ### `DisplayPrefs`
-A player's own map display choice. It's frontend only, so it has no counterpart in `backend/models.py`. It's stored in `localStorage` and in Supabase `user_metadata.display_prefs`, and is defined in `frontend/src/utils/displayPrefs.ts`:
+A player's own map display choice. It's frontend only, so it has no counterpart in `backend/domain/models.py`. It's stored in `localStorage` and in Supabase `user_metadata.display_prefs`, and is defined in `frontend/src/utils/displayPrefs.ts`:
 
 ```typescript
 type PieceStyle = 'classic' | 'seated' | 'compact' | 'flags' | 'nameplate';

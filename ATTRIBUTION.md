@@ -27,7 +27,7 @@
   - Authored by Philip Paquette and contributors.
   - Licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](https://www.gnu.org/licenses/agpl-3.0.html).
 - **Diplomacy Adjudicator Test Cases (DATC)**:
-  - Test suites in `backend/test_adjudicator.py` reference the DATC standards developed and maintained by **Lucas Kruijswijk** and the international Diplomacy community.
+  - Test suites in `backend/tests/unit/test_adjudicator.py` reference the DATC standards developed and maintained by **Lucas Kruijswijk** and the international Diplomacy community.
 - **Lucide Icons**:
   - Copyright (c) Lucide Contributors.
   - Licensed under the [ISC License](https://github.com/lucide-icons/lucide/blob/main/LICENSE).

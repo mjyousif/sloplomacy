@@ -45,7 +45,7 @@ python scripts/quickstart.py
 ### Local Demo Sign-In
 When Supabase is not configured, the sign-in form creates a local demo account. It is stored in the browser, and the frontend sends it to the backend as an unsigned `alg: none` token.
 
-`backend/auth.py` rejects those tokens unless `ENVIRONMENT` is `development` or `test`, or `ALLOW_INSECURE_DEV_AUTH=true`. Every launcher above sets `ENVIRONMENT=development` for the backend it starts, so a demo sign-in works out of the box:
+`backend/security/auth.py` rejects those tokens unless `ENVIRONMENT` is `development` or `test`, or `ALLOW_INSECURE_DEV_AUTH=true`. Every launcher above sets `ENVIRONMENT=development` for the backend it starts, so a demo sign-in works out of the box:
 
 - `scripts/quickstart.py` sets it in `backend_env()`. `scripts/start.sh`, `scripts/start.bat`, `scripts/dev.sh` and the default path of `scripts/start.ps1` and `scripts/dev.ps1` all run `scripts/quickstart.py`.
 - `scripts/dev.ps1` sets it in the backend window for `-SeparateWindows`, which starts Uvicorn directly.

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import jwt
 import pytest
-from database import is_valid_room_code
+from domain.models import OrderType
 from fastapi.testclient import TestClient
 from main import (
     GAME_SUMMARIES,
@@ -15,7 +15,7 @@ from main import (
     app,
     seed_initial_multiplayer_lobbies,
 )
-from models import OrderType
+from storage.supabase import is_valid_room_code
 
 JWT_SECRET = "test-secret-at-least-32-chars-long-12345"
 client = TestClient(app)

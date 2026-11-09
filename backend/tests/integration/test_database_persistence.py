@@ -4,18 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
-from database import (
-    LOBBY_COLUMNS,
-    SupabaseUnavailable,
-    build_summary_from_row,
-    delete_game_from_db,
-    is_persistence_enabled,
-    load_all_summaries_from_db,
-    load_game_from_db,
-    save_game_to_db,
-    to_app_status,
-    to_db_status,
-)
+from domain.models import GameParticipant, GameState, MultiplayerGameSummary, Power
 from fastapi.testclient import TestClient
 from main import (
     GAME_HISTORY,
@@ -30,7 +19,18 @@ from main import (
     cache_loaded_game,
     persist_game,
 )
-from models import GameParticipant, GameState, MultiplayerGameSummary, Power
+from storage.supabase import (
+    LOBBY_COLUMNS,
+    SupabaseUnavailable,
+    build_summary_from_row,
+    delete_game_from_db,
+    is_persistence_enabled,
+    load_all_summaries_from_db,
+    load_game_from_db,
+    save_game_to_db,
+    to_app_status,
+    to_db_status,
+)
 
 client = TestClient(app)
 

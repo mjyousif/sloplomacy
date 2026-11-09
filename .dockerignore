@@ -11,7 +11,5 @@ frontend/dist
 *.pyo
 .DS_Store
 Thumbs.db
-backend/test_*.py
-backend/conftest.py
+backend/tests/
 backend/.pytest_cache
-backend/ws_testing.py

@@ -8,7 +8,7 @@ The backend service is located in the `backend/` directory. It is built with **F
 
 ```
 backend/
-├── main.py                  # FastAPI app instance, CORS/security headers, router inclusion & root facades
+├── main.py                  # FastAPI app instance, CORS/security headers, router inclusion
 ├── api/                     # Modular FastAPI routers
 │   ├── games.py             # Match room creation, seat joining/claiming/surrendering, public/private lobbies
 │   ├── orders.py            # Single order submission, batch atomic updates, confirm-all
@@ -39,14 +39,6 @@ backend/
 ├── tests/                   # Categorized pytest test suite
 │   ├── unit/                # Unit test suites (adjudicator, engine, validator, phase_timer)
 │   └── integration/         # Integration test suites (api, database, admin, security, websocket, etc.)
-├── models.py                # Root backward-compatible facade re-exporting domain/
-├── adjudicator.py           # Root backward-compatible facade re-exporting engine/
-├── database.py              # Root backward-compatible facade re-exporting storage/
-├── auth.py                  # Root backward-compatible facade re-exporting security/
-├── map_data.py              # Root backward-compatible facade re-exporting engine/
-├── validator.py             # Root backward-compatible facade re-exporting engine/
-├── phase_timer.py           # Root backward-compatible facade re-exporting engine/
-├── ai_engine.py             # Root backward-compatible facade re-exporting engine/
 ├── requirements-runtime.txt # Python runtime dependencies (what the Docker image installs)
 ├── requirements.txt         # Runtime dependencies plus test tools, for CI tests
 └── requirements-dev.txt     # Runtime + test + code quality tools (Ruff) for development
@@ -104,7 +96,7 @@ The backend maintains active match sessions in scoped memory dictionaries acting
 - `SAVES_RUNNING: Dict[str, bool]`: Games with a save running, and whether that save must repeat because the game changed during it.
 - `HISTORY_UNSAVED: Set[str]`: Games whose rollback history differs from what is saved.
 
-When `SUPABASE_URL` and the service role key (`SUPABASE_SERVICE_ROLE_KEY`, or `SUPABASE_KEY` holding the service role key) are configured, the backend automatically operates a **read-through / write-through** persistence layer via [`backend/storage/supabase.py`](database.py) (re-exported via `database.py`):
+When `SUPABASE_URL` and the service role key (`SUPABASE_SERVICE_ROLE_KEY`, or `SUPABASE_KEY` holding the service role key) are configured, the backend automatically operates a **read-through / write-through** persistence layer via [`backend/storage/supabase.py`](../../backend/storage/supabase.py):
 - On state mutation, the game state, summary, history, and passcodes are serialized to JSONB and persisted to Supabase's `public.multiplayer_games` table. Only one save runs per game, so an older write cannot land after a newer one, and a change made during a save is written when that save repeats.
 - On container cold start (such as Google Cloud Run scale-to-zero wakeups), any request for a game absent from RAM is transparently fetched and restored from Supabase.
 - Memory is authoritative for a loaded game. `GET /api/games` uses Supabase only to pick up games this process has not loaded and to drop games deleted from Supabase, never to replace a loaded game.

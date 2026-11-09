@@ -1,15 +1,15 @@
 import random
 
 import pytest
-from adjudicator import adjudicate_turn, create_diplomacy_game, order_to_diplomacy_str
-from map_data import (
+from domain.models import Order, OrderType, Power, ProvinceType, Unit, UnitType
+from engine.adjudicator import adjudicate_turn, create_diplomacy_game, order_to_diplomacy_str
+from engine.topology import (
     PROVINCES,
     can_unit_support_province,
     get_initial_1901_units,
     get_initial_ownership,
     split_province_code,
 )
-from models import Order, OrderType, Power, ProvinceType, Unit, UnitType
 
 
 def test_adjudicator_support_cut_by_attack():

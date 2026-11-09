@@ -1,8 +1,8 @@
-from ai_engine import generate_tactical_orders
+from domain.models import OrderType
+from engine.ai import generate_tactical_orders
+from engine.topology import get_initial_1901_units, get_initial_ownership
 from fastapi.testclient import TestClient
 from main import app
-from map_data import get_initial_1901_units, get_initial_ownership
-from models import OrderType
 
 
 def test_ai_engine_generates_valid_non_conflicting_orders():

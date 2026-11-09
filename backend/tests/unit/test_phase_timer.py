@@ -6,10 +6,15 @@ import time
 import jwt
 import main
 import pytest
+from domain.models import GameState, PhaseTimer, Power, TimerChoice, TimerStage
+from engine.phase_timer import (
+    FIXED_PHASE_MINUTES,
+    VOTE_WINDOW_SECONDS,
+    start_phase_clock,
+    tally_votes,
+)
 from fastapi.testclient import TestClient
 from main import GAME_HISTORY, GAME_SUMMARIES, GAMES, PRIVATE_SANDBOXES, app, tick_timer
-from models import GameState, PhaseTimer, Power, TimerChoice, TimerStage
-from phase_timer import FIXED_PHASE_MINUTES, VOTE_WINDOW_SECONDS, start_phase_clock, tally_votes
 
 TEST_JWT_SECRET = "test-secret-at-least-32-chars-long-12345"
 ALL_POWERS = ["FRANCE", "ENGLAND", "GERMANY", "ITALY", "AUSTRIA", "RUSSIA", "TURKEY"]

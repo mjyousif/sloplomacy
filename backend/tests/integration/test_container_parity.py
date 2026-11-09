@@ -65,6 +65,45 @@ def test_no_stray_backend_package_imports_in_production_source():
     )
 
 
+# The root modules that once aliased the real packages through sys.modules. They are gone, so
+# every import names the package that owns the code and each name has one import path.
+REMOVED_ROOT_SHIMS = (
+    "adjudicator",
+    "ai_engine",
+    "auth",
+    "database",
+    "map_data",
+    "models",
+    "phase_timer",
+    "validator",
+)
+
+
+def test_removed_root_shims_stay_removed():
+    """No root alias module comes back, and no file (tests included) imports one."""
+    backend_dir = Path(__file__).resolve().parents[2]
+    present = [name for name in REMOVED_ROOT_SHIMS if (backend_dir / f"{name}.py").exists()]
+    assert not present, f"Root alias modules are back: {present}. Import the real package instead."
+
+    violations = []
+    for py_file in backend_dir.rglob("*.py"):
+        if ".venv" in py_file.parts:
+            continue
+        tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                names = [node.module]
+            elif isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            else:
+                continue
+            for name in names:
+                if name.split(".")[0] in REMOVED_ROOT_SHIMS:
+                    violations.append(f"{py_file.relative_to(backend_dir)}:{node.lineno}: {name}")
+
+    assert not violations, "Imports of removed root modules:\n" + "\n".join(violations)
+
+
 def test_container_runtime_import_isolation_full_lifecycle():
     """
     Dynamic execution test: Exercises the full campaign lifecycle through TestClient
