@@ -3,7 +3,8 @@
 from collections import defaultdict
 
 import diplomacy
-from domain.models import Order, OrderResolution, OrderType, Power, Unit, UnitType
+from domain.board import Power, Unit, UnitType
+from domain.orders import Order, OrderResolution, OrderType
 from engine.adjudicator.context import ResolutionContext
 from engine.adjudicator.translator import order_to_diplomacy_str
 

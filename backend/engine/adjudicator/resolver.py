@@ -4,7 +4,8 @@ from collections import defaultdict
 from typing import Any
 
 import diplomacy
-from domain.models import Order, Power, SimulationResult, Unit
+from domain.board import Power, Unit
+from domain.orders import Order, SimulationResult
 from engine.adjudicator.adjustments import build_adjustment_orders, resolve_adjustments
 from engine.adjudicator.context import ResolutionContext
 from engine.adjudicator.movement import build_movement_orders, resolve_movement

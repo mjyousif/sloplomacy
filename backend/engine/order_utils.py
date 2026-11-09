@@ -1,15 +1,9 @@
 from pathlib import Path
 from typing import Any
 
-from domain.models import (
-    GameState,
-    Order,
-    OrderType,
-    Power,
-    ProvinceInfo,
-    Unit,
-    UnitType,
-)
+from domain.board import Power, ProvinceInfo, Unit, UnitType
+from domain.game_state import GameState
+from domain.orders import Order, OrderType
 from engine.adjudicator.resolver import (
     adjudicate_turn,
     compute_current_builds,

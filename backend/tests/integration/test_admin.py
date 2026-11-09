@@ -2,7 +2,7 @@ import time
 
 import jwt
 import pytest
-from domain.models import UnitType
+from domain.board import UnitType
 from fastapi.testclient import TestClient
 from main import app
 from scenarios.presets import seed_initial_multiplayer_lobbies

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import jwt
 import pytest
-from domain.models import OrderType
+from domain.orders import OrderType
 from fastapi.testclient import TestClient
 from main import app
 from scenarios.presets import seed_initial_multiplayer_lobbies

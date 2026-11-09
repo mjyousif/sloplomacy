@@ -3,7 +3,8 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from domain.models import Order, OrderResolution, Unit
+from domain.board import Unit
+from domain.orders import Order, OrderResolution
 from engine.topology.provinces import PROVINCES
 
 # A unit as the engine reports it after processing: (unit type, base province, coast).

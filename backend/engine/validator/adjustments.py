@@ -2,7 +2,9 @@
 
 from typing import Any
 
-from domain.models import IssueCode, IssueSeverity, Order, OrderType, Power, Unit
+from domain.board import Power, Unit
+from domain.issues import IssueCode, IssueSeverity
+from domain.orders import Order, OrderType
 from engine.validator.issues import IssueCollector
 
 

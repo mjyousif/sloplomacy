@@ -1,14 +1,13 @@
 import logging
 import time
 
-from domain.models import (
+from domain.board import Power
+from domain.game_state import GameState, TimerStage
+from domain.orders import SimulationResult
+from domain.requests import (
     FinalizeRequest,
     FinalizeResponse,
-    GameState,
-    Power,
     SetPowerRequest,
-    SimulationResult,
-    TimerStage,
     TimerToggleRequest,
     TimerVoteRequest,
 )

@@ -1,6 +1,6 @@
 """FastAPI router for turn history: every resolved phase of a game, with all orders and outcomes."""
 
-from domain.models import GameState, TurnHistoryEntry, TurnRecord
+from domain.game_state import GameState, TurnHistoryEntry, TurnRecord
 from engine.adjudicator.resolver import adjudicate_turn
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from security.auth import AuthUser, get_current_user

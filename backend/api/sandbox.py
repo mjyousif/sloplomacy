@@ -3,15 +3,10 @@
 import uuid
 
 from api.turns import _execute_adjudication
-from domain.models import (
-    GameState,
-    GenerateAIOrdersRequest,
-    Order,
-    OrderType,
-    Power,
-    ScenarioRequest,
-    SetPowerRequest,
-)
+from domain.board import Power
+from domain.game_state import GameState
+from domain.orders import Order, OrderType
+from domain.requests import GenerateAIOrdersRequest, ScenarioRequest, SetPowerRequest
 from engine.ai import generate_tactical_orders
 from engine.order_utils import (
     refresh_diagnostics_and_simulation,

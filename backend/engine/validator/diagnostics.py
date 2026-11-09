@@ -2,7 +2,9 @@
 
 from collections import defaultdict
 
-from domain.models import IssueCode, IssueSeverity, Order, OrderType, Power, Unit
+from domain.board import Power, Unit
+from domain.issues import IssueCode, IssueSeverity
+from domain.orders import Order, OrderType
 from engine.topology.graph import can_unit_support_province
 from engine.validator.issues import IssueCollector, province_name
 

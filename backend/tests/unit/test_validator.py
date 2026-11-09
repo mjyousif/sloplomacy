@@ -1,4 +1,6 @@
-from domain.models import IssueCode, IssueSeverity, Order, OrderType, Power, Unit, UnitType
+from domain.board import Power, Unit, UnitType
+from domain.issues import IssueCode, IssueSeverity
+from domain.orders import Order, OrderType
 from engine.topology.provinces import get_initial_1901_units
 from engine.validator.convoys import has_active_convoy_chain
 from engine.validator.orchestrator import validate_orders

@@ -3,21 +3,14 @@
 import uuid
 from datetime import datetime, timezone
 
-from domain.models import (
-    CreateGameRequest,
-    GameParticipant,
-    GameState,
-    MultiplayerGameSummary,
-    Power,
-    ProvinceInfo,
-    SaveSandboxRequest,
-)
+from domain.board import Power
+from domain.game_state import GameParticipant, MultiplayerGameSummary
+from domain.requests import CreateGameRequest, GameBootstrapResponse, SaveSandboxRequest
 from engine.order_utils import (
     refresh_diagnostics_and_simulation,
 )
 from engine.topology.provinces import PROVINCES
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from pydantic import BaseModel
 from scenarios.presets import build_scenario
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
@@ -49,12 +42,6 @@ from ws.connection_manager import (
 )
 
 router = APIRouter(tags=["Lobby & Match Management"])
-
-
-class GameBootstrapResponse(BaseModel):
-    state: GameState
-    provinces: dict[str, ProvinceInfo]
-    summary: MultiplayerGameSummary | None = None
 
 
 async def sync_lobby_with_db() -> None:

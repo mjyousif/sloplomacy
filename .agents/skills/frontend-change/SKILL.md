@@ -9,7 +9,7 @@ Read the matching doc first: `docs/frontend/map-renderer.md`, `sidebar-and-contr
 
 ## Rules that have bitten before
 
-- **Types**: `frontend/src/types/diplomacy.ts` mirrors `backend/domain/models.py`. Change both together.
+- **Types**: `frontend/src/types/diplomacy.ts` mirrors the Pydantic models in `backend/domain/` (`board.py`, `orders.py`, `issues.py`, `game_state.py`, `requests.py`). Change both together.
 - **Always pass `activeGameId`** to API calls. A missing one silently hits `proto_1901`.
 - **Player power** comes from `resolvePlayerPower` (claimed seat), never from `GameState.active_power`.
 - **Phone styles** all live in `src/compact.css` under `[data-layout='compact']`. No width `@media` queries elsewhere. The compact layout must not change the wide one: compare element boxes at 1440×900 before and after.

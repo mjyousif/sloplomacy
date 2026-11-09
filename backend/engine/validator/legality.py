@@ -1,6 +1,8 @@
 """Movement phase, per unit: is each order legal, and is it a likely blunder."""
 
-from domain.models import IssueCode, IssueSeverity, Order, OrderType, ProvinceType, Unit, UnitType
+from domain.board import ProvinceType, Unit, UnitType
+from domain.issues import IssueCode, IssueSeverity
+from domain.orders import Order, OrderType
 from engine.topology.graph import (
     can_army_be_convoyed_theoretically,
     can_unit_move_directly,

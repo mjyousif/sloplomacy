@@ -1,6 +1,7 @@
 """Collect validation issues, numbered in the order they are found."""
 
-from domain.models import IssueCode, IssueSeverity, Power, ValidationIssue
+from domain.board import Power
+from domain.issues import IssueCode, IssueSeverity, ValidationIssue
 from engine.topology.provinces import PROVINCES
 
 

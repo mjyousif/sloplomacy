@@ -1,6 +1,7 @@
 """Translate between this app's orders and phase names and the `diplomacy` engine's strings."""
 
-from domain.models import Order, OrderType, Unit
+from domain.board import Unit
+from domain.orders import Order, OrderType
 from engine.topology.provinces import PROVINCES
 
 

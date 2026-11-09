@@ -1,6 +1,7 @@
 from collections import defaultdict
 
-from domain.models import GameState, MultiplayerGameSummary, Power
+from domain.board import Power
+from domain.game_state import GameState, MultiplayerGameSummary
 from fastapi import WebSocket
 from security.secrecy import sanitize_game_state_for_viewer
 from storage.store import GAME_SUMMARIES, GAMES, sync_summary

@@ -3,7 +3,7 @@
 Pure declarations with no rules logic, so it is exempt from the file size ceiling.
 """
 
-from domain.models import Power, ProvinceInfo, ProvinceType, Unit, UnitType
+from domain.board import Power, ProvinceInfo, ProvinceType, Unit, UnitType
 
 # Complete 75-province standard 1901 Diplomacy map definition + Switzerland
 RAW_PROVINCES = [

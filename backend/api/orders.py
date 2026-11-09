@@ -1,13 +1,9 @@
 """FastAPI router for tactical orders and order confirmations."""
 
-from domain.models import (
-    GameState,
-    OrderSubmissionRequest,
-    OrderType,
-    SetPowerRequest,
-    SingleOrderUpdateRequest,
-    UnitType,
-)
+from domain.board import UnitType
+from domain.game_state import GameState
+from domain.orders import OrderType
+from domain.requests import OrderSubmissionRequest, SetPowerRequest, SingleOrderUpdateRequest
 from engine.order_utils import (
     build_slot_power,
     refresh_diagnostics_and_simulation,

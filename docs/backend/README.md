@@ -20,7 +20,11 @@ backend/
 │   ├── history.py           # Read-only turn history: resolved phases with every power's orders and outcomes
 │   └── websocket.py         # Real-time WebSockets for turn state updates and lobby room events
 ├── domain/                  # Core Pydantic domain models & schemas
-│   └── models.py            # GameState, Order, Unit, Resolution, Diagnostics, Timer schemas
+│   ├── board.py             # Power, UnitType, ProvinceType, ProvinceInfo, Unit
+│   ├── orders.py            # OrderType, Order, OrderResolution, SimulationResult
+│   ├── issues.py            # IssueSeverity, IssueCode, ValidationIssue
+│   ├── game_state.py        # GameState, PhaseTimer, turn history, seats and lobby summaries
+│   └── requests.py          # Request/response bodies (incl. GameBootstrapResponse) and WebSocket messages
 ├── engine/                  # Authoritative rules & simulation engine
 │   ├── adjudicator/         # DATC turn adjudication over python 'diplomacy', one module per phase
 │   │   ├── resolver.py      # create_diplomacy_game, compute_current_builds, adjudicate_turn
