@@ -1,7 +1,45 @@
+"""Seats: joining, re-entering, leaving and surrendering."""
+
 import pytest
+from domain.board import Power
 from fastapi.testclient import TestClient
 from main import app
 from scenarios.presets import seed_initial_multiplayer_lobbies
+from storage.store import GAMES
+from tests.integration.api.helpers import (
+    _new_game,
+)
+
+client = TestClient(app)
+
+
+def test_joining_does_not_change_the_power_other_players_see():
+    game_id = _new_game("ENGLAND")
+
+    joined = client.post(
+        f"/api/games/{game_id}/join",
+        json={"power": "RUSSIA", "user_id": "friend", "email": "friend@test.com"},
+    )
+
+    assert joined.status_code == 200
+    assert joined.json()["state"]["active_power"] == "RUSSIA"
+    assert GAMES[game_id].active_power == Power.ENGLAND
+    assert client.get(f"/api/game?game_id={game_id}").json()["state"]["active_power"] == "ENGLAND"
+
+
+def test_reentering_a_saved_sandbox_still_switches_its_power():
+    game_id = _new_game("ENGLAND")
+    saved = client.post(
+        f"/api/games/save-sandbox?game_id={game_id}",
+        json={"name": "Study", "user_id": "host", "email": "host@test.com"},
+    ).json()["game_id"]
+
+    client.post(
+        f"/api/games/{saved}/join",
+        json={"power": "TURKEY", "user_id": "host", "email": "host@test.com"},
+    )
+
+    assert GAMES[saved].active_power == Power.TURKEY
 
 
 @pytest.fixture(autouse=True)
