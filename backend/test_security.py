@@ -67,16 +67,7 @@ def test_jwt_alg_none_rejected(monkeypatch):
 
 
 def load_quickstart():
-    current = Path(__file__).resolve().parent
-    path = None
-    while current.parent != current:
-        candidate = current / "quickstart.py"
-        if candidate.exists():
-            path = candidate
-            break
-        current = current.parent
-    if path is None:
-        path = Path(__file__).resolve().parents[3] / "quickstart.py"
+    path = Path(__file__).resolve().parent.parent / "quickstart.py"
     spec = importlib.util.spec_from_file_location("quickstart", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

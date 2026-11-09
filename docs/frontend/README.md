@@ -20,35 +20,14 @@ frontend/
     ├── index.css                # Base reset & typography
     ├── components/
     │   ├── EuropeMap.tsx        # High-performance interactive SVG game board & order arrows
-    │   ├── map/                 # Decomposed SVG map sub-layers & utilities
-    │   │   ├── layers/
-    │   │   │   ├── StaticLayers.tsx       # Gradients, sea textures & pass-through background defs
-    │   │   │   ├── ProvincePolygon.tsx    # Memoized individual SVG province polygons & boundaries
-    │   │   │   ├── SupplyCentersLayer.tsx # Memoized supply center stars & markers
-    │   │   │   └── MapNamesLayer.tsx      # Memoized typography & province label placements
-    │   │   └── utils/
-    │   │       └── curveGeometry.ts       # Quadratic Bezier control point math for order arrows
     │   ├── CollapsibleSection.tsx # Reusable collapsible/static section container with accessible toggles
     │   ├── CollapsibleSection.test.tsx # Vitest suite for CollapsibleSection behavior and accessibility
     │   ├── ToolsSidebar.tsx     # Left collapsible sidebar: legend, zoom options, powers, sandbox & admin (a ≡ drawer on phones)
     │   ├── MacroSidebar.tsx     # Right collapsible sidebar: core gameplay orders, builds, finalize & adjudicate (the order sheet on phones)
-    │   ├── macro/               # Decomposed order sheet and unit management cards
-    │   │   ├── UnitMacroCard.tsx # Unit order card: move, hold, support, convoy & retreat selectors
-    │   │   └── BuildSlotCard.tsx # Winter adjustment build/disband quota cards
     │   ├── sidebars.test.ts     # Vitest suite for ToolsSidebar and MacroSidebar collapsible views
     │   ├── PhaseTimerWidget.tsx # Bottom-left map widget: turn clock, votes, ready-up & +5 button (a pill on phones)
     │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
-    │   ├── lobby/               # Decomposed match browser and lobby dialogs
-    │   │   ├── GameRoomCard.tsx              # Match listing card with power indicators and join buttons
-    │   │   ├── CreateCampaignPanel.tsx       # Public/private campaign creation form
-    │   │   ├── PasscodePromptModal.tsx       # Passcode entry dialog for private matches
-    │   │   └── PrivateCampaignCreatedModal.tsx # Shareable credentials modal after creating private room
     │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
-    │   ├── admin/               # Decomposed creator console tabs
-    │   │   ├── TurnControlTab.tsx      # Timeline rollback and turn jump controls
-    │   │   ├── UnitTeleportTab.tsx     # Move units instantly across provinces
-    │   │   ├── UnitSpawnerTab.tsx      # Unit creation and disband tools
-    │   │   └── TerritoryControlTab.tsx # Supply center ownership modifier
     │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
     │   ├── BottomSheet.tsx      # Phone pull-up panel with peek, half and full stops (holds the order sheet)
     │   ├── CompactTopBar.tsx    # Phone top bar: back, ≡ tools, turn, order-problem count and a ⋯ menu
