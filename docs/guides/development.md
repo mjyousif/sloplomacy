@@ -165,21 +165,9 @@ Run all backend pytest suites, frontend Vitest unit tests, TypeScript typechecks
 ```
 
 ### Running Backend Tests (`pytest`)
-The backend includes 11 test suites covering the entire engine:
-- `test_engine.py`: Graph symmetry and connectivity.
-- `test_adjudicator.py`: Official DATC combat scenarios and retreat path mechanics.
-- `test_admin.py`: Administrator privileges and board mutation operations.
-- `test_ai_and_private_lobbies.py`: Tactical AI orders and passcode-protected lobbies.
-- `test_api_integration.py`: FastAPI endpoints, multi-game room query parameters, and private multiplayer sandboxes.
-- `test_database_persistence.py`: Supabase saving, restarts, outages, and what the lobby keeps from memory.
-- `test_match_guards.py`: A lone player's hidden orders, saved sandboxes kept to their owner, and one resolve per turn.
-- `test_phase_timer.py`: Turn clock votes, pauses, extensions, deadlines and late requests.
-- `test_security.py`: JWT cryptographic validation, seat authorization, Fog of War secrecy, and IDOR protection.
-- `test_surrender_leave.py`: Concessions, civil disorder, and room departures.
-- `test_validator.py`: Pre-flight blunder diagnostics across Movement, Retreats, and Adjustments.
-- `test_websocket_sync.py`: Live game and lobby broadcasts.
+The suites live in `backend/tests/`, split into `unit/` (one module at a time, mirroring the packages) and `integration/` (the app through HTTP and the game socket). [docs/backend/README.md](../backend/README.md#running-backend-tests) describes the layout.
 
-WebSocket tests read messages with `receive_json(ws)` from `backend/ws_testing.py` rather than `ws.receive_json()`. Starlette's test client waits forever for a message, so a broadcast the server never sends would hang the run; the helper fails the test after 5 seconds instead. In CI every job also has a `timeout-minutes` limit.
+WebSocket tests read messages with `receive_json(ws)` from `backend/tests/ws_testing.py` rather than `ws.receive_json()`. Starlette's test client waits forever for a message, so a broadcast the server never sends would hang the run; the helper fails the test after 5 seconds instead. In CI every job also has a `timeout-minutes` limit.
 
 Run all tests from the repository root:
 ```bash

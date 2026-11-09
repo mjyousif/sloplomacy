@@ -59,7 +59,9 @@ This repository enforces strict modularity and separation of concerns to prevent
 ## 4. Test Suite Partitioning
 
 - Avoid single 1,000+ line test suites.
-- Group tests into domain-specific modules (e.g. `tests/unit/test_validator.py`, `tests/integration/test_adjudicator.py`, `tests/integration/test_websocket_sync.py`).
+- Unit tests mirror the package they cover (`tests/unit/engine/validator/test_legality.py` for `engine/validator/legality.py`); integration tests go under `tests/integration/`, grouped by router or feature (`tests/integration/api/turn_clock/`).
+- Shared fixtures go in the folder's `conftest.py`, plain helpers in a `helpers.py` beside the tests. Don't copy a helper into two test files.
+- Each test file must pass on its own. Seed what it needs (lobbies, a fresh board) in a fixture instead of relying on tests that run earlier.
 - For frontend, keep tests close to their code: `Component.test.tsx` or `helper.test.ts`.
 
 ## 5. Review Checklist for Agents
