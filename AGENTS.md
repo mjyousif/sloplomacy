@@ -45,7 +45,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```bash
   python -m pytest backend/ -v
   ```
-  *(Runs every `backend/tests/**/test_*.py` suite, including: `test_engine.py`, `test_adjudicator.py`, `test_admin.py`, `test_ai_and_private_lobbies.py`, `test_api_integration.py`, `test_database_persistence.py`, `test_match_guards.py`, `test_phase_timer.py`, `test_security.py`, `test_surrender_leave.py`, `test_validator.py`, and `test_websocket_sync.py`)*
+  *(Runs every `test_*.py` under `backend/tests/`. `unit/` mirrors the packages and `integration/` drives the app; see [Running Backend Tests](docs/backend/README.md#running-backend-tests).)*
 
 ### Frontend Commands (`frontend/`)
 - **Install Dependencies**:
@@ -179,7 +179,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
 - **Security & Authorization (`backend/security/`)**: JWT verification and auth dependencies (`auth.py`) and viewer state secrecy sanitization (`secrecy.py`).
 - **Scenarios & Presets (`backend/scenarios/`)**: Scenario definitions and match presets (`presets.py`).
 - **Real-Time WebSockets (`backend/ws/`)**: Thread-safe WebSocket connection manager and broadcast dispatch (`connection_manager.py`).
-- **Test Harness (`backend/tests/`)**: Categorized test suites (`unit/` and `integration/`).
+- **Test Harness (`backend/tests/`)**: `unit/` tests one module at a time and mirrors the package it covers (`tests/unit/engine/adjudicator/test_movement.py`); `integration/` drives the app through HTTP and the game socket (`tests/integration/api/`). Every test file passes on its own.
 
 ### Frontend Packages (`frontend/src/`)
 - **State Coordinator (`App.tsx`)**: Root state container, view mode switcher (Lobby, Game, Sandbox), and API coordination.
@@ -309,7 +309,7 @@ To prevent files from growing into unmaintainable monoliths, agents and contribu
 - Always run `npx tsc --noEmit` before committing frontend modifications.
 
 ### 4. Run Comprehensive Verification
-- **Backend Tests**: Run python -m pytest backend/ -v (must pass every suite, currently: adjudicator, admin, ai_and_private_lobbies, api_integration, database_persistence, engine, match_guards, phase_timer, security, surrender_leave, validator, websocket_sync).
+- **Backend Tests**: Run `python -m pytest backend/ -v` (must pass every suite under `backend/tests/`).
 - **Frontend Verification**: Run `npm test` (Vitest) and `npm run build` (Vite + TypeScript) in `frontend/`.
 
 ### 5. Preserve Documentation & Code Integrity
