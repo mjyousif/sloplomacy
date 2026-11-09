@@ -33,7 +33,7 @@ from engine.order_utils import (
     validate_order_references,
 )
 from engine.phase_timer import start_phase_clock
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
@@ -48,6 +48,7 @@ from security.secrecy import (
     reject_on_multiplayer_match,
     require_own_seat,
     sanitize_game_state_for_viewer,
+    saved_sandbox_guard,
     verify_admin_access,
     verify_power_authorization,
     viewer_power_for,
@@ -151,12 +152,9 @@ async def add_security_headers(request: Request, call_next):
 
 
 # Include modular domain routers
-app.include_router(games.router)
-app.include_router(orders.router)
-app.include_router(turns.router)
-app.include_router(sandbox.router)
-app.include_router(admin.router)
-app.include_router(history.router)
+# A saved sandbox is its owner's alone, on every HTTP route. The game socket checks it itself.
+for http_router in (games, orders, turns, sandbox, admin, history):
+    app.include_router(http_router.router, dependencies=[Depends(saved_sandbox_guard)])
 app.include_router(websocket.router)
 
 

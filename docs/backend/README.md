@@ -152,6 +152,7 @@ The backend includes 11 comprehensive pytest suites:
 - `test_ai_and_private_lobbies.py`: Heuristic AI orders, auto-step, and private lobby passcode tests.
 - `test_api_integration.py`: Route contracts, query parameter scoping, and state persistence.
 - `test_database_persistence.py`: Supabase database persistence & cold-start recovery tests.
+- `test_match_guards.py`: A lone player's hidden orders, saved sandboxes kept to their owner, and one resolve per turn.
 - `test_phase_timer.py`: Turn clock votes, pauses, extensions, deadlines and late requests.
 - `test_security.py`: JWT cryptographic validation, seat authorization, Fog of War secrecy, and IDOR protection.
 - `test_surrender_leave.py`: Seat vacating, player surrender, and civil disorder mechanics.

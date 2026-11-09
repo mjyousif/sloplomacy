@@ -36,6 +36,7 @@ import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
 import { useDisplayPrefs } from './hooks/useDisplayPrefs';
 import { useTurnHistory } from './hooks/useTurnHistory';
 import {
+  authedFetch,
   getAuthHeaders,
   getInitialAuthUser,
   signOutUser,
@@ -427,7 +428,7 @@ export function App() {
   // Leaving the match board by any route closes its private sandbox.
   useEffect(() => {
     if (!sandboxGameId || viewMode === 'multiplayer') return;
-    fetch(
+    authedFetch(
       `${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(sandboxGameId)}`,
       {
         method: 'POST',
@@ -516,12 +517,11 @@ export function App() {
       return;
     }
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/games/${encodeURIComponent(gameId)}/join`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             power,
             user_id: authUser.id,
@@ -574,7 +574,7 @@ export function App() {
     );
     try {
       setLoading(true);
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/sandbox/ai-orders?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
@@ -610,7 +610,7 @@ export function App() {
   const handleAIStepTurn = async () => {
     try {
       setLoading(true);
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/sandbox/ai-step?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
@@ -646,12 +646,11 @@ export function App() {
       return;
     }
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/games/save-sandbox?game_id=${encodeURIComponent(activeGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: `${authUser.displayName}'s ${
               gameState?.season || 'Spring'
@@ -697,12 +696,11 @@ export function App() {
       return;
     }
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/games/${encodeURIComponent(gameId)}/surrender`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             power,
             user_id: authUser.id,
@@ -745,12 +743,11 @@ export function App() {
       return;
     }
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/games/${encodeURIComponent(gameId)}/leave`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             power,
             user_id: authUser.id,
@@ -786,7 +783,7 @@ export function App() {
       return;
     }
     try {
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/power?game_id=${encodeURIComponent(activeGameId)}`,
         {
           method: 'POST',
@@ -819,12 +816,11 @@ export function App() {
       return;
     }
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/order?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             order,
             turn: gameState ? turnLabel(gameState) : undefined,
@@ -846,12 +842,11 @@ export function App() {
   const handleConfirmAllHolds = async () => {
     if (!gameState) return;
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/orders/confirm-all?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ power: playerPower }),
         },
       );
@@ -870,12 +865,11 @@ export function App() {
   const handleClearForeignPreMoves = async () => {
     if (!gameState) return;
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/sandbox/clear-foreign?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ power: playerPower }),
         },
       );
@@ -895,7 +889,7 @@ export function App() {
     if (entering) turnHistory.goLive();
     try {
       if (entering) {
-        const res = await fetch(
+        const res = await authedFetch(
           `${API_BASE}/sandbox/enter?game_id=${encodeURIComponent(activeGameId)}`,
           {
             method: 'POST',
@@ -918,7 +912,7 @@ export function App() {
           'Entered Hypothetical Mode: Plot hypothetical foreign moves to test outcomes. Exiting will discard foreign guesses!',
         );
       } else {
-        const res = await fetch(
+        const res = await authedFetch(
           `${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(draftGameId)}`,
           {
             method: 'POST',
@@ -958,12 +952,11 @@ export function App() {
   const handleFinalizeClick = async (force = false) => {
     if (!gameState || !requireRealBoard('finalize your real orders')) return;
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/finalize?game_id=${encodeURIComponent(activeGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             power: playerPower,
             force,
@@ -998,12 +991,11 @@ export function App() {
   const handleUnfinalizeClick = async () => {
     if (!gameState || !requireRealBoard('unlock your real orders')) return;
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/unfinalize?game_id=${encodeURIComponent(activeGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ power: playerPower }),
         },
       );
@@ -1020,7 +1012,7 @@ export function App() {
 
   const _handleSimulatePreMoves = async () => {
     try {
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/simulate?game_id=${encodeURIComponent(draftGameId)}`,
         { method: 'POST' },
       );
@@ -1039,12 +1031,11 @@ export function App() {
     body: Record<string, unknown> = {},
   ) => {
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/games/${encodeURIComponent(activeGameId)}/timer/${action}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         },
       );
@@ -1064,18 +1055,18 @@ export function App() {
     }
   };
 
+  // A double-click must not resolve two phases: the second click waits for the first, and the
+  // server refuses a turn that has already resolved.
+  const adjudicatingRef = useRef(false);
   const handleAdjudicateTurn = async () => {
+    if (!gameState || adjudicatingRef.current) return;
     if (!requireRealBoard('resolve the real turn')) return;
+    adjudicatingRef.current = true;
     try {
-      const authHeaders = await getAuthHeaders();
-      const headers: Record<string, string> = {
-        ...authHeaders,
-        ...(authUser?.id ? { 'X-User-Id': authUser.id } : {}),
-        ...(authUser?.email ? { 'X-User-Email': authUser.email } : {}),
-      };
-      const res = await fetch(
-        `${API_BASE}/adjudicate?game_id=${encodeURIComponent(activeGameId)}`,
-        { method: 'POST', headers },
+      const turn = encodeURIComponent(turnLabel(gameState));
+      const res = await authedFetch(
+        `${API_BASE}/adjudicate?game_id=${encodeURIComponent(activeGameId)}&turn=${turn}`,
+        { method: 'POST' },
       );
       if (res.ok) {
         const st: GameState = await res.json();
@@ -1093,17 +1084,18 @@ export function App() {
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      adjudicatingRef.current = false;
     }
   };
 
   const handleLoadScenario = async (scenarioId: string) => {
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
+      const res = await authedFetch(
         `${API_BASE}/scenario?game_id=${encodeURIComponent(activeGameId)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             scenario_id: scenarioId,
             active_power: playerPower,

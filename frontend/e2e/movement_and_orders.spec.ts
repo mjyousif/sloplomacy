@@ -94,11 +94,14 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       // 8. Execute adjudication
       const adjudicateBtn = page.locator('[data-testid="btn-adjudicate-phase"]');
       await expect(adjudicateBtn).toBeVisible();
-      await adjudicateBtn.click();
+      // A double-click resolves one phase, not two (it once skipped Fall 1901 entirely).
+      await adjudicateBtn.dblclick();
 
       // Verify phase advances to Fall 1901 Movement and FRA_A_PAR moved to BUR
       const turnPill = page.locator('[data-testid="turn-chronicle-pill"]');
       await expect(turnPill).toContainText(/FALL 1901/i, { timeout: 10000 });
+      await page.waitForLoadState('networkidle');
+      await expect(turnPill).toContainText(/FALL 1901/i);
       const advancedArmy = page.locator(
         '[data-testid="unit-token"][data-unit-id="FRA_A_PAR"][data-province="BUR"]'
       );
