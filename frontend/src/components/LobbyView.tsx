@@ -20,6 +20,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../types/diplomacy';
+import { defaultCampaignName } from '../utils/campaignName';
 import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
 import { GameRoomCard } from './lobby/GameRoomCard';
 import { PasscodePromptModal } from './lobby/PasscodePromptModal';
@@ -134,7 +135,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     setCreateError(null);
     try {
       const summary = await onCreateGame(
-        newGameName.trim() || `${user.displayName}'s 1901 Campaign`,
+        newGameName.trim() || defaultCampaignName(user.displayName),
         selectedCreatePower,
         isPrivate,
         passcode.trim(),
