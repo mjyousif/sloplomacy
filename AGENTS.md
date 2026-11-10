@@ -334,6 +334,9 @@ Reusable playbooks live in `.agents/skills/`. Read the matching `SKILL.md` befor
 | `codebase-modularity` | Adding, refactoring, or reviewing code to enforce file size ceilings and prevent monolithic files |
 | `secrecy-review` | Adding or changing an endpoint, WebSocket message, broadcast, save path, sandbox or admin action (fog of war and seat authorization) |
 | `frontend-change` | Editing the map, sidebars, top bar, modals, CSS, display settings or phone layout |
+| `map-visual-qa` | Cartographic QA: verifying unit centroid anchors, bicoastal fleets, SVG order vectors, and retreat offsets |
+| `visual-verifier` | Headless Playwright runs, inspecting screenshot diffs, and formatting compact visual failure reports (< 300 tokens) |
+| `context-distiller` | Distilling complex adjudication failures into sub-1,500-token noise-free prompts for `precision-surgeon` |
 | `open-pr` | Committing, opening or updating a PR, or resolving conflicts on a stacked PR |
 | `supabase`, `supabase-postgres-best-practices` | Anything touching the database, RLS, migrations or Supabase Auth |
 
@@ -362,3 +365,20 @@ Working rules for agents:
     gh pr edit <pr-number> --body-file "<path_to_body.md>"
     ```
   - Clean up any local temporary body file immediately after execution.
+
+### 9. Model Quota & Inverted Delegation Protocol
+To maximize token efficiency and prevent excessive reasoning quota consumption, this repository uses an **inverted agent hierarchy**:
+- **Lead Scout (`gemini-3.8-flash`) — Primary Session Lead**:
+  - Handles **100%** of exploratory repository reading, grep searches, file edits, git commands, test executions (`pytest`, `vitest`, `playwright`, `e2e_runner.py`), and visual multimodal reviews (`read_file` / `view_image`).
+  - Acts as the primary operational driver and gatekeeper.
+  - Defined in `.agents/agents/lead-scout.md`.
+- **Precision Surgeon (`gemini-4-argon`) — Stateless Logic Solver**:
+  - Reserved **exclusively** for isolated, complex logic bottlenecks: core Diplomacy rule adjudication (`backend/engine/adjudicator/`), graph topological routing, or retreat legality edge cases.
+  - Defined in `.agents/agents/precision-surgeon.md`.
+  - Operates statelessly with zero tools and returns only unified diffs or clean function replacements.
+- **Strict Token & Context Isolation Rules**:
+  - **Zero Raw Dumps**: `gemini-4-argon` must **never** receive raw test output streams, stack traces, full test suites, multi-turn conversational transcripts, or SVG geometry dumps.
+  - **Sub-1,500 Token Distillation**: Before invoking Argon, Flash must distill the failing problem to under 1,500 tokens using `.agents/skills/context-distiller/SKILL.md` (retaining only target function, minimal Pydantic/dataclass types, DATC invariants, and the single failing assertion).
+  - **Local Error Resolution**: Basic linter (`ruff`), formatter, and typecheck (`tsc`/`mypy`) errors on Argon's output must be resolved locally by Flash without re-querying Argon.
+- **Reference & Tooling Consistency**:
+  - If `CLAUDE.md` is present in the workspace, it must be maintained as a symlink pointing to `AGENTS.md` (or maintained in strict reference consistency) so that all agent environments share the same operational rules.
