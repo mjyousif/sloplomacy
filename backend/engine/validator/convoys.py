@@ -1,37 +1,16 @@
 """Whether fleets ordered to convoy form a connected chain for an army."""
 
-from domain.board import ProvinceType, Unit, UnitType
+from domain.board import Power, ProvinceType, Unit, UnitType
 from domain.orders import Order, OrderType
 from engine.topology.graph import split_province_code
 from engine.topology.provinces import PROVINCES
 
 
-def has_active_convoy_chain(
+def _is_chain_connected(
     army_origin: str,
     army_target: str,
-    units: list[Unit],
-    orders: dict[str, Order],
+    convoying_sea_provs: set[str],
 ) -> bool:
-    """
-    Check if there is a connected chain of Fleets in SEA provinces ordered to CONVOY
-    the army from army_origin to army_target.
-    """
-    convoying_sea_provs: set[str] = set()
-    for u in units:
-        if u.unit_type == UnitType.FLEET and PROVINCES[u.province].type == ProvinceType.SEA:
-            order = orders.get(u.id)
-            if (
-                order
-                and order.order_type == OrderType.CONVOY
-                and order.aux_unit_origin == army_origin
-                and order.target == army_target
-            ):
-                convoying_sea_provs.add(u.province)
-
-    if not convoying_sea_provs:
-        return False
-
-    # BFS from sea zones adjacent to army_origin to sea zones adjacent to army_target
     def fleet_touches_land(sea_prov: str, land_prov: str) -> bool:
         adj = PROVINCES[sea_prov].fleet_adj.get("", [])
         return any(split_province_code(a)[0] == land_prov for a in adj)
@@ -57,3 +36,75 @@ def has_active_convoy_chain(
                 queue.append(base_n)
 
     return False
+
+
+def has_active_convoy_chain(
+    army_origin: str,
+    army_target: str,
+    units: list[Unit],
+    orders: dict[str, Order],
+    power: Power | None = None,
+) -> bool:
+    """
+    Check if there is a connected chain of Fleets in SEA provinces ordered to CONVOY
+    the army from army_origin to army_target.
+    If power is specified, only fleets belonging to that power are considered.
+    """
+    convoying_sea_provs: set[str] = set()
+    for u in units:
+        if (
+            u.unit_type == UnitType.FLEET
+            and PROVINCES[u.province].type == ProvinceType.SEA
+            and not u.is_dislodged
+        ):
+            if power is not None and u.power != power:
+                continue
+            order = orders.get(u.id)
+            if (
+                order
+                and order.order_type == OrderType.CONVOY
+                and order.aux_unit_origin == army_origin
+                and order.target == army_target
+            ):
+                convoying_sea_provs.add(u.province)
+
+    if not convoying_sea_provs:
+        return False
+
+    return _is_chain_connected(army_origin, army_target, convoying_sea_provs)
+
+
+def has_potential_convoy_chain(
+    army_origin: str,
+    army_target: str,
+    units: list[Unit],
+    orders: dict[str, Order],
+    army_power: Power,
+) -> bool:
+    """
+    Check if a connected chain of Fleets exists between army_origin and army_target,
+    where friendly fleets must be ordered to CONVOY, and foreign fleets merely need to be present.
+    """
+    convoying_sea_provs: set[str] = set()
+    for u in units:
+        if (
+            u.unit_type == UnitType.FLEET
+            and PROVINCES[u.province].type == ProvinceType.SEA
+            and not u.is_dislodged
+        ):
+            if u.power == army_power:
+                order = orders.get(u.id)
+                if (
+                    order
+                    and order.order_type == OrderType.CONVOY
+                    and order.aux_unit_origin == army_origin
+                    and order.target == army_target
+                ):
+                    convoying_sea_provs.add(u.province)
+            else:
+                convoying_sea_provs.add(u.province)
+
+    if not convoying_sea_provs:
+        return False
+
+    return _is_chain_connected(army_origin, army_target, convoying_sea_provs)

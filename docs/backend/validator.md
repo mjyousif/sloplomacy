@@ -29,8 +29,8 @@ The validator is **phase-aware**, adjusting its checks dynamically for **Movemen
 | `SELF_BOUNCE` | `warning` | Movement / Retreats | Friendly units moving/retreating to the same province | Two friendly units attack or retreat to the same province with equal strength, causing a mutual bounce. |
 | `SELF_OCCUPIED_BOUNCE`| `warning` | Movement | Moving into province occupied by friendly holding unit | Moving into a territory held by a friendly unit that is not vacating. |
 | `FRIENDLY_FIRE` | `warning` | Movement | Friendly attack on own holding unit | Supporting an attack against a friendly unit (cannot dislodge own piece). |
-| `UNMATCHED_SUPPORT` | `warning` | Movement | Supported action differs from unit's actual order | Supporter ordered `S A PAR -> BUR`, but `A PAR` is ordered to `HOLD` or `MOVE GAS`. |
-| `BROKEN_CONVOY` | `warning` | Movement | Army moving via convoy without active convoy fleet | Army ordered `MOVE via convoy`, but the intermediate fleet is holding, supporting, or missing. |
+| `UNMATCHED_SUPPORT` | `warning` / `info` | Movement | Supported action differs from unit's actual order (friendly), or foreign support reminder | For friendly units: warning if supporter ordered `S A PAR -> BUR`, but `A PAR` is ordered to `HOLD` or `MOVE GAS`. For foreign units: informational note (`info`) reminding that support depends on the foreign power ordering matching moves (foreign orders are never inspected during planning to preserve Fog of War). |
+| `BROKEN_CONVOY` | `warning` / `info` | Movement | Army moving via convoy without active convoy fleet, or foreign convoy reminder | For friendly units: warning if army ordered `MOVE via convoy` without an active friendly fleet chain or fleet convoys an army that is not moving. For foreign units: informational note (`info`) reminding that convoy depends on foreign orders matching. |
 | `UNASSIGNED_UNIT` | `warning` | All Phases | Unit left on unconfirmed default order | Unit has not had its order manually confirmed, a dislodged unit would disband, or build/disband quota remains unfulfilled prior to finalization. |
 
 ---

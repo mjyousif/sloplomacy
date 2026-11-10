@@ -242,3 +242,71 @@ def test_turn_history_of_a_private_match_needs_the_passcode():
         assert client.get(f"{path}&passcode=Secret1901").status_code == 200
         # Seated players need no passcode, as with GET /api/game.
         assert client.get(path, headers=alice_headers()).status_code == 200
+
+
+def test_supporting_foreign_unit_never_leaks_and_allows_finalization():
+    gid = secret_plan_match()
+    # Alice (France) has secretly ordered FRA_A_PAR -> BUR.
+    # Bob (Germany) orders Munich to support France's Paris army to Burgundy,
+    # and assigns Berlin and Kiel to HOLD so there are no unassigned unit warnings:
+    client.post(
+        f"/api/order?game_id={gid}",
+        json={
+            "order": {
+                "unit_id": "GER_A_BER",
+                "power": "GERMANY",
+                "unit_type": "A",
+                "origin": "BER",
+                "order_type": "HOLD",
+                "is_explicit": True,
+            }
+        },
+        headers=bob_headers(),
+    )
+    client.post(
+        f"/api/order?game_id={gid}",
+        json={
+            "order": {
+                "unit_id": "GER_F_KIE",
+                "power": "GERMANY",
+                "unit_type": "F",
+                "origin": "KIE",
+                "order_type": "HOLD",
+                "is_explicit": True,
+            }
+        },
+        headers=bob_headers(),
+    )
+    res = client.post(
+        f"/api/order?game_id={gid}",
+        json={
+            "order": {
+                "unit_id": "GER_A_MUN",
+                "power": "GERMANY",
+                "unit_type": "A",
+                "origin": "MUN",
+                "order_type": "SUPPORT",
+                "aux_unit_origin": "PAR",
+                "target": "BUR",
+                "is_explicit": True,
+            }
+        },
+        headers=bob_headers(),
+    )
+    assert res.status_code == 200
+    bob_state = res.json()
+
+    # Bob's issues must NOT leak whether Paris matched or what Paris is doing
+    for issue in bob_state["issues"]:
+        assert issue["severity"] == "info"
+        assert "currently" not in issue["message"]
+
+    # Bob can finalize his orders directly without being blocked by confirmation
+    fin_res = client.post(
+        f"/api/finalize?game_id={gid}",
+        json={"power": "GERMANY", "force": False},
+        headers=bob_headers(),
+    )
+    assert fin_res.status_code == 200
+    assert fin_res.json()["finalized"] is True
+    assert fin_res.json()["requires_confirmation"] is False
