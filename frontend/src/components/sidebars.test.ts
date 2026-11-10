@@ -126,9 +126,11 @@ describe('ToolsSidebar', () => {
     expect(html).toContain('MAP VIEW &amp; CAMERA');
     expect(html).toContain('105%');
     expect(html).toContain('TACTICAL MAP LEGEND');
-    expect(html).toContain('Move / Attack Vector');
+    expect(html).toContain('Move / Attack');
+    expect(html).not.toContain('Move / Attack Vector');
     expect(html).toContain('Support Link');
     expect(html).toContain('Fleet Convoy');
+    expect(html).toContain('Warning / Dislodgement');
     expect(html).toContain('COMMAND NATION (SELECT)');
     expect(html).toContain('France');
     expect(html).toContain('England');
@@ -136,6 +138,20 @@ describe('ToolsSidebar', () => {
     expect(html).toContain('HYPOTHETICAL MODE &amp; PRE-MOVES');
     expect(html).toContain('Enter Hypothetical Mode');
     expect(html).not.toContain('CREATOR ADMIN TOOLS');
+  });
+
+  it('pairs the legend entries so convoy sits beside move and warning beside support', () => {
+    const html = renderToString(
+      React.createElement(ToolsSidebar, baseToolsProps),
+    );
+    const order = [
+      'Move / Attack',
+      'Fleet Convoy',
+      'Support Link',
+      'Warning / Dislodgement',
+    ].map((label) => html.indexOf(label));
+    expect(order).not.toContain(-1);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
   it('renders creator admin section only when isGameCreator is true', () => {
