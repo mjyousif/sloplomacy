@@ -3,6 +3,7 @@ import time
 
 from domain.board import Power
 from domain.game_state import GameState, TimerStage
+from domain.issues import IssueSeverity
 from domain.orders import SimulationResult
 from domain.requests import (
     FinalizeRequest,
@@ -228,7 +229,8 @@ async def finalize_power_orders(
         retreats=game.retreats,
     )
 
-    if power_issues and not req.force:
+    blocking_issues = [i for i in power_issues if i.severity != IssueSeverity.INFO]
+    if blocking_issues and not req.force:
         refresh_diagnostics_and_simulation(game)
         return FinalizeResponse(
             finalized=False,

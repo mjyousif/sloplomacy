@@ -379,13 +379,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               <span className="legend-swatch swatch-move">
                 <MoveRight size={12} />
               </span>
-              <span className="legend-label">Move / Attack Vector</span>
-            </div>
-            <div className="legend-item" title="Support order to hold or move">
-              <span className="legend-swatch swatch-support">
-                <Crosshair size={12} />
-              </span>
-              <span className="legend-label">Support Link</span>
+              <span className="legend-label">Move / Attack</span>
             </div>
             <div
               className="legend-item"
@@ -395,6 +389,12 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
                 <Anchor size={12} />
               </span>
               <span className="legend-label">Fleet Convoy</span>
+            </div>
+            <div className="legend-item" title="Support order to hold or move">
+              <span className="legend-swatch swatch-support">
+                <Crosshair size={12} />
+              </span>
+              <span className="legend-label">Support Link</span>
             </div>
             <div className="legend-item" title="Tactical issue or dislodgement">
               <span className="legend-swatch swatch-warn">
@@ -559,7 +559,8 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               <span className="sandbox-live-pill">ACTIVE</span>
             ) : undefined
           }
-          collapsible={false}
+          collapsible={true}
+          defaultOpen={true}
         >
           <button
             type="button"
@@ -653,6 +654,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               {onSaveSandboxClick && (
                 <button
                   type="button"
+                  data-testid="btn-save-sandbox"
                   className="tools-btn"
                   onClick={onSaveSandboxClick}
                   title="Save current board state to your account"
@@ -670,7 +672,8 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           <CollapsibleSection
             title="CREATOR ADMIN TOOLS"
             icon={<ShieldAlert size={12} />}
-            collapsible={false}
+            collapsible={true}
+            defaultOpen={true}
             className="admin-tools-section"
           >
             <p className="tools-micro-desc">

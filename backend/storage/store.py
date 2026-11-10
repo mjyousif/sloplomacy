@@ -163,6 +163,10 @@ def check_game_capacity() -> None:
         for sbx_id in list(PRIVATE_SANDBOXES.keys()):
             evict_game(sbx_id)
         if len(GAMES) >= MAX_ACTIVE_GAMES:
+            for gid, s in list(GAME_SUMMARIES.items()):
+                if s.is_draft:
+                    evict_game(gid)
+        if len(GAMES) >= MAX_ACTIVE_GAMES:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Server game capacity reached. Please try again later.",

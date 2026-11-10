@@ -31,7 +31,7 @@ def check_friendly_bounces(
             and o.aux_unit_origin != o.target
         ):
             sup_unit = unit_by_prov.get(o.aux_unit_origin)
-            if sup_unit:
+            if sup_unit and sup_unit.power == u.power:
                 sup_order = orders.get(sup_unit.id)
                 if (
                     sup_order

@@ -850,10 +850,30 @@
 .macro-units-scroll-area {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 14px;
+  overflow-x: hidden;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #333d4e transparent;
+}
+
+.macro-units-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.macro-units-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.macro-units-scroll-area::-webkit-scrollbar-thumb {
+  background: #333d4e;
+  border-radius: 4px;
+}
+
+.macro-units-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 .macro-list-header {
@@ -875,10 +895,12 @@
 .unit-macro-card {
   background: #232934;
   border: 1px solid #353e4f;
-  border-radius: 10px;
-  padding: 11px 12px;
+  border-radius: 9px;
+  padding: 9px 11px;
   cursor: pointer;
   transition: all 0.14s ease;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .unit-macro-card:hover,
@@ -904,7 +926,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .unit-identity {
@@ -978,44 +1000,55 @@
 .unit-behavior-visualizer {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 9px;
+  gap: 6px;
+  padding: 4px 8px;
   background: #191d25;
   border-radius: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   border: 1px solid #2c3342;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .behavior-verb-tag {
-  padding: 2px 7px;
+  padding: 1px 6px;
   border-radius: 4px;
   font-family: "JetBrains Mono", monospace;
-  font-size: 0.66rem;
+  font-size: 0.65rem;
   font-weight: 700;
   color: #ffffff;
   letter-spacing: 0.04em;
+  flex-shrink: 0;
 }
 
 .behavior-target-text {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Inline Order Controls */
 .unit-inline-controls {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
 }
 
 .order-type-tabs {
   display: flex;
   gap: 4px;
+  min-width: 0;
+  width: 100%;
 }
 
 .order-tab-btn {
   flex: 1;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1028,6 +1061,7 @@
   font-size: 0.68rem;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .order-tab-btn:hover {
@@ -1045,17 +1079,21 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 0;
+  width: 100%;
 }
 
 .order-param-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 0.73rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .order-param-row label {
-  width: 78px;
+  width: 72px;
   color: #94a3b8;
   font-weight: 600;
   flex-shrink: 0;
@@ -1063,6 +1101,8 @@
 
 .order-param-row select {
   flex: 1;
+  min-width: 0;
+  width: 100%;
   padding: 5px 8px;
   border-radius: 5px;
   background: #161a22;
@@ -1070,6 +1110,9 @@
   color: #f1f5f9;
   font-size: 0.74rem;
   font-weight: 500;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 /* Diagnostic Alert inside Unit Card */
@@ -1088,6 +1131,12 @@
   background: rgba(245, 158, 11, 0.14);
   border: 1px solid rgba(245, 158, 11, 0.45);
   color: #fde68a;
+}
+
+.unit-diagnostic-alert.info {
+  background: rgba(59, 130, 246, 0.14);
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  color: #bfdbfe;
 }
 
 .unit-diagnostic-alert.error {
@@ -1629,6 +1678,10 @@
   border-left: 4px solid #f59e0b;
 }
 
+.sanity-issue-item.severity-info {
+  border-left: 4px solid #3b82f6;
+}
+
 .sanity-issue-item.severity-error {
   border-left: 4px solid #ef4444;
 }
@@ -1636,6 +1689,10 @@
 .sanity-issue-icon {
   margin-top: 2px;
   color: #fbbf24;
+}
+
+.sanity-issue-item.severity-info .sanity-issue-icon {
+  color: #60a5fa;
 }
 
 .sanity-issue-item.severity-error .sanity-issue-icon {
@@ -1664,6 +1721,11 @@
 .sanity-code-pill.warn {
   background: rgba(245, 158, 11, 0.2);
   color: #fcd34d;
+}
+
+.sanity-code-pill.info {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
 }
 
 .sanity-code-pill.err {
@@ -2695,11 +2757,87 @@
   font-size: 1.1rem;
 }
 
+.modal-close-icon,
+.modal-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.modal-close-icon:hover:not(:disabled),
+.modal-close-btn:hover:not(:disabled) {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #334155;
+}
+
+.modal-close-icon:disabled,
+.modal-close-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .created-modal-desc {
   font-size: 0.84rem;
   color: #cbd5e1;
   line-height: 1.5;
   margin-bottom: 18px;
+}
+
+.passcode-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.passcode-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.passcode-input-wrap .input-icon {
+  position: absolute;
+  left: 12px;
+  color: #c8963e;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.passcode-input-wrap input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px 11px 38px;
+  border-radius: 8px;
+  border: 1px solid #3b4456;
+  background: #0f131a;
+  color: #f8fafc;
+  font-size: 0.9rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.passcode-input-wrap input:focus {
+  outline: none;
+  border-color: #c8963e;
+  box-shadow: 0 0 0 3px rgba(200, 150, 62, 0.2);
+}
+
+.passcode-input-wrap input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .credential-box-wrap {
@@ -2765,13 +2903,14 @@
   margin-top: 16px;
 }
 
-.created-enter-btn {
+.created-enter-btn,
+.modal-enter-btn {
   flex: 1;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 11px 16px;
+  padding: 11px 18px;
   border-radius: 8px;
   background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
   border: 1px solid #e5b964;
@@ -2779,10 +2918,28 @@
   font-size: 0.84rem;
   font-weight: 800;
   cursor: pointer;
+  transition:
+    filter 0.15s ease,
+    opacity 0.15s ease;
 }
 
-.created-close-secondary-btn {
-  padding: 11px 16px;
+.created-enter-btn:hover:not(:disabled),
+.modal-enter-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.created-enter-btn:disabled,
+.modal-enter-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.created-close-secondary-btn,
+.modal-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 18px;
   border-radius: 8px;
   background: #222836;
   border: 1px solid #3b4456;
@@ -2790,6 +2947,23 @@
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.created-close-secondary-btn:hover:not(:disabled),
+.modal-cancel-btn:hover:not(:disabled) {
+  background: #2d3548;
+  color: #f8fafc;
+  border-color: #4f5b73;
+}
+
+.created-close-secondary-btn:disabled,
+.modal-cancel-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* Tactical AI General Staff Command Section (MacroSidebar) */
@@ -4416,17 +4590,33 @@
 
 /* Tactical Map Legend */
 .tools-legend-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 6px;
+  column-gap: 0;
+  /* One continuous hairline down the column seam, unbroken by the row gap. */
+  background-image: linear-gradient(#282f3d, #282f3d);
+  background-size: 1px 100%;
+  background-position: 50% 0;
+  background-repeat: no-repeat;
 }
 
 .legend-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   font-size: 0.7rem;
+  line-height: 1.3;
   color: #cbd5e1;
+}
+
+/* Pair the entries into two columns split by the seam hairline above. */
+.tools-legend-grid > .legend-item:nth-child(odd) {
+  padding-right: 10px;
+}
+
+.tools-legend-grid > .legend-item:nth-child(even) {
+  padding-left: 10px;
 }
 
 .legend-swatch {
@@ -4465,6 +4655,8 @@
 
 .legend-label {
   font-weight: 500;
+  /* Centres the first line against the 20px swatch when the label wraps. */
+  padding-top: 3px;
 }
 
 /* Powers Standing List */
@@ -4974,6 +5166,14 @@
 .admin-tools-section {
   background: rgba(220, 38, 38, 0.05);
   border-bottom-color: rgba(220, 38, 38, 0.2);
+}
+
+.admin-tools-section .sidebar-section-icon {
+  color: #f87171;
+}
+
+.admin-tools-section .sidebar-section-toggle-btn:hover .sidebar-section-icon {
+  color: #fca5a5;
 }
 
 .creator-overline {

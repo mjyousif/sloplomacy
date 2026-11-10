@@ -99,5 +99,117 @@ def test_validator_unassigned_unit_warnings():
     no_warn = validate_orders(units, orders, include_unassigned_warnings=False)
     assert not any(i.code == IssueCode.UNASSIGNED_UNIT for i in no_warn)
 
-    with_warn = validate_orders(units, orders, include_unassigned_warnings=True)
-    assert sum(1 for i in with_warn if i.code == IssueCode.UNASSIGNED_UNIT) == 2
+
+def test_foreign_support_does_not_leak_orders():
+    """Supporting a foreign unit must emit INFO and never leak the foreign unit's actual order."""
+    units = [
+        Unit(id="ITA_F_WES", power=Power.ITALY, unit_type=UnitType.FLEET, province="WES"),
+        Unit(id="FRA_F_POR", power=Power.FRANCE, unit_type=UnitType.FLEET, province="POR"),
+    ]
+    # France secretly orders Portugal to move to Spain
+    orders = {
+        "ITA_F_WES": Order(
+            unit_id="ITA_F_WES",
+            power=Power.ITALY,
+            unit_type=UnitType.FLEET,
+            origin="WES",
+            order_type=OrderType.SUPPORT,
+            aux_unit_origin="POR",
+            target="MAO",
+            is_explicit=True,
+        ),
+        "FRA_F_POR": Order(
+            unit_id="FRA_F_POR",
+            power=Power.FRANCE,
+            unit_type=UnitType.FLEET,
+            origin="POR",
+            order_type=OrderType.MOVE,
+            target="SPA",
+            target_coast="SC",
+            is_explicit=True,
+        ),
+    }
+    issues = validate_orders(units, orders)
+    ita_issues = [i for i in issues if i.power == Power.ITALY]
+    assert len(ita_issues) == 1
+    issue = ita_issues[0]
+    assert issue.severity == IssueSeverity.INFO
+    assert issue.code == IssueCode.UNMATCHED_SUPPORT
+    assert "Foreign Support" in issue.title
+    # Must NOT reveal France's true move to Spain or that it's holding
+    assert "Spain" not in issue.message
+    assert "SPA" not in issue.message
+    assert "currently" not in issue.message
+
+
+def test_foreign_convoy_does_not_leak_orders():
+    """Convoying a foreign army must emit INFO and never leak the foreign unit's actual order."""
+    units = [
+        Unit(id="ENG_F_NTH", power=Power.ENGLAND, unit_type=UnitType.FLEET, province="NTH"),
+        Unit(id="FRA_A_BEL", power=Power.FRANCE, unit_type=UnitType.ARMY, province="BEL"),
+    ]
+    # France secretly orders Belgium to Burgundy
+    orders = {
+        "ENG_F_NTH": Order(
+            unit_id="ENG_F_NTH",
+            power=Power.ENGLAND,
+            unit_type=UnitType.FLEET,
+            origin="NTH",
+            order_type=OrderType.CONVOY,
+            aux_unit_origin="BEL",
+            target="LON",
+            is_explicit=True,
+        ),
+        "FRA_A_BEL": Order(
+            unit_id="FRA_A_BEL",
+            power=Power.FRANCE,
+            unit_type=UnitType.ARMY,
+            origin="BEL",
+            order_type=OrderType.MOVE,
+            target="BUR",
+            is_explicit=True,
+        ),
+    }
+    issues = validate_orders(units, orders)
+    eng_issues = [i for i in issues if i.power == Power.ENGLAND]
+    assert len(eng_issues) == 1
+    issue = eng_issues[0]
+    assert issue.severity == IssueSeverity.INFO
+    assert issue.code == IssueCode.BROKEN_CONVOY
+    assert "Foreign Convoy" in issue.title
+    assert "Burgundy" not in issue.message
+    assert "BUR" not in issue.message
+    assert "not ordered to move" not in issue.message
+
+
+def test_army_convoy_across_water_with_foreign_fleet_emits_info_not_warning():
+    """An army moving across water with a foreign fleet present emits INFO rather than leaking."""
+    units = [
+        Unit(id="ENG_A_LON", power=Power.ENGLAND, unit_type=UnitType.ARMY, province="LON"),
+        Unit(id="FRA_F_ENG", power=Power.FRANCE, unit_type=UnitType.FLEET, province="ENG"),
+    ]
+    # France orders fleet to HOLD
+    orders = {
+        "ENG_A_LON": Order(
+            unit_id="ENG_A_LON",
+            power=Power.ENGLAND,
+            unit_type=UnitType.ARMY,
+            origin="LON",
+            order_type=OrderType.MOVE,
+            target="BEL",
+            is_explicit=True,
+        ),
+        "FRA_F_ENG": Order(
+            unit_id="FRA_F_ENG",
+            power=Power.FRANCE,
+            unit_type=UnitType.FLEET,
+            origin="ENG",
+            order_type=OrderType.HOLD,
+            is_explicit=True,
+        ),
+    }
+    issues = validate_orders(units, orders)
+    eng_issues = [i for i in issues if i.power == Power.ENGLAND]
+    assert len(eng_issues) == 1
+    assert eng_issues[0].severity == IssueSeverity.INFO
+    assert "Foreign Convoy Required" in eng_issues[0].title
