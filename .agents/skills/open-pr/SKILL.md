@@ -31,7 +31,8 @@ Body format that has worked well here:
 - **What changed**: a table or short list. For security or behavior fixes use a Before / Now table, one row per path.
 - **Why this approach**: the invariant it protects, with the AGENTS.md section if one applies.
 - **Verification**: counts and commands actually run (pytest, `tsc`, vitest, build, E2E scenario and screenshots checked). If a run was skipped, say so.
-- **Screenshots inspected**: if you ran an E2E scenario, name the scenario, the steps you opened, and what each showed (for example, "step 2: modal lists the Burgundy self-bounce"). If you did not run E2E, say why. Opening the images is the point, so don't list steps you didn't look at.
+- **Screenshots inspected (Mandatory for visual/behavior changes)**: name the scenario, the steps you opened, and what each showed (for example, "step 2: modal lists the Burgundy self-bounce"). Opening and referencing the images is mandatory whenever user-facing UI, layout, map rendering, or diagnostics change.
+- **After Screenshots**: include or embed visual evidence of the new behavior in the PR description or task summary.
 - **Deploy notes**: new secrets, env vars, migrations, or "nothing needed". Reviewers act on this.
 - `Closes #<issue>` when there is one.
 
