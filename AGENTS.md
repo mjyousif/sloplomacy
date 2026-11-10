@@ -185,7 +185,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
 - **State Coordinator (`App.tsx`)**: Root state container, view mode switcher (Lobby, Game, Sandbox), and API coordination.
 - **Components (`components/`)**:
   - Top-level feature views (`EuropeMap.tsx`, `MacroSidebar.tsx`, `ToolsSidebar.tsx`, `LobbyView.tsx`, `AdminToolsModal.tsx`).
-  - Feature subdirectories (`map/`, `macro/`, `lobby/`, `admin/`) decomposing complex views into focused, single-responsibility subcomponents (e.g. SVG layers, card items, tab views). A feature's own hooks sit in its folder (`map/hooks/`: `useMapCamera`, `useMapGestures`, `useMapInteraction`, `useMapSelection`, `useUnitMenuPlacement`), and the menus over the map in `map/hud/`.
+  - Feature subdirectories (`map/`, `macro/`, `lobby/`, `admin/`) decomposing complex views into focused, single-responsibility subcomponents (e.g. SVG layers, card items, tab views). A feature's own hooks sit in its folder (`map/hooks/`: `useMapCamera`, `useMapGestures`, `useMapInteraction`, `useMapSelection`, `useOrderOverlay`, `useUnitMenuPlacement`), the menus over the map in `map/hud/`, and the SVG layers in `map/layers/` (order arrows in `map/layers/orders/`).
 - **Cartographic Data & Metrics (`data/`)**: Static map geometry paths (`europeMapGeometry.ts`), layout coordinates (`mapLayouts.ts`), and font metrics (`mapTextMetrics.ts`).
 - **Custom Hooks (`hooks/`)**: Reusable React hooks for WebSockets (`useDiplomacyWebSocket`), phone layout media queries (`useCompactLayout`), display settings (`useDisplayPrefs`), and the turn selector (`useTurnHistory`).
 - **Types (`types/`)**: TypeScript type contracts (`diplomacy.ts`), strictly synchronized with the models in `backend/domain/`.

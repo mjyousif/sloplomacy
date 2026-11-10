@@ -29,7 +29,6 @@ import {
   compactHitRadius,
   halfNearestDistances,
 } from '../utils/mapCameraHelpers';
-import { canUnitSupportInto } from '../utils/orderHelpers';
 import {
   getPieceArrowScale,
   getPieceFrame,
@@ -44,13 +43,17 @@ import { useKeepSelectionInView, useMapCamera } from './map/hooks/useMapCamera';
 import { useMapGestures } from './map/hooks/useMapGestures';
 import { useMapInteraction } from './map/hooks/useMapInteraction';
 import { useMapSelection } from './map/hooks/useMapSelection';
+import { useOrderOverlay } from './map/hooks/useOrderOverlay';
 import { useUnitMenuPlacement } from './map/hooks/useUnitMenuPlacement';
 import { BuildMenu } from './map/hud/BuildMenu';
 import { CoastPicker } from './map/hud/CoastPicker';
 import { MapZoomControls } from './map/hud/MapZoomControls';
 import { SimulationBanner } from './map/hud/SimulationBanner';
 import { UnitMenu } from './map/hud/UnitMenu';
+import { ArrowMarkerDefs } from './map/layers/ArrowMarkerDefs';
 import { MapNamesLayer } from './map/layers/MapNamesLayer';
+import { OrderArrowsLayer } from './map/layers/OrderArrowsLayer';
+import type { OrderLayerContext } from './map/layers/orders/orderLayerContext';
 import { ProvincePolygon } from './map/layers/ProvincePolygon';
 import {
   StaticBackgroundLayer,
@@ -58,7 +61,6 @@ import {
   StaticForegroundLayer,
 } from './map/layers/StaticLayers';
 import { SupplyCentersLayer } from './map/layers/SupplyCentersLayer';
-import { computeQuadraticCurve } from './map/utils/curveGeometry';
 
 export interface EuropeMapHandle {
   stepZoom: (delta: number) => void;
@@ -312,35 +314,28 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       reachableMap,
     } = selection;
 
-    const { issuesByUnit, issuesByProvince } = useMemo(() => {
-      // Only show issues for activePower unless foreign units can be edited
-      const visibleIssues = canEditAnyPower
-        ? issues
-        : issues.filter((i) => i.power === activePower);
-
-      const byUnit: Record<string, ValidationIssue[]> = {};
-      const byProvince: Record<string, ValidationIssue[]> = {};
-      for (const iss of visibleIssues) {
-        for (const uid of iss.unit_ids) {
-          if (!byUnit[uid]) byUnit[uid] = [];
-          byUnit[uid].push(iss);
-        }
-        for (const pid of iss.provinces) {
-          if (!byProvince[pid]) byProvince[pid] = [];
-          byProvince[pid].push(iss);
-        }
-      }
-      return { issuesByUnit: byUnit, issuesByProvince: byProvince };
-    }, [issues, canEditAnyPower, activePower]);
-
-    // Filter which units' orders are visible on the map:
-    const isUnitOrderVisible = useCallback(
-      (u: Unit) =>
-        historyView
-          ? historyPower === null || u.power === historyPower
-          : canEditAnyPower || u.power === activePower,
-      [historyView, historyPower, canEditAnyPower, activePower],
-    );
+    const orderOverlay = useOrderOverlay({
+      units,
+      orders,
+      provinces,
+      issues,
+      unitsByProv,
+      activePower,
+      canEditAnyPower,
+      historyView,
+      historyPower,
+      isRetreatPhase,
+      isAdjustmentPhase,
+      getUnitPoint,
+      getProvincePoint,
+      arrowScale,
+    });
+    const {
+      issuesByUnit,
+      issuesByProvince,
+      isUnitOrderVisible,
+      supportCountByUnitId,
+    } = orderOverlay;
 
     // Build homes map for Adjustments phase
     const controllableBuildHomes = useMemo(() => {
@@ -401,49 +396,6 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
             touchHitCaps[pieceId] ?? Infinity,
           )
         : 0;
-
-    // Count how many valid supports each moving/holding unit receives among visible orders
-    const supportCountByUnitId = useMemo(() => {
-      const counts: Record<string, number> = {};
-      if (!isRetreatPhase && !isAdjustmentPhase) {
-        for (const u of units) {
-          if (!isUnitOrderVisible(u) || u.is_dislodged) continue;
-          const o = orders[u.id];
-          if (
-            o &&
-            o.order_type === 'SUPPORT' &&
-            o.aux_unit_origin &&
-            o.target
-          ) {
-            const targetUnit = unitsByProv[o.aux_unit_origin];
-            if (targetUnit && isUnitOrderVisible(targetUnit)) {
-              const targetOrder = orders[targetUnit.id];
-              const isHoldSup = o.aux_unit_origin === o.target;
-              if (
-                (isHoldSup &&
-                  (!targetOrder || targetOrder.order_type !== 'MOVE')) ||
-                (!isHoldSup &&
-                  targetOrder?.order_type === 'MOVE' &&
-                  targetOrder?.target === o.target)
-              ) {
-                if (canUnitSupportInto(u, o.target, provinces)) {
-                  counts[targetUnit.id] = (counts[targetUnit.id] || 0) + 1;
-                }
-              }
-            }
-          }
-        }
-      }
-      return counts;
-    }, [
-      units,
-      orders,
-      unitsByProv,
-      provinces,
-      isUnitOrderVisible,
-      isRetreatPhase,
-      isAdjustmentPhase,
-    ]);
 
     const interaction = useMapInteraction({
       provinces,
@@ -508,33 +460,26 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       selectedBuildProv,
     });
 
-    // Precompute Move midpoints so Support arrows point directly to the move arrow they support
-    const moveMidpointsByOrigin = useMemo(() => {
-      const midpoints: Record<string, Point> = {};
-      for (const u of units) {
-        if (!isUnitOrderVisible(u) || u.is_dislodged) continue;
-        const o = orders[u.id];
-        if (
-          o &&
-          o.order_type === 'MOVE' &&
-          o.target &&
-          EUROPE_PROVINCE_GEOMETRY[o.target]
-        ) {
-          const p1 = getUnitPoint(u);
-          const p2 = getProvincePoint(o.target, o.target_coast);
-          const { mid } = computeQuadraticCurve(p1, p2, 0.14, arrowScale);
-          midpoints[u.province] = mid;
-        }
-      }
-      return midpoints;
-    }, [
-      units,
+    const orderLayerContext: OrderLayerContext = {
       orders,
+      provinces,
       isUnitOrderVisible,
+      issuesByUnit,
+      supportCountByUnitId,
+      moveMidpointsByOrigin: orderOverlay.moveMidpointsByOrigin,
       getUnitPoint,
       getProvincePoint,
+      describePiece,
+      pieceStyle,
+      unitMark,
+      pieceRingScale,
       arrowScale,
-    ]);
+      selectedUnitId,
+      hoveredUnitId,
+      showSimulationOverlay,
+      sandboxMode,
+      simulationResult,
+    };
 
     return (
       <div
@@ -615,65 +560,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
           <defs>
             <StaticDefsLayer />
 
-            <marker
-              id="arrow-valid"
-              viewBox="0 0 10 10"
-              refX="7"
-              refY="5"
-              markerWidth="5.5"
-              markerHeight="5.5"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 1.2 L 9 5 L 0 8.8 L 2.2 5 z" fill="#1e293b" />
-            </marker>
-
-            <marker
-              id="arrow-warning"
-              viewBox="0 0 10 10"
-              refX="7"
-              refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 1 L 9.5 5 L 0 9 L 2.2 5 z" fill="#d97706" />
-            </marker>
-
-            <marker
-              id="arrow-error"
-              viewBox="0 0 10 10"
-              refX="7"
-              refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 1 L 9.5 5 L 0 9 L 2.2 5 z" fill="#dc2626" />
-            </marker>
-
-            <marker
-              id="arrow-sim-ok"
-              viewBox="0 0 10 10"
-              refX="7"
-              refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 1 L 9.5 5 L 0 9 L 2.2 5 z" fill="#059669" />
-            </marker>
-
-            <marker
-              id="arrow-sim-bounce"
-              viewBox="0 0 10 10"
-              refX="7"
-              refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 1 L 9.5 5 L 0 9 L 2.2 5 z" fill="#e11d48" />
-            </marker>
+            <ArrowMarkerDefs />
           </defs>
 
           <g
@@ -760,341 +647,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
             />
 
             {/* 6. TACTICAL ORDER VECTORS LAYER */}
-            <g className="tactical-vectors-layer">
-              {/* 6A. CONVOY CHAINS */}
-              {units.map((u) => {
-                if (!isUnitOrderVisible(u) || u.is_dislodged) return null;
-                const o = orders[u.id];
-                if (
-                  !o ||
-                  o.order_type !== 'CONVOY' ||
-                  !o.aux_unit_origin ||
-                  !o.target
-                )
-                  return null;
-                const fleetPt = getUnitPoint(u);
-                const armyPt = getProvincePoint(o.aux_unit_origin);
-                const destPt = getProvincePoint(o.target);
-                const hasIssue = Boolean(issuesByUnit[u.id]?.length);
-
-                return (
-                  <g
-                    key={`convoy_${u.id}`}
-                    pointerEvents="none"
-                    data-testid="order-arrow"
-                    data-order-unit={u.id}
-                    data-order-type="CONVOY"
-                    data-order-target={o.target || ''}
-                  >
-                    <path
-                      d={`M ${armyPt.x},${armyPt.y} L ${fleetPt.x},${fleetPt.y} L ${destPt.x},${destPt.y}`}
-                      fill="none"
-                      stroke={hasIssue ? '#f59e0b' : '#0284c7'}
-                      strokeWidth="4.2"
-                      strokeDasharray="9 6"
-                    />
-                    <circle
-                      cx={fleetPt.x}
-                      cy={fleetPt.y}
-                      r={26 * pieceRingScale}
-                      fill="none"
-                      stroke={hasIssue ? '#f59e0b' : '#0284c7'}
-                      strokeWidth="2.5"
-                      strokeDasharray="5 4"
-                    />
-                  </g>
-                );
-              })}
-
-              {/* 6B. SUPPORT VECTORS */}
-              {units.map((u) => {
-                if (!isUnitOrderVisible(u) || u.is_dislodged) return null;
-                const o = orders[u.id];
-                if (
-                  !o ||
-                  o.order_type !== 'SUPPORT' ||
-                  !o.aux_unit_origin ||
-                  !o.target
-                )
-                  return null;
-
-                const supporterPt = getUnitPoint(u);
-                const isSupportHold = o.aux_unit_origin === o.target;
-                const targetPoint =
-                  !isSupportHold && moveMidpointsByOrigin[o.aux_unit_origin]
-                    ? moveMidpointsByOrigin[o.aux_unit_origin]
-                    : getProvincePoint(o.target);
-
-                const unitIssues = issuesByUnit[u.id] || [];
-                const hasError = unitIssues.some((i) => i.severity === 'error');
-                const hasWarn = unitIssues.some(
-                  (i) => i.severity === 'warning',
-                );
-                const simActive = showSimulationOverlay || sandboxMode;
-                const simRes = simActive
-                  ? simulationResult?.resolutions[u.id]
-                  : null;
-
-                const strokeColor = hasError
-                  ? '#dc2626'
-                  : simRes?.cut
-                    ? '#e11d48'
-                    : hasWarn
-                      ? '#f59e0b'
-                      : '#0d9488';
-
-                return (
-                  <g
-                    key={`support_${u.id}`}
-                    pointerEvents="none"
-                    data-testid="order-arrow"
-                    data-order-unit={u.id}
-                    data-order-type="SUPPORT"
-                    data-order-target={o.target || ''}
-                  >
-                    <line
-                      x1={supporterPt.x}
-                      y1={supporterPt.y}
-                      x2={targetPoint.x}
-                      y2={targetPoint.y}
-                      stroke="#ffffff"
-                      strokeWidth="6"
-                      strokeOpacity="0.7"
-                      strokeDasharray="8 5"
-                    />
-                    <line
-                      x1={supporterPt.x}
-                      y1={supporterPt.y}
-                      x2={targetPoint.x}
-                      y2={targetPoint.y}
-                      stroke={strokeColor}
-                      strokeWidth="3.6"
-                      strokeDasharray="8 5"
-                    />
-                    <circle
-                      cx={targetPoint.x}
-                      cy={targetPoint.y}
-                      r={isSupportHold ? 24 * pieceRingScale : 8}
-                      fill={isSupportHold ? 'none' : strokeColor}
-                      stroke={strokeColor}
-                      strokeWidth="2.8"
-                    />
-                    {simActive && simRes?.cut && (
-                      <g
-                        transform={`translate(${(supporterPt.x + targetPoint.x) / 2}, ${
-                          (supporterPt.y + targetPoint.y) / 2
-                        })`}
-                      >
-                        <rect
-                          x="-26"
-                          y="-9"
-                          width="52"
-                          height="18"
-                          rx="4"
-                          fill="#be123c"
-                          stroke="#fff"
-                          strokeWidth="1.2"
-                        />
-                        <text
-                          y="3.5"
-                          textAnchor="middle"
-                          fill="#fff"
-                          fontSize="9.5"
-                          fontWeight="800"
-                        >
-                          CUT
-                        </text>
-                      </g>
-                    )}
-                  </g>
-                );
-              })}
-
-              {/* 6C. MOVE & RETREAT ARROWS + GHOST DESTINATION TOKENS */}
-              {units.map((u) => {
-                if (!isUnitOrderVisible(u)) return null;
-                const o = orders[u.id];
-                if (
-                  !o ||
-                  (o.order_type !== 'MOVE' && o.order_type !== 'RETREAT') ||
-                  !o.target ||
-                  !EUROPE_PROVINCE_GEOMETRY[o.target]
-                )
-                  return null;
-
-                const p1 = getUnitPoint(u);
-                const p2 = getProvincePoint(o.target, o.target_coast);
-                const { path, mid } = computeQuadraticCurve(
-                  p1,
-                  p2,
-                  0.14,
-                  arrowScale,
-                );
-
-                const unitIssues = issuesByUnit[u.id] || [];
-                const hasError = unitIssues.some((i) => i.severity === 'error');
-                const hasWarn = unitIssues.some(
-                  (i) => i.severity === 'warning',
-                );
-                const supCount = supportCountByUnitId[u.id] || 0;
-                const isSelectedOrHovered =
-                  u.id === selectedUnitId || u.id === hoveredUnitId;
-
-                const simActive = showSimulationOverlay || sandboxMode;
-                const simRes = simActive
-                  ? simulationResult?.resolutions[u.id]
-                  : null;
-
-                let strokeColor =
-                  o.order_type === 'RETREAT'
-                    ? '#ea580c'
-                    : POWER_METADATA[u.power].color;
-                let markerId =
-                  o.order_type === 'RETREAT'
-                    ? 'url(#arrow-warning)'
-                    : 'url(#arrow-valid)';
-                let dashArray: string | undefined =
-                  o.order_type === 'RETREAT'
-                    ? '8 4'
-                    : o.via_convoy
-                      ? '10 5'
-                      : undefined;
-
-                if (hasError) {
-                  strokeColor = '#dc2626';
-                  markerId = 'url(#arrow-error)';
-                  dashArray = '6 5';
-                } else if (hasWarn) {
-                  strokeColor = '#d97706';
-                  markerId = 'url(#arrow-warning)';
-                } else if (simActive && simRes) {
-                  if (simRes.succeeded) {
-                    strokeColor = '#059669';
-                    markerId = 'url(#arrow-sim-ok)';
-                  } else {
-                    strokeColor = '#e11d48';
-                    markerId = 'url(#arrow-sim-bounce)';
-                    dashArray = '7 5';
-                  }
-                }
-
-                const strokeWidth =
-                  4.5 + supCount * 1.8 + (isSelectedOrHovered ? 1.2 : 0);
-                const meta = POWER_METADATA[u.power];
-                const ghostPiece = describePiece(
-                  o.target,
-                  o.target_coast,
-                  false,
-                );
-
-                return (
-                  <g
-                    key={`move_${u.id}`}
-                    pointerEvents="none"
-                    data-testid="order-arrow"
-                    data-order-unit={u.id}
-                    data-order-type={o.order_type}
-                    data-order-target={o.target || ''}
-                  >
-                    <path
-                      d={path}
-                      fill="none"
-                      stroke="#fef3c7"
-                      strokeWidth={strokeWidth + 3.5}
-                      strokeOpacity="0.9"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d={path}
-                      fill="none"
-                      stroke={strokeColor}
-                      strokeWidth={strokeWidth}
-                      strokeDasharray={dashArray}
-                      strokeLinecap="round"
-                      markerEnd={markerId}
-                    />
-
-                    {supCount > 0 && (
-                      <g transform={`translate(${mid.x}, ${mid.y})`}>
-                        <rect
-                          x="-16"
-                          y="-11"
-                          width="32"
-                          height="22"
-                          rx="11"
-                          fill="#0f766e"
-                          stroke="#fef3c7"
-                          strokeWidth="1.8"
-                        />
-                        <text
-                          y="5"
-                          textAnchor="middle"
-                          fill="#ffffff"
-                          fontSize="12"
-                          fontWeight="800"
-                        >
-                          +{supCount}
-                        </text>
-                      </g>
-                    )}
-
-                    {simActive && simRes && simRes.bounced && (
-                      <g transform={`translate(${mid.x}, ${mid.y - 16})`}>
-                        <rect
-                          x="-36"
-                          y="-10"
-                          width="72"
-                          height="20"
-                          rx="5"
-                          fill="#be123c"
-                          stroke="#fff"
-                          strokeWidth="1.4"
-                        />
-                        <text
-                          y="4"
-                          textAnchor="middle"
-                          fill="#fff"
-                          fontSize="10"
-                          fontWeight="800"
-                        >
-                          ✕ BOUNCED
-                        </text>
-                      </g>
-                    )}
-
-                    {/* GHOST PREVIEW UNIT TOKEN AT DESTINATION WHEN MOVE SUCCEEDS */}
-                    {simActive && simRes && simRes.succeeded && (
-                      <g
-                        transform={`translate(${p2.x}, ${p2.y})`}
-                        opacity="0.88"
-                      >
-                        <PieceOutline
-                          frame={ghostPiece.frame}
-                          radius={22}
-                          fill="rgba(16, 185, 129, 0.22)"
-                          stroke="#10b981"
-                          strokeWidth="2.5"
-                          strokeDasharray="4 3"
-                        />
-                        <MapPiece
-                          style={pieceStyle}
-                          mark={unitMark}
-                          unitType={u.unit_type}
-                          color={meta.color}
-                          variant="ghost"
-                          rim="#34d399"
-                          frame={ghostPiece.frame}
-                          flagDirection={ghostPiece.flagDirection}
-                          hasStar={Boolean(
-                            provinces[o.target]?.is_supply_center,
-                          )}
-                        />
-                      </g>
-                    )}
-                  </g>
-                );
-              })}
-            </g>
+            <OrderArrowsLayer units={units} ctx={orderLayerContext} />
 
             {/* 6D. WINTER ADJUSTMENTS BUILD TOKENS LAYER */}
             {isAdjustmentPhase && (

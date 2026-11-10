@@ -73,18 +73,20 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   │      - Distinguishes neutral vs power-owned centers
   │      - Position, size and presence follow the active piece style
   │
-  ├── 6. Order Vector Layer (curveGeometry.ts: computeQuadraticCurve):
-  │      - Blue curved bezier arrows for MOVE orders
-  │      - Teal dashed arrows with target reticles for SUPPORT orders
-  │      - Purple wavy arrows for CONVOY paths
-  │      - Grey circular shields for HOLD orders
-  │      - Amber arrows for RETREAT orders
+  ├── 6. Order Vector Layer (layers/OrderArrowsLayer.tsx, one component per order in layers/orders/;
+  │      data from hooks/useOrderOverlay.ts, curves from curveGeometry.ts: computeQuadraticCurve):
+  │      - ConvoyChain: a dashed blue line army → fleet → shore, and a dashed ring on the fleet
+  │      - SupportVector: a dashed teal line to the supported unit, or to the middle of the move it
+  │        supports (moveMidpointsByOrigin); a ring around a unit supported to hold
+  │      - MoveArrow: a curved arrow in the power's colour (convoyed moves dashed), retreats orange
+  │        and dashed, thicker and badged +N for each valid support, red or amber for issues
+  │      - Arrowheads in the SVG defs (layers/ArrowMarkerDefs.tsx)
+  │      - Holds have no arrow: the units layer rings a holding unit
   │
-  ├── 7. Tactical Simulation & Clash Layer:
-  │      - Red crossed swords (⚔) at contested provinces
-  │      - Amber bounce markers (💥) where attacks fail
-  │      - Scissors (✂) denoting cut supports
-  │      - Dislodged unit badges with retreat indicators
+  ├── 7. Simulation outcomes, drawn by the same arrows while the preview is on:
+  │      - Green arrows and a ghost piece where a move lands
+  │      - "✕ BOUNCED" on a move that fails, "CUT" on a support that is cut
+  │      - "DISLODGED!" on units the simulation dislodges (units layer)
   │
   ├── 8. Unit Token Layer:
   │      - Army / fleet pieces drawn by MapPiece in the active style and mark
@@ -92,9 +94,9 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   │      - Semi-transparent phantom tokens for pending BUILD orders
   │      - Selection ring and active power indicator
   │
-  └── 9. Floating Action Menu / HUD:
-         - Contextual radial quick-actions when a unit is clicked
-         - Simulation summary banner
+  └── 9. Menus over the map (map/hud/):
+         - The selected unit's menu, the build menu and the coast picker
+         - The Hypothetical Mode banner, and a phone's zoom buttons
 </svg>
 ```
 
