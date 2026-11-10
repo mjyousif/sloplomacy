@@ -81,7 +81,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 ## Reusable Collapsible Section (`CollapsibleSection.tsx`)
 
 `CollapsibleSection.tsx` standardizes all sidebar panel sections with a shared design and typographic hierarchy:
-- **Collapsible or Static Modes**: Set `collapsible={true}` for sections that can fold shut (such as the Tactical Map Legend and Great Powers Standing), or `collapsible={false}` for action controls that share identical headers and borders without toggle behavior.
+- **Collapsible or Static Modes**: Set `collapsible={true}` for sections that can fold shut (such as Tactical Map Legend, Great Powers Standing, Pre-Move Sandbox, and Creator Admin Tools), or `collapsible={false}` for action controls (such as Map View & Camera) that share identical headers and borders without toggle behavior.
 - **Accessible ARIA Attributes**: Includes `aria-expanded` and `aria-controls` on the toggle button with animated chevron indicators (`ChevronDown` / `ChevronRight`).
 - **Badge and Counter Support**: Accepts an optional `badge` node (such as zoom percentage badges or unit counts).
 - **Controlled & Uncontrolled Support**: Supports `defaultOpen` for initial expansion state, or `isOpen` and `onToggle` for controlled state management.
@@ -121,6 +121,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 - **Multiplayer Mode**: Displays diplomatic status (Orders Finalized, Drafting, or Civil Disorder).
 
 ### 4. War Room & Pre-Move Sandbox Tools
+- Rendered inside a collapsible `CollapsibleSection` (`defaultOpen={true}`). Displays the `ACTIVE` pill in the header when hypothetical mode is engaged, even when collapsed.
 - **"Enter Hypothetical Mode" / "Exit Mode"**: Toggles isolated hypothetical planning (with the Eye icon). In hypothetical mode, foreign moves can be freely drafted; exiting discards foreign guesses and restores the authoritative state. In a multiplayer match the sandbox is a private copy: other players cannot see it, it does not show their real orders, and Finalize, Resolve, Surrender and the Admin Console wait until you exit.
 - **Tactical General Staff AI**:
   - **"Plan Opponents"**: Generates DATC-compliant, heuristic moves for all 6 other nations.
@@ -130,7 +131,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 - **Scenario Management & Saving**: One-click "Reset 1901" scenario start and "Save Sandbox". Clicking "Save Sandbox" opens `SaveSandboxModal.tsx`, letting the commander specify a custom name (e.g., "Balkans 1901 Tactical Analysis") before promoting their personal draft sandbox in-place to a permanent saved sandbox.
 
 ### 5. Creator Administrator Controls (Game Creator Only)
-- Visible exclusively to room creators.
+- Visible exclusively to room creators, rendered inside a collapsible `CollapsibleSection` (`defaultOpen={true}`) with a warning red `ShieldAlert` icon.
 - **"Open Admin Console"**: Launches `AdminToolsModal.tsx` for timeline rollbacks, unit teleportation, and arbitrary unit spawning/destruction.
   - Destroy, Roll Back and Hard Reset ask for confirmation in an in-app `ConfirmModal`, never a browser dialog. A browser dialog the player has blocked answers "no" without showing anything, which made these buttons silently do nothing (issues #75, #77). Holding Shift while clicking skips the confirmation, and the modal says so. Escape or Cancel backs out.
   - The turn form resets only when the console opens or the game reaches another turn, not on every order update, so typing is not undone and an error from the last action stays visible.

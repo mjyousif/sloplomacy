@@ -159,9 +159,9 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   │   ├── Map View & Camera Controls (Zoom In, Zoom Out, Fit Map 105% - CollapsibleSection static)
 │   │   ├── Tactical Map Legend (Move, Support, Convoy, Conflict vectors - CollapsibleSection toggle)
 │   │   ├── Great Powers Standing & Command Selector (SC & Unit tallies - CollapsibleSection toggle)
-│   │   ├── Hypothetical Mode (What-If Opponent Guesses) & Tactical General Staff AI
+│   │   ├── Hypothetical Mode (What-If Opponent Guesses) & Tactical AI (CollapsibleSection toggle)
 │   │   ├── Foreign Guesses Count & Discard Actions
-│   │   ├── Creator Admin Console & Direct-Edit Override Trigger
+│   │   ├── Creator Admin Console & Direct-Edit Override Trigger (CollapsibleSection toggle)
 │   │   └── Turn History footer (TurnHistorySelector.tsx: ‹ turn › Live, nation chips)
 │   │
 │   ├── EuropeMap.tsx (Center Interactive SVG Board)

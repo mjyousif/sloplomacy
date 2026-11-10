@@ -5019,6 +5019,14 @@
   border-bottom-color: rgba(220, 38, 38, 0.2);
 }
 
+.admin-tools-section .sidebar-section-icon {
+  color: #f87171;
+}
+
+.admin-tools-section .sidebar-section-toggle-btn:hover .sidebar-section-icon {
+  color: #fca5a5;
+}
+
 .creator-overline {
   display: flex;
   align-items: center;

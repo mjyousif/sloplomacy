@@ -559,7 +559,8 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               <span className="sandbox-live-pill">ACTIVE</span>
             ) : undefined
           }
-          collapsible={false}
+          collapsible={true}
+          defaultOpen={true}
         >
           <button
             type="button"
@@ -671,7 +672,8 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           <CollapsibleSection
             title="CREATOR ADMIN TOOLS"
             icon={<ShieldAlert size={12} />}
-            collapsible={false}
+            collapsible={true}
+            defaultOpen={true}
             className="admin-tools-section"
           >
             <p className="tools-micro-desc">
