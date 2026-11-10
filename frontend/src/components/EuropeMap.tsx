@@ -20,7 +20,6 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -45,20 +44,8 @@ import {
 import type { PieceStyle, UnitMark } from '../utils/displayPrefs';
 import { adjustmentOrdersFor } from '../utils/historyHelpers';
 import {
-  type CameraBoundsOptions,
-  COMPACT_MAX_ZOOM,
-  clampCamera,
   compactHitRadius,
-  DEFAULT_CAMERA,
-  elementPointToViewBox,
-  getPhoneDefaultCamera,
-  getViewportFit,
   halfNearestDistances,
-  keepPointInView,
-  MAP_CENTER_X,
-  MAP_CENTER_Y,
-  pinchStep,
-  zoomAtPoint,
 } from '../utils/mapCameraHelpers';
 import {
   canUnitSupportInto,
@@ -76,6 +63,8 @@ import {
   PieceHoldOutline,
   PieceOutline,
 } from './MapPiece';
+import { useKeepSelectionInView, useMapCamera } from './map/hooks/useMapCamera';
+import { useMapGestures } from './map/hooks/useMapGestures';
 import { MapNamesLayer } from './map/layers/MapNamesLayer';
 import { ProvincePolygon } from './map/layers/ProvincePolygon';
 import {
@@ -141,12 +130,6 @@ export interface EuropeMapProps {
 
 /** How far the docked unit bar sits above the bottom of the map (`.unit-docked-bar` in compact.css). */
 const DOCKED_BAR_INSET = 8;
-
-/** On a phone, a selected unit is kept at least this far (px) from the edges of the uncovered map. */
-const SELECTION_VIEW_MARGIN = 80;
-
-/** How long the zoom must stay still before a phone's tap targets are resized for it. */
-const TOUCH_TARGET_SETTLE_MS = 150;
 
 type MapInteractionMode =
   | 'MOVE'
@@ -219,29 +202,6 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       dockObserverRef.current = new ResizeObserver(apply);
       dockObserverRef.current.observe(el);
     }, []);
-
-    // Camera state stored in a mutable ref for zero-re-render 60fps+ pan & zoom via requestAnimationFrame
-    const cameraRef = useRef<{ x: number; y: number; zoom: number }>({
-      ...DEFAULT_CAMERA,
-    });
-    const isPanningRef = useRef<boolean>(false);
-    const dragMovedRef = useRef<boolean>(false);
-    const mouseDownClientRef = useRef<Point>({ x: 0, y: 0 });
-    // Pointers pressed on the map, by id, at the client position last applied to the camera.
-    // One pointer pans, and two pinch.
-    const activePointersRef = useRef<Map<number, Point>>(new Map());
-    const rafIdRef = useRef<number | null>(null);
-
-    // Read through refs so the wheel listener and the rAF callback always see the current values.
-    const cameraOptions = useMemo<CameraBoundsOptions | undefined>(
-      () => (compact ? { maxZoom: COMPACT_MAX_ZOOM } : undefined),
-      [compact],
-    );
-    const cameraOptionsRef = useRef(cameraOptions);
-    cameraOptionsRef.current = cameraOptions;
-    const onZoomChangeRef = useRef(onZoomChange);
-    onZoomChangeRef.current = onZoomChange;
-    const reportedZoomRef = useRef<number | null>(null);
 
     // Draggable Floating Menu State (also updated via ref during drag)
     const menuDragOffsetRef = useRef<Point>({ x: 0, y: 0 });
@@ -356,6 +316,39 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       },
       [unitsByProv, getProvincePoint, describePiece],
     );
+
+    // Where a phone's camera starts: the middle of the player's own units, if they have any.
+    const ownUnitsCentre = useMemo((): Point | null => {
+      const own = units.filter(
+        (u) => u.power === activePower && !u.is_dislodged,
+      );
+      if (own.length === 0) return null;
+      const pts = own.map((u) => getUnitPoint(u));
+      return {
+        x: pts.reduce((sum, p) => sum + p.x, 0) / pts.length,
+        y: pts.reduce((sum, p) => sum + p.y, 0) / pts.length,
+      };
+    }, [units, activePower, getUnitPoint]);
+
+    const camera = useMapCamera({
+      svgRef,
+      cameraGroupRef,
+      compact,
+      activePower,
+      ownUnitsCentre,
+      onZoomChange,
+      onCameraSync: syncFloatingMenu,
+    });
+    const {
+      cameraRef,
+      touchPxPerUnit,
+      scheduleCameraSync,
+      zoomAboutCentre,
+      stepZoom,
+      resetCamera,
+    } = camera;
+    const gestures = useMapGestures(svgRef, camera);
+    const { isPanningRef, dragMovedRef } = gestures;
 
     const getStarOwnerColor = (province: string): string | undefined => {
       const owner = ownership[province] || provinces[province]?.home_power;
@@ -1060,15 +1053,9 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       getProvincePoint,
     ]);
 
-    // Apply camera transform & floating menu position directly to DOM
-    const syncCameraDOM = useCallback(() => {
-      const { x, y, zoom: z } = cameraRef.current;
-      if (cameraGroupRef.current) {
-        cameraGroupRef.current.setAttribute(
-          'transform',
-          `translate(${x}, ${y}) scale(${z})`,
-        );
-      }
+    // The floating menu sits in screen space, so it follows every camera write. A function
+    // declaration, because the camera hook above is handed it before this point in the render.
+    function syncFloatingMenu() {
       if (floatingMenuRef.current) {
         const pos = getSelectedUnitFloatingPosition();
         if (pos) {
@@ -1076,214 +1063,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
           floatingMenuRef.current.style.top = `${pos.top}px`;
         }
       }
-    }, [getSelectedUnitFloatingPosition]);
-
-    // Tells App the zoom, but only when the rounded figure changes, so a wheel spin or a pinch
-    // doesn't re-render the whole app on every frame.
-    // Phone: screen pixels per board unit once the zoom settles, which sizes the tap targets.
-    // It updates after the zoom stops changing, not on every frame of a pinch.
-    const [touchPxPerUnit, setTouchPxPerUnit] = useState(0);
-    const touchSettleTimerRef = useRef<number | null>(null);
-    const compactRef = useRef(compact);
-    compactRef.current = compact;
-    const settleTouchTargets = useCallback(() => {
-      if (!compactRef.current) return;
-      if (touchSettleTimerRef.current !== null)
-        window.clearTimeout(touchSettleTimerRef.current);
-      touchSettleTimerRef.current = window.setTimeout(() => {
-        touchSettleTimerRef.current = null;
-        const rect = svgRef.current?.getBoundingClientRect();
-        if (!rect) return;
-        setTouchPxPerUnit(
-          getViewportFit(rect.width, rect.height).scale *
-            cameraRef.current.zoom,
-        );
-      }, TOUCH_TARGET_SETTLE_MS);
-    }, []);
-
-    useEffect(() => {
-      if (!compact) return;
-      settleTouchTargets();
-      window.addEventListener('resize', settleTouchTargets);
-      return () => {
-        window.removeEventListener('resize', settleTouchTargets);
-        if (touchSettleTimerRef.current !== null)
-          window.clearTimeout(touchSettleTimerRef.current);
-      };
-    }, [compact, settleTouchTargets]);
-
-    const reportZoom = useCallback(() => {
-      const percent = Math.round(cameraRef.current.zoom * 100);
-      if (percent === reportedZoomRef.current) return;
-      reportedZoomRef.current = percent;
-      onZoomChangeRef.current?.(percent);
-      settleTouchTargets();
-    }, [settleTouchTargets]);
-
-    const scheduleCameraSync = useCallback(() => {
-      if (rafIdRef.current !== null) return;
-      rafIdRef.current = requestAnimationFrame(() => {
-        rafIdRef.current = null;
-        syncCameraDOM();
-        // A pinch reports once the fingers lift.
-        if (activePointersRef.current.size < 2) reportZoom();
-      });
-    }, [syncCameraDOM, reportZoom]);
-
-    useEffect(() => {
-      return () => {
-        if (rafIdRef.current !== null) {
-          cancelAnimationFrame(rafIdRef.current);
-        }
-      };
-    }, []);
-
-    /** A client-space point in viewBox units, allowing for the letterbox around the board. */
-    const clientToViewBox = useCallback((pt: Point): Point => {
-      const rect = svgRef.current?.getBoundingClientRect();
-      const W = rect?.width || 980;
-      const H = rect?.height || 860;
-      return elementPointToViewBox(
-        { x: pt.x - (rect?.left ?? 0), y: pt.y - (rect?.top ?? 0) },
-        W,
-        H,
-      );
-    }, []);
-
-    // Native non-passive wheel listener for smooth cursor-anchored zooming
-    useEffect(() => {
-      const svgEl = svgRef.current;
-      if (!svgEl) return;
-
-      const onWheel = (e: WheelEvent) => {
-        e.preventDefault();
-        const current = cameraRef.current;
-        const factor = Math.exp(-e.deltaY * 0.0014);
-        const next = zoomAtPoint(
-          current,
-          clientToViewBox({ x: e.clientX, y: e.clientY }),
-          Number((current.zoom * factor).toFixed(3)),
-          cameraOptionsRef.current,
-        );
-        if (next.zoom === current.zoom) return;
-        cameraRef.current = next;
-        scheduleCameraSync();
-      };
-
-      svgEl.addEventListener('wheel', onWheel, { passive: false });
-      return () => svgEl.removeEventListener('wheel', onWheel);
-    }, [scheduleCameraSync, clientToViewBox]);
-
-    // Pointer Events cover the mouse, a finger and a pen alike. The map takes the pointer only
-    // once a drag passes the threshold: capturing on press would send the click to the map
-    // instead of the unit or province under it.
-    const endPanning = () => {
-      isPanningRef.current = false;
-      svgRef.current?.classList.remove('panning', 'actively-dragging');
-      reportZoom();
-    };
-
-    const markDragging = () => {
-      dragMovedRef.current = true;
-      svgRef.current?.classList.add('actively-dragging');
-    };
-
-    const capturePointer = (pointerId: number) => {
-      try {
-        svgRef.current?.setPointerCapture(pointerId);
-      } catch {
-        // The pointer is already gone, for example lifted in the same frame.
-      }
-    };
-
-    const handlePointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
-      const pointers = activePointersRef.current;
-      const client = { x: e.clientX, y: e.clientY };
-      if (pointers.size === 0) {
-        isPanningRef.current = true;
-        svgRef.current?.classList.add('panning');
-        dragMovedRef.current = false;
-        mouseDownClientRef.current = client;
-      }
-      pointers.set(e.pointerId, client);
-      if (pointers.size === 2) {
-        // A second finger turns the gesture into a pinch, and a pinch is never a tap.
-        markDragging();
-        pointers.forEach((_, id) => capturePointer(id));
-      }
-    };
-
-    const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
-      const pointers = activePointersRef.current;
-      const last = pointers.get(e.pointerId);
-      if (!last) return;
-      const client = { x: e.clientX, y: e.clientY };
-
-      if (pointers.size >= 2) {
-        const [idA, idB] = Array.from(pointers.keys());
-        if (e.pointerId !== idA && e.pointerId !== idB) return;
-        const prev: [Point, Point] = [
-          clientToViewBox(pointers.get(idA)!),
-          clientToViewBox(pointers.get(idB)!),
-        ];
-        pointers.set(e.pointerId, client);
-        const next: [Point, Point] = [
-          clientToViewBox(pointers.get(idA)!),
-          clientToViewBox(pointers.get(idB)!),
-        ];
-        cameraRef.current = pinchStep(
-          cameraRef.current,
-          prev,
-          next,
-          cameraOptionsRef.current,
-        );
-        scheduleCameraSync();
-        return;
-      }
-
-      if (!dragMovedRef.current) {
-        // A finger wobbles more than a mouse, so a tap allows more movement before it pans.
-        const threshold = e.pointerType === 'mouse' ? 4 : 10;
-        const dist = Math.hypot(
-          client.x - mouseDownClientRef.current.x,
-          client.y - mouseDownClientRef.current.y,
-        );
-        if (dist <= threshold) return;
-        markDragging();
-        capturePointer(e.pointerId);
-      }
-
-      const rect = svgRef.current?.getBoundingClientRect();
-      const { scale } = getViewportFit(rect?.width || 980, rect?.height || 860);
-      cameraRef.current = clampCamera(
-        {
-          x: cameraRef.current.x + (client.x - last.x) / scale,
-          y: cameraRef.current.y + (client.y - last.y) / scale,
-          zoom: cameraRef.current.zoom,
-        },
-        cameraOptionsRef.current,
-      );
-      pointers.set(e.pointerId, client);
-      scheduleCameraSync();
-    };
-
-    const handlePointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
-      const pointers = activePointersRef.current;
-      if (!pointers.delete(e.pointerId)) return;
-      if (svgRef.current?.hasPointerCapture(e.pointerId)) {
-        svgRef.current.releasePointerCapture(e.pointerId);
-      }
-      // With one finger left after a pinch, carrying on pans from where that finger is.
-      if (pointers.size === 0) endPanning();
-    };
-
-    // A captured pointer keeps the drag going off the map. Before the threshold, leaving the map
-    // ends the press, as it always has for the mouse.
-    const handlePointerLeave = (e: React.PointerEvent<SVGSVGElement>) => {
-      if (svgRef.current?.hasPointerCapture(e.pointerId)) return;
-      handlePointerUp(e);
-    };
+    }
 
     // The cursor stays over the menu during a drag, so the map's own handlers never see it.
     // Capturing the pointer sends every move and the release to the header instead, wherever
@@ -1319,70 +1099,6 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       floatingMenuRef.current?.classList.remove('dragging');
     };
 
-    /** Zooms about the middle of the view, so whatever is in the middle stays there. */
-    const zoomAboutCentre = useCallback(
-      (newZoom: number) => {
-        cameraRef.current = zoomAtPoint(
-          cameraRef.current,
-          { x: MAP_CENTER_X, y: MAP_CENTER_Y },
-          newZoom,
-          cameraOptionsRef.current,
-        );
-        syncCameraDOM();
-        reportZoom();
-      },
-      [syncCameraDOM, reportZoom],
-    );
-
-    const stepZoom = useCallback(
-      (delta: number) => {
-        zoomAboutCentre(Number((cameraRef.current.zoom + delta).toFixed(2)));
-      },
-      [zoomAboutCentre],
-    );
-
-    // Where a phone's camera starts: the middle of the player's own units, if they have any.
-    const ownUnitsCentre = useMemo((): Point | null => {
-      const own = units.filter(
-        (u) => u.power === activePower && !u.is_dislodged,
-      );
-      if (own.length === 0) return null;
-      const pts = own.map((u) => getUnitPoint(u));
-      return {
-        x: pts.reduce((sum, p) => sum + p.x, 0) / pts.length,
-        y: pts.reduce((sum, p) => sum + p.y, 0) / pts.length,
-      };
-    }, [units, activePower, getUnitPoint]);
-    const ownUnitsCentreRef = useRef(ownUnitsCentre);
-    ownUnitsCentreRef.current = ownUnitsCentre;
-
-    const getHomeCamera = useCallback(() => {
-      if (!compact) return clampCamera({ ...DEFAULT_CAMERA });
-      const rect = svgRef.current?.getBoundingClientRect();
-      return getPhoneDefaultCamera(
-        rect?.width ?? 0,
-        rect?.height ?? 0,
-        ownUnitsCentreRef.current,
-        cameraOptionsRef.current,
-      );
-    }, [compact]);
-
-    const resetCamera = useCallback(() => {
-      cameraRef.current = getHomeCamera();
-      syncCameraDOM();
-      reportZoom();
-    }, [getHomeCamera, syncCameraDOM, reportZoom]);
-
-    // Entering or leaving the phone layout, or switching powers on a phone, moves the camera
-    // home. The wide layout starts on DEFAULT_CAMERA already, so its first render is untouched.
-    const cameraHomeKeyRef = useRef<string>('wide');
-    useLayoutEffect(() => {
-      const key = compact ? `compact:${activePower}` : 'wide';
-      if (key === cameraHomeKeyRef.current) return;
-      cameraHomeKeyRef.current = key;
-      resetCamera();
-    }, [compact, activePower, resetCamera]);
-
     useImperativeHandle(
       ref,
       () => ({
@@ -1392,12 +1108,6 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       }),
       [stepZoom, resetCamera],
     );
-
-    useEffect(() => {
-      // App gave a new callback, so tell it the zoom even if the figure hasn't changed.
-      reportedZoomRef.current = null;
-      reportZoom();
-    }, [reportZoom]);
 
     // Phones dock the menus instead, so they skip the placement math.
     const floatingPos = compact ? null : getSelectedUnitFloatingPosition();
@@ -1435,42 +1145,18 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       if (compact) onDockedBarChangeRef.current?.(dockedBarVisible);
     }, [compact, dockedBarVisible]);
 
-    // Phone: whatever was just selected, from the map or from its card in the order sheet, is
-    // panned clear of the docked bar with room around it for the provinces to tap. It only runs
-    // when the selection changes, so panning away afterwards is left alone.
-    const selectionAnchorRef = useRef<Point | null>(null);
-    selectionAnchorRef.current = selectedUnit
-      ? getUnitPoint(selectedUnit)
-      : selectedBuildProv
-        ? getProvincePoint(selectedBuildProv)
-        : null;
-    // Through a ref, so a re-render that changes syncCameraDOM can't re-run this and undo a pan.
-    const syncCameraDOMRef = useRef(syncCameraDOM);
-    syncCameraDOMRef.current = syncCameraDOM;
-    useEffect(() => {
-      if (!compact) return;
-      const anchor = selectionAnchorRef.current;
-      const svg = svgRef.current;
-      if (!anchor || !svg) return;
-      const rect = svg.getBoundingClientRect();
-      // The dock ref has already put the bar's space on the map by the time effects run.
-      const barSpace =
-        parseFloat(
-          containerRef.current?.style.getPropertyValue('--docked-bar-h') ?? '',
-        ) || 0;
-      const next = keepPointInView(
-        cameraRef.current,
-        anchor,
-        rect.width,
-        rect.height,
-        { top: 0, bottom: rect.height - barSpace },
-        SELECTION_VIEW_MARGIN,
-        cameraOptionsRef.current,
-      );
-      if (next === cameraRef.current) return;
-      cameraRef.current = next;
-      syncCameraDOMRef.current();
-    }, [compact, selectedUnitId, selectedBuildProv]);
+    useKeepSelectionInView(camera, {
+      svgRef,
+      containerRef,
+      compact,
+      anchor: selectedUnit
+        ? getUnitPoint(selectedUnit)
+        : selectedBuildProv
+          ? getProvincePoint(selectedBuildProv)
+          : null,
+      selectedUnitId,
+      selectedBuildProv,
+    });
     const activeOrderButton = getActiveOrderButton(
       interactionMode,
       selectedUnit ? orders[selectedUnit.id] : undefined,
@@ -1983,11 +1669,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
           ref={svgRef}
           viewBox={MAP_VIEWBOX}
           className="europe-svg-canvas"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          onPointerLeave={handlePointerLeave}
+          {...gestures.pointerHandlers}
         >
           <defs>
             <StaticDefsLayer />

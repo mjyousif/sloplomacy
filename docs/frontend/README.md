@@ -21,7 +21,12 @@ frontend/
     ├── components/
     │   ├── EuropeMap.tsx        # High-performance interactive SVG game board & order arrows
     │   ├── EuropeMap.test.tsx   # The unit menu in the DOM: each newly selected unit gets a fresh menu
-    │   ├── map/                 # Decomposed SVG map sub-layers & utilities
+    │   ├── map/                 # Decomposed SVG map sub-layers, hooks & utilities
+    │   │   ├── hooks/
+    │   │   │   ├── useMapCamera.ts        # Camera ref, frame-synced transform, wheel & button zoom, home camera, phone selection pan
+    │   │   │   ├── useMapCamera.test.ts
+    │   │   │   ├── useMapGestures.ts      # Pointer pan with a tap threshold, two-finger pinch
+    │   │   │   └── useMapGestures.test.ts
     │   │   ├── layers/
     │   │   │   ├── StaticLayers.tsx       # Gradients, sea textures & pass-through background defs
     │   │   │   ├── ProvincePolygon.tsx    # Memoized individual SVG province polygons & boundaries
@@ -85,6 +90,7 @@ frontend/
     │   └── supabase.ts          # Supabase client singleton & auth helpers
     ├── test/
     │   ├── setup.ts             # Runs before every test file: jest-dom matchers and Testing Library cleanup
+    │   ├── mapDom.ts            # A map <svg> with an on-screen box and pointer capture, for map hook tests
     │   └── mapFixtures.ts       # France and its neighbours, units and orders for map tests
     ├── types/
     │   └── diplomacy.ts         # TypeScript definitions synchronized with backend/domain/*.py
