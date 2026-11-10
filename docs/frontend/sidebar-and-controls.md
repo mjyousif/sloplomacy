@@ -173,7 +173,8 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 - **Province Code & Title**: Name and code (with coastal notation, e.g. `STP/SC`).
 - **Behavior Visualizer**: Symbolic action summary (e.g. `MOVE -> BUR`, `HOLD Defending Paris`).
 - **Order Mode Tabs**: `HOLD`, `MOVE`, `SUPPORT`, `CONVOY`, `RETREAT`, `DISBAND`.
-- **Target & Auxiliary Selectors**: Clean, contextual dropdown menus populated strictly with valid reachable provinces and convoy routes.
+- **Target & Auxiliary Selectors**: Clean, contextual dropdown menus populated strictly with valid reachable provinces and convoy routes, constrained with ellipsis truncation to prevent horizontal container blowout.
+- **Scrollable Order List**: Styled with slim dark-mode scrollbars matching the left sidebar and `overflow-x: hidden` to prevent horizontal scrollbar leaks.
 - **Real-Time Diagnostics**: Inline error/warning alerts explaining DATC violations.
 - **Simulation Preview Results**: Instant visual feedback on simulated advances, bounces, or cut supports.
 
