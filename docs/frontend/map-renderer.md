@@ -14,7 +14,7 @@ The visual centerpiece of the application is `frontend/src/components/EuropeMap.
 
 ## Pan & Zoom Engine
 
-The map features smooth multi-modal navigation without external library bloat:
+The map features smooth multi-modal navigation without external library bloat. The camera lives in `components/map/hooks/useMapCamera.ts` and the pointer gestures in `useMapGestures.ts`, next to it. `EuropeMap` spreads the gestures' pointer handlers on its `<svg>` and hands the camera a callback that moves the floating unit menu with every camera write.
 1. **Drag to pan (mouse, finger or pen)**: The camera lives in a ref, and a `requestAnimationFrame` sync writes it to the camera group's SVG `transform` attribute, so panning never re-renders React:
    ```ts
    cameraGroupRef.current.setAttribute('transform', `translate(${x}, ${y}) scale(${zoom})`)
@@ -33,13 +33,13 @@ App passes `compact` from `useCompactLayout()`. On a phone the map:
 - **Shows zoom buttons on the map**: zoom in, zoom out (each by 1.5×) and "Back to my units", 44px square in the bottom-right corner (`.map-zoom-controls` in `compact.css`).
 - **Drops `backdrop-filter`** from the cartouche and the unit popup, since blurring what is behind them repaints the board on every pan frame.
 - **Docks the unit menus**: the unit popup, the build popup and the coast picker render as one full-width `.unit-docked-bar` at the bottom of the map, with no drag header and no placement math. The bar's height goes on the map as `--docked-bar-h`, and the zoom buttons ride above it. `onDockedBarChange(visible)` tells App, which lowers the order sheet.
-- **Keeps a new selection in view**: when the selected unit or build slot changes, `keepPointInView` pans (without zooming) so it sits at least 80px inside the part of the map the bar leaves uncovered. An axis already in range doesn't move, and a later pan is left alone.
+- **Keeps a new selection in view** (`useKeepSelectionInView`): when the selected unit or build slot changes, `keepPointInView` pans (without zooming) so it sits at least 80px inside the part of the map the bar leaves uncovered. An axis already in range doesn't move, and a later pan is left alone.
 - **Makes pieces finger-sized**: every piece gets a transparent hit circle at least 22px in radius on screen (`compactHitRadius`), capped at half the distance to the nearest other piece (`halfNearestDistances`) so neighbours keep their own targets. Classic and Name as piece get one too, which they don't need on desktop. It is resized once the zoom has been still for 150ms, not on every frame of a pinch.
 - **Says "Tap"** instead of "Click" in its hints.
 
 The wide layout is unchanged: it starts on `DEFAULT_CAMERA`, keeps the `3.0x` ceiling, renders no zoom buttons, floats its popups and keeps the styles' own hit areas.
 
-The browser pane sends mouse events. The `mobile` E2E scenario turns on Playwright's touch emulation, so its taps arrive as touch, but neither can drag or pinch: those have unit tests (`mapCameraHelpers.test.ts`, `sheetHelpers.test.ts`) and need a real phone to check by hand.
+The browser pane sends mouse events. The `mobile` E2E scenario turns on Playwright's touch emulation, so its taps arrive as touch, but neither can drag or pinch: those have unit tests (`mapCameraHelpers.test.ts`, `map/hooks/useMapCamera.test.ts`, `map/hooks/useMapGestures.test.ts`, `sheetHelpers.test.ts`) and need a real phone to check by hand.
 
 ---
 
@@ -73,18 +73,20 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   │      - Distinguishes neutral vs power-owned centers
   │      - Position, size and presence follow the active piece style
   │
-  ├── 6. Order Vector Layer (curveGeometry.ts: computeQuadraticCurve):
-  │      - Blue curved bezier arrows for MOVE orders
-  │      - Teal dashed arrows with target reticles for SUPPORT orders
-  │      - Purple wavy arrows for CONVOY paths
-  │      - Grey circular shields for HOLD orders
-  │      - Amber arrows for RETREAT orders
+  ├── 6. Order Vector Layer (layers/OrderArrowsLayer.tsx, one component per order in layers/orders/;
+  │      data from hooks/useOrderOverlay.ts, curves from curveGeometry.ts: computeQuadraticCurve):
+  │      - ConvoyChain: a dashed blue line army → fleet → shore, and a dashed ring on the fleet
+  │      - SupportVector: a dashed teal line to the supported unit, or to the middle of the move it
+  │        supports (moveMidpointsByOrigin); a ring around a unit supported to hold
+  │      - MoveArrow: a curved arrow in the power's colour (convoyed moves dashed), retreats orange
+  │        and dashed, thicker and badged +N for each valid support, red or amber for issues
+  │      - Arrowheads in the SVG defs (layers/ArrowMarkerDefs.tsx)
+  │      - Holds have no arrow: the units layer rings a holding unit
   │
-  ├── 7. Tactical Simulation & Clash Layer:
-  │      - Red crossed swords (⚔) at contested provinces
-  │      - Amber bounce markers (💥) where attacks fail
-  │      - Scissors (✂) denoting cut supports
-  │      - Dislodged unit badges with retreat indicators
+  ├── 7. Simulation outcomes, drawn by the same arrows while the preview is on:
+  │      - Green arrows and a ghost piece where a move lands
+  │      - "✕ BOUNCED" on a move that fails, "CUT" on a support that is cut
+  │      - "DISLODGED!" on units the simulation dislodges (units layer)
   │
   ├── 8. Unit Token Layer:
   │      - Army / fleet pieces drawn by MapPiece in the active style and mark
@@ -92,9 +94,9 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   │      - Semi-transparent phantom tokens for pending BUILD orders
   │      - Selection ring and active power indicator
   │
-  └── 9. Floating Action Menu / HUD:
-         - Contextual radial quick-actions when a unit is clicked
-         - Simulation summary banner
+  └── 9. Menus over the map (map/hud/):
+         - The selected unit's menu, the build menu and the coast picker
+         - The Hypothetical Mode banner, and a phone's zoom buttons
 </svg>
 ```
 
@@ -157,12 +159,16 @@ With `historyView` set, `App.tsx` feeds the map a `TurnRecord` from the turn sel
 ---
 
 ## Floating Unit Menu
+The menus over the map are components in `components/map/hud/`: `UnitMenu` (the selected unit's buttons and hint), `BuildMenu` (a winter build slot), `CoastPicker`, `SimulationBanner` and, on a phone, `MapZoomControls`. Where they go comes from `map/hooks/useUnitMenuPlacement.ts`: the floating position beside the unit (kept clear of the provinces it can reach and moved with the camera), the header drag, and on a phone the docked bar and its `--docked-bar-h`. Every order they send is built by `utils/orderBuilders.ts`.
+
 - **Highlighted Button**: `getActiveOrderButton` lights exactly one of Move, Hold, Support, or Convoy. The menu opens on Move, or on Hold if the unit has an explicit `HOLD` order. Pressing Move, Support, or Convoy takes the highlight from a saved Hold. The saved order itself stays until a new one replaces it.
 - **Dragging**: Press and hold the menu header, then drag. The header captures the pointer, so the drag follows the cursor over the menu and outside the map, and it ends on release. Buttons in the header do not start a drag.
 
 ---
 
 ## Click-to-Order Interaction Modes
+
+The click state machine lives in `components/map/hooks/useMapInteraction.ts`: the mode (`MOVE`, `SUPPORT_PICK_UNIT`, `SUPPORT_PICK_TARGET`, `CONVOY_PICK_ARMY`, `CONVOY_PICK_TARGET`), the unit a support or convoy is for, the coast choice, and the unit and province click handlers. The menu buttons call its `chooseMove`, `chooseSupport`, `chooseConvoy` and `chooseRetreat`. What is selected, whether the player may command it, and where it can go come from `useMapSelection.ts`. Every order is built by `utils/orderBuilders.ts` (`holdOrder`, `moveOrder`, `retreatOrder`, `supportOrder`, `convoyOrder`), so the map and its menus send the same shape for the same order.
 
 A player can only control their own units, and other powers' units are marked `foreign-locked`. Every control check goes through `canEditAnyPower`, which is true in the sandbox and for a host with Direct-Edit on (`directEditActive`). That also decides whose orders and diagnostics are drawn.
 

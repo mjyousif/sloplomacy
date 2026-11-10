@@ -21,8 +21,29 @@ frontend/
     ├── components/
     │   ├── EuropeMap.tsx        # High-performance interactive SVG game board & order arrows
     │   ├── EuropeMap.test.tsx   # The unit menu in the DOM: each newly selected unit gets a fresh menu
-    │   ├── map/                 # Decomposed SVG map sub-layers & utilities
+    │   ├── map/                 # Decomposed SVG map sub-layers, hooks & utilities
+    │   │   ├── hooks/
+    │   │   │   ├── useMapCamera.ts        # Camera ref, frame-synced transform, wheel & button zoom, home camera, phone selection pan
+    │   │   │   ├── useMapCamera.test.ts
+    │   │   │   ├── useMapGestures.ts      # Pointer pan with a tap threshold, two-finger pinch
+    │   │   │   ├── useMapGestures.test.ts
+    │   │   │   ├── useMapInteraction.ts   # Click state machine: modes, support/convoy picks, coast choice, hover
+    │   │   │   ├── useMapInteraction.test.ts # Every click path in all three phases (also covers useMapSelection)
+    │   │   │   ├── useMapSelection.ts     # The selected unit or build slot, who may command it, where it can go
+    │   │   │   ├── useOrderOverlay.ts     # Whose orders are drawn, issues by unit and province, support counts, move midpoints
+    │   │   │   ├── useOrderOverlay.test.ts
+    │   │   │   ├── useUnitMenuPlacement.ts # Floating menu position and drag, the phone's docked bar
+    │   │   │   └── useUnitMenuPlacement.test.ts
+    │   │   ├── hud/                       # The menus over the map, each with a co-located test
+    │   │   │   ├── UnitMenu.tsx           # Move/Hold/Support/Convoy, Retreat/Disband or Keep/Disband, and the step hint
+    │   │   │   ├── BuildMenu.tsx          # Army, fleet per coast, or waive for a winter build slot
+    │   │   │   ├── CoastPicker.tsx        # Which coast of a split-coast province
+    │   │   │   ├── SimulationBanner.tsx   # The Hypothetical Mode strip over the map
+    │   │   │   └── MapZoomControls.tsx    # A phone's zoom buttons on the map
     │   │   ├── layers/
+    │   │   │   ├── OrderArrowsLayer.tsx   # Every drawn order: convoys under supports under moves (with its test)
+    │   │   │   ├── orders/                # ConvoyChain, SupportVector, MoveArrow and their shared context type
+    │   │   │   ├── ArrowMarkerDefs.tsx    # The arrowheads in the SVG defs
     │   │   │   ├── StaticLayers.tsx       # Gradients, sea textures & pass-through background defs
     │   │   │   ├── ProvincePolygon.tsx    # Memoized individual SVG province polygons & boundaries
     │   │   │   ├── SupplyCentersLayer.tsx # Memoized supply center stars & markers
@@ -87,10 +108,13 @@ frontend/
     │   └── supabase.ts          # Supabase client singleton & auth helpers
     ├── test/
     │   ├── setup.ts             # Runs before every test file: jest-dom matchers and Testing Library cleanup
+    │   ├── mapDom.ts            # A map <svg> with an on-screen box and pointer capture, for map hook tests
     │   └── mapFixtures.ts       # France and its neighbours, units and orders for map tests
     ├── types/
     │   └── diplomacy.ts         # TypeScript definitions synchronized with backend/domain/*.py
     └── utils/
+        ├── orderBuilders.ts     # Hold, move, retreat, support, convoy, disband, build and waive orders, built one way everywhere
+        ├── orderBuilders.test.ts # Each order's exact fields and field order
         ├── orderHelpers.ts      # Reachability calculations, retreat targeting & symbolic formatters
         ├── orderHelpers.test.ts # Vitest suite for order parsing and valid destinations
         ├── adminHelpers.ts      # Admin permission verification & payload formatters
