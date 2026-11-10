@@ -79,7 +79,11 @@ async def list_games():
     for gid in list(GAME_SUMMARIES.keys()):
         if gid not in (DEFAULT_GAME_ID, "proto_1901"):
             sync_summary(gid)
-    return [s for gid, s in GAME_SUMMARIES.items() if gid not in (DEFAULT_GAME_ID, "proto_1901")]
+    return [
+        s
+        for gid, s in GAME_SUMMARIES.items()
+        if gid not in (DEFAULT_GAME_ID, "proto_1901") and not s.is_draft
+    ]
 
 
 @router.get(
@@ -204,6 +208,59 @@ async def create_multiplayer_game(
 
 
 @router.post(
+    "/api/games/solo-sandbox",
+    response_model=GameBootstrapResponse,
+    summary="Create Personal Solo Sandbox",
+)
+async def create_solo_sandbox(
+    current_user: AuthUser | None = Depends(get_current_user),
+):
+    check_game_capacity()
+    gid = f"solo_{uuid.uuid4().hex[:8]}"
+    now_iso = datetime.now(timezone.utc).isoformat()
+    game_state = build_scenario("standard_1901", Power.FRANCE, gid)
+    GAMES[gid] = game_state
+    SANDBOX_CHECKPOINTS[gid] = None
+    GAME_HISTORY[gid] = []
+
+    effective_user_id = current_user.user_id if current_user else "guest"
+    effective_email = (
+        (current_user.email or "guest@diplomacy.local") if current_user else "guest@diplomacy.local"
+    )
+    display_name = effective_email.split("@")[0]
+    summary = MultiplayerGameSummary(
+        game_id=gid,
+        name=f"Draft Tactical Sandbox ({game_state.season} {game_state.year})",
+        status="active",
+        season=game_state.season,
+        year=game_state.year,
+        phase=game_state.phase,
+        created_by=effective_email,
+        creator_id=effective_user_id,
+        created_at=now_iso,
+        participants={
+            Power.FRANCE.value: GameParticipant(
+                user_id=effective_user_id,
+                email=effective_email,
+                display_name=display_name,
+                power=Power.FRANCE,
+                joined_at=now_iso,
+            )
+        },
+        finalized_powers=[],
+        is_sandbox=True,
+        is_draft=True,
+    )
+    GAME_SUMMARIES[gid] = summary
+    await persist_game(gid)
+    return GameBootstrapResponse(
+        state=game_state,
+        provinces=PROVINCES,
+        summary=summary,
+    )
+
+
+@router.post(
     "/api/games/save-sandbox",
     response_model=MultiplayerGameSummary,
     summary="Save Sandbox to Account",
@@ -215,9 +272,37 @@ async def save_sandbox_to_account(
 ):
     check_game_capacity()
     source_game = await resolve_game(game_id)
-    new_gid = f"saved_{uuid.uuid4().hex[:8]}"
+    gid = source_game.game_id
     now_iso = datetime.now(timezone.utc).isoformat()
 
+    effective_user_id = current_user.user_id if current_user else req.user_id
+    effective_email = (current_user.email or req.email) if current_user else req.email
+    display_name = req.display_name or effective_email.split("@")[0]
+
+    existing_summary = GAME_SUMMARIES.get(gid)
+    if existing_summary and existing_summary.is_sandbox and existing_summary.is_draft:
+        chosen_name = (
+            req.name.strip()
+            or existing_summary.name
+            or f"Saved Tactical Sandbox ({source_game.season} {source_game.year})"
+        )
+        existing_summary.name = chosen_name
+        existing_summary.is_draft = False
+        existing_summary.creator_id = effective_user_id
+        existing_summary.created_by = effective_email
+        existing_summary.participants[source_game.active_power.value] = GameParticipant(
+            user_id=effective_user_id,
+            email=effective_email,
+            display_name=display_name,
+            power=source_game.active_power,
+            joined_at=now_iso,
+        )
+        sync_summary(gid)
+        await persist_game(gid)
+        await broadcast_lobby_update()
+        return existing_summary
+
+    new_gid = f"saved_{uuid.uuid4().hex[:8]}"
     visible = sanitize_game_state_for_viewer(
         source_game, viewer_power_for(source_game.game_id, current_user)
     )
@@ -228,9 +313,6 @@ async def save_sandbox_to_account(
     SANDBOX_CHECKPOINTS[new_gid] = None
     GAME_HISTORY[new_gid] = []
 
-    effective_user_id = current_user.user_id if current_user else req.user_id
-    effective_email = (current_user.email or req.email) if current_user else req.email
-    display_name = req.display_name or effective_email.split("@")[0]
     summary = MultiplayerGameSummary(
         game_id=new_gid,
         name=req.name.strip()
@@ -253,6 +335,7 @@ async def save_sandbox_to_account(
         },
         finalized_powers=list(cloned_state.finalized_powers),
         is_sandbox=True,
+        is_draft=False,
     )
     GAME_SUMMARIES[new_gid] = summary
     await persist_game(new_gid)

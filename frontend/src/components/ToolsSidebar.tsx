@@ -654,6 +654,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               {onSaveSandboxClick && (
                 <button
                   type="button"
+                  data-testid="btn-save-sandbox"
                   className="tools-btn"
                   onClick={onSaveSandboxClick}
                   title="Save current board state to your account"

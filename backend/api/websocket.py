@@ -147,7 +147,9 @@ async def ws_lobby_endpoint(websocket: WebSocket):
         await websocket.send_json(
             {
                 "type": "lobby_update",
-                "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values()],
+                "games": [
+                    s.model_dump(mode="json") for s in GAME_SUMMARIES.values() if not s.is_draft
+                ],
             }
         )
         while True:
@@ -162,7 +164,11 @@ async def ws_lobby_endpoint(websocket: WebSocket):
                     await websocket.send_json(
                         {
                             "type": "lobby_update",
-                            "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values()],
+                            "games": [
+                                s.model_dump(mode="json")
+                                for s in GAME_SUMMARIES.values()
+                                if not s.is_draft
+                            ],
                         }
                     )
     except WebSocketDisconnect:

@@ -36,6 +36,8 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 | `surrenderModalOpen` | `boolean` | Modal | Controls visibility of the Surrender / Civil Disorder confirmation modal. |
 | `sanityModalOpen` | `boolean` | Modal | Controls visibility of pre-finalization warning modal. |
 | `sanityModalIssues` | `ValidationIssue[]` | Modal | Issues displayed inside the Sanity Check modal. |
+| `saveSandboxModalOpen` | `boolean` | Modal | Controls visibility of modal to name and save/promote a draft sandbox. |
+| `savingSandbox` | `boolean` | UI | True while saving or promoting a sandbox session via the API. |
 | `hypotheticalMatchTimer` | `PhaseTimer \| null` | Multiplayer | The real match's clock while `sandboxGameId` is set, because the private copy has none. Components read the derived `matchTimer`. |
 | `turnHistory` | `TurnHistory` | History | From `useTurnHistory`: the resolved phases (`entries`), the one on show (`viewIndex`, `null` = live), its `TurnRecord` (`turn`) and the nation chip (`power`). The list is refetched whenever the live turn changes, which covers WebSocket updates and rollbacks. If the phase on show has moved it is found again by season, year and phase, and if it is gone the view goes back to live. Records are cached until the list is refetched. It always reads `activeGameId`, never `sandboxGameId`, and sends the passcode the player typed for a private match as `X-Passcode`. While `turn` is set, the map shows that turn read-only and the orders panel is dimmed (`viewingHistory`). |
 | `toastBanner` | `string \| null` | Banner | Auto-expiring toast message for user notifications. |
@@ -132,6 +134,17 @@ While `sandboxGameId` is set, the board shows the private copy and is kept apart
 - WebSocket updates (and fallback polling when disconnected) for the match update `activeGameSummary` and `hypotheticalMatchTimer`. The clock continues to run via WebSocket heartbeats or fallback polling. A deadline can pass here, and orders in the copy reach the match only on exit, so the timer widget warns the player. Exiting brings the board back up to date.
 - Finalize, Unlock, Resolve, Surrender and the Admin Console are refused with a toast (`requireRealBoard`), because they act on the real match and the player would be looking at a hypothetical board.
 - Leaving the match view by any route closes the sandbox through the effect that watches `viewMode`.
+
+### Solo Sandbox Isolation & In-Place Promotion
+
+1. **Entering Solo Sandbox (`handleEnterSoloSandbox`)**:
+   - Dispatches `POST /api/games/solo-sandbox`.
+   - The backend initializes a dedicated, isolated draft sandbox (`solo_<uuid>`, `is_sandbox: true`, `is_draft: true`).
+   - Draft sandboxes are excluded from public lobby lists and `/ws/lobby` broadcasts, ensuring that two visitors launching Solo Sandbox never interact or see each other's moves.
+2. **Promoting to Saved Sandbox (`handleSaveSandboxToAccount`)**:
+   - Clicking "Save Sandbox" opens `SaveSandboxModal` (`saveSandboxModalOpen = true`), allowing the commander to specify a custom name.
+   - Dispatches `POST /api/games/save-sandbox` with the custom name and caller's credentials.
+   - For draft sandboxes (`is_draft: true`), the backend promotes the session in-place (`is_draft: false`), updates the name and creator attribution, and records it in the saved games list.
 
 
 ---
