@@ -30,6 +30,8 @@ frontend/
     │   │   │   ├── useMapInteraction.ts   # Click state machine: modes, support/convoy picks, coast choice, hover
     │   │   │   ├── useMapInteraction.test.ts # Every click path in all three phases (also covers useMapSelection)
     │   │   │   ├── useMapSelection.ts     # The selected unit or build slot, who may command it, where it can go
+    │   │   │   ├── useOrderOverlay.ts     # Whose orders are drawn, issues by unit and province, support counts, move midpoints
+    │   │   │   ├── useOrderOverlay.test.ts
     │   │   │   ├── useUnitMenuPlacement.ts # Floating menu position and drag, the phone's docked bar
     │   │   │   └── useUnitMenuPlacement.test.ts
     │   │   ├── hud/                       # The menus over the map, each with a co-located test
@@ -39,6 +41,9 @@ frontend/
     │   │   │   ├── SimulationBanner.tsx   # The Hypothetical Mode strip over the map
     │   │   │   └── MapZoomControls.tsx    # A phone's zoom buttons on the map
     │   │   ├── layers/
+    │   │   │   ├── OrderArrowsLayer.tsx   # Every drawn order: convoys under supports under moves (with its test)
+    │   │   │   ├── orders/                # ConvoyChain, SupportVector, MoveArrow and their shared context type
+    │   │   │   ├── ArrowMarkerDefs.tsx    # The arrowheads in the SVG defs
     │   │   │   ├── StaticLayers.tsx       # Gradients, sea textures & pass-through background defs
     │   │   │   ├── ProvincePolygon.tsx    # Memoized individual SVG province polygons & boundaries
     │   │   │   ├── SupplyCentersLayer.tsx # Memoized supply center stars & markers
