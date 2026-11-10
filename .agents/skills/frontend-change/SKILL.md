@@ -20,6 +20,7 @@ Read the matching doc first: `docs/frontend/map-renderer.md`, `sidebar-and-contr
 - **Display preferences** are per player and never enter `GameState` or the backend. Run everything read from `localStorage` or `user_metadata` through `sanitizeDisplayPrefs`. A failed account read is not "nothing saved".
 - **No redundant UI**: see the anti-redundancy rules in `sidebar-and-controls.md` before adding a toggle, badge or legend entry.
 - **Destructive actions** use `ConfirmModal` (in-app), not `window.confirm`.
+- **Effect dependencies**: `useExhaustiveDependencies` is off and Biome's unsafe fixes are never applied. A dependency the body never reads, like `userId` in `useDisplayPrefs` (the user is read through a ref) or `authKey` in `useDiplomacyWebSocket`, is what makes the effect re-run. #116's autofix removed three of these and broke sign-in, the socket and the unit menu. Test a re-run with `renderHook`'s `rerender`. State that must reset when a prop changes before the next paint (such as the unit menu on a new selection) is reset during render, not in an effect.
 - **Performance**: the map re-renders on hover. Memoize expensive derived data (`useMemo` / `React.memo`) and don't create new objects in render paths that feed the SVG.
 - Never reveal other powers' orders in the client. The server masks them, and the client must not reconstruct them from cached state or a fallback poll.
 

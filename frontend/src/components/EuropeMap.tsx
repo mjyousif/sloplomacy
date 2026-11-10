@@ -260,11 +260,14 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       coasts: string[];
     } | null>(null);
 
-    // Reset menu drag offset and chosen mode whenever a different unit is selected
-    useEffect(() => {
-      menuDragOffsetRef.current = { x: 0, y: 0 };
+    // Reset menu drag offset and chosen mode whenever a different unit is selected: during
+    // render, not in an effect, which would run after the new menu was placed with the old offset.
+    const [menuUnitId, setMenuUnitId] = useState(selectedUnitId);
+    if (menuUnitId !== selectedUnitId) {
+      setMenuUnitId(selectedUnitId);
       setMoveModeChosen(false);
-    }, []);
+      menuDragOffsetRef.current = { x: 0, y: 0 };
+    }
 
     const isAdjustmentPhase = phase === 'Adjustments' || season === 'Winter';
     const isRetreatPhase = phase === 'Retreats';

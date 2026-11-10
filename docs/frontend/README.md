@@ -20,6 +20,7 @@ frontend/
     ├── index.css                # Base reset & typography
     ├── components/
     │   ├── EuropeMap.tsx        # High-performance interactive SVG game board & order arrows
+    │   ├── EuropeMap.test.tsx   # The unit menu in the DOM: each newly selected unit gets a fresh menu
     │   ├── map/                 # Decomposed SVG map sub-layers & utilities
     │   │   ├── layers/
     │   │   │   ├── StaticLayers.tsx       # Gradients, sea textures & pass-through background defs
@@ -73,6 +74,7 @@ frontend/
     ├── hooks/
     │   ├── useDiplomacyWebSocket.ts # Live Sync socket: heartbeat, reconnect rules & clock refresh
     │   ├── useDiplomacyWebSocket.test.ts # Vitest suite for socket URLs and reconnect rules
+    │   ├── useDiplomacyWebSocket.connection.test.ts # One socket per player: reconnects on sign-in and sign-out
     │   ├── useTurnHistory.ts    # Turn selector state: resolved phases, the one on show, its record and the nation chip
     │   ├── useTurnHistory.test.ts # Loading, stepping, caching and keeping the viewed turn across refetches
     │   ├── useCompactLayout.ts  # The phone breakpoint (COMPACT_LAYOUT_QUERY) as a live boolean
@@ -82,7 +84,8 @@ frontend/
     ├── lib/
     │   └── supabase.ts          # Supabase client singleton & auth helpers
     ├── test/
-    │   └── setup.ts             # Runs before every test file: jest-dom matchers and Testing Library cleanup
+    │   ├── setup.ts             # Runs before every test file: jest-dom matchers and Testing Library cleanup
+    │   └── mapFixtures.ts       # France and its neighbours, units and orders for map tests
     ├── types/
     │   └── diplomacy.ts         # TypeScript definitions synchronized with backend/domain/*.py
     └── utils/
