@@ -200,6 +200,7 @@ def build_summary_from_row(row: dict[str, Any]) -> MultiplayerGameSummary:
         participants={},
         finalized_powers=[],
         is_sandbox=bool(row.get("is_sandbox", False)),
+        is_draft=bool(row.get("is_draft", False)),
         is_private=bool(row.get("is_private", False)),
         has_passcode=bool(row.get("passcode")),
     )

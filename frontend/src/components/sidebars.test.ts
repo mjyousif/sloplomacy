@@ -126,9 +126,11 @@ describe('ToolsSidebar', () => {
     expect(html).toContain('MAP VIEW &amp; CAMERA');
     expect(html).toContain('105%');
     expect(html).toContain('TACTICAL MAP LEGEND');
-    expect(html).toContain('Move / Attack Vector');
+    expect(html).toContain('Move / Attack');
+    expect(html).not.toContain('Move / Attack Vector');
     expect(html).toContain('Support Link');
     expect(html).toContain('Fleet Convoy');
+    expect(html).toContain('Warning / Dislodgement');
     expect(html).toContain('COMMAND NATION (SELECT)');
     expect(html).toContain('France');
     expect(html).toContain('England');
@@ -136,6 +138,20 @@ describe('ToolsSidebar', () => {
     expect(html).toContain('HYPOTHETICAL MODE &amp; PRE-MOVES');
     expect(html).toContain('Enter Hypothetical Mode');
     expect(html).not.toContain('CREATOR ADMIN TOOLS');
+  });
+
+  it('pairs the legend entries so convoy sits beside move and warning beside support', () => {
+    const html = renderToString(
+      React.createElement(ToolsSidebar, baseToolsProps),
+    );
+    const order = [
+      'Move / Attack',
+      'Fleet Convoy',
+      'Support Link',
+      'Warning / Dislodgement',
+    ].map((label) => html.indexOf(label));
+    expect(order).not.toContain(-1);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
   it('renders creator admin section only when isGameCreator is true', () => {
@@ -148,6 +164,29 @@ describe('ToolsSidebar', () => {
     );
     expect(html).toContain('CREATOR ADMIN TOOLS');
     expect(html).toContain('Open Admin Console');
+  });
+
+  it('renders sandbox and admin as collapsible sections with toggle buttons', () => {
+    const html = renderToString(
+      React.createElement(ToolsSidebar, {
+        ...baseToolsProps,
+        isGameCreator: true,
+        onOpenAdminTools: vi.fn(),
+        sandboxMode: true,
+      }),
+    );
+    // Sandbox collapsible section
+    expect(html).toContain('HYPOTHETICAL MODE &amp; PRE-MOVES');
+    expect(html).toContain('sandbox-live-pill');
+    expect(html).toContain('ACTIVE');
+    // Admin collapsible section
+    expect(html).toContain('CREATOR ADMIN TOOLS');
+    expect(html).toContain('admin-tools-section');
+
+    // Both use the collapsible toggle button with aria-expanded
+    const buttons = html.match(/sidebar-section-toggle-btn/g);
+    // Legend, Powers, Sandbox, Admin -> 4 collapsible sections
+    expect(buttons?.length).toBe(4);
   });
 
   it('renders SVG flags and rank badges in diplomatic standings', () => {
