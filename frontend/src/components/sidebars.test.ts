@@ -150,6 +150,29 @@ describe('ToolsSidebar', () => {
     expect(html).toContain('Open Admin Console');
   });
 
+  it('renders sandbox and admin as collapsible sections with toggle buttons', () => {
+    const html = renderToString(
+      React.createElement(ToolsSidebar, {
+        ...baseToolsProps,
+        isGameCreator: true,
+        onOpenAdminTools: vi.fn(),
+        sandboxMode: true,
+      }),
+    );
+    // Sandbox collapsible section
+    expect(html).toContain('HYPOTHETICAL MODE &amp; PRE-MOVES');
+    expect(html).toContain('sandbox-live-pill');
+    expect(html).toContain('ACTIVE');
+    // Admin collapsible section
+    expect(html).toContain('CREATOR ADMIN TOOLS');
+    expect(html).toContain('admin-tools-section');
+
+    // Both use the collapsible toggle button with aria-expanded
+    const buttons = html.match(/sidebar-section-toggle-btn/g);
+    // Legend, Powers, Sandbox, Admin -> 4 collapsible sections
+    expect(buttons?.length).toBe(4);
+  });
+
   it('renders SVG flags and rank badges in diplomatic standings', () => {
     const html = renderToString(
       React.createElement(ToolsSidebar, baseToolsProps),
