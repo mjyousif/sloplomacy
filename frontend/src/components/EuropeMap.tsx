@@ -1,24 +1,7 @@
-import {
-  Anchor,
-  Crosshair,
-  Eye,
-  GripHorizontal,
-  Maximize2,
-  MoveRight,
-  Play,
-  PlusCircle,
-  Shield,
-  Swords,
-  Trash2,
-  X,
-  ZoomIn,
-  ZoomOut,
-} from 'lucide-react';
 import type React from 'react';
 import {
   forwardRef,
   useCallback,
-  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -46,10 +29,7 @@ import {
   compactHitRadius,
   halfNearestDistances,
 } from '../utils/mapCameraHelpers';
-import {
-  canUnitSupportInto,
-  getActiveOrderButton,
-} from '../utils/orderHelpers';
+import { canUnitSupportInto } from '../utils/orderHelpers';
 import {
   getPieceArrowScale,
   getPieceFrame,
@@ -64,6 +44,12 @@ import { useKeepSelectionInView, useMapCamera } from './map/hooks/useMapCamera';
 import { useMapGestures } from './map/hooks/useMapGestures';
 import { useMapInteraction } from './map/hooks/useMapInteraction';
 import { useMapSelection } from './map/hooks/useMapSelection';
+import { useUnitMenuPlacement } from './map/hooks/useUnitMenuPlacement';
+import { BuildMenu } from './map/hud/BuildMenu';
+import { CoastPicker } from './map/hud/CoastPicker';
+import { MapZoomControls } from './map/hud/MapZoomControls';
+import { SimulationBanner } from './map/hud/SimulationBanner';
+import { UnitMenu } from './map/hud/UnitMenu';
 import { MapNamesLayer } from './map/layers/MapNamesLayer';
 import { ProvincePolygon } from './map/layers/ProvincePolygon';
 import {
@@ -127,9 +113,6 @@ export interface EuropeMapProps {
   historyPower?: Power | null;
 }
 
-/** How far the docked unit bar sits above the bottom of the map (`.unit-docked-bar` in compact.css). */
-const DOCKED_BAR_INSET = 8;
-
 export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
   function EuropeMap(
     {
@@ -169,43 +152,6 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
     const containerRef = useRef<HTMLDivElement | null>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
     const cameraGroupRef = useRef<SVGGElement | null>(null);
-    const floatingMenuRef = useRef<HTMLDivElement | null>(null);
-
-    // On a phone the unit menu, build menu and coast picker dock as one bar at the bottom of the
-    // map instead of floating beside the unit. The space the bar takes (its height plus the 8px
-    // it sits above the map's edge, see compact.css) goes on the map as --docked-bar-h, so the
-    // zoom buttons can sit above it.
-    const dockObserverRef = useRef<ResizeObserver | null>(null);
-    const dockRef = useCallback((el: HTMLDivElement | null) => {
-      dockObserverRef.current?.disconnect();
-      dockObserverRef.current = null;
-      const container = containerRef.current;
-      if (!el) {
-        container?.style.removeProperty('--docked-bar-h');
-        return;
-      }
-      const apply = () =>
-        container?.style.setProperty(
-          '--docked-bar-h',
-          `${Math.ceil(el.getBoundingClientRect().height) + DOCKED_BAR_INSET}px`,
-        );
-      apply();
-      if (typeof ResizeObserver === 'undefined') return;
-      dockObserverRef.current = new ResizeObserver(apply);
-      dockObserverRef.current.observe(el);
-    }, []);
-
-    // Draggable Floating Menu State (also updated via ref during drag)
-    const menuDragOffsetRef = useRef<Point>({ x: 0, y: 0 });
-    const menuDragStartRef = useRef<Point>({ x: 0, y: 0 });
-
-    // Reset the menu drag offset whenever a different unit is selected: during render, not in
-    // an effect, which would run after the new menu was placed with the old offset.
-    const offsetUnitRef = useRef(selectedUnitId);
-    if (offsetUnitRef.current !== selectedUnitId) {
-      offsetUnitRef.current = selectedUnitId;
-      menuDragOffsetRef.current = { x: 0, y: 0 };
-    }
 
     const isAdjustmentPhase = phase === 'Adjustments' || season === 'Winter';
     const isRetreatPhase = phase === 'Retreats';
@@ -315,7 +261,9 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       activePower,
       ownUnitsCentre,
       onZoomChange,
-      onCameraSync: syncFloatingMenu,
+      // The floating menu sits in screen space, so it follows every camera write. The camera
+      // only calls this after render, by which time the menu's placement exists.
+      onCameraSync: () => menuPlacement.syncFloatingMenu(),
     });
     const {
       cameraRef,
@@ -514,164 +462,12 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
     });
     const {
       interactionMode,
-      moveModeChosen,
-      pendingAuxOrigin,
       pendingCoastChoice,
       hoveredProv,
       clearSelection,
       handleSelectUnitOnMap,
       commitMoveOrRetreatOrder,
     } = interaction;
-
-    // Convert SVG (1524x1357) point to container screen coordinates using current cameraRef
-    const svgPointToScreen = useCallback(
-      (pt: Point, W: number, H: number): Point => {
-        const { x: panX, y: panY, zoom: z } = cameraRef.current;
-        const svgX = 762 + (pt.x - 762) * z + panX;
-        const svgY = 678 + (pt.y - 678) * z + panY;
-        const scale = Math.min(W / 1524, H / 1357);
-        const offsetX = (W - 1524 * scale) / 2;
-        const offsetY = (H - 1357 * scale) / 2;
-        return {
-          x: offsetX + svgX * scale,
-          y: offsetY + svgY * scale,
-        };
-      },
-      [],
-    );
-
-    // Smart placement for the floating menu
-    const getSelectedUnitFloatingPosition = useCallback((): {
-      left: number;
-      top: number;
-      anchorLeft: number;
-      anchorTop: number;
-    } | null => {
-      const anchorPt = selectedUnit
-        ? getUnitPoint(selectedUnit)
-        : selectedBuildProv
-          ? getProvincePoint(selectedBuildProv)
-          : null;
-      if (!anchorPt) return null;
-
-      const W = containerRef.current?.clientWidth || 980;
-      const H = containerRef.current?.clientHeight || 860;
-      const unitScreen = svgPointToScreen(anchorPt, W, H);
-      const neighborScreens = reachableList.map((r) =>
-        svgPointToScreen(getProvincePoint(r.province), W, H),
-      );
-
-      const menuW = 256;
-      const menuH = 98;
-
-      const candidates: Point[] = [
-        { x: unitScreen.x - menuW / 2, y: unitScreen.y - menuH - 95 }, // Above
-        { x: unitScreen.x - menuW / 2, y: unitScreen.y + 95 }, // Below
-        { x: unitScreen.x - menuW - 95, y: unitScreen.y - menuH / 2 }, // Left
-        { x: unitScreen.x + 95, y: unitScreen.y - menuH / 2 }, // Right
-        { x: unitScreen.x - menuW - 75, y: unitScreen.y - menuH - 75 }, // Top-Left
-        { x: unitScreen.x + 75, y: unitScreen.y - menuH - 75 }, // Top-Right
-        { x: unitScreen.x - menuW - 75, y: unitScreen.y + 75 }, // Bottom-Left
-        { x: unitScreen.x + 75, y: unitScreen.y + 75 }, // Bottom-Right
-      ];
-
-      let bestCandidate = candidates[0];
-      let bestScore = -Infinity;
-
-      for (const cand of candidates) {
-        const clampedX = Math.max(14, Math.min(W - menuW - 14, cand.x));
-        const clampedY = Math.max(64, Math.min(H - menuH - 14, cand.y));
-        const centerX = clampedX + menuW / 2;
-        const centerY = clampedY + menuH / 2;
-
-        let minNeighborDist = 9999;
-        for (const ns of neighborScreens) {
-          const d = Math.hypot(centerX - ns.x, centerY - ns.y);
-          if (d < minNeighborDist) minNeighborDist = d;
-        }
-        const distToUnit = Math.hypot(
-          centerX - unitScreen.x,
-          centerY - unitScreen.y,
-        );
-        const score = Math.min(minNeighborDist, distToUnit);
-        if (score > bestScore) {
-          bestScore = score;
-          bestCandidate = { x: clampedX, y: clampedY };
-        }
-      }
-
-      return {
-        left: Math.max(
-          10,
-          Math.min(
-            W - menuW - 10,
-            bestCandidate.x + menuDragOffsetRef.current.x,
-          ),
-        ),
-        top: Math.max(
-          10,
-          Math.min(
-            H - menuH - 10,
-            bestCandidate.y + menuDragOffsetRef.current.y,
-          ),
-        ),
-        anchorLeft: bestCandidate.x,
-        anchorTop: bestCandidate.y,
-      };
-    }, [
-      selectedUnit,
-      selectedBuildProv,
-      reachableList,
-      svgPointToScreen,
-      getUnitPoint,
-      getProvincePoint,
-    ]);
-
-    // The floating menu sits in screen space, so it follows every camera write. A function
-    // declaration, because the camera hook above is handed it before this point in the render.
-    function syncFloatingMenu() {
-      if (floatingMenuRef.current) {
-        const pos = getSelectedUnitFloatingPosition();
-        if (pos) {
-          floatingMenuRef.current.style.left = `${pos.left}px`;
-          floatingMenuRef.current.style.top = `${pos.top}px`;
-        }
-      }
-    }
-
-    // The cursor stays over the menu during a drag, so the map's own handlers never see it.
-    // Capturing the pointer sends every move and the release to the header instead, wherever
-    // the cursor goes. A capture also takes the click, so buttons in the header must not start one.
-    const handleMenuDragStart = (e: React.PointerEvent<HTMLDivElement>) => {
-      if (e.button !== 0 || (e.target as Element).closest('button')) return;
-      const pos = getSelectedUnitFloatingPosition();
-      if (pos) {
-        // Start from where the menu is, since an earlier drag may have run past the map edge
-        menuDragOffsetRef.current = {
-          x: pos.left - pos.anchorLeft,
-          y: pos.top - pos.anchorTop,
-        };
-      }
-      menuDragStartRef.current = {
-        x: e.clientX - menuDragOffsetRef.current.x,
-        y: e.clientY - menuDragOffsetRef.current.y,
-      };
-      e.currentTarget.setPointerCapture(e.pointerId);
-      floatingMenuRef.current?.classList.add('dragging');
-    };
-
-    const handleMenuDragMove = (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-      menuDragOffsetRef.current = {
-        x: e.clientX - menuDragStartRef.current.x,
-        y: e.clientY - menuDragStartRef.current.y,
-      };
-      scheduleCameraSync();
-    };
-
-    const handleMenuDragEnd = () => {
-      floatingMenuRef.current?.classList.remove('dragging');
-    };
 
     useImperativeHandle(
       ref,
@@ -683,41 +479,21 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       [stepZoom, resetCamera],
     );
 
-    // Phones dock the menus instead, so they skip the placement math.
-    const floatingPos = compact ? null : getSelectedUnitFloatingPosition();
-    const floatingStyle = floatingPos
-      ? { left: floatingPos.left, top: floatingPos.top }
-      : undefined;
-    const menuRef = compact ? dockRef : floatingMenuRef;
-    const menuClassName = compact
-      ? 'unit-floating-menu unit-docked-bar'
-      : 'unit-floating-menu';
-    // Only the floating menu can be dragged. A docked bar stays put.
-    const dragHeaderProps = compact
-      ? {}
-      : {
-          title: 'Drag to move this menu anywhere',
-          onPointerDown: handleMenuDragStart,
-          onPointerMove: handleMenuDragMove,
-          onLostPointerCapture: handleMenuDragEnd,
-        };
-    const tap = compact ? 'Tap' : 'Click';
-    const tapLower = tap.toLowerCase();
-    const showBuildMenu = Boolean(
-      selectedBuildProv && selectedUnitId && (compact || floatingPos),
-    );
-    // A phone shows the coast picker in the bar's place while it is open.
-    const showUnitMenu = Boolean(
-      selectedUnit && (compact ? !pendingCoastChoice : floatingPos),
-    );
-    const dockedBarVisible =
-      compact && (showBuildMenu || Boolean(selectedUnit));
-
-    const onDockedBarChangeRef = useRef(onDockedBarChange);
-    onDockedBarChangeRef.current = onDockedBarChange;
-    useEffect(() => {
-      if (compact) onDockedBarChangeRef.current?.(dockedBarVisible);
-    }, [compact, dockedBarVisible]);
+    const menuPlacement = useUnitMenuPlacement({
+      compact,
+      containerRef,
+      cameraRef,
+      scheduleCameraSync,
+      selectedUnitId,
+      selectedUnit,
+      selectedBuildProv,
+      reachableList,
+      pendingCoastChoice,
+      getUnitPoint,
+      getProvincePoint,
+      onDockedBarChange,
+    });
+    const { dockRef, showBuildMenu, showUnitMenu } = menuPlacement;
 
     useKeepSelectionInView(camera, {
       svgRef,
@@ -731,11 +507,6 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       selectedUnitId,
       selectedBuildProv,
     });
-    const activeOrderButton = getActiveOrderButton(
-      interactionMode,
-      selectedUnit ? orders[selectedUnit.id] : undefined,
-      moveModeChosen,
-    );
 
     // Precompute Move midpoints so Support arrows point directly to the move arrow they support
     const moveMidpointsByOrigin = useMemo(() => {
@@ -775,457 +546,63 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         {(showSimulationOverlay || sandboxMode) &&
           simulationResult &&
           !historyView && (
-            <div className="simulation-map-banner">
-              <Eye size={16} />
-              <span>
-                {compact ? (
-                  // A phone has room for one short line here.
-                  <>
-                    <strong>HYPOTHETICAL</strong> · guesses are discarded on
-                    exit
-                  </>
-                ) : (
-                  <>
-                    <strong>HYPOTHETICAL PLANNING &amp; OUTCOME PREVIEW</strong>{' '}
-                    — Foreign guesses are discarded upon exit
-                  </>
-                )}
-              </span>
-              <button
-                className="sim-advance-btn"
-                onClick={onAdjudicateTurn}
-                title="Step forward one phase in Sandbox to plan follow-up turns"
-              >
-                <Play size={12} /> Step Turn Forward
-              </button>
-              {showSimulationOverlay && !sandboxMode && (
-                <button
-                  className="sim-close-btn"
-                  onClick={onClearSimulationOverlay}
-                >
-                  Hide Preview
-                </button>
-              )}
-            </div>
+            <SimulationBanner
+              compact={compact}
+              sandboxMode={sandboxMode}
+              showSimulationOverlay={showSimulationOverlay}
+              onAdjudicateTurn={onAdjudicateTurn}
+              onClearSimulationOverlay={onClearSimulationOverlay}
+            />
           )}
 
         {overlay}
 
         {/* Coast Disambiguation Popup */}
         {selectedUnit && pendingCoastChoice && (
-          <div
-            ref={compact ? dockRef : undefined}
-            className={
-              compact
-                ? 'coast-picker-modal unit-docked-bar'
-                : 'coast-picker-modal'
+          <CoastPicker
+            compact={compact}
+            dockRef={dockRef}
+            provinces={provinces}
+            choice={pendingCoastChoice}
+            onPick={(c) =>
+              commitMoveOrRetreatOrder(
+                selectedUnit,
+                pendingCoastChoice.target,
+                c,
+              )
             }
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="coast-picker-title">
-              Select Coast for {provinces[pendingCoastChoice.target]?.name}:
-            </div>
-            <div className="coast-picker-buttons">
-              {pendingCoastChoice.coasts.map((c) => (
-                <button
-                  key={c}
-                  className="coast-btn"
-                  onClick={() =>
-                    commitMoveOrRetreatOrder(
-                      selectedUnit,
-                      pendingCoastChoice.target,
-                      c,
-                    )
-                  }
-                >
-                  {pendingCoastChoice.target}/{c} Coast
-                </button>
-              ))}
-              <button
-                className="coast-cancel-btn"
-                onClick={interaction.cancelCoastChoice}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
+            onCancel={interaction.cancelCoastChoice}
+          />
         )}
 
         {/* DRAGGABLE COMPACT FLOATING TACTICAL MENU (FOR BUILD SLOTS IN WINTER ADJUSTMENTS) */}
         {showBuildMenu && selectedBuildProv && selectedUnitId && (
-          <div
-            ref={menuRef}
-            className={menuClassName}
-            data-testid={compact ? 'unit-docked-bar' : undefined}
-            style={{
-              ...floatingStyle,
-              borderColor: '#22c55e',
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="floating-menu-header" {...dragHeaderProps}>
-              <div className="floating-unit-title">
-                <GripHorizontal size={13} className="floating-drag-grip" />
-                <PlusCircle size={13} style={{ color: '#4ade80' }} />
-                <strong>Build in {provinces[selectedBuildProv]?.name}</strong>
-              </div>
-              <button
-                className="floating-close-btn"
-                onClick={clearSelection}
-                title="Close (Esc)"
-              >
-                <X size={14} />
-                {compact && <span>Cancel</span>}
-              </button>
-            </div>
-
-            <div className="floating-menu-buttons">
-              <button
-                className={`tactical-mode-btn ${
-                  selectedBuildOrder?.order_type === 'BUILD' &&
-                  selectedBuildOrder?.unit_type === 'A'
-                    ? 'active-hold'
-                    : ''
-                }`}
-                onClick={() => {
-                  const buildPwr =
-                    controllableBuildHomes[selectedBuildProv] || activePower;
-                  onUpdateOrder({
-                    unit_id: selectedUnitId,
-                    power: buildPwr,
-                    unit_type: 'A',
-                    origin: selectedBuildProv,
-                    origin_coast: null,
-                    order_type: 'BUILD',
-                    via_convoy: false,
-                    is_explicit: true,
-                  });
-                  clearSelection();
-                }}
-              >
-                <Swords size={13} />+ Army
-              </button>
-
-              {provinces[selectedBuildProv]?.type === 'COAST' &&
-                (provinces[selectedBuildProv]?.coasts?.length > 0 ? (
-                  provinces[selectedBuildProv].coasts.map((cst) => (
-                    <button
-                      key={cst}
-                      className={`tactical-mode-btn ${
-                        selectedBuildOrder?.order_type === 'BUILD' &&
-                        selectedBuildOrder?.unit_type === 'F' &&
-                        selectedBuildOrder?.origin_coast === cst
-                          ? 'active-hold'
-                          : ''
-                      }`}
-                      onClick={() => {
-                        const buildPwr =
-                          controllableBuildHomes[selectedBuildProv] ||
-                          activePower;
-                        onUpdateOrder({
-                          unit_id: selectedUnitId,
-                          power: buildPwr,
-                          unit_type: 'F',
-                          origin: selectedBuildProv,
-                          origin_coast: cst,
-                          order_type: 'BUILD',
-                          via_convoy: false,
-                          is_explicit: true,
-                        });
-                        clearSelection();
-                      }}
-                    >
-                      <Anchor size={13} />+ F ({cst})
-                    </button>
-                  ))
-                ) : (
-                  <button
-                    className={`tactical-mode-btn ${
-                      selectedBuildOrder?.order_type === 'BUILD' &&
-                      selectedBuildOrder?.unit_type === 'F'
-                        ? 'active-hold'
-                        : ''
-                    }`}
-                    onClick={() => {
-                      const buildPwr =
-                        controllableBuildHomes[selectedBuildProv] ||
-                        activePower;
-                      onUpdateOrder({
-                        unit_id: selectedUnitId,
-                        power: buildPwr,
-                        unit_type: 'F',
-                        origin: selectedBuildProv,
-                        origin_coast: null,
-                        order_type: 'BUILD',
-                        via_convoy: false,
-                        is_explicit: true,
-                      });
-                      clearSelection();
-                    }}
-                  >
-                    <Anchor size={13} />+ Fleet
-                  </button>
-                ))}
-
-              <button
-                className={`tactical-mode-btn ${
-                  selectedBuildOrder?.order_type === 'WAIVE' ? 'active' : ''
-                }`}
-                onClick={() => {
-                  const buildPwr =
-                    controllableBuildHomes[selectedBuildProv] || activePower;
-                  onUpdateOrder({
-                    unit_id: selectedUnitId,
-                    power: buildPwr,
-                    unit_type: 'A',
-                    origin: selectedBuildProv,
-                    origin_coast: null,
-                    order_type: 'WAIVE',
-                    via_convoy: false,
-                    is_explicit: true,
-                  });
-                  clearSelection();
-                }}
-              >
-                <X size={13} />
-                Waive
-              </button>
-            </div>
-            <div className="floating-menu-hint">
-              Choose unit type to build in {provinces[selectedBuildProv]?.name}{' '}
-              or Waive
-            </div>
-          </div>
+          <BuildMenu
+            compact={compact}
+            placement={menuPlacement}
+            provinces={provinces}
+            slotId={selectedUnitId}
+            home={selectedBuildProv}
+            order={selectedBuildOrder}
+            power={controllableBuildHomes[selectedBuildProv] || activePower}
+            onUpdateOrder={onUpdateOrder}
+            onClose={clearSelection}
+          />
         )}
 
         {/* DRAGGABLE COMPACT FLOATING TACTICAL MENU (FOR UNITS) */}
         {showUnitMenu && selectedUnit && (
-          <div
-            ref={menuRef}
-            className={menuClassName}
-            data-testid={compact ? 'unit-docked-bar' : undefined}
-            style={floatingStyle}
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="floating-menu-header" {...dragHeaderProps}>
-              <div className="floating-unit-title">
-                <GripHorizontal size={13} className="floating-drag-grip" />
-                <span
-                  className="tactical-power-dot"
-                  style={{
-                    backgroundColor: POWER_METADATA[selectedUnit.power].color,
-                  }}
-                />
-                <strong>
-                  {selectedUnit.is_dislodged ? 'Dislodged ' : ''}
-                  {selectedUnit.unit_type === 'A' ? 'Army' : 'Fleet'}{' '}
-                  {provinces[selectedUnit.province]?.name}
-                </strong>
-              </div>
-              <button
-                className="floating-close-btn"
-                onClick={clearSelection}
-                title="Close (Esc)"
-              >
-                <X size={14} />
-                {compact && <span>Cancel</span>}
-              </button>
-            </div>
-
-            {isRetreatPhase ? (
-              <>
-                <div
-                  className="floating-menu-buttons"
-                  style={{ gridTemplateColumns: '1fr 1fr' }}
-                >
-                  <button
-                    className={`tactical-mode-btn ${
-                      orders[selectedUnit.id]?.order_type === 'RETREAT'
-                        ? 'active'
-                        : ''
-                    }`}
-                    onClick={interaction.chooseRetreat}
-                  >
-                    <MoveRight size={13} />
-                    Retreat
-                  </button>
-                  <button
-                    className={`tactical-mode-btn ${
-                      orders[selectedUnit.id]?.order_type === 'DISBAND'
-                        ? 'active'
-                        : ''
-                    }`}
-                    style={{ borderColor: '#ef4444', color: '#fca5a5' }}
-                    onClick={() => {
-                      onUpdateOrder({
-                        unit_id: selectedUnit.id,
-                        power: selectedUnit.power,
-                        unit_type: selectedUnit.unit_type,
-                        origin: selectedUnit.province,
-                        origin_coast: selectedUnit.coast,
-                        order_type: 'DISBAND',
-                        target: null,
-                        target_coast: null,
-                        aux_unit_origin: null,
-                        via_convoy: false,
-                        is_explicit: true,
-                      });
-                      clearSelection();
-                    }}
-                  >
-                    <Trash2 size={13} />
-                    Disband
-                  </button>
-                </div>
-                <div className="floating-menu-hint">
-                  {`${tap} a green province on the map to Retreat, or ${tapLower} Disband`}
-                </div>
-              </>
-            ) : isAdjustmentPhase ? (
-              <>
-                <div
-                  className="floating-menu-buttons"
-                  style={{ gridTemplateColumns: '1fr 1fr' }}
-                >
-                  <button
-                    className={`tactical-mode-btn ${
-                      orders[selectedUnit.id]?.order_type !== 'DISBAND'
-                        ? 'active-hold'
-                        : ''
-                    }`}
-                    onClick={() => {
-                      onUpdateOrder({
-                        unit_id: selectedUnit.id,
-                        power: selectedUnit.power,
-                        unit_type: selectedUnit.unit_type,
-                        origin: selectedUnit.province,
-                        origin_coast: selectedUnit.coast,
-                        order_type: 'HOLD',
-                        target: null,
-                        target_coast: null,
-                        aux_unit_origin: null,
-                        via_convoy: false,
-                        is_explicit: true,
-                      });
-                      clearSelection();
-                    }}
-                  >
-                    <Shield size={13} />
-                    Keep Unit
-                  </button>
-                  <button
-                    className={`tactical-mode-btn ${
-                      orders[selectedUnit.id]?.order_type === 'DISBAND'
-                        ? 'active'
-                        : ''
-                    }`}
-                    style={{ borderColor: '#ef4444', color: '#fca5a5' }}
-                    onClick={() => {
-                      onUpdateOrder({
-                        unit_id: selectedUnit.id,
-                        power: selectedUnit.power,
-                        unit_type: selectedUnit.unit_type,
-                        origin: selectedUnit.province,
-                        origin_coast: selectedUnit.coast,
-                        order_type: 'DISBAND',
-                        target: null,
-                        target_coast: null,
-                        aux_unit_origin: null,
-                        via_convoy: false,
-                        is_explicit: true,
-                      });
-                      clearSelection();
-                    }}
-                  >
-                    <Trash2 size={13} />
-                    Disband
-                  </button>
-                </div>
-                <div className="floating-menu-hint">
-                  Choose whether to Keep or Disband this unit for Winter
-                  Adjustments
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="floating-menu-buttons">
-                  <button
-                    className={`tactical-mode-btn ${activeOrderButton === 'MOVE' ? 'active' : ''}`}
-                    onClick={interaction.chooseMove}
-                  >
-                    <MoveRight size={13} />
-                    Move
-                  </button>
-
-                  <button
-                    className={`tactical-mode-btn ${
-                      activeOrderButton === 'HOLD' ? 'active-hold' : ''
-                    }`}
-                    onClick={() => {
-                      onUpdateOrder({
-                        unit_id: selectedUnit.id,
-                        power: selectedUnit.power,
-                        unit_type: selectedUnit.unit_type,
-                        origin: selectedUnit.province,
-                        origin_coast: selectedUnit.coast,
-                        order_type: 'HOLD',
-                        target: null,
-                        target_coast: null,
-                        aux_unit_origin: null,
-                        via_convoy: false,
-                        is_explicit: true,
-                      });
-                      clearSelection();
-                    }}
-                  >
-                    <Shield size={13} />
-                    Hold
-                  </button>
-
-                  <button
-                    className={`tactical-mode-btn ${
-                      activeOrderButton === 'SUPPORT' ? 'active' : ''
-                    }`}
-                    onClick={interaction.chooseSupport}
-                  >
-                    <Crosshair size={13} />
-                    Support
-                  </button>
-
-                  {selectedUnit.unit_type === 'F' &&
-                    provinces[selectedUnit.province]?.type === 'SEA' && (
-                      <button
-                        className={`tactical-mode-btn ${
-                          activeOrderButton === 'CONVOY' ? 'active' : ''
-                        }`}
-                        onClick={interaction.chooseConvoy}
-                      >
-                        <Anchor size={13} />
-                        Convoy
-                      </button>
-                    )}
-                </div>
-
-                <div className="floating-menu-hint">
-                  {interactionMode === 'MOVE' &&
-                    (compact
-                      ? 'Tap a green province to Move'
-                      : 'Click a green province to Move • Drag header to move')}
-                  {interactionMode === 'SUPPORT_PICK_UNIT' &&
-                    `Step 1/2: ${tap} unit to Support`}
-                  {interactionMode === 'SUPPORT_PICK_TARGET' &&
-                    `Step 2/2: ${tap} destination for ${pendingAuxOrigin} (or ${tapLower} ${pendingAuxOrigin} to Hold)`}
-                  {interactionMode === 'CONVOY_PICK_ARMY' &&
-                    `Step 1/2: ${tap} coastal Army to Convoy`}
-                  {interactionMode === 'CONVOY_PICK_TARGET' &&
-                    `Step 2/2: ${tap} destination coast for Army ${pendingAuxOrigin}`}
-                </div>
-              </>
-            )}
-          </div>
+          <UnitMenu
+            compact={compact}
+            placement={menuPlacement}
+            provinces={provinces}
+            unit={selectedUnit}
+            order={orders[selectedUnit.id]}
+            isRetreatPhase={isRetreatPhase}
+            isAdjustmentPhase={isAdjustmentPhase}
+            interaction={interaction}
+            onUpdateOrder={onUpdateOrder}
+          />
         )}
 
         {/* Main Interactive SVG Map */}
@@ -2128,32 +1505,11 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
 
         {/* Phones have no wheel and the tools rail is out of reach, so zoom lives on the map. */}
         {compact && (
-          <div className="map-zoom-controls" role="group" aria-label="Map zoom">
-            <button
-              type="button"
-              className="map-zoom-btn"
-              aria-label="Zoom in"
-              onClick={() => zoomAboutCentre(cameraRef.current.zoom * 1.5)}
-            >
-              <ZoomIn size={20} />
-            </button>
-            <button
-              type="button"
-              className="map-zoom-btn"
-              aria-label="Zoom out"
-              onClick={() => zoomAboutCentre(cameraRef.current.zoom / 1.5)}
-            >
-              <ZoomOut size={20} />
-            </button>
-            <button
-              type="button"
-              className="map-zoom-btn"
-              aria-label="Back to my units"
-              onClick={resetCamera}
-            >
-              <Maximize2 size={18} />
-            </button>
-          </div>
+          <MapZoomControls
+            onZoomIn={() => zoomAboutCentre(cameraRef.current.zoom * 1.5)}
+            onZoomOut={() => zoomAboutCentre(cameraRef.current.zoom / 1.5)}
+            onReset={resetCamera}
+          />
         )}
       </div>
     );
