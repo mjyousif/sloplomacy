@@ -157,6 +157,8 @@ With `historyView` set, `App.tsx` feeds the map a `TurnRecord` from the turn sel
 ---
 
 ## Floating Unit Menu
+The menus over the map are components in `components/map/hud/`: `UnitMenu` (the selected unit's buttons and hint), `BuildMenu` (a winter build slot), `CoastPicker`, `SimulationBanner` and, on a phone, `MapZoomControls`. Where they go comes from `map/hooks/useUnitMenuPlacement.ts`: the floating position beside the unit (kept clear of the provinces it can reach and moved with the camera), the header drag, and on a phone the docked bar and its `--docked-bar-h`. Every order they send is built by `utils/orderBuilders.ts`.
+
 - **Highlighted Button**: `getActiveOrderButton` lights exactly one of Move, Hold, Support, or Convoy. The menu opens on Move, or on Hold if the unit has an explicit `HOLD` order. Pressing Move, Support, or Convoy takes the highlight from a saved Hold. The saved order itself stays until a new one replaces it.
 - **Dragging**: Press and hold the menu header, then drag. The header captures the pointer, so the drag follows the cursor over the menu and outside the map, and it ends on release. Buttons in the header do not start a drag.
 

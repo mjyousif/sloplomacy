@@ -29,7 +29,15 @@ frontend/
     │   │   │   ├── useMapGestures.test.ts
     │   │   │   ├── useMapInteraction.ts   # Click state machine: modes, support/convoy picks, coast choice, hover
     │   │   │   ├── useMapInteraction.test.ts # Every click path in all three phases (also covers useMapSelection)
-    │   │   │   └── useMapSelection.ts     # The selected unit or build slot, who may command it, where it can go
+    │   │   │   ├── useMapSelection.ts     # The selected unit or build slot, who may command it, where it can go
+    │   │   │   ├── useUnitMenuPlacement.ts # Floating menu position and drag, the phone's docked bar
+    │   │   │   └── useUnitMenuPlacement.test.ts
+    │   │   ├── hud/                       # The menus over the map, each with a co-located test
+    │   │   │   ├── UnitMenu.tsx           # Move/Hold/Support/Convoy, Retreat/Disband or Keep/Disband, and the step hint
+    │   │   │   ├── BuildMenu.tsx          # Army, fleet per coast, or waive for a winter build slot
+    │   │   │   ├── CoastPicker.tsx        # Which coast of a split-coast province
+    │   │   │   ├── SimulationBanner.tsx   # The Hypothetical Mode strip over the map
+    │   │   │   └── MapZoomControls.tsx    # A phone's zoom buttons on the map
     │   │   ├── layers/
     │   │   │   ├── StaticLayers.tsx       # Gradients, sea textures & pass-through background defs
     │   │   │   ├── ProvincePolygon.tsx    # Memoized individual SVG province polygons & boundaries
@@ -98,7 +106,7 @@ frontend/
     ├── types/
     │   └── diplomacy.ts         # TypeScript definitions synchronized with backend/domain/*.py
     └── utils/
-        ├── orderBuilders.ts     # Hold, move, retreat, support and convoy orders, built one way everywhere
+        ├── orderBuilders.ts     # Hold, move, retreat, support, convoy, disband, build and waive orders, built one way everywhere
         ├── orderBuilders.test.ts # Each order's exact fields and field order
         ├── orderHelpers.ts      # Reachability calculations, retreat targeting & symbolic formatters
         ├── orderHelpers.test.ts # Vitest suite for order parsing and valid destinations

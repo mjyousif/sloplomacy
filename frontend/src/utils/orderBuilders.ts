@@ -1,4 +1,4 @@
-import type { Order, Unit } from '../types/diplomacy';
+import type { Order, Power, Unit, UnitType } from '../types/diplomacy';
 
 /**
  * The orders a player gives a unit, built the one way the map, its menus and the order cards
@@ -84,6 +84,51 @@ export const convoyOrder = (
   order_type: 'CONVOY',
   aux_unit_origin: armyOrigin,
   target,
+  via_convoy: false,
+  is_explicit: true,
+});
+
+/** Disband: a dislodged unit that won't retreat, or a unit given up in a winter adjustment. */
+export const disbandOrder = (unit: Unit): Order => ({
+  ...fromUnit(unit),
+  order_type: 'DISBAND',
+  target: null,
+  target_coast: null,
+  aux_unit_origin: null,
+  via_convoy: false,
+  is_explicit: true,
+});
+
+/** Build an army or a fleet (on `coast`, for a split-coast home) in a winter build slot. */
+export const buildOrder = (
+  slotId: string,
+  power: Power,
+  home: string,
+  unitType: UnitType,
+  coast: string | null,
+): Order => ({
+  unit_id: slotId,
+  power,
+  unit_type: unitType,
+  origin: home,
+  origin_coast: coast,
+  order_type: 'BUILD',
+  via_convoy: false,
+  is_explicit: true,
+});
+
+/** Leave a winter build slot empty. */
+export const waiveOrder = (
+  slotId: string,
+  power: Power,
+  home: string,
+): Order => ({
+  unit_id: slotId,
+  power,
+  unit_type: 'A',
+  origin: home,
+  origin_coast: null,
+  order_type: 'WAIVE',
   via_convoy: false,
   is_explicit: true,
 });

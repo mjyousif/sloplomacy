@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Unit } from '../types/diplomacy';
 import {
+  buildOrder,
   convoyOrder,
+  disbandOrder,
   holdOrder,
   moveOrder,
   retreatOrder,
   supportOrder,
+  waiveOrder,
 } from './orderBuilders';
 
 const FLEET: Unit = {
@@ -89,6 +92,56 @@ describe('order builders', () => {
         order_type: 'CONVOY',
         aux_unit_origin: 'FIN',
         target: 'SWE',
+        via_convoy: false,
+        is_explicit: true,
+      }),
+    );
+  });
+
+  it('disbands', () => {
+    expect(Object.entries(disbandOrder(FLEET))).toEqual(
+      Object.entries({
+        ...FROM_FLEET,
+        order_type: 'DISBAND',
+        target: null,
+        target_coast: null,
+        aux_unit_origin: null,
+        via_convoy: false,
+        is_explicit: true,
+      }),
+    );
+  });
+
+  it('builds in a slot, on a coast where one is named', () => {
+    expect(
+      Object.entries(
+        buildOrder('BUILD_RUSSIA_STP', 'RUSSIA', 'STP', 'F', 'NC'),
+      ),
+    ).toEqual(
+      Object.entries({
+        unit_id: 'BUILD_RUSSIA_STP',
+        power: 'RUSSIA',
+        unit_type: 'F',
+        origin: 'STP',
+        origin_coast: 'NC',
+        order_type: 'BUILD',
+        via_convoy: false,
+        is_explicit: true,
+      }),
+    );
+  });
+
+  it('waives a slot as an army with no coast', () => {
+    expect(
+      Object.entries(waiveOrder('BUILD_FRANCE_PAR', 'FRANCE', 'PAR')),
+    ).toEqual(
+      Object.entries({
+        unit_id: 'BUILD_FRANCE_PAR',
+        power: 'FRANCE',
+        unit_type: 'A',
+        origin: 'PAR',
+        origin_coast: null,
+        order_type: 'WAIVE',
         via_convoy: false,
         is_explicit: true,
       }),
