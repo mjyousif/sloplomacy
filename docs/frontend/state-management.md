@@ -135,16 +135,16 @@ While `sandboxGameId` is set, the board shows the private copy and is kept apart
 - Finalize, Unlock, Resolve, Surrender and the Admin Console are refused with a toast (`requireRealBoard`), because they act on the real match and the player would be looking at a hypothetical board.
 - Leaving the match view by any route closes the sandbox through the effect that watches `viewMode`.
 
-### Solo Sandbox Isolation & In-Place Promotion
+### Solo Sandbox Isolation, Session Persistence & In-Place Promotion
 
-1. **Entering Solo Sandbox (`handleEnterSoloSandbox`)**:
-   - Dispatches `POST /api/games/solo-sandbox`.
-   - The backend initializes a dedicated, isolated draft sandbox (`solo_<uuid>`, `is_sandbox: true`, `is_draft: true`).
+1. **Entering & Resuming Solo Sandbox (`handleEnterSoloSandbox`)**:
+   - Reads `sloplomacy_solo_sandbox_id` from `localStorage` (`readStoredSoloSandboxId`) and dispatches `POST /api/games/solo-sandbox` (passing `?resume_game_id=<storedId>` when present).
+   - If the stored draft ID is still active (or if the signed-in user already owns an unpromoted draft), the backend resumes it with all orders and turns intact. Otherwise, it initializes a dedicated, isolated draft sandbox (`solo_<uuid>`, `is_sandbox: true`, `is_draft: true`) and stores the ID in `localStorage`.
    - Draft sandboxes are excluded from public lobby lists and `/ws/lobby` broadcasts, ensuring that two visitors launching Solo Sandbox never interact or see each other's moves.
 2. **Promoting to Saved Sandbox (`handleSaveSandboxToAccount`)**:
    - Clicking "Save Sandbox" opens `SaveSandboxModal` (`saveSandboxModalOpen = true`), allowing the commander to specify a custom name.
    - Dispatches `POST /api/games/save-sandbox` with the custom name and caller's credentials.
-   - For draft sandboxes (`is_draft: true`), the backend promotes the session in-place (`is_draft: false`), updates the name and creator attribution, and records it in the saved games list.
+   - For draft sandboxes (`is_draft: true`), the backend promotes the session in-place (`is_draft: false`), updates the name and creator attribution, and records it in the saved games list. The frontend clears `sloplomacy_solo_sandbox_id` so future Solo Sandbox launches start a fresh draft while the promoted scenario remains in the user's saved campaigns.
 
 
 ---

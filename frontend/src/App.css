@@ -2738,11 +2738,87 @@
   font-size: 1.1rem;
 }
 
+.modal-close-icon,
+.modal-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.modal-close-icon:hover:not(:disabled),
+.modal-close-btn:hover:not(:disabled) {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #334155;
+}
+
+.modal-close-icon:disabled,
+.modal-close-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .created-modal-desc {
   font-size: 0.84rem;
   color: #cbd5e1;
   line-height: 1.5;
   margin-bottom: 18px;
+}
+
+.passcode-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.passcode-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.passcode-input-wrap .input-icon {
+  position: absolute;
+  left: 12px;
+  color: #c8963e;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.passcode-input-wrap input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px 11px 38px;
+  border-radius: 8px;
+  border: 1px solid #3b4456;
+  background: #0f131a;
+  color: #f8fafc;
+  font-size: 0.9rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.passcode-input-wrap input:focus {
+  outline: none;
+  border-color: #c8963e;
+  box-shadow: 0 0 0 3px rgba(200, 150, 62, 0.2);
+}
+
+.passcode-input-wrap input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .credential-box-wrap {
@@ -2808,13 +2884,14 @@
   margin-top: 16px;
 }
 
-.created-enter-btn {
+.created-enter-btn,
+.modal-enter-btn {
   flex: 1;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 11px 16px;
+  padding: 11px 18px;
   border-radius: 8px;
   background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
   border: 1px solid #e5b964;
@@ -2822,10 +2899,28 @@
   font-size: 0.84rem;
   font-weight: 800;
   cursor: pointer;
+  transition:
+    filter 0.15s ease,
+    opacity 0.15s ease;
 }
 
-.created-close-secondary-btn {
-  padding: 11px 16px;
+.created-enter-btn:hover:not(:disabled),
+.modal-enter-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.created-enter-btn:disabled,
+.modal-enter-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.created-close-secondary-btn,
+.modal-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 18px;
   border-radius: 8px;
   background: #222836;
   border: 1px solid #3b4456;
@@ -2833,6 +2928,23 @@
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.created-close-secondary-btn:hover:not(:disabled),
+.modal-cancel-btn:hover:not(:disabled) {
+  background: #2d3548;
+  color: #f8fafc;
+  border-color: #4f5b73;
+}
+
+.created-close-secondary-btn:disabled,
+.modal-cancel-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* Tactical AI General Staff Command Section (MacroSidebar) */
