@@ -850,10 +850,30 @@
 .macro-units-scroll-area {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 14px;
+  overflow-x: hidden;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #333d4e transparent;
+}
+
+.macro-units-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.macro-units-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.macro-units-scroll-area::-webkit-scrollbar-thumb {
+  background: #333d4e;
+  border-radius: 4px;
+}
+
+.macro-units-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 .macro-list-header {
@@ -875,10 +895,12 @@
 .unit-macro-card {
   background: #232934;
   border: 1px solid #353e4f;
-  border-radius: 10px;
-  padding: 11px 12px;
+  border-radius: 9px;
+  padding: 9px 11px;
   cursor: pointer;
   transition: all 0.14s ease;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .unit-macro-card:hover,
@@ -904,7 +926,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .unit-identity {
@@ -978,44 +1000,55 @@
 .unit-behavior-visualizer {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 9px;
+  gap: 6px;
+  padding: 4px 8px;
   background: #191d25;
   border-radius: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   border: 1px solid #2c3342;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .behavior-verb-tag {
-  padding: 2px 7px;
+  padding: 1px 6px;
   border-radius: 4px;
   font-family: "JetBrains Mono", monospace;
-  font-size: 0.66rem;
+  font-size: 0.65rem;
   font-weight: 700;
   color: #ffffff;
   letter-spacing: 0.04em;
+  flex-shrink: 0;
 }
 
 .behavior-target-text {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Inline Order Controls */
 .unit-inline-controls {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
 }
 
 .order-type-tabs {
   display: flex;
   gap: 4px;
+  min-width: 0;
+  width: 100%;
 }
 
 .order-tab-btn {
   flex: 1;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1028,6 +1061,7 @@
   font-size: 0.68rem;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .order-tab-btn:hover {
@@ -1045,17 +1079,21 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 0;
+  width: 100%;
 }
 
 .order-param-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 0.73rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .order-param-row label {
-  width: 78px;
+  width: 72px;
   color: #94a3b8;
   font-weight: 600;
   flex-shrink: 0;
@@ -1063,6 +1101,8 @@
 
 .order-param-row select {
   flex: 1;
+  min-width: 0;
+  width: 100%;
   padding: 5px 8px;
   border-radius: 5px;
   background: #161a22;
@@ -1070,6 +1110,9 @@
   color: #f1f5f9;
   font-size: 0.74rem;
   font-weight: 500;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 /* Diagnostic Alert inside Unit Card */
