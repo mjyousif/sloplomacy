@@ -10,7 +10,7 @@ from engine.topology.graph import (
     split_province_code,
 )
 from engine.topology.provinces import PROVINCES
-from engine.validator.convoys import has_active_convoy_chain
+from engine.validator.convoys import has_active_convoy_chain, has_potential_convoy_chain
 from engine.validator.issues import IssueCollector, province_name
 
 
@@ -66,17 +66,33 @@ def check_unit_orders(
                 if unit.unit_type == UnitType.ARMY and can_army_be_convoyed_theoretically(
                     unit.province, order.target
                 ):
-                    if not has_active_convoy_chain(unit.province, order.target, units, orders):
-                        add_issue(
-                            IssueSeverity.WARNING,
-                            IssueCode.BROKEN_CONVOY,
-                            f"Missing Fleet Convoy to {p_name(order.target)}",
-                            f"Army in {p_name(unit.province)} is ordered to {p_name(order.target)} across water, "
-                            f"but no connected Fleet chain is currently ordered to CONVOY it.",
-                            [unit.id],
-                            [unit.province, order.target],
-                            unit.power,
-                        )
+                    if not has_active_convoy_chain(
+                        unit.province, order.target, units, orders, power=unit.power
+                    ):
+                        if has_potential_convoy_chain(
+                            unit.province, order.target, units, orders, army_power=unit.power
+                        ):
+                            add_issue(
+                                IssueSeverity.INFO,
+                                IssueCode.BROKEN_CONVOY,
+                                f"Foreign Convoy Required to {p_name(order.target)}",
+                                f"Army in {p_name(unit.province)} is ordered to {p_name(order.target)} across water. "
+                                f"This move requires convoy orders from foreign fleet(s) to succeed.",
+                                [unit.id],
+                                [unit.province, order.target],
+                                unit.power,
+                            )
+                        else:
+                            add_issue(
+                                IssueSeverity.WARNING,
+                                IssueCode.BROKEN_CONVOY,
+                                f"Missing Fleet Convoy to {p_name(order.target)}",
+                                f"Army in {p_name(unit.province)} is ordered to {p_name(order.target)} across water, "
+                                f"but no connected Fleet chain is currently ordered to CONVOY it.",
+                                [unit.id],
+                                [unit.province, order.target],
+                                unit.power,
+                            )
                 else:
                     add_issue(
                         IssueSeverity.ERROR,
@@ -163,63 +179,80 @@ def check_unit_orders(
                 )
                 continue
 
-            supported_order = orders.get(supported_unit.id)
-            is_support_hold = order.aux_unit_origin == order.target
-
-            if is_support_hold:
-                # Supporting unit to HOLD in place
-                if supported_order and supported_order.order_type == OrderType.MOVE:
-                    add_issue(
-                        IssueSeverity.WARNING,
-                        IssueCode.UNMATCHED_SUPPORT,
-                        f"Unmatched Support Hold for {p_name(supported_unit.province)}",
-                        f"{unit.unit_type.value} {p_name(unit.province)} is ordered to support {supported_unit.unit_type.value} {p_name(supported_unit.province)} holding in place, "
-                        f"but {p_name(supported_unit.province)} is ordered to MOVE to {p_name(supported_order.target)}.",
-                        [unit.id, supported_unit.id],
-                        [unit.province, supported_unit.province],
-                        unit.power,
-                    )
+            if supported_unit.power != unit.power:
+                target_desc = (
+                    "holding in place"
+                    if order.aux_unit_origin == order.target
+                    else f"moving to {p_name(order.target)}"
+                )
+                add_issue(
+                    IssueSeverity.INFO,
+                    IssueCode.UNMATCHED_SUPPORT,
+                    f"Foreign Support for {supported_unit.power.value.capitalize()} in {p_name(supported_unit.province)}",
+                    f"{unit.unit_type.value} {p_name(unit.province)} is supporting foreign {supported_unit.power.value.capitalize()} {supported_unit.unit_type.value} in {p_name(supported_unit.province)} {target_desc}. "
+                    f"This support will only take effect if {supported_unit.power.value.capitalize()} orders it.",
+                    [unit.id, supported_unit.id],
+                    [unit.province, supported_unit.province, order.target],
+                    unit.power,
+                )
             else:
-                # Supporting unit to MOVE from aux_unit_origin -> target
-                if (
-                    not supported_order
-                    or supported_order.order_type != OrderType.MOVE
-                    or supported_order.target != order.target
-                ):
-                    actual_desc = "holding in place"
+                supported_order = orders.get(supported_unit.id)
+                is_support_hold = order.aux_unit_origin == order.target
+
+                if is_support_hold:
+                    # Supporting unit to HOLD in place
                     if supported_order and supported_order.order_type == OrderType.MOVE:
-                        actual_desc = f"moving to {p_name(supported_order.target)}"
-                    elif supported_order and supported_order.order_type == OrderType.SUPPORT:
-                        actual_desc = "giving support elsewhere"
-                    elif supported_order and supported_order.order_type == OrderType.CONVOY:
-                        actual_desc = "convoying"
-
-                    add_issue(
-                        IssueSeverity.WARNING,
-                        IssueCode.UNMATCHED_SUPPORT,
-                        f"Unmatched Support for {p_name(supported_unit.province)} → {p_name(order.target)}",
-                        f"{unit.unit_type.value} {p_name(unit.province)} is supporting {supported_unit.unit_type.value} {p_name(supported_unit.province)} → {p_name(order.target)}, "
-                        f"but {p_name(supported_unit.province)} is currently {actual_desc}.",
-                        [unit.id, supported_unit.id],
-                        [unit.province, supported_unit.province, order.target],
-                        unit.power,
-                    )
-
-                # Check Friendly Fire: supporting an attack on a province occupied by your own unit
-                occupant = unit_by_prov.get(order.target)
-                if occupant and occupant.power == unit.power:
-                    occ_order = orders.get(occupant.id)
-                    if not occ_order or occ_order.order_type != OrderType.MOVE:
                         add_issue(
                             IssueSeverity.WARNING,
-                            IssueCode.FRIENDLY_FIRE,
-                            f"Supporting Attack on Own Unit in {p_name(order.target)}",
-                            f"{unit.unit_type.value} {p_name(unit.province)} is supporting an attack into {p_name(order.target)}, "
-                            f"which is occupied by your own {occupant.unit_type.value} {p_name(occupant.province)}!",
-                            [unit.id, occupant.id],
-                            [unit.province, order.target],
+                            IssueCode.UNMATCHED_SUPPORT,
+                            f"Unmatched Support Hold for {p_name(supported_unit.province)}",
+                            f"{unit.unit_type.value} {p_name(unit.province)} is ordered to support {supported_unit.unit_type.value} {p_name(supported_unit.province)} holding in place, "
+                            f"but {p_name(supported_unit.province)} is ordered to MOVE to {p_name(supported_order.target)}.",
+                            [unit.id, supported_unit.id],
+                            [unit.province, supported_unit.province],
                             unit.power,
                         )
+                else:
+                    # Supporting unit to MOVE from aux_unit_origin -> target
+                    if (
+                        not supported_order
+                        or supported_order.order_type != OrderType.MOVE
+                        or supported_order.target != order.target
+                    ):
+                        actual_desc = "holding in place"
+                        if supported_order and supported_order.order_type == OrderType.MOVE:
+                            actual_desc = f"moving to {p_name(supported_order.target)}"
+                        elif supported_order and supported_order.order_type == OrderType.SUPPORT:
+                            actual_desc = "giving support elsewhere"
+                        elif supported_order and supported_order.order_type == OrderType.CONVOY:
+                            actual_desc = "convoying"
+
+                        add_issue(
+                            IssueSeverity.WARNING,
+                            IssueCode.UNMATCHED_SUPPORT,
+                            f"Unmatched Support for {p_name(supported_unit.province)} → {p_name(order.target)}",
+                            f"{unit.unit_type.value} {p_name(unit.province)} is supporting {supported_unit.unit_type.value} {p_name(supported_unit.province)} → {p_name(order.target)}, "
+                            f"but {p_name(supported_unit.province)} is currently {actual_desc}.",
+                            [unit.id, supported_unit.id],
+                            [unit.province, supported_unit.province, order.target],
+                            unit.power,
+                        )
+
+            # Check Friendly Fire: supporting an attack on a province occupied by your own unit
+            occupant = unit_by_prov.get(order.target)
+            if occupant and occupant.power == unit.power:
+                occ_order = orders.get(occupant.id)
+                if not occ_order or occ_order.order_type != OrderType.MOVE:
+                    add_issue(
+                        IssueSeverity.WARNING,
+                        IssueCode.FRIENDLY_FIRE,
+                        f"Supporting Attack on Own Unit in {p_name(order.target)}",
+                        f"{unit.unit_type.value} {p_name(unit.province)} is supporting an attack into {p_name(order.target)}, "
+                        f"which is occupied by your own {occupant.unit_type.value} {p_name(occupant.province)}!",
+                        [unit.id, occupant.id],
+                        [unit.province, order.target],
+                        unit.power,
+                    )
 
         elif order.order_type == OrderType.CONVOY:
             if (
@@ -258,6 +291,17 @@ def check_unit_orders(
                     f"Fleet in {p_name(unit.province)} is ordered to convoy an Army from {p_name(order.aux_unit_origin)}, but no Army is present there.",
                     [unit.id],
                     [unit.province, order.aux_unit_origin, order.target],
+                    unit.power,
+                )
+            elif convoyed_unit.power != unit.power:
+                add_issue(
+                    IssueSeverity.INFO,
+                    IssueCode.BROKEN_CONVOY,
+                    f"Foreign Convoy for {convoyed_unit.power.value.capitalize()} in {p_name(convoyed_unit.province)}",
+                    f"Fleet in {p_name(unit.province)} is ordered to convoy foreign {convoyed_unit.power.value.capitalize()} Army in {p_name(convoyed_unit.province)} → {p_name(order.target)}. "
+                    f"This convoy will only take effect if {convoyed_unit.power.value.capitalize()} orders the Army to move to {p_name(order.target)}.",
+                    [unit.id, convoyed_unit.id],
+                    [unit.province, convoyed_unit.province, order.target],
                     unit.power,
                 )
             else:

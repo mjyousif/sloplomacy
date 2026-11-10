@@ -144,3 +144,52 @@ def test_self_bounce_and_unmatched_support_validation():
     codes = {i.code for i in issues}
     assert IssueCode.SELF_BOUNCE in codes
     assert IssueCode.UNMATCHED_SUPPORT in codes
+
+
+def test_foreign_support_does_not_leak_into_friendly_bounce_diagnostics():
+    """Secret foreign support must not alter friendly bounce warnings or leak support presence."""
+    units = [
+        Unit(id="ITA_A_VEN", power=Power.ITALY, unit_type=UnitType.ARMY, province="VEN"),
+        Unit(id="ITA_A_PIE", power=Power.ITALY, unit_type=UnitType.ARMY, province="PIE"),
+        Unit(id="AUT_A_TRI", power=Power.AUSTRIA, unit_type=UnitType.ARMY, province="TRI"),
+    ]
+    orders = {
+        "ITA_A_VEN": Order(
+            unit_id="ITA_A_VEN",
+            power=Power.ITALY,
+            unit_type=UnitType.ARMY,
+            origin="VEN",
+            order_type=OrderType.MOVE,
+            target="TYR",
+            is_explicit=True,
+        ),
+        "ITA_A_PIE": Order(
+            unit_id="ITA_A_PIE",
+            power=Power.ITALY,
+            unit_type=UnitType.ARMY,
+            origin="PIE",
+            order_type=OrderType.MOVE,
+            target="TYR",
+            is_explicit=True,
+        ),
+        # Austria secretly supports Italy's Army Venice to Tyrolia
+        "AUT_A_TRI": Order(
+            unit_id="AUT_A_TRI",
+            power=Power.AUSTRIA,
+            unit_type=UnitType.ARMY,
+            origin="TRI",
+            order_type=OrderType.SUPPORT,
+            aux_unit_origin="VEN",
+            target="TYR",
+            is_explicit=True,
+        ),
+    }
+    issues = validate_orders(units, orders)
+    ita_bounce_issues = [
+        i for i in issues if i.power == Power.ITALY and i.code == IssueCode.SELF_BOUNCE
+    ]
+    assert len(ita_bounce_issues) == 1
+    issue = ita_bounce_issues[0]
+    # Italy must see equal strength self-bounce, not "Even with support on Army Venice"
+    assert "equal strength (1)" in issue.message
+    assert "Even with support" not in issue.message

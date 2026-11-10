@@ -200,10 +200,13 @@ interface MultiplayerGameSummary {
   finalized_powers: Power[];
   surrendered_powers?: Power[];
   is_sandbox: boolean;
+  is_draft?: boolean;
   is_private?: boolean;
   has_passcode?: boolean;
 }
 ```
+
+*Note on `is_draft`*: Ephemeral personal solo sandbox sessions created via `POST /api/games/solo-sandbox` set `is_draft: true`. Draft sandboxes are hidden from public lobby listings and `/ws/lobby` WebSocket feeds to preserve player isolation, and can be promoted to permanent saved sandboxes (`is_draft: false`) via `POST /api/games/save-sandbox`.
 
 ### `GameParticipant`
 Represents an enrolled player commanding a nation in a multiplayer match.

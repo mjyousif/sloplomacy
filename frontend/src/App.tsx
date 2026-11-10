@@ -25,6 +25,7 @@ import { LobbyView } from './components/LobbyView';
 import { MacroSidebar } from './components/MacroSidebar';
 import { PhaseTimerWidget } from './components/PhaseTimerWidget';
 import { SanityCheckModal } from './components/SanityCheckModal';
+import { SaveSandboxModal } from './components/SaveSandboxModal';
 import { SurrenderModal } from './components/SurrenderModal';
 import { ToolsSidebar } from './components/ToolsSidebar';
 import {
@@ -66,6 +67,29 @@ const API_BASE = '/api';
 const NO_ISSUES: ValidationIssue[] = [];
 const NO_PROVINCES: string[] = [];
 
+const SOLO_SANDBOX_STORAGE_KEY = 'sloplomacy_solo_sandbox_id';
+
+function readStoredSoloSandboxId(): string | null {
+  try {
+    const val = localStorage.getItem(SOLO_SANDBOX_STORAGE_KEY)?.trim();
+    return val?.startsWith('solo_') ? val : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredSoloSandboxId(gameId: string | null): void {
+  try {
+    if (gameId?.startsWith('solo_')) {
+      localStorage.setItem(SOLO_SANDBOX_STORAGE_KEY, gameId);
+    } else {
+      localStorage.removeItem(SOLO_SANDBOX_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage quota / privacy mode restrictions
+  }
+}
+
 export function App() {
   // Navigation & Mode State
   const [viewMode, setViewMode] = useState<'lobby' | 'sandbox' | 'multiplayer'>(
@@ -82,7 +106,9 @@ export function App() {
       return 'lobby';
     },
   );
-  const [activeGameId, setActiveGameId] = useState<string>('proto_1901');
+  const [activeGameId, setActiveGameId] = useState<string>(
+    () => readStoredSoloSandboxId() ?? 'proto_1901',
+  );
   const [activeGameSummary, setActiveGameSummary] =
     useState<MultiplayerGameSummary | null>(null);
   const [lockedPower, setLockedPower] = useState<Power | null>(null);
@@ -127,6 +153,9 @@ export function App() {
   const [showSimulationOverlay, setShowSimulationOverlay] =
     useState<boolean>(false);
   const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
+  const [saveSandboxModalOpen, setSaveSandboxModalOpen] =
+    useState<boolean>(false);
+  const [savingSandbox, setSavingSandbox] = useState<boolean>(false);
   const [adminOverrideActive, setAdminOverrideActive] =
     useState<boolean>(false);
   const [zoomPercent, setZoomPercent] = useState<number>(105);
@@ -328,7 +357,14 @@ export function App() {
       const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
         headers: { ...authHeaders },
       });
-      if (!res.ok) throw new Error(`Backend returned ${res.status}`);
+      if (!res.ok) {
+        if (gid !== 'proto_1901' && gid === readStoredSoloSandboxId()) {
+          writeStoredSoloSandboxId(null);
+          setActiveGameId('proto_1901');
+          return fetchGame('proto_1901', targetPower);
+        }
+        throw new Error(`Backend returned ${res.status}`);
+      }
       const data = await res.json();
       if (seq !== boardRequestSeq.current) return;
       applyServerState(data.state);
@@ -351,7 +387,7 @@ export function App() {
   useEffect(() => {
     getInitialAuthUser().then((u) => setAuthUser(u));
     const unsub = subscribeToAuthChanges((u) => setAuthUser(u));
-    fetchGame('proto_1901');
+    fetchGame(readStoredSoloSandboxId() ?? 'proto_1901');
     fetchGamesList();
     return () => unsub();
   }, []);
@@ -453,11 +489,38 @@ export function App() {
       );
       if (!confirmLeave) return;
     }
-    setActiveGameId('proto_1901');
-    setActiveGameSummary(null);
-    setLockedPower(null);
-    setViewMode('sandbox');
-    await fetchGame('proto_1901');
+    try {
+      setLoading(true);
+      const storedDraftId = readStoredSoloSandboxId();
+      const query = storedDraftId
+        ? `?resume_game_id=${encodeURIComponent(storedDraftId)}`
+        : '';
+      const res = await authedFetch(`${API_BASE}/games/solo-sandbox${query}`, {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to create solo sandbox (${res.status})`);
+      }
+      const data = await res.json();
+      boardRequestSeq.current++;
+      if (data.summary?.is_draft) {
+        writeStoredSoloSandboxId(data.state.game_id);
+      }
+      setActiveGameId(data.state.game_id);
+      setActiveGameSummary(data.summary);
+      applyServerState(data.state);
+      setProvinces(data.provinces);
+      setSelectedUnitId(null);
+      setLockedPower(null);
+      setSandboxMode(false);
+      setShowSimulationOverlay(false);
+      setViewMode('sandbox');
+    } catch (err: any) {
+      console.error(err);
+      triggerToast('Could not launch personal solo sandbox.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreateMultiplayerGame = async (
@@ -637,7 +700,7 @@ export function App() {
     }
   };
 
-  const handleSaveSandboxToAccount = async () => {
+  const handleOpenSaveSandboxModal = () => {
     if (!authUser) {
       openAuthPrompt(
         'Sign in or create a free account to save this tactical sandbox scenario to your profile.',
@@ -645,31 +708,45 @@ export function App() {
       );
       return;
     }
+    setSaveSandboxModalOpen(true);
+  };
+
+  const handleSaveSandboxToAccount = async (customName: string) => {
+    if (!authUser) return;
     try {
+      setSavingSandbox(true);
       const res = await authedFetch(
         `${API_BASE}/games/save-sandbox?game_id=${encodeURIComponent(activeGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: `${authUser.displayName}'s ${
-              gameState?.season || 'Spring'
-            } ${gameState?.year || 1901} Study (${
-              POWER_METADATA[playerPower].shortName
-            })`,
+            name: customName,
             user_id: authUser.id,
             email: authUser.email,
             display_name: authUser.displayName,
           }),
         },
       );
-      if (res.ok) {
-        const saved: MultiplayerGameSummary = await res.json();
-        await fetchGamesList();
-        triggerToast(`Saved "${saved.name}" to your account!`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        triggerToast(err.detail || 'Could not save sandbox.');
+        return;
       }
-    } catch (e) {
+      const saved: MultiplayerGameSummary = await res.json();
+      if (saved.game_id === readStoredSoloSandboxId()) {
+        writeStoredSoloSandboxId(null);
+      }
+      setActiveGameId(saved.game_id);
+      setActiveGameSummary(saved);
+      await fetchGamesList();
+      setSaveSandboxModalOpen(false);
+      triggerToast(`Saved "${saved.name}" to your account!`);
+    } catch (e: any) {
       console.error(e);
+      triggerToast('Error saving sandbox to account.');
+    } finally {
+      setSavingSandbox(false);
     }
   };
 
@@ -1471,7 +1548,7 @@ export function App() {
             onGenerateAIMoves={handleGenerateAIMoves}
             onAIStepTurn={handleAIStepTurn}
             onLoadScenario={handleLoadScenario}
-            onSaveSandboxClick={handleSaveSandboxToAccount}
+            onSaveSandboxClick={handleOpenSaveSandboxModal}
             isGameCreator={isGameCreator}
             onOpenAdminTools={openAdminTools}
             adminOverrideActive={adminOverrideActive}
@@ -1629,6 +1706,23 @@ export function App() {
         power={surrenderModalPower}
         onSurrender={handleSurrenderPower}
         onLeave={handleLeaveGame}
+      />
+
+      {/* SAVE SANDBOX MODAL */}
+      <SaveSandboxModal
+        isOpen={saveSandboxModalOpen}
+        defaultName={
+          authUser
+            ? `${authUser.displayName}'s ${
+                gameState?.season || 'Spring'
+              } ${gameState?.year || 1901} Study (${
+                POWER_METADATA[playerPower].shortName
+              })`
+            : 'Tactical Sandbox Study'
+        }
+        saving={savingSandbox}
+        onSave={handleSaveSandboxToAccount}
+        onCancel={() => setSaveSandboxModalOpen(false)}
       />
 
       {/* GAME CREATOR ADMINISTRATOR MODAL */}
