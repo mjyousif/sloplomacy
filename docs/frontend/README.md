@@ -26,7 +26,10 @@ frontend/
     │   │   │   ├── useMapCamera.ts        # Camera ref, frame-synced transform, wheel & button zoom, home camera, phone selection pan
     │   │   │   ├── useMapCamera.test.ts
     │   │   │   ├── useMapGestures.ts      # Pointer pan with a tap threshold, two-finger pinch
-    │   │   │   └── useMapGestures.test.ts
+    │   │   │   ├── useMapGestures.test.ts
+    │   │   │   ├── useMapInteraction.ts   # Click state machine: modes, support/convoy picks, coast choice, hover
+    │   │   │   ├── useMapInteraction.test.ts # Every click path in all three phases (also covers useMapSelection)
+    │   │   │   └── useMapSelection.ts     # The selected unit or build slot, who may command it, where it can go
     │   │   ├── layers/
     │   │   │   ├── StaticLayers.tsx       # Gradients, sea textures & pass-through background defs
     │   │   │   ├── ProvincePolygon.tsx    # Memoized individual SVG province polygons & boundaries
@@ -95,6 +98,8 @@ frontend/
     ├── types/
     │   └── diplomacy.ts         # TypeScript definitions synchronized with backend/domain/*.py
     └── utils/
+        ├── orderBuilders.ts     # Hold, move, retreat, support and convoy orders, built one way everywhere
+        ├── orderBuilders.test.ts # Each order's exact fields and field order
         ├── orderHelpers.ts      # Reachability calculations, retreat targeting & symbolic formatters
         ├── orderHelpers.test.ts # Vitest suite for order parsing and valid destinations
         ├── adminHelpers.ts      # Admin permission verification & payload formatters
