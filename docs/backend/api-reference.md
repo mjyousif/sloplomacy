@@ -213,9 +213,9 @@ Concedes command of a Great Power into **Civil Disorder**. Surrendered units hol
 ---
 
 ### 8. `POST /api/games/solo-sandbox`
-Mints an isolated, ephemeral draft sandbox session with a unique UUID (`solo_<uuid>`).
+Mints an isolated, ephemeral draft sandbox session with a unique UUID (`solo_<uuid>`), or resumes an existing draft sandbox when `?resume_game_id=<id>` is passed (or when an authenticated user already owns an unpromoted draft).
 
-- **Draft Isolation**: Sets `is_sandbox=True` and `is_draft=True`. Draft sandboxes are completely isolated per visitor/player.
+- **Draft Isolation & Resumption**: Sets `is_sandbox=True` and `is_draft=True`. Draft sandboxes are completely isolated per visitor/player. Leaving a Solo Sandbox and returning resumes the same draft (via `resume_game_id` stored in `localStorage` or account lookup) until the user resets the board or promotes it via Save Sandbox.
 - **Lobby & WebSocket Exclusion**: Draft sandboxes are filtered out of public `/api/games` listings and `/ws/lobby` broadcasts, ensuring that no draft session is discoverable or shared by other players.
 - **Capacity & Eviction**: When total active games approach `MAX_CONCURRENT_GAMES`, unpromoted draft sandboxes are prioritized for memory eviction before rejecting new rooms.
 - **Promotion Flow**: Once the user chooses to keep the sandbox, `POST /api/games/save-sandbox` promotes the draft session in-place (`is_draft=False`) without creating duplicate games.

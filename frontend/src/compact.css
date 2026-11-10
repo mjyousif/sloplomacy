@@ -166,7 +166,8 @@
 [data-layout="compact"] .confirm-modal-close,
 [data-layout="compact"] .auth-close-btn,
 [data-layout="compact"] .admin-close-btn,
-[data-layout="compact"] .modal-close-btn {
+[data-layout="compact"] .modal-close-btn,
+[data-layout="compact"] .modal-close-icon {
   min-width: 44px;
   min-height: 44px;
   display: inline-flex;
@@ -176,7 +177,8 @@
 }
 
 /* LobbyView's private-match modals use a close button that has no style of its own. */
-[data-layout="compact"] .modal-close-btn {
+[data-layout="compact"] .modal-close-btn,
+[data-layout="compact"] .modal-close-icon {
   background: transparent;
   border: none;
   color: #94a3b8;

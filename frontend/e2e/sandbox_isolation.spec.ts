@@ -75,6 +75,13 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
       await expect(parisArrow).toBeVisible();
       await recorder.recordStep(page, '06_hypothetical_exited_foreign_discarded');
 
+      // 8b. Leave Solo Sandbox back to Lobby, then re-launch Solo Sandbox and verify session persistence keeps FRA_A_PAR -> BUR
+      await page.locator('.brand-block.clickable').click();
+      await page.waitForSelector('[data-testid="btn-enter-sandbox"]', { timeout: 15000 });
+      await page.locator('[data-testid="btn-enter-sandbox"]').click();
+      await page.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
+      await expect(parisArrow).toBeVisible();
+
       // 9. Attempt to save sandbox as guest -> opens AuthModal prompt
       const saveSandboxBtn = page.locator('[data-testid="btn-save-sandbox"]');
       await expect(saveSandboxBtn).toBeVisible();

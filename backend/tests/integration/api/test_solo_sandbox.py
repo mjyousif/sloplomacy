@@ -281,3 +281,67 @@ def test_guest_draft_sandbox_promoted_by_authenticated_user():
 
     # Unauthenticated guest is now refused access to Alice's saved sandbox
     assert client.get(f"/api/game?game_id={gid}").status_code in (401, 403)
+
+
+def test_solo_sandbox_resumes_draft_via_query_or_account():
+    """Leaving and re-entering Solo Sandbox resumes the player's existing draft sandbox."""
+    from tests.integration.security.helpers import ALICE_ID, alice_headers, bob_headers
+
+    # 1. Guest creates a draft sandbox and plots a move
+    r1 = client.post("/api/games/solo-sandbox")
+    assert r1.status_code == 200
+    gid1 = r1.json()["state"]["game_id"]
+
+    client.post(
+        f"/api/order?game_id={gid1}",
+        json={
+            "order": {
+                "unit_id": "FRA_A_PAR",
+                "power": "FRANCE",
+                "unit_type": "A",
+                "origin": "PAR",
+                "order_type": "MOVE",
+                "target": "BUR",
+                "is_explicit": True,
+            }
+        },
+    )
+
+    # 2. Guest returns and passes resume_game_id -> gets the exact same draft with orders intact
+    r2 = client.post(f"/api/games/solo-sandbox?resume_game_id={gid1}")
+    assert r2.status_code == 200
+    data2 = r2.json()
+    assert data2["state"]["game_id"] == gid1
+    assert data2["state"]["orders"]["FRA_A_PAR"]["order_type"] == "MOVE"
+    assert data2["state"]["orders"]["FRA_A_PAR"]["target"] == "BUR"
+
+    # 3. Guest signs in as Alice and resumes -> draft is adopted by Alice
+    r3 = client.post(f"/api/games/solo-sandbox?resume_game_id={gid1}", headers=alice_headers())
+    assert r3.status_code == 200
+    data3 = r3.json()
+    assert data3["state"]["game_id"] == gid1
+    assert data3["summary"]["creator_id"] == ALICE_ID
+
+    # 4. Alice opens Solo Sandbox from another browser (no resume_game_id) -> resumes her draft
+    r4 = client.post("/api/games/solo-sandbox", headers=alice_headers())
+    assert r4.status_code == 200
+    assert r4.json()["state"]["game_id"] == gid1
+
+    # 5. Bob tries to pass Alice's draft ID -> gets a fresh isolated draft instead
+    r5 = client.post(f"/api/games/solo-sandbox?resume_game_id={gid1}", headers=bob_headers())
+    assert r5.status_code == 200
+    assert r5.json()["state"]["game_id"] != gid1
+
+    # 6. Once Alice promotes her draft to a saved sandbox, launching Solo Sandbox starts a fresh draft
+    save_res = client.post(
+        f"/api/games/save-sandbox?game_id={gid1}",
+        json={"name": "Promoted Plan", "user_id": ALICE_ID, "email": "alice@test.com"},
+        headers=alice_headers(),
+    )
+    assert save_res.status_code == 200
+    assert save_res.json()["is_draft"] is False
+
+    r6 = client.post(f"/api/games/solo-sandbox?resume_game_id={gid1}", headers=alice_headers())
+    assert r6.status_code == 200
+    assert r6.json()["state"]["game_id"] != gid1
+    assert r6.json()["summary"]["is_draft"] is True
