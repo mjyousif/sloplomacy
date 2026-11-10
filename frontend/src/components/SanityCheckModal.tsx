@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Crosshair,
+  Info,
   ShieldAlert,
   X,
 } from 'lucide-react';
@@ -89,14 +90,17 @@ export const SanityCheckModal: React.FC<SanityCheckModalProps> = ({
         <div className="sanity-issues-list">
           {issues.map((issue) => {
             const isErr = issue.severity === 'error';
+            const isInfo = issue.severity === 'info';
             return (
               <div
                 key={issue.id}
-                className={`sanity-issue-item ${isErr ? 'severity-error' : 'severity-warning'}`}
+                className={`sanity-issue-item ${isErr ? 'severity-error' : isInfo ? 'severity-info' : 'severity-warning'}`}
               >
                 <div className="sanity-issue-icon">
                   {isErr ? (
                     <AlertOctagon size={20} />
+                  ) : isInfo ? (
+                    <Info size={20} />
                   ) : (
                     <AlertTriangle size={20} />
                   )}
@@ -104,7 +108,7 @@ export const SanityCheckModal: React.FC<SanityCheckModalProps> = ({
                 <div className="sanity-issue-content">
                   <div className="sanity-issue-header-row">
                     <span
-                      className={`sanity-code-pill ${isErr ? 'err' : 'warn'}`}
+                      className={`sanity-code-pill ${isErr ? 'err' : isInfo ? 'info' : 'warn'}`}
                     >
                       {issue.code.replace(/_/g, ' ')}
                     </span>

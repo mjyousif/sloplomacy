@@ -4,6 +4,7 @@ import {
   Anchor,
   CheckCircle2,
   Crosshair,
+  Info,
   MoveRight,
   Shield,
   Swords,
@@ -526,7 +527,11 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
       {/* Diagnostic Alerts */}
       {unitIssues.map((iss) => (
         <div key={iss.id} className={`unit-diagnostic-alert ${iss.severity}`}>
-          <AlertTriangle size={13} className="diag-icon" />
+          {iss.severity === 'info' ? (
+            <Info size={13} className="diag-icon" />
+          ) : (
+            <AlertTriangle size={13} className="diag-icon" />
+          )}
           <div>
             <strong>{iss.title}:</strong> {iss.message}
           </div>
