@@ -127,7 +127,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
   - **"Plan All 7 Powers"**: Auto-generates orders for every nation across Europe.
   - **"AI Step Turn"**: Auto-plans foreign powers and steps the game clock directly to the next phase with full adjudication.
 - **Foreign Guesses Counter & Clear**: Displays count of drafted foreign guesses with a one-click "Clear" button.
-- **Scenario Management**: One-click "Reset 1901" scenario start and "Save Sandbox" to player account.
+- **Scenario Management & Saving**: One-click "Reset 1901" scenario start and "Save Sandbox". Clicking "Save Sandbox" opens `SaveSandboxModal.tsx`, letting the commander specify a custom name (e.g., "Balkans 1901 Tactical Analysis") before promoting their personal draft sandbox in-place to a permanent saved sandbox.
 
 ### 5. Creator Administrator Controls (Game Creator Only)
 - Visible exclusively to room creators.

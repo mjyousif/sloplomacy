@@ -226,6 +226,8 @@ def caller_owns_saved_sandbox(
     summary: MultiplayerGameSummary, current_user: AuthUser | None
 ) -> bool:
     """True when the caller saved this sandbox. A guest's sandbox stays open, like a guest's seat."""
+    if not is_valid_uuid(summary.creator_id):
+        return True
     if current_user:
         if summary.creator_id and summary.creator_id == current_user.user_id:
             return True
@@ -234,7 +236,7 @@ def caller_owns_saved_sandbox(
             and current_user.email
             and summary.created_by.lower() == current_user.email.lower()
         )
-    return not is_valid_uuid(summary.creator_id)
+    return False
 
 
 def require_saved_sandbox_owner(game_id: str, current_user: AuthUser | None) -> None:

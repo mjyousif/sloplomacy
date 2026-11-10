@@ -19,6 +19,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/games/{game_id}/join` | Claim a sovereign Great Power seat (validating passcode if private) | `JoinGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/leave` | Vacate claimed power in lobby or match, or delete sandbox | `LeaveGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/surrender` | Concede sovereign command into Civil Disorder | `SurrenderRequest` | `GameBootstrapResponse` |
+| `POST` | `/api/games/solo-sandbox` | Mint a personal, isolated draft sandbox session (`solo_<uuid>`) | *None* | `MultiplayerGameSummary` |
 
 ### Match & Tactical Operations
 | Method | Endpoint | Description | Request Body | Response Model |
@@ -48,7 +49,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/sandbox/clear-foreign` | Reset all foreign hypothetical orders to default HOLD (`409` on live match) | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/sandbox/ai-orders` | Generate DATC-compliant heuristic tactical AI orders for specified powers | `GenerateAIOrdersRequest` | `GameState` |
 | `POST` | `/api/sandbox/ai-step` | Auto-plan unassigned foreign powers with tactical AI and advance turn | *None* | `GameState` |
-| `POST` | `/api/games/save-sandbox` | Save an in-memory solo sandbox session into persistent game list | `SaveSandboxRequest` | `MultiplayerGameSummary` |
+| `POST` | `/api/games/save-sandbox` | Promote draft sandbox in-place or save clone of solo match session | `SaveSandboxRequest` | `MultiplayerGameSummary` |
 
 ### Phase Clock & Timers
 | Method | Endpoint | Description | Request Body | Response Model |
@@ -211,15 +212,49 @@ Concedes command of a Great Power into **Civil Disorder**. Surrendered units hol
 
 ---
 
-### 8. `POST /api/games/save-sandbox`
-Saves an active solo sandbox into the persistent game summary registry. A saved copy is never masked, so a live match is copied only as the caller may see it: their own orders, everyone else holding, and no turn clock.
+### 8. `POST /api/games/solo-sandbox`
+Mints an isolated, ephemeral draft sandbox session with a unique UUID (`solo_<uuid>`).
 
-A saved sandbox belongs to the account that saved it (`creator_id`). Every HTTP route that names it, by path or `?game_id=`, answers `401` without a token and `403` for anyone else, and its game socket closes with `4403`. That covers viewing, orders, resolving, the sandbox and admin tools, joining, copying and deleting. A sandbox saved by a guest (no account id) stays open, as a guest's seat does.
+- **Draft Isolation**: Sets `is_sandbox=True` and `is_draft=True`. Draft sandboxes are completely isolated per visitor/player.
+- **Lobby & WebSocket Exclusion**: Draft sandboxes are filtered out of public `/api/games` listings and `/ws/lobby` broadcasts, ensuring that no draft session is discoverable or shared by other players.
+- **Capacity & Eviction**: When total active games approach `MAX_CONCURRENT_GAMES`, unpromoted draft sandboxes are prioritized for memory eviction before rejecting new rooms.
+- **Promotion Flow**: Once the user chooses to keep the sandbox, `POST /api/games/save-sandbox` promotes the draft session in-place (`is_draft=False`) without creating duplicate games.
+
+#### Response (`MultiplayerGameSummary`):
+```json
+{
+  "game_id": "solo_f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "name": "Solo Sandbox f47ac10b",
+  "status": "active",
+  "season": "Spring",
+  "year": 1901,
+  "phase": "Movement",
+  "created_by": "guest",
+  "creator_id": null,
+  "created_at": "2026-11-09T22:00:00Z",
+  "participants": {},
+  "finalized_powers": [],
+  "surrendered_powers": [],
+  "is_sandbox": true,
+  "is_draft": true,
+  "is_private": false,
+  "has_passcode": false
+}
+```
+
+---
+
+### 9. `POST /api/games/save-sandbox`
+Saves an active solo sandbox into the persistent game summary registry.
+
+- **In-Place Draft Promotion**: If `game_id` refers to an existing draft sandbox (`is_draft=True`, such as `solo_<uuid>`), the endpoint promotes it in-place rather than cloning: sets `is_draft=False`, updates the name to the caller's chosen custom name (from `SaveSandboxRequest.name`), and sets `creator_id` and participant metadata to the authenticated user.
+- **Cloning Live Matches or Scenarios**: If saving from a multiplayer match or static prototype (`proto_1901`), a new copy is created under a `saved_` prefix. A saved copy is never masked, so a live match is copied only as the caller may see it: their own orders, everyone else holding, and no turn clock.
+- **Access Control**: A saved sandbox belongs to the account that saved it (`creator_id`). Every HTTP route that names it, by path or `?game_id=`, answers `401` without a token and `403` for anyone else, and its game socket closes with `4403`. That covers viewing, orders, resolving, the sandbox and admin tools, joining, copying and deleting. A sandbox saved by a guest (no account id) stays open, as a guest's seat does.
 
 #### Request (`SaveSandboxRequest`):
 ```json
 {
-  "game_id": "sandbox_tactics_bur",
+  "game_id": "solo_f47ac10b-58cc-4372-a567-0e02b2c3d479",
   "name": "Burgundy Opening Analysis",
   "user_id": "usr_1020",
   "email": "marshal@slop.eu"

@@ -299,6 +299,7 @@ export interface MultiplayerGameSummary {
   finalized_powers: Power[];
   surrendered_powers?: Power[];
   is_sandbox: boolean;
+  is_draft?: boolean;
   is_private?: boolean;
   has_passcode?: boolean;
 }

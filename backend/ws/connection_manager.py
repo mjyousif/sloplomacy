@@ -79,7 +79,7 @@ class ConnectionManager:
 
         payload = {
             "type": "lobby_update",
-            "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values()],
+            "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values() if not s.is_draft],
         }
         dead: list[WebSocket] = []
         for ws in list(self.lobby_connections):

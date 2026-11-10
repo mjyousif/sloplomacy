@@ -124,6 +124,7 @@ class MultiplayerGameSummary(BaseModel):
     finalized_powers: list[Power] = Field(default_factory=list)
     surrendered_powers: list[Power] = Field(default_factory=list)
     is_sandbox: bool = False
+    is_draft: bool = False
     is_private: bool = False
     has_passcode: bool = False
 

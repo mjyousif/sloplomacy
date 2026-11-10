@@ -62,6 +62,8 @@ frontend/
     │   ├── ConfirmModal.tsx     # In-app confirmation for destructive actions; Shift+click skips it
     │   ├── ConfirmModal.test.ts # Vitest suite for the confirmation and its Shift rule
     │   ├── useConfirm.test.tsx  # Asking, confirming, dismissing and Shift-skipping in the DOM
+    │   ├── SaveSandboxModal.tsx # Accessible modal to name and save/promote a personal draft sandbox
+    │   ├── SaveSandboxModal.test.tsx # Vitest suite for SaveSandboxModal input, submission, and keyboard handling
     │   ├── PowerFlag.tsx        # Vector SVG historical World War I (1901-1918) flags for all 7 Great Powers
     │   ├── PowerFlag.test.tsx   # Vitest suite for historical flag rendering and accessibility
     │   └── VersionBadge.tsx     # Git commit short SHA indicator, clipboard copy & GitHub commit link
