@@ -164,6 +164,8 @@ With `historyView` set, `App.tsx` feeds the map a `TurnRecord` from the turn sel
 
 ## Click-to-Order Interaction Modes
 
+The click state machine lives in `components/map/hooks/useMapInteraction.ts`: the mode (`MOVE`, `SUPPORT_PICK_UNIT`, `SUPPORT_PICK_TARGET`, `CONVOY_PICK_ARMY`, `CONVOY_PICK_TARGET`), the unit a support or convoy is for, the coast choice, and the unit and province click handlers. The menu buttons call its `chooseMove`, `chooseSupport`, `chooseConvoy` and `chooseRetreat`. What is selected, whether the player may command it, and where it can go come from `useMapSelection.ts`. Every order is built by `utils/orderBuilders.ts` (`holdOrder`, `moveOrder`, `retreatOrder`, `supportOrder`, `convoyOrder`), so the map and its menus send the same shape for the same order.
+
 A player can only control their own units, and other powers' units are marked `foreign-locked`. Every control check goes through `canEditAnyPower`, which is true in the sandbox and for a host with Direct-Edit on (`directEditActive`). That also decides whose orders and diagnostics are drawn.
 
 The map supports direct board-level order entry across all phases:
