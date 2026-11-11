@@ -154,4 +154,141 @@ describe('ProvincesLayer', () => {
       ).toBeNull();
     }
   });
+
+  it('highlights valid coastal armies and destination coasts in convoy modes without lighting sea or inland tiles', () => {
+    const mao: ProvinceInfo = {
+      ...FRANCE_PROVINCES.BRE,
+      id: 'MAO',
+      name: 'Mid-Atlantic Ocean',
+      type: 'SEA',
+      is_supply_center: false,
+      home_power: null,
+      fleet_adj: { '': ['BRE', 'GAS', 'SPA/NC', 'SPA/SC'] },
+    };
+    const spain: ProvinceInfo = {
+      ...FRANCE_PROVINCES.GAS,
+      id: 'SPA',
+      name: 'Spain',
+      coasts: ['NC', 'SC'],
+      fleet_adj: { NC: ['MAO', 'GAS'], SC: ['MAO', 'MAR'] },
+    };
+    const provincesWithMaoAndSpa = { ...PROVINCES, MAO: mao, SPA: spain };
+    const fMao = unitAt('FRANCE', 'F', 'MAO');
+    const aBre = unitAt('FRANCE', 'A', 'BRE');
+    const aPar = unitAt('FRANCE', 'A', 'PAR'); // inland
+    const units = [fMao, aBre, aPar];
+
+    const fillOf = (container: HTMLElement, provId: string) =>
+      container
+        .querySelector(
+          `[data-testid="province-path"][data-province-id="${provId}"]`,
+        )
+        ?.getAttribute('fill');
+
+    // Step 1: CONVOY_PICK_ARMY lights coastal army BRE, not inland PAR or sea MAO
+    const step1 = draw({
+      provinces: provincesWithMaoAndSpa,
+      selectedUnit: fMao,
+      reachableMap: { MAO: [], BRE: [], GAS: [], SPA: ['NC', 'SC'] },
+      interactionMode: 'CONVOY_PICK_ARMY',
+      units,
+    });
+    expect(fillOf(step1.container, 'BRE')).toBe('#4ade80');
+    expect(fillOf(step1.container, 'PAR')).not.toBe('#4ade80');
+    expect(fillOf(step1.container, 'MAO')).toBe('#9ec5d6');
+
+    // Step 2: CONVOY_PICK_TARGET for A BRE lights destination coasts (GAS, SPA),
+    // not origin BRE, inland PAR, or sea MAO, and shows no fleet coast selectors.
+    const step2 = draw({
+      provinces: provincesWithMaoAndSpa,
+      selectedUnit: fMao,
+      reachableMap: { MAO: [], BRE: [], GAS: [], SPA: ['NC', 'SC'] },
+      interactionMode: 'CONVOY_PICK_TARGET',
+      pendingAuxOrigin: 'BRE',
+      units,
+    });
+    expect(fillOf(step2.container, 'GAS')).toBe('#4ade80');
+    expect(fillOf(step2.container, 'SPA')).toBe('#4ade80');
+    expect(fillOf(step2.container, 'BRE')).not.toBe('#4ade80');
+    expect(fillOf(step2.container, 'PAR')).not.toBe('#4ade80');
+    expect(fillOf(step2.container, 'MAO')).toBe('#9ec5d6');
+    expect(
+      step2.container.querySelector('[data-testid="province-coast-selector"]'),
+    ).toBeNull();
+  });
+
+  it('highlights valid supportable units and targets in support modes without lighting sea tiles for armies', () => {
+    const mao: ProvinceInfo = {
+      ...FRANCE_PROVINCES.BRE,
+      id: 'MAO',
+      name: 'Mid-Atlantic Ocean',
+      type: 'SEA',
+      is_supply_center: false,
+      home_power: null,
+      fleet_adj: { '': ['BRE', 'GAS'] },
+    };
+    const provincesWithMao = {
+      ...PROVINCES,
+      MAO: mao,
+      BRE: {
+        ...FRANCE_PROVINCES.BRE,
+        fleet_adj: { '': ['MAO', 'PIC', 'GAS'] },
+      },
+      GAS: {
+        ...FRANCE_PROVINCES.GAS,
+        fleet_adj: { '': ['MAO', 'BRE'] },
+      },
+    };
+    const fBre = unitAt('FRANCE', 'F', 'BRE');
+    const aGas = unitAt('FRANCE', 'A', 'GAS');
+    const fPic = unitAt('FRANCE', 'F', 'PIC');
+    const aMar = unitAt('FRANCE', 'A', 'MAR'); // cannot reach BRE/MAO/PIC/GAS
+    const units = [fBre, aGas, fPic, aMar];
+
+    const fillOf = (container: HTMLElement, provId: string) =>
+      container
+        .querySelector(
+          `[data-testid="province-path"][data-province-id="${provId}"]`,
+        )
+        ?.getAttribute('fill');
+
+    // Step 1: SUPPORT_PICK_UNIT lights PIC (direct hold) and GAS (can move to PIC? No, PAR can move to PIC), not MAR or empty MAO
+    const aPar = unitAt('FRANCE', 'A', 'PAR'); // army_adj includes PIC
+    const step1 = draw({
+      provinces: provincesWithMao,
+      selectedUnit: fBre,
+      reachableMap: { MAO: [], PIC: [] },
+      interactionMode: 'SUPPORT_PICK_UNIT',
+      units: [fBre, aPar, fPic, aMar],
+    });
+    expect(fillOf(step1.container, 'PAR')).toBe('#4ade80');
+    expect(fillOf(step1.container, 'PIC')).toBe('#4ade80');
+    expect(fillOf(step1.container, 'MAR')).not.toBe('#4ade80');
+    expect(fillOf(step1.container, 'MAO')).toBe('#9ec5d6');
+
+    // Step 2: SUPPORT_PICK_TARGET for Army in GAS lights GAS (hold), NOT sea tile MAO
+    const step2Army = draw({
+      provinces: provincesWithMao,
+      selectedUnit: fBre,
+      reachableMap: { MAO: [], PIC: [], GAS: [] },
+      interactionMode: 'SUPPORT_PICK_TARGET',
+      pendingAuxOrigin: 'GAS',
+      units,
+    });
+    expect(fillOf(step2Army.container, 'GAS')).toBe('#4ade80');
+    expect(fillOf(step2Army.container, 'MAO')).toBe('#9ec5d6');
+
+    // Step 2: SUPPORT_PICK_TARGET for Fleet in GAS DOES light MAO (a fleet can move to MAO)
+    const fGas = unitAt('FRANCE', 'F', 'GAS');
+    const step2Fleet = draw({
+      provinces: provincesWithMao,
+      selectedUnit: fBre,
+      reachableMap: { MAO: [], PIC: [], GAS: [] },
+      interactionMode: 'SUPPORT_PICK_TARGET',
+      pendingAuxOrigin: 'GAS',
+      units: [fBre, fGas],
+    });
+    expect(fillOf(step2Fleet.container, 'GAS')).toBe('#4ade80');
+    expect(fillOf(step2Fleet.container, 'MAO')).toBe('#4ade80');
+  });
 });
