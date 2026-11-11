@@ -317,6 +317,8 @@ export interface MultiplayerGameSummary {
   created_by: string;
   creator_id?: string | null;
   created_at: string;
+  /** When a phase last resolved; null until the first one does. */
+  last_moved_at?: string | null;
   participants: Record<string, GameParticipant>;
   finalized_powers: Power[];
   surrendered_powers?: Power[];
@@ -371,9 +373,33 @@ export interface WebSocketGameUpdate {
   summary: MultiplayerGameSummary | null;
 }
 
+/** Public matches only: the lobby socket never lists a private campaign or a sandbox. */
 export interface WebSocketLobbyUpdate {
   type: 'lobby_update';
   games: MultiplayerGameSummary[];
+}
+
+/** One public game in `GET /api/games/browse`. Players appear by display name only. */
+export interface LobbyGameRow {
+  game_id: string;
+  name: string;
+  status: 'waiting' | 'active' | 'completed' | string;
+  season: string;
+  year: number;
+  phase: string;
+  host_name: string;
+  created_at: string;
+  /** created_at until a phase has resolved. */
+  last_moved_at: string;
+  claimed_powers: Power[];
+  open_powers: Power[];
+}
+
+export interface LobbyBrowsePage {
+  games: LobbyGameRow[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 export type WebSocketMessage =

@@ -3,6 +3,7 @@ import {
   type SetStateAction,
   useCallback,
   useEffect,
+  useRef,
 } from 'react';
 import { getAuthHeaders } from '../lib/supabase';
 import type {
@@ -39,6 +40,8 @@ export interface GameSyncOptions {
   /** From `useGameSession`. */
   fetchGame: (gid?: string, targetPower?: Power | null) => Promise<void>;
   fetchGamesList: () => Promise<void>;
+  /** Re-reads the signed-in player's own games, which the public lobby socket leaves out. */
+  fetchMyGames: () => Promise<void>;
 }
 
 /**
@@ -62,6 +65,7 @@ export function useGameSync({
   applyServerState,
   fetchGame,
   fetchGamesList,
+  fetchMyGames,
 }: GameSyncOptions) {
   const handleWsGameUpdate = useCallback(
     (update: WebSocketGameUpdate) => {
@@ -100,12 +104,14 @@ export function useGameSync({
   const handleWsLobbyUpdate = useCallback(
     (update: WebSocketLobbyUpdate) => {
       setGamesList(update.games);
+      // The socket lists public matches only, so re-read the player's own (private) games.
+      fetchMyGames();
       const current = update.games.find((g) => g.game_id === activeGameId);
       if (current) {
         setActiveGameSummary(current);
       }
     },
-    [activeGameId],
+    [activeGameId, fetchMyGames],
   );
 
   const { isConnected: wsConnected, sendRefresh: sendWsRefresh } =
@@ -124,6 +130,14 @@ export function useGameSync({
     fetchGame(readStoredSoloSandboxId() ?? 'proto_1901');
     fetchGamesList();
   }, []);
+
+  // Signing in or out changes whose games are "mine". The first load above covers mount.
+  const seenAuthKey = useRef(authKey);
+  useEffect(() => {
+    if (seenAuthKey.current === authKey) return;
+    seenAuthKey.current = authKey;
+    fetchMyGames();
+  }, [authKey]);
 
   // Only a `refresh` makes the server run the clock; a `ping` is just a heartbeat.
   // Without a socket the fallback poll below runs the clock every few seconds, and

@@ -15,7 +15,7 @@ for _p in (str(_BACKEND_DIR), str(_REPO_ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from api import admin, admin_units, games, history, orders, sandbox, seats, turns, websocket
+from api import admin, admin_units, games, history, lobby, orders, sandbox, seats, turns, websocket
 from engine.order_utils import resolve_static_path
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -92,7 +92,8 @@ async def add_security_headers(request: Request, call_next):
 
 # Include modular domain routers
 # A saved sandbox is its owner's alone, on every HTTP route. The game socket checks it itself.
-for http_router in (games, seats, orders, turns, sandbox, admin, admin_units, history):
+# `lobby` comes before `games` so /api/games/browse and /mine are not read as a game id.
+for http_router in (lobby, games, seats, orders, turns, sandbox, admin, admin_units, history):
     app.include_router(http_router.router, dependencies=[Depends(saved_sandbox_guard)])
 app.include_router(websocket.router)
 

@@ -14,6 +14,7 @@ Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #
 - [ ] A `?power=` query only selects among the caller's own seats. It never grants a view of another power.
 - [ ] The WebSocket learns the caller from the `auth` first message (`?handshake=1`). Never put a token in a URL (Cloud Run logs it).
 - [ ] Per-viewer broadcast: each socket gets its own masked copy, not one shared payload.
+- [ ] A lobby listing (`GET /api/games`, `/api/games/browse`, `/ws/lobby`) goes through `storage.lobby.public_summaries`, so it never names a private campaign or a sandbox. The lobby socket shares one payload, so anything per-player belongs in `GET /api/games/mine` instead. Browse rows carry no emails or user ids.
 
 ## Writes: who is allowed to change this?
 

@@ -97,6 +97,7 @@ export function App() {
     applyServerState,
     fetchGame,
     fetchGamesList,
+    fetchMyGames,
   } = useGameSession({ viewMode, setSimulationResult });
 
   // Auth State
@@ -230,6 +231,7 @@ export function App() {
     applyServerState,
     fetchGame,
     fetchGamesList,
+    fetchMyGames,
   });
 
   // Leaving the match board by any route closes its private sandbox.

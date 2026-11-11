@@ -15,6 +15,7 @@ from security.secrecy import (
     viewer_power_for,
 )
 from storage import supabase
+from storage.lobby import public_summaries
 from storage.store import (
     GAME_PASSCODES,
     GAME_SUMMARIES,
@@ -147,9 +148,7 @@ async def ws_lobby_endpoint(websocket: WebSocket):
         await websocket.send_json(
             {
                 "type": "lobby_update",
-                "games": [
-                    s.model_dump(mode="json") for s in GAME_SUMMARIES.values() if not s.is_draft
-                ],
+                "games": [s.model_dump(mode="json") for s in public_summaries()],
             }
         )
         while True:
@@ -164,11 +163,7 @@ async def ws_lobby_endpoint(websocket: WebSocket):
                     await websocket.send_json(
                         {
                             "type": "lobby_update",
-                            "games": [
-                                s.model_dump(mode="json")
-                                for s in GAME_SUMMARIES.values()
-                                if not s.is_draft
-                            ],
+                            "games": [s.model_dump(mode="json") for s in public_summaries()],
                         }
                     )
     except WebSocketDisconnect:

@@ -4,7 +4,7 @@ from domain.board import Power
 from fastapi.testclient import TestClient
 from main import app
 from storage.store import GAMES
-from tests.integration.api.helpers import _remove_unit, _set_turn
+from tests.integration.api.helpers import _auth_headers, _remove_unit, _set_turn
 
 client = TestClient(app)
 
@@ -240,11 +240,14 @@ def test_draft_sandbox_promotion_to_saved_sandbox():
     assert saved["is_sandbox"] is True
     assert saved["is_draft"] is False
 
-    # Now it appears in lobby listing
-    lobbies = client.get("/api/games").json()
-    promoted_lobby = next((g for g in lobbies if g["game_id"] == gid), None)
+    # Now it appears in its owner's games, and never in the public lobby
+    mine = client.get(
+        "/api/games/mine", headers=_auth_headers("user_123", "user123@example.com")
+    ).json()
+    promoted_lobby = next((g for g in mine if g["game_id"] == gid), None)
     assert promoted_lobby is not None
     assert promoted_lobby["name"] == "Custom French Opening 1901"
+    assert gid not in [g["game_id"] for g in client.get("/api/games").json()]
 
     # Board state was preserved
     board = client.get(f"/api/game?game_id={gid}").json()["state"]

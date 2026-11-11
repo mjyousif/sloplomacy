@@ -155,6 +155,8 @@ class MultiplayerGameSummary(BaseModel):
     created_by: str
     creator_id: str | None = None
     created_at: str
+    # When a phase last resolved. None until the first one does; the lobby then uses created_at.
+    last_moved_at: str | None = None
     participants: dict[str, GameParticipant] = Field(default_factory=dict)
     finalized_powers: list[Power] = Field(default_factory=list)
     surrendered_powers: list[Power] = Field(default_factory=list)

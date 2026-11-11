@@ -197,6 +197,7 @@ interface MultiplayerGameSummary {
   created_by: string;
   creator_id?: string | null;
   created_at: string;
+  last_moved_at?: string | null; // when a phase last resolved; null until one does
   participants: Record<string, GameParticipant>;
   finalized_powers: Power[];
   surrendered_powers?: Power[];
@@ -208,6 +209,34 @@ interface MultiplayerGameSummary {
 ```
 
 *Note on `is_draft`*: Ephemeral personal solo sandbox sessions created via `POST /api/games/solo-sandbox` set `is_draft: true`. Draft sandboxes are hidden from public lobby listings and `/ws/lobby` WebSocket feeds to preserve player isolation, and can be promoted to permanent saved sandboxes (`is_draft: false`) via `POST /api/games/save-sandbox`.
+
+*Note on `last_moved_at`*: `_execute_adjudication` sets it each time a phase resolves. It is saved inside the summary in `game_state`, so it needs no column.
+
+### `LobbyGameRow` and `LobbyBrowsePage`
+One public match in `GET /api/games/browse`, and a page of them. A row names players by display name only, never by email or user id.
+
+```typescript
+interface LobbyGameRow {
+  game_id: string;
+  name: string;
+  status: 'waiting' | 'active' | 'completed' | string;
+  season: string;
+  year: number;
+  phase: string;
+  host_name: string;
+  created_at: string;
+  last_moved_at: string; // created_at until a phase has resolved
+  claimed_powers: Power[];
+  open_powers: Power[];
+}
+
+interface LobbyBrowsePage {
+  games: LobbyGameRow[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+```
 
 ### `GameParticipant`
 Represents an enrolled player commanding a nation in a multiplayer match.
@@ -307,7 +336,7 @@ interface WebSocketGameUpdate {
 ```
 
 ### `WebSocketLobbyUpdate`
-Broadcast to connected clients on `/ws/lobby` whenever a game is created, updated, joined, vacated, or its status changes.
+Broadcast to connected clients on `/ws/lobby` whenever a game is created, updated, joined, vacated, or its status changes. It lists public matches only.
 
 ```typescript
 interface WebSocketLobbyUpdate {

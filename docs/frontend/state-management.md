@@ -8,7 +8,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 
 `App.tsx` keeps most of this state itself. Some of it comes from hooks named for what they do, and the table says which:
 
-- `hooks/useGameSession.ts`: the open game (`activeGameId`, `activeGameSummary`), the player's seat (`lockedPower`, and `playerPower` derived from it by `resolvePlayerPower`), the board (`gameState`, `provinces`, `loading`, `errorMsg`) and the lobby's games (`gamesList`, `loadingGames`), with `fetchGame`, `fetchGamesList`, `applyServerState` and `boardRequestSeq`. It runs no effects.
+- `hooks/useGameSession.ts`: the open game (`activeGameId`, `activeGameSummary`), the player's seat (`lockedPower`, and `playerPower` derived from it by `resolvePlayerPower`), the board (`gameState`, `provinces`, `loading`, `errorMsg`) and the lobby's games (`gamesList`, `loadingGames`), with `fetchGame`, `fetchGamesList`, `fetchMyGames`, `applyServerState` and `boardRequestSeq`. It runs no effects.
 - `hooks/useGameSync.ts`: what keeps them current: the socket (`useDiplomacyWebSocket`) and its two message handlers, the first load on mount, `handleTimerExpired`, and the fallback poll. App calls it later than `useGameSession`, where these effects have always run, so they keep their order among App's effects (after the display-prefs, layout-reset and turn-history effects, before `useSandboxExit`).
 - `hooks/useSandboxSession.ts`: the sandbox tools. Hypothetical Mode (`sandboxMode`, the private copy's `sandboxGameId`, `hypotheticalMatchTimer`, `showSimulationOverlay`, `handleToggleSandboxMode`, `handleClearForeignPreMoves`), what is worked out from the copy (`draftGameId`, `matchTimer`, `requireRealBoard`), the tactical AI (`handleGenerateAIMoves`, `handleAIStepTurn`), the scenario reset (`handleLoadScenario`) and saving to an account (`saveSandboxModalOpen`, `savingSandbox`, `handleOpenSaveSandboxModal`, `handleSaveSandboxToAccount`). It runs no effects, and App calls it just before `useGameSync`, which reads `sandboxGameId`.
 - `hooks/useSandboxExit.ts`: the one effect that closes the private copy when the player leaves the match board by any route. App calls it right after `useGameSync`, where this effect has always run, so on leaving a match from Hypothetical Mode the socket switches before `POST /api/sandbox/exit` goes out.
@@ -28,7 +28,7 @@ The desktop header is `components/TopHeader.tsx`, which keeps no state: App pass
 | `authUser` | `AuthUser \| null` | Auth | Authenticated user profile from Supabase (or local dev mode), from `useAuthSession`. The sign-in modal's `onSuccess` also sets it. |
 | `authModalOpen`, `authModalReason`, `authModalTab` | `boolean`, `string \| null`, `'signin' \| 'signup'` | Modal | The Supabase auth dialogue, from `useAuthSession`: whether it is open, the banner saying why it was asked for, and the tab asked for. `AuthModal` stays mounted while closed, so it resets its tab to `authModalTab` (and clears the typed email, password, name and messages) each time it opens, during render. |
 | `displayPrefs` | `DisplayPrefs` | Display | This player's piece style and army and fleet marks, from `useDisplayPrefs`. |
-| `gamesList` | `MultiplayerGameSummary[]` | Lobby | Roster of public matches, lobbies, and sandboxes, from `useGameSession`. |
+| `gamesList` | `MultiplayerGameSummary[]` | Lobby | The player's own games (`GET /api/games/mine`: private campaigns and saved sandboxes included) followed by the public matches (`GET /api/games` and the lobby socket), each game once, from `useGameSession`. `setGamesList` replaces only the public part. |
 | `gameState` | `GameState \| null` | Global | Authoritative match state received from FastAPI, from `useGameSession`. |
 | `provinces` | `Record<string, ProvinceInfo>` | Global | Static map topology metadata, from `useGameSession`, sent with every board. |
 | `selectedUnitId` | `string \| null` | UI | Currently selected military unit on the map or in the sidebar. |
@@ -176,7 +176,8 @@ To guarantee seamless multiplayer coordination, the frontend maintains a persist
             │                                                   │
             ▼                                                   ▼
   handleWsLobbyUpdate                                  handleWsGameUpdate
-  - Update gamesList                                   - Update gameState
+  - Update gamesList (public part)                     - Update gameState
+  - Re-read /api/games/mine
   - Update participant counts                          - Update activeGameSummary
                                                        - Trigger phase-advance toast
 ```
