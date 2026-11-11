@@ -68,7 +68,15 @@ export function useTurnHistory({
     (index: number | null) => {
       setViewIndex(index);
       viewedRef.current = index === null ? null : (entries[index] ?? null);
-      if (index === null) setPower(null);
+      if (index === null) {
+        setPower(null);
+        setTurn(null);
+      } else {
+        const cached = cache.current.get(index);
+        if (cached) {
+          setTurn(cached);
+        }
+      }
     },
     [entries],
   );
@@ -87,6 +95,7 @@ export function useTurnHistory({
     setTurn(null);
     setEntries([]);
     viewedRef.current = null;
+    cache.current.clear();
   }, [gameId, enabled]);
 
   useEffect(() => {
@@ -104,7 +113,10 @@ export function useTurnHistory({
           const found = list.find((e) => sameTurn(e, viewed));
           setViewIndex(found ? found.index : null);
           viewedRef.current = found ?? null;
-          if (!found) setPower(null);
+          if (!found) {
+            setPower(null);
+            setTurn(null);
+          }
         }
       })
       .catch((err) => {
@@ -136,16 +148,20 @@ export function useTurnHistory({
         console.error('Failed to load a past turn:', err);
         setViewIndex(null);
         viewedRef.current = null;
+        setTurn(null);
       });
     return () => {
       cancelled = true;
     };
   }, [viewIndex, gameId, passcode, entries]);
 
+  const activeTurn =
+    viewIndex === null ? null : (cache.current.get(viewIndex) ?? turn);
+
   return {
     entries,
     viewIndex,
-    turn: turn && turn.index === viewIndex ? turn : null,
+    turn: activeTurn,
     power,
     select,
     step,
