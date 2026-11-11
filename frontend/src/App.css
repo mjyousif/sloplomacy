@@ -4591,7 +4591,7 @@
 /* Tactical Map Legend */
 .tools-legend-grid {
   display: grid;
-  grid-template-columns: 45.5% 54.5%;
+  grid-template-columns: 1fr 1fr;
   row-gap: 6px;
   column-gap: 0;
   /* One continuous hairline down the column seam, unbroken by the row gap. */
