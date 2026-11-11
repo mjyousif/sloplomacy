@@ -249,4 +249,67 @@ describe('useTurnHistory', () => {
       ),
     );
   });
+
+  it('does not drop turn to null between historical turns while loading', async () => {
+    let resolveTurn1!: (res: Response) => void;
+    const turn1Promise = new Promise<Response>((resolve) => {
+      resolveTurn1 = resolve;
+    });
+
+    mockHistoryApi([S1901M, F1901M]);
+    const originalFetch = globalThis.fetch;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.includes('/api/history/1')) {
+          return turn1Promise;
+        }
+        return originalFetch(url, init);
+      }),
+    );
+
+    const { result } = renderHook(() => useTurnHistory(baseOptions));
+    await waitFor(() => expect(result.current.entries).toHaveLength(2));
+
+    // Select turn 0 and wait for it to load
+    act(() => result.current.select(0));
+    await waitFor(() => expect(result.current.turn?.index).toBe(0));
+
+    // Now select turn 1, whose response is held pending
+    act(() => result.current.select(1));
+    expect(result.current.viewIndex).toBe(1);
+    // Crucial invariant: turn must NOT be null while loading turn 1, preventing live moves flicker
+    expect(result.current.turn).not.toBeNull();
+    expect(result.current.turn?.index).toBe(0);
+
+    // Resolve turn 1
+    await act(async () => {
+      resolveTurn1(Response.json(recordFor(F1901M)));
+    });
+
+    await waitFor(() => expect(result.current.turn?.index).toBe(1));
+  });
+
+  it('serves cached turns synchronously without dropping turn to null', async () => {
+    mockHistoryApi([S1901M, F1901M]);
+    const { result } = renderHook(() => useTurnHistory(baseOptions));
+    await waitFor(() => expect(result.current.entries).toHaveLength(2));
+
+    // Load both turns into cache
+    act(() => result.current.select(0));
+    await waitFor(() => expect(result.current.turn?.index).toBe(0));
+
+    act(() => result.current.select(1));
+    await waitFor(() => expect(result.current.turn?.index).toBe(1));
+
+    // Now switch back to turn 0: must update synchronously without an intermediate null
+    act(() => result.current.select(0));
+    expect(result.current.viewIndex).toBe(0);
+    expect(result.current.turn?.index).toBe(0);
+
+    // Switch back to turn 1: must update synchronously without an intermediate null
+    act(() => result.current.select(1));
+    expect(result.current.viewIndex).toBe(1);
+    expect(result.current.turn?.index).toBe(1);
+  });
 });
