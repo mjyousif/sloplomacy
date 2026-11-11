@@ -236,7 +236,7 @@ Use the file name (without `.spec.ts`) as the `ScenarioRecorder` name, because t
 | Scenario | Focus Area | Step Screenshots Saved In |
 | :--- | :--- | :--- |
 | `movement` | Map reticle moves, Support vectors, Hold toggles, turn advance, Admin rollback | `artifacts/e2e/movement_and_orders/` |
-| `sandbox` | Lobby launch, Hypothetical Mode foreign pre-move isolation | `artifacts/e2e/sandbox_isolation/` |
+| `sandbox` | Lobby launch, the sign-up prompt on hosting while signed out, Hypothetical Mode foreign pre-move isolation | `artifacts/e2e/sandbox_isolation/` |
 | `blunder` | Self-bounce detection, Sanity Check modal, override flow | `artifacts/e2e/blunder_sanity_modal/` |
 | `retreats` | Dislodged unit ring, valid retreat selection, Fall advance | `artifacts/e2e/retreats_dislodgement/` |
 | `builds` | Winter adjustments, Army/Fleet builds, bicoastal STP/NC Fleet build, deficit disband | `artifacts/e2e/winter_builds/` |

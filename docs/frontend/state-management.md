@@ -21,7 +21,7 @@ The desktop header is `components/TopHeader.tsx`, which keeps no state: App pass
 | `currentGameSummary`| `MultiplayerGameSummary \| null` | Room | Metadata for current multiplayer match or saved sandbox. |
 | `lockedPower` | `Power \| null` | Match | Claimed sovereign power for active player in multiplayer matches. `playerPower`, derived by `resolvePlayerPower`, is what the app uses as the player's power: this seat in multiplayer, `gameState.active_power` in a sandbox. |
 | `authUser` | `AuthUser \| null` | Auth | Authenticated user profile from Supabase (or local dev mode), from `useAuthSession`. The sign-in modal's `onSuccess` also sets it. |
-| `authModalOpen`, `authModalReason`, `authModalTab` | `boolean`, `string \| null`, `'signin' \| 'signup'` | Modal | The Supabase auth dialogue, from `useAuthSession`: whether it is open, the banner saying why it was asked for, and the tab asked for. |
+| `authModalOpen`, `authModalReason`, `authModalTab` | `boolean`, `string \| null`, `'signin' \| 'signup'` | Modal | The Supabase auth dialogue, from `useAuthSession`: whether it is open, the banner saying why it was asked for, and the tab asked for. `AuthModal` stays mounted while closed, so it resets its tab to `authModalTab` (and clears the typed email, password, name and messages) each time it opens, during render. |
 | `displayPrefs` | `DisplayPrefs` | Display | This player's piece style and army and fleet marks, from `useDisplayPrefs`. |
 | `gamesList` | `MultiplayerGameSummary[]` | Lobby | Roster of public matches, lobbies, and sandboxes. |
 | `gameState` | `GameState \| null` | Global | Authoritative match state received from FastAPI. |
