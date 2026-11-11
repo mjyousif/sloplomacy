@@ -20,6 +20,7 @@ from security.secrecy import (
     viewer_power_for,
 )
 from storage import supabase
+from storage.lobby import public_summaries
 from storage.store import (
     DEFAULT_GAME_ID,
     GAME_HISTORY,
@@ -72,6 +73,14 @@ async def sync_lobby_with_db() -> None:
     summary="List Games",
 )
 async def list_games():
+    """Public matches only. Private campaigns and sandboxes are listed to their players by
+    `GET /api/games/mine`."""
+    await refresh_lobby_summaries()
+    return public_summaries()
+
+
+async def refresh_lobby_summaries() -> None:
+    """Bring the lobby's summaries up to date with Supabase and with the games in memory."""
     GAME_SUMMARIES.pop(DEFAULT_GAME_ID, None)
     GAME_SUMMARIES.pop("proto_1901", None)
     if supabase.is_persistence_enabled():
@@ -80,11 +89,6 @@ async def list_games():
     for gid in list(GAME_SUMMARIES.keys()):
         if gid not in (DEFAULT_GAME_ID, "proto_1901"):
             sync_summary(gid)
-    return [
-        s
-        for gid, s in GAME_SUMMARIES.items()
-        if gid not in (DEFAULT_GAME_ID, "proto_1901") and not s.is_draft
-    ]
 
 
 @router.get(

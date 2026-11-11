@@ -74,6 +74,7 @@ function makeOptions(over: Partial<GameSyncOptions> = {}): GameSyncOptions {
     applyServerState: vi.fn(),
     fetchGame: vi.fn(async () => {}),
     fetchGamesList: vi.fn(async () => {}),
+    fetchMyGames: vi.fn(async () => {}),
     ...over,
   };
 }
@@ -225,6 +226,21 @@ describe('useGameSync: lobby updates', () => {
     });
     expect(opts.setGamesList).toHaveBeenCalledWith([OTHER, SUMMARY]);
     expect(opts.setActiveGameSummary).toHaveBeenCalledWith(SUMMARY);
+  });
+
+  it('re-reads the player’s own games, which the public socket leaves out', () => {
+    renderSync();
+    socket.options.onLobbyUpdate({ type: 'lobby_update', games: [OTHER] });
+    expect(opts.fetchMyGames).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-reads them on sign-in and sign-out, not on mount', () => {
+    const { rerender } = renderSync();
+    expect(opts.fetchMyGames).not.toHaveBeenCalled();
+    rerender({ ...opts, authKey: null });
+    rerender({ ...opts, authKey: null });
+    rerender({ ...opts, authKey: 'user-bob' });
+    expect(opts.fetchMyGames).toHaveBeenCalledTimes(2);
   });
 
   it('keeps the summary when the open game is not listed', () => {

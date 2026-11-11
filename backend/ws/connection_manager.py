@@ -4,6 +4,7 @@ from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
 from fastapi import WebSocket
 from security.secrecy import sanitize_game_state_for_viewer
+from storage.lobby import public_summaries
 from storage.store import GAME_SUMMARIES, GAMES, sync_summary
 
 
@@ -79,7 +80,8 @@ class ConnectionManager:
 
         payload = {
             "type": "lobby_update",
-            "games": [s.model_dump(mode="json") for s in GAME_SUMMARIES.values() if not s.is_draft],
+            # One payload goes to every socket, so it holds public matches only.
+            "games": [s.model_dump(mode="json") for s in public_summaries()],
         }
         dead: list[WebSocket] = []
         for ws in list(self.lobby_connections):

@@ -176,3 +176,26 @@ class GameBootstrapResponse(BaseModel):
     state: GameState
     provinces: dict[str, ProvinceInfo]
     summary: MultiplayerGameSummary | None = None
+
+
+class LobbyGameRow(BaseModel):
+    """One public game in the lobby browser. It names players only by display name, never email."""
+
+    game_id: str
+    name: str
+    status: str
+    season: str
+    year: int
+    phase: str
+    host_name: str
+    created_at: str
+    last_moved_at: str
+    claimed_powers: list[Power]
+    open_powers: list[Power]
+
+
+class LobbyBrowsePage(BaseModel):
+    games: list[LobbyGameRow]
+    total: int
+    page: int
+    page_size: int

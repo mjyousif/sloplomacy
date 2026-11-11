@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { getAuthHeaders } from '../lib/supabase';
 import type {
   GameState,
@@ -38,9 +38,15 @@ export function useGameSession({
     useState<MultiplayerGameSummary | null>(null);
   const [lockedPower, setLockedPower] = useState<Power | null>(null);
 
-  // Lobby Games State
+  // Lobby Games State. The public lobby (`GET /api/games` and the lobby socket) holds public
+  // matches only; the player's own games, private campaigns included, come from `/games/mine`.
   const [gamesList, setGamesList] = useState<MultiplayerGameSummary[]>([]);
+  const [myGamesList, setMyGamesList] = useState<MultiplayerGameSummary[]>([]);
   const [loadingGames, setLoadingGames] = useState<boolean>(false);
+  const lobbyGames = useMemo(
+    () => mergeGames(myGamesList, gamesList),
+    [myGamesList, gamesList],
+  );
 
   // Board & Tactical Engine State
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -61,10 +67,34 @@ export function useGameSession({
     }
   };
 
+  /** The signed-in player's own games. A guest has none, and a failed read keeps the last list. */
+  const fetchMyGames = async () => {
+    try {
+      const authHeaders = await getAuthHeaders();
+      if (!authHeaders.Authorization) {
+        setMyGamesList([]);
+        return;
+      }
+      const res = await fetch(`${API_BASE}/games/mine`, {
+        headers: { ...authHeaders },
+      });
+      if (res.ok) {
+        setMyGamesList(await res.json());
+      } else if (res.status === 401) {
+        setMyGamesList([]);
+      }
+    } catch (e) {
+      console.error('Failed to fetch your games:', e);
+    }
+  };
+
   const fetchGamesList = async () => {
     try {
       setLoadingGames(true);
-      const res = await fetch(`${API_BASE}/games`);
+      const [res] = await Promise.all([
+        fetch(`${API_BASE}/games`),
+        fetchMyGames(),
+      ]);
       if (res.ok) {
         const list: MultiplayerGameSummary[] = await res.json();
         setGamesList(list);
@@ -132,8 +162,11 @@ export function useGameSession({
     lockedPower,
     setLockedPower,
     playerPower,
-    gamesList,
+    /** The player's own games first, then the public lobby, each game once. */
+    gamesList: lobbyGames,
+    /** Replaces the public lobby list, as the lobby socket does. */
     setGamesList,
+    fetchMyGames,
     loadingGames,
     gameState,
     setGameState,
@@ -147,4 +180,13 @@ export function useGameSession({
     fetchGame,
     fetchGamesList,
   };
+}
+
+/** Each game once: the player's own copy wins, since only it can hold a private match. */
+export function mergeGames(
+  mine: MultiplayerGameSummary[],
+  lobby: MultiplayerGameSummary[],
+): MultiplayerGameSummary[] {
+  const own = new Set(mine.map((g) => g.game_id));
+  return [...mine, ...lobby.filter((g) => !own.has(g.game_id))];
 }

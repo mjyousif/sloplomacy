@@ -12,7 +12,9 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 ### Lobby & Match Management
 | Method | Endpoint | Description | Request Body | Response Model |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/games` | List all open lobbies, active matches, and saved sandboxes | *None* | `List[MultiplayerGameSummary]` |
+| `GET` | `/api/games` | List public matches (never private campaigns, sandboxes or drafts) | *None* | `List[MultiplayerGameSummary]` |
+| `GET` | `/api/games/browse` | Page through public matches with seat, country and turn filters; no emails or user ids | Query: `seats`, `countries`, `turn_op`, `season`, `year`, `page`, `page_size` | `LobbyBrowsePage` |
+| `GET` | `/api/games/mine` | The signed-in caller's own games, private campaigns and saved sandboxes included (`401` without a token) | *None* | `List[MultiplayerGameSummary]` |
 | `GET` | `/api/games/{game_id}` | Fetch summary metadata, participants, and status for a game room | *None* | `MultiplayerGameSummary` |
 | `POST` | `/api/games` | Create a new multiplayer room (public or private with passcode) | `CreateGameRequest` | `MultiplayerGameSummary` |
 | `DELETE` | `/api/games/{game_id}` | Delete a match lobby and remove its state from Supabase | *None* | `Dict[str, str]` |
@@ -87,7 +89,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 ## Detailed Specifications: Lobby & Multiplayer Management
 
 ### 1. `GET /api/games`
-Returns the list of all registered multiplayer game rooms, open lobbies, and saved sandboxes. If Supabase cannot be read, the list comes from memory and the call still succeeds.
+Returns the public multiplayer matches. A private campaign, a sandbox (saved or draft) and `proto_1901` are never listed: players find their own private games and saved sandboxes with `GET /api/games/mine`, and others join a private campaign by its id and passcode. If Supabase cannot be read, the list comes from memory and the call still succeeds.
 
 #### Response (`List[MultiplayerGameSummary]`):
 ```json
@@ -115,6 +117,52 @@ Returns the list of all registered multiplayer game rooms, open lobbies, and sav
   }
 ]
 ```
+
+---
+
+### 1a. `GET /api/games/browse`
+Pages through the public matches for the lobby browser. Needs no sign-in, and lists the same games as `GET /api/games`. Each row names the host by display name only: it carries no emails, user ids or participant records.
+
+#### Query parameters
+| Name | Default | Meaning |
+| :--- | :--- | :--- |
+| `seats` | `open` | `open`: at least one unclaimed power and not completed. `full`: every power claimed. `all`: both, and completed games. |
+| `countries` | *none* | Comma-separated powers (`FRANCE,ITALY`, any case). Keeps games where **every** listed power is unclaimed. An unknown name answers `422`. |
+| `turn_op` | *none* | `at`, `before` or `after`. Needs `year`. |
+| `season` | *none* | `Spring`, `Fall` or `Winter`, ordered in that sequence within a year. Without it the turn filter compares years only. |
+| `year` | *none* | `1901` or later. |
+| `page`, `page_size` | `1`, `10` | Pages start at 1. `page_size` is at most 50. A page past the end is empty. |
+
+Games with an open seat come first, then the most recently played (`last_moved_at`, then `created_at`).
+
+#### Response (`LobbyBrowsePage`):
+```json
+{
+  "games": [
+    {
+      "game_id": "mp_bbc66b",
+      "name": "Friday Night 1901",
+      "status": "active",
+      "season": "Fall",
+      "year": 1903,
+      "phase": "Movement",
+      "host_name": "Gage",
+      "created_at": "2026-11-03T14:00:00+00:00",
+      "last_moved_at": "2026-11-10T21:12:40+00:00",
+      "claimed_powers": ["FRANCE", "RUSSIA", "TURKEY"],
+      "open_powers": ["AUSTRIA", "ENGLAND", "GERMANY", "ITALY"]
+    }
+  ],
+  "total": 14,
+  "page": 1,
+  "page_size": 10
+}
+```
+
+---
+
+### 1b. `GET /api/games/mine`
+Returns every game the caller holds a seat in or owns, as `List[MultiplayerGameSummary]`, including private campaigns and saved sandboxes. Draft sandboxes are left out. The caller comes from the `Authorization: Bearer <token>` header; without one it answers `401`. It lists only the caller's own games, so it shows no one else's private campaign.
 
 ---
 
@@ -216,7 +264,7 @@ Concedes command of a Great Power into **Civil Disorder**. Surrendered units hol
 Mints an isolated, ephemeral draft sandbox session with a unique UUID (`solo_<uuid>`), or resumes an existing draft sandbox when `?resume_game_id=<id>` is passed (or when an authenticated user already owns an unpromoted draft).
 
 - **Draft Isolation & Resumption**: Sets `is_sandbox=True` and `is_draft=True`. Draft sandboxes are completely isolated per visitor/player. Leaving a Solo Sandbox and returning resumes the same draft (via `resume_game_id` stored in `localStorage` or account lookup) until the user resets the board or promotes it via Save Sandbox.
-- **Lobby & WebSocket Exclusion**: Draft sandboxes are filtered out of public `/api/games` listings and `/ws/lobby` broadcasts, ensuring that no draft session is discoverable or shared by other players.
+- **Lobby & WebSocket Exclusion**: Sandboxes, drafts or saved, are filtered out of public `/api/games` listings, `/api/games/browse` and `/ws/lobby` broadcasts, ensuring that no sandbox is discoverable or shared by other players. A saved one appears to its owner in `GET /api/games/mine`.
 - **Capacity & Eviction**: When total active games approach `MAX_CONCURRENT_GAMES`, unpromoted draft sandboxes are prioritized for memory eviction before rejecting new rooms.
 - **Promotion Flow**: Once the user chooses to keep the sandbox, `POST /api/games/save-sandbox` promotes the draft session in-place (`is_draft=False`) without creating duplicate games.
 
@@ -671,7 +719,7 @@ Establishes a persistent, low-latency WebSocket connection scoped to a specific 
 Establishes a persistent WebSocket feed for the multiplayer match browser.
 
 - **Connection Handshake**:
-  - Immediately transmits a `lobby_update` payload containing all current games and their live participant statuses.
+  - Immediately transmits a `lobby_update` payload containing the public matches (the same list as `GET /api/games`) and their live participant statuses. Every socket gets the same payload, so it never lists a private campaign, a sandbox or a draft; clients re-read `GET /api/games/mine` for their own.
 - **Automatic Broadcast Triggers**:
   - Whenever any multiplayer game is created, joined, left, surrendered, or adjudicated.
 

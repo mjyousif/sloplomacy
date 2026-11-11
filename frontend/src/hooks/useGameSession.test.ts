@@ -16,7 +16,11 @@ import type {
   SimulationResult,
 } from '../types/diplomacy';
 import { SOLO_SANDBOX_STORAGE_KEY } from '../utils/soloSandboxStorage';
-import { type GameSessionOptions, useGameSession } from './useGameSession';
+import {
+  type GameSessionOptions,
+  mergeGames,
+  useGameSession,
+} from './useGameSession';
 
 const supabase = vi.hoisted(() => ({ getAuthHeaders: vi.fn() }));
 vi.mock('../lib/supabase', () => supabase);
@@ -165,6 +169,76 @@ describe('useGameSession: fetchGamesList', () => {
     await act(() => result.current.fetchGamesList());
     expect(result.current.gamesList).toEqual([SUMMARY]);
     expect(result.current.loadingGames).toBe(false);
+  });
+});
+
+describe('useGameSession: the player’s own games', () => {
+  const PRIVATE = {
+    game_id: 'mp_secret',
+    name: 'Hidden',
+    is_private: true,
+  } as MultiplayerGameSummary;
+  const byUrl = (mine: Reply, lobby: Reply) => (url: string) =>
+    Promise.resolve(url === '/api/games/mine' ? mine : lobby);
+
+  it('adds the signed-in player’s private games to the public lobby', async () => {
+    fetchMock.mockImplementation(
+      byUrl(reply(200, [PRIVATE, SUMMARY]), reply(200, [SUMMARY])),
+    );
+    const { result } = renderSession();
+    await act(() => result.current.fetchGamesList());
+    expect(fetchMock).toHaveBeenCalledWith('/api/games/mine', {
+      headers: { Authorization: 'Bearer t' },
+    });
+    expect(result.current.gamesList).toEqual([PRIVATE, SUMMARY]);
+  });
+
+  it('drops them when the server says nobody is signed in', async () => {
+    fetchMock.mockImplementation(
+      byUrl(reply(200, [PRIVATE]), reply(200, [SUMMARY])),
+    );
+    const { result } = renderSession();
+    await act(() => result.current.fetchGamesList());
+    fetchMock.mockImplementation(byUrl(reply(401, {}), reply(200, [SUMMARY])));
+    await act(() => result.current.fetchMyGames());
+    expect(result.current.gamesList).toEqual([SUMMARY]);
+  });
+
+  it('asks for none while nobody is signed in', async () => {
+    supabase.getAuthHeaders.mockResolvedValue({});
+    fetchMock.mockImplementation(byUrl(reply(200, []), reply(200, [SUMMARY])));
+    const { result } = renderSession();
+    await act(() => result.current.fetchGamesList());
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/games/mine',
+      expect.anything(),
+    );
+    expect(result.current.gamesList).toEqual([SUMMARY]);
+  });
+
+  it('keeps them through a failed read', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    fetchMock.mockImplementation(
+      byUrl(reply(200, [PRIVATE]), reply(200, [SUMMARY])),
+    );
+    const { result } = renderSession();
+    await act(() => result.current.fetchGamesList());
+    fetchMock.mockImplementation(byUrl(reply(503, {}), reply(200, [SUMMARY])));
+    await act(() => result.current.fetchMyGames());
+    expect(result.current.gamesList).toEqual([PRIVATE, SUMMARY]);
+  });
+
+  it('a socket update replaces only the public part', async () => {
+    fetchMock.mockImplementation(byUrl(reply(200, [PRIVATE]), reply(200, [])));
+    const { result } = renderSession();
+    await act(() => result.current.fetchGamesList());
+    act(() => result.current.setGamesList([SUMMARY]));
+    expect(result.current.gamesList).toEqual([PRIVATE, SUMMARY]);
+  });
+
+  it('mergeGames lists each game once, the player’s copy first', () => {
+    const stale = { ...SUMMARY, name: 'stale' };
+    expect(mergeGames([SUMMARY], [stale, PRIVATE])).toEqual([SUMMARY, PRIVATE]);
   });
 });
 

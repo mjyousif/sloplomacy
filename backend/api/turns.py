@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import datetime, timezone
 
 from domain.board import Power
 from domain.game_state import GameState, TimerStage
@@ -144,6 +145,8 @@ async def _execute_adjudication(game: GameState) -> GameState:
     if game.timer:
         start_phase_clock(game, timer_players(game), time.time())
     refresh_diagnostics_and_simulation(game)
+    if summary := GAME_SUMMARIES.get(gid):
+        summary.last_moved_at = datetime.now(timezone.utc).isoformat()
     sync_summary(game.game_id)
     await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
