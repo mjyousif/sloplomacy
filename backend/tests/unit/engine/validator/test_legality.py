@@ -135,6 +135,7 @@ def test_foreign_support_does_not_leak_orders():
     issue = ita_issues[0]
     assert issue.severity == IssueSeverity.INFO
     assert issue.code == IssueCode.UNMATCHED_SUPPORT
+    assert issue.unit_ids == ["ITA_F_WES"]
     assert "Foreign Support" in issue.title
     # Must NOT reveal France's true move to Spain or that it's holding
     assert "Spain" not in issue.message
@@ -176,6 +177,7 @@ def test_foreign_convoy_does_not_leak_orders():
     issue = eng_issues[0]
     assert issue.severity == IssueSeverity.INFO
     assert issue.code == IssueCode.BROKEN_CONVOY
+    assert issue.unit_ids == ["ENG_F_NTH"]
     assert "Foreign Convoy" in issue.title
     assert "Burgundy" not in issue.message
     assert "BUR" not in issue.message

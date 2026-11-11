@@ -194,7 +194,7 @@ def check_unit_orders(
                     f"Foreign Support for {supported_unit.power.value.capitalize()} in {p_name(supported_unit.province)}",
                     f"{unit.unit_type.value} {p_name(unit.province)} is supporting foreign {supported_unit.power.value.capitalize()} {supported_unit.unit_type.value} in {p_name(supported_unit.province)} {target_desc}. "
                     f"This support will only take effect if {supported_unit.power.value.capitalize()} orders it.",
-                    [unit.id, supported_unit.id],
+                    [unit.id],
                     [unit.province, supported_unit.province, order.target],
                     unit.power,
                 )
@@ -348,7 +348,7 @@ def check_unit_orders(
                     f"Disconnected Convoy Chain for {p_name(unit.province)}",
                     f"Fleet in {p_name(unit.province)} is ordered to convoy A {p_name(order.aux_unit_origin)} → {p_name(order.target)}, "
                     f"but stationed sea fleets do not form a continuous route through {p_name(unit.province)}.",
-                    [unit.id, convoyed_unit.id],
+                    [unit.id],
                     [unit.province, order.aux_unit_origin, order.target],
                     unit.power,
                 )
@@ -359,7 +359,7 @@ def check_unit_orders(
                     f"Foreign Convoy for {convoyed_unit.power.value.capitalize()} in {p_name(convoyed_unit.province)}",
                     f"Fleet in {p_name(unit.province)} is ordered to convoy foreign {convoyed_unit.power.value.capitalize()} Army in {p_name(convoyed_unit.province)} → {p_name(order.target)}. "
                     f"This convoy will only take effect if {convoyed_unit.power.value.capitalize()} orders the Army to move to {p_name(order.target)}.",
-                    [unit.id, convoyed_unit.id],
+                    [unit.id],
                     [unit.province, convoyed_unit.province, order.target],
                     unit.power,
                 )
@@ -376,7 +376,7 @@ def check_unit_orders(
                         f"Unmatched Convoy for Army {p_name(convoyed_unit.province)}",
                         f"Fleet in {p_name(unit.province)} is ordered to convoy A {p_name(convoyed_unit.province)} → {p_name(order.target)}, "
                         f"but A {p_name(convoyed_unit.province)} is not ordered to move to {p_name(order.target)}.",
-                        [unit.id, convoyed_unit.id],
+                        [unit.id],
                         [unit.province, convoyed_unit.province, order.target],
                         unit.power,
                     )
@@ -395,7 +395,7 @@ def check_unit_orders(
                             f"Incomplete Convoy Chain to {p_name(order.target)}",
                             f"Fleet in {p_name(unit.province)} is ordered to convoy A {p_name(convoyed_unit.province)} → {p_name(order.target)}, "
                             f"but another Fleet along the sea chain is not yet ordered to convoy.",
-                            [unit.id, convoyed_unit.id],
+                            [unit.id],
                             [unit.province, convoyed_unit.province, order.target],
                             unit.power,
                         )
@@ -406,7 +406,7 @@ def check_unit_orders(
                             f"Foreign Convoy Link Required to {p_name(order.target)}",
                             f"Fleet in {p_name(unit.province)} is relaying A {p_name(convoyed_unit.province)} → {p_name(order.target)} "
                             f"across a sea route that depends on a foreign Fleet also ordering CONVOY.",
-                            [unit.id, convoyed_unit.id],
+                            [unit.id],
                             [unit.province, convoyed_unit.province, order.target],
                             unit.power,
                         )

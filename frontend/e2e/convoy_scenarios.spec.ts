@@ -284,6 +284,79 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
       ).toHaveAttribute('data-reachable-color', 'green');
       await recorder.recordStep(page, '09_trans_med_4_fleet_convoy_spain_green');
 
+      // 10. Mixed-power Fog-of-War & diagnostic isolation in Sandbox:
+      //     France orders A PIC -> NWY + F ENG C A PIC -> NWY; England secretly orders F NTH C A PIC -> NWY
+      await seedScenario('standard_1901', 'proto_1901', 'FRANCE');
+      await spawnUnit('FRANCE', 'A', 'PIC');
+      await spawnUnit('FRANCE', 'F', 'ENG');
+      await spawnUnit('ENGLAND', 'F', 'NTH');
+      await postOrder({
+        unit_id: 'FRA_A_PIC',
+        power: 'FRANCE',
+        unit_type: 'A',
+        origin: 'PIC',
+        order_type: 'MOVE',
+        target: 'NWY',
+        via_convoy: true,
+      });
+      await postOrder({
+        unit_id: 'FRA_F_ENG',
+        power: 'FRANCE',
+        unit_type: 'F',
+        origin: 'ENG',
+        order_type: 'CONVOY',
+        aux_unit_origin: 'PIC',
+        target: 'NWY',
+      });
+      await postOrder({
+        unit_id: 'ENG_F_NTH',
+        power: 'ENGLAND',
+        unit_type: 'F',
+        origin: 'NTH',
+        order_type: 'CONVOY',
+        aux_unit_origin: 'PIC',
+        target: 'NWY',
+      });
+      await page.reload();
+      await page.waitForSelector('[data-testid="unit-token"]', {
+        timeout: 15000,
+      });
+
+      const picCard = page.locator(
+        '[data-testid="unit-macro-card"][data-unit-id="FRA_A_PIC"]',
+      );
+      await expect(picCard).toBeVisible();
+      // Picardy card shows ONLY its own 1 info note — never F ENG's note and never England's North Sea note!
+      await expect(picCard.locator('.unit-diagnostic-alert')).toHaveCount(1);
+      await expect(picCard).not.toContainText('North Sea');
+      // Finalize button is green (info notes are not blocking warnings)
+      await expect(page.locator('[data-testid="btn-finalize-orders"]')).not.toContainText(
+        'Warning',
+      );
+      await recorder.recordStep(
+        page,
+        '10_france_view_single_info_no_foreign_bleed',
+      );
+
+      // 11. Switch to England: F NTH Convoy Step 1 keeps Picardy in Ocean Blue (via fleet chain), even when A PIC is moving!
+      await page
+        .locator('[data-testid="power-standing-card"][data-power="ENGLAND"]')
+        .click();
+      await page
+        .locator('[data-testid="unit-token"][data-unit-id="ENG_F_NTH"]')
+        .click();
+      await page
+        .locator('.unit-floating-menu')
+        .getByRole('button', { name: 'Convoy' })
+        .click();
+      await expect(
+        page.locator('[data-testid="province-path"][data-province-id="PIC"]'),
+      ).toHaveAttribute('data-reachable-color', 'blue');
+      await recorder.recordStep(
+        page,
+        '11_england_nth_convoy_pick_army_picardy_blue',
+      );
+
       recorder.finalize('PASSED');
     } catch (err) {
       recorder.finalize('FAILED');

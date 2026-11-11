@@ -523,4 +523,63 @@ describe('MacroSidebar', () => {
       expect(html).toContain('Waiting on: Germany');
     });
   });
+
+  it('never bleeds foreign issues onto activePower cards and does not count info notes as warnings', () => {
+    const foreignLeakAttempt = {
+      id: 'eng_convoy_info',
+      severity: 'info' as const,
+      code: 'BROKEN_CONVOY' as const,
+      title: 'Foreign Convoy for France in Paris',
+      message: 'Secret England North Sea order',
+      unit_ids: [mockUnits[0].id],
+      provinces: ['PAR'],
+      power: 'ENGLAND' as const,
+    };
+    const ownInfoNote = {
+      id: 'fra_convoy_info',
+      severity: 'info' as const,
+      code: 'BROKEN_CONVOY' as const,
+      title: 'Foreign Convoy Required',
+      message: 'Requires allied fleet',
+      unit_ids: [mockUnits[0].id],
+      provinces: ['PAR'],
+      power: 'FRANCE' as const,
+    };
+    const macroHtml = renderToString(
+      React.createElement(MacroSidebar, {
+        ...baseMacroProps,
+        issues: [foreignLeakAttempt, ownInfoNote],
+      }),
+    );
+    expect(macroHtml).not.toContain('Secret England North Sea order');
+    expect(macroHtml).toContain('Foreign Convoy Required');
+    expect(macroHtml).not.toContain('has-warnings');
+    expect(macroHtml).not.toContain('Finalize France (');
+
+    const toolsHtml = renderToString(
+      React.createElement(ToolsSidebar, {
+        collapsed: false,
+        onToggleCollapse: vi.fn(),
+        zoomPercent: 100,
+        onZoomIn: vi.fn(),
+        onZoomOut: vi.fn(),
+        onResetCamera: vi.fn(),
+        activePower: 'FRANCE',
+        onSelectPower: vi.fn(),
+        ownership: mockOwnership,
+        units: mockUnits,
+        finalizedPowers: [],
+        sandboxMode: false,
+        onToggleSandboxMode: vi.fn(),
+        onClearForeignPreMoves: vi.fn(),
+        foreignModifiedOrdersCount: 0,
+        onLoadScenario: vi.fn(),
+        isMultiplayer: false,
+        isGameCreator: false,
+        issues: [{ ...foreignLeakAttempt, severity: 'warning' }, ownInfoNote],
+      }),
+    );
+    // Neither England's warning (sandboxMode is false) nor France's info note shows a ⚠ tag!
+    expect(toolsHtml).not.toContain('mini-status-tag warning');
+  });
 });

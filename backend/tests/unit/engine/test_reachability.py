@@ -172,6 +172,49 @@ def test_fleet_convoy_options_exclude_dead_end_non_path_coasts_and_promote_ready
     assert "SPA" not in mao_pic_after.chained
 
 
+def test_convoy_reachability_never_leaks_foreign_orders_even_on_unmasked_sandbox_board():
+    """Even with unmasked orders, foreign fleet convoys never turn destinations green and NTH keeps PIC chained."""
+    units = [
+        Unit(id="FRA_A_PIC", power=Power.FRANCE, unit_type=UnitType.ARMY, province="PIC"),
+        Unit(id="FRA_F_MAO", power=Power.FRANCE, unit_type=UnitType.FLEET, province="MAO"),
+        Unit(id="ENG_F_ENG", power=Power.ENGLAND, unit_type=UnitType.FLEET, province="ENG"),
+        Unit(id="ENG_F_NTH", power=Power.ENGLAND, unit_type=UnitType.FLEET, province="NTH"),
+    ]
+    unmasked_orders = {
+        "FRA_A_PIC": Order(
+            unit_id="FRA_A_PIC",
+            power=Power.FRANCE,
+            unit_type=UnitType.ARMY,
+            origin="PIC",
+            order_type=OrderType.MOVE,
+            target="NWY",
+            via_convoy=True,
+            is_explicit=True,
+        ),
+        "ENG_F_ENG": Order(
+            unit_id="ENG_F_ENG",
+            power=Power.ENGLAND,
+            unit_type=UnitType.FLEET,
+            origin="ENG",
+            order_type=OrderType.CONVOY,
+            aux_unit_origin="PIC",
+            target="POR",
+            is_explicit=True,
+        ),
+    }
+    opts = compute_unit_options(units, unmasked_orders, "Movement")
+
+    # 1. England's F NTH sees A PIC in `chained` (ocean blue), never promoted to `direct` (green) by A PIC's move
+    assert "PIC" in opts["ENG_F_NTH"].convoyable_armies.chained
+    assert "PIC" not in opts["ENG_F_NTH"].convoyable_armies.direct
+
+    # 2. France's F MAO does NOT see POR as `direct` (green) because ENG_F_ENG belongs to England!
+    assert opts["FRA_F_MAO"].convoy_targets["PIC"].direct == []
+    assert "POR" in opts["FRA_F_MAO"].convoy_targets["PIC"].chained
+    assert opts["FRA_A_PIC"].active_convoys == []
+    assert "POR" in opts["FRA_A_PIC"].potential_convoys
+
+
 def test_has_sea_path_through_matches_brute_force_simple_paths():
     """Verify Menger 2-disjoint-path check equals exact simple-path search across tricky topologies."""
     allowed = {"NTH", "ENG", "MAO", "IRI", "NAO", "HEL", "SKA", "WES"}

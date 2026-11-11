@@ -41,6 +41,7 @@ def army_convoy_destinations(
         o.target
         for o in orders.values()
         if o.order_type == OrderType.CONVOY
+        and o.power == army.power
         and o.aux_unit_origin == army.province
         and o.target
         and o.origin in sea_fleets
@@ -48,7 +49,8 @@ def army_convoy_destinations(
     active = {
         t
         for t in ordered_targets
-        if t in reachable and has_active_convoy_chain(army.province, t, units, orders)
+        if t in reachable
+        and has_active_convoy_chain(army.province, t, units, orders, power=army.power)
     }
     potential = reachable - active
     return sorted(active), sorted(potential)
@@ -64,9 +66,9 @@ def fleet_convoy_options(
     For a fleet in a sea zone, the coastal armies it can help carry and where to.
 
     Only lists `(origin, target)` pairs with a simple path of stationed sea fleets passing
-    through `fleet.province` (never dead-end coasts that bypass this fleet). `direct` means
-    ordering this fleet completes an unbroken convoy chain (either alone or with sibling fleets
-    already ordered); `chained` means additional stationed sea fleets must also convoy.
+    through `fleet.province` (never dead-end coasts that bypass this fleet). Only own-power
+    fleet orders ever promote a target to `direct`, so another power's convoy orders can never
+    leak into reachability even on an unmasked board.
     """
     if fleet.unit_type != UnitType.FLEET or fleet.is_dislodged or fleet.province not in sea_fleets:
         return None, {}
@@ -104,7 +106,11 @@ def fleet_convoy_options(
                 is_explicit=True,
             )
             if has_active_convoy_chain(
-                origin, candidate, units, {**orders, fleet.id: hypothetical}
+                origin,
+                candidate,
+                units,
+                {**orders, fleet.id: hypothetical},
+                power=fleet.power,
             ):
                 direct_targets.append(candidate)
             else:
@@ -113,14 +119,7 @@ def fleet_convoy_options(
         if not direct_targets and not chained_targets:
             continue
 
-        army_order = orders.get(army.id)
-        army_waiting_on_chain = bool(
-            army_order
-            and army_order.order_type == OrderType.MOVE
-            and army_order.target in (set(direct_targets) | set(chained_targets))
-            and (army_order.via_convoy or army_order.target not in PROVINCES[origin].army_adj)
-        )
-        if origin in own_coasts or army_waiting_on_chain:
+        if origin in own_coasts:
             direct_armies.append(origin)
         else:
             chained_armies.append(origin)

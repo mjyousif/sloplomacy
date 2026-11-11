@@ -205,10 +205,11 @@ def test_secret_foreign_convoy_in_single_or_mixed_chain_never_turns_active(game)
         ),
     }
     refresh_diagnostics_and_simulation(game)
-    # Raw authoritative state has SPA active because both fleets ordered CONVOY
-    assert game.unit_options["FRA_A_PIC"].active_convoys == ["SPA"]
+    # Even on the raw board, a mixed France + Germany convoy keeps SPA potential (own-power scoped)
+    assert game.unit_options["FRA_A_PIC"].active_convoys == []
+    assert "SPA" in game.unit_options["FRA_A_PIC"].potential_convoys
 
-    # Masked for France: Germany's secret F ENG C A PIC -> SPA is hidden, so SPA stays potential!
+    # Masked for France: Germany's secret F ENG C A PIC -> SPA stays hidden and SPA stays potential
     seen_fra = sanitize_game_state_for_viewer(game, Power.FRANCE)
     assert seen_fra.unit_options["FRA_A_PIC"].active_convoys == []
     assert "SPA" in seen_fra.unit_options["FRA_A_PIC"].potential_convoys
