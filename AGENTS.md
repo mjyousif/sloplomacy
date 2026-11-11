@@ -185,7 +185,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
 - **State Coordinator (`App.tsx`)**: Root state container, view mode switcher (Lobby, Game, Sandbox), and API coordination.
 - **Components (`components/`)**:
   - Top-level feature views (`EuropeMap.tsx`, `MacroSidebar.tsx`, `ToolsSidebar.tsx`, `LobbyView.tsx`, `AdminToolsModal.tsx`).
-  - Feature subdirectories (`map/`, `macro/`, `lobby/`, `admin/`) decomposing complex views into focused, single-responsibility subcomponents (e.g. SVG layers, card items, tab views). A feature's own hooks sit in its folder (`map/hooks/`: `useMapCamera`, `useMapGestures`, `useMapInteraction`, `useMapSelection`, `useOrderOverlay`, `useUnitMenuPlacement`), the menus over the map in `map/hud/`, and the SVG layers in `map/layers/` (order arrows in `map/layers/orders/`).
+  - Feature subdirectories (`map/`, `macro/`, `lobby/`, `admin/`) decomposing complex views into focused, single-responsibility subcomponents (e.g. SVG layers, card items, tab views). A feature's own hooks sit in its folder (`map/hooks/`: `useEuropeMap` wires `usePieceGeometry`, `useMapCamera`, `useMapGestures`, `useMapSelection`, `useMapInteraction`, `useOrderOverlay`, `useBuildHomes`, `useTouchHitRadius` and `useUnitMenuPlacement`), the menus over the map in `map/hud/`, and the SVG layers in `map/layers/` (order arrows in `map/layers/orders/`).
 - **Cartographic Data & Metrics (`data/`)**: Static map geometry paths (`europeMapGeometry.ts`), layout coordinates (`mapLayouts.ts`), and font metrics (`mapTextMetrics.ts`).
 - **Custom Hooks (`hooks/`)**: Reusable React hooks for WebSockets (`useDiplomacyWebSocket`), phone layout media queries (`useCompactLayout`), display settings (`useDisplayPrefs`), and the turn selector (`useTurnHistory`).
 - **Types (`types/`)**: TypeScript type contracts (`diplomacy.ts`), strictly synchronized with the models in `backend/domain/`.
@@ -270,7 +270,7 @@ The game cycles through three standard phases per year:
 - **Invariant**: Everything read back from `localStorage` or `user_metadata` goes through `sanitizeDisplayPrefs`, because players can edit both.
 - **Invariant**: A failed account read must never be treated as "no saved value", because the upload that follows would overwrite the player's choice. Only a successful read that finds nothing means the account is empty.
 - **Invariant**: Classic with `letters` stays pixel-identical to the original map, including `CLY.unitPos` in the North Atlantic. Fix layout problems in the other styles' rows in `mapLayouts.ts`.
-- All piece bodies are drawn by `MapPiece`, and everything around them takes its size from `PieceFrame`. Don't hardcode ring radii or badge offsets in `EuropeMap.tsx`.
+- All piece bodies are drawn by `MapPiece`, and everything around them takes its size from `PieceFrame`. Don't hardcode ring radii or badge offsets in the map's layers (`components/map/layers/`).
 
 ### 9. Phone Layout
 - Phones get a compact layout, chosen by `useCompactLayout()` from `COMPACT_LAYOUT_QUERY` and written on the shell as `data-layout`. The rules are in [docs/frontend/styling-and-themes.md](docs/frontend/styling-and-themes.md#responsive--layout-specifications).
