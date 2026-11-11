@@ -4,12 +4,12 @@ check_file_limits.py
 
 Enforces codebase modularity file-size thresholds and ratchets.
 Rules:
-1. Target size: 150 - 350 lines.
-2. Hard ceiling: 500 lines for any new file.
+1. Target size: 150 - 350 lines for source files (up to 500 for test suites).
+2. Hard ceiling: 500 lines for new/refactored source files, 750 lines for test files.
 3. Declarative data files are allowlisted exceptions (e.g. static geometry / topology).
-4. Legacy files exceeding 500 lines are capped at a baseline ceiling. They cannot grow
-   monolithically without modular decomposition (ratchet rule).
-5. Files crossing 350 lines produce a non-blocking warning.
+4. Legacy files exceeding their ceiling are capped at a baseline ceiling. They cannot
+   grow monolithically without modular decomposition (ratchet rule).
+5. Files crossing their target size produce a non-blocking warning (or fail under --strict).
 """
 
 from __future__ import annotations
@@ -21,10 +21,11 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
-# Hard ceiling for new or refactored files
+# Hard ceilings and target warning thresholds
 CEILING_LINES = 500
-# Target warning threshold
 WARN_LINES = 350
+TEST_CEILING_LINES = 750
+TEST_WARN_LINES = 500
 
 # Allowlisted pure declarative static data files
 ALLOWLIST_FILES: Set[str] = {
@@ -32,7 +33,7 @@ ALLOWLIST_FILES: Set[str] = {
     "backend/engine/topology/provinces.py",
 }
 
-# Baseline limits for known legacy files already exceeding 500 lines.
+# Baseline limits for known legacy files already exceeding their ceiling.
 # These limits are ratcheted down as files get decomposed.
 # Growth beyond the baseline + tolerance triggers a failure.
 LEGACY_BASELINES: Dict[str, int] = {
@@ -41,9 +42,6 @@ LEGACY_BASELINES: Dict[str, int] = {
     "frontend/src/components/ToolsSidebar.tsx": 738,
     "frontend/src/components/MapPiece.tsx": 665,
     "frontend/src/components/AdminToolsModal.tsx": 631,
-    "frontend/src/hooks/useSandboxSession.test.ts": 611,
-    "frontend/src/components/map/hooks/useMapInteraction.test.ts": 592,
-    "frontend/src/components/sidebars.test.ts": 586,
     "frontend/src/components/LobbyView.tsx": 581,
 }
 
@@ -85,17 +83,28 @@ def get_git_repo_root() -> Path:
         return Path.cwd()
 
 
+def is_test_file(rel_path: str) -> bool:
+    name = Path(rel_path).name
+    return (
+        name.startswith("test_")
+        or ".test." in name
+        or ".spec." in name
+        or rel_path.startswith("backend/tests/")
+        or rel_path.startswith("frontend/e2e/")
+    )
+
+
 def scan_repository(
     repo_root: Path,
-) -> Tuple[List[Tuple[str, int, int]], List[Tuple[str, int]], List[Tuple[str, int]]]:
+) -> Tuple[List[Tuple[str, int, int]], List[Tuple[str, int, int]], List[Tuple[str, int]]]:
     """
     Scans the repository and returns:
     - errors: list of (rel_path, actual_lines, limit)
-    - warnings: list of (rel_path, actual_lines)
+    - warnings: list of (rel_path, actual_lines, target)
     - ratchet_candidates: list of (rel_path, actual_lines) where a legacy file shrank!
     """
     errors: List[Tuple[str, int, int]] = []
-    warnings: List[Tuple[str, int]] = []
+    warnings: List[Tuple[str, int, int]] = []
     ratchet_candidates: List[Tuple[str, int]] = []
 
     for root, dirs, files in os.walk(repo_root):
@@ -123,11 +132,12 @@ def scan_repository(
                     # File shrank significantly: suggest ratcheting baseline down!
                     ratchet_candidates.append((rel_path, lines))
             else:
-                # Standard file
-                if lines > CEILING_LINES:
-                    errors.append((rel_path, lines, CEILING_LINES))
-                elif lines > WARN_LINES:
-                    warnings.append((rel_path, lines))
+                ceiling = TEST_CEILING_LINES if is_test_file(rel_path) else CEILING_LINES
+                target = TEST_WARN_LINES if is_test_file(rel_path) else WARN_LINES
+                if lines > ceiling:
+                    errors.append((rel_path, lines, ceiling))
+                elif lines > target:
+                    warnings.append((rel_path, lines, target))
 
     return errors, warnings, ratchet_candidates
 
@@ -157,13 +167,13 @@ def main() -> int:
             print(f"    - {path}: now {lines} lines (baseline was {baseline}). Ratchet down!")
 
     if warnings:
-        print(f"\n[!] Notice: {len(warnings)} files exceed target size ({WARN_LINES} lines):")
-        for path, lines in sorted(warnings, key=lambda x: x[1], reverse=True)[:10]:
-            print(f"    - {path} ({lines} lines > {WARN_LINES} target)")
+        print(f"\n[!] Notice: {len(warnings)} file(s) exceed their target size:")
+        for path, lines, target in sorted(warnings, key=lambda x: x[1], reverse=True)[:10]:
+            print(f"    - {path} ({lines} lines > {target} target)")
         if len(warnings) > 10:
             print(f"    ... and {len(warnings) - 10} more.")
         if args.strict:
-            errors.extend((path, lines, WARN_LINES) for path, lines in warnings)
+            errors.extend(warnings)
 
     if errors:
         print(f"\n[x] Modularity Violation: {len(errors)} file(s) exceeded the size ceiling:")
