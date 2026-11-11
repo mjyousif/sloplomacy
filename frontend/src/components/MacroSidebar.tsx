@@ -25,8 +25,8 @@ import {
   type Unit,
   type ValidationIssue,
 } from '../types/diplomacy';
+import { buildDefaultOrderForType } from '../utils/orderBuilders';
 import {
-  canUnitSupportInto,
   formatOrderSummary,
   getConsensusStatusInfo,
   getReachableDestinations,
@@ -334,135 +334,15 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   const simActive = showSimulationOverlay || sandboxMode;
 
   const handleOrderTypeChange = (unit: Unit, newType: OrderType) => {
-    if (newType === 'RETREAT') {
-      const validRetreats = getValidRetreatDestinations(
-        unit,
-        retreats,
-        provinces,
-      );
-      const firstRet = validRetreats[0];
-      onUpdateOrder({
-        unit_id: unit.id,
-        power: unit.power,
-        unit_type: unit.unit_type,
-        origin: unit.province,
-        origin_coast: unit.coast,
-        order_type: 'RETREAT',
-        target: firstRet ? firstRet.province : null,
-        target_coast:
-          firstRet && firstRet.coasts.length === 1 ? firstRet.coasts[0] : null,
-        aux_unit_origin: null,
-        via_convoy: false,
-        is_explicit: true,
-      });
-      return;
-    }
-
-    if (newType === 'DISBAND') {
-      onUpdateOrder({
-        unit_id: unit.id,
-        power: unit.power,
-        unit_type: unit.unit_type,
-        origin: unit.province,
-        origin_coast: unit.coast,
-        order_type: 'DISBAND',
-        target: null,
-        target_coast: null,
-        aux_unit_origin: null,
-        via_convoy: false,
-        is_explicit: true,
-      });
-      return;
-    }
-
-    const reachable = getReachableDestinations(unit, provinces);
-    if (newType === 'HOLD') {
-      onUpdateOrder({
-        unit_id: unit.id,
-        power: unit.power,
-        unit_type: unit.unit_type,
-        origin: unit.province,
-        origin_coast: unit.coast,
-        order_type: 'HOLD',
-        target: null,
-        target_coast: null,
-        aux_unit_origin: null,
-        via_convoy: false,
-        is_explicit: true,
-      });
-    } else if (newType === 'MOVE') {
-      const firstDest = reachable[0];
-      onUpdateOrder({
-        unit_id: unit.id,
-        power: unit.power,
-        unit_type: unit.unit_type,
-        origin: unit.province,
-        origin_coast: unit.coast,
-        order_type: 'MOVE',
-        target: firstDest ? firstDest.province : null,
-        target_coast:
-          firstDest && firstDest.coasts.length === 1
-            ? firstDest.coasts[0]
-            : null,
-        aux_unit_origin: null,
-        via_convoy: false,
-        is_explicit: true,
-      });
-    } else if (newType === 'SUPPORT') {
-      const otherUnits = units.filter(
-        (other) => other.id !== unit.id && !other.is_dislodged,
-      );
-      const defaultSup =
-        otherUnits.find(
-          (other) =>
-            other.power === unit.power &&
-            (canUnitSupportInto(unit, other.province, provinces) ||
-              (orders[other.id]?.target &&
-                canUnitSupportInto(unit, orders[other.id].target!, provinces))),
-        ) || otherUnits[0];
-
-      const supOrder = defaultSup ? orders[defaultSup.id] : undefined;
-      const defaultTarget =
-        supOrder &&
-        supOrder.order_type === 'MOVE' &&
-        supOrder.target &&
-        canUnitSupportInto(unit, supOrder.target, provinces)
-          ? supOrder.target
-          : defaultSup?.province || null;
-
-      onUpdateOrder({
-        unit_id: unit.id,
-        power: unit.power,
-        unit_type: unit.unit_type,
-        origin: unit.province,
-        origin_coast: unit.coast,
-        order_type: 'SUPPORT',
-        aux_unit_origin: defaultSup ? defaultSup.province : null,
-        target: defaultTarget,
-        via_convoy: false,
-        is_explicit: true,
-      });
-    } else if (newType === 'CONVOY') {
-      const armies = units.filter(
-        (u2) => u2.unit_type === 'A' && !u2.is_dislodged,
-      );
-      const firstArmy = armies.find((a) => a.power === unit.power) || armies[0];
-      const coastalProvs = Object.values(provinces).filter(
-        (p) => p.type === 'COAST',
-      );
-      onUpdateOrder({
-        unit_id: unit.id,
-        power: unit.power,
-        unit_type: unit.unit_type,
-        origin: unit.province,
-        origin_coast: unit.coast,
-        order_type: 'CONVOY',
-        aux_unit_origin: firstArmy ? firstArmy.province : null,
-        target: coastalProvs[0]?.id || null,
-        via_convoy: false,
-        is_explicit: true,
-      });
-    }
+    const nextOrder = buildDefaultOrderForType({
+      unit,
+      newType,
+      provinces,
+      units,
+      orders,
+      retreats,
+    });
+    if (nextOrder) onUpdateOrder(nextOrder);
   };
 
   // Phone: a finger has no hover, so the selected unit's card lights up its provinces instead,

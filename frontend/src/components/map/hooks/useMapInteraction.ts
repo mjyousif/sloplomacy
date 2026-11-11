@@ -204,14 +204,24 @@ export function useMapInteraction({
       return;
     }
 
-    // 4. If we are in CONVOY_PICK_ARMY mode and click an Army
+    // 4. If we are in CONVOY_PICK_ARMY mode, only a coastal Army can board a convoy
+    if (selectedUnit && interactionMode === 'CONVOY_PICK_ARMY') {
+      if (u.unit_type === 'A' && provinces[u.province]?.type === 'COAST') {
+        setPendingAuxOrigin(u.province);
+        setInteractionMode('CONVOY_PICK_TARGET');
+      } else {
+        clearSelection();
+      }
+      return;
+    }
+
+    // 4b. If we are in CONVOY_PICK_TARGET mode, clicking a unit delegates to its province
     if (
       selectedUnit &&
-      interactionMode === 'CONVOY_PICK_ARMY' &&
-      u.unit_type === 'A'
+      interactionMode === 'CONVOY_PICK_TARGET' &&
+      pendingAuxOrigin
     ) {
-      setPendingAuxOrigin(u.province);
-      setInteractionMode('CONVOY_PICK_TARGET');
+      handleProvinceClick(u.province);
       return;
     }
 
@@ -409,7 +419,7 @@ export function useMapInteraction({
 
     if (interactionMode === 'CONVOY_PICK_ARMY') {
       const occ = unitsByProv[provId];
-      if (occ && occ.unit_type === 'A') {
+      if (occ && occ.unit_type === 'A' && provinces[provId]?.type === 'COAST') {
         setPendingAuxOrigin(provId);
         setInteractionMode('CONVOY_PICK_TARGET');
       } else {
@@ -419,7 +429,9 @@ export function useMapInteraction({
     }
 
     if (interactionMode === 'CONVOY_PICK_TARGET' && pendingAuxOrigin) {
-      onUpdateOrder(convoyOrder(selectedUnit, pendingAuxOrigin, provId));
+      if (provinces[provId]?.type === 'COAST' && provId !== pendingAuxOrigin) {
+        onUpdateOrder(convoyOrder(selectedUnit, pendingAuxOrigin, provId));
+      }
       clearSelection();
       return;
     }

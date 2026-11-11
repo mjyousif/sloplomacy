@@ -1,4 +1,16 @@
-import type { Order, Power, Unit, UnitType } from '../types/diplomacy';
+import type {
+  Order,
+  OrderType,
+  Power,
+  ProvinceInfo,
+  Unit,
+  UnitType,
+} from '../types/diplomacy';
+import {
+  canUnitSupportInto,
+  getReachableDestinations,
+  getValidRetreatDestinations,
+} from './orderHelpers';
 
 /**
  * The orders a player gives a unit, built the one way the map, its menus and the order cards
@@ -132,3 +144,112 @@ export const waiveOrder = (
   via_convoy: false,
   is_explicit: true,
 });
+
+/** Build the initial explicit order when a player switches a unit's order type in the sidebar. */
+export function buildDefaultOrderForType({
+  unit,
+  newType,
+  provinces,
+  units,
+  orders,
+  retreats,
+}: {
+  unit: Unit;
+  newType: OrderType;
+  provinces: Record<string, ProvinceInfo>;
+  units: Unit[];
+  orders: Record<string, Order>;
+  retreats?: Record<Power, Record<string, string[]>> | null;
+}): Order | null {
+  if (newType === 'RETREAT') {
+    const validRetreats = getValidRetreatDestinations(
+      unit,
+      retreats,
+      provinces,
+    );
+    const firstRet = validRetreats[0];
+    return {
+      ...fromUnit(unit),
+      order_type: 'RETREAT',
+      target: firstRet ? firstRet.province : null,
+      target_coast:
+        firstRet && firstRet.coasts.length === 1 ? firstRet.coasts[0] : null,
+      aux_unit_origin: null,
+      via_convoy: false,
+      is_explicit: true,
+    };
+  }
+
+  if (newType === 'DISBAND') return disbandOrder(unit);
+  if (newType === 'HOLD') return holdOrder(unit);
+
+  if (newType === 'MOVE') {
+    const firstDest = getReachableDestinations(unit, provinces)[0];
+    return {
+      ...fromUnit(unit),
+      order_type: 'MOVE',
+      target: firstDest ? firstDest.province : null,
+      target_coast:
+        firstDest && firstDest.coasts.length === 1 ? firstDest.coasts[0] : null,
+      aux_unit_origin: null,
+      via_convoy: false,
+      is_explicit: true,
+    };
+  }
+
+  if (newType === 'SUPPORT') {
+    const otherUnits = units.filter(
+      (other) => other.id !== unit.id && !other.is_dislodged,
+    );
+    const defaultSup =
+      otherUnits.find(
+        (other) =>
+          other.power === unit.power &&
+          (canUnitSupportInto(unit, other.province, provinces) ||
+            (orders[other.id]?.target &&
+              canUnitSupportInto(unit, orders[other.id].target!, provinces))),
+      ) || otherUnits[0];
+
+    const supOrder = defaultSup ? orders[defaultSup.id] : undefined;
+    const defaultTarget =
+      supOrder &&
+      supOrder.order_type === 'MOVE' &&
+      supOrder.target &&
+      canUnitSupportInto(unit, supOrder.target, provinces)
+        ? supOrder.target
+        : defaultSup?.province || null;
+
+    return {
+      ...fromUnit(unit),
+      order_type: 'SUPPORT',
+      aux_unit_origin: defaultSup ? defaultSup.province : null,
+      target: defaultTarget,
+      via_convoy: false,
+      is_explicit: true,
+    };
+  }
+
+  if (newType === 'CONVOY') {
+    const coastalArmies = units.filter(
+      (u2) =>
+        u2.unit_type === 'A' &&
+        !u2.is_dislodged &&
+        provinces[u2.province]?.type === 'COAST',
+    );
+    const firstArmy =
+      coastalArmies.find((a) => a.power === unit.power) || coastalArmies[0];
+    const coastalProvs = Object.values(provinces).filter(
+      (p) => p.type === 'COAST' && p.id !== firstArmy?.province,
+    );
+    return {
+      ...fromUnit(unit),
+      order_type: 'CONVOY',
+      aux_unit_origin: firstArmy ? firstArmy.province : null,
+      target: coastalProvs[0]?.id || null,
+      via_convoy: false,
+      is_explicit: true,
+    };
+  }
+
+  return null;
+}
