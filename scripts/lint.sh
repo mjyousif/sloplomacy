@@ -41,7 +41,7 @@ fi
 
 # 1. Backend Linting (Ruff)
 if [ "$FRONTEND_ONLY" = false ]; then
-    echo -e "\n[1/2] Linting Python backend (Ruff)..."
+    echo -e "\n[1/3] Linting Python backend (Ruff)..."
     cd "$REPO_ROOT"
     if $PYTHON_CMD -m ruff --version &>/dev/null; then
         $PYTHON_CMD -m ruff check backend/
@@ -56,12 +56,17 @@ fi
 
 # 2. Frontend Linting & Typecheck (Biome & tsc)
 if [ "$BACKEND_ONLY" = false ]; then
-    echo -e "\n[2/2] Linting & typechecking Frontend (Biome & tsc)..."
+    echo -e "\n[2/3] Linting & typechecking Frontend (Biome & tsc)..."
     cd "$FRONTEND_DIR"
     npm run lint
     npm run typecheck
     echo "[✓] Frontend lint and typecheck passed!"
 fi
+
+# 3. Modularity & File Size Audit
+echo -e "\n[3/3] Checking codebase modularity and file-size ceilings..."
+cd "$REPO_ROOT"
+$PYTHON_CMD scripts/check_file_limits.py
 
 echo -e "\n================================================="
 echo "  ALL LINT CHECKS PASSED!"

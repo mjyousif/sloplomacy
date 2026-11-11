@@ -117,11 +117,15 @@ To test cloud authentication locally rather than default local dev mode:
 Static analysis, linting, and formatting checks are decoupled from runtime tests:
 
 ### Unified Linting & Formatting Runners
-- **Run Linters & Typecheck**:
+- **Run Linters, Typecheck & File-Size Audit**:
   ```bash
   ./scripts/lint.sh
   # Windows PowerShell:
   .\scripts\lint.ps1
+  ```
+- **Run File-Size Modularity Audit Standalone** (enforces the 500-line ceiling and legacy ratchets):
+  ```bash
+  python3 scripts/check_file_limits.py
   ```
 - **Check Formatting (Dry-Run)**:
   ```bash

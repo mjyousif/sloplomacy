@@ -67,7 +67,7 @@ This repository enforces strict modularity and separation of concerns to prevent
 ## 5. Review Checklist for Agents
 
 Before concluding any refactor or feature:
-1. Run `git diff --stat origin/main` to inspect changed files.
-2. Check if any modified file exceeded 500 lines or grew substantially without modular extraction.
+1. Run `python3 scripts/check_file_limits.py` (also included in `./scripts/lint.sh`, `.\scripts\lint.ps1`, and CI) to verify no file exceeds the 500-line ceiling or grows past its legacy baseline. If a legacy file shrank, ratchet down its entry in `LEGACY_BASELINES` inside `scripts/check_file_limits.py` in the same PR.
+2. Run `git diff --stat origin/main` to inspect changed files.
 3. Ensure no new API endpoints were added directly to `backend/main.py`.
 4. Ensure new UI elements are extracted to subcomponents rather than inlined as hundreds of JSX lines in `App.tsx` or `EuropeMap.tsx`.
