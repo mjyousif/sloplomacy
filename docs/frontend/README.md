@@ -22,7 +22,11 @@ frontend/
     │   ├── EuropeMap.tsx        # High-performance interactive SVG game board & order arrows
     │   ├── EuropeMap.test.tsx   # The unit menu in the DOM: each newly selected unit gets a fresh menu
     │   ├── map/                 # Decomposed SVG map sub-layers, hooks & utilities
-    │   │   ├── hooks/
+    │   │   ├── hooks/                     # Each with a co-located test
+    │   │   │   ├── useEuropeMap.ts        # The map's view model: every hook below wired together for EuropeMap
+    │   │   │   ├── usePieceGeometry.ts    # Unit indexes, piece points per style, describePiece, own-units centre
+    │   │   │   ├── useBuildHomes.ts       # The winter build slots drawn, live or on a past turn
+    │   │   │   ├── useTouchHitRadius.ts   # A phone's finger-sized tap targets, short of each neighbour
     │   │   │   ├── useMapCamera.ts        # Camera ref, frame-synced transform, wheel & button zoom, home camera, phone selection pan
     │   │   │   ├── useMapCamera.test.ts
     │   │   │   ├── useMapGestures.ts      # Pointer pan with a tap threshold, two-finger pinch
@@ -41,7 +45,10 @@ frontend/
     │   │   │   ├── SimulationBanner.tsx   # The Hypothetical Mode strip over the map
     │   │   │   └── MapZoomControls.tsx    # A phone's zoom buttons on the map
     │   │   ├── layers/
+    │   │   │   ├── ProvincesLayer.tsx     # Every province polygon, lit where the selected unit can go (with its test)
     │   │   │   ├── OrderArrowsLayer.tsx   # Every drawn order: convoys under supports under moves (with its test)
+    │   │   │   ├── BuildTokensLayer.tsx   # A winter's build slots (with its test)
+    │   │   │   ├── UnitsLayer.tsx         # Every unit, each drawn by units/UnitToken.tsx (with its test)
     │   │   │   ├── orders/                # ConvoyChain, SupportVector, MoveArrow and their shared context type
     │   │   │   ├── ArrowMarkerDefs.tsx    # The arrowheads in the SVG defs
     │   │   │   ├── StaticLayers.tsx       # Gradients, sea textures & pass-through background defs

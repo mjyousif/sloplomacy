@@ -2,6 +2,8 @@
 
 The visual centerpiece of the application is `frontend/src/components/EuropeMap.tsx`. It is a fully vectorized, GPU-accelerated SVG cartographic map representing the European theatre in 1901.
 
+`EuropeMap.tsx` only lays the map out. Its view model, `components/map/hooks/useEuropeMap.ts`, applies the props' defaults and wires every map hook together: piece geometry (`usePieceGeometry`), camera and gestures, selection and the click state machine, the order overlay, build homes, phone tap targets and menu placement. It returns what the layers and menus need, including the context objects the order and unit layers read.
+
 ---
 
 ## Geometry & Coordinate System
@@ -56,7 +58,7 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   ├── 2. Background Map Layer (StaticLayers.tsx: StaticBackgroundLayer, StaticForegroundLayer):
   │      - Landmass contours, ocean bathymetry, topography
   │
-  ├── 3. Dynamic Province Fill Layer (ProvincePolygon.tsx: ProvincePolygon):
+  ├── 3. Dynamic Province Fill Layer (layers/ProvincesLayer.tsx, one ProvincePolygon each):
   │      - Semi-transparent fills colored by owning Great Power
   │      - Hover highlighting for candidate destinations
   │      - Pulsing red highlights for provinces with tactical errors
@@ -88,11 +90,14 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   │      - "✕ BOUNCED" on a move that fails, "CUT" on a support that is cut
   │      - "DISLODGED!" on units the simulation dislodges (units layer)
   │
-  ├── 8. Unit Token Layer:
-  │      - Army / fleet pieces drawn by MapPiece in the active style and mark
-  │      - Offset dislodged unit tokens with dashed red border
-  │      - Semi-transparent phantom tokens for pending BUILD orders
-  │      - Selection ring and active power indicator
+  ├── 8. Unit Token Layer (layers/UnitsLayer.tsx, one units/UnitToken.tsx each; build slots in
+  │      layers/BuildTokensLayer.tsx):
+  │      - Army / fleet pieces drawn by MapPiece in the active style and mark, placed by
+  │        hooks/usePieceGeometry.ts
+  │      - Dislodged units stepped aside with an orange ring and a DISLODGED! banner
+  │      - Winter build slots: the piece being built with a BUILD tag, or "+ BUILD HERE" while waived
+  │      - Selection, hover and own-power rings, hold rings, +N supports to hold, and issue badges
+  │      - On a phone, tap targets grown to a finger's width (hooks/useTouchHitRadius.ts)
   │
   └── 9. Menus over the map (map/hud/):
          - The selected unit's menu, the build menu and the coast picker
