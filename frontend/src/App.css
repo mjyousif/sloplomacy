@@ -4591,13 +4591,13 @@
 /* Tactical Map Legend */
 .tools-legend-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 45.5% 54.5%;
   row-gap: 6px;
   column-gap: 0;
   /* One continuous hairline down the column seam, unbroken by the row gap. */
   background-image: linear-gradient(#282f3d, #282f3d);
   background-size: 1px 100%;
-  background-position: 50% 0;
+  background-position: 45.5% 0;
   background-repeat: no-repeat;
 }
 

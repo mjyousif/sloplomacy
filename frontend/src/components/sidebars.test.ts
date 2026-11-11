@@ -130,7 +130,8 @@ describe('ToolsSidebar', () => {
     expect(html).not.toContain('Move / Attack Vector');
     expect(html).toContain('Support Link');
     expect(html).toContain('Fleet Convoy');
-    expect(html).toContain('Warning / Dislodgement');
+    expect(html).toContain('Warning');
+    expect(html).not.toContain('Warning / Dislodgement');
     expect(html).toContain('COMMAND NATION (SELECT)');
     expect(html).toContain('France');
     expect(html).toContain('England');
@@ -148,7 +149,7 @@ describe('ToolsSidebar', () => {
       'Move / Attack',
       'Fleet Convoy',
       'Support Link',
-      'Warning / Dislodgement',
+      'Warning',
     ].map((label) => html.indexOf(label));
     expect(order).not.toContain(-1);
     expect(order).toEqual([...order].sort((a, b) => a - b));
