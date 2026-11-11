@@ -117,6 +117,12 @@ frontend/
     │   ├── useGameSession.test.ts # Seat, board loads, stale replies, the forgotten solo sandbox, errors and the lobby list
     │   ├── useGameSync.ts       # The live socket and its handlers, the first load and the fallback poll
     │   ├── useGameSync.test.ts  # Game and lobby updates, the phase toast, the first load, and when and what the poll fetches
+    │   ├── useSandboxSession.ts # Hypothetical Mode and its private copy, the tactical AI, the scenario reset and saving a sandbox
+    │   ├── useSandboxSession.test.ts # Entering and leaving in a match and a solo sandbox, the copy's clock, AI, reset and save
+    │   ├── useSandboxExit.ts    # Closes a match's private sandbox copy when the player leaves the match board
+    │   ├── useSandboxExit.test.ts # When it closes the copy, what it sends, and that a failed close is ignored
+    │   ├── useMatchActions.ts   # Orders, confirm-all, finalize with the Sanity Check modal, unlock, resolve and the clock buttons
+    │   ├── useMatchActions.test.tsx # Foreign-order guard, finalize problems, double-click resolve, clock behind a private copy
     │   ├── useAuthSession.ts    # The signed-in user (loaded on mount, then followed) and the sign-in modal
     │   ├── useAuthSession.test.ts # Initial load, sign-in and sign-out, unsubscribe, and the modal's reason and tab
     │   ├── useWorkspaceLayout.ts # Desktop rails, phone order sheet and tools drawer, reset on a new game, view or layout

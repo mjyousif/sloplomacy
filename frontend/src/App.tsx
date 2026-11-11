@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import './App.css';
 import './compact.css';
 import {
@@ -29,16 +29,16 @@ import { useCompactLayout } from './hooks/useCompactLayout';
 import { useDisplayPrefs } from './hooks/useDisplayPrefs';
 import { useGameSession } from './hooks/useGameSession';
 import { useGameSync } from './hooks/useGameSync';
+import { useMatchActions } from './hooks/useMatchActions';
+import { useSandboxExit } from './hooks/useSandboxExit';
+import { useSandboxSession } from './hooks/useSandboxSession';
 import { useToast } from './hooks/useToast';
 import { useTurnHistory } from './hooks/useTurnHistory';
 import { useWorkspaceLayout } from './hooks/useWorkspaceLayout';
 import { authedFetch, getAuthHeaders, signOutUser } from './lib/supabase';
 import {
-  type FinalizeResponse,
   type GameState,
   type MultiplayerGameSummary,
-  type Order,
-  type PhaseTimer,
   POWER_METADATA,
   type Power,
   type SimulationResult,
@@ -121,18 +121,7 @@ export function App() {
   const [highlightedProvinces, setHighlightedProvinces] = useState<string[]>(
     [],
   );
-  const [sandboxMode, setSandboxMode] = useState<boolean>(false);
-  // A multiplayer sandbox runs on a private server-side copy of the match under its own game id.
-  const [sandboxGameId, setSandboxGameId] = useState<string | null>(null);
-  // The private copy has no clock, so this follows the real match while the player is in it.
-  const [hypotheticalMatchTimer, setHypotheticalMatchTimer] =
-    useState<PhaseTimer | null>(null);
-  const [showSimulationOverlay, setShowSimulationOverlay] =
-    useState<boolean>(false);
   const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
-  const [saveSandboxModalOpen, setSaveSandboxModalOpen] =
-    useState<boolean>(false);
-  const [savingSandbox, setSavingSandbox] = useState<boolean>(false);
   const [adminOverrideActive, setAdminOverrideActive] =
     useState<boolean>(false);
   const [zoomPercent, setZoomPercent] = useState<number>(105);
@@ -154,11 +143,6 @@ export function App() {
   } = useWorkspaceLayout({ viewMode, activeGameId, isCompact });
   const mapRef = useRef<EuropeMapHandle | null>(null);
 
-  // Sanity Check Modal State
-  const [sanityModalOpen, setSanityModalOpen] = useState<boolean>(false);
-  const [sanityModalIssues, setSanityModalIssues] = useState<ValidationIssue[]>(
-    [],
-  );
   const { toastBanner, triggerToast } = useToast();
   const { confirm, confirmModal } = useConfirm();
   // Passcodes this player typed for private matches during this visit, so the live
@@ -190,18 +174,44 @@ export function App() {
   );
   // Direct-Edit stays on when the host moves to another game, where it must not apply.
   const directEditActive = isGameCreator && adminOverrideActive;
-  // Drafts, AI plans and previews go to the private copy while there is one.
-  const draftGameId = sandboxGameId ?? activeGameId;
-  const matchTimer = sandboxGameId
-    ? hypotheticalMatchTimer
-    : (gameState?.timer ?? null);
-
-  // The board in a private sandbox is hypothetical, so nothing real can be done from it.
-  const requireRealBoard = (action: string): boolean => {
-    if (!sandboxGameId) return true;
-    triggerToast(`Exit Hypothetical Mode to ${action}.`);
-    return false;
-  };
+  // Hypothetical Mode, the AI, the scenario reset and saving a sandbox.
+  const {
+    sandboxMode,
+    setSandboxMode,
+    sandboxGameId,
+    setSandboxGameId,
+    setHypotheticalMatchTimer,
+    showSimulationOverlay,
+    setShowSimulationOverlay,
+    saveSandboxModalOpen,
+    setSaveSandboxModalOpen,
+    savingSandbox,
+    draftGameId,
+    matchTimer,
+    requireRealBoard,
+    handleGenerateAIMoves,
+    handleAIStepTurn,
+    handleOpenSaveSandboxModal,
+    handleSaveSandboxToAccount,
+    handleClearForeignPreMoves,
+    handleToggleSandboxMode,
+    handleLoadScenario,
+  } = useSandboxSession({
+    activeGameId,
+    setActiveGameId,
+    setActiveGameSummary,
+    gameState,
+    playerPower,
+    authUser,
+    openAuthPrompt,
+    triggerToast,
+    goLive: turnHistory.goLive,
+    setLoading,
+    setSelectedUnitId,
+    applyServerState,
+    fetchGame,
+    fetchGamesList,
+  });
 
   // The live socket, the first load and the fallback poll.
   const { wsConnected, handleTimerExpired } = useGameSync({
@@ -223,20 +233,43 @@ export function App() {
   });
 
   // Leaving the match board by any route closes its private sandbox.
-  useEffect(() => {
-    if (!sandboxGameId || viewMode === 'multiplayer') return;
-    authedFetch(
-      `${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(sandboxGameId)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ power: playerPower }),
-      },
-    ).catch(() => {});
-    setSandboxGameId(null);
-    setSandboxMode(false);
-    setShowSimulationOverlay(false);
-  }, [viewMode, sandboxGameId]);
+  useSandboxExit({
+    viewMode,
+    sandboxGameId,
+    playerPower,
+    setSandboxGameId,
+    setSandboxMode,
+    setShowSimulationOverlay,
+  });
+
+  // Orders, finalizing, resolving the turn and the turn clock.
+  const {
+    sanityModalOpen,
+    setSanityModalOpen,
+    sanityModalIssues,
+    handleUpdateOrder,
+    handleConfirmAllHolds,
+    handleFinalizeClick,
+    handleUnfinalizeClick,
+    postTimerAction,
+    handleAdjudicateTurn,
+  } = useMatchActions({
+    viewMode,
+    activeGameId,
+    lockedPower,
+    gameState,
+    playerPower,
+    directEditActive,
+    sandboxMode,
+    sandboxGameId,
+    draftGameId,
+    requireRealBoard,
+    setHypotheticalMatchTimer,
+    triggerToast,
+    setSelectedUnitId,
+    applyServerState,
+    fetchGamesList,
+  });
 
   const handleEnterSoloSandbox = async (event?: React.MouseEvent) => {
     if (viewMode === 'multiplayer' && activeGameSummary) {
@@ -389,128 +422,6 @@ export function App() {
     }
   };
 
-  const handleGenerateAIMoves = async (
-    powers?: Power[],
-    includeActive: boolean = false,
-  ) => {
-    const foreignPowers = (Object.keys(POWER_METADATA) as Power[]).filter(
-      (p) => p !== playerPower,
-    );
-    try {
-      setLoading(true);
-      const res = await authedFetch(
-        `${API_BASE}/sandbox/ai-orders?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            powers: powers || (includeActive ? null : foreignPowers),
-            include_active: includeActive,
-          }),
-        },
-      );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Failed to generate AI orders.');
-        return;
-      }
-      const updatedState = await res.json();
-      applyServerState(updatedState);
-      triggerToast(
-        includeActive
-          ? 'Tactical AI planned orders for all 7 Great Powers!'
-          : powers && powers.length === 1
-            ? `Tactical AI planned orders for ${POWER_METADATA[powers[0]].shortName}!`
-            : 'Tactical AI planned orders for foreign powers!',
-      );
-    } catch (e: any) {
-      console.error(e);
-      triggerToast('Error generating AI orders.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAIStepTurn = async () => {
-    try {
-      setLoading(true);
-      const res = await authedFetch(
-        `${API_BASE}/sandbox/ai-step?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        },
-      );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Failed to step turn with AI.');
-        return;
-      }
-      const updatedState = await res.json();
-      applyServerState(updatedState);
-      setSelectedUnitId(null);
-      setShowSimulationOverlay(false);
-      triggerToast(
-        `AI advanced game clock to ${updatedState.season} ${updatedState.year} ${updatedState.phase}!`,
-      );
-    } catch (e: any) {
-      console.error(e);
-      triggerToast('Error stepping turn with AI.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenSaveSandboxModal = () => {
-    if (!authUser) {
-      openAuthPrompt(
-        'Sign in or create a free account to save this tactical sandbox scenario to your profile.',
-        'signup',
-      );
-      return;
-    }
-    setSaveSandboxModalOpen(true);
-  };
-
-  const handleSaveSandboxToAccount = async (customName: string) => {
-    if (!authUser) return;
-    try {
-      setSavingSandbox(true);
-      const res = await authedFetch(
-        `${API_BASE}/games/save-sandbox?game_id=${encodeURIComponent(activeGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: customName,
-            user_id: authUser.id,
-            email: authUser.email,
-            display_name: authUser.displayName,
-          }),
-        },
-      );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Could not save sandbox.');
-        return;
-      }
-      const saved: MultiplayerGameSummary = await res.json();
-      if (saved.game_id === readStoredSoloSandboxId()) {
-        writeStoredSoloSandboxId(null);
-      }
-      setActiveGameId(saved.game_id);
-      setActiveGameSummary(saved);
-      await fetchGamesList();
-      setSaveSandboxModalOpen(false);
-      triggerToast(`Saved "${saved.name}" to your account!`);
-    } catch (e: any) {
-      console.error(e);
-      triggerToast('Error saving sandbox to account.');
-    } finally {
-      setSavingSandbox(false);
-    }
-  };
-
   const handleOpenSurrenderModal = (
     game: MultiplayerGameSummary,
     power: Power,
@@ -633,324 +544,6 @@ export function App() {
         const st: GameState = await res.json();
         applyServerState(st);
         setSelectedUnitId(null);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleUpdateOrder = async (order: Order) => {
-    // In multiplayer mode without Sandbox Pre-Move active, only allow ordering own power's units
-    if (
-      viewMode === 'multiplayer' &&
-      lockedPower &&
-      !sandboxMode &&
-      !directEditActive &&
-      order.power !== lockedPower
-    ) {
-      triggerToast(
-        `Enable "Sandbox Pre-Moves" to plot hypothetical orders for foreign powers.`,
-      );
-      return;
-    }
-    try {
-      const res = await authedFetch(
-        `${API_BASE}/order?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            order,
-            turn: gameState ? turnLabel(gameState) : undefined,
-          }),
-        },
-      );
-      if (res.ok) {
-        const st: GameState = await res.json();
-        applyServerState(st);
-      } else {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'That order was not accepted.');
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleConfirmAllHolds = async () => {
-    if (!gameState) return;
-    try {
-      const res = await authedFetch(
-        `${API_BASE}/orders/confirm-all?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: playerPower }),
-        },
-      );
-      if (res.ok) {
-        const st: GameState = await res.json();
-        applyServerState(st);
-        triggerToast(
-          `Confirmed all current orders for ${POWER_METADATA[playerPower].shortName}.`,
-        );
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleClearForeignPreMoves = async () => {
-    if (!gameState) return;
-    try {
-      const res = await authedFetch(
-        `${API_BASE}/sandbox/clear-foreign?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: playerPower }),
-        },
-      );
-      if (res.ok) {
-        const st: GameState = await res.json();
-        applyServerState(st);
-        triggerToast('Cleared all hypothetical foreign pre-moves.');
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleToggleSandboxMode = async () => {
-    if (!gameState) return;
-    const entering = !sandboxMode;
-    if (entering) turnHistory.goLive();
-    try {
-      if (entering) {
-        const res = await authedFetch(
-          `${API_BASE}/sandbox/enter?game_id=${encodeURIComponent(activeGameId)}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ power: playerPower }),
-          },
-        );
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          triggerToast(err.detail || 'Could not open the sandbox.');
-          return;
-        }
-        const st: GameState = await res.json();
-        setHypotheticalMatchTimer(gameState.timer ?? null);
-        applyServerState(st);
-        setSandboxGameId(st.game_id === activeGameId ? null : st.game_id);
-        setSandboxMode(true);
-        setShowSimulationOverlay(true);
-        triggerToast(
-          'Entered Hypothetical Mode: Plot hypothetical foreign moves to test outcomes. Exiting will discard foreign guesses!',
-        );
-      } else {
-        const res = await authedFetch(
-          `${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(draftGameId)}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ power: playerPower }),
-          },
-        );
-        let turnMovedOn = false;
-        if (res.ok) {
-          const st: GameState = await res.json();
-          turnMovedOn =
-            st.season !== gameState.season ||
-            st.year !== gameState.year ||
-            st.phase !== gameState.phase;
-          applyServerState(st);
-        } else if (sandboxGameId) {
-          // The private copy is gone, for example after a server restart: show the real match.
-          await fetchGame(activeGameId);
-        }
-        setSandboxGameId(null);
-        setSandboxMode(false);
-        setShowSimulationOverlay(false);
-        setSelectedUnitId(null);
-        triggerToast(
-          sandboxGameId && turnMovedOn
-            ? 'The match moved on while in Hypothetical Mode, so hypothetical orders were not kept.'
-            : `Exited Hypothetical Mode — foreign guesses discarded. Showing only ${
-                POWER_METADATA[playerPower].shortName
-              }'s real orders.`,
-        );
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleFinalizeClick = async (force = false) => {
-    if (!gameState || !requireRealBoard('finalize your real orders')) return;
-    try {
-      const res = await authedFetch(
-        `${API_BASE}/finalize?game_id=${encodeURIComponent(activeGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            power: playerPower,
-            force,
-            turn: turnLabel(gameState),
-          }),
-        },
-      );
-      if (res.ok) {
-        const data: FinalizeResponse = await res.json();
-        applyServerState(data.state);
-        if (data.requires_confirmation) {
-          setSanityModalIssues(data.issues);
-          setSanityModalOpen(true);
-        } else {
-          setSanityModalOpen(false);
-          triggerToast(
-            `${POWER_METADATA[playerPower].name} orders locked & finalized!`,
-          );
-          fetchGamesList();
-        }
-      } else {
-        // The clock can resolve the phase while the request is on its way.
-        const err = await res.json().catch(() => ({}));
-        setSanityModalOpen(false);
-        triggerToast(err.detail || 'Could not finalize your orders.');
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleUnfinalizeClick = async () => {
-    if (!gameState || !requireRealBoard('unlock your real orders')) return;
-    try {
-      const res = await authedFetch(
-        `${API_BASE}/unfinalize?game_id=${encodeURIComponent(activeGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: playerPower }),
-        },
-      );
-      if (res.ok) {
-        const st: GameState = await res.json();
-        applyServerState(st);
-        triggerToast('Orders unlocked for editing.');
-        fetchGamesList();
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const _handleSimulatePreMoves = async () => {
-    try {
-      const res = await authedFetch(
-        `${API_BASE}/simulate?game_id=${encodeURIComponent(draftGameId)}`,
-        { method: 'POST' },
-      );
-      if (res.ok) {
-        const sim: SimulationResult = await res.json();
-        setSimulationResult(sim);
-        setShowSimulationOverlay((prev) => !prev);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const postTimerAction = async (
-    action: 'start' | 'vote' | 'extend' | 'ready',
-    body: Record<string, unknown> = {},
-  ) => {
-    try {
-      const res = await authedFetch(
-        `${API_BASE}/games/${encodeURIComponent(activeGameId)}/timer/${action}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-      );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'The clock did not accept that.');
-        return;
-      }
-      const st: GameState = await res.json();
-      if (sandboxGameId) {
-        setHypotheticalMatchTimer(st.timer ?? null);
-      } else {
-        applyServerState(st);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // A double-click must not resolve two phases: the second click waits for the first, and the
-  // server refuses a turn that has already resolved.
-  const adjudicatingRef = useRef(false);
-  const handleAdjudicateTurn = async () => {
-    if (!gameState || adjudicatingRef.current) return;
-    if (!requireRealBoard('resolve the real turn')) return;
-    adjudicatingRef.current = true;
-    try {
-      const turn = encodeURIComponent(turnLabel(gameState));
-      const res = await authedFetch(
-        `${API_BASE}/adjudicate?game_id=${encodeURIComponent(activeGameId)}&turn=${turn}`,
-        { method: 'POST' },
-      );
-      if (res.ok) {
-        const st: GameState = await res.json();
-        applyServerState(st);
-        setSelectedUnitId(null);
-        triggerToast(
-          st.winner
-            ? `${POWER_METADATA[st.winner].name} has won the game!`
-            : `Turn resolved! Now in ${st.season} ${st.year} (${st.phase} Phase).`,
-        );
-        fetchGamesList();
-      } else {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Could not resolve the turn.');
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      adjudicatingRef.current = false;
-    }
-  };
-
-  const handleLoadScenario = async (scenarioId: string) => {
-    try {
-      const res = await authedFetch(
-        `${API_BASE}/scenario?game_id=${encodeURIComponent(activeGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            scenario_id: scenarioId,
-            active_power: playerPower,
-          }),
-        },
-      );
-      if (res.ok) {
-        const st: GameState = await res.json();
-        applyServerState(st);
-        setSandboxGameId(null);
-        setSandboxMode(false);
-        setShowSimulationOverlay(false);
-        setSelectedUnitId(null);
-        triggerToast('Reset to Standard Spring 1901.');
-      } else {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Could not reset the scenario.');
       }
     } catch (e) {
       console.error(e);

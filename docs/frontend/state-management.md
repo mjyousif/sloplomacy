@@ -9,7 +9,10 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 `App.tsx` keeps most of this state itself. Some of it comes from hooks named for what they do, and the table says which:
 
 - `hooks/useGameSession.ts`: the open game (`activeGameId`, `activeGameSummary`), the player's seat (`lockedPower`, and `playerPower` derived from it by `resolvePlayerPower`), the board (`gameState`, `provinces`, `loading`, `errorMsg`) and the lobby's games (`gamesList`, `loadingGames`), with `fetchGame`, `fetchGamesList`, `applyServerState` and `boardRequestSeq`. It runs no effects.
-- `hooks/useGameSync.ts`: what keeps them current: the socket (`useDiplomacyWebSocket`) and its two message handlers, the first load on mount, `handleTimerExpired`, and the fallback poll. App calls it later than `useGameSession`, where these effects have always run, so they keep their order among App's effects (after the display-prefs, layout-reset and turn-history effects, before the effect that closes a private sandbox).
+- `hooks/useGameSync.ts`: what keeps them current: the socket (`useDiplomacyWebSocket`) and its two message handlers, the first load on mount, `handleTimerExpired`, and the fallback poll. App calls it later than `useGameSession`, where these effects have always run, so they keep their order among App's effects (after the display-prefs, layout-reset and turn-history effects, before `useSandboxExit`).
+- `hooks/useSandboxSession.ts`: the sandbox tools. Hypothetical Mode (`sandboxMode`, the private copy's `sandboxGameId`, `hypotheticalMatchTimer`, `showSimulationOverlay`, `handleToggleSandboxMode`, `handleClearForeignPreMoves`), what is worked out from the copy (`draftGameId`, `matchTimer`, `requireRealBoard`), the tactical AI (`handleGenerateAIMoves`, `handleAIStepTurn`), the scenario reset (`handleLoadScenario`) and saving to an account (`saveSandboxModalOpen`, `savingSandbox`, `handleOpenSaveSandboxModal`, `handleSaveSandboxToAccount`). It runs no effects, and App calls it just before `useGameSync`, which reads `sandboxGameId`.
+- `hooks/useSandboxExit.ts`: the one effect that closes the private copy when the player leaves the match board by any route. App calls it right after `useGameSync`, where this effect has always run, so on leaving a match from Hypothetical Mode the socket switches before `POST /api/sandbox/exit` goes out.
+- `hooks/useMatchActions.ts`: what a player does in a match: `handleUpdateOrder`, `handleConfirmAllHolds`, `handleFinalizeClick` with the Sanity Check modal (`sanityModalOpen`, `sanityModalIssues`), `handleUnfinalizeClick`, `handleAdjudicateTurn` with its double-click guard, and the clock buttons (`postTimerAction`). It runs no effects.
 - `hooks/useAuthSession.ts`: who is signed in and the sign-in modal. It reads the saved user once on mount and then follows every sign-in and sign-out through `subscribeToAuthChanges`. `openAuthPrompt(reason?, tab?)` opens the modal with an optional reason banner and a tab (sign-in by default).
 - `hooks/useWorkspaceLayout.ts`: the desktop rails, the phone order sheet and the tools drawer, with the effect that resets the sheet and drawer.
 - `hooks/useToast.ts`: the toast banner and `triggerToast`.
@@ -31,10 +34,10 @@ The desktop header is `components/TopHeader.tsx`, which keeps no state: App pass
 | `selectedUnitId` | `string \| null` | UI | Currently selected military unit on the map or in the sidebar. |
 | `hoveredUnitId` | `string \| null` | UI | Unit hovered for cross-component highlighting. Set from `onPointerEnter`/`onPointerLeave` on map pieces and sidebar cards, which ignore `pointerType === 'touch'`: a finger has no hover, so a tap would otherwise leave the highlight on. |
 | `highlightedProvinces`| `string[]` | UI | Provinces highlighted during targeting or diagnostic inspection. |
-| `sandboxMode` | `boolean` | Mode | True when user is in Hypothetical Mode (Eye icon, guessing opponent moves). |
-| `sandboxGameId` | `string \| null` | Mode | Id of the private server-side copy used by a multiplayer sandbox, or `null`. Drafts, AI plans and previews go to `draftGameId`, which is this id when set and `activeGameId` otherwise. |
+| `sandboxMode` | `boolean` | Mode | True when user is in Hypothetical Mode (Eye icon, guessing opponent moves), from `useSandboxSession`. |
+| `sandboxGameId` | `string \| null` | Mode | Id of the private server-side copy used by a multiplayer sandbox, or `null`, from `useSandboxSession`. Drafts, AI plans and previews go to `draftGameId`, which is this id when set and `activeGameId` otherwise. |
 | `simulationResult` | `SimulationResult \| null`| UI | Cached non-destructive simulation preview from the server. |
-| `showSimulationOverlay`| `boolean` | UI | Whether combat resolutions (arrows, bounces, cuts) are projected on the map. |
+| `showSimulationOverlay`| `boolean` | UI | Whether combat resolutions (arrows, bounces, cuts) are projected on the map, from `useSandboxSession`. |
 | `adminModalOpen` | `boolean` | Modal | Controls visibility of the game creator's Admin Tools modal. |
 | `adminOverrideActive`| `boolean` | Admin | The host's Direct-Edit toggle. It only takes effect through the derived `directEditActive`, which also requires `isGameCreator`, so it does nothing in a game the player does not host. |
 | `leftSidebarCollapsed`| `boolean` | UI | Whether the Left Tools Sidebar is collapsed into a 44px rail, from `useWorkspaceLayout`. Desktop only: phones have no rails. |
@@ -44,11 +47,11 @@ The desktop header is `components/TopHeader.tsx`, which keeps no state: App pass
 | `zoomPercent` | `number` | UI | Map zoom percentage (default: `105`, more on a phone). `EuropeMap` reports it at most once per frame and after a pinch ends, so zooming doesn't re-render App on every event. |
 | `isCompact` | `boolean` | Layout | True on phone-sized screens, from `useCompactLayout()`. It follows rotation and resizes. App writes it on the shell as `data-layout`, which `compact.css` styles, and uses it to swap in `CompactTopBar` for `TopHeader`. `LobbyView` reads the same hook to say whether the Host form is "below" or "on the right". |
 | `surrenderModalOpen` | `boolean` | Modal | Controls visibility of the Surrender / Civil Disorder confirmation modal. |
-| `sanityModalOpen` | `boolean` | Modal | Controls visibility of pre-finalization warning modal. |
-| `sanityModalIssues` | `ValidationIssue[]` | Modal | Issues displayed inside the Sanity Check modal. |
-| `saveSandboxModalOpen` | `boolean` | Modal | Controls visibility of modal to name and save/promote a draft sandbox. |
-| `savingSandbox` | `boolean` | UI | True while saving or promoting a sandbox session via the API. |
-| `hypotheticalMatchTimer` | `PhaseTimer \| null` | Multiplayer | The real match's clock while `sandboxGameId` is set, because the private copy has none. Components read the derived `matchTimer`. |
+| `sanityModalOpen` | `boolean` | Modal | Controls visibility of pre-finalization warning modal, from `useMatchActions`. |
+| `sanityModalIssues` | `ValidationIssue[]` | Modal | Issues displayed inside the Sanity Check modal, from `useMatchActions`. |
+| `saveSandboxModalOpen` | `boolean` | Modal | Controls visibility of modal to name and save/promote a draft sandbox, from `useSandboxSession`. |
+| `savingSandbox` | `boolean` | UI | True while saving or promoting a sandbox session via the API, from `useSandboxSession`. |
+| `hypotheticalMatchTimer` | `PhaseTimer \| null` | Multiplayer | The real match's clock while `sandboxGameId` is set, because the private copy has none, from `useSandboxSession`. Components read the derived `matchTimer`. |
 | `turnHistory` | `TurnHistory` | History | From `useTurnHistory`: the resolved phases (`entries`), the one on show (`viewIndex`, `null` = live), its `TurnRecord` (`turn`) and the nation chip (`power`). The list is refetched whenever the live turn changes, which covers WebSocket updates and rollbacks. If the phase on show has moved it is found again by season, year and phase, and if it is gone the view goes back to live. Records are cached until the list is refetched. It always reads `activeGameId`, never `sandboxGameId`, and sends the passcode the player typed for a private match as `X-Passcode`. While `turn` is set, the map shows that turn read-only and the orders panel is dimmed (`viewingHistory`). |
 | `toastBanner` | `string \| null` | Banner | Auto-expiring toast message for user notifications, from `useToast`. A new message replaces the one showing, and each clears itself after 4.5 seconds unless a different message has replaced it. |
 | `wsConnected` | `boolean` | Network | Active real-time WebSocket connection to room feed or lobby, from `useGameSync`. |
@@ -129,7 +132,7 @@ When a user enables **Hypothetical Mode** (`Eye` icon in tools sidebar):
    - The UI displays an indicator banner: `"HYPOTHETICAL PLANNING & OUTCOME PREVIEW"`.
 2. **Multi-Power Operations**:
    - The player can assign orders to foreign units to test opponent combinations and battle predictions.
-   - Clicking **"Simulate Turn"** displays how all hypothetical forces interact.
+   - The outcome overlay is on while in Hypothetical Mode, so the map shows how all hypothetical forces interact.
 3. **Exiting Hypothetical Mode**:
    - Dispatches `POST /api/sandbox/exit?game_id={draftGameId}`.
    - The backend restores the pre-sandbox checkpoint, or discards the private copy and returns the real match.
@@ -143,7 +146,7 @@ While `sandboxGameId` is set, the board shows the private copy and is kept apart
 
 - WebSocket updates (and fallback polling when disconnected) for the match update `activeGameSummary` and `hypotheticalMatchTimer`. The clock continues to run via WebSocket heartbeats or fallback polling. A deadline can pass here, and orders in the copy reach the match only on exit, so the timer widget warns the player. Exiting brings the board back up to date.
 - Finalize, Unlock, Resolve, Surrender and the Admin Console are refused with a toast (`requireRealBoard`), because they act on the real match and the player would be looking at a hypothetical board.
-- Leaving the match view by any route closes the sandbox through the effect that watches `viewMode`.
+- Leaving the match view by any route closes the sandbox through the effect in `useSandboxExit`, which watches `viewMode`.
 
 ### Solo Sandbox Isolation, Session Persistence & In-Place Promotion
 
@@ -191,7 +194,7 @@ To guarantee seamless multiplayer coordination, the frontend maintains a persist
    - When the turn clock reaches zero, `PhaseTimerWidget` calls `onExpire`, and the app sends `{ type: 'refresh' }`. Only `refresh` makes the server run the clock; `ping` just keeps the connection open. Without a socket, the fallback poll runs the clock within 4 seconds. The countdown keeps `onExpire` in a ref, so a new callback never restarts it from an old server value.
 5. **Requests and stale replies**:
    - Every call that acts on a game sends the player's token, through `authedFetch` (`lib/supabase.ts`) or `getAuthHeaders`. The server finds the player's seat and their saved sandboxes from it, so a call sent without it is treated as a stranger's.
-   - `handleAdjudicateTurn` ignores a click while a resolve is in flight and sends the turn it means (`?turn=`), so a double-click resolves one phase.
+   - `handleAdjudicateTurn` (in `useMatchActions`) ignores a click while a resolve is in flight and sends the turn it means (`?turn=`), so a double-click resolves one phase.
    - `fetchGame` (in `useGameSession`) and joining a match bump `boardRequestSeq`. A `GET /api/game` reply that comes back after a newer request is dropped, so the startup load of `proto_1901` cannot replace a match the player has just joined.
 6. **Visual Telemetry**:
    - The header displays a real-time badge (`.header-ws-badge`):
