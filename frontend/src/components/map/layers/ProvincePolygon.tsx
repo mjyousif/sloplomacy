@@ -7,6 +7,7 @@ export interface ProvincePolygonProps {
   isSea: boolean;
   owner: Power | null;
   isReachable: boolean;
+  reachableColor?: 'green' | 'blue';
   allowedCoastsStr: string;
   showFleetCoasts: boolean;
   showMoveReticle: boolean;
@@ -24,6 +25,7 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
     isSea,
     owner,
     isReachable,
+    reachableColor = 'green',
     allowedCoastsStr,
     showFleetCoasts,
     showMoveReticle,
@@ -36,6 +38,8 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
   }) => {
     let fill = 'transparent';
     let fillOpacity = 0;
+
+    const isBlueReachable = isReachable && reachableColor === 'blue';
 
     if (isSea) {
       if (isHighlighted) {
@@ -68,6 +72,12 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
       if (isHighlighted) {
         fill = '#facc15';
         fillOpacity = 0.58;
+      } else if (isBlueReachable && isHovered) {
+        fill = '#0ea5e9';
+        fillOpacity = 0.54;
+      } else if (isBlueReachable) {
+        fill = '#38bdf8';
+        fillOpacity = 0.34;
       } else if (isReachable && isHovered) {
         fill = '#22c55e';
         fillOpacity = 0.55;
@@ -78,6 +88,15 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
     }
 
     const allowedCoasts = allowedCoastsStr ? allowedCoastsStr.split(',') : [];
+    const strokeColor = isHighlighted
+      ? '#eab308'
+      : isBlueReachable
+        ? '#0284c7'
+        : isReachable
+          ? '#15803d'
+          : hasWarning
+            ? '#d97706'
+            : 'none';
 
     return (
       <g>
@@ -85,19 +104,13 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
           d={geom.path}
           fill={fill}
           fillOpacity={fillOpacity}
-          stroke={
-            isHighlighted
-              ? '#eab308'
-              : isReachable
-                ? '#15803d'
-                : hasWarning
-                  ? '#d97706'
-                  : 'none'
-          }
+          stroke={strokeColor}
           strokeWidth={isHighlighted || isReachable || hasWarning ? 3.5 : 0}
+          strokeDasharray={isBlueReachable ? '6 3' : undefined}
           className="province-interactive-path"
           data-testid="province-path"
           data-province-id={geom.id}
+          data-reachable-color={isReachable ? reachableColor : undefined}
           onClick={() => onClickProvince(geom.id)}
           onPointerEnter={(e) => {
             if (e.pointerType !== 'touch') onHoverProvince(geom.id);

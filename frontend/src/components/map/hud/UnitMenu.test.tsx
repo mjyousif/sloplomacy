@@ -139,12 +139,17 @@ describe('UnitMenu in a movement phase', () => {
       true,
       'Step 2/2: Tap destination for BUR (or tap BUR to Hold)',
     ],
-    ['CONVOY_PICK_ARMY', null, false, 'Step 1/2: Click coastal Army to Convoy'],
+    [
+      'CONVOY_PICK_ARMY',
+      null,
+      false,
+      'Step 1/2: Click coastal Army to Convoy (green = adjacent shore, blue = via fleet chain)',
+    ],
     [
       'CONVOY_PICK_TARGET',
       'BRE',
       true,
-      'Step 2/2: Tap destination coast for Army BRE',
+      'Step 2/2: Tap destination coast (green = direct / ready, blue = multi-ship chain)',
     ],
   ] as const)('in %s mode says what to do next', (mode, aux, compact, hint) => {
     setup({ mode, pendingAuxOrigin: aux, compact });

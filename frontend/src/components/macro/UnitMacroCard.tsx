@@ -11,15 +11,16 @@ import {
   Trash2,
 } from 'lucide-react';
 import type React from 'react';
-import {
-  type Order,
-  type OrderResolution,
-  type OrderType,
-  POWER_METADATA,
-  type ProvinceInfo,
-  type Unit,
-  type ValidationIssue,
+import type {
+  Order,
+  OrderResolution,
+  OrderType,
+  ProvinceInfo,
+  Unit,
+  UnitMoveOptions,
+  ValidationIssue,
 } from '../../types/diplomacy';
+import { OrderParameterControls } from './OrderParameterControls';
 
 export interface UnitMacroCardProps {
   unit: Unit;
@@ -36,6 +37,7 @@ export interface UnitMacroCardProps {
   orders: Record<string, Order>;
   reachable: { province: string; coasts: string[] }[];
   validRetreats: { province: string; coasts: string[] }[];
+  unitOptions?: UnitMoveOptions | null;
   summary: { verb: string; targetText: string; badgeColor: string };
   unitIssues: ValidationIssue[];
   simRes: OrderResolution | null | undefined;
@@ -64,6 +66,7 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
   orders,
   reachable,
   validRetreats,
+  unitOptions = null,
   summary,
   unitIssues,
   simRes,
@@ -235,49 +238,19 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
                 </button>
               </div>
 
-              {order?.order_type === 'RETREAT' && validRetreats.length > 0 && (
-                <div className="order-param-row">
-                  <label>Retreat To:</label>
-                  <select
-                    data-testid="select-retreat-target"
-                    value={
-                      order.target
-                        ? `${order.target}${order.target_coast ? `/${order.target_coast}` : ''}`
-                        : ''
-                    }
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (!val) return;
-                      const [base, cst] = val.split('/');
-                      onUpdateOrder({
-                        ...order,
-                        target: base,
-                        target_coast: cst || null,
-                        is_explicit: true,
-                      });
-                    }}
-                  >
-                    {validRetreats.flatMap((r) => {
-                      if (r.coasts.length > 0 && unit.unit_type === 'F') {
-                        return r.coasts.map((c) => (
-                          <option
-                            key={`${r.province}/${c}`}
-                            value={`${r.province}/${c}`}
-                          >
-                            {provinces[r.province]?.name} ({c} Coast) [
-                            {r.province}/{c}]
-                          </option>
-                        ));
-                      }
-                      return (
-                        <option key={r.province} value={r.province}>
-                          {provinces[r.province]?.name} ({r.province})
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              )}
+              <OrderParameterControls
+                unit={unit}
+                order={order}
+                provinces={provinces}
+                units={units}
+                unitsByProv={unitsByProv}
+                orders={orders}
+                reachable={reachable}
+                validRetreats={validRetreats}
+                unitOptions={unitOptions}
+                isRetreatPhase={true}
+                onUpdateOrder={onUpdateOrder}
+              />
             </>
           ) : null
         ) : isAdjustmentPhase ? (
@@ -342,201 +315,19 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
               )}
             </div>
 
-            {order?.order_type === 'MOVE' && (
-              <div className="order-param-row">
-                <label>Destination:</label>
-                <select
-                  data-testid="select-order-target"
-                  value={
-                    order.target
-                      ? `${order.target}${order.target_coast ? `/${order.target_coast}` : ''}`
-                      : ''
-                  }
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (!val) return;
-                    const [base, cst] = val.split('/');
-                    const isAdjacent = reachable.some(
-                      (r) => r.province === base,
-                    );
-                    onUpdateOrder({
-                      ...order,
-                      target: base,
-                      target_coast: cst || null,
-                      via_convoy: unit.unit_type === 'A' && !isAdjacent,
-                      is_explicit: true,
-                    });
-                  }}
-                >
-                  <optgroup label="Reachable Provinces">
-                    {reachable.flatMap((r) => {
-                      if (r.coasts.length > 0 && unit.unit_type === 'F') {
-                        return r.coasts.map((c) => (
-                          <option
-                            key={`${r.province}/${c}`}
-                            value={`${r.province}/${c}`}
-                          >
-                            {provinces[r.province]?.name} ({c} Coast) [
-                            {r.province}/{c}]
-                          </option>
-                        ));
-                      }
-                      return (
-                        <option key={r.province} value={r.province}>
-                          {provinces[r.province]?.name} ({r.province})
-                        </option>
-                      );
-                    })}
-                  </optgroup>
-                  {unit.unit_type === 'A' &&
-                    provinces[unit.province]?.type === 'COAST' && (
-                      <optgroup label="Coastal (via Convoy)">
-                        {Object.values(provinces)
-                          .filter(
-                            (p) =>
-                              p.type === 'COAST' &&
-                              p.id !== unit.province &&
-                              !reachable.some((r) => r.province === p.id),
-                          )
-                          .map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name} ({p.id}) — via Convoy
-                            </option>
-                          ))}
-                      </optgroup>
-                    )}
-                </select>
-              </div>
-            )}
-
-            {order?.order_type === 'SUPPORT' && (
-              <div className="order-param-grid">
-                <div className="order-param-row">
-                  <label>Unit:</label>
-                  <select
-                    data-testid="select-support-unit"
-                    value={order.aux_unit_origin || ''}
-                    onChange={(e) => {
-                      const newAux = e.target.value;
-                      const supUnit = unitsByProv[newAux];
-                      const supOrd = supUnit ? orders[supUnit.id] : undefined;
-                      const autoTarget =
-                        supOrd?.order_type === 'MOVE' && supOrd.target
-                          ? supOrd.target
-                          : newAux;
-                      onUpdateOrder({
-                        ...order,
-                        aux_unit_origin: newAux,
-                        target: autoTarget,
-                        is_explicit: true,
-                      });
-                    }}
-                  >
-                    {units
-                      .filter((u2) => u2.id !== unit.id && !u2.is_dislodged)
-                      .map((u2) => (
-                        <option key={u2.id} value={u2.province}>
-                          [{POWER_METADATA[u2.power].shortName}] {u2.unit_type}{' '}
-                          {provinces[u2.province]?.name} ({u2.province})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                <div className="order-param-row">
-                  <label>Into:</label>
-                  <select
-                    data-testid="select-support-target"
-                    value={order.target || ''}
-                    onChange={(e) => {
-                      onUpdateOrder({
-                        ...order,
-                        target: e.target.value,
-                        is_explicit: true,
-                      });
-                    }}
-                  >
-                    {order.aux_unit_origin && (
-                      <option value={order.aux_unit_origin}>
-                        HOLD in {provinces[order.aux_unit_origin]?.name} (
-                        {order.aux_unit_origin})
-                      </option>
-                    )}
-                    <optgroup label="Support Move Into:">
-                      {reachable
-                        .filter((r) => r.province !== order.aux_unit_origin)
-                        .map((r) => (
-                          <option key={r.province} value={r.province}>
-                            → {provinces[r.province]?.name} ({r.province})
-                          </option>
-                        ))}
-                    </optgroup>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {order?.order_type === 'CONVOY' && (
-              <div className="order-param-grid">
-                <div className="order-param-row">
-                  <label>Army:</label>
-                  <select
-                    value={order.aux_unit_origin || ''}
-                    onChange={(e) => {
-                      const nextOrigin = e.target.value;
-                      const nextTarget =
-                        order.target && order.target !== nextOrigin
-                          ? order.target
-                          : Object.values(provinces).find(
-                              (p) => p.type === 'COAST' && p.id !== nextOrigin,
-                            )?.id || null;
-                      onUpdateOrder({
-                        ...order,
-                        aux_unit_origin: nextOrigin,
-                        target: nextTarget,
-                        is_explicit: true,
-                      });
-                    }}
-                  >
-                    {units
-                      .filter(
-                        (u2) =>
-                          u2.unit_type === 'A' &&
-                          !u2.is_dislodged &&
-                          provinces[u2.province]?.type === 'COAST',
-                      )
-                      .map((u2) => (
-                        <option key={u2.id} value={u2.province}>
-                          A {provinces[u2.province]?.name} ({u2.province})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                <div className="order-param-row">
-                  <label>To Coast:</label>
-                  <select
-                    value={order.target || ''}
-                    onChange={(e) =>
-                      onUpdateOrder({
-                        ...order,
-                        target: e.target.value,
-                        is_explicit: true,
-                      })
-                    }
-                  >
-                    {Object.values(provinces)
-                      .filter(
-                        (p) =>
-                          p.type === 'COAST' && p.id !== order.aux_unit_origin,
-                      )
-                      .map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} ({p.id})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-            )}
+            <OrderParameterControls
+              unit={unit}
+              order={order}
+              provinces={provinces}
+              units={units}
+              unitsByProv={unitsByProv}
+              orders={orders}
+              reachable={reachable}
+              validRetreats={validRetreats}
+              unitOptions={unitOptions}
+              isRetreatPhase={false}
+              onUpdateOrder={onUpdateOrder}
+            />
           </>
         )}
       </div>

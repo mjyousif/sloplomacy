@@ -3,6 +3,7 @@
 from domain.board import ProvinceType, Unit, UnitType
 from domain.issues import IssueCode, IssueSeverity
 from domain.orders import Order, OrderType
+from engine.reachability.sea_graph import has_sea_path_through, stationed_sea_fleets
 from engine.topology.graph import (
     can_army_be_convoyed_theoretically,
     can_unit_move_directly,
@@ -23,6 +24,8 @@ def check_unit_orders(
 ) -> None:
     add_issue = collector.add
     p_name = province_name
+    sea_fleet_map = stationed_sea_fleets(units)
+    sea_fleets = set(sea_fleet_map)
 
     for unit in units:
         if unit.is_dislodged:
@@ -336,6 +339,19 @@ def check_unit_orders(
                     [unit.province, order.aux_unit_origin, order.target],
                     unit.power,
                 )
+            elif not has_sea_path_through(
+                order.aux_unit_origin, order.target, unit.province, sea_fleets
+            ):
+                add_issue(
+                    IssueSeverity.WARNING,
+                    IssueCode.BROKEN_CONVOY,
+                    f"Disconnected Convoy Chain for {p_name(unit.province)}",
+                    f"Fleet in {p_name(unit.province)} is ordered to convoy A {p_name(order.aux_unit_origin)} → {p_name(order.target)}, "
+                    f"but stationed sea fleets do not form a continuous route through {p_name(unit.province)}.",
+                    [unit.id, convoyed_unit.id],
+                    [unit.province, order.aux_unit_origin, order.target],
+                    unit.power,
+                )
             elif convoyed_unit.power != unit.power:
                 add_issue(
                     IssueSeverity.INFO,
@@ -364,3 +380,33 @@ def check_unit_orders(
                         [unit.province, convoyed_unit.province, order.target],
                         unit.power,
                     )
+                elif not has_active_convoy_chain(
+                    order.aux_unit_origin, order.target, units, orders, power=unit.power
+                ):
+                    friendly_seas = {
+                        prov for prov, flt in sea_fleet_map.items() if flt.power == unit.power
+                    }
+                    if has_sea_path_through(
+                        order.aux_unit_origin, order.target, unit.province, friendly_seas
+                    ):
+                        add_issue(
+                            IssueSeverity.WARNING,
+                            IssueCode.BROKEN_CONVOY,
+                            f"Incomplete Convoy Chain to {p_name(order.target)}",
+                            f"Fleet in {p_name(unit.province)} is ordered to convoy A {p_name(convoyed_unit.province)} → {p_name(order.target)}, "
+                            f"but another Fleet along the sea chain is not yet ordered to convoy.",
+                            [unit.id, convoyed_unit.id],
+                            [unit.province, convoyed_unit.province, order.target],
+                            unit.power,
+                        )
+                    else:
+                        add_issue(
+                            IssueSeverity.INFO,
+                            IssueCode.BROKEN_CONVOY,
+                            f"Foreign Convoy Link Required to {p_name(order.target)}",
+                            f"Fleet in {p_name(unit.province)} is relaying A {p_name(convoyed_unit.province)} → {p_name(order.target)} "
+                            f"across a sea route that depends on a foreign Fleet also ordering CONVOY.",
+                            [unit.id, convoyed_unit.id],
+                            [unit.province, convoyed_unit.province, order.target],
+                            unit.power,
+                        )

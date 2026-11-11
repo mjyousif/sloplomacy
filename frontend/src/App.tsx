@@ -810,6 +810,9 @@ export function App() {
             retreats={
               historyTurn ? (historyTurn.retreats ?? null) : gameState.retreats
             }
+            unitOptions={
+              viewingHistory ? null : (gameState.unit_options ?? null)
+            }
             onClearSimulationOverlay={() => setShowSimulationOverlay(false)}
             onAdjudicateTurn={handleAdjudicateTurn}
             overlay={
@@ -877,6 +880,7 @@ export function App() {
             season={gameState.season}
             builds={gameState.builds}
             retreats={gameState.retreats}
+            unitOptions={gameState.unit_options}
             isMultiplayer={viewMode === 'multiplayer'}
             isGameCreator={isGameCreator}
             gameOver={Boolean(gameState.winner)}

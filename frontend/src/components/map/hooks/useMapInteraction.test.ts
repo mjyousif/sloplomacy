@@ -8,6 +8,7 @@ import type {
   Power,
   ProvinceInfo,
   Unit,
+  UnitMoveOptions,
 } from '../../../types/diplomacy';
 import {
   convoyOrder,
@@ -48,6 +49,7 @@ interface Board {
   phase?: 'Movement' | 'Retreats' | 'Adjustments';
   retreats?: Record<Power, Record<string, string[]>> | null;
   builds?: Record<Power, { count: number; homes: string[] }> | null;
+  unitOptions?: Record<string, UnitMoveOptions> | null;
   buildHomes?: Record<string, Power>;
   sandboxMode?: boolean;
   historyView?: boolean;
@@ -86,6 +88,7 @@ function setup(board: Board) {
       unitsById,
       provinces: PROVINCES,
       retreats: board.retreats ?? null,
+      unitOptions: board.unitOptions ?? null,
       activePower: board.activePower ?? 'FRANCE',
       sandboxMode: board.sandboxMode ?? false,
       directEditActive: false,
@@ -346,6 +349,57 @@ describe('useMapInteraction in a movement phase', () => {
     expect(onUpdateOrder).toHaveBeenCalledExactlyOnceWith(
       convoyOrder(F_MAO, 'BRE', 'SPA'),
     );
+  });
+
+  it('uses via_convoy on an adjacent coast when active_convoys includes it, and enforces unitOptions on convoy & support', () => {
+    const unitOptions: Record<string, UnitMoveOptions> = {
+      [A_BRE.id]: {
+        direct_moves: ['GAS', 'PAR', 'PIC'],
+        active_convoys: ['GAS'],
+        potential_convoys: ['SPA'],
+        convoy_targets: {},
+        valid_supports: [
+          {
+            unit_id: A_PAR.id,
+            province: 'PAR',
+            hold: true,
+            moves: ['GAS', 'PIC'],
+          },
+        ],
+      },
+      [F_MAO.id]: {
+        direct_moves: ['BRE', 'GAS', 'SPA/NC', 'SPA/SC'],
+        active_convoys: [],
+        potential_convoys: [],
+        convoyable_armies: { direct: ['BRE'], chained: [] },
+        convoy_targets: { BRE: { direct: ['SPA'], chained: [] } },
+        valid_supports: [],
+      },
+    };
+    const { r, clickUnit, clickProvince, onUpdateOrder } = setup({
+      units: [A_BRE, A_PAR, F_MAO, A_MAR_ITA],
+      unitOptions,
+    });
+
+    // Adjacent GAS is in active_convoys -> sets via_convoy: true!
+    clickUnit(A_BRE);
+    clickProvince('GAS');
+    expect(onUpdateOrder).toHaveBeenCalledExactlyOnceWith(
+      moveOrder(A_BRE, 'GAS', null, true),
+    );
+
+    // Dead-end MAR is NOT in F_MAO's convoy_targets['BRE'] -> refused!
+    clickUnit(F_MAO);
+    act(() => r().interaction.chooseConvoy());
+    clickUnit(A_BRE);
+    clickProvince('MAR');
+    expect(onUpdateOrder).toHaveBeenCalledTimes(1);
+
+    // Out-of-range A_MAR_ITA is NOT in A_BRE's valid_supports -> refused!
+    clickUnit(A_BRE);
+    act(() => r().interaction.chooseSupport());
+    clickUnit(A_MAR_ITA);
+    expect(r().selectedUnitId).toBeNull();
   });
 
   it('asks a fleet which coast of a split-coast province, unless the click named one', () => {

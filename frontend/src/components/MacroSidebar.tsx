@@ -23,6 +23,7 @@ import {
   type ProvinceInfo,
   type SimulationResult,
   type Unit,
+  type UnitMoveOptions,
   type ValidationIssue,
 } from '../types/diplomacy';
 import { buildDefaultOrderForType } from '../utils/orderBuilders';
@@ -56,6 +57,7 @@ export interface MacroSidebarProps {
   season?: string;
   builds?: Record<Power, { count: number; homes: string[] }> | null;
   retreats?: Record<Power, Record<string, string[]>> | null;
+  unitOptions?: Record<string, UnitMoveOptions> | null;
   isMultiplayer?: boolean;
   isGameCreator?: boolean;
   gameOver?: boolean;
@@ -117,6 +119,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   season = 'Spring',
   builds = null,
   retreats = null,
+  unitOptions = null,
   isMultiplayer = false,
   isGameCreator = false,
   gameOver = false,
@@ -341,6 +344,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       units,
       orders,
       retreats,
+      unitOptions: unitOptions ? (unitOptions[unit.id] ?? null) : null,
     });
     if (nextOrder) onUpdateOrder(nextOrder);
   };
@@ -521,10 +525,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         const hasWarn = unitIssues.some((i) => i.severity === 'warning');
         const isSelected = unit.id === selectedUnitId;
         const isHovered = unit.id === hoveredUnitId;
+        const uOpts = unitOptions ? (unitOptions[unit.id] ?? null) : null;
         const summary = formatOrderSummary(order, provinces, unitsByProv);
-        const reachable = getReachableDestinations(unit, provinces);
+        const reachable = getReachableDestinations(unit, provinces, uOpts);
         const validRetreats = unit.is_dislodged
-          ? getValidRetreatDestinations(unit, retreats, provinces)
+          ? getValidRetreatDestinations(unit, retreats, provinces, uOpts)
           : [];
         const simRes = simActive
           ? simulationResult?.resolutions[unit.id]
@@ -543,6 +548,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
             orders={orders}
             reachable={reachable}
             validRetreats={validRetreats}
+            unitOptions={uOpts}
             summary={summary}
             unitIssues={unitIssues}
             simRes={simRes}

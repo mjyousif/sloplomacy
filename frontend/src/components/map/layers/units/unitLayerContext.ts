@@ -9,6 +9,7 @@ import type {
 } from '../../../../types/diplomacy';
 import type { PieceStyle, UnitMark } from '../../../../utils/displayPrefs';
 import type { PieceFrame } from '../../../MapPiece';
+import type { MapInteractionMode } from '../../hooks/useMapInteraction';
 import type { PieceGeometry } from '../../hooks/usePieceGeometry';
 
 /** Everything a unit token reads from the map, handed down in one object. */
@@ -22,6 +23,7 @@ export interface UnitLayerContext {
   canEditAnyPower: boolean;
   activePower: Power;
   selectedUnit: Unit | null;
+  interactionMode?: MapInteractionMode;
   hoveredUnitId: string | null;
   isUnitOrderVisible: (u: Unit) => boolean;
   issuesByUnit: Record<string, ValidationIssue[]>;

@@ -235,9 +235,9 @@ export function UnitMenu({
             {interactionMode === 'SUPPORT_PICK_TARGET' &&
               `Step 2/2: ${tap} destination for ${pendingAuxOrigin} (or ${tapLower} ${pendingAuxOrigin} to Hold)`}
             {interactionMode === 'CONVOY_PICK_ARMY' &&
-              `Step 1/2: ${tap} coastal Army to Convoy`}
+              `Step 1/2: ${tap} coastal Army to Convoy (green = adjacent shore, blue = via fleet chain)`}
             {interactionMode === 'CONVOY_PICK_TARGET' &&
-              `Step 2/2: ${tap} destination coast for Army ${pendingAuxOrigin}`}
+              `Step 2/2: ${tap} destination coast (green = direct / ready, blue = multi-ship chain)`}
           </div>
         </>
       )}

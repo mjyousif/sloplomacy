@@ -58,12 +58,11 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   ├── 2. Background Map Layer (StaticLayers.tsx: StaticBackgroundLayer, StaticForegroundLayer):
   │      - Landmass contours, ocean bathymetry, topography
   │
-  ├── 3. Dynamic Province Fill Layer (layers/ProvincesLayer.tsx, one ProvincePolygon each):
+  ├── 3. Dynamic Province Fill Layer (layers/ProvincesLayer.tsx, targetHighlight.ts, ProvincePolygon.tsx):
   │      - Semi-transparent fills colored by owning Great Power
-  │      - Hover highlighting for candidate destinations
-  │      - Pulsing red highlights for provinces with tactical errors
-  │      - Amber glow on valid retreat destinations during Retreats phase
-  │      - Gold pulsing border on vacant home SCs during Winter Adjustments
+  │      - Solid green fill + target reticle for direct moves, active convoy chains, and legal support targets
+  │      - Dashed ocean-blue fill/stroke for potential convoy destinations and multi-ship convoy chains
+  │      - Amber/gold highlights for sidebar hover, validation warnings, and vacant Winter home SCs
   │
   ├── 4. Province Names Layer (MapNamesLayer.tsx: MapNamesLayer):
   │      - Classic: the original typesetting from StaticNamesLayer (AUTHENTIC_NAMES_SVG)

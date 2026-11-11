@@ -15,6 +15,9 @@ logger = logging.getLogger("diplomacy.database")
 
 ROOM_CODE_REGEX = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 
+# Rebuilt from the board whenever a game loads, so saving them would only bloat every row.
+DERIVED_STATE_FIELDS = {"unit_options"}
+
 
 def is_valid_room_code(code: str | None) -> bool:
     """Verify that a game_id / room_code conforms to safe alphanumeric syntax."""
@@ -359,14 +362,16 @@ async def save_game_to_db(
         "season": state.season,
         "year": state.year,
         "game_state": {
-            "state": state.model_dump(mode="json"),
+            "state": state.model_dump(mode="json", exclude=DERIVED_STATE_FIELDS),
             "summary": summary.model_dump(mode="json") if summary else None,
             "passcode": passcode,
         },
         "updated_at": now_iso,
     }
     if history is not None:
-        payload["history"] = [h.model_dump(mode="json") for h in history]
+        payload["history"] = [
+            h.model_dump(mode="json", exclude=DERIVED_STATE_FIELDS) for h in history
+        ]
 
     if summary and is_valid_uuid(summary.creator_id):
         payload["host_user_id"] = summary.creator_id

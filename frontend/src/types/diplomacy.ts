@@ -124,6 +124,27 @@ export interface PhaseTimer {
   extensions_needed: number;
 }
 
+export interface ConvoyReach {
+  direct: string[];
+  chained: string[];
+}
+
+export interface SupportOption {
+  unit_id: string;
+  province: string;
+  hold: boolean;
+  moves: string[];
+}
+
+export interface UnitMoveOptions {
+  direct_moves: string[];
+  active_convoys: string[];
+  potential_convoys: string[];
+  convoyable_armies?: ConvoyReach | null;
+  convoy_targets: Record<string, ConvoyReach>;
+  valid_supports: SupportOption[];
+}
+
 export interface GameState {
   game_id: string;
   season: string;
@@ -143,6 +164,7 @@ export interface GameState {
   retreats?: Record<Power, Record<string, string[]>> | null;
   winner?: Power | null;
   timer?: PhaseTimer | null;
+  unit_options?: Record<string, UnitMoveOptions>;
 }
 
 /** One resolved phase in a game's history, as the turn selector lists it (oldest first). */

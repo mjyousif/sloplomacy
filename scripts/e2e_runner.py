@@ -165,16 +165,38 @@ def print_scenario_artifacts(scenario_name: str):
             print(f"  -> {png.as_uri()}")
 
 
-def run_scenario(scenario_arg: str, headed: bool = False, base_url: str = "http://localhost:5173") -> int:
+def run_scenario(
+    scenario_arg: str,
+    headed: bool = False,
+    base_url: str = "http://localhost:5173",
+    api_url: str = "http://localhost:8000",
+) -> int:
+    from urllib.parse import urlparse
+
     backend_proc = None
     frontend_proc = None
+    parsed_api = urlparse(api_url)
+    api_host = parsed_api.hostname or "127.0.0.1"
+    api_port = str(parsed_api.port or 8000)
+    parsed_base = urlparse(base_url)
+    fe_host = parsed_base.hostname or "127.0.0.1"
+    fe_port = str(parsed_base.port or 5173)
 
     try:
         # Check backend
-        backend_url = "http://localhost:8000/api/game"
+        backend_url = f"{api_url.rstrip('/')}/api/game"
         if not is_service_ready(backend_url):
-            print_colored("--> Starting FastAPI backend on :8000...", Colors.CYAN)
-            backend_cmd = [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"]
+            print_colored(f"--> Starting FastAPI backend on {api_host}:{api_port}...", Colors.CYAN)
+            backend_cmd = [
+                sys.executable,
+                "-m",
+                "uvicorn",
+                "main:app",
+                "--host",
+                api_host,
+                "--port",
+                api_port,
+            ]
             backend_env = os.environ.copy()
             if not backend_env.get("ENVIRONMENT"):
                 backend_env["ENVIRONMENT"] = "development"
@@ -186,7 +208,7 @@ def run_scenario(scenario_arg: str, headed: bool = False, base_url: str = "http:
                 stderr=subprocess.DEVNULL,
             )
             if not wait_for_service(backend_url, "FastAPI Backend"):
-                print_colored("[FAIL] FastAPI backend failed to start on :8000", Colors.RED)
+                print_colored(f"[FAIL] FastAPI backend failed to start on :{api_port}", Colors.RED)
                 return 1
             print_colored("--> FastAPI backend is active.", Colors.GREEN)
 
@@ -194,9 +216,13 @@ def run_scenario(scenario_arg: str, headed: bool = False, base_url: str = "http:
         frontend_url = base_url
         if not is_service_ready(frontend_url):
             print_colored(f"--> Starting Vite frontend on {base_url}...", Colors.CYAN)
+            fe_env = os.environ.copy()
+            fe_env["VITE_PORT"] = fe_port
+            fe_env["VITE_API_TARGET"] = api_url
             frontend_proc = subprocess.Popen(
-                [NPM_CMD, "run", "dev"],
+                [NPM_CMD, "run", "dev", "--", "--host", fe_host, "--port", fe_port, "--strictPort"],
                 cwd=str(FRONTEND_DIR),
+                env=fe_env,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
@@ -229,6 +255,7 @@ def run_scenario(scenario_arg: str, headed: bool = False, base_url: str = "http:
 
         env = os.environ.copy()
         env["E2E_BASE_URL"] = base_url
+        env["E2E_API_URL"] = api_url
 
         ret = subprocess.run(cmd, cwd=str(FRONTEND_DIR), env=env)
 
@@ -273,6 +300,7 @@ def main():
     run_parser.add_argument("--headed", action="store_true", help="Launch real visible browser")
     run_parser.add_argument("--all", action="store_true", help="Run all available scenarios")
     run_parser.add_argument("--base-url", default="http://localhost:5173", help="Base URL of the frontend")
+    run_parser.add_argument("--api-url", default="http://localhost:8000", help="Base URL of the FastAPI backend")
 
     args = parser.parse_args()
 
@@ -282,7 +310,7 @@ def main():
 
     if args.command == "run":
         target = "all" if args.all else args.scenario
-        return run_scenario(target, headed=args.headed, base_url=args.base_url)
+        return run_scenario(target, headed=args.headed, base_url=args.base_url, api_url=args.api_url)
 
     return 0
 

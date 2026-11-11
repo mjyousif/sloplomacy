@@ -4,6 +4,7 @@ import type {
   Power,
   ProvinceInfo,
   Unit,
+  UnitMoveOptions,
 } from '../../../types/diplomacy';
 import {
   getReachableDestinations,
@@ -16,6 +17,7 @@ export interface UseMapSelectionOptions {
   unitsById: Record<string, Unit>;
   provinces: Record<string, ProvinceInfo>;
   retreats: Record<Power, Record<string, string[]>> | null;
+  unitOptions?: Record<string, UnitMoveOptions> | null;
   activePower: Power;
   sandboxMode: boolean;
   directEditActive: boolean;
@@ -31,6 +33,8 @@ export interface MapSelection {
   selectedBuildProv: string | null;
   /** The selected unit, if the player may command it now. */
   selectedUnit: Unit | null;
+  /** Server-computed options for the selected unit, if present. */
+  selectedUnitOptions: UnitMoveOptions | null;
   /** True in the sandbox, or for a host with Direct-Edit on. Never on a past turn. */
   canEditAnyPower: boolean;
   /** The power the player commands, or null on a past turn. */
@@ -47,6 +51,7 @@ export function useMapSelection({
   unitsById,
   provinces,
   retreats,
+  unitOptions = null,
   activePower,
   sandboxMode,
   directEditActive,
@@ -79,25 +84,45 @@ export function useMapSelection({
       ? rawSelectedUnit
       : null;
 
+  const selectedUnitOptions =
+    selectedUnit && unitOptions ? (unitOptions[selectedUnit.id] ?? null) : null;
+
   const { reachableList, reachableMap } = useMemo(() => {
     const list = selectedUnit
       ? isRetreatPhase
-        ? getValidRetreatDestinations(selectedUnit, retreats, provinces)
+        ? getValidRetreatDestinations(
+            selectedUnit,
+            retreats,
+            provinces,
+            selectedUnitOptions,
+          )
         : isAdjustmentPhase
           ? []
-          : getReachableDestinations(selectedUnit, provinces)
+          : getReachableDestinations(
+              selectedUnit,
+              provinces,
+              selectedUnitOptions,
+            )
       : [];
     const map: Record<string, string[]> = {};
     for (const r of list) {
       map[r.province] = r.coasts;
     }
     return { reachableList: list, reachableMap: map };
-  }, [selectedUnit, isRetreatPhase, isAdjustmentPhase, retreats, provinces]);
+  }, [
+    selectedUnit,
+    selectedUnitOptions,
+    isRetreatPhase,
+    isAdjustmentPhase,
+    retreats,
+    provinces,
+  ]);
 
   return {
     selectedBuildOrder,
     selectedBuildProv,
     selectedUnit,
+    selectedUnitOptions,
     canEditAnyPower,
     controlPower,
     reachableList,

@@ -162,3 +162,55 @@ def test_the_seat_matches_by_email_whatever_its_case(game):
     same_person = AuthUser(user_id="another-id", email="ALICE@Test.com")
     assert caller_holds_seat(GAME_SUMMARIES[GID], Power.FRANCE, same_person)
     assert not caller_holds_seat(GAME_SUMMARIES[GID], Power.GERMANY, same_person)
+
+
+def test_secret_foreign_convoy_in_single_or_mixed_chain_never_turns_active(game):
+    """Neither a 1-ship nor a mixed 2-ship foreign convoy order may leak into unit_options."""
+    from domain.board import Unit, UnitType
+    from domain.orders import Order
+    from engine.order_utils import refresh_diagnostics_and_simulation
+
+    game.units = [
+        Unit(id="FRA_A_PIC", power=Power.FRANCE, unit_type=UnitType.ARMY, province="PIC"),
+        Unit(id="FRA_F_MAO", power=Power.FRANCE, unit_type=UnitType.FLEET, province="MAO"),
+        Unit(id="GER_F_ENG", power=Power.GERMANY, unit_type=UnitType.FLEET, province="ENG"),
+    ]
+    game.orders = {
+        "FRA_A_PIC": Order(
+            unit_id="FRA_A_PIC",
+            power=Power.FRANCE,
+            unit_type=UnitType.ARMY,
+            origin="PIC",
+            order_type=OrderType.HOLD,
+        ),
+        "FRA_F_MAO": Order(
+            unit_id="FRA_F_MAO",
+            power=Power.FRANCE,
+            unit_type=UnitType.FLEET,
+            origin="MAO",
+            order_type=OrderType.CONVOY,
+            aux_unit_origin="PIC",
+            target="SPA",
+            is_explicit=True,
+        ),
+        "GER_F_ENG": Order(
+            unit_id="GER_F_ENG",
+            power=Power.GERMANY,
+            unit_type=UnitType.FLEET,
+            origin="ENG",
+            order_type=OrderType.CONVOY,
+            aux_unit_origin="PIC",
+            target="SPA",
+            is_explicit=True,
+        ),
+    }
+    refresh_diagnostics_and_simulation(game)
+    # Raw authoritative state has SPA active because both fleets ordered CONVOY
+    assert game.unit_options["FRA_A_PIC"].active_convoys == ["SPA"]
+
+    # Masked for France: Germany's secret F ENG C A PIC -> SPA is hidden, so SPA stays potential!
+    seen_fra = sanitize_game_state_for_viewer(game, Power.FRANCE)
+    assert seen_fra.unit_options["FRA_A_PIC"].active_convoys == []
+    assert "SPA" in seen_fra.unit_options["FRA_A_PIC"].potential_convoys
+    assert "SPA" in seen_fra.unit_options["FRA_F_MAO"].convoy_targets["PIC"].chained
+    assert seen_fra.unit_options["FRA_F_MAO"].convoy_targets["PIC"].direct == []

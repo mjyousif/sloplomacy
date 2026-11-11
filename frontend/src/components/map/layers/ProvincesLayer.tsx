@@ -5,11 +5,12 @@ import type {
   Power,
   ProvinceInfo,
   Unit,
+  UnitMoveOptions,
   ValidationIssue,
 } from '../../../types/diplomacy';
 import type { MapInteractionMode } from '../hooks/useMapInteraction';
 import { ProvincePolygon } from './ProvincePolygon';
-import { getModeTargetProvinces } from './targetHighlight';
+import { getModeTargetHighlights } from './targetHighlight';
 
 interface ProvincesLayerProps {
   provinces: Record<string, ProvinceInfo>;
@@ -19,6 +20,7 @@ interface ProvincesLayerProps {
   /** Home centres with a build slot drawn this winter. */
   buildHomes: Record<string, Power>;
   selectedUnit: Unit | null;
+  selectedUnitOptions?: UnitMoveOptions | null;
   selectedBuildProv: string | null;
   /** Where the selected unit can go, with the coasts a fleet can land on. */
   reachableMap: Record<string, string[]>;
@@ -40,6 +42,7 @@ export function ProvincesLayer({
   isAdjustmentPhase,
   buildHomes,
   selectedUnit,
+  selectedUnitOptions = null,
   selectedBuildProv,
   reachableMap,
   interactionMode,
@@ -53,9 +56,10 @@ export function ProvincesLayer({
 }: ProvincesLayerProps) {
   const modeTargets = useMemo(
     () =>
-      getModeTargetProvinces({
+      getModeTargetHighlights({
         interactionMode,
         selectedUnit,
+        selectedUnitOptions,
         pendingAuxOrigin,
         reachableMap,
         provinces,
@@ -64,6 +68,7 @@ export function ProvincesLayer({
     [
       interactionMode,
       selectedUnit,
+      selectedUnitOptions,
       pendingAuxOrigin,
       reachableMap,
       provinces,
@@ -82,17 +87,20 @@ export function ProvincesLayer({
         const isBuildableHome = Boolean(
           isAdjustmentPhase && buildHomes[geom.id],
         );
-        const isMoveReachable = Boolean(
+        const isDirectMove = Boolean(
           selectedUnit && reachableMap[geom.id] && interactionMode === 'MOVE',
         );
-        const isReachable = modeTargets.has(geom.id) || isBuildableHome;
-        const allowedCoastsStr = isMoveReachable
+        const isGreen = modeTargets.green.has(geom.id) || isBuildableHome;
+        const isBlue = !isGreen && modeTargets.blue.has(geom.id);
+        const isReachable = isGreen || isBlue;
+        const reachableColor: 'green' | 'blue' = isBlue ? 'blue' : 'green';
+        const showMoveReticle = modeTargets.reticles.has(geom.id);
+        const allowedCoastsStr = isDirectMove
           ? (reachableMap[geom.id] || []).join(',')
           : '';
         const showFleetCoasts = Boolean(
-          isMoveReachable && selectedUnit?.unit_type === 'F',
+          isDirectMove && selectedUnit?.unit_type === 'F',
         );
-        const showMoveReticle = isMoveReachable;
         const isHovered = hoveredProv === geom.id;
         const isHighlighted =
           highlightedProvinces.includes(geom.id) ||
@@ -106,6 +114,7 @@ export function ProvincesLayer({
             isSea={isSea}
             owner={owner}
             isReachable={isReachable}
+            reachableColor={reachableColor}
             allowedCoastsStr={allowedCoastsStr}
             showFleetCoasts={showFleetCoasts}
             showMoveReticle={showMoveReticle}
