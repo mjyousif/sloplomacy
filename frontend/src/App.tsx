@@ -2,24 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import './compact.css';
 import {
-  AlertOctagon,
   AlertTriangle,
-  Calendar,
   CheckCircle2,
   Compass,
-  Crown,
-  FlaskConical,
-  LogIn,
-  LogOut,
   ShieldAlert,
-  ShieldCheck,
-  User as UserIcon,
 } from 'lucide-react';
 import { AdminToolsModal } from './components/AdminToolsModal';
 import { AuthModal } from './components/AuthModal';
 import { CompactTopBar } from './components/CompactTopBar';
 import { useConfirm } from './components/ConfirmModal';
-import { DisplaySettingsMenu } from './components/DisplaySettingsMenu';
 import { EuropeMap, type EuropeMapHandle } from './components/EuropeMap';
 import { LobbyView } from './components/LobbyView';
 import { MacroSidebar } from './components/MacroSidebar';
@@ -28,23 +19,20 @@ import { SanityCheckModal } from './components/SanityCheckModal';
 import { SaveSandboxModal } from './components/SaveSandboxModal';
 import { SurrenderModal } from './components/SurrenderModal';
 import { ToolsSidebar } from './components/ToolsSidebar';
+import { TopHeader } from './components/TopHeader';
 import {
   TurnHistoryPill,
   TurnHistorySelector,
 } from './components/TurnHistorySelector';
+import { useAuthSession } from './hooks/useAuthSession';
 import { useCompactLayout } from './hooks/useCompactLayout';
 import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
 import { useDisplayPrefs } from './hooks/useDisplayPrefs';
+import { useToast } from './hooks/useToast';
 import { useTurnHistory } from './hooks/useTurnHistory';
+import { useWorkspaceLayout } from './hooks/useWorkspaceLayout';
+import { authedFetch, getAuthHeaders, signOutUser } from './lib/supabase';
 import {
-  authedFetch,
-  getAuthHeaders,
-  getInitialAuthUser,
-  signOutUser,
-  subscribeToAuthChanges,
-} from './lib/supabase';
-import {
-  type AuthUser,
   type FinalizeResponse,
   type GameState,
   type MultiplayerGameSummary,
@@ -59,7 +47,6 @@ import {
   type WebSocketLobbyUpdate,
 } from './types/diplomacy';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
-import type { SheetSnap } from './utils/sheetHelpers';
 import { turnLabel } from './utils/timerHelpers';
 
 const API_BASE = '/api';
@@ -114,17 +101,20 @@ export function App() {
   const [lockedPower, setLockedPower] = useState<Power | null>(null);
 
   // Auth State
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const {
+    authUser,
+    setAuthUser,
+    authModalOpen,
+    setAuthModalOpen,
+    authModalReason,
+    authModalTab,
+    openAuthPrompt,
+  } = useAuthSession();
   const {
     prefs: displayPrefs,
     saveState: displayPrefsSaveState,
     updatePrefs: updateDisplayPrefs,
   } = useDisplayPrefs(authUser);
-  const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
-  const [authModalReason, setAuthModalReason] = useState<string | null>(null);
-  const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>(
-    'signin',
-  );
 
   // Lobby Games State
   const [gamesList, setGamesList] = useState<MultiplayerGameSummary[]>([]);
@@ -161,31 +151,20 @@ export function App() {
   const [zoomPercent, setZoomPercent] = useState<number>(105);
   // Phone-sized screens get the compact layout, styled from compact.css.
   const isCompact = useCompactLayout();
-  // The desktop sidebars' rails. Phones have no rails: orders live in a sheet and tools in a drawer.
-  const [leftSidebarCollapsed, setLeftSidebarCollapsed] =
-    useState<boolean>(false);
-  const [rightSidebarCollapsed, setRightSidebarCollapsed] =
-    useState<boolean>(false);
-  // The phone order sheet starts lowered, so the map gets as much room as it can.
-  const [sheetSnap, setSheetSnap] = useState<SheetSnap>('peek');
-  const [toolsDrawerOpen, setToolsDrawerOpen] = useState<boolean>(false);
-  const toolsToggleRef = useRef<HTMLButtonElement | null>(null);
-  // While the map's docked unit bar is up, the sheet drops to its peek so the bar and the
-  // provinces to tap stay in view.
-  const handleDockedBarChange = useCallback((visible: boolean) => {
-    if (visible) setSheetSnap('peek');
-  }, []);
-  const closeToolsDrawer = useCallback(() => {
-    setToolsDrawerOpen(false);
-    toolsToggleRef.current?.focus();
-  }, []);
-
-  // Every visit to a game starts with the sheet lowered and the drawer shut, and leaving the
-  // phone layout (rotating a tablet, widening a window) shuts the drawer too.
-  useEffect(() => {
-    setSheetSnap('peek');
-    setToolsDrawerOpen(false);
-  }, [viewMode, activeGameId, isCompact]);
+  // The sidebar rails on desktop; the order sheet and tools drawer on a phone.
+  const {
+    leftSidebarCollapsed,
+    setLeftSidebarCollapsed,
+    rightSidebarCollapsed,
+    setRightSidebarCollapsed,
+    sheetSnap,
+    setSheetSnap,
+    toolsDrawerOpen,
+    setToolsDrawerOpen,
+    toolsToggleRef,
+    handleDockedBarChange,
+    closeToolsDrawer,
+  } = useWorkspaceLayout({ viewMode, activeGameId, isCompact });
   const mapRef = useRef<EuropeMapHandle | null>(null);
 
   // Sanity Check Modal State
@@ -193,7 +172,7 @@ export function App() {
   const [sanityModalIssues, setSanityModalIssues] = useState<ValidationIssue[]>(
     [],
   );
-  const [toastBanner, setToastBanner] = useState<string | null>(null);
+  const { toastBanner, triggerToast } = useToast();
   const { confirm, confirmModal } = useConfirm();
   // Passcodes this player typed for private matches during this visit, so the live
   // socket can present them. Never saved: a reload falls back to polling.
@@ -235,27 +214,11 @@ export function App() {
     ? hypotheticalMatchTimer
     : (gameState?.timer ?? null);
 
-  const triggerToast = (msg: string) => {
-    setToastBanner(msg);
-    setTimeout(() => {
-      setToastBanner((prev) => (prev === msg ? null : prev));
-    }, 4500);
-  };
-
   // The board in a private sandbox is hypothetical, so nothing real can be done from it.
   const requireRealBoard = (action: string): boolean => {
     if (!sandboxGameId) return true;
     triggerToast(`Exit Hypothetical Mode to ${action}.`);
     return false;
-  };
-
-  const openAuthPrompt = (
-    reason?: string,
-    tab: 'signin' | 'signup' = 'signin',
-  ) => {
-    setAuthModalReason(reason || null);
-    setAuthModalTab(tab);
-    setAuthModalOpen(true);
   };
 
   const applyServerState = (st: GameState) => {
@@ -384,12 +347,10 @@ export function App() {
     }
   };
 
+  // The auth user is loaded and followed by useAuthSession.
   useEffect(() => {
-    getInitialAuthUser().then((u) => setAuthUser(u));
-    const unsub = subscribeToAuthChanges((u) => setAuthUser(u));
     fetchGame(readStoredSoloSandboxId() ?? 'proto_1901');
     fetchGamesList();
-    return () => unsub();
   }, []);
 
   // Only a `refresh` makes the server run the clock; a `ping` is just a heartbeat.
@@ -1300,163 +1261,26 @@ export function App() {
           toolsToggleRef={toolsToggleRef}
         />
       ) : (
-        <header className="imperial-top-header">
-          <div className="brand-and-nav">
-            <div
-              className="brand-block clickable"
-              onClick={handleBackToLobby}
-              title="Return to Main Lobby"
-            >
-              <div className="brand-emblem">
-                <Compass size={22} />
-              </div>
-              <div>
-                <h1 className="brand-title">SLOPLOMACY 1901</h1>
-                <span className="brand-subtitle">
-                  TACTICAL ENGINE &amp; MULTIPLAYER CHANCELLERY
-                </span>
-              </div>
-            </div>
-
-            {/* Primary Navigation Switcher */}
-            <nav className="top-view-nav">
-              <button
-                type="button"
-                data-testid="nav-tab-sandbox"
-                className={`nav-tab-btn ${viewMode === 'sandbox' ? 'active' : ''}`}
-                onClick={handleEnterSoloSandbox}
-                title="Open standalone 7-power practice laboratory"
-              >
-                <FlaskConical size={14} />
-                <span>Solo Sandbox</span>
-              </button>
-              {viewMode === 'multiplayer' && activeGameSummary && (
-                <span className="nav-active-match-pill">
-                  <Crown size={13} />
-                  <span>
-                    {activeGameSummary.name} (
-                    {POWER_METADATA[playerPower].shortName})
-                  </span>
-                </span>
-              )}
-            </nav>
-          </div>
-
-          {/* Center Board Readout (Only when viewing Map Board) */}
-          {viewMode !== 'lobby' && (
-            <div className="header-center-telemetry">
-              <div
-                className="turn-chronicle-pill"
-                data-testid="turn-chronicle-pill"
-              >
-                <Calendar size={15} className="turn-cal-icon" />
-                <span className="turn-season-text">
-                  {gameState.season.toUpperCase()} {gameState.year}
-                </span>
-                <span className="turn-phase-divider">•</span>
-                <span className="turn-phase-text">
-                  {gameState.phase.toUpperCase()} PHASE
-                </span>
-              </div>
-
-              {gameState.winner && (
-                <span className="game-over-pill">
-                  <Crown size={14} />
-                  <span>
-                    {POWER_METADATA[gameState.winner].shortName.toUpperCase()}{' '}
-                    WINS
-                  </span>
-                </span>
-              )}
-
-              <div className="header-sanity-readout">
-                {activeErrors.length > 0 ? (
-                  <div
-                    className="header-error-pill"
-                    onClick={() => handleFinalizeClick(false)}
-                    title="Click to open Sanity Check Diagnostics"
-                  >
-                    <AlertOctagon size={15} />
-                    <span>
-                      Error: {activeErrors.length}
-                      {activeWarnings.length > 0
-                        ? ` • Warning: ${activeWarnings.length}`
-                        : ''}
-                    </span>
-                  </div>
-                ) : activeWarnings.length > 0 ? (
-                  <div
-                    className="header-warning-pill"
-                    onClick={() => handleFinalizeClick(false)}
-                    title="Click to open Sanity Check Diagnostics"
-                  >
-                    <AlertTriangle size={15} />
-                    <span>Warning: {activeWarnings.length}</span>
-                  </div>
-                ) : (
-                  <div className="header-clean-pill">
-                    <ShieldCheck size={15} />
-                    <span>Valid Moves</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Right Header Controls: Board Actions + User Account */}
-          <div className="header-right-actions">
-            <div
-              className={`header-ws-badge ${wsConnected ? 'ws-connected' : 'ws-disconnected'}`}
-              title={
-                wsConnected
-                  ? `Real-time synchronization connected (${viewMode === 'lobby' ? 'Lobby Feed' : activeGameId})`
-                  : 'Connecting to real-time synchronization...'
-              }
-            >
-              <span
-                className={`ws-status-dot ${wsConnected ? 'dot-online' : 'dot-offline'}`}
-              />
-              <span>{wsConnected ? 'Live Sync' : 'Connecting...'}</span>
-            </div>
-
-            <DisplaySettingsMenu
-              prefs={displayPrefs}
-              saveState={displayPrefsSaveState}
-              onChange={updateDisplayPrefs}
-            />
-
-            {/* User Authentication Controls */}
-            {authUser ? (
-              <div className="header-user-Menu">
-                <span className="header-user-badge" title={authUser.email}>
-                  <UserIcon size={13} />
-                  <span>{authUser.displayName}</span>
-                </span>
-                <button
-                  type="button"
-                  className="header-auth-btn signout"
-                  onClick={handleSignOut}
-                  title="Sign Out"
-                >
-                  <LogOut size={14} />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            ) : (
-              <div className="header-user-Menu">
-                <span className="header-guest-tag">Guest Mode</span>
-                <button
-                  type="button"
-                  className="header-auth-btn signin"
-                  onClick={() => openAuthPrompt(undefined, 'signin')}
-                >
-                  <LogIn size={14} />
-                  <span>Sign In / Register</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
+        <TopHeader
+          viewMode={viewMode}
+          turn={gameState}
+          winner={gameState.winner ?? null}
+          errorCount={activeErrors.length}
+          warningCount={activeWarnings.length}
+          onOpenOrderCheck={() => handleFinalizeClick(false)}
+          onBackToLobby={handleBackToLobby}
+          onEnterSoloSandbox={handleEnterSoloSandbox}
+          matchSummary={activeGameSummary}
+          playerPower={playerPower}
+          wsConnected={wsConnected}
+          gameId={activeGameId}
+          displayPrefs={displayPrefs}
+          displayPrefsSaveState={displayPrefsSaveState}
+          onChangeDisplayPrefs={updateDisplayPrefs}
+          authUser={authUser}
+          onSignIn={() => openAuthPrompt(undefined, 'signin')}
+          onSignOut={handleSignOut}
+        />
       )}
 
       {/* ADMIN DIRECT-EDIT OVERRIDE BANNER */}
