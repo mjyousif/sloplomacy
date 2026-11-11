@@ -56,20 +56,17 @@ export function ProvincesLayer({
         const isBuildableHome = Boolean(
           isAdjustmentPhase && buildHomes[geom.id],
         );
-        const isReachable =
-          Boolean(selectedUnit && reachableMap[geom.id]) || isBuildableHome;
-        const allowedCoastsStr =
-          selectedUnit && reachableMap[geom.id]
-            ? (reachableMap[geom.id] || []).join(',')
-            : '';
-        const showFleetCoasts = Boolean(
-          selectedUnit &&
-            selectedUnit.unit_type === 'F' &&
-            reachableMap[geom.id],
-        );
-        const showMoveReticle = Boolean(
+        const isMoveReachable = Boolean(
           selectedUnit && reachableMap[geom.id] && interactionMode === 'MOVE',
         );
+        const isReachable = isMoveReachable || isBuildableHome;
+        const allowedCoastsStr = isMoveReachable
+          ? (reachableMap[geom.id] || []).join(',')
+          : '';
+        const showFleetCoasts = Boolean(
+          isMoveReachable && selectedUnit?.unit_type === 'F',
+        );
+        const showMoveReticle = isMoveReachable;
         const isHovered = hoveredProv === geom.id;
         const isHighlighted =
           highlightedProvinces.includes(geom.id) ||

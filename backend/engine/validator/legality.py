@@ -282,6 +282,49 @@ def check_unit_orders(
                 )
                 continue
 
+            origin_prov = PROVINCES.get(order.aux_unit_origin)
+            if not origin_prov or origin_prov.type != ProvinceType.COAST:
+                add_issue(
+                    IssueSeverity.ERROR,
+                    IssueCode.ILLEGAL_CONVOY,
+                    f"Illegal Convoy Origin {p_name(order.aux_unit_origin)}",
+                    f"Fleet in {p_name(unit.province)} cannot convoy an Army from {p_name(order.aux_unit_origin)} because it is not a coastal province.",
+                    [unit.id],
+                    [unit.province, order.aux_unit_origin],
+                    unit.power,
+                )
+                continue
+
+            target_prov = PROVINCES.get(order.target)
+            if not target_prov or target_prov.type != ProvinceType.COAST:
+                reason = (
+                    "a sea zone (water tile)"
+                    if target_prov and target_prov.type == ProvinceType.SEA
+                    else "not a coastal province"
+                )
+                add_issue(
+                    IssueSeverity.ERROR,
+                    IssueCode.ILLEGAL_CONVOY,
+                    f"Illegal Convoy Destination {p_name(order.target)}",
+                    f"Fleet in {p_name(unit.province)} cannot convoy an Army to {p_name(order.target)} because it is {reason}.",
+                    [unit.id],
+                    [unit.province, order.target],
+                    unit.power,
+                )
+                continue
+
+            if order.target == order.aux_unit_origin:
+                add_issue(
+                    IssueSeverity.ERROR,
+                    IssueCode.ILLEGAL_CONVOY,
+                    f"Illegal Convoy Destination {p_name(order.target)}",
+                    f"Fleet in {p_name(unit.province)} cannot convoy an Army from {p_name(order.aux_unit_origin)} back to {p_name(order.target)}.",
+                    [unit.id],
+                    [unit.province, order.target],
+                    unit.power,
+                )
+                continue
+
             convoyed_unit = unit_by_prov.get(order.aux_unit_origin)
             if not convoyed_unit or convoyed_unit.unit_type != UnitType.ARMY:
                 add_issue(

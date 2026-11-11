@@ -113,4 +113,45 @@ describe('ProvincesLayer', () => {
       army.container.querySelector('[data-testid="province-coast-selector"]'),
     ).toBeNull();
   });
+
+  it('does not light sea tiles or split-coast selectors while picking a convoy or support (#142)', () => {
+    const mao: ProvinceInfo = {
+      ...FRANCE_PROVINCES.BRE,
+      id: 'MAO',
+      name: 'Mid-Atlantic Ocean',
+      type: 'SEA',
+      is_supply_center: false,
+      home_power: null,
+    };
+    const spain: ProvinceInfo = {
+      ...FRANCE_PROVINCES.GAS,
+      id: 'SPA',
+      name: 'Spain',
+      coasts: ['NC', 'SC'],
+    };
+    const fleet = unitAt('FRANCE', 'F', 'BRE');
+    const provincesWithSeaAndSpain = { ...PROVINCES, MAO: mao, SPA: spain };
+
+    for (const mode of [
+      'CONVOY_PICK_ARMY',
+      'CONVOY_PICK_TARGET',
+      'SUPPORT_PICK_UNIT',
+      'SUPPORT_PICK_TARGET',
+    ] as const) {
+      const { container } = draw({
+        provinces: provincesWithSeaAndSpain,
+        selectedUnit: fleet,
+        reachableMap: { MAO: [], SPA: ['NC', 'SC'] },
+        interactionMode: mode,
+      });
+      const maoPath = container.querySelector(
+        '[data-testid="province-path"][data-province-id="MAO"]',
+      );
+      expect(maoPath?.getAttribute('fill')).toBe('#9ec5d6');
+      expect(maoPath?.getAttribute('stroke')).toBe('none');
+      expect(
+        container.querySelector('[data-testid="province-coast-selector"]'),
+      ).toBeNull();
+    }
+  });
 });

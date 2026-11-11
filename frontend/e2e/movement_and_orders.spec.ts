@@ -1,8 +1,27 @@
 // @scenario movement
 // @order 1
-// @description Map reticle Move, Support vector, Hold toggle, adjudication, and Admin Console turn rollback.
+// @description Map reticle Move, Support vector, Hold toggle, Sea-Fleet Convoy guard (#142), adjudication, and Admin Console turn rollback.
 import { test, expect } from '@playwright/test';
 import { ScenarioRecorder, seedScenario } from './helpers';
+
+async function spawnUnit(
+  power: string,
+  unit_type: 'A' | 'F',
+  province: string,
+  gameId = 'proto_1901',
+) {
+  const res = await fetch(
+    `http://localhost:8000/api/admin/unit/spawn?game_id=${gameId}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ power, unit_type, province }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`Spawn failed (${res.status}): ${await res.text()}`);
+  }
+}
 
 test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollback', () => {
   test('selects unit, orders move via map reticle, plots support vector, adjudicates, and rolls back turn via Admin Console', async ({ page }) => {
@@ -126,6 +145,48 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
         page.locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"][data-province="PAR"]')
       ).toBeVisible();
       await recorder.recordStep(page, '08_turn_rolled_back_to_spring_1901');
+
+      // 10. Verify Fleet at sea Convoy flow disallows water/inland tiles (#142) and convoys coastal army to coast
+      await spawnUnit('FRANCE', 'F', 'ENG');
+      await spawnUnit('FRANCE', 'A', 'PIC');
+      await page.reload();
+      await page.waitForSelector('[data-testid="unit-token"][data-unit-id="FRA_F_ENG"]', {
+        timeout: 15000,
+      });
+
+      const fleetEng = page.locator('[data-testid="unit-token"][data-unit-id="FRA_F_ENG"]');
+      const armyPic = page.locator('[data-testid="unit-token"][data-unit-id="FRA_A_PIC"]');
+      const maoWaterPath = page.locator('[data-testid="province-path"][data-province-id="MAO"]');
+      const nthWaterPath = page.locator('[data-testid="province-path"][data-province-id="NTH"]');
+
+      await fleetEng.click();
+      await page.locator('.unit-floating-menu').getByRole('button', { name: 'Convoy' }).click();
+      // Sea zones must NOT stay lit green once Convoy mode is entered (#142)
+      await expect(maoWaterPath).not.toHaveAttribute('fill', '#4ade80');
+      await expect(nthWaterPath).not.toHaveAttribute('fill', '#4ade80');
+
+      await armyPic.click();
+      await expect(maoWaterPath).not.toHaveAttribute('fill', '#4ade80');
+      await expect(nthWaterPath).not.toHaveAttribute('fill', '#4ade80');
+      await recorder.recordStep(page, '09_convoy_pick_target_water_tiles_unlit');
+
+      // Clicking a water tile in CONVOY_PICK_TARGET must be ignored (no CONVOY order created)
+      await nthWaterPath.click();
+      await expect(
+        page.locator('[data-testid="order-arrow"][data-order-unit="FRA_F_ENG"][data-order-type="CONVOY"]')
+      ).toHaveCount(0);
+
+      // Re-pick Convoy -> A PIC -> coastal WAL and verify valid CONVOY vector renders
+      await fleetEng.click();
+      await page.locator('.unit-floating-menu').getByRole('button', { name: 'Convoy' }).click();
+      await armyPic.click();
+      await page.locator('[data-testid="province-path"][data-province-id="WAL"]').click();
+      await expect(
+        page.locator(
+          '[data-testid="order-arrow"][data-order-unit="FRA_F_ENG"][data-order-type="CONVOY"][data-order-target="WAL"]'
+        )
+      ).toBeVisible();
+      await recorder.recordStep(page, '10_convoy_order_to_coast_rendered');
 
       recorder.finalize('PASSED');
     } catch (err) {

@@ -213,3 +213,135 @@ def test_army_convoy_across_water_with_foreign_fleet_emits_info_not_warning():
     assert len(eng_issues) == 1
     assert eng_issues[0].severity == IssueSeverity.INFO
     assert "Foreign Convoy Required" in eng_issues[0].title
+
+
+def test_convoy_to_water_tile_emits_illegal_convoy_error():
+    """A fleet cannot convoy an army onto a sea zone (#142)."""
+    units = [
+        Unit(id="ENG_F_ENG", power=Power.ENGLAND, unit_type=UnitType.FLEET, province="ENG"),
+        Unit(id="ENG_A_LON", power=Power.ENGLAND, unit_type=UnitType.ARMY, province="LON"),
+    ]
+    orders = {
+        "ENG_F_ENG": Order(
+            unit_id="ENG_F_ENG",
+            power=Power.ENGLAND,
+            unit_type=UnitType.FLEET,
+            origin="ENG",
+            order_type=OrderType.CONVOY,
+            aux_unit_origin="LON",
+            target="NTH",
+            is_explicit=True,
+        ),
+        "ENG_A_LON": Order(
+            unit_id="ENG_A_LON",
+            power=Power.ENGLAND,
+            unit_type=UnitType.ARMY,
+            origin="LON",
+            order_type=OrderType.HOLD,
+            is_explicit=True,
+        ),
+    }
+    issues = validate_orders(units, orders)
+    errors = [i for i in issues if i.severity == IssueSeverity.ERROR]
+    assert len(errors) == 1
+    assert errors[0].code == IssueCode.ILLEGAL_CONVOY
+    assert "NTH" in errors[0].provinces
+
+
+def test_convoy_to_inland_province_emits_illegal_convoy_error():
+    """A fleet cannot convoy an army to an inland landlocked province."""
+    units = [
+        Unit(id="ENG_F_ENG", power=Power.ENGLAND, unit_type=UnitType.FLEET, province="ENG"),
+        Unit(id="ENG_A_LON", power=Power.ENGLAND, unit_type=UnitType.ARMY, province="LON"),
+    ]
+    orders = {
+        "ENG_F_ENG": Order(
+            unit_id="ENG_F_ENG",
+            power=Power.ENGLAND,
+            unit_type=UnitType.FLEET,
+            origin="ENG",
+            order_type=OrderType.CONVOY,
+            aux_unit_origin="LON",
+            target="PAR",
+            is_explicit=True,
+        ),
+        "ENG_A_LON": Order(
+            unit_id="ENG_A_LON",
+            power=Power.ENGLAND,
+            unit_type=UnitType.ARMY,
+            origin="LON",
+            order_type=OrderType.HOLD,
+            is_explicit=True,
+        ),
+    }
+    issues = validate_orders(units, orders)
+    errors = [i for i in issues if i.severity == IssueSeverity.ERROR]
+    assert len(errors) == 1
+    assert errors[0].code == IssueCode.ILLEGAL_CONVOY
+    assert "PAR" in errors[0].provinces
+
+
+def test_convoy_from_inland_origin_emits_illegal_convoy_error():
+    """A fleet cannot convoy an army starting from an inland landlocked province."""
+    units = [
+        Unit(id="FRA_F_MAO", power=Power.FRANCE, unit_type=UnitType.FLEET, province="MAO"),
+        Unit(id="FRA_A_PAR", power=Power.FRANCE, unit_type=UnitType.ARMY, province="PAR"),
+    ]
+    orders = {
+        "FRA_F_MAO": Order(
+            unit_id="FRA_F_MAO",
+            power=Power.FRANCE,
+            unit_type=UnitType.FLEET,
+            origin="MAO",
+            order_type=OrderType.CONVOY,
+            aux_unit_origin="PAR",
+            target="BRE",
+            is_explicit=True,
+        ),
+        "FRA_A_PAR": Order(
+            unit_id="FRA_A_PAR",
+            power=Power.FRANCE,
+            unit_type=UnitType.ARMY,
+            origin="PAR",
+            order_type=OrderType.HOLD,
+            is_explicit=True,
+        ),
+    }
+    issues = validate_orders(units, orders)
+    errors = [i for i in issues if i.severity == IssueSeverity.ERROR]
+    assert len(errors) == 1
+    assert errors[0].code == IssueCode.ILLEGAL_CONVOY
+    assert "PAR" in errors[0].provinces
+
+
+def test_convoy_to_same_origin_emits_illegal_convoy_error():
+    """A fleet cannot convoy an army back to its own origin province."""
+    units = [
+        Unit(id="ENG_F_ENG", power=Power.ENGLAND, unit_type=UnitType.FLEET, province="ENG"),
+        Unit(id="ENG_A_LON", power=Power.ENGLAND, unit_type=UnitType.ARMY, province="LON"),
+    ]
+    orders = {
+        "ENG_F_ENG": Order(
+            unit_id="ENG_F_ENG",
+            power=Power.ENGLAND,
+            unit_type=UnitType.FLEET,
+            origin="ENG",
+            order_type=OrderType.CONVOY,
+            aux_unit_origin="LON",
+            target="LON",
+            is_explicit=True,
+        ),
+        "ENG_A_LON": Order(
+            unit_id="ENG_A_LON",
+            power=Power.ENGLAND,
+            unit_type=UnitType.ARMY,
+            origin="LON",
+            order_type=OrderType.HOLD,
+            is_explicit=True,
+        ),
+    }
+    issues = validate_orders(units, orders)
+    errors = [i for i in issues if i.severity == IssueSeverity.ERROR]
+    assert len(errors) == 1
+    assert errors[0].code == IssueCode.ILLEGAL_CONVOY
+    assert "LON" in errors[0].provinces

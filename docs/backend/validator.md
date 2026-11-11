@@ -24,7 +24,7 @@ The validator is **phase-aware**, adjusting its checks dynamically for **Movemen
 | :--- | :--- | :--- | :--- | :--- |
 | `ILLEGAL_MOVE` | `error` | Movement / Retreats | Movement impossible due to terrain, coast, or non-adjacency | Army moving to sea, Fleet moving inland, non-adjacent destination without convoy, or retreating to illegal province. |
 | `ILLEGAL_SUPPORT` | `error` | Movement | Supporting unit cannot reach supported target | Unit ordered to support into a province it could not legally move to itself. |
-| `ILLEGAL_CONVOY` | `error` | Movement | Fleet in coastal province or army ordered to convoy | Convoy orders can only be executed by Fleets located in `SEA` provinces. |
+| `ILLEGAL_CONVOY` | `error` | Movement | Invalid convoy fleet, origin, or destination | Convoy orders require a Fleet in a `SEA` province carrying an Army from a `COAST` province to a different `COAST` province (never a `SEA` water tile, inland province, or the Army's own origin). |
 | `VOID_SUPPORT_SELF` | `error` | Movement | Unit attempting to support itself | A unit ordered to support its own position or move. |
 | `SELF_BOUNCE` | `warning` | Movement / Retreats | Friendly units moving/retreating to the same province | Two friendly units attack or retreat to the same province with equal strength, causing a mutual bounce. |
 | `SELF_OCCUPIED_BOUNCE`| `warning` | Movement | Moving into province occupied by friendly holding unit | Moving into a territory held by a friendly unit that is not vacating. |

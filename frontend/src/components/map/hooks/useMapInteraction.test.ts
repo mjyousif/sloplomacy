@@ -295,6 +295,59 @@ describe('useMapInteraction in a movement phase', () => {
     expect(r().interaction.interactionMode).toBe('MOVE');
   });
 
+  it('refuses inland armies and refuses water, inland, or same-origin convoy destinations (#142)', () => {
+    const A_SPA_ENG = unitAt('ENGLAND', 'A', 'SPA');
+    const { r, clickUnit, clickProvince, onUpdateOrder } = setup({
+      units: [F_MAO, A_PAR, A_BRE, A_SPA_ENG],
+    });
+
+    // Inland army cannot be picked as convoy passenger (unit click or province click)
+    clickUnit(F_MAO);
+    act(() => r().interaction.chooseConvoy());
+    clickUnit(A_PAR);
+    expect(r().selectedUnitId).toBeNull();
+    expect(r().interaction.interactionMode).toBe('MOVE');
+
+    clickUnit(F_MAO);
+    act(() => r().interaction.chooseConvoy());
+    clickProvince('PAR');
+    expect(r().selectedUnitId).toBeNull();
+
+    // Water tile cannot be picked as convoy destination
+    clickUnit(F_MAO);
+    act(() => r().interaction.chooseConvoy());
+    clickUnit(A_BRE);
+    expect(r().interaction.interactionMode).toBe('CONVOY_PICK_TARGET');
+    clickProvince('MAO');
+    expect(onUpdateOrder).not.toHaveBeenCalled();
+    expect(r().selectedUnitId).toBeNull();
+
+    // Inland tile cannot be picked as convoy destination
+    clickUnit(F_MAO);
+    act(() => r().interaction.chooseConvoy());
+    clickUnit(A_BRE);
+    clickProvince('PAR');
+    expect(onUpdateOrder).not.toHaveBeenCalled();
+    expect(r().selectedUnitId).toBeNull();
+
+    // Same origin cannot be picked as convoy destination
+    clickUnit(F_MAO);
+    act(() => r().interaction.chooseConvoy());
+    clickUnit(A_BRE);
+    clickProvince('BRE');
+    expect(onUpdateOrder).not.toHaveBeenCalled();
+    expect(r().selectedUnitId).toBeNull();
+
+    // Occupied valid coastal province CAN be picked by clicking the unit standing there
+    clickUnit(F_MAO);
+    act(() => r().interaction.chooseConvoy());
+    clickUnit(A_BRE);
+    clickUnit(A_SPA_ENG);
+    expect(onUpdateOrder).toHaveBeenCalledExactlyOnceWith(
+      convoyOrder(F_MAO, 'BRE', 'SPA'),
+    );
+  });
+
   it('asks a fleet which coast of a split-coast province, unless the click named one', () => {
     const { r, clickUnit, clickProvince, onUpdateOrder } = setup({
       units: [F_MAO],

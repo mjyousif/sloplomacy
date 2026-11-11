@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { Unit } from '../types/diplomacy';
+import { FRANCE_PROVINCES, unitAt } from '../test/mapFixtures';
+import type { ProvinceInfo, Unit } from '../types/diplomacy';
 import {
+  buildDefaultOrderForType,
   buildOrder,
   convoyOrder,
   disbandOrder,
@@ -158,5 +160,33 @@ describe('order builders', () => {
     expect(JSON.stringify(holdOrder(army))).toBe(
       '{"unit_id":"FRA_A_PAR","power":"FRANCE","unit_type":"A","origin":"PAR","order_type":"HOLD","target":null,"target_coast":null,"aux_unit_origin":null,"via_convoy":false,"is_explicit":true}',
     );
+  });
+
+  it('picks a coastal army and a different coastal target when switching a fleet to CONVOY', () => {
+    const mao: ProvinceInfo = {
+      ...FRANCE_PROVINCES.BRE,
+      id: 'MAO',
+      name: 'Mid-Atlantic Ocean',
+      type: 'SEA',
+      is_supply_center: false,
+      home_power: null,
+    };
+    const provinces: Record<string, ProvinceInfo> = {
+      ...FRANCE_PROVINCES,
+      MAO: mao,
+    };
+    const fMao = unitAt('FRANCE', 'F', 'MAO');
+    const aPar = unitAt('FRANCE', 'A', 'PAR'); // inland — must be skipped
+    const aBre = unitAt('FRANCE', 'A', 'BRE'); // coastal
+    const order = buildDefaultOrderForType({
+      unit: fMao,
+      newType: 'CONVOY',
+      provinces,
+      units: [fMao, aPar, aBre],
+      orders: {},
+    });
+    expect(order?.aux_unit_origin).toBe('BRE');
+    expect(order?.target).not.toBe('BRE');
+    expect(provinces[order?.target ?? '']?.type).toBe('COAST');
   });
 });

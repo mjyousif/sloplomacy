@@ -388,22 +388,23 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
                       );
                     })}
                   </optgroup>
-                  {unit.unit_type === 'A' && (
-                    <optgroup label="Coastal (via Convoy)">
-                      {Object.values(provinces)
-                        .filter(
-                          (p) =>
-                            p.type === 'COAST' &&
-                            p.id !== unit.province &&
-                            !reachable.some((r) => r.province === p.id),
-                        )
-                        .map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({p.id}) — via Convoy
-                          </option>
-                        ))}
-                    </optgroup>
-                  )}
+                  {unit.unit_type === 'A' &&
+                    provinces[unit.province]?.type === 'COAST' && (
+                      <optgroup label="Coastal (via Convoy)">
+                        {Object.values(provinces)
+                          .filter(
+                            (p) =>
+                              p.type === 'COAST' &&
+                              p.id !== unit.province &&
+                              !reachable.some((r) => r.province === p.id),
+                          )
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} ({p.id}) — via Convoy
+                            </option>
+                          ))}
+                      </optgroup>
+                    )}
                 </select>
               </div>
             )}
@@ -480,16 +481,29 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
                   <label>Army:</label>
                   <select
                     value={order.aux_unit_origin || ''}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const nextOrigin = e.target.value;
+                      const nextTarget =
+                        order.target && order.target !== nextOrigin
+                          ? order.target
+                          : Object.values(provinces).find(
+                              (p) => p.type === 'COAST' && p.id !== nextOrigin,
+                            )?.id || null;
                       onUpdateOrder({
                         ...order,
-                        aux_unit_origin: e.target.value,
+                        aux_unit_origin: nextOrigin,
+                        target: nextTarget,
                         is_explicit: true,
-                      })
-                    }
+                      });
+                    }}
                   >
                     {units
-                      .filter((u2) => u2.unit_type === 'A' && !u2.is_dislodged)
+                      .filter(
+                        (u2) =>
+                          u2.unit_type === 'A' &&
+                          !u2.is_dislodged &&
+                          provinces[u2.province]?.type === 'COAST',
+                      )
                       .map((u2) => (
                         <option key={u2.id} value={u2.province}>
                           A {provinces[u2.province]?.name} ({u2.province})
@@ -510,7 +524,10 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
                     }
                   >
                     {Object.values(provinces)
-                      .filter((p) => p.type === 'COAST')
+                      .filter(
+                        (p) =>
+                          p.type === 'COAST' && p.id !== order.aux_unit_origin,
+                      )
                       .map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name} ({p.id})
