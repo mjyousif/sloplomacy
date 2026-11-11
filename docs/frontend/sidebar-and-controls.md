@@ -38,6 +38,16 @@ The previews render with the real `MapPiece`, so they always match the map. Thes
 
 ---
 
+## Desktop Top Bar (`TopHeader.tsx`)
+
+On a wide screen the header is `TopHeader.tsx`. `App.tsx` passes it the data and handlers it shows, and it keeps no state of its own:
+
+- **Left**: the brand, which goes back to the lobby, then the Solo Sandbox tab (marked while in the solo sandbox) and, in a multiplayer match, the match name with your power.
+- **Center**, only on a board: the turn ("SPRING 1901 • MOVEMENT PHASE"), the winner once there is one, and the order check: a red pill with the error count (and warnings after it), an amber pill with the warning count, or a green "Valid Moves". The red and amber pills ask to finalize, and the server answers with the order check.
+- **Right**: the Live Sync badge, whose tooltip names what it follows (the lobby feed or the game id), the [display settings](#top-bar-display-settings), and Guest Mode with Sign In / Register, or your name (email in the tooltip) with Sign Out.
+
+---
+
 ## Phone Top Bar (`CompactTopBar.tsx`)
 
 In the compact layout (see [Responsive & Layout Specifications](styling-and-themes.md#responsive--layout-specifications)) the header becomes one `52px` row:

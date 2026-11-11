@@ -184,10 +184,10 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
 ### Frontend Packages (`frontend/src/`)
 - **State Coordinator (`App.tsx`)**: Root state container, view mode switcher (Lobby, Game, Sandbox), and API coordination.
 - **Components (`components/`)**:
-  - Top-level feature views (`EuropeMap.tsx`, `MacroSidebar.tsx`, `ToolsSidebar.tsx`, `LobbyView.tsx`, `AdminToolsModal.tsx`).
+  - Top-level feature views (`EuropeMap.tsx`, `MacroSidebar.tsx`, `ToolsSidebar.tsx`, `LobbyView.tsx`, `AdminToolsModal.tsx`) and the top bars (`TopHeader.tsx` on desktop, `CompactTopBar.tsx` on phones).
   - Feature subdirectories (`map/`, `macro/`, `lobby/`, `admin/`) decomposing complex views into focused, single-responsibility subcomponents (e.g. SVG layers, card items, tab views). A feature's own hooks sit in its folder (`map/hooks/`: `useEuropeMap` wires `usePieceGeometry`, `useMapCamera`, `useMapGestures`, `useMapSelection`, `useMapInteraction`, `useOrderOverlay`, `useBuildHomes`, `useTouchHitRadius` and `useUnitMenuPlacement`), the menus over the map in `map/hud/`, and the SVG layers in `map/layers/` (order arrows in `map/layers/orders/`).
 - **Cartographic Data & Metrics (`data/`)**: Static map geometry paths (`europeMapGeometry.ts`), layout coordinates (`mapLayouts.ts`), and font metrics (`mapTextMetrics.ts`).
-- **Custom Hooks (`hooks/`)**: Reusable React hooks for WebSockets (`useDiplomacyWebSocket`), phone layout media queries (`useCompactLayout`), display settings (`useDisplayPrefs`), and the turn selector (`useTurnHistory`).
+- **Custom Hooks (`hooks/`)**: Reusable React hooks for WebSockets (`useDiplomacyWebSocket`), phone layout media queries (`useCompactLayout`), display settings (`useDisplayPrefs`), and the turn selector (`useTurnHistory`), plus the App state hooks named for what they do: the signed-in user and sign-in modal (`useAuthSession`), the rails, phone sheet and tools drawer (`useWorkspaceLayout`) and the toast (`useToast`).
 - **Types (`types/`)**: TypeScript type contracts (`diplomacy.ts`), strictly synchronized with the models in `backend/domain/`.
 - **Pure Utilities (`utils/`)**: Pure algorithmic helpers and math (`orderHelpers.ts`, `orderBuilders.ts`, `adminHelpers.ts`, `timerHelpers.ts`, `mapCameraHelpers.ts`, `sheetHelpers.ts`, `historyHelpers.ts`, `displayPrefs.ts`).
 - **Responsive Layout (`compact.css`)**: Phone-specific styles grouped exclusively under `[data-layout='compact']`.

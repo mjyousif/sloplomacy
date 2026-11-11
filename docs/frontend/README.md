@@ -83,6 +83,8 @@ frontend/
     │   ├── BottomSheet.tsx      # Phone pull-up panel with peek, half and full stops (holds the order sheet)
     │   ├── CompactTopBar.tsx    # Phone top bar: back, ≡ tools, turn, order-problem count and a ⋯ menu
     │   ├── CompactTopBar.test.ts # Vitest suite for the phone top bar and the surrender note
+    │   ├── TopHeader.tsx        # Desktop top bar: brand, Solo Sandbox, turn, order check, Live Sync, display settings, account
+    │   ├── TopHeader.test.tsx   # Each part of the desktop top bar and the buttons it hands back to App
     │   ├── DisplaySettingsMenu.tsx # Top bar menu for this player's piece style and army and fleet marks
     │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every display style
     │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
@@ -110,7 +112,13 @@ frontend/
     │   ├── useCompactLayout.ts  # The phone breakpoint (COMPACT_LAYOUT_QUERY) as a live boolean
     │   ├── useCompactLayout.test.ts # Follows the media query, including older Safari listeners
     │   ├── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
-    │   └── useDisplayPrefs.test.ts # Device and account saving, failed reads and edits during a read
+    │   ├── useDisplayPrefs.test.ts # Device and account saving, failed reads and edits during a read
+    │   ├── useAuthSession.ts    # The signed-in user (loaded on mount, then followed) and the sign-in modal
+    │   ├── useAuthSession.test.ts # Initial load, sign-in and sign-out, unsubscribe, and the modal's reason and tab
+    │   ├── useWorkspaceLayout.ts # Desktop rails, phone order sheet and tools drawer, reset on a new game, view or layout
+    │   ├── useWorkspaceLayout.test.ts # Rails, docked-bar peek, drawer focus return and each reset trigger
+    │   ├── useToast.ts          # The toast banner and triggerToast
+    │   └── useToast.test.ts     # Expiry, and a newer message outliving the older one's timer
     ├── lib/
     │   └── supabase.ts          # Supabase client singleton & auth helpers
     ├── test/
@@ -154,7 +162,7 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   └── User Auth Header & Profile Switcher
 │
 ├── View 2: Tactical Workspace (when viewMode === 'multiplayer' | 'sandbox')
-│   ├── Imperial Header Bar (CompactTopBar.tsx on phones: back, ≡ tools, turn, problem count, ⋯ menu)
+│   ├── Imperial Header Bar (TopHeader.tsx; CompactTopBar.tsx on phones: back, ≡ tools, turn, problem count, ⋯ menu)
 │   │   ├── Return to Lobby (Clickable Brand Emblem & Title)
 │   │   ├── Turn Chronicle Pill (Season, Year, Phase & Winner)
 │   │   ├── Sanity Check Diagnostics Warning Pill
