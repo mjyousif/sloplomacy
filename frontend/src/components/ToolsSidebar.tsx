@@ -396,11 +396,11 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               </span>
               <span className="legend-label">Support Link</span>
             </div>
-            <div className="legend-item" title="Tactical issue or dislodgement">
+            <div className="legend-item" title="Tactical issue or warning">
               <span className="legend-swatch swatch-warn">
                 <AlertTriangle size={12} />
               </span>
-              <span className="legend-label">Warning / Dislodgement</span>
+              <span className="legend-label">Warning</span>
             </div>
           </div>
         </CollapsibleSection>

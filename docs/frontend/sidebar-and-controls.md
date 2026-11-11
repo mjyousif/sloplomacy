@@ -113,7 +113,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
   - **Move / Attack**: Blue curved arrow indicating unit repositioning.
   - **Fleet Convoy**: Purple wavy line representing naval troop transport.
   - **Support Link**: Teal dashed line with target reticle indicating defensive or offensive support.
-  - **Warning / Dislodgement**: Red/amber alert indicating illegal orders, cut supports, or retreats. The longest label, it wraps to two lines in its column.
+  - **Warning**: Red/amber alert indicating illegal orders, cut supports, or retreats.
 
 ### 3. Great Powers Diplomatic Standing & Command Selector
 - Lists all 7 Great Powers (Austria-Hungary, England, France, Germany, Italy, Russia, Turkey) with their authentic World War I (1901–1918) SVG flags, toggleable sorting (`By Score` vs `Default`), dynamic numeric ranking (1–7), player names in multiplayer, national colors, controlled Supply Centers, and active field units.
