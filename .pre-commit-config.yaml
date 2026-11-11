@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.4
+    hooks:
+      - id: ruff-check
+        files: ^backend/
+      - id: ruff-format
+        args: [--check]
+        files: ^backend/
+
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v2.6.6
+    hooks:
+      - id: biome-ci
+        args: [--config-path=frontend/biome.jsonc]
+        files: ^frontend/src/
+
+  - repo: local
+    hooks:
+      - id: file-size-limits
+        name: Check modularity file-size limits
+        entry: python scripts/check_file_limits.py
+        language: python
+        pass_filenames: false
+        files: \.(py|ts|tsx)$

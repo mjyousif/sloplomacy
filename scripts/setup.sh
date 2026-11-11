@@ -20,6 +20,14 @@ PIP_REQ="$BACKEND_DIR/requirements-dev.txt"
 if [ ! -f "$PIP_REQ" ]; then PIP_REQ="$BACKEND_DIR/requirements.txt"; fi
 "$PIP_CMD" install --upgrade pip
 "$PIP_CMD" install -r "$PIP_REQ"
+
+PRE_COMMIT_CMD="$BACKEND_DIR/.venv/bin/pre-commit"
+if [ ! -f "$PRE_COMMIT_CMD" ]; then
+    PRE_COMMIT_CMD="$(command -v pre-commit || true)"
+fi
+if [ -n "$PRE_COMMIT_CMD" ] && [ -e "$REPO_ROOT/.git" ]; then
+    (cd "$REPO_ROOT" && "$PRE_COMMIT_CMD" install)
+fi
 echo "[✓] Backend environment ready!"
 
 # 2. Frontend npm

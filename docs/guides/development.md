@@ -127,6 +127,10 @@ Static analysis, linting, and formatting checks are decoupled from runtime tests
   ```bash
   python3 scripts/check_file_limits.py
   ```
+- **Automatic Pre-Commit Hooks** (`.pre-commit-config.yaml` runs Ruff, Biome, and `check_file_limits.py` on commit; installed automatically by `scripts/setup.sh` / `scripts/setup.ps1`, or manually):
+  ```bash
+  pre-commit install
+  ```
 - **Check Formatting (Dry-Run)**:
   ```bash
   ./scripts/format.sh --check

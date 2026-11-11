@@ -25,6 +25,22 @@ if (-not (Test-Path $PipReq)) { $PipReq = Join-Path $BackendDir "requirements.tx
 Write-Host "Installing backend dependencies from $PipReq..."
 & $PipExe install --upgrade pip
 & $PipExe install -r $PipReq
+if ($LASTEXITCODE -ne 0) { throw "pip install failed with code $LASTEXITCODE" }
+
+$PreCommitExe = Join-Path $VenvDir "Scripts\pre-commit.exe"
+if (-not (Test-Path $PreCommitExe)) {
+    $Cmd = Get-Command pre-commit -ErrorAction SilentlyContinue
+    if ($Cmd) { $PreCommitExe = $Cmd.Source } else { $PreCommitExe = $null }
+}
+if ($PreCommitExe -and (Test-Path (Join-Path $RepoRoot ".git"))) {
+    Push-Location $RepoRoot
+    try {
+        & $PreCommitExe install
+        if ($LASTEXITCODE -ne 0) { throw "pre-commit install failed with code $LASTEXITCODE" }
+    } finally {
+        Pop-Location
+    }
+}
 Write-Host "[OK] Backend environment ready!" -ForegroundColor Green
 
 # 2. Frontend npm
