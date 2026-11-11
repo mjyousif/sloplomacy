@@ -8,6 +8,8 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 
 `App.tsx` keeps most of this state itself. Some of it comes from hooks named for what they do, and the table says which:
 
+- `hooks/useGameSession.ts`: the open game (`activeGameId`, `activeGameSummary`), the player's seat (`lockedPower`, and `playerPower` derived from it by `resolvePlayerPower`), the board (`gameState`, `provinces`, `loading`, `errorMsg`) and the lobby's games (`gamesList`, `loadingGames`), with `fetchGame`, `fetchGamesList`, `applyServerState` and `boardRequestSeq`. It runs no effects.
+- `hooks/useGameSync.ts`: what keeps them current: the socket (`useDiplomacyWebSocket`) and its two message handlers, the first load on mount, `handleTimerExpired`, and the fallback poll. App calls it later than `useGameSession`, where these effects have always run, so they keep their order among App's effects (after the display-prefs, layout-reset and turn-history effects, before the effect that closes a private sandbox).
 - `hooks/useAuthSession.ts`: who is signed in and the sign-in modal. It reads the saved user once on mount and then follows every sign-in and sign-out through `subscribeToAuthChanges`. `openAuthPrompt(reason?, tab?)` opens the modal with an optional reason banner and a tab (sign-in by default).
 - `hooks/useWorkspaceLayout.ts`: the desktop rails, the phone order sheet and the tools drawer, with the effect that resets the sheet and drawer.
 - `hooks/useToast.ts`: the toast banner and `triggerToast`.
@@ -17,15 +19,15 @@ The desktop header is `components/TopHeader.tsx`, which keeps no state: App pass
 | State Property | Type | Scope | Description |
 | :--- | :--- | :--- | :--- |
 | `viewMode` | `'lobby' \| 'sandbox' \| 'multiplayer'` | Router | High-level application mode (match browser vs tactical board). |
-| `activeGameId` | `string` | Scoping | ID of the active game session (default: `'proto_1901'`). |
-| `currentGameSummary`| `MultiplayerGameSummary \| null` | Room | Metadata for current multiplayer match or saved sandbox. |
-| `lockedPower` | `Power \| null` | Match | Claimed sovereign power for active player in multiplayer matches. `playerPower`, derived by `resolvePlayerPower`, is what the app uses as the player's power: this seat in multiplayer, `gameState.active_power` in a sandbox. |
+| `activeGameId` | `string` | Scoping | ID of the active game session, from `useGameSession`: the solo sandbox this browser remembers (`readStoredSoloSandboxId`), else `'proto_1901'`. |
+| `activeGameSummary`| `MultiplayerGameSummary \| null` | Room | Metadata for current multiplayer match or saved sandbox, from `useGameSession`. |
+| `lockedPower` | `Power \| null` | Match | Claimed sovereign power for active player in multiplayer matches, from `useGameSession`. `playerPower`, derived by `resolvePlayerPower`, is what the app uses as the player's power: this seat in multiplayer, `gameState.active_power` in a sandbox. |
 | `authUser` | `AuthUser \| null` | Auth | Authenticated user profile from Supabase (or local dev mode), from `useAuthSession`. The sign-in modal's `onSuccess` also sets it. |
 | `authModalOpen`, `authModalReason`, `authModalTab` | `boolean`, `string \| null`, `'signin' \| 'signup'` | Modal | The Supabase auth dialogue, from `useAuthSession`: whether it is open, the banner saying why it was asked for, and the tab asked for. `AuthModal` stays mounted while closed, so it resets its tab to `authModalTab` (and clears the typed email, password, name and messages) each time it opens, during render. |
 | `displayPrefs` | `DisplayPrefs` | Display | This player's piece style and army and fleet marks, from `useDisplayPrefs`. |
-| `gamesList` | `MultiplayerGameSummary[]` | Lobby | Roster of public matches, lobbies, and sandboxes. |
-| `gameState` | `GameState \| null` | Global | Authoritative match state received from FastAPI. |
-| `provinces` | `Record<string, ProvinceInfo>` | Global | Static map topology metadata fetched once on bootstrap. |
+| `gamesList` | `MultiplayerGameSummary[]` | Lobby | Roster of public matches, lobbies, and sandboxes, from `useGameSession`. |
+| `gameState` | `GameState \| null` | Global | Authoritative match state received from FastAPI, from `useGameSession`. |
+| `provinces` | `Record<string, ProvinceInfo>` | Global | Static map topology metadata, from `useGameSession`, sent with every board. |
 | `selectedUnitId` | `string \| null` | UI | Currently selected military unit on the map or in the sidebar. |
 | `hoveredUnitId` | `string \| null` | UI | Unit hovered for cross-component highlighting. Set from `onPointerEnter`/`onPointerLeave` on map pieces and sidebar cards, which ignore `pointerType === 'touch'`: a finger has no hover, so a tap would otherwise leave the highlight on. |
 | `highlightedProvinces`| `string[]` | UI | Provinces highlighted during targeting or diagnostic inspection. |
@@ -49,7 +51,7 @@ The desktop header is `components/TopHeader.tsx`, which keeps no state: App pass
 | `hypotheticalMatchTimer` | `PhaseTimer \| null` | Multiplayer | The real match's clock while `sandboxGameId` is set, because the private copy has none. Components read the derived `matchTimer`. |
 | `turnHistory` | `TurnHistory` | History | From `useTurnHistory`: the resolved phases (`entries`), the one on show (`viewIndex`, `null` = live), its `TurnRecord` (`turn`) and the nation chip (`power`). The list is refetched whenever the live turn changes, which covers WebSocket updates and rollbacks. If the phase on show has moved it is found again by season, year and phase, and if it is gone the view goes back to live. Records are cached until the list is refetched. It always reads `activeGameId`, never `sandboxGameId`, and sends the passcode the player typed for a private match as `X-Passcode`. While `turn` is set, the map shows that turn read-only and the orders panel is dimmed (`viewingHistory`). |
 | `toastBanner` | `string \| null` | Banner | Auto-expiring toast message for user notifications, from `useToast`. A new message replaces the one showing, and each clears itself after 4.5 seconds unless a different message has replaced it. |
-| `wsConnected` | `boolean` | Network | Active real-time WebSocket connection to room feed or lobby. |
+| `wsConnected` | `boolean` | Network | Active real-time WebSocket connection to room feed or lobby, from `useGameSync`. |
 
 ---
 
@@ -159,10 +161,10 @@ While `sandboxGameId` is set, the board shows the private copy and is kept apart
 
 ## Real-Time WebSocket Synchronization (`useDiplomacyWebSocket`)
 
-To guarantee seamless multiplayer coordination, the frontend maintains a persistent WebSocket connection via the custom hook `useDiplomacyWebSocket`:
+To guarantee seamless multiplayer coordination, the frontend maintains a persistent WebSocket connection via the custom hook `useDiplomacyWebSocket`, which `useGameSync` calls with its two handlers:
 
 ```
-                           CLIENT BROWSER (App.tsx)
+                           CLIENT BROWSER (useGameSync)
                                       │
             ┌─────────────────────────┴─────────────────────────┐
             │ viewMode === 'lobby'                              │ viewMode !== 'lobby'
@@ -190,7 +192,7 @@ To guarantee seamless multiplayer coordination, the frontend maintains a persist
 5. **Requests and stale replies**:
    - Every call that acts on a game sends the player's token, through `authedFetch` (`lib/supabase.ts`) or `getAuthHeaders`. The server finds the player's seat and their saved sandboxes from it, so a call sent without it is treated as a stranger's.
    - `handleAdjudicateTurn` ignores a click while a resolve is in flight and sends the turn it means (`?turn=`), so a double-click resolves one phase.
-   - `fetchGame` and joining a match bump `boardRequestSeq`. A `GET /api/game` reply that comes back after a newer request is dropped, so the startup load of `proto_1901` cannot replace a match the player has just joined.
+   - `fetchGame` (in `useGameSession`) and joining a match bump `boardRequestSeq`. A `GET /api/game` reply that comes back after a newer request is dropped, so the startup load of `proto_1901` cannot replace a match the player has just joined.
 6. **Visual Telemetry**:
    - The header displays a real-time badge (`.header-ws-badge`):
      - `Live Sync` with a pulsating green indicator when actively connected.

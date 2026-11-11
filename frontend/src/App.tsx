@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import './compact.css';
 import {
@@ -26,8 +26,9 @@ import {
 } from './components/TurnHistorySelector';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useCompactLayout } from './hooks/useCompactLayout';
-import { useDiplomacyWebSocket } from './hooks/useDiplomacyWebSocket';
 import { useDisplayPrefs } from './hooks/useDisplayPrefs';
+import { useGameSession } from './hooks/useGameSession';
+import { useGameSync } from './hooks/useGameSync';
 import { useToast } from './hooks/useToast';
 import { useTurnHistory } from './hooks/useTurnHistory';
 import { useWorkspaceLayout } from './hooks/useWorkspaceLayout';
@@ -40,42 +41,20 @@ import {
   type PhaseTimer,
   POWER_METADATA,
   type Power,
-  type ProvinceInfo,
   type SimulationResult,
   type ValidationIssue,
-  type WebSocketGameUpdate,
-  type WebSocketLobbyUpdate,
 } from './types/diplomacy';
-import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
+import { checkIsGameCreator } from './utils/adminHelpers';
+import {
+  readStoredSoloSandboxId,
+  writeStoredSoloSandboxId,
+} from './utils/soloSandboxStorage';
 import { turnLabel } from './utils/timerHelpers';
 
 const API_BASE = '/api';
 // Stable empties for a past turn, so the map's memoized layers are not rebuilt every render.
 const NO_ISSUES: ValidationIssue[] = [];
 const NO_PROVINCES: string[] = [];
-
-const SOLO_SANDBOX_STORAGE_KEY = 'sloplomacy_solo_sandbox_id';
-
-function readStoredSoloSandboxId(): string | null {
-  try {
-    const val = localStorage.getItem(SOLO_SANDBOX_STORAGE_KEY)?.trim();
-    return val?.startsWith('solo_') ? val : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredSoloSandboxId(gameId: string | null): void {
-  try {
-    if (gameId?.startsWith('solo_')) {
-      localStorage.setItem(SOLO_SANDBOX_STORAGE_KEY, gameId);
-    } else {
-      localStorage.removeItem(SOLO_SANDBOX_STORAGE_KEY);
-    }
-  } catch {
-    // Ignore storage quota / privacy mode restrictions
-  }
-}
 
 export function App() {
   // Navigation & Mode State
@@ -93,12 +72,32 @@ export function App() {
       return 'lobby';
     },
   );
-  const [activeGameId, setActiveGameId] = useState<string>(
-    () => readStoredSoloSandboxId() ?? 'proto_1901',
-  );
-  const [activeGameSummary, setActiveGameSummary] =
-    useState<MultiplayerGameSummary | null>(null);
-  const [lockedPower, setLockedPower] = useState<Power | null>(null);
+  const [simulationResult, setSimulationResult] =
+    useState<SimulationResult | null>(null);
+  // The open game, its summary and the player's seat, the board, and the lobby's games.
+  const {
+    activeGameId,
+    setActiveGameId,
+    activeGameSummary,
+    setActiveGameSummary,
+    lockedPower,
+    setLockedPower,
+    playerPower,
+    gamesList,
+    setGamesList,
+    loadingGames,
+    gameState,
+    setGameState,
+    provinces,
+    setProvinces,
+    loading,
+    setLoading,
+    errorMsg,
+    boardRequestSeq,
+    applyServerState,
+    fetchGame,
+    fetchGamesList,
+  } = useGameSession({ viewMode, setSimulationResult });
 
   // Auth State
   const {
@@ -116,16 +115,6 @@ export function App() {
     updatePrefs: updateDisplayPrefs,
   } = useDisplayPrefs(authUser);
 
-  // Lobby Games State
-  const [gamesList, setGamesList] = useState<MultiplayerGameSummary[]>([]);
-  const [loadingGames, setLoadingGames] = useState<boolean>(false);
-
-  // Board & Tactical Engine State
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [provinces, setProvinces] = useState<Record<string, ProvinceInfo>>({});
-  const [loading, setLoading] = useState<boolean>(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
   // UI Interaction State
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [hoveredUnitId, setHoveredUnitId] = useState<string | null>(null);
@@ -138,8 +127,6 @@ export function App() {
   // The private copy has no clock, so this follows the real match while the player is in it.
   const [hypotheticalMatchTimer, setHypotheticalMatchTimer] =
     useState<PhaseTimer | null>(null);
-  const [simulationResult, setSimulationResult] =
-    useState<SimulationResult | null>(null);
   const [showSimulationOverlay, setShowSimulationOverlay] =
     useState<boolean>(false);
   const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
@@ -196,11 +183,6 @@ export function App() {
     null,
   );
 
-  const playerPower = resolvePlayerPower(
-    viewMode,
-    lockedPower,
-    gameState?.active_power,
-  );
   const isGameCreator = checkIsGameCreator(
     activeGameSummary,
     authUser,
@@ -221,206 +203,24 @@ export function App() {
     return false;
   };
 
-  const applyServerState = (st: GameState) => {
-    setGameState(st);
-    if (st.last_resolution) {
-      setSimulationResult(st.last_resolution);
-    }
-  };
-
-  const handleWsGameUpdate = useCallback(
-    (update: WebSocketGameUpdate) => {
-      if (update.game_id !== activeGameId) return;
-
-      if (update.summary) {
-        setActiveGameSummary(update.summary);
-      }
-      // The real match keeps moving behind a private sandbox; exiting catches the board up.
-      if (sandboxGameId) {
-        setHypotheticalMatchTimer(update.state.timer ?? null);
-        return;
-      }
-
-      setGameState((prev) => {
-        if (
-          prev &&
-          (prev.season !== update.state.season ||
-            prev.year !== update.state.year ||
-            prev.phase !== update.state.phase)
-        ) {
-          triggerToast(
-            `Phase advanced: ${update.state.season} ${update.state.year} (${update.state.phase})`,
-          );
-        }
-        return update.state;
-      });
-
-      if (update.state.last_resolution) {
-        setSimulationResult(update.state.last_resolution);
-      }
-    },
-    [activeGameId, sandboxGameId, triggerToast],
-  );
-
-  const handleWsLobbyUpdate = useCallback(
-    (update: WebSocketLobbyUpdate) => {
-      setGamesList(update.games);
-      const current = update.games.find((g) => g.game_id === activeGameId);
-      if (current) {
-        setActiveGameSummary(current);
-      }
-    },
-    [activeGameId],
-  );
-
-  const { isConnected: wsConnected, sendRefresh: sendWsRefresh } =
-    useDiplomacyWebSocket({
-      activeGameId,
-      viewMode,
-      power: playerPower,
-      passcode: activeGameId ? (matchPasscodes[activeGameId] ?? null) : null,
-      authKey: authUser?.id ?? null,
-      onGameUpdate: handleWsGameUpdate,
-      onLobbyUpdate: handleWsLobbyUpdate,
-    });
-
-  const fetchGamesList = async () => {
-    try {
-      setLoadingGames(true);
-      const res = await fetch(`${API_BASE}/games`);
-      if (res.ok) {
-        const list: MultiplayerGameSummary[] = await res.json();
-        setGamesList(list);
-      }
-    } catch (e) {
-      console.error('Failed to fetch games list:', e);
-    } finally {
-      setLoadingGames(false);
-    }
-  };
-
-  // Bumped by every fetchGame and every join, so an older reply still in flight
-  // (such as the startup load of proto_1901) cannot replace a board opened since.
-  const boardRequestSeq = useRef(0);
-
-  const fetchGame = async (
-    gid: string = activeGameId,
-    targetPower?: Power | null,
-  ) => {
-    const seq = ++boardRequestSeq.current;
-    try {
-      setLoading(true);
-      const effectivePower =
-        targetPower !== undefined ? targetPower : playerPower;
-      const params = new URLSearchParams({ game_id: gid });
-      if (effectivePower) {
-        params.set('power', effectivePower);
-      }
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
-        headers: { ...authHeaders },
-      });
-      if (!res.ok) {
-        if (gid !== 'proto_1901' && gid === readStoredSoloSandboxId()) {
-          writeStoredSoloSandboxId(null);
-          setActiveGameId('proto_1901');
-          return fetchGame('proto_1901', targetPower);
-        }
-        throw new Error(`Backend returned ${res.status}`);
-      }
-      const data = await res.json();
-      if (seq !== boardRequestSeq.current) return;
-      applyServerState(data.state);
-      setProvinces(data.provinces);
-      if (data.summary) {
-        setActiveGameSummary(data.summary);
-      }
-      setErrorMsg(null);
-    } catch (err: any) {
-      if (seq === boardRequestSeq.current) {
-        setErrorMsg(
-          err.message || 'Failed to connect to Diplomacy backend server.',
-        );
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // The auth user is loaded and followed by useAuthSession.
-  useEffect(() => {
-    fetchGame(readStoredSoloSandboxId() ?? 'proto_1901');
-    fetchGamesList();
-  }, []);
-
-  // Only a `refresh` makes the server run the clock; a `ping` is just a heartbeat.
-  // Without a socket the fallback poll below runs the clock every few seconds, and
-  // it also knows to leave the board alone while a private sandbox is open.
-  const handleTimerExpired = useCallback(() => {
-    sendWsRefresh();
-  }, [sendWsRefresh]);
-
-  // Fallback poll game state in multiplayer mode ONLY when WebSocket is disconnected,
-  // so turn advancements and timers continue to work if a network drops WS connections.
-  useEffect(() => {
-    if (viewMode !== 'multiplayer' || !activeGameId) return;
-    if (wsConnected) return; // Real-time WebSocket is active; avoid redundant HTTP polling and state races
-
-    let abandoned = false;
-
-    const pollState = async () => {
-      // Pause polling when browser tab is in background to allow Cloud Run to scale to zero
-      if (typeof document !== 'undefined' && document.hidden) return;
-
-      try {
-        const effectivePower = playerPower;
-        const params = new URLSearchParams({ game_id: activeGameId });
-        if (effectivePower) {
-          params.set('power', effectivePower);
-        }
-        const authHeaders = await getAuthHeaders();
-        const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
-          headers: { ...authHeaders },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        // A reply still in flight must not repaint a board the player has since left.
-        if (abandoned || !data?.state) return;
-        if (sandboxGameId) {
-          // The poll also runs the clock, so it continues behind a private sandbox.
-          setHypotheticalMatchTimer(data.state.timer ?? null);
-        } else {
-          applyServerState(data.state);
-        }
-        if (data.summary) setActiveGameSummary(data.summary);
-      } catch {
-        // Fallback polling network errors are silently ignored
-      }
-    };
-
-    const interval = setInterval(pollState, 4000);
-
-    const handleVisibilityChange = () => {
-      if (typeof document !== 'undefined' && !document.hidden && !abandoned) {
-        pollState();
-      }
-    };
-
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-    }
-
-    return () => {
-      abandoned = true;
-      clearInterval(interval);
-      if (typeof document !== 'undefined') {
-        document.removeEventListener(
-          'visibilitychange',
-          handleVisibilityChange,
-        );
-      }
-    };
-  }, [viewMode, activeGameId, sandboxGameId, wsConnected, playerPower]);
+  // The live socket, the first load and the fallback poll.
+  const { wsConnected, handleTimerExpired } = useGameSync({
+    viewMode,
+    activeGameId,
+    playerPower,
+    sandboxGameId,
+    matchPasscodes,
+    authKey: authUser?.id ?? null,
+    triggerToast,
+    setActiveGameSummary,
+    setGameState,
+    setGamesList,
+    setSimulationResult,
+    setHypotheticalMatchTimer,
+    applyServerState,
+    fetchGame,
+    fetchGamesList,
+  });
 
   // Leaving the match board by any route closes its private sandbox.
   useEffect(() => {

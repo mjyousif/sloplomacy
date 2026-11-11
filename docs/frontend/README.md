@@ -113,6 +113,10 @@ frontend/
     │   ├── useCompactLayout.test.ts # Follows the media query, including older Safari listeners
     │   ├── useDisplayPrefs.ts   # This player's display choice, saved on the device and account
     │   ├── useDisplayPrefs.test.ts # Device and account saving, failed reads and edits during a read
+    │   ├── useGameSession.ts    # The open game, its summary and seat, the board and the lobby list, and the loads that fill them
+    │   ├── useGameSession.test.ts # Seat, board loads, stale replies, the forgotten solo sandbox, errors and the lobby list
+    │   ├── useGameSync.ts       # The live socket and its handlers, the first load and the fallback poll
+    │   ├── useGameSync.test.ts  # Game and lobby updates, the phase toast, the first load, and when and what the poll fetches
     │   ├── useAuthSession.ts    # The signed-in user (loaded on mount, then followed) and the sign-in modal
     │   ├── useAuthSession.test.ts # Initial load, sign-in and sign-out, unsubscribe, and the modal's reason and tab
     │   ├── useWorkspaceLayout.ts # Desktop rails, phone order sheet and tools drawer, reset on a new game, view or layout
@@ -141,7 +145,9 @@ frontend/
         ├── powerHelpers.ts      # Great Power ranking (SC descending, unit tiebreaker, tied rank sharing)
         ├── powerHelpers.test.ts # Vitest suite for diplomatic standing ranking
         ├── sheetHelpers.ts      # Phone order sheet stops: snap heights, release and tap stepping
-        └── sheetHelpers.test.ts # Vitest suite for the sheet's snap math
+        ├── sheetHelpers.test.ts # Vitest suite for the sheet's snap math
+        ├── soloSandboxStorage.ts # The draft solo sandbox id this browser remembers (localStorage)
+        └── soloSandboxStorage.test.ts # Only solo_ ids are kept, and blocked storage never throws
 ```
 
 ---
