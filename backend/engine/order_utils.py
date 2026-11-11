@@ -9,6 +9,7 @@ from engine.adjudicator.resolver import (
     compute_current_builds,
     create_diplomacy_game,
 )
+from engine.reachability import compute_unit_options
 from engine.topology.provinces import PROVINCES
 from engine.validator.orchestrator import validate_orders
 from fastapi import HTTPException
@@ -125,6 +126,7 @@ def refresh_diagnostics_and_simulation(game: GameState) -> None:
         game.builds = None
         game.retreats = None
         game.issues = []
+        game.unit_options = {}
         return
 
     if game.phase == "Adjustments":
@@ -162,6 +164,9 @@ def refresh_diagnostics_and_simulation(game: GameState) -> None:
         game.year,
         game.phase,
         retreats=game.retreats,
+    )
+    game.unit_options = compute_unit_options(
+        game.units, game.orders, game.phase, retreats=game.retreats
     )
 
 

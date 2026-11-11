@@ -2,6 +2,7 @@ import logging
 
 from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
+from engine.reachability import compute_unit_options
 from fastapi import HTTPException, status
 from storage import supabase
 from storage.supabase import SupabaseUnavailable
@@ -132,6 +133,10 @@ def cache_loaded_game(game_id: str, loaded: tuple) -> GameState:
     if game_id in GAMES:
         return GAMES[game_id]
     state, summary, history, passcode = loaded
+    # Options are never saved (see DERIVED_STATE_FIELDS), so rebuild them from the board.
+    state.unit_options = compute_unit_options(
+        state.units, state.orders, state.phase, retreats=state.retreats, winner=state.winner
+    )
     GAMES[game_id] = state
     if summary:
         GAME_SUMMARIES[game_id] = summary

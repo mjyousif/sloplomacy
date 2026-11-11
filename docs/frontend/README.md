@@ -33,6 +33,7 @@ frontend/
     │   │   │   ├── useMapGestures.test.ts
     │   │   │   ├── useMapInteraction.ts   # Click state machine: modes, support/convoy picks, coast choice, hover
     │   │   │   ├── useMapInteraction.test.ts # Every click path in all three phases (also covers useMapSelection)
+    │   │   │   ├── mapReachabilityHelpers.ts # Pure click-eligibility predicates over UnitMoveOptions
     │   │   │   ├── useMapSelection.ts     # The selected unit or build slot, who may command it, where it can go
     │   │   │   ├── useOrderOverlay.ts     # Whose orders are drawn, issues by unit and province, support counts, move midpoints
     │   │   │   ├── useOrderOverlay.test.ts
@@ -46,6 +47,7 @@ frontend/
     │   │   │   └── MapZoomControls.tsx    # A phone's zoom buttons on the map
     │   │   ├── layers/
     │   │   │   ├── ProvincesLayer.tsx     # Every province polygon, lit where the selected unit can go (with its test)
+    │   │   │   ├── targetHighlight.ts     # Green (direct/active) and ocean-blue (potential/chained) target sets + reticles
     │   │   │   ├── OrderArrowsLayer.tsx   # Every drawn order: convoys under supports under moves (with its test)
     │   │   │   ├── BuildTokensLayer.tsx   # A winter's build slots (with its test)
     │   │   │   ├── UnitsLayer.tsx         # Every unit, each drawn by units/UnitToken.tsx (with its test)
@@ -62,7 +64,8 @@ frontend/
     │   ├── ToolsSidebar.tsx     # Left collapsible sidebar: legend, zoom options, powers, sandbox & admin (a ≡ drawer on phones)
     │   ├── MacroSidebar.tsx     # Right collapsible sidebar: core gameplay orders, builds, finalize & adjudicate (the order sheet on phones)
     │   ├── macro/               # Decomposed order sheet and unit management cards
-    │   │   ├── UnitMacroCard.tsx # Unit order card: move, hold, support, convoy & retreat selectors
+    │   │   ├── UnitMacroCard.tsx # Unit order card shell, badges, diagnostics & simulation strip
+    │   │   ├── OrderParameterControls.tsx # Move/via-convoy, support & convoy parameter dropdowns (with its test)
     │   │   └── BuildSlotCard.tsx # Winter adjustment build/disband quota cards
     │   ├── sidebars.test.ts     # Vitest suite for ToolsSidebar and MacroSidebar collapsible views
     │   ├── TurnHistorySelector.tsx # Left pane footer to pick a resolved turn, nation chips, and the phone's map pill

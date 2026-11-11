@@ -4,6 +4,7 @@ import type {
   Power,
   ProvinceInfo,
   Unit,
+  UnitMoveOptions,
   UnitType,
 } from '../types/diplomacy';
 import {
@@ -153,6 +154,7 @@ export function buildDefaultOrderForType({
   units,
   orders,
   retreats,
+  unitOptions = null,
 }: {
   unit: Unit;
   newType: OrderType;
@@ -160,12 +162,14 @@ export function buildDefaultOrderForType({
   units: Unit[];
   orders: Record<string, Order>;
   retreats?: Record<Power, Record<string, string[]>> | null;
+  unitOptions?: UnitMoveOptions | null;
 }): Order | null {
   if (newType === 'RETREAT') {
     const validRetreats = getValidRetreatDestinations(
       unit,
       retreats,
       provinces,
+      unitOptions,
     );
     const firstRet = validRetreats[0];
     return {
@@ -184,7 +188,7 @@ export function buildDefaultOrderForType({
   if (newType === 'HOLD') return holdOrder(unit);
 
   if (newType === 'MOVE') {
-    const firstDest = getReachableDestinations(unit, provinces)[0];
+    const firstDest = getReachableDestinations(unit, provinces, unitOptions)[0];
     return {
       ...fromUnit(unit),
       order_type: 'MOVE',
@@ -198,6 +202,32 @@ export function buildDefaultOrderForType({
   }
 
   if (newType === 'SUPPORT') {
+    if (unitOptions && unitOptions.valid_supports.length > 0) {
+      const unitsById = Object.fromEntries(units.map((u) => [u.id, u]));
+      const chosenSup =
+        unitOptions.valid_supports.find(
+          (s) => unitsById[s.unit_id]?.power === unit.power,
+        ) || unitOptions.valid_supports[0];
+      const supOrder = orders[chosenSup.unit_id];
+      const matchingMove =
+        supOrder?.order_type === 'MOVE' &&
+        supOrder.target &&
+        chosenSup.moves.includes(supOrder.target)
+          ? supOrder.target
+          : null;
+      const target =
+        matchingMove ??
+        (chosenSup.hold ? chosenSup.province : (chosenSup.moves[0] ?? null));
+      return {
+        ...fromUnit(unit),
+        order_type: 'SUPPORT',
+        aux_unit_origin: chosenSup.province,
+        target,
+        via_convoy: false,
+        is_explicit: true,
+      };
+    }
+
     const otherUnits = units.filter(
       (other) => other.id !== unit.id && !other.is_dislodged,
     );
@@ -205,9 +235,14 @@ export function buildDefaultOrderForType({
       otherUnits.find(
         (other) =>
           other.power === unit.power &&
-          (canUnitSupportInto(unit, other.province, provinces) ||
+          (canUnitSupportInto(unit, other.province, provinces, unitOptions) ||
             (orders[other.id]?.target &&
-              canUnitSupportInto(unit, orders[other.id].target!, provinces))),
+              canUnitSupportInto(
+                unit,
+                orders[other.id].target!,
+                provinces,
+                unitOptions,
+              ))),
       ) || otherUnits[0];
 
     const supOrder = defaultSup ? orders[defaultSup.id] : undefined;
@@ -215,7 +250,7 @@ export function buildDefaultOrderForType({
       supOrder &&
       supOrder.order_type === 'MOVE' &&
       supOrder.target &&
-      canUnitSupportInto(unit, supOrder.target, provinces)
+      canUnitSupportInto(unit, supOrder.target, provinces, unitOptions)
         ? supOrder.target
         : defaultSup?.province || null;
 
@@ -230,6 +265,34 @@ export function buildDefaultOrderForType({
   }
 
   if (newType === 'CONVOY') {
+    if (unitOptions?.convoyable_armies) {
+      const candidates = [
+        ...unitOptions.convoyable_armies.direct,
+        ...unitOptions.convoyable_armies.chained,
+      ];
+      const byProv = Object.fromEntries(
+        units.filter((u) => !u.is_dislodged).map((u) => [u.province, u]),
+      );
+      const chosenOrigin =
+        candidates.find((prov) => byProv[prov]?.power === unit.power) ??
+        candidates[0] ??
+        null;
+      const reach = chosenOrigin
+        ? unitOptions.convoy_targets[chosenOrigin]
+        : undefined;
+      const chosenTarget = reach
+        ? (reach.direct[0] ?? reach.chained[0] ?? null)
+        : null;
+      return {
+        ...fromUnit(unit),
+        order_type: 'CONVOY',
+        aux_unit_origin: chosenOrigin,
+        target: chosenTarget,
+        via_convoy: false,
+        is_explicit: true,
+      };
+    }
+
     const coastalArmies = units.filter(
       (u2) =>
         u2.unit_type === 'A' &&

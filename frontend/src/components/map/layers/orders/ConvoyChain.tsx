@@ -19,7 +19,9 @@ export function ConvoyChain({
   const fleetPt = getUnitPoint(unit);
   const armyPt = getProvincePoint(auxOrigin);
   const destPt = getProvincePoint(target);
-  const hasIssue = Boolean(issuesByUnit[unit.id]?.length);
+  const hasIssue = Boolean(
+    issuesByUnit[unit.id]?.some((i) => i.severity !== 'info'),
+  );
 
   return (
     <g

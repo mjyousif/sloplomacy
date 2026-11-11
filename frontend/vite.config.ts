@@ -11,20 +11,22 @@ if (!commitHash) {
   }
 }
 
+const apiTarget = process.env.VITE_API_TARGET || 'http://127.0.0.1:8000';
+
 export default defineConfig({
   plugins: [react()],
   define: {
     __COMMIT_HASH__: JSON.stringify(commitHash),
   },
   server: {
-    port: 5173,
+    port: Number(process.env.VITE_PORT || 5173),
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: apiTarget,
         changeOrigin: true,
       },
       '/ws': {
-        target: 'http://127.0.0.1:8000',
+        target: apiTarget,
         ws: true,
         changeOrigin: true,
       },

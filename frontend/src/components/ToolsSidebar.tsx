@@ -448,7 +448,13 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
                 const isSelected = pwr === activePower;
                 const isFinal = finalizedPowers.includes(pwr);
                 const isSurr = surrenderedPowers.includes(pwr);
-                const pwrIssues = issues.filter((i) => i.power === pwr);
+                const canSeePowerIssues =
+                  isSelected || sandboxMode || adminOverrideActive;
+                const pwrIssues = canSeePowerIssues
+                  ? issues.filter(
+                      (i) => i.power === pwr && i.severity !== 'info',
+                    )
+                  : [];
                 const occupant = participants?.[pwr];
                 const playerName =
                   occupant?.display_name ||

@@ -82,6 +82,19 @@ describe('useOrderOverlay', () => {
     expect(issuesByProvince).toEqual({ PAR: [mine], BUR: [mine] });
   });
 
+  it('does not paint amber province warning borders for informational info notes', () => {
+    const infoNote: ValidationIssue = {
+      ...issue('foreign-convoy', 'FRANCE', [A_PAR.id], ['PAR', 'BUR']),
+      severity: 'info',
+    };
+    const { issuesByUnit, issuesByProvince } = overlay({
+      units: [A_PAR],
+      issues: [infoNote],
+    });
+    expect(issuesByUnit).toEqual({ [A_PAR.id]: [infoNote] });
+    expect(issuesByProvince).toEqual({});
+  });
+
   it("shows every power's issues where any power can be edited", () => {
     const theirs = issue('theirs', 'GERMANY', [A_PIC_GER.id], ['PIC']);
     const { issuesByUnit } = overlay({

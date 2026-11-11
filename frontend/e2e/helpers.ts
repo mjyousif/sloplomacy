@@ -86,11 +86,14 @@ export class ScenarioRecorder {
   }
 }
 
+export const DEFAULT_E2E_API_URL =
+  process.env.E2E_API_URL || 'http://localhost:8000';
+
 export async function seedScenario(
   scenarioId: string,
   gameId: string = 'proto_1901',
   activePower?: string,
-  apiBase: string = 'http://localhost:8000'
+  apiBase: string = DEFAULT_E2E_API_URL
 ) {
   const payload: Record<string, string> = {
     scenario_id: scenarioId,
@@ -115,7 +118,7 @@ export async function seedScenario(
 export async function postOrder(
   order: Record<string, unknown>,
   gameId: string = 'proto_1901',
-  apiBase: string = 'http://localhost:8000',
+  apiBase: string = DEFAULT_E2E_API_URL,
 ) {
   const res = await fetch(`${apiBase}/api/order?game_id=${gameId}`, {
     method: 'POST',
@@ -129,7 +132,7 @@ export async function postOrder(
 /** Resolves the current phase through the API. */
 export async function resolvePhase(
   gameId: string = 'proto_1901',
-  apiBase: string = 'http://localhost:8000',
+  apiBase: string = DEFAULT_E2E_API_URL,
 ) {
   const res = await fetch(`${apiBase}/api/adjudicate?game_id=${gameId}`, {
     method: 'POST',

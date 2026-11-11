@@ -72,9 +72,11 @@ export function useOrderOverlay({
         if (!byUnit[uid]) byUnit[uid] = [];
         byUnit[uid].push(iss);
       }
-      for (const pid of iss.provinces) {
-        if (!byProvince[pid]) byProvince[pid] = [];
-        byProvince[pid].push(iss);
+      if (iss.severity !== 'info') {
+        for (const pid of iss.provinces) {
+          if (!byProvince[pid]) byProvince[pid] = [];
+          byProvince[pid].push(iss);
+        }
       }
     }
     return { issuesByUnit: byUnit, issuesByProvince: byProvince };

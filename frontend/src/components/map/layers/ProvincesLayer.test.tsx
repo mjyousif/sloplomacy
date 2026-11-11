@@ -291,4 +291,56 @@ describe('ProvincesLayer', () => {
     expect(fillOf(step2Fleet.container, 'GAS')).toBe('#4ade80');
     expect(fillOf(step2Fleet.container, 'MAO')).toBe('#4ade80');
   });
+
+  it('lights active convoys in solid green with reticles, potential/chained convoys in ocean blue, and support options in green', () => {
+    const army = unitAt('FRANCE', 'A', 'BRE');
+    const moveView = draw({
+      selectedUnit: army,
+      reachableMap: { PAR: [] },
+      selectedUnitOptions: {
+        direct_moves: ['PAR'],
+        active_convoys: ['MAR'],
+        potential_convoys: ['GAS', 'PAR'],
+        convoy_targets: {},
+        valid_supports: [],
+      },
+      interactionMode: 'MOVE',
+    });
+    // Active convoy MAR gets solid green AND a move reticle; potential convoy GAS gets ocean blue;
+    // PAR (both direct and potential) stays solid green!
+    expect(moveView.ids('reachable-reticle')).toEqual(['MAR', 'PAR']);
+    const marPath = moveView.container.querySelector(
+      '[data-testid="province-path"][data-province-id="MAR"]',
+    );
+    const gasPath = moveView.container.querySelector(
+      '[data-testid="province-path"][data-province-id="GAS"]',
+    );
+    expect(marPath?.getAttribute('data-reachable-color')).toBe('green');
+    expect(gasPath?.getAttribute('data-reachable-color')).toBe('blue');
+    expect(gasPath?.getAttribute('fill')).toBe('#38bdf8');
+    expect(gasPath?.getAttribute('stroke')).toBe('#0284c7');
+
+    // SUPPORT_PICK_TARGET lights legal moves & hold in green with reticles
+    const supView = draw({
+      selectedUnit: army,
+      reachableMap: { PAR: [], GAS: [] },
+      selectedUnitOptions: {
+        direct_moves: ['PAR', 'GAS'],
+        active_convoys: [],
+        potential_convoys: [],
+        convoy_targets: {},
+        valid_supports: [
+          {
+            unit_id: 'FRA_A_PAR',
+            province: 'PAR',
+            hold: true,
+            moves: ['GAS'],
+          },
+        ],
+      },
+      interactionMode: 'SUPPORT_PICK_TARGET',
+      pendingAuxOrigin: 'PAR',
+    });
+    expect(supView.ids('reachable-reticle')).toEqual(['GAS', 'PAR']);
+  });
 });

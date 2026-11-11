@@ -7,6 +7,7 @@ import type {
   ProvinceInfo,
   SimulationResult,
   Unit,
+  UnitMoveOptions,
   ValidationIssue,
 } from '../types/diplomacy';
 import type { PieceStyle, UnitMark } from '../utils/displayPrefs';
@@ -53,6 +54,7 @@ export interface EuropeMapProps {
   season?: string;
   builds?: Record<Power, { count: number; homes: string[] }> | null;
   retreats?: Record<Power, Record<string, string[]>> | null;
+  unitOptions?: Record<string, UnitMoveOptions> | null;
   onSelectUnit: (unitId: string | null) => void;
   onHoverUnit: (unitId: string | null) => void;
   onUpdateOrder: (order: Order) => void;
@@ -123,12 +125,14 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       selectedBuildOrder,
       selectedBuildProv,
       selectedUnit,
+      selectedUnitOptions,
       reachableMap,
       issuesByProvince,
       controllableBuildHomes,
       touchHitRadius,
       interaction,
       interactionMode,
+      pendingAuxOrigin,
       pendingCoastChoice,
       hoveredProv,
       clearSelection,
@@ -240,11 +244,12 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
               isAdjustmentPhase={isAdjustmentPhase}
               buildHomes={controllableBuildHomes}
               selectedUnit={selectedUnit}
+              selectedUnitOptions={selectedUnitOptions}
               selectedBuildProv={selectedBuildProv}
               reachableMap={reachableMap}
               interactionMode={interactionMode}
               units={units}
-              pendingAuxOrigin={interaction.pendingAuxOrigin}
+              pendingAuxOrigin={pendingAuxOrigin}
               hoveredProv={hoveredProv}
               highlightedProvinces={highlightedProvinces}
               issuesByProvince={issuesByProvince}

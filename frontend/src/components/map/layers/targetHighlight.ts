@@ -1,14 +1,28 @@
-import type { ProvinceInfo, Unit } from '../../../types/diplomacy';
+import type {
+  ProvinceInfo,
+  Unit,
+  UnitMoveOptions,
+} from '../../../types/diplomacy';
 import { getReachableDestinations } from '../../../utils/orderHelpers';
 import type { MapInteractionMode } from '../hooks/useMapInteraction';
 
+export interface ModeTargetResult {
+  green: Set<string>;
+  blue: Set<string>;
+  reticles: Set<string>;
+}
+
 /**
- * Compute which province IDs should highlight green as valid direct targets
- * for the current `interactionMode` (Move/Retreat, Support, or Convoy).
+ * Compute which province IDs highlight in solid green (direct / ready), ocean blue
+ * (potential / multi-ship chain), and carry target reticles for `interactionMode`.
+ *
+ * Uses backend-authoritative `selectedUnitOptions` when present, falling back to
+ * local `reachableMap` + `provinces` inspection when `selectedUnitOptions` is null.
  */
-export function getModeTargetProvinces({
+export function getModeTargetHighlights({
   interactionMode,
   selectedUnit,
+  selectedUnitOptions = null,
   pendingAuxOrigin,
   reachableMap,
   provinces,
@@ -16,25 +30,49 @@ export function getModeTargetProvinces({
 }: {
   interactionMode: MapInteractionMode;
   selectedUnit: Unit | null;
+  selectedUnitOptions?: UnitMoveOptions | null;
   pendingAuxOrigin: string | null;
   reachableMap: Record<string, string[]>;
   provinces: Record<string, ProvinceInfo>;
   units: Unit[];
-}): Set<string> {
-  if (!selectedUnit) return new Set();
+}): ModeTargetResult {
+  const green = new Set<string>();
+  const blue = new Set<string>();
+  const reticles = new Set<string>();
+  if (!selectedUnit) return { green, blue, reticles };
 
   if (interactionMode === 'MOVE') {
-    return new Set(Object.keys(reachableMap));
+    for (const pid of Object.keys(reachableMap)) {
+      green.add(pid);
+      reticles.add(pid);
+    }
+    if (selectedUnitOptions) {
+      for (const pid of selectedUnitOptions.active_convoys) {
+        green.add(pid);
+        reticles.add(pid);
+      }
+      for (const pid of selectedUnitOptions.potential_convoys) {
+        if (!green.has(pid)) blue.add(pid);
+      }
+    }
+    return { green, blue, reticles };
   }
 
   if (interactionMode === 'CONVOY_PICK_ARMY') {
+    if (selectedUnitOptions) {
+      const reach = selectedUnitOptions.convoyable_armies;
+      for (const pid of reach?.direct ?? []) green.add(pid);
+      for (const pid of reach?.chained ?? []) {
+        if (!green.has(pid)) blue.add(pid);
+      }
+      return { green, blue, reticles };
+    }
     if (
       selectedUnit.unit_type !== 'F' ||
       provinces[selectedUnit.province]?.type !== 'SEA'
     ) {
-      return new Set();
+      return { green, blue, reticles };
     }
-    const armyOrigins = new Set<string>();
     for (const u of units) {
       if (
         u.unit_type === 'A' &&
@@ -42,31 +80,47 @@ export function getModeTargetProvinces({
         reachableMap[u.province] &&
         provinces[u.province]?.type === 'COAST'
       ) {
-        armyOrigins.add(u.province);
+        green.add(u.province);
       }
     }
-    return armyOrigins;
+    return { green, blue, reticles };
   }
 
   if (interactionMode === 'CONVOY_PICK_TARGET') {
+    if (!pendingAuxOrigin) return { green, blue, reticles };
+    if (selectedUnitOptions) {
+      const reach = selectedUnitOptions.convoy_targets[pendingAuxOrigin];
+      for (const pid of reach?.direct ?? []) {
+        green.add(pid);
+        reticles.add(pid);
+      }
+      for (const pid of reach?.chained ?? []) {
+        if (!green.has(pid)) blue.add(pid);
+      }
+      return { green, blue, reticles };
+    }
     if (
       selectedUnit.unit_type !== 'F' ||
-      provinces[selectedUnit.province]?.type !== 'SEA' ||
-      !pendingAuxOrigin
+      provinces[selectedUnit.province]?.type !== 'SEA'
     ) {
-      return new Set();
+      return { green, blue, reticles };
     }
-    const targets = new Set<string>();
     for (const provId of Object.keys(reachableMap)) {
       if (provId !== pendingAuxOrigin && provinces[provId]?.type === 'COAST') {
-        targets.add(provId);
+        green.add(provId);
+        reticles.add(provId);
       }
     }
-    return targets;
+    return { green, blue, reticles };
   }
 
   if (interactionMode === 'SUPPORT_PICK_UNIT') {
-    const supportableUnits = new Set<string>();
+    if (selectedUnitOptions) {
+      for (const sup of selectedUnitOptions.valid_supports) {
+        green.add(sup.province);
+      }
+      return { green, blue, reticles };
+    }
     for (const u of units) {
       if (u.is_dislodged || u.id === selectedUnit.id) continue;
       if (
@@ -75,30 +129,45 @@ export function getModeTargetProvinces({
           Boolean(reachableMap[d.province]),
         )
       ) {
-        supportableUnits.add(u.province);
+        green.add(u.province);
       }
     }
-    return supportableUnits;
+    return { green, blue, reticles };
   }
 
   if (interactionMode === 'SUPPORT_PICK_TARGET') {
-    if (!pendingAuxOrigin) return new Set();
+    if (!pendingAuxOrigin) return { green, blue, reticles };
+    if (selectedUnitOptions) {
+      const supOpt = selectedUnitOptions.valid_supports.find(
+        (s) => s.province === pendingAuxOrigin,
+      );
+      if (supOpt) {
+        if (supOpt.hold) {
+          green.add(pendingAuxOrigin);
+          reticles.add(pendingAuxOrigin);
+        }
+        for (const pid of supOpt.moves) {
+          green.add(pid);
+          reticles.add(pid);
+        }
+      }
+      return { green, blue, reticles };
+    }
     const auxUnit = units.find(
       (u) => !u.is_dislodged && u.province === pendingAuxOrigin,
     );
-    if (!auxUnit) return new Set();
-
+    if (!auxUnit) return { green, blue, reticles };
     const auxDirect = new Set(
       getReachableDestinations(auxUnit, provinces).map((d) => d.province),
     );
-    const validTargets = new Set<string>();
     for (const provId of Object.keys(reachableMap)) {
       if (provId === pendingAuxOrigin || auxDirect.has(provId)) {
-        validTargets.add(provId);
+        green.add(provId);
+        reticles.add(provId);
       }
     }
-    return validTargets;
+    return { green, blue, reticles };
   }
 
-  return new Set();
+  return { green, blue, reticles };
 }

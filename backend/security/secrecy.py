@@ -4,6 +4,7 @@ from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
 from engine.adjudicator.resolver import adjudicate_turn
 from engine.order_utils import create_default_orders
+from engine.reachability import compute_unit_options
 from fastapi import Depends, HTTPException, Request, status
 from security.auth import AuthUser, get_current_user
 from storage.store import (
@@ -209,6 +210,11 @@ def sanitize_game_state_for_viewer(
             game.phase,
             retreats=game.retreats,
         )
+
+    # Rebuild options from masked orders so a foreign fleet's secret convoy never turns green.
+    masked_game.unit_options = compute_unit_options(
+        game.units, masked_game.orders, game.phase, retreats=game.retreats
+    )
 
     return masked_game
 

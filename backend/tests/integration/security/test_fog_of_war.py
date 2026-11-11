@@ -310,3 +310,71 @@ def test_supporting_foreign_unit_never_leaks_and_allows_finalization():
     assert fin_res.status_code == 200
     assert fin_res.json()["finalized"] is True
     assert fin_res.json()["requires_confirmation"] is False
+
+
+def test_mixed_multi_fleet_secret_convoy_never_leaks_via_http_or_socket():
+    """Two-player test: Bob's secret convoy order never promotes Alice's unit_options over HTTP or WS."""
+    gid = secret_plan_match()
+    # Spawn France A PIC + F MAO, and Germany F ENG (forming a 2-fleet ENG -> MAO bridge to SPA)
+    for pwr, utype, prov in (
+        ("FRANCE", "A", "PIC"),
+        ("FRANCE", "F", "MAO"),
+        ("GERMANY", "F", "ENG"),
+    ):
+        r = client.post(
+            f"/api/admin/unit/spawn?game_id={gid}",
+            json={"power": pwr, "unit_type": utype, "province": prov},
+            headers=alice_headers(),
+        )
+        assert r.status_code == 200
+
+    # Bob (Germany) secretly orders GER_F_ENG to convoy FRA_A_PIC -> SPA (and LON)
+    bob_convoy = client.post(
+        f"/api/order?game_id={gid}",
+        json={
+            "order": {
+                "unit_id": "GER_F_ENG",
+                "power": "GERMANY",
+                "unit_type": "F",
+                "origin": "ENG",
+                "order_type": "CONVOY",
+                "aux_unit_origin": "PIC",
+                "target": "SPA",
+                "is_explicit": True,
+            }
+        },
+        headers=bob_headers(),
+    )
+    assert bob_convoy.status_code == 200
+
+    # Alice (France) orders FRA_F_MAO to convoy FRA_A_PIC -> SPA
+    alice_convoy = client.post(
+        f"/api/order?game_id={gid}",
+        json={
+            "order": {
+                "unit_id": "FRA_F_MAO",
+                "power": "FRANCE",
+                "unit_type": "F",
+                "origin": "MAO",
+                "order_type": "CONVOY",
+                "aux_unit_origin": "PIC",
+                "target": "SPA",
+                "is_explicit": True,
+            }
+        },
+        headers=alice_headers(),
+    )
+    assert alice_convoy.status_code == 200
+    alice_http = alice_convoy.json()
+
+    # Over HTTP (POST /api/order & GET /api/game) and WebSocket, SPA must NOT appear in active_convoys for Alice!
+    assert alice_http["unit_options"]["FRA_A_PIC"]["active_convoys"] == []
+    assert "SPA" in alice_http["unit_options"]["FRA_A_PIC"]["potential_convoys"]
+
+    alice_get = client.get(f"/api/game?game_id={gid}", headers=alice_headers()).json()["state"]
+    assert alice_get["unit_options"]["FRA_A_PIC"]["active_convoys"] == []
+    assert alice_get["unit_options"]["FRA_F_MAO"]["convoy_targets"]["PIC"]["direct"] == []
+
+    alice_ws = socket_state(f"/ws/games/{gid}?handshake=1", make_jwt(ALICE_ID, "alice@test.com"))
+    assert alice_ws["unit_options"]["FRA_A_PIC"]["active_convoys"] == []
+    assert "SPA" in alice_ws["unit_options"]["FRA_A_PIC"]["potential_convoys"]

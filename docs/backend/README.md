@@ -41,6 +41,12 @@ backend/
 │   │   ├── legality.py      # Movement, per unit: legality, supports, convoys
 │   │   ├── diagnostics.py   # Movement, across units: self-bounces and direct swaps
 │   │   └── convoys.py       # has_active_convoy_chain
+│   ├── reachability/        # Authoritative move, convoy chain and support options per unit
+│   │   ├── __init__.py      # compute_unit_options orchestrator (Movement, Retreats, Adjustments)
+│   │   ├── moves.py         # Direct adjacent moves and retreat destination codes
+│   │   ├── sea_graph.py     # Sea-zone connectivity tables and Menger simple-path routing
+│   │   ├── convoys.py       # Army active/potential convoys and fleet direct/chained options
+│   │   └── supports.py      # Legal support options (hold and move) per unit
 │   ├── topology/            # Europe 1901 map
 │   │   ├── provinces.py     # Province records, adjacencies & coasts, 1901 units and ownership (data)
 │   │   └── graph.py         # Movement, support & convoy reachability rules, coast parsing

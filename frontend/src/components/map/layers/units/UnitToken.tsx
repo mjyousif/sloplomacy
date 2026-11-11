@@ -32,6 +32,7 @@ export function UnitToken({
     canEditAnyPower,
     activePower,
     selectedUnit,
+    interactionMode,
     hoveredUnitId,
     isUnitOrderVisible,
     issuesByUnit,
@@ -56,8 +57,12 @@ export function UnitToken({
   const meta = POWER_METADATA[unit.power];
   const order = orders[unit.id];
   const isControllable = unit.power === controlPower || canEditAnyPower;
+  const isTargetableWhileSelected = Boolean(
+    selectedUnit && unit.id !== selectedUnit.id && interactionMode,
+  );
+  const isInteractive = isControllable || isTargetableWhileSelected;
   const isSelected = Boolean(selectedUnit && unit.id === selectedUnit.id);
-  const isHovered = unit.id === hoveredUnitId && isControllable;
+  const isHovered = unit.id === hoveredUnitId && isInteractive;
   const unitIssues = isUnitOrderVisible(unit)
     ? issuesByUnit[unit.id] || []
     : [];
@@ -109,7 +114,7 @@ export function UnitToken({
       transform={`translate(${pt.x}, ${pt.y})`}
       className={`map-unit-token ${isSelected ? 'selected' : ''} ${
         isHovered ? 'hovered' : ''
-      } ${!isControllable ? 'foreign-locked' : ''}`}
+      } ${!isInteractive ? 'foreign-locked' : ''}`}
       data-testid="unit-token"
       data-unit-id={unit.id}
       data-unit-power={unit.power}
@@ -119,7 +124,7 @@ export function UnitToken({
       opacity={isAdvancingInSim && !isSelected ? 0.62 : 1}
       onClick={(e) => handleSelectUnitOnMap(unit, e)}
       onPointerEnter={(e) => {
-        if (isControllable && e.pointerType !== 'touch') onHoverUnit(unit.id);
+        if (isInteractive && e.pointerType !== 'touch') onHoverUnit(unit.id);
       }}
       onPointerLeave={(e) => {
         if (e.pointerType !== 'touch') onHoverUnit(null);

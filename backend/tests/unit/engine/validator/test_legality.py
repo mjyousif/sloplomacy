@@ -135,6 +135,7 @@ def test_foreign_support_does_not_leak_orders():
     issue = ita_issues[0]
     assert issue.severity == IssueSeverity.INFO
     assert issue.code == IssueCode.UNMATCHED_SUPPORT
+    assert issue.unit_ids == ["ITA_F_WES"]
     assert "Foreign Support" in issue.title
     # Must NOT reveal France's true move to Spain or that it's holding
     assert "Spain" not in issue.message
@@ -176,6 +177,7 @@ def test_foreign_convoy_does_not_leak_orders():
     issue = eng_issues[0]
     assert issue.severity == IssueSeverity.INFO
     assert issue.code == IssueCode.BROKEN_CONVOY
+    assert issue.unit_ids == ["ENG_F_NTH"]
     assert "Foreign Convoy" in issue.title
     assert "Burgundy" not in issue.message
     assert "BUR" not in issue.message
@@ -345,3 +347,84 @@ def test_convoy_to_same_origin_emits_illegal_convoy_error():
     assert len(errors) == 1
     assert errors[0].code == IssueCode.ILLEGAL_CONVOY
     assert "LON" in errors[0].provinces
+
+
+def test_fleet_convoy_disconnected_or_incomplete_chain_emits_broken_convoy():
+    """A fleet ordered to convoy without a connected sea path or missing a friendly relay warns."""
+    # 1. Disconnected sea path: F NTH C A LON -> NAP with no fleets in ENG/MAO/WES/TYS
+    units_disc = [
+        Unit(id="ENG_F_NTH", power=Power.ENGLAND, unit_type=UnitType.FLEET, province="NTH"),
+        Unit(id="ENG_A_LON", power=Power.ENGLAND, unit_type=UnitType.ARMY, province="LON"),
+    ]
+    orders_disc = {
+        "ENG_F_NTH": Order(
+            unit_id="ENG_F_NTH",
+            power=Power.ENGLAND,
+            unit_type=UnitType.FLEET,
+            origin="NTH",
+            order_type=OrderType.CONVOY,
+            aux_unit_origin="LON",
+            target="NAP",
+            is_explicit=True,
+        ),
+        "ENG_A_LON": Order(
+            unit_id="ENG_A_LON",
+            power=Power.ENGLAND,
+            unit_type=UnitType.ARMY,
+            origin="LON",
+            order_type=OrderType.MOVE,
+            target="NAP",
+            via_convoy=True,
+            is_explicit=True,
+        ),
+    }
+    issues_disc = validate_orders(units_disc, orders_disc)
+    fleet_warns = [
+        i for i in issues_disc if "ENG_F_NTH" in i.unit_ids and i.severity == IssueSeverity.WARNING
+    ]
+    assert len(fleet_warns) == 1
+    assert fleet_warns[0].code == IssueCode.BROKEN_CONVOY
+    assert "Disconnected Convoy Chain" in fleet_warns[0].title
+
+    # 2. Friendly 2-fleet chain where second friendly fleet (F MAO) is still holding -> WARNING
+    units_inc = [
+        Unit(id="FRA_A_PIC", power=Power.FRANCE, unit_type=UnitType.ARMY, province="PIC"),
+        Unit(id="FRA_F_ENG", power=Power.FRANCE, unit_type=UnitType.FLEET, province="ENG"),
+        Unit(id="FRA_F_MAO", power=Power.FRANCE, unit_type=UnitType.FLEET, province="MAO"),
+    ]
+    orders_inc = {
+        "FRA_A_PIC": Order(
+            unit_id="FRA_A_PIC",
+            power=Power.FRANCE,
+            unit_type=UnitType.ARMY,
+            origin="PIC",
+            order_type=OrderType.MOVE,
+            target="SPA",
+            via_convoy=True,
+            is_explicit=True,
+        ),
+        "FRA_F_ENG": Order(
+            unit_id="FRA_F_ENG",
+            power=Power.FRANCE,
+            unit_type=UnitType.FLEET,
+            origin="ENG",
+            order_type=OrderType.CONVOY,
+            aux_unit_origin="PIC",
+            target="SPA",
+            is_explicit=True,
+        ),
+        "FRA_F_MAO": Order(
+            unit_id="FRA_F_MAO",
+            power=Power.FRANCE,
+            unit_type=UnitType.FLEET,
+            origin="MAO",
+            order_type=OrderType.HOLD,
+            is_explicit=True,
+        ),
+    }
+    issues_inc = validate_orders(units_inc, orders_inc)
+    eng_warns = [
+        i for i in issues_inc if "FRA_F_ENG" in i.unit_ids and i.severity == IssueSeverity.WARNING
+    ]
+    assert len(eng_warns) == 1
+    assert "Incomplete Convoy Chain" in eng_warns[0].title

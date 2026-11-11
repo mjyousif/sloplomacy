@@ -23,6 +23,7 @@ import {
   type ProvinceInfo,
   type SimulationResult,
   type Unit,
+  type UnitMoveOptions,
   type ValidationIssue,
 } from '../types/diplomacy';
 import { buildDefaultOrderForType } from '../utils/orderBuilders';
@@ -56,6 +57,7 @@ export interface MacroSidebarProps {
   season?: string;
   builds?: Record<Power, { count: number; homes: string[] }> | null;
   retreats?: Record<Power, Record<string, string[]>> | null;
+  unitOptions?: Record<string, UnitMoveOptions> | null;
   isMultiplayer?: boolean;
   isGameCreator?: boolean;
   gameOver?: boolean;
@@ -117,6 +119,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   season = 'Spring',
   builds = null,
   retreats = null,
+  unitOptions = null,
   isMultiplayer = false,
   isGameCreator = false,
   gameOver = false,
@@ -254,6 +257,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   const myActiveFieldUnits = myUnits.filter((u) => !u.is_dislodged);
 
   const myIssues = issues.filter((i) => i.power === activePower);
+  const myBlockingIssues = myIssues.filter((i) => i.severity !== 'info');
 
   // Supply center count per power
   const scCountByPower: Record<Power, number> = {
@@ -298,7 +302,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   ).length;
 
   const issuesByUnit: Record<string, ValidationIssue[]> = {};
-  for (const iss of issues) {
+  for (const iss of myIssues) {
     for (const uid of iss.unit_ids) {
       if (!issuesByUnit[uid]) issuesByUnit[uid] = [];
       issuesByUnit[uid].push(iss);
@@ -341,6 +345,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       units,
       orders,
       retreats,
+      unitOptions: unitOptions ? (unitOptions[unit.id] ?? null) : null,
     });
     if (nextOrder) onUpdateOrder(nextOrder);
   };
@@ -405,10 +410,10 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         <span className="status-badge finalized">
           <Lock size={11} /> Finalized
         </span>
-      ) : myIssues.length > 0 ? (
+      ) : myBlockingIssues.length > 0 ? (
         <span className="status-badge has-warnings">
-          <AlertTriangle size={11} /> {myIssues.length} Issue
-          {myIssues.length > 1 ? 's' : ''}
+          <AlertTriangle size={11} /> {myBlockingIssues.length} Issue
+          {myBlockingIssues.length > 1 ? 's' : ''}
         </span>
       ) : (
         <span className="status-badge drafting">Drafting</span>
@@ -521,10 +526,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         const hasWarn = unitIssues.some((i) => i.severity === 'warning');
         const isSelected = unit.id === selectedUnitId;
         const isHovered = unit.id === hoveredUnitId;
+        const uOpts = unitOptions ? (unitOptions[unit.id] ?? null) : null;
         const summary = formatOrderSummary(order, provinces, unitsByProv);
-        const reachable = getReachableDestinations(unit, provinces);
+        const reachable = getReachableDestinations(unit, provinces, uOpts);
         const validRetreats = unit.is_dislodged
-          ? getValidRetreatDestinations(unit, retreats, provinces)
+          ? getValidRetreatDestinations(unit, retreats, provinces, uOpts)
           : [];
         const simRes = simActive
           ? simulationResult?.resolutions[unit.id]
@@ -543,6 +549,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
             orders={orders}
             reachable={reachable}
             validRetreats={validRetreats}
+            unitOptions={uOpts}
             summary={summary}
             unitIssues={unitIssues}
             simRes={simRes}
@@ -573,16 +580,16 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           type="button"
           data-testid="btn-finalize-orders"
           className={`finalize-primary-btn ${
-            myIssues.length > 0 ? 'has-warning-state' : ''
+            myBlockingIssues.length > 0 ? 'has-warning-state' : ''
           }`}
           onClick={onFinalizeClick}
         >
-          {myIssues.length > 0 ? (
+          {myBlockingIssues.length > 0 ? (
             <>
               <AlertTriangle size={15} />
               <span>
-                Finalize {powerMeta.shortName} ({myIssues.length} Warning
-                {myIssues.length > 1 ? 's' : ''})
+                Finalize {powerMeta.shortName} ({myBlockingIssues.length}{' '}
+                Warning{myBlockingIssues.length > 1 ? 's' : ''})
               </span>
             </>
           ) : (

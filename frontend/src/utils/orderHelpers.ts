@@ -5,6 +5,7 @@ import {
   type Power,
   type ProvinceInfo,
   type Unit,
+  type UnitMoveOptions,
 } from '../types/diplomacy';
 
 export function splitProvinceCode(code: string): {
@@ -18,10 +19,32 @@ export function splitProvinceCode(code: string): {
   return { base: code.toUpperCase(), coast: null };
 }
 
+/** Group move codes (e.g. `['SPA/NC', 'SPA/SC', 'POR']`) by base province with coasts. */
+export function groupMoveDestinations(
+  codes: string[],
+): { province: string; coasts: string[] }[] {
+  const byBase: Record<string, string[]> = {};
+  for (const entry of codes) {
+    const { base, coast } = splitProvinceCode(entry);
+    if (!byBase[base]) byBase[base] = [];
+    if (coast && !byBase[base].includes(coast)) {
+      byBase[base].push(coast);
+    }
+  }
+  return Object.entries(byBase).map(([province, coasts]) => ({
+    province,
+    coasts,
+  }));
+}
+
 export function getReachableDestinations(
   unit: Unit,
   provinces: Record<string, ProvinceInfo>,
+  unitOptions?: UnitMoveOptions | null,
 ): { province: string; coasts: string[] }[] {
+  if (unitOptions) {
+    return groupMoveDestinations(unitOptions.direct_moves);
+  }
   const orig = provinces[unit.province];
   if (!orig) return [];
 
@@ -29,30 +52,20 @@ export function getReachableDestinations(
     return orig.army_adj.map((p) => ({ province: p, coasts: [] }));
   }
 
-  // Fleet
   const coastKey = unit.coast || '';
   const adjEntries = orig.fleet_adj[coastKey] || [];
-  const byBase: Record<string, string[]> = {};
-
-  for (const entry of adjEntries) {
-    const { base, coast } = splitProvinceCode(entry);
-    if (!byBase[base]) byBase[base] = [];
-    if (coast && !byBase[base].includes(coast)) {
-      byBase[base].push(coast);
-    }
-  }
-
-  return Object.entries(byBase).map(([province, coasts]) => ({
-    province,
-    coasts,
-  }));
+  return groupMoveDestinations(adjEntries);
 }
 
 export function getValidRetreatDestinations(
   unit: Unit,
   retreats: Partial<Record<Power, Record<string, string[]>>> | null | undefined,
   provinces: Record<string, ProvinceInfo>,
+  unitOptions?: UnitMoveOptions | null,
 ): { province: string; coasts: string[] }[] {
+  if (unitOptions) {
+    return groupMoveDestinations(unitOptions.direct_moves);
+  }
   if (!retreats) {
     return getReachableDestinations(unit, provinces);
   }
@@ -61,28 +74,16 @@ export function getValidRetreatDestinations(
   const fullKey = `${unit.unit_type} ${locKey}`;
   const fallbackKey = `${unit.unit_type} ${unit.province}`;
   const rawList = pwrRetreats[fullKey] || pwrRetreats[fallbackKey] || [];
-
-  const byBase: Record<string, string[]> = {};
-  for (const entry of rawList) {
-    const { base, coast } = splitProvinceCode(entry);
-    if (!byBase[base]) byBase[base] = [];
-    if (coast && !byBase[base].includes(coast)) {
-      byBase[base].push(coast);
-    }
-  }
-
-  return Object.entries(byBase).map(([province, coasts]) => ({
-    province,
-    coasts,
-  }));
+  return groupMoveDestinations(rawList);
 }
 
 export function canUnitSupportInto(
   unit: Unit,
   targetProvince: string,
   provinces: Record<string, ProvinceInfo>,
+  unitOptions?: UnitMoveOptions | null,
 ): boolean {
-  const reachable = getReachableDestinations(unit, provinces);
+  const reachable = getReachableDestinations(unit, provinces, unitOptions);
   return reachable.some((r) => r.province === targetProvince);
 }
 

@@ -54,6 +54,39 @@ class PhaseTimer(BaseModel):
         return max(1, math.ceil(len(self.players) * 5 / 7))
 
 
+class ConvoyReach(BaseModel):
+    """Provinces a convoy can reach, split by whether this fleet completes the chain now."""
+
+    direct: list[str] = Field(default_factory=list)
+    chained: list[str] = Field(default_factory=list)
+
+
+class SupportOption(BaseModel):
+    """A unit this piece can legally support, and where."""
+
+    unit_id: str
+    province: str
+    hold: bool = False
+    moves: list[str] = Field(default_factory=list)
+
+
+class UnitMoveOptions(BaseModel):
+    """
+    Everything one unit may be ordered to do this phase, computed by the engine.
+
+    The client only displays it: green for `direct_moves` and `active_convoys`, ocean blue for
+    `potential_convoys`. In a live match it is rebuilt from the orders the viewer may see, so a
+    foreign fleet's hidden convoy order never turns a destination green.
+    """
+
+    direct_moves: list[str] = Field(default_factory=list)
+    active_convoys: list[str] = Field(default_factory=list)
+    potential_convoys: list[str] = Field(default_factory=list)
+    convoyable_armies: ConvoyReach | None = None
+    convoy_targets: dict[str, ConvoyReach] = Field(default_factory=dict)
+    valid_supports: list[SupportOption] = Field(default_factory=list)
+
+
 class GameState(BaseModel):
     game_id: str
     season: str  # "Spring", "Fall", or "Winter"
@@ -73,6 +106,8 @@ class GameState(BaseModel):
     retreats: dict[str, Any] | None = None
     winner: Power | None = None  # Set once the game has been won; no further turns resolve
     timer: PhaseTimer | None = None  # None until the host starts the clock
+    # Per unit id: where it may move, convoy and support. Rebuilt on refresh and load, never saved.
+    unit_options: dict[str, UnitMoveOptions] = Field(default_factory=dict)
 
 
 class TurnHistoryEntry(BaseModel):
