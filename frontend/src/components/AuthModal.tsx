@@ -41,6 +41,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
+  // The modal stays mounted while closed, so `useState(initialTab)` alone
+  // would keep the first tab forever. Reset during render (not in an
+  // effect) so the right tab shows on the first paint: every opening starts
+  // clean on `initialTab`, and a new `initialTab` while open switches tabs
+  // the way the tab buttons do.
+  const [shownWith, setShownWith] = useState({ isOpen, initialTab });
+  if (shownWith.isOpen !== isOpen || shownWith.initialTab !== initialTab) {
+    const reopened = isOpen && !shownWith.isOpen;
+    setShownWith({ isOpen, initialTab });
+    if (isOpen) {
+      setTab(initialTab);
+      setError(null);
+      setInfoMessage(null);
+    }
+    if (reopened) {
+      setEmail('');
+      setPassword('');
+      setDisplayName('');
+    }
+  }
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {

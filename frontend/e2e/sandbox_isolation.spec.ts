@@ -1,6 +1,6 @@
 // @scenario sandbox
 // @order 2
-// @description Lobby launch, Hypothetical Mode foreign pre-move isolation, and order retention check.
+// @description Lobby launch, sign-up prompt on Host, Hypothetical Mode foreign pre-move isolation, and order retention check.
 import { test, expect } from '@playwright/test';
 import { ScenarioRecorder, seedScenario } from './helpers';
 
@@ -17,6 +17,16 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
       await page.goto('/');
       await page.waitForSelector('[data-testid="btn-enter-sandbox"]', { timeout: 15000 });
       await recorder.recordStep(page, '01_lobby_screen');
+
+      // 2b. Hosting while signed out asks for an account: the modal opens on Create Account
+      await page.getByRole('button', { name: 'Sign In to Host Campaign' }).click();
+      const hostAuthModal = page.getByRole('dialog', { name: 'Diplomatic Credentials' });
+      await expect(hostAuthModal).toBeVisible();
+      await expect(hostAuthModal).toContainText('create an account to host a new multiplayer');
+      await expect(hostAuthModal.locator('.auth-tab.active')).toHaveText('Create Account');
+      await recorder.recordStep(page, '01b_host_prompt_opens_signup');
+      await page.getByRole('button', { name: 'Close authentication modal' }).click();
+      await expect(hostAuthModal).toHaveCount(0);
 
       // 3. Launch Solo Sandbox
       await page.locator('[data-testid="btn-enter-sandbox"]').click();
@@ -89,9 +99,11 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
 
       const authModal = page.getByRole('dialog', { name: 'Diplomatic Credentials' });
       await expect(authModal).toBeVisible();
+      await expect(authModal.locator('.auth-tab.active')).toHaveText('Create Account');
       await recorder.recordStep(page, '07_auth_modal_prompt_on_save');
 
-      // 10. Authenticate via dev credentials
+      // 10. Switch to Sign In and authenticate via dev credentials
+      await authModal.getByRole('button', { name: 'Sign In', exact: true }).click();
       await page.fill('#auth-email', 'tactician@slop.eu');
       await page.fill('#auth-password', 'password123');
       await page.getByRole('button', { name: 'Sign In to Chancellery' }).click();
