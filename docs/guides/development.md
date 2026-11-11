@@ -210,6 +210,7 @@ python scripts/e2e_runner.py list
 # Run a specific scenario:
 python scripts/e2e_runner.py run movement
 python scripts/e2e_runner.py run sandbox
+python scripts/e2e_runner.py run lobby_browser
 python scripts/e2e_runner.py run blunder
 python scripts/e2e_runner.py run retreats
 python scripts/e2e_runner.py run builds
@@ -242,6 +243,7 @@ Use the file name (without `.spec.ts`) as the `ScenarioRecorder` name, because t
 | `builds` | Winter adjustments, Army/Fleet builds, bicoastal STP/NC Fleet build, deficit disband | `artifacts/e2e/winter_builds/` |
 | `mobile` | Phone (390x844, touch taps): full-width map, order sheet, ≡ tools drawer, docked unit bar, card-to-map selection, a move by tap, a winter build, a past turn from the drawer with its map pill | `artifacts/e2e/mobile_compact_hud/`, `artifacts/e2e/mobile_winter_build/`, `artifacts/e2e/mobile_turn_history/` |
 | `history` | Turn history: a resolved bounce shown with every nation's orders, nation chips, the read-only orders panel, back to live | `artifacts/e2e/turn_history/` |
+| `lobby_browser` | Lobby game browser: open games newest first, Italy-open, after-Spring-1901 and Full filters, a row opened into its seats, a guest's claim asking to sign in, a private campaign only in its member's My Games, phone rows | `artifacts/e2e/lobby_browser/` |
 | `convoy_scenarios` | Authoritative convoy reachability: ocean-blue potential/chained vs solid-green active highlights + reticles, dead-end path filtering, broken chains, 4-ship Trans-Med convoy, and bicoastal landings | `artifacts/e2e/convoy_scenarios/` |
 
 Each scenario exports a `summary.json` containing the execution status (`PASSED`/`FAILED`), step-by-step screenshot paths, and any browser console or uncaught page runtime errors.

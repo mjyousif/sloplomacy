@@ -1,31 +1,17 @@
-import {
-  Compass,
-  Crown,
-  Flag,
-  FlaskConical,
-  Globe,
-  Lock,
-  LogIn,
-  Play,
-  RefreshCw,
-  Shield,
-  Sparkles,
-} from 'lucide-react';
+import { Compass, Crown, FlaskConical, LogIn, Sparkles } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { useCompactLayout } from '../hooks/useCompactLayout';
-import {
-  type AuthUser,
-  type MultiplayerGameSummary,
-  POWER_METADATA,
-  type Power,
+import type {
+  AuthUser,
+  MultiplayerGameSummary,
+  Power,
 } from '../types/diplomacy';
 import { defaultCampaignName } from '../utils/campaignName';
 import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
-import { GameRoomCard } from './lobby/GameRoomCard';
-import { PasscodePromptModal } from './lobby/PasscodePromptModal';
+import { GameBrowser } from './lobby/GameBrowser';
+import { MyGamesSection } from './lobby/MyGamesSection';
 import { PrivateCampaignCreatedModal } from './lobby/PrivateCampaignCreatedModal';
-import { PowerFlag } from './PowerFlag';
 import { VersionBadge } from './VersionBadge';
 
 interface LobbyViewProps {
@@ -88,20 +74,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   const [joinCodeLoading, setJoinCodeLoading] = useState(false);
   const [joinCodeError, setJoinCodeError] = useState<string | null>(null);
 
-  // Modal prompt when clicking a private game slot in the list
-  const [passcodeModalTarget, setPasscodeModalTarget] = useState<{
-    game: MultiplayerGameSummary;
-    power: Power;
-  } | null>(null);
-  const [enteredModalPasscode, setEnteredModalPasscode] = useState('');
-  const [_passcodeModalSubmitting, setPasscodeModalSubmitting] =
-    useState(false);
-  const [passcodeModalError, setPasscodeModalError] = useState<string | null>(
-    null,
-  );
-
-  const [joiningKey, setJoiningKey] = useState<string | null>(null);
-
   const handleCopy = (text: string, fieldId: string) => {
     navigator.clipboard.writeText(text);
     setCopiedField(fieldId);
@@ -116,8 +88,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         Object.values(g.participants || {}).some((p) => p.user_id === user.id),
       )
     : [];
-
-  const multiplayerLobbies = games.filter((g) => !g.is_sandbox);
 
   const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,67 +125,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       setCreateError(err.message || 'Failed to create campaign.');
     } finally {
       setCreating(false);
-    }
-  };
-
-  const handlePowerSlotClick = async (
-    game: MultiplayerGameSummary,
-    power: Power,
-  ) => {
-    if (!user) {
-      onOpenAuth(
-        `Sign in or create an account to claim ${POWER_METADATA[power].shortName} in "${game.name}".`,
-        'signin',
-      );
-      return;
-    }
-
-    const isAlreadyClaimedByMe =
-      game.participants && game.participants[power]?.user_id === user.id;
-    const isAlreadyInThisGame = Boolean(
-      user &&
-        Object.values(game.participants || {}).some(
-          (p) => p.user_id === user.id,
-        ),
-    );
-
-    // If private with passcode and user isn't already a participant, ask for passcode!
-    if (game.has_passcode && !isAlreadyClaimedByMe && !isAlreadyInThisGame) {
-      setPasscodeModalTarget({ game, power });
-      setEnteredModalPasscode('');
-      setPasscodeModalError(null);
-      return;
-    }
-
-    const key = `${game.game_id}_${power}`;
-    setJoiningKey(key);
-    try {
-      await onJoinOrEnterGame(game.game_id, power);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setJoiningKey(null);
-    }
-  };
-
-  const handlePasscodeModalSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!passcodeModalTarget) return;
-    setPasscodeModalSubmitting(true);
-    setPasscodeModalError(null);
-    try {
-      await onJoinOrEnterGame(
-        passcodeModalTarget.game.game_id,
-        passcodeModalTarget.power,
-        enteredModalPasscode.trim(),
-      );
-      setPasscodeModalTarget(null);
-    } catch (err: any) {
-      setPasscodeModalError(
-        err.message || 'Incorrect passcode for this private campaign.',
-      );
-    } finally {
-      setPasscodeModalSubmitting(false);
     }
   };
 
@@ -332,193 +241,25 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       <div className="lobby-main-grid">
         {/* Left Column: My Games + Open Lobbies */}
         <div className="lobby-games-column">
-          {/* My Active Games Section */}
-          <section className="lobby-section">
-            <div className="lobby-section-header">
-              <div className="lobby-section-title">
-                <Shield size={18} />
-                <h2>My Active Campaigns &amp; Saved Games</h2>
-              </div>
-              {user && (
-                <span className="lobby-count-badge">
-                  {myGames.length} {myGames.length === 1 ? 'Game' : 'Games'}
-                </span>
-              )}
-            </div>
+          <MyGamesSection
+            user={user}
+            myGames={myGames}
+            hostFormPlace={hostFormPlace}
+            onOpenAuth={onOpenAuth}
+            onResume={(game, power) => onJoinOrEnterGame(game.game_id, power)}
+            onOpenSurrenderModal={onOpenSurrenderModal}
+          />
 
-            {!user ? (
-              <div className="lobby-empty-box locked">
-                <Lock size={22} />
-                <div>
-                  <strong>
-                    Account Required to Save &amp; Track Campaigns
-                  </strong>
-                  <p>
-                    Sign in to see your active multiplayer nations and saved
-                    tactical studies here.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="lobby-inline-auth-btn"
-                  onClick={() => onOpenAuth(undefined, 'signin')}
-                >
-                  Sign In
-                </button>
-              </div>
-            ) : myGames.length === 0 ? (
-              <div className="lobby-empty-box">
-                <p>
-                  You haven&apos;t joined any campaigns yet. Host a public or
-                  private campaign {hostFormPlace}, or join using a Game ID
-                  &amp; passcode!
-                </p>
-              </div>
-            ) : (
-              <div className="my-games-list">
-                {myGames.map((game) => {
-                  const myEntry = Object.values(game.participants || {}).find(
-                    (p) => p.user_id === user.id,
-                  );
-                  const myPower = myEntry?.power || 'FRANCE';
-                  const pMeta = POWER_METADATA[myPower];
-                  const isFinalized =
-                    game.finalized_powers?.includes(myPower) ?? false;
-
-                  return (
-                    <div key={game.game_id} className="my-game-row">
-                      <div className="my-game-info">
-                        <div className="my-game-top">
-                          <span className="my-game-name">{game.name}</span>
-                          <span className="my-game-turn-pill">
-                            {game.season} {game.year} · {game.phase}
-                          </span>
-                          {game.is_private && (
-                            <span className="my-game-private-tag">
-                              <Lock size={11} /> Private
-                            </span>
-                          )}
-                          {game.is_sandbox && (
-                            <span className="my-game-sandbox-tag">
-                              Saved Sandbox
-                            </span>
-                          )}
-                        </div>
-                        <div className="my-game-sub">
-                          <span
-                            className="my-power-chip"
-                            style={{
-                              backgroundColor: pMeta.lightBg,
-                              borderColor: pMeta.color,
-                              color: pMeta.color,
-                            }}
-                          >
-                            <PowerFlag
-                              power={myPower}
-                              width={18}
-                              height={12}
-                              style={{ marginRight: 6 }}
-                            />
-                            Playing as {pMeta.shortName} (Locked)
-                          </span>
-                          <span
-                            className={`my-finalize-status ${
-                              isFinalized ? 'ready' : 'pending'
-                            }`}
-                          >
-                            {isFinalized
-                              ? '✓ Orders Finalized'
-                              : '● Orders Pending'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="my-game-action-group">
-                        <button
-                          type="button"
-                          className="enter-match-btn"
-                          onClick={() => handlePowerSlotClick(game, myPower)}
-                        >
-                          <Play size={14} />
-                          <span>Resume as {pMeta.shortName}</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="leave-campaign-btn"
-                          title={
-                            game.is_sandbox
-                              ? 'Delete saved solo sandbox scenario'
-                              : game.status === 'active'
-                                ? `Surrender & leave ${game.name}`
-                                : `Leave ${game.name} lobby`
-                          }
-                          onClick={() => onOpenSurrenderModal(game, myPower)}
-                        >
-                          <Flag size={13} />
-                          <span>
-                            {game.is_sandbox
-                              ? 'Delete'
-                              : game.status === 'active'
-                                ? 'Surrender & Leave'
-                                : 'Leave'}
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-
-          {/* Open Multiplayer Lobbies Section */}
-          <section className="lobby-section">
-            <div className="lobby-section-header">
-              <div className="lobby-section-title">
-                <Globe size={18} />
-                <h2>Multiplayer Lobbies — Pick Your Country</h2>
-              </div>
-              <button
-                type="button"
-                className="lobby-refresh-btn"
-                onClick={onRefreshGames}
-                disabled={loadingGames}
-              >
-                <RefreshCw
-                  size={14}
-                  className={loadingGames ? 'spin-icon' : ''}
-                />
-                <span>Refresh</span>
-              </button>
-            </div>
-
-            <div className="lobby-cards-stack">
-              {multiplayerLobbies.length === 0 ? (
-                <div className="lobby-empty-box no-lobbies">
-                  <Globe size={28} className="empty-globe-icon" />
-                  <div>
-                    <strong>No Active Campaigns Right Now</strong>
-                    <p>
-                      There are no active multiplayer lobbies yet. Host a new
-                      public or private match {hostFormPlace}, or join a
-                      friend&apos;s game using their Game ID and passcode!
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                multiplayerLobbies.map((game) => (
-                  <GameRoomCard
-                    key={game.game_id}
-                    game={game}
-                    user={user}
-                    joiningKey={joiningKey}
-                    onOpenSurrenderModal={onOpenSurrenderModal}
-                    handlePowerSlotClick={handlePowerSlotClick}
-                  />
-                ))
-              )}
-            </div>
-          </section>
+          <GameBrowser
+            user={user}
+            myGames={myGames}
+            refreshSignal={games}
+            loadingGames={loadingGames}
+            onRefreshGames={onRefreshGames}
+            onOpenAuth={onOpenAuth}
+            onJoinOrEnterGame={onJoinOrEnterGame}
+            hostFormPlace={hostFormPlace}
+          />
         </div>
 
         {/* Right Column: Host New Multiplayer Campaign & Join with Code */}
@@ -565,16 +306,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         handleCopy={handleCopy}
         copiedGameId={copiedField === 'gid'}
         copiedPasscode={copiedField === 'pw'}
-      />
-
-      <PasscodePromptModal
-        passcodeModalTarget={passcodeModalTarget}
-        onClose={() => setPasscodeModalTarget(null)}
-        enteredModalPasscode={enteredModalPasscode}
-        setEnteredModalPasscode={setEnteredModalPasscode}
-        passcodeModalError={passcodeModalError}
-        handlePasscodeModalSubmit={handlePasscodeModalSubmit}
-        joiningKey={joiningKey}
       />
     </div>
   );

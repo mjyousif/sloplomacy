@@ -2364,83 +2364,6 @@
   white-space: nowrap;
 }
 
-.lobby-cards-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.lobby-game-card {
-  padding: 18px;
-  border-radius: 10px;
-  background: #212734;
-  border: 1px solid #374051;
-}
-
-.lobby-game-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.lobby-game-title {
-  margin: 0 0 4px;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #f8fafc;
-}
-
-.lobby-game-meta {
-  font-size: 0.76rem;
-  color: #9ca3af;
-}
-
-.lobby-game-badges {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.players-count-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: #171b24;
-  border: 1px solid #363f52;
-  color: #cbd5e1;
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.game-status-pill {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.game-status-pill.active {
-  background: rgba(16, 185, 129, 0.15);
-  color: #6ee7b7;
-  border: 1px solid rgba(16, 185, 129, 0.35);
-}
-
-.game-status-pill.waiting {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fde68a;
-  border: 1px solid rgba(245, 158, 11, 0.35);
-}
-
-.lobby-powers-instruction {
-  font-size: 0.78rem;
-  color: #cbd5e1;
-  margin-bottom: 12px;
-}
-
 .lobby-power-slots-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -2489,16 +2412,278 @@
   font-weight: 700;
 }
 
-.slot-yours-label {
-  color: #15803d;
-}
-
 .slot-taken-label {
   color: #9ca3af;
 }
 
 .slot-claim-label {
   color: #1e293b;
+}
+
+/* Lobby game browser: filters, compact rows, pager */
+.browser-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: rgba(15, 18, 24, 0.55);
+  border: 1px solid #313846;
+}
+
+.browser-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.browser-filter-label {
+  color: #9ca3af;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.browser-seg,
+.browser-countries {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.browser-seg {
+  gap: 0;
+  border: 1px solid #3c4454;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.browser-seg button {
+  padding: 5px 12px;
+  background: #252b37;
+  border: none;
+  border-right: 1px solid #3c4454;
+  color: #cbd5e1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.browser-seg button:last-child {
+  border-right: none;
+}
+
+.browser-seg button.active {
+  background: rgba(200, 150, 62, 0.22);
+  color: #fde68a;
+}
+
+.browser-country-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #252b37;
+  border: 1px solid #3c4454;
+  color: #9ca3af;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.browser-country-chip.active {
+  background: #2f3646;
+  color: #f8fafc;
+}
+
+.browser-filters select,
+.browser-year-input {
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: #171b24;
+  border: 1px solid #3c4454;
+  color: #e2e8f0;
+  font-size: 0.75rem;
+}
+
+.browser-filters select:disabled,
+.browser-year-input:disabled {
+  opacity: 0.45;
+}
+
+.browser-year-input {
+  width: 76px;
+}
+
+.browser-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px 9px;
+  border-radius: 7px;
+  background: none;
+  border: 1px solid #3c4454;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.browser-head,
+.browser-row-main {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) 0.9fr 1.6fr 0.8fr 0.7fr 92px;
+  align-items: center;
+  gap: 12px;
+}
+
+.browser-head {
+  padding: 0 14px 6px;
+  color: #6b7280;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.browser-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.browser-row {
+  border-radius: 9px;
+  background: #212734;
+  border: 1px solid #374051;
+}
+
+.browser-row.expanded {
+  border-color: #c8963e;
+}
+
+.browser-row-main {
+  padding: 10px 14px;
+}
+
+.browser-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.browser-game-name {
+  overflow: hidden;
+  color: #f8fafc;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser-host {
+  color: #9ca3af;
+  font-size: 0.7rem;
+}
+
+.browser-turn {
+  color: #fde68a;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.browser-open-seats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.browser-full-label,
+.browser-date {
+  color: #9ca3af;
+  font-size: 0.74rem;
+}
+
+.browser-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.browser-join-btn,
+.browser-resume-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 11px;
+  border-radius: 7px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.browser-join-btn {
+  background: #252b37;
+  border: 1px solid #c8963e;
+  color: #fde68a;
+}
+
+.browser-join-btn:disabled {
+  border-color: #3c4454;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.browser-resume-btn {
+  background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+  border: 1px solid #e2b55f;
+  color: #14171c;
+}
+
+.browser-row-seats {
+  padding: 0 14px 12px;
+}
+
+.browser-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.browser-pager button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 7px;
+  background: #252b37;
+  border: 1px solid #3c4454;
+  color: #cbd5e1;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.browser-pager button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.browser-pager-label {
+  color: #9ca3af;
+  font-size: 0.76rem;
 }
 
 /* Right Column: Create New Game Card */
@@ -2671,12 +2856,6 @@
   cursor: not-allowed;
 }
 
-.game-status-pill.private {
-  background: rgba(217, 119, 6, 0.18);
-  border: 1px solid #d97706;
-  color: #fbbf24;
-}
-
 .my-game-private-tag {
   display: inline-flex;
   align-items: center;
@@ -2688,22 +2867,6 @@
   border: 1px solid #d97706;
   color: #fde68a;
   font-weight: 600;
-}
-
-.game-id-mono {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.75rem;
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.1);
-  padding: 1px 5px;
-  border-radius: 4px;
-  border: 1px solid rgba(56, 189, 248, 0.25);
-}
-
-.lobby-game-title-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 
 /* Empty State Globe */
@@ -3979,35 +4142,6 @@
 
 .leave-campaign-btn:hover {
   background: rgba(239, 68, 68, 0.24);
-  border-color: #ef4444;
-  color: #ffffff;
-}
-
-.lobby-claim-alert-flex {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.lobby-claim-leave-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 11px;
-  border-radius: 6px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  color: #fca5a5;
-  font-size: 0.72rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.lobby-claim-leave-btn:hover {
-  background: rgba(239, 68, 68, 0.28);
   border-color: #ef4444;
   color: #ffffff;
 }

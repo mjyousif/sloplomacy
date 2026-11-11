@@ -49,7 +49,7 @@ This repository enforces strict modularity and separation of concerns to prevent
   - High-complexity components must decompose their visual sub-layers, modals, or tab views into dedicated subdirectories under `components/<feature>/`:
     - `components/map/`: SVG sub-layers (`ProvincePolygon.tsx`, `SupplyCentersLayer.tsx`, `MapNamesLayer.tsx`, `StaticLayers.tsx`, `curveGeometry.ts`).
     - `components/macro/`: Unit order cards (`UnitMacroCard.tsx`), build quota cards (`BuildSlotCard.tsx`).
-    - `components/lobby/`: Game cards (`GameRoomCard.tsx`), creation panels (`CreateCampaignPanel.tsx`), passcode dialogs.
+    - `components/lobby/`: My Games (`MyGamesSection.tsx`), the game browser (`GameBrowser.tsx` with its filters, rows, pager and `hooks/useLobbyBrowse.ts`), creation panels (`CreateCampaignPanel.tsx`), the private campaign dialog.
     - `components/admin/`: Admin tab controls (`TurnControlTab.tsx`, `UnitTeleportTab.tsx`, `UnitSpawnerTab.tsx`, `TerritoryControlTab.tsx`).
 - **Hook Extraction for Stateful Logic (`frontend/src/hooks/`)**:
   - Extract complex state management, WebSockets, media queries, or device preferences into custom hooks (e.g., `useDiplomacyWebSocket.ts`, `useCompactLayout.ts`, `useDisplayPrefs.ts`) instead of jamming hundreds of lines of `useEffect` into `App.tsx`.

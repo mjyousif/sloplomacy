@@ -108,8 +108,10 @@ App.applyServerState(st)
 
 ## Lobby & Match Management Flow
 
-1. **Viewing Matches (`GET /api/games`)**:
-   - `LobbyView.tsx` loads the list of open lobbies, ongoing matches, and saved sandboxes.
+1. **Viewing Matches (`GET /api/games/browse`, `GET /api/games/mine`)**:
+   - `MyGamesSection` lists the player's own games from `gamesList` (private campaigns and saved sandboxes included).
+   - `GameBrowser` pages through the public matches. Its filters and page live in `useLobbyBrowse`, not in App: changing a filter goes back to page 1, and a new `gamesList` from the lobby socket reloads the open page. The year box keeps what was typed until it is a whole year, so "19" does not clear itself on the way to 1903.
+   - A private campaign never appears in the browser. Others join it by Game ID and passcode in the Join Private Campaign form.
 2. **Creating a Match (`POST /api/games`)**:
    - Users create custom rooms or isolated sandboxes.
 3. **Joining & Claiming Seats (`POST /api/games/{id}/join`)**:

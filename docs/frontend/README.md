@@ -70,11 +70,15 @@ frontend/
     │   ├── sidebars.test.ts     # Vitest suite for ToolsSidebar and MacroSidebar collapsible views
     │   ├── TurnHistorySelector.tsx # Left pane footer to pick a resolved turn, nation chips, and the phone's map pill
     │   ├── PhaseTimerWidget.tsx # Bottom-left map widget: turn clock, votes, ready-up & +5 button (a pill on phones)
-    │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
+    │   ├── LobbyView.tsx        # Lobby page: hero, My Games, the game browser, game creation & join by code
     │   ├── lobby/               # Decomposed match browser and lobby dialogs
-    │   │   ├── GameRoomCard.tsx              # Match listing card with power indicators and join buttons
+    │   │   ├── MyGamesSection.tsx            # The player's campaigns and saved sandboxes (private ones included), Resume & Leave
+    │   │   ├── GameBrowser.tsx               # Paged public games (GET /api/games/browse), claim a seat, Resume your own (with its test)
+    │   │   ├── GameBrowserFilters.tsx        # Open/Full/All, countries still free, and the turn at/before/after
+    │   │   ├── GameBrowserRow.tsx            # One compact row: name & host, turn, open-seat flags, last move, created; opens into the seats
+    │   │   ├── GameBrowserPager.tsx          # Prev / Page X of Y / Next
+    │   │   ├── hooks/useLobbyBrowse.ts       # Filters, page and the fetched page; reloads when the lobby socket's list changes
     │   │   ├── CreateCampaignPanel.tsx       # Public/private campaign creation form
-    │   │   ├── PasscodePromptModal.tsx       # Passcode entry dialog for private matches
     │   │   └── PrivateCampaignCreatedModal.tsx # Shareable credentials modal after creating private room
     │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
     │   ├── admin/               # Decomposed creator console tabs

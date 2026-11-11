@@ -617,13 +617,58 @@
   justify-content: center;
 }
 
-[data-layout="compact"] .lobby-game-card {
-  padding: 14px 12px;
+/* Game browser rows: name and action on the first line, the rest below. */
+[data-layout="compact"] .browser-head {
+  display: none;
 }
 
-[data-layout="compact"] .lobby-game-card-header,
-[data-layout="compact"] .lobby-game-badges {
-  flex-wrap: wrap;
+[data-layout="compact"] .browser-row-main {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "name name action"
+    "turn seats seats"
+    "moved created created";
+  row-gap: 6px;
+  padding: 10px 12px;
+}
+
+[data-layout="compact"] .browser-name {
+  grid-area: name;
+}
+
+[data-layout="compact"] .browser-turn {
+  grid-area: turn;
+}
+
+[data-layout="compact"] .browser-open-seats {
+  grid-area: seats;
+  justify-content: flex-end;
+}
+
+/* The column headings are hidden, so the dates say what they are. */
+[data-layout="compact"] .browser-moved {
+  grid-area: moved;
+}
+
+[data-layout="compact"] .browser-moved::before {
+  content: "Last move ";
+}
+
+[data-layout="compact"] .browser-created {
+  grid-area: created;
+  text-align: right;
+}
+
+[data-layout="compact"] .browser-created::before {
+  content: "Created ";
+}
+
+[data-layout="compact"] .browser-action {
+  grid-area: action;
+}
+
+[data-layout="compact"] .browser-clear-btn {
+  margin-left: 0;
 }
 
 [data-layout="compact"] .lobby-power-slots-grid {
@@ -640,7 +685,6 @@
 [data-layout="compact"] .lobby-refresh-btn,
 [data-layout="compact"] .enter-match-btn,
 [data-layout="compact"] .leave-campaign-btn,
-[data-layout="compact"] .lobby-claim-leave-btn,
 [data-layout="compact"] .lobby-create-submit-btn,
 [data-layout="compact"] .lobby-join-submit-btn,
 [data-layout="compact"] .privacy-toggle-btn,
@@ -660,9 +704,6 @@
 [data-layout="compact"] .lobby-era-pill,
 [data-layout="compact"] .lobby-count-badge,
 [data-layout="compact"] .my-game-turn-pill,
-[data-layout="compact"] .players-count-pill,
-[data-layout="compact"] .game-status-pill,
-[data-layout="compact"] .lobby-claim-leave-btn,
 [data-layout="compact"] .power-slot-status,
 [data-layout="compact"] .lobby-footer-tagline,
 [data-layout="compact"] .version-badge-text,
