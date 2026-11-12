@@ -61,7 +61,17 @@ frontend/
     │   │       └── curveGeometry.ts       # Quadratic Bezier control point math for order arrows
     │   ├── CollapsibleSection.tsx # Reusable collapsible/static section container with accessible toggles
     │   ├── CollapsibleSection.test.tsx # Vitest suite for CollapsibleSection behavior and accessibility
-    │   ├── ToolsSidebar.tsx     # Left collapsible sidebar: legend, zoom options, powers, sandbox & admin (a ≡ drawer on phones)
+    │   ├── ToolsSidebar.tsx     # Left collapsible sidebar: header, the sections below, history footer (a ≡ drawer on phones)
+    │   ├── ToolsSidebar.test.tsx # Panel and drawer: section order, collapse, Escape, backdrop, focus, admin gate
+    │   ├── tools/               # The sidebar's parts, each with a co-located test
+    │   │   ├── toolsSidebarProps.ts      # ToolsSidebarProps; sections take a Pick<> of it
+    │   │   ├── CollapsedRail.tsx         # The 44px rail the desktop panel folds into
+    │   │   ├── MapControlsSection.tsx    # Zoom readout, Zoom In/Out and Fit Map (panel only)
+    │   │   ├── MapLegendSection.tsx      # The four order marks
+    │   │   ├── StandingsSection.tsx      # Power cards, ranks, status tags and the sort toggle
+    │   │   ├── useStandingsSort.ts       # Supply Centre and unit tallies, ranking and the remembered sort mode
+    │   │   ├── SandboxToolsSection.tsx   # Hypothetical Mode, General Staff AI, foreign moves, reset and save
+    │   │   └── AdminSection.tsx          # Open Admin Console and the Direct-Edit override
     │   ├── MacroSidebar.tsx     # Right collapsible sidebar: core gameplay orders, builds, finalize & adjudicate (the order sheet on phones)
     │   ├── macro/               # Decomposed order sheet and unit management cards
     │   │   ├── UnitMacroCard.tsx # Unit order card shell, badges, diagnostics & simulation strip
@@ -95,7 +105,13 @@ frontend/
     │   ├── AppModals.tsx        # Sanity Check, Surrender & Leave, Save Sandbox, admin console, sign-in and confirm
     │   ├── AppModals.test.tsx   # Each modal's wiring, the saved sandbox's default name, admin only for the host
     │   ├── DisplaySettingsMenu.tsx # Top bar menu for this player's piece style and army and fleet marks
-    │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every display style
+    │   ├── MapPiece.tsx         # Draws a unit piece for every display style; the one import path, re-exports the pieces/ helpers
+    │   ├── MapPiece.test.tsx    # Every style x mark x unit type x variant, flags, plates and the seated star
+    │   ├── pieces/              # What a map piece is made of
+    │   │   ├── pieceFrame.ts    # PieceFrame and PiecePill: ring sizes, badge offsets, banners, arrow scales (with its test)
+    │   │   ├── PieceOutlines.tsx # PieceOutline, PieceHoldOutline and PieceHitArea (with its test)
+    │   │   ├── marks.tsx        # The letter, icon, vehicle and NATO marks and the SupplyStar (with its test)
+    │   │   └── styles/          # One body per family: DiscPiece (classic, seated, compact), FlagPiece, PillPiece (nameplate)
     │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
     │   ├── SanityCheckModal.tsx # Pre-finalization tactical blunder warning dialogue
     │   ├── ConfirmModal.tsx     # In-app confirmation for destructive actions; Shift+click skips it
@@ -194,9 +210,9 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   │   ├── Real-Time WebSocket Synchronization Badge
 │   │   └── User Auth Profile / Guest Mode
 │   │
-│   ├── ToolsSidebar.tsx (Left Collapsible Tools & Intel Panel; a ≡ drawer on phones)
-│   │   ├── Collapse / Expand Rail Toggle (44px collapsed rail)
-│   │   ├── Map View & Camera Controls (Zoom In, Zoom Out, Fit Map 105% - CollapsibleSection static)
+│   ├── ToolsSidebar.tsx (Left Collapsible Tools & Intel Panel; a ≡ drawer on phones; its parts are in tools/)
+│   │   ├── Collapse / Expand Rail Toggle (CollapsedRail.tsx, the 44px collapsed rail)
+│   │   ├── Map View & Camera Controls (MapControlsSection.tsx; Zoom In, Zoom Out, Fit Map 105% - CollapsibleSection static)
 │   │   ├── Tactical Map Legend (Move, Support, Convoy, Conflict vectors - CollapsibleSection toggle)
 │   │   ├── Great Powers Standing & Command Selector (SC & Unit tallies - CollapsibleSection toggle)
 │   │   ├── Hypothetical Mode (What-If Opponent Guesses) & Tactical AI (CollapsibleSection toggle)
