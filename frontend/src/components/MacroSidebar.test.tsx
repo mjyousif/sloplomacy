@@ -1,0 +1,423 @@
+// @vitest-environment jsdom
+import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  A_BRE,
+  A_PAR,
+  ALL_UNITS,
+  FRENCH_OWNERSHIP,
+  HOLD_ORDERS,
+  issue,
+  MACRO_PROVINCES,
+  participantsFor,
+} from '../test/macroFixtures';
+import { orderFor, unitAt } from '../test/mapFixtures';
+import { MacroSidebar, type MacroSidebarProps } from './MacroSidebar';
+
+const fns = () => ({
+  onSelectUnit: vi.fn(),
+  onHoverUnit: vi.fn(),
+  onHighlightProvinces: vi.fn(),
+  onUpdateOrder: vi.fn(),
+  onConfirmAllHolds: vi.fn(),
+  onFinalizeClick: vi.fn(),
+  onUnfinalizeClick: vi.fn(),
+  onAdjudicateTurn: vi.fn(),
+});
+
+const baseProps = (): MacroSidebarProps => ({
+  provinces: MACRO_PROVINCES,
+  units: ALL_UNITS,
+  orders: HOLD_ORDERS,
+  ownership: FRENCH_OWNERSHIP,
+  activePower: 'FRANCE',
+  finalizedPowers: [],
+  sandboxMode: false,
+  selectedUnitId: null,
+  hoveredUnitId: null,
+  issues: [],
+  simulationResult: null,
+  showSimulationOverlay: false,
+  ...fns(),
+});
+
+const sidebar = (over: Partial<MacroSidebarProps> = {}) => {
+  const props = { ...baseProps(), ...over };
+  const view = render(<MacroSidebar {...props} />);
+  return { ...view, props };
+};
+
+/** A sidebar that collapses and expands itself, as the workspace's rail toggle does. */
+function Toggle() {
+  const [collapsed, setCollapsed] = useState(false);
+  return (
+    <MacroSidebar
+      {...baseProps()}
+      collapsed={collapsed}
+      onToggleCollapse={() => setCollapsed((c) => !c)}
+    />
+  );
+}
+
+describe('MacroSidebar panel', () => {
+  it('shows the power, its orders and the footer, in that order', () => {
+    const { container } = sidebar();
+    const aside = container.querySelector('aside') as HTMLElement;
+    expect(aside).toHaveClass('macro-sidebar-expanded');
+    expect(Array.from(aside.children).map((c) => c.className)).toEqual([
+      'active-power-banner',
+      'macro-units-scroll-area',
+      'sidebar-footer-actions',
+      'sidebar-version-footer',
+    ]);
+    expect(
+      aside.querySelector('.active-power-banner')?.getAttribute('style'),
+    ).toContain('border-left');
+    expect(screen.getAllByTestId('unit-macro-card')).toHaveLength(3);
+    expect(screen.getByTestId('btn-finalize-orders')).toBeInTheDocument();
+    expect(screen.getByTestId('btn-adjudicate-phase')).toBeInTheDocument();
+  });
+
+  it('wires Confirm All, Finalize and Resolve to their handlers', () => {
+    const { props } = sidebar();
+    fireEvent.click(screen.getByTestId('btn-confirm-all'));
+    fireEvent.click(screen.getByTestId('btn-finalize-orders'));
+    fireEvent.click(screen.getByTestId('btn-adjudicate-phase'));
+    expect(props.onConfirmAllHolds).toHaveBeenCalledTimes(1);
+    expect(props.onFinalizeClick).toHaveBeenCalledTimes(1);
+    expect(props.onAdjudicateTurn).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows Unlock for a finalized power', () => {
+    const { props } = sidebar({ finalizedPowers: ['FRANCE'] });
+    fireEvent.click(screen.getByTestId('btn-unfinalize-orders'));
+    expect(props.onUnfinalizeClick).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Finalized')).toBeInTheDocument();
+  });
+
+  it('counts the blocking issues in the status and on Finalize', () => {
+    sidebar({ issues: [issue(A_PAR, 'error'), issue(A_BRE, 'info')] });
+    expect(screen.getByText(/1 Issue/)).toBeInTheDocument();
+    expect(screen.getByTestId('btn-finalize-orders')).toHaveTextContent(
+      'Finalize France (1 Warning)',
+    );
+  });
+
+  it('shows Civil Disorder for a surrendered power', () => {
+    sidebar({ surrenderedPowers: ['FRANCE'] });
+    expect(screen.getByText('Civil Disorder')).toBeInTheDocument();
+  });
+
+  it('offers Surrender only in a multiplayer match that handles it', () => {
+    const solo = sidebar({ onSurrenderClick: vi.fn() });
+    expect(solo.container.querySelector('.surrender-btn-sidebar')).toBeNull();
+    solo.unmount();
+    const onSurrenderClick = vi.fn();
+    const mp = sidebar({ isMultiplayer: true, onSurrenderClick });
+    fireEvent.click(
+      mp.container.querySelector('.surrender-btn-sidebar') as HTMLElement,
+    );
+    expect(onSurrenderClick).toHaveBeenCalledTimes(1);
+    mp.unmount();
+    const noHandler = sidebar({ isMultiplayer: true });
+    expect(
+      noHandler.container.querySelector('.surrender-btn-sidebar'),
+    ).toBeNull();
+  });
+
+  it('in multiplayer shows the consensus card from the powers it waits on', () => {
+    const { container } = sidebar({
+      isMultiplayer: true,
+      participants: participantsFor(['FRANCE', 'ENGLAND']),
+      lobbyStatus: 'active',
+      finalizedPowers: ['FRANCE'],
+    });
+    expect(container.querySelector('.consensus-title')).toHaveTextContent(
+      'Resolution Progress: 1/2 Ready',
+    );
+    expect(container.querySelector('.mp-consensus-desc')).toHaveTextContent(
+      'Waiting on: England',
+    );
+  });
+
+  it('puts the phase context in the banner during winter and retreats', () => {
+    const winter = sidebar({ season: 'Winter', phase: 'Adjustments' });
+    expect(
+      winter.container.querySelector(
+        '.active-power-banner .macro-phase-context-box',
+      ),
+    ).toHaveClass('adjustment');
+    winter.unmount();
+    const retreat = sidebar({ phase: 'Retreats', season: 'Fall' });
+    expect(
+      retreat.container.querySelector(
+        '.active-power-banner .macro-phase-context-box',
+      ),
+    ).toHaveClass('retreat');
+  });
+
+  it("shows the unit cards' controls for a dislodged unit in a retreat phase", () => {
+    const dislodged = unitAt('FRANCE', 'A', 'MAR', { is_dislodged: true });
+    sidebar({
+      phase: 'Retreats',
+      season: 'Fall',
+      units: [A_PAR, dislodged],
+      orders: {
+        [dislodged.id]: orderFor(dislodged, 'RETREAT', { target: 'GAS' }),
+      },
+      retreats: { FRANCE: { 'A MAR': ['GAS'] } } as never,
+    });
+    expect(screen.getByTestId('select-retreat-target')).toBeInTheDocument();
+  });
+
+  it('shows the sandbox simulation strips only when simulating', () => {
+    const simulationResult = {
+      resolutions: { [A_PAR.id]: { succeeded: true, reason: 'Held.' } },
+    } as never;
+    const off = sidebar({ simulationResult });
+    expect(off.container.querySelector('.unit-sim-result-strip')).toBeNull();
+    off.unmount();
+    expect(
+      sidebar({ simulationResult, sandboxMode: true }).container.querySelector(
+        '.unit-sim-result-strip',
+      ),
+    ).not.toBeNull();
+  });
+
+  it('does not highlight provinces by itself outside the phone sheet', () => {
+    const { props } = sidebar({ selectedUnitId: A_PAR.id });
+    expect(props.onHighlightProvinces).not.toHaveBeenCalled();
+  });
+
+  describe('the powers the match waits on', () => {
+    const consensus = (c: HTMLElement) =>
+      c.querySelector('.consensus-title')?.textContent;
+
+    it('follows the participants as they change', () => {
+      // A stable list: an omitted prop is a new array on every render and would refresh the memo.
+      const props = {
+        ...baseProps(),
+        isMultiplayer: true,
+        lobbyStatus: 'active',
+        surrenderedPowers: [] as never[],
+      };
+      const { container, rerender } = render(
+        <MacroSidebar
+          {...props}
+          participants={participantsFor(['FRANCE', 'ENGLAND'])}
+        />,
+      );
+      expect(consensus(container)).toBe('Resolution Progress: 0/2 Ready');
+      rerender(
+        <MacroSidebar
+          {...props}
+          participants={participantsFor(['FRANCE', 'ENGLAND', 'GERMANY'], {})}
+        />,
+      );
+      // Germany has a seat but no units, so the match still waits on two.
+      expect(consensus(container)).toBe('Resolution Progress: 0/2 Ready');
+      rerender(
+        <MacroSidebar
+          {...props}
+          participants={participantsFor(['FRANCE', 'ENGLAND'], {
+            surrendered: true,
+          })}
+        />,
+      );
+      expect(consensus(container)).toBe('Waiting for Players');
+    });
+
+    it('follows the retreat options as they change', () => {
+      const props = {
+        ...baseProps(),
+        isMultiplayer: true,
+        lobbyStatus: 'active',
+        phase: 'Retreats',
+        season: 'Fall',
+        participants: participantsFor(['FRANCE', 'ENGLAND']),
+        surrenderedPowers: [] as never[],
+      };
+      const { container, rerender } = render(
+        <MacroSidebar {...props} retreats={null} />,
+      );
+      expect(consensus(container)).toBe('Waiting for Players');
+      rerender(
+        <MacroSidebar
+          {...props}
+          retreats={{ ENGLAND: { 'A PIC': ['BUR'] } } as never}
+        />,
+      );
+      expect(consensus(container)).toBe('Resolution Progress: 0/1 Ready');
+    });
+  });
+
+  describe('a past turn', () => {
+    it('adds a bar leading back to live and makes the orders inert', () => {
+      const onReturnToLive = vi.fn();
+      const { container } = sidebar({
+        historyLabel: 'Fall 1901 Movement',
+        onReturnToLive,
+      });
+      expect(container.querySelector('aside')).toHaveClass('history-locked');
+      expect(container.querySelector('.active-power-banner')).toHaveAttribute(
+        'inert',
+      );
+      expect(
+        container.querySelector('.macro-units-scroll-area'),
+      ).toHaveAttribute('inert');
+      expect(
+        container.querySelector('.sidebar-footer-actions'),
+      ).toHaveAttribute('inert');
+      fireEvent.click(screen.getByTestId('history-lock-live-btn'));
+      expect(onReturnToLive).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the live panel alone', () => {
+      const { container } = sidebar();
+      expect(container.querySelector('aside')).not.toHaveClass(
+        'history-locked',
+      );
+      expect(container.querySelector('[inert]')).toBeNull();
+      expect(screen.queryByTestId('history-lock-bar')).toBeNull();
+    });
+  });
+
+  describe('collapsing', () => {
+    it('has a collapse button when it can collapse', () => {
+      const onToggleCollapse = vi.fn();
+      sidebar({ onToggleCollapse });
+      fireEvent.click(screen.getByTestId('macro-sidebar-collapse-btn'));
+      expect(onToggleCollapse).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the rail when collapsed', () => {
+      const { container } = sidebar({
+        collapsed: true,
+        onToggleCollapse: vi.fn(),
+      });
+      const aside = container.querySelector('aside') as HTMLElement;
+      expect(aside).toHaveClass('macro-sidebar-collapsed');
+      expect(aside).not.toHaveAttribute('data-testid');
+      expect(
+        screen.getByTestId('macro-sidebar-expand-btn'),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId('unit-macro-card')).toBeNull();
+    });
+
+    it('keeps one <aside> as it collapses and expands, so its width transition plays', () => {
+      const { container } = render(<Toggle />);
+      const aside = container.querySelector('aside');
+      fireEvent.click(screen.getByTestId('macro-sidebar-collapse-btn'));
+      expect(container.querySelector('aside')).toBe(aside);
+      expect(aside).toHaveClass('macro-sidebar-collapsed');
+      fireEvent.click(screen.getByTestId('macro-sidebar-expand-btn'));
+      expect(container.querySelector('aside')).toBe(aside);
+      expect(aside).toHaveClass('macro-sidebar-expanded');
+    });
+  });
+});
+
+describe('MacroSidebar sheet', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const sheet = (over: Partial<MacroSidebarProps> = {}) =>
+    sidebar({ variant: 'sheet', ...over });
+
+  it('shows the power, Confirm All and the footer at the peek, the cards in the body', () => {
+    const { container } = sheet();
+    const peek = container.querySelector('.macro-sheet-peek') as HTMLElement;
+    expect(peek.querySelector('.macro-sheet-status-row')).not.toBeNull();
+    const controls = peek.querySelector('.macro-sheet-controls') as HTMLElement;
+    expect(
+      Array.from(controls.children).map((c) => c.getAttribute('data-testid')),
+    ).toEqual([
+      'btn-confirm-all',
+      'btn-finalize-orders',
+      'btn-adjudicate-phase',
+    ]);
+    const body = container.querySelector('.macro-sheet-body') as HTMLElement;
+    expect(
+      body.querySelectorAll('[data-testid="unit-macro-card"]'),
+    ).toHaveLength(3);
+    expect(body.querySelector('.macro-hint')).toHaveTextContent(
+      'Tap a card or the map',
+    );
+  });
+
+  it('puts Surrender at the foot of the body', () => {
+    const { container } = sheet({
+      isMultiplayer: true,
+      onSurrenderClick: vi.fn(),
+    });
+    expect(
+      container.querySelector(
+        '.macro-sheet-body .macro-sheet-surrender .surrender-btn-sidebar',
+      ),
+    ).not.toBeNull();
+  });
+
+  it('shows the lock bar in the peek and goes inert for a past turn', () => {
+    const { container } = sheet({ historyLabel: 'Fall 1901 Movement' });
+    const peek = container.querySelector('.macro-sheet-peek') as HTMLElement;
+    expect(peek).toHaveClass('history-locked');
+    expect(peek.firstElementChild).toHaveAttribute(
+      'data-testid',
+      'history-lock-bar',
+    );
+    expect(peek.querySelector('.macro-sheet-status-row')).toHaveAttribute(
+      'inert',
+    );
+    expect(peek.querySelector('.macro-sheet-controls')).toHaveAttribute(
+      'inert',
+    );
+    expect(container.querySelector('.macro-sheet-body')).toHaveAttribute(
+      'inert',
+    );
+  });
+
+  it("lights up the selected unit's provinces, as a finger has no hover", () => {
+    const { props } = sheet({ selectedUnitId: A_PAR.id });
+    expect(props.onHighlightProvinces).toHaveBeenLastCalledWith(['PAR']);
+  });
+
+  it("scrolls the selected unit's card up when the sheet is raised", () => {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: Element) {
+        const el = this as HTMLElement;
+        const top = el.classList.contains('bottom-sheet-body')
+          ? 100
+          : el.dataset.unitId === A_BRE.id
+            ? 500
+            : 0;
+        return {
+          top,
+          bottom: top,
+          left: 0,
+          right: 0,
+          width: 0,
+          height: 0,
+          x: 0,
+          y: top,
+          toJSON() {},
+        };
+      },
+    );
+    const { container } = sheet({
+      sheetSnap: 'half',
+      selectedUnitId: A_BRE.id,
+    });
+    expect(
+      (container.querySelector('.bottom-sheet-body') as HTMLElement).scrollTop,
+    ).toBe(500 - 100 - 8);
+  });
+
+  it('steps the sheet through its stops from the handle', () => {
+    const onSheetSnapChange = vi.fn();
+    const { container } = sheet({ onSheetSnapChange });
+    fireEvent.click(
+      container.querySelector('.bottom-sheet-handle') as HTMLElement,
+    );
+    expect(onSheetSnapChange).toHaveBeenCalledWith('half');
+  });
+});

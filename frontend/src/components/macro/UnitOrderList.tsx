@@ -1,0 +1,194 @@
+import type React from 'react';
+import type {
+  Order,
+  OrderType,
+  Power,
+  PowerMeta,
+  ProvinceInfo,
+  SimulationResult,
+  Unit,
+  UnitMoveOptions,
+} from '../../types/diplomacy';
+import { buildDefaultOrderForType } from '../../utils/orderBuilders';
+import {
+  formatOrderSummary,
+  getReachableDestinations,
+  getValidRetreatDestinations,
+} from '../../utils/orderHelpers';
+import type { OrderProgress } from '../../utils/orderProgress';
+import { BuildSlotCard } from './BuildSlotCard';
+import { UnitMacroCard } from './UnitMacroCard';
+
+interface UnitOrderListProps {
+  activePower: Power;
+  powerMeta: PowerMeta;
+  progress: OrderProgress;
+  provinces: Record<string, ProvinceInfo>;
+  units: Unit[];
+  orders: Record<string, Order>;
+  retreats: Record<Power, Record<string, string[]>> | null;
+  unitOptions: Record<string, UnitMoveOptions> | null;
+  selectedUnitId: string | null;
+  hoveredUnitId: string | null;
+  simulationResult: SimulationResult | null;
+  /** Whether each card shows how its order resolved in the simulation. */
+  simActive: boolean;
+  isAdjustmentPhase: boolean;
+  isRetreatPhase: boolean;
+  /** The phone sheet words its hints for a finger. */
+  isSheet: boolean;
+  onSelectUnit: (unitId: string | null) => void;
+  onHoverUnit: (unitId: string | null) => void;
+  onHighlightProvinces: (provinces: string[]) => void;
+  onUpdateOrder: (order: Order) => void;
+}
+
+/**
+ * Everything inside the scrolling list: the home build slots in winter, then a card for each of
+ * the power's units. A fragment, so the panel and the sheet each choose the container.
+ */
+export const UnitOrderList: React.FC<UnitOrderListProps> = ({
+  activePower,
+  powerMeta,
+  progress,
+  provinces,
+  units,
+  orders,
+  retreats,
+  unitOptions,
+  selectedUnitId,
+  hoveredUnitId,
+  simulationResult,
+  simActive,
+  isAdjustmentPhase,
+  isRetreatPhase,
+  isSheet,
+  onSelectUnit,
+  onHoverUnit,
+  onHighlightProvinces,
+  onUpdateOrder,
+}) => {
+  const {
+    unitsByProv,
+    myUnits,
+    issuesByUnit,
+    buildCount,
+    buildHomes,
+    maxAllowedBuilds,
+    assignedBuildsCount,
+    neededDisbands,
+    assignedDisbandsCount,
+  } = progress;
+
+  const handleOrderTypeChange = (unit: Unit, newType: OrderType) => {
+    const nextOrder = buildDefaultOrderForType({
+      unit,
+      newType,
+      provinces,
+      units,
+      orders,
+      retreats,
+      unitOptions: unitOptions ? (unitOptions[unit.id] ?? null) : null,
+    });
+    if (nextOrder) onUpdateOrder(nextOrder);
+  };
+
+  return (
+    <>
+      {/* Winter Builds */}
+      {isAdjustmentPhase && buildCount > 0 && buildHomes.length > 0 && (
+        <div className="macro-builds-wrapper">
+          <div className="macro-list-header">
+            <span>
+              HOME BUILDS ({assignedBuildsCount}/{maxAllowedBuilds} ASSIGNED)
+            </span>
+            <span className="macro-hint">
+              {isSheet ? 'Tap a card or the map' : 'Click card or map'}
+            </span>
+          </div>
+          {buildHomes.map((homeProv) => {
+            const bId = `BUILD_${activePower}_${homeProv}`;
+            return (
+              <BuildSlotCard
+                key={homeProv}
+                homeProv={homeProv}
+                buildOrder={orders[bId]}
+                pInfo={provinces[homeProv]}
+                activePower={activePower}
+                isSelected={selectedUnitId === bId}
+                provinces={provinces}
+                unitsByProv={unitsByProv}
+                onSelectUnit={onSelectUnit}
+                onHoverUnit={onHoverUnit}
+                onHighlightProvinces={onHighlightProvinces}
+                onUpdateOrder={onUpdateOrder}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      <div className="macro-list-header">
+        <span>
+          {isAdjustmentPhase && buildCount < 0
+            ? `DISBAND UNITS (${assignedDisbandsCount}/${neededDisbands} SELECTED)`
+            : `ACTIVE FORCE ORDERS (${myUnits.length} UNITS)`}
+        </span>
+        <span className="macro-hint">
+          {isSheet ? 'Tap a card or the map' : 'Click card or map'}
+        </span>
+      </div>
+
+      {myUnits.map((unit) => {
+        const order = orders[unit.id];
+        const unitIssues = issuesByUnit[unit.id] || [];
+        const hasError = unitIssues.some((i) => i.severity === 'error');
+        const hasWarn = unitIssues.some((i) => i.severity === 'warning');
+        const isSelected = unit.id === selectedUnitId;
+        const isHovered = unit.id === hoveredUnitId;
+        const uOpts = unitOptions ? (unitOptions[unit.id] ?? null) : null;
+        const summary = formatOrderSummary(order, provinces, unitsByProv);
+        const reachable = getReachableDestinations(unit, provinces, uOpts);
+        const validRetreats = unit.is_dislodged
+          ? getValidRetreatDestinations(unit, retreats, provinces, uOpts)
+          : [];
+        const simRes = simActive
+          ? simulationResult?.resolutions[unit.id]
+          : null;
+        const isDisbanding = order?.order_type === 'DISBAND';
+
+        return (
+          <UnitMacroCard
+            key={unit.id}
+            unit={unit}
+            order={order}
+            powerMeta={powerMeta}
+            provinces={provinces}
+            units={units}
+            unitsByProv={unitsByProv}
+            orders={orders}
+            reachable={reachable}
+            validRetreats={validRetreats}
+            unitOptions={uOpts}
+            summary={summary}
+            unitIssues={unitIssues}
+            simRes={simRes}
+            isSelected={isSelected}
+            isHovered={isHovered}
+            hasError={hasError}
+            hasWarn={hasWarn}
+            isDisbanding={isDisbanding}
+            isRetreatPhase={isRetreatPhase}
+            isAdjustmentPhase={isAdjustmentPhase}
+            buildCount={buildCount}
+            onSelectUnit={onSelectUnit}
+            onHoverUnit={onHoverUnit}
+            onHighlightProvinces={onHighlightProvinces}
+            onUpdateOrder={onUpdateOrder}
+            handleOrderTypeChange={handleOrderTypeChange}
+          />
+        );
+      })}
+    </>
+  );
+};

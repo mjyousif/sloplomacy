@@ -3,10 +3,7 @@ import {
   AlertTriangle,
   Anchor,
   CheckCircle2,
-  Crosshair,
   Info,
-  MoveRight,
-  Shield,
   Swords,
   Trash2,
 } from 'lucide-react';
@@ -21,6 +18,7 @@ import type {
   ValidationIssue,
 } from '../../types/diplomacy';
 import { OrderParameterControls } from './OrderParameterControls';
+import { OrderTypeTabs } from './OrderTypeTabs';
 
 export interface UnitMacroCardProps {
   unit: Unit;
@@ -196,139 +194,31 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
         className="unit-inline-controls"
         onClick={(e) => e.stopPropagation()}
       >
-        {isRetreatPhase ? (
-          unit.is_dislodged ? (
-            <>
-              <div className="order-type-tabs">
-                {validRetreats.length > 0 && (
-                  <button
-                    type="button"
-                    data-testid="btn-order-retreat"
-                    className={`order-tab-btn ${order?.order_type === 'RETREAT' ? 'active' : ''}`}
-                    style={
-                      order?.order_type === 'RETREAT'
-                        ? {
-                            backgroundColor: '#ea580c',
-                            borderColor: '#fdba74',
-                            color: '#fff',
-                          }
-                        : undefined
-                    }
-                    onClick={() => handleOrderTypeChange(unit, 'RETREAT')}
-                  >
-                    <MoveRight size={11} /> RETREAT
-                  </button>
-                )}
-                <button
-                  type="button"
-                  data-testid="btn-order-disband"
-                  className={`order-tab-btn ${order?.order_type === 'DISBAND' ? 'active' : ''}`}
-                  style={
-                    order?.order_type === 'DISBAND'
-                      ? {
-                          backgroundColor: '#dc2626',
-                          borderColor: '#fca5a5',
-                          color: '#fff',
-                        }
-                      : undefined
-                  }
-                  onClick={() => handleOrderTypeChange(unit, 'DISBAND')}
-                >
-                  <Trash2 size={11} /> DISBAND
-                </button>
-              </div>
-
-              <OrderParameterControls
-                unit={unit}
-                order={order}
-                provinces={provinces}
-                units={units}
-                unitsByProv={unitsByProv}
-                orders={orders}
-                reachable={reachable}
-                validRetreats={validRetreats}
-                unitOptions={unitOptions}
-                isRetreatPhase={true}
-                onUpdateOrder={onUpdateOrder}
-              />
-            </>
-          ) : null
-        ) : isAdjustmentPhase ? (
-          buildCount < 0 ? (
-            <div className="order-type-tabs">
-              <button
-                type="button"
-                data-testid="btn-adjustment-keep"
-                className={`order-tab-btn ${!isDisbanding ? 'active' : ''}`}
-                onClick={() => handleOrderTypeChange(unit, 'HOLD')}
-              >
-                <Shield size={11} /> KEEP UNIT
-              </button>
-              <button
-                type="button"
-                data-testid="btn-adjustment-disband"
-                className={`order-tab-btn ${isDisbanding ? 'active' : ''}`}
-                style={
-                  isDisbanding
-                    ? {
-                        backgroundColor: '#dc2626',
-                        borderColor: '#fca5a5',
-                        color: '#fff',
-                      }
-                    : undefined
-                }
-                onClick={() => handleOrderTypeChange(unit, 'DISBAND')}
-              >
-                <Trash2 size={11} /> DISBAND UNIT
-              </button>
-            </div>
-          ) : null
-        ) : (
-          <>
-            <div className="order-type-tabs">
-              {(['HOLD', 'MOVE', 'SUPPORT', 'CONVOY'] as OrderType[]).map(
-                (oType) => {
-                  if (
-                    oType === 'CONVOY' &&
-                    (unit.unit_type !== 'F' ||
-                      provinces[unit.province]?.type !== 'SEA')
-                  ) {
-                    return null;
-                  }
-                  const active = (order?.order_type || 'HOLD') === oType;
-                  return (
-                    <button
-                      key={oType}
-                      type="button"
-                      className={`order-tab-btn ${active ? 'active' : ''}`}
-                      data-testid={`btn-order-type-${oType}`}
-                      onClick={() => handleOrderTypeChange(unit, oType)}
-                    >
-                      {oType === 'HOLD' && <Shield size={11} />}
-                      {oType === 'MOVE' && <MoveRight size={11} />}
-                      {oType === 'SUPPORT' && <Crosshair size={11} />}
-                      {oType === 'CONVOY' && <Anchor size={11} />}
-                      {oType}
-                    </button>
-                  );
-                },
-              )}
-            </div>
-
-            <OrderParameterControls
-              unit={unit}
-              order={order}
-              provinces={provinces}
-              units={units}
-              unitsByProv={unitsByProv}
-              orders={orders}
-              reachable={reachable}
-              validRetreats={validRetreats}
-              unitOptions={unitOptions}
-              isRetreatPhase={false}
-              onUpdateOrder={onUpdateOrder}
-            />
-          </>
+        <OrderTypeTabs
+          unit={unit}
+          order={order}
+          provinces={provinces}
+          validRetreats={validRetreats}
+          isDisbanding={isDisbanding}
+          isRetreatPhase={isRetreatPhase}
+          isAdjustmentPhase={isAdjustmentPhase}
+          buildCount={buildCount}
+          handleOrderTypeChange={handleOrderTypeChange}
+        />
+        {(isRetreatPhase ? unit.is_dislodged : !isAdjustmentPhase) && (
+          <OrderParameterControls
+            unit={unit}
+            order={order}
+            provinces={provinces}
+            units={units}
+            unitsByProv={unitsByProv}
+            orders={orders}
+            reachable={reachable}
+            validRetreats={validRetreats}
+            unitOptions={unitOptions}
+            isRetreatPhase={isRetreatPhase}
+            onUpdateOrder={onUpdateOrder}
+          />
         )}
       </div>
 

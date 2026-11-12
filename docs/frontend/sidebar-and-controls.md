@@ -163,6 +163,21 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 
 ## Right Sidebar: Tactical Command & Orders (`MacroSidebar.tsx`)
 
+`MacroSidebar` reads the phase flags (`isAdjustmentPhase`, `isRetreatPhase`) from its props, keeps two `useMemo`s (the powers the match is waiting on, via `getRequiredPowers`, and the consensus card text) and calls `computeOrderProgress` for the rest: the power's units, its blocking issues, its supply center count, the builds and disbands owed and the confirmed counts (`utils/orderProgress.ts`). It passes that one `OrderProgress` object, plus a few flat props, to the pieces in `components/macro/`, and arranges them for the desktop panel, the collapsed rail or the phone sheet. Fix a number or a label in the piece that draws it, not in a copy per layout:
+
+| Piece | Draws |
+| :--- | :--- |
+| `PowerHeader` (with `StatusBadge`, `PhaseContext`, `HistoryLockBar`) | The power's name or crest, its unit and center counts, the status badge, the phase's instruction box and the past-turn bar |
+| `UnitOrderList` | The home build slots in winter and a `UnitMacroCard` per unit, and the handler that sends the default order for a picked type |
+| `UnitMacroCard` | One unit: header, status pill, behavior bar, then `OrderTypeTabs` and `OrderParameterControls`, issues and the simulation strip |
+| `OrderTypeTabs` | The order-type buttons for the phase (Retreat/Disband, Keep/Disband or Hold/Move/Support/Convoy) |
+| `OrderParameterControls` | The selects for the order's type, in `macro/controls/` (`RetreatControls`, `MoveControls`, `SupportControls`, `ConvoyControls`); each takes only the props it reads |
+| `OrderFooter` (with `ConfirmAllButton`, `SurrenderButton`) | The Confirm All and Surrender buttons, and the footer: Finalize or Unlock, then Resolve or the consensus card. `OrderFooter` itself is a fragment, because the sheet's CSS styles these buttons as direct children of `.macro-sheet-controls` |
+| `CollapsedRail` | The rail's contents. The `<aside>` stays in `MacroSidebar` so collapsing keeps one element and the width transition on `.macro-sidebar` plays |
+| `useSheetSelection` | The sheet's two reactions to the selected unit (highlight its provinces, scroll its card up when the sheet is raised) |
+
+Pieces must not be defined inside `MacroSidebar`: a component defined in a render is a new type each time and remounts its subtree, which drops select focus.
+
 ### 1. Active Sovereign Command Header & Telemetry
 - Displays active nation crest, name, controlled Supply Centers, and active/dislodged unit counts.
 - Real-time status badge: `Drafting Orders`, `Finalized`, `Civil Disorder`, or `X Issues`.

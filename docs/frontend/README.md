@@ -73,10 +73,19 @@ frontend/
     │   │   ├── SandboxToolsSection.tsx   # Hypothetical Mode, General Staff AI, foreign moves, reset and save
     │   │   └── AdminSection.tsx          # Open Admin Console and the Direct-Edit override
     │   ├── MacroSidebar.tsx     # Right collapsible sidebar: core gameplay orders, builds, finalize & adjudicate (the order sheet on phones)
+    │   ├── MacroSidebar.test.tsx # Panel, collapsed rail and phone sheet: layout, handlers, history lock, one <aside> across collapse
     │   ├── macro/               # Decomposed order sheet and unit management cards
+    │   │   ├── PowerHeader.tsx  # StatusBadge, PhaseContext, HistoryLockBar and the power header row (panel banner top or sheet status row)
+    │   │   ├── UnitOrderList.tsx # The home build slots in winter and a card per unit; owns the order-type change handler
     │   │   ├── UnitMacroCard.tsx # Unit order card shell, badges, diagnostics & simulation strip
-    │   │   ├── OrderParameterControls.tsx # Move/via-convoy, support & convoy parameter dropdowns (with its test)
-    │   │   └── BuildSlotCard.tsx # Winter adjustment build/disband quota cards
+    │   │   ├── OrderTypeTabs.tsx # The row of order-type buttons: Retreat/Disband, Keep/Disband, or Hold/Move/Support/Convoy
+    │   │   ├── OrderParameterControls.tsx # Picks the control for the order's type (retreat phase shows only the retreat select)
+    │   │   ├── controls/        # RetreatControls, MoveControls (with via-convoy), SupportControls and ConvoyControls, each with its test
+    │   │   ├── OrderFooter.tsx  # Confirm All and Surrender buttons, and Finalize/Unlock plus Resolve or the consensus card
+    │   │   ├── CollapsedRail.tsx # The contents of the 44px rail (the <aside> stays in MacroSidebar so its width transition plays)
+    │   │   ├── useSheetSelection.ts # Phone sheet: highlight the selected unit's provinces, scroll its card up when the sheet is raised
+    │   │   ├── BuildSlotCard.tsx # Winter adjustment build/disband quota cards
+    │   │   └── *.test.tsx       # Tests beside each piece (BuildSlotCard has none yet)
     │   ├── sidebars.test.ts     # Vitest suite for ToolsSidebar and MacroSidebar collapsible views
     │   ├── TurnHistorySelector.tsx # Left pane footer to pick a resolved turn, nation chips, and the phone's map pill
     │   ├── PhaseTimerWidget.tsx # Bottom-left map widget: turn clock, votes, ready-up & +5 button (a pill on phones)
@@ -163,13 +172,16 @@ frontend/
     ├── test/
     │   ├── setup.ts             # Runs before every test file: jest-dom matchers and Testing Library cleanup
     │   ├── mapDom.ts            # A map <svg> with an on-screen box and pointer capture, for map hook tests
-    │   └── mapFixtures.ts       # France and its neighbours, units and orders for map tests
+    │   ├── mapFixtures.ts       # France and its neighbours, units and orders for map tests
+    │   └── macroFixtures.ts     # The same board plus a Channel fleet, issues, participants and an OrderProgress, for the order panel's tests
     ├── types/
     │   └── diplomacy.ts         # TypeScript definitions synchronized with backend/domain/*.py
     └── utils/
         ├── orderBuilders.ts     # Hold, move, retreat, support, convoy, disband, build and waive orders, built one way everywhere
         ├── orderBuilders.test.ts # Each order's exact fields and field order
         ├── orderHelpers.ts      # Reachability calculations, retreat targeting & symbolic formatters
+        ├── orderProgress.ts     # Which powers a match waits on, and a power's build, disband and confirmed counts (OrderProgress)
+        ├── orderProgress.test.ts # Required powers per phase, supply center counts, winter counts and confirmed orders
         ├── orderHelpers.test.ts # Vitest suite for order parsing and valid destinations
         ├── adminHelpers.ts      # Admin permission verification & payload formatters
         ├── adminHelpers.test.ts # Vitest suite for admin authorization and mutations
