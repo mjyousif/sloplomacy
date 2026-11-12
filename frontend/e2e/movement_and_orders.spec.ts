@@ -176,11 +176,13 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
         page.locator('[data-testid="order-arrow"][data-order-unit="FRA_F_ENG"][data-order-type="CONVOY"]')
       ).toHaveCount(0);
 
-      // Re-pick Convoy -> A PIC -> coastal WAL and verify valid CONVOY vector renders
+      // Re-pick Convoy -> A PIC -> coastal WAL and verify valid CONVOY vector renders.
+      // Since #193 a convoy target carries a reticle, which covers the middle of Wales, so the
+      // pick goes through the reticle as a player's click would.
       await fleetEng.click();
       await page.locator('.unit-floating-menu').getByRole('button', { name: 'Convoy' }).click();
       await armyPic.click();
-      await page.locator('[data-testid="province-path"][data-province-id="WAL"]').click();
+      await page.locator('[data-testid="reachable-reticle"][data-province-id="WAL"]').click();
       await expect(
         page.locator(
           '[data-testid="order-arrow"][data-order-unit="FRA_F_ENG"][data-order-type="CONVOY"][data-order-target="WAL"]'
