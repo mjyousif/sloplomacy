@@ -18,6 +18,7 @@ describe('PowerPicker', () => {
       POWER_METADATA.ITALY.shortName,
     );
     expect(selected[0].style.borderColor).not.toBe('');
+    expect(selected[0].style.backgroundColor).not.toBe('');
     expect(buttons[0].style.borderColor).toBe('');
     expect(buttons[0].style.backgroundColor).toBe('');
     // None of them submit a form around them.

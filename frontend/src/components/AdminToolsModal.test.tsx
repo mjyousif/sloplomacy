@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -108,8 +108,9 @@ const field = (label: string | RegExp) =>
     .parentElement?.querySelector('select') as HTMLSelectElement;
 
 describe('AdminToolsModal', () => {
-  it('renders nothing while closed', () => {
+  it('renders nothing while closed, and asks the server nothing', async () => {
     const { view } = setup({ isOpen: false });
+    await act(async () => {});
     expect(view.container).toBeEmptyDOMElement();
     expect(calls).toEqual([]);
   });
@@ -301,5 +302,98 @@ describe('AdminToolsModal', () => {
     const { user } = setup({ onResetScenario: undefined });
     await user.click(tab(/Territory & Powers/));
     expect(screen.queryByText(/Hard Reset/)).not.toBeInTheDocument();
+  });
+
+  it('shows the game clock and the timeline count in the turn tab', async () => {
+    setup();
+    await screen.findByText('Previous snapshot is ready to restore (2 saved).');
+    expect(field('Season')).toHaveValue('Fall');
+    expect(field('Phase')).toHaveValue('Retreats');
+    expect(
+      (screen.getByText('Year').parentElement as HTMLElement).querySelector(
+        'input',
+      ),
+    ).toHaveValue(1902);
+  });
+
+  it('keeps what was picked in each tab when switching away and back', async () => {
+    const { user } = setup();
+    await user.click(tab(/Move Units Anywhere/));
+    await user.selectOptions(field('Select Unit on Board'), 'F_LON');
+    await user.selectOptions(field('Destination Province'), 'STP');
+    await user.selectOptions(field(/Fleet Coast in St Petersburg/), 'SC');
+    await user.click(tab(/Spawn \/ Destroy Units/));
+    await user.selectOptions(field('Great Power'), 'GERMANY');
+    await user.selectOptions(field('Unit Type'), 'F');
+    await user.selectOptions(field('Province'), 'STP');
+    await user.selectOptions(field(/Coast in St Petersburg/), 'SC');
+    await user.selectOptions(field('Filter by Country:'), 'FRANCE');
+    await user.click(tab(/Territory & Powers/));
+    await user.selectOptions(field('Province'), 'PAR');
+    await user.selectOptions(field('New Owner'), 'ITALY');
+    await user.click(tab(/Move Units Anywhere/));
+    expect(field('Select Unit on Board')).toHaveValue('F_LON');
+    expect(field('Destination Province')).toHaveValue('STP');
+    expect(field(/Fleet Coast in St Petersburg/)).toHaveValue('SC');
+    await user.click(tab(/Spawn \/ Destroy Units/));
+    expect(field('Great Power')).toHaveValue('GERMANY');
+    expect(field('Unit Type')).toHaveValue('F');
+    expect(field('Province')).toHaveValue('STP');
+    expect(field(/Coast in St Petersburg/)).toHaveValue('SC');
+    expect(field('Filter by Country:')).toHaveValue('FRANCE');
+    await user.click(tab(/Territory & Powers/));
+    expect(field('Province')).toHaveValue('PAR');
+    expect(field('New Owner')).toHaveValue('ITALY');
+  });
+
+  it('sends the coast picked in the spawn tab', async () => {
+    const { props, user } = setup();
+    await user.click(tab(/Spawn \/ Destroy Units/));
+    await user.selectOptions(field('Unit Type'), 'F');
+    await user.selectOptions(field('Province'), 'STP');
+    await user.selectOptions(field(/Coast in St Petersburg/), 'SC');
+    await user.click(screen.getByRole('button', { name: /Spawn Unit/ }));
+    await waitFor(() => expect(props.onToast).toHaveBeenCalled());
+    expect(posts()[0].body.coast).toBe('SC');
+  });
+
+  it('shows no error banner until something fails, and marks the override switch when on', () => {
+    const off = setup();
+    expect(off.view.container.querySelector('.admin-error-banner')).toBeNull();
+    expect(
+      screen.getByText(/Map Direct-Edit Mode/).closest('button'),
+    ).not.toHaveClass('active');
+    off.view.unmount();
+    setup({ adminOverrideActive: true });
+    expect(
+      screen.getByText(/Map Direct-Edit Mode/).closest('button'),
+    ).toHaveClass('active');
+  });
+
+  it('disables the actions while a request is out', async () => {
+    let release: () => void = () => {};
+    vi.mocked(fetch).mockImplementation(async (url) => {
+      if (String(url).includes('/status'))
+        return {
+          ok: true,
+          json: async () => ({ history_count: 0, can_rollback: false }),
+        } as Response;
+      await new Promise<void>((r) => {
+        release = r;
+      });
+      return { ok: true, json: async () => NEW } as Response;
+    });
+    const { props, user } = setup();
+    const unlock = screen.getByRole('button', {
+      name: /Unlock \/ Unfinalize All/,
+    });
+    await user.click(unlock);
+    await waitFor(() => expect(unlock).toBeDisabled());
+    expect(
+      screen.getByRole('button', { name: /Apply Clock Changes/ }),
+    ).toBeDisabled();
+    release();
+    await waitFor(() => expect(props.onToast).toHaveBeenCalled());
+    await waitFor(() => expect(unlock).toBeEnabled());
   });
 });

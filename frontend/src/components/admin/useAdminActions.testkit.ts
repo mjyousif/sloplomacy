@@ -31,6 +31,8 @@ export const net = {
   calls: [] as { url: string; init?: RequestInit }[],
   replies: {} as Record<string, Reply>,
   fetchThrows: {} as Record<string, unknown>,
+  /** An endpoint listed here does not answer until its promise settles. */
+  hold: {} as Record<string, Promise<unknown>>,
 };
 
 function key(url: string) {
@@ -42,6 +44,7 @@ export function resetNet() {
   net.calls.length = 0;
   for (const k of Object.keys(net.replies)) delete net.replies[k];
   for (const k of Object.keys(net.fetchThrows)) delete net.fetchThrows[k];
+  for (const k of Object.keys(net.hold)) delete net.hold[k];
   // Each status read answers with the same numbers, so it never re-renders the hook by itself.
   net.replies.status = {
     ok: true,
@@ -52,6 +55,7 @@ export function resetNet() {
     vi.fn(async (url: string, init?: RequestInit) => {
       net.calls.push({ url, init });
       const k = key(url);
+      if (k in net.hold) await net.hold[k];
       if (k in net.fetchThrows) throw net.fetchThrows[k];
       const r = net.replies[k] ?? { ok: true, body: state() };
       return {

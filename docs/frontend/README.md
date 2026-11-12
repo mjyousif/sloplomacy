@@ -90,7 +90,7 @@ frontend/
     │   ├── TurnHistorySelector.tsx # Left pane footer to pick a resolved turn, nation chips, and the phone's map pill
     │   ├── PhaseTimerWidget.tsx # Bottom-left map widget: turn clock, votes, ready-up & +5 button (a pill on phones)
     │   ├── LobbyView.tsx        # The lobby: form state, create / join / seat-claim handlers and the dialogs; arranges the sections below
-    │   ├── LobbyView.test.tsx   # Layout, seat claims, the passcode box, hosting, joining by code and copy
+    │   ├── LobbyView.test.tsx, LobbyView.hosting.test.tsx, LobbyView.testkit.tsx # Layout and seat claims; hosting, joining by code and copy; shared setup
     │   ├── lobby/               # Decomposed match browser and lobby dialogs
     │   │   ├── LobbyHero.tsx                 # Top banner: Solo Sandbox button, sign-in button and the two mode cards
     │   │   ├── MyGamesSection.tsx            # The player's own campaigns and saved sandboxes, with Resume and Leave
