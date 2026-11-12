@@ -14,7 +14,7 @@ frontend/
 ├── tsconfig.json                # TypeScript compiler configuration
 └── src/
     ├── main.tsx                 # React DOM bootstrapping
-    ├── App.tsx                  # Root state container, viewMode router & API coordination
+    ├── App.tsx                  # Root state container and viewMode router: calls the state hooks, renders the pieces below
     ├── App.css                  # Tactical HUD styling, CRT brass themes, animations & modals
     ├── compact.css              # Phone layout, applied while the shell has data-layout="compact"
     ├── index.css                # Base reset & typography
@@ -88,6 +88,12 @@ frontend/
     │   ├── CompactTopBar.test.ts # Vitest suite for the phone top bar and the surrender note
     │   ├── TopHeader.tsx        # Desktop top bar: brand, Solo Sandbox, turn, order check, Live Sync, display settings, account
     │   ├── TopHeader.test.tsx   # Each part of the desktop top bar and the buttons it hands back to App
+    │   ├── AppHeader.tsx        # Above the board: TopHeader or CompactTopBar, the Direct-Edit banner and the toast
+    │   ├── AppHeader.test.tsx   # Which bar shows, the problem counts, the banner's buttons and the toast
+    │   ├── GameWorkspace.tsx    # The game screen: ToolsSidebar, EuropeMap with the clock and history pill, MacroSidebar
+    │   ├── GameWorkspace.test.tsx # Phone and desktop variants, a past turn drawn read-only, the clock, zoom and rail wiring
+    │   ├── AppModals.tsx        # Sanity Check, Surrender & Leave, Save Sandbox, admin console, sign-in and confirm
+    │   ├── AppModals.test.tsx   # Each modal's wiring, the saved sandbox's default name, admin only for the host
     │   ├── DisplaySettingsMenu.tsx # Top bar menu for this player's piece style and army and fleet marks
     │   ├── MapPiece.tsx         # Draws unit pieces, stars, rings and hit areas for every display style
     │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
@@ -126,6 +132,10 @@ frontend/
     │   ├── useSandboxExit.test.ts # When it closes the copy, what it sends, and that a failed close is ignored
     │   ├── useMatchActions.ts   # Orders, confirm-all, finalize with the Sanity Check modal, unlock, resolve and the clock buttons
     │   ├── useMatchActions.test.tsx # Foreign-order guard, finalize problems, double-click resolve, clock behind a private copy
+    │   ├── useSeatActions.ts    # Solo Sandbox, create, join, surrender (with its modal), leave and picking a sandbox power
+    │   ├── useSeatActions.test.ts # Solo Sandbox, creating and joining: sign-in prompts, bodies, passcodes, refusals
+    │   ├── useSeatActions.surrender.test.ts # The Surrender & Leave modal, surrendering, leaving and picking a sandbox power
+    │   ├── useSeatActions.testkit.ts # Options, replies and the signed-in player both seat test files share
     │   ├── useAuthSession.ts    # The signed-in user (loaded on mount, then followed) and the sign-in modal
     │   ├── useAuthSession.test.ts # Initial load, sign-in and sign-out, unsubscribe, and the modal's reason and tab
     │   ├── useWorkspaceLayout.ts # Desktop rails, phone order sheet and tools drawer, reset on a new game, view or layout
@@ -176,8 +186,8 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   ├── Active & Saved Sandboxes Roster
 │   └── User Auth Header & Profile Switcher
 │
-├── View 2: Tactical Workspace (when viewMode === 'multiplayer' | 'sandbox')
-│   ├── Imperial Header Bar (TopHeader.tsx; CompactTopBar.tsx on phones: back, ≡ tools, turn, problem count, ⋯ menu)
+├── View 2: GameWorkspace.tsx (when viewMode === 'multiplayer' | 'sandbox')
+│   ├── Imperial Header Bar (AppHeader.tsx, on every view: TopHeader.tsx; CompactTopBar.tsx on phones: back, ≡ tools, turn, problem count, ⋯ menu; then the Direct-Edit banner and the toast)
 │   │   ├── Return to Lobby (Clickable Brand Emblem & Title)
 │   │   ├── Turn Chronicle Pill (Season, Year, Phase & Winner)
 │   │   ├── Sanity Check Diagnostics Warning Pill
@@ -218,7 +228,7 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │       ├── Sticky Footer: Order Finalization & Phase Adjudication Actions
 │       └── Past-turn bar ("Viewing … · Back to live"), with everything below it dimmed and inert
 │
-├── Modals & Overlays
+├── Modals & Overlays (AppModals.tsx renders the dialogues, on every view)
 │   ├── DisplaySettingsMenu.tsx (Top bar popover for piece style and marks)
 │   ├── AuthModal.tsx (Supabase login/signup & local dev auth toggle)
 │   ├── AdminToolsModal.tsx (Creator unit teleport, spawn, destroy, turn jump, rollback)
