@@ -1,16 +1,3 @@
-import {
-  Compass,
-  Crown,
-  Flag,
-  FlaskConical,
-  Globe,
-  Lock,
-  LogIn,
-  Play,
-  RefreshCw,
-  Shield,
-  Sparkles,
-} from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { useCompactLayout } from '../hooks/useCompactLayout';
@@ -22,10 +9,12 @@ import {
 } from '../types/diplomacy';
 import { defaultCampaignName } from '../utils/campaignName';
 import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
-import { GameRoomCard } from './lobby/GameRoomCard';
+import { JoinWithCodeCard } from './lobby/JoinWithCodeCard';
+import { LobbyHero } from './lobby/LobbyHero';
+import { MyGamesSection } from './lobby/MyGamesSection';
+import { OpenLobbiesSection } from './lobby/OpenLobbiesSection';
 import { PasscodePromptModal } from './lobby/PasscodePromptModal';
 import { PrivateCampaignCreatedModal } from './lobby/PrivateCampaignCreatedModal';
-import { PowerFlag } from './PowerFlag';
 import { VersionBadge } from './VersionBadge';
 
 interface LobbyViewProps {
@@ -94,8 +83,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     power: Power;
   } | null>(null);
   const [enteredModalPasscode, setEnteredModalPasscode] = useState('');
-  const [_passcodeModalSubmitting, setPasscodeModalSubmitting] =
-    useState(false);
   const [passcodeModalError, setPasscodeModalError] = useState<string | null>(
     null,
   );
@@ -201,7 +188,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   const handlePasscodeModalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passcodeModalTarget) return;
-    setPasscodeModalSubmitting(true);
     setPasscodeModalError(null);
     try {
       await onJoinOrEnterGame(
@@ -214,8 +200,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       setPasscodeModalError(
         err.message || 'Incorrect passcode for this private campaign.',
       );
-    } finally {
-      setPasscodeModalSubmitting(false);
     }
   };
 
@@ -246,279 +230,34 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
   return (
     <div className="lobby-container">
-      {/* Top Hero Banner */}
-      <section className="lobby-hero">
-        <div className="lobby-hero-content">
-          <div className="lobby-badge-row">
-            <span className="lobby-era-pill">
-              <Compass size={13} /> STANDARD 1901 DIPLOMACY
-            </span>
-            <span className="lobby-era-pill gold">
-              <Sparkles size={13} /> DATC ADJUDICATOR
-            </span>
-          </div>
-          <h1 className="lobby-hero-title">The Chancellery of Europe</h1>
-          <p className="lobby-hero-subtitle">
-            {user ? (
-              <>
-                Welcome back, Envoy <strong>{user.displayName}</strong>. Command
-                your nation in power-locked multiplayer campaigns, or open the
-                solo sandbox with automated General Staff AI to test multi-power
-                maneuvers.
-              </>
-            ) : (
-              <>
-                Experiment freely with the full 7-power tactical engine in{' '}
-                <strong>Guest Solo Sandbox</strong>—now powered with intelligent
-                tactical AI—or sign in to claim your own nation, save scenarios,
-                and wage multiplayer campaigns.
-              </>
-            )}
-          </p>
-
-          <div className="lobby-hero-actions">
-            <button
-              type="button"
-              data-testid="btn-enter-sandbox"
-              className="lobby-primary-cta"
-              onClick={onEnterSandbox}
-            >
-              <FlaskConical size={18} />
-              <span>
-                {user ? 'Launch Solo Sandbox' : 'Launch Solo Sandbox (Guest)'}
-              </span>
-            </button>
-
-            {!user && (
-              <button
-                type="button"
-                className="lobby-secondary-cta"
-                onClick={() => onOpenAuth(undefined, 'signin')}
-              >
-                <LogIn size={17} />
-                <span>Sign In / Create Account for Multiplayer</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Feature Comparison Card */}
-        <div className="lobby-mode-comparison">
-          <div className="mode-card sandbox-card">
-            <div className="mode-card-header">
-              <FlaskConical size={16} />
-              <span>Solo Sandbox (Guest or Practice)</span>
-            </div>
-            <ul>
-              <li>Switch freely between all 7 Great Powers</li>
-              <li>Tactical AI auto-plans opponent moves &amp; steps turns</li>
-              <li>Simulate bounces, supports &amp; convoy chains</li>
-            </ul>
-          </div>
-          <div className="mode-card mp-card">
-            <div className="mode-card-header">
-              <Crown size={16} />
-              <span>Multiplayer Campaigns (Public &amp; Private)</span>
-            </div>
-            <ul>
-              <li>Host public or passcode-protected private campaigns</li>
-              <li>Invite players via Game ID &amp; secret passcode</li>
-              <li>Issue &amp; finalize orders strictly for your nation</li>
-            </ul>
-          </div>
-        </div>
-      </section>
+      <LobbyHero
+        user={user}
+        onEnterSandbox={onEnterSandbox}
+        onOpenAuth={onOpenAuth}
+      />
 
       <div className="lobby-main-grid">
         {/* Left Column: My Games + Open Lobbies */}
         <div className="lobby-games-column">
-          {/* My Active Games Section */}
-          <section className="lobby-section">
-            <div className="lobby-section-header">
-              <div className="lobby-section-title">
-                <Shield size={18} />
-                <h2>My Active Campaigns &amp; Saved Games</h2>
-              </div>
-              {user && (
-                <span className="lobby-count-badge">
-                  {myGames.length} {myGames.length === 1 ? 'Game' : 'Games'}
-                </span>
-              )}
-            </div>
+          <MyGamesSection
+            user={user}
+            myGames={myGames}
+            hostFormPlace={hostFormPlace}
+            handlePowerSlotClick={handlePowerSlotClick}
+            onOpenAuth={onOpenAuth}
+            onOpenSurrenderModal={onOpenSurrenderModal}
+          />
 
-            {!user ? (
-              <div className="lobby-empty-box locked">
-                <Lock size={22} />
-                <div>
-                  <strong>
-                    Account Required to Save &amp; Track Campaigns
-                  </strong>
-                  <p>
-                    Sign in to see your active multiplayer nations and saved
-                    tactical studies here.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="lobby-inline-auth-btn"
-                  onClick={() => onOpenAuth(undefined, 'signin')}
-                >
-                  Sign In
-                </button>
-              </div>
-            ) : myGames.length === 0 ? (
-              <div className="lobby-empty-box">
-                <p>
-                  You haven&apos;t joined any campaigns yet. Host a public or
-                  private campaign {hostFormPlace}, or join using a Game ID
-                  &amp; passcode!
-                </p>
-              </div>
-            ) : (
-              <div className="my-games-list">
-                {myGames.map((game) => {
-                  const myEntry = Object.values(game.participants || {}).find(
-                    (p) => p.user_id === user.id,
-                  );
-                  const myPower = myEntry?.power || 'FRANCE';
-                  const pMeta = POWER_METADATA[myPower];
-                  const isFinalized =
-                    game.finalized_powers?.includes(myPower) ?? false;
-
-                  return (
-                    <div key={game.game_id} className="my-game-row">
-                      <div className="my-game-info">
-                        <div className="my-game-top">
-                          <span className="my-game-name">{game.name}</span>
-                          <span className="my-game-turn-pill">
-                            {game.season} {game.year} · {game.phase}
-                          </span>
-                          {game.is_private && (
-                            <span className="my-game-private-tag">
-                              <Lock size={11} /> Private
-                            </span>
-                          )}
-                          {game.is_sandbox && (
-                            <span className="my-game-sandbox-tag">
-                              Saved Sandbox
-                            </span>
-                          )}
-                        </div>
-                        <div className="my-game-sub">
-                          <span
-                            className="my-power-chip"
-                            style={{
-                              backgroundColor: pMeta.lightBg,
-                              borderColor: pMeta.color,
-                              color: pMeta.color,
-                            }}
-                          >
-                            <PowerFlag
-                              power={myPower}
-                              width={18}
-                              height={12}
-                              style={{ marginRight: 6 }}
-                            />
-                            Playing as {pMeta.shortName} (Locked)
-                          </span>
-                          <span
-                            className={`my-finalize-status ${
-                              isFinalized ? 'ready' : 'pending'
-                            }`}
-                          >
-                            {isFinalized
-                              ? '✓ Orders Finalized'
-                              : '● Orders Pending'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="my-game-action-group">
-                        <button
-                          type="button"
-                          className="enter-match-btn"
-                          onClick={() => handlePowerSlotClick(game, myPower)}
-                        >
-                          <Play size={14} />
-                          <span>Resume as {pMeta.shortName}</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="leave-campaign-btn"
-                          title={
-                            game.is_sandbox
-                              ? 'Delete saved solo sandbox scenario'
-                              : game.status === 'active'
-                                ? `Surrender & leave ${game.name}`
-                                : `Leave ${game.name} lobby`
-                          }
-                          onClick={() => onOpenSurrenderModal(game, myPower)}
-                        >
-                          <Flag size={13} />
-                          <span>
-                            {game.is_sandbox
-                              ? 'Delete'
-                              : game.status === 'active'
-                                ? 'Surrender & Leave'
-                                : 'Leave'}
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-
-          {/* Open Multiplayer Lobbies Section */}
-          <section className="lobby-section">
-            <div className="lobby-section-header">
-              <div className="lobby-section-title">
-                <Globe size={18} />
-                <h2>Multiplayer Lobbies — Pick Your Country</h2>
-              </div>
-              <button
-                type="button"
-                className="lobby-refresh-btn"
-                onClick={onRefreshGames}
-                disabled={loadingGames}
-              >
-                <RefreshCw
-                  size={14}
-                  className={loadingGames ? 'spin-icon' : ''}
-                />
-                <span>Refresh</span>
-              </button>
-            </div>
-
-            <div className="lobby-cards-stack">
-              {multiplayerLobbies.length === 0 ? (
-                <div className="lobby-empty-box no-lobbies">
-                  <Globe size={28} className="empty-globe-icon" />
-                  <div>
-                    <strong>No Active Campaigns Right Now</strong>
-                    <p>
-                      There are no active multiplayer lobbies yet. Host a new
-                      public or private match {hostFormPlace}, or join a
-                      friend&apos;s game using their Game ID and passcode!
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                multiplayerLobbies.map((game) => (
-                  <GameRoomCard
-                    key={game.game_id}
-                    game={game}
-                    user={user}
-                    joiningKey={joiningKey}
-                    onOpenSurrenderModal={onOpenSurrenderModal}
-                    handlePowerSlotClick={handlePowerSlotClick}
-                  />
-                ))
-              )}
-            </div>
-          </section>
+          <OpenLobbiesSection
+            user={user}
+            multiplayerLobbies={multiplayerLobbies}
+            loadingGames={loadingGames}
+            onRefreshGames={onRefreshGames}
+            hostFormPlace={hostFormPlace}
+            joiningKey={joiningKey}
+            handlePowerSlotClick={handlePowerSlotClick}
+            onOpenSurrenderModal={onOpenSurrenderModal}
+          />
         </div>
 
         {/* Right Column: Host New Multiplayer Campaign & Join with Code */}
@@ -537,6 +276,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             createError={createError}
             creating={creating}
             handleCreateMatch={handleCreateMatch}
+          />
+
+          {/* 2. Join Private Campaign by Game ID & Passcode */}
+          <JoinWithCodeCard
+            user={user}
             joinCodeGameId={joinCodeGameId}
             setJoinCodeGameId={setJoinCodeGameId}
             joinCodePasscode={joinCodePasscode}

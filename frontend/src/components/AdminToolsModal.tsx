@@ -20,8 +20,6 @@ import type {
 import { TurnControlTab } from './admin/TurnControlTab';
 import { useConfirm } from './ConfirmModal';
 
-const API_BASE = '/api';
-
 interface AdminToolsModalProps {
   isOpen: boolean;
   onClose: () => void;
