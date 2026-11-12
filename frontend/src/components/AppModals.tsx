@@ -1,6 +1,7 @@
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { AuthModalTab } from '../hooks/useAuthSession';
 import {
+  type AdminActionLogEntry,
   type AuthUser,
   type GameState,
   type MultiplayerGameSummary,
@@ -9,6 +10,7 @@ import {
   type ProvinceInfo,
   type ValidationIssue,
 } from '../types/diplomacy';
+import { AdminActionWarningModal } from './AdminActionWarningModal';
 import { AdminToolsModal } from './AdminToolsModal';
 import { AuthModal } from './AuthModal';
 import { SanityCheckModal } from './SanityCheckModal';
@@ -48,11 +50,14 @@ export interface AppModalsProps {
   adminModalOpen: boolean;
   setAdminModalOpen: Dispatch<SetStateAction<boolean>>;
   adminOverrideActive: boolean;
-  setAdminOverrideActive: Dispatch<SetStateAction<boolean>>;
+  onToggleDirectEdit: () => void;
   applyServerState: (st: GameState) => void;
   fetchGamesList: () => Promise<void>;
-  handleLoadScenario: (scenarioId: string) => void;
   triggerToast: (msg: string) => void;
+  /** Admin action warning modal for participants. */
+  unacknowledgedAdminEntries?: AdminActionLogEntry[];
+  onAcknowledgeAdminEntries?: () => Promise<void>;
+  acknowledgingAdminEntries?: boolean;
   /** The sign-in modal, from `useAuthSession`. */
   authUser: AuthUser | null;
   setAuthUser: Dispatch<SetStateAction<AuthUser | null>>;
@@ -93,11 +98,13 @@ export function AppModals({
   adminModalOpen,
   setAdminModalOpen,
   adminOverrideActive,
-  setAdminOverrideActive,
+  onToggleDirectEdit,
   applyServerState,
   fetchGamesList,
-  handleLoadScenario,
   triggerToast,
+  unacknowledgedAdminEntries = [],
+  onAcknowledgeAdminEntries,
+  acknowledgingAdminEntries = false,
   authUser,
   setAuthUser,
   authModalOpen,
@@ -166,8 +173,17 @@ export function AppModals({
           }}
           onToast={triggerToast}
           adminOverrideActive={adminOverrideActive}
-          onToggleAdminOverride={() => setAdminOverrideActive((prev) => !prev)}
-          onResetScenario={() => handleLoadScenario('standard_1901')}
+          onToggleAdminOverride={onToggleDirectEdit}
+        />
+      )}
+
+      {/* ADMIN ACTION WARNING MODAL */}
+      {onAcknowledgeAdminEntries && (
+        <AdminActionWarningModal
+          isOpen={unacknowledgedAdminEntries.length > 0}
+          entries={unacknowledgedAdminEntries}
+          onAcknowledge={onAcknowledgeAdminEntries}
+          loading={acknowledgingAdminEntries}
         />
       )}
 

@@ -170,8 +170,9 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - `orders.py`: Move/retreat/build order submission, atomic batch updates, and order confirmation.
   - `turns.py`: Finalization, turn adjudication, phase timer voting, and extension requests.
   - `sandbox.py`: Sandbox sessions, speculative simulation, and AI heuristics.
-  - `admin.py`: Creator/admin turn controls (status, rollback, set-turn, unfinalize-all, test seeding).
-  - `admin_units.py`: Creator/admin board overrides (teleport, unit spawning/deletion, ownership).
+  - `admin.py`: Creator/admin turn controls (status, rollback, set-turn, unfinalize-all, acknowledge, test seeding).
+  - `admin_units.py`: Creator/admin board overrides (teleport, unit spawning/deletion, ownership, atomic `board-edit` batch commit with optimistic concurrency).
+  - `admin_utils.py`: Admin audit log recording (`AdminActionLogEntry`), consolidated `"Admin"` phase snapshots in `GAME_HISTORY`, and before/after diff order generation.
   - `history.py`: Read-only turn history for the turn selector (resolved phases and their records).
   - `websocket.py`: Live turn synchronization and WebSocket subscriptions.
 - **Domain Models (`backend/domain/`)**: Authoritative Pydantic v2 schemas: `board.py` (powers, provinces, units), `orders.py` (orders and adjudication results), `issues.py` (validation issues), `game_state.py` (`GameState`, `UnitMoveOptions`, clock, history, seats) and `requests.py` (request/response DTOs and WebSocket messages).

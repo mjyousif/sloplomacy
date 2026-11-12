@@ -8,6 +8,7 @@ import { useConfirm } from './components/ConfirmModal';
 import type { EuropeMapHandle } from './components/EuropeMap';
 import { GameWorkspace } from './components/GameWorkspace';
 import { LobbyView } from './components/LobbyView';
+import { useAdminDirectEdit } from './hooks/useAdminDirectEdit';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useCompactLayout } from './hooks/useCompactLayout';
 import { useDisplayPrefs } from './hooks/useDisplayPrefs';
@@ -26,24 +27,16 @@ import { checkIsGameCreator } from './utils/adminHelpers';
 import { turnLabel } from './utils/timerHelpers';
 
 export function App() {
-  // Navigation & Mode State
   const [viewMode, setViewMode] = useState<'lobby' | 'sandbox' | 'multiplayer'>(
-    () => {
-      if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search);
-        if (
-          params.get('view') === 'sandbox' ||
-          window.location.hash === '#sandbox'
-        ) {
-          return 'sandbox';
-        }
-      }
-      return 'lobby';
-    },
+    () =>
+      typeof window !== 'undefined' &&
+      (new URLSearchParams(window.location.search).get('view') === 'sandbox' ||
+        window.location.hash === '#sandbox')
+        ? 'sandbox'
+        : 'lobby',
   );
   const [simulationResult, setSimulationResult] =
     useState<SimulationResult | null>(null);
-  // The open game, its summary and the player's seat, the board, and the lobby's games.
   const {
     activeGameId,
     setActiveGameId,
@@ -68,8 +61,6 @@ export function App() {
     fetchGamesList,
     fetchMyGames,
   } = useGameSession({ viewMode, setSimulationResult });
-
-  // Auth State
   const {
     authUser,
     setAuthUser,
@@ -84,8 +75,6 @@ export function App() {
     saveState: displayPrefsSaveState,
     updatePrefs: updateDisplayPrefs,
   } = useDisplayPrefs(authUser);
-
-  // UI Interaction State
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [hoveredUnitId, setHoveredUnitId] = useState<string | null>(null);
   const [highlightedProvinces, setHighlightedProvinces] = useState<string[]>(
@@ -95,47 +84,44 @@ export function App() {
   const [adminOverrideActive, setAdminOverrideActive] =
     useState<boolean>(false);
   const [zoomPercent, setZoomPercent] = useState<number>(105);
-  // Phone-sized screens get the compact layout, styled from compact.css.
   const isCompact = useCompactLayout();
-  // The sidebar rails on desktop; the order sheet and tools drawer on a phone.
-  const {
-    leftSidebarCollapsed,
-    setLeftSidebarCollapsed,
-    rightSidebarCollapsed,
-    setRightSidebarCollapsed,
-    sheetSnap,
-    setSheetSnap,
-    toolsDrawerOpen,
-    setToolsDrawerOpen,
-    toolsToggleRef,
-    handleDockedBarChange,
-    closeToolsDrawer,
-  } = useWorkspaceLayout({ viewMode, activeGameId, isCompact });
+  const layout = useWorkspaceLayout({ viewMode, activeGameId, isCompact });
   const mapRef = useRef<EuropeMapHandle | null>(null);
-
   const { toastBanner, triggerToast } = useToast();
   const { confirm, confirmModal } = useConfirm();
-  // Passcodes this player typed for private matches during this visit, so the live
-  // socket can present them. Never saved: a reload falls back to polling.
   const [matchPasscodes, setMatchPasscodes] = useState<Record<string, string>>(
     {},
   );
-
-  // The turn selector. It always reads the real game, even from a private sandbox copy.
   const turnHistory = useTurnHistory({
     gameId: activeGameId,
     liveTurnKey: gameState ? turnLabel(gameState) : '',
     passcode: matchPasscodes[activeGameId] ?? null,
     enabled: viewMode !== 'lobby',
   });
-
   const isGameCreator = checkIsGameCreator(
     activeGameSummary,
     authUser,
     viewMode,
   );
-  // Direct-Edit stays on when the host moves to another game, where it must not apply.
   const directEditActive = isGameCreator && adminOverrideActive;
+  const handleAdminUpdateState = (st: typeof gameState) => {
+    if (!st) return;
+    applyServerState(st);
+    fetchGamesList();
+  };
+  const directEdit = useAdminDirectEdit({
+    activeGameId,
+    viewMode,
+    lockedPower,
+    gameState,
+    provinces,
+    directEditActive,
+    setDirectEditActive: setAdminOverrideActive,
+    authUser,
+    onUpdateGameState: handleAdminUpdateState,
+    showToast: triggerToast,
+    confirm,
+  });
   // Hypothetical Mode, the AI, the scenario reset and saving a sandbox.
   const {
     sandboxMode,
@@ -234,20 +220,7 @@ export function App() {
     fetchGamesList,
   });
 
-  // Taking and giving up a seat, and the Surrender & Leave modal.
-  const {
-    surrenderModalOpen,
-    setSurrenderModalOpen,
-    surrenderModalGame,
-    surrenderModalPower,
-    handleEnterSoloSandbox,
-    handleCreateMultiplayerGame,
-    handleJoinOrEnterMultiplayerGame,
-    handleOpenSurrenderModal,
-    handleSurrenderPower,
-    handleLeaveGame,
-    handleSelectPower,
-  } = useSeatActions({
+  const seats = useSeatActions({
     viewMode,
     setViewMode,
     activeGameId,
@@ -292,43 +265,65 @@ export function App() {
     );
   }
 
-  const openAdminTools = () => {
+  const openAdminTools = async () => {
     if (!requireRealBoard('use the admin tools')) return;
+    if (!(await directEdit.confirmIfDirty('open Turn and Clock Settings')))
+      return;
     turnHistory.goLive();
+    setAdminOverrideActive(false);
     setAdminModalOpen(true);
+    layout.setRightSidebarCollapsed(false);
+    if (isCompact) layout.setSheetSnap('half');
+  };
+  const handleToggleEditBoard = () => {
+    setAdminModalOpen(false);
+    layout.setRightSidebarCollapsed(false);
+    directEdit.handleToggleDirectEdit();
+  };
+  // Leaves either admin mode; Edit Board asks first if edits are still staged.
+  const handleExitAdmin = async () => {
+    if (directEditActive) await directEdit.handleToggleDirectEdit();
+    setAdminModalOpen(false);
   };
 
-  // A past turn on the map. Nothing on it can be selected, so any selection is dropped.
   const historyTurn = turnHistory.turn;
   const viewedEntry =
     turnHistory.viewIndex === null
       ? null
       : (turnHistory.entries[turnHistory.viewIndex] ?? null);
-  const showPastTurn = (index: number | null) => {
+  const showPastTurn = async (index: number | null) => {
+    if (
+      index !== null &&
+      !(await directEdit.confirmIfDirty('view a past turn'))
+    )
+      return;
     if (index !== null) {
       setSelectedUnitId(null);
       setHighlightedProvinces([]);
     }
     turnHistory.select(index);
   };
-  const stepPastTurn = (delta: -1 | 1) => {
+  const stepPastTurn = async (delta: -1 | 1) => {
+    if (!(await directEdit.confirmIfDirty('view a past turn'))) return;
     setSelectedUnitId(null);
     setHighlightedProvinces([]);
     turnHistory.step(delta);
   };
-
-  const handleBackToLobby = () => {
+  const handleBackToLobby = async () => {
+    if (!(await directEdit.confirmIfDirty('return to the lobby'))) return;
     setViewMode('lobby');
     fetchGamesList();
   };
-
+  const guardedEnterSoloSandbox = async (event?: React.MouseEvent) => {
+    if (!(await directEdit.confirmIfDirty('open the Solo Sandbox'))) return;
+    seats.handleEnterSoloSandbox(event);
+  };
   const handleSignOut = async () => {
     await signOutUser();
-    if (viewMode === 'multiplayer') {
-      setViewMode('lobby');
-    }
+    if (viewMode === 'multiplayer') setViewMode('lobby');
     triggerToast('Signed out — now in Guest Mode.');
   };
+  const boardState = directEdit.effectiveGameState ?? gameState;
 
   return (
     <div
@@ -338,7 +333,7 @@ export function App() {
       <AppHeader
         viewMode={viewMode}
         isCompact={isCompact}
-        gameState={gameState}
+        gameState={boardState}
         activeGameId={activeGameId}
         activeGameSummary={activeGameSummary}
         playerPower={playerPower}
@@ -350,14 +345,17 @@ export function App() {
         openAuthPrompt={openAuthPrompt}
         handleSignOut={handleSignOut}
         handleBackToLobby={handleBackToLobby}
-        handleEnterSoloSandbox={handleEnterSoloSandbox}
+        handleEnterSoloSandbox={guardedEnterSoloSandbox}
         handleFinalizeClick={handleFinalizeClick}
-        toolsDrawerOpen={toolsDrawerOpen}
-        setToolsDrawerOpen={setToolsDrawerOpen}
-        toolsToggleRef={toolsToggleRef}
+        toolsDrawerOpen={layout.toolsDrawerOpen}
+        setToolsDrawerOpen={layout.setToolsDrawerOpen}
+        toolsToggleRef={layout.toolsToggleRef}
+        isGameCreator={isGameCreator}
         directEditActive={directEditActive}
         openAdminTools={openAdminTools}
-        setAdminOverrideActive={setAdminOverrideActive}
+        onToggleDirectEdit={handleToggleEditBoard}
+        turnClockOpen={isGameCreator && adminModalOpen}
+        onExitAdmin={handleExitAdmin}
         toastBanner={toastBanner}
       />
 
@@ -368,31 +366,30 @@ export function App() {
           games={gamesList}
           loadingGames={loadingGames}
           onRefreshGames={fetchGamesList}
-          onEnterSandbox={handleEnterSoloSandbox}
+          onEnterSandbox={guardedEnterSoloSandbox}
           onOpenAuth={openAuthPrompt}
-          onCreateGame={handleCreateMultiplayerGame}
-          onJoinOrEnterGame={handleJoinOrEnterMultiplayerGame}
-          onOpenSurrenderModal={handleOpenSurrenderModal}
+          onCreateGame={seats.handleCreateMultiplayerGame}
+          onJoinOrEnterGame={seats.handleJoinOrEnterMultiplayerGame}
+          onOpenSurrenderModal={seats.handleOpenSurrenderModal}
         />
       ) : (
-        /* VIEW 2: INTERACTIVE EUROPE MAP + MACRO SIDEBAR (SANDBOX OR MULTIPLAYER) */
         <GameWorkspace
           viewMode={viewMode}
           isCompact={isCompact}
-          gameState={gameState}
+          gameState={boardState}
           provinces={provinces}
           activeGameSummary={activeGameSummary}
           playerPower={playerPower}
           lockedPower={lockedPower}
-          leftSidebarCollapsed={leftSidebarCollapsed}
-          setLeftSidebarCollapsed={setLeftSidebarCollapsed}
-          rightSidebarCollapsed={rightSidebarCollapsed}
-          setRightSidebarCollapsed={setRightSidebarCollapsed}
-          sheetSnap={sheetSnap}
-          setSheetSnap={setSheetSnap}
-          toolsDrawerOpen={toolsDrawerOpen}
-          closeToolsDrawer={closeToolsDrawer}
-          handleDockedBarChange={handleDockedBarChange}
+          leftSidebarCollapsed={layout.leftSidebarCollapsed}
+          setLeftSidebarCollapsed={layout.setLeftSidebarCollapsed}
+          rightSidebarCollapsed={layout.rightSidebarCollapsed}
+          setRightSidebarCollapsed={layout.setRightSidebarCollapsed}
+          sheetSnap={layout.sheetSnap}
+          setSheetSnap={layout.setSheetSnap}
+          toolsDrawerOpen={layout.toolsDrawerOpen}
+          closeToolsDrawer={layout.closeToolsDrawer}
+          handleDockedBarChange={layout.handleDockedBarChange}
           turnHistory={turnHistory}
           historyTurn={historyTurn}
           viewedEntry={viewedEntry}
@@ -420,20 +417,33 @@ export function App() {
           handleAIStepTurn={handleAIStepTurn}
           handleLoadScenario={handleLoadScenario}
           handleOpenSaveSandboxModal={handleOpenSaveSandboxModal}
-          handleUpdateOrder={handleUpdateOrder}
+          handleUpdateOrder={
+            directEditActive ? directEdit.stageUnitOrder : handleUpdateOrder
+          }
           handleConfirmAllHolds={handleConfirmAllHolds}
           handleFinalizeClick={handleFinalizeClick}
           handleUnfinalizeClick={handleUnfinalizeClick}
           handleAdjudicateTurn={handleAdjudicateTurn}
           postTimerAction={postTimerAction}
           handleTimerExpired={handleTimerExpired}
-          handleSelectPower={handleSelectPower}
-          handleOpenSurrenderModal={handleOpenSurrenderModal}
+          handleSelectPower={seats.handleSelectPower}
+          handleOpenSurrenderModal={seats.handleOpenSurrenderModal}
           isGameCreator={isGameCreator}
           directEditActive={directEditActive}
-          openAdminTools={openAdminTools}
-          adminOverrideActive={adminOverrideActive}
-          setAdminOverrideActive={setAdminOverrideActive}
+          directEdit={directEdit}
+          turnClockSettings={
+            isGameCreator && adminModalOpen
+              ? {
+                  isOpen: true,
+                  onClose: () => setAdminModalOpen(false),
+                  gameId: activeGameId,
+                  gameState,
+                  user: authUser,
+                  onStateUpdated: handleAdminUpdateState,
+                  onToast: triggerToast,
+                }
+              : undefined
+          }
         />
       )}
 
@@ -448,25 +458,27 @@ export function App() {
         handleFinalizeClick={handleFinalizeClick}
         setSelectedUnitId={setSelectedUnitId}
         setHighlightedProvinces={setHighlightedProvinces}
-        surrenderModalOpen={surrenderModalOpen}
-        setSurrenderModalOpen={setSurrenderModalOpen}
-        surrenderModalGame={surrenderModalGame}
-        surrenderModalPower={surrenderModalPower}
-        handleSurrenderPower={handleSurrenderPower}
-        handleLeaveGame={handleLeaveGame}
+        surrenderModalOpen={seats.surrenderModalOpen}
+        setSurrenderModalOpen={seats.setSurrenderModalOpen}
+        surrenderModalGame={seats.surrenderModalGame}
+        surrenderModalPower={seats.surrenderModalPower}
+        handleSurrenderPower={seats.handleSurrenderPower}
+        handleLeaveGame={seats.handleLeaveGame}
         saveSandboxModalOpen={saveSandboxModalOpen}
         setSaveSandboxModalOpen={setSaveSandboxModalOpen}
         savingSandbox={savingSandbox}
         handleSaveSandboxToAccount={handleSaveSandboxToAccount}
         isGameCreator={isGameCreator}
-        adminModalOpen={adminModalOpen}
+        adminModalOpen={false}
         setAdminModalOpen={setAdminModalOpen}
         adminOverrideActive={adminOverrideActive}
-        setAdminOverrideActive={setAdminOverrideActive}
+        onToggleDirectEdit={handleToggleEditBoard}
         applyServerState={applyServerState}
         fetchGamesList={fetchGamesList}
-        handleLoadScenario={handleLoadScenario}
         triggerToast={triggerToast}
+        unacknowledgedAdminEntries={directEdit.unacknowledgedAdminEntries}
+        onAcknowledgeAdminEntries={directEdit.handleAcknowledgeAdminEntries}
+        acknowledgingAdminEntries={directEdit.acknowledgingAdminEntries}
         authUser={authUser}
         setAuthUser={setAuthUser}
         authModalOpen={authModalOpen}

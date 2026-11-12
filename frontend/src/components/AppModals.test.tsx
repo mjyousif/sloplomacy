@@ -21,6 +21,9 @@ vi.mock('./SanityCheckModal', () => ({ SanityCheckModal: stub('sanity') }));
 vi.mock('./SurrenderModal', () => ({ SurrenderModal: stub('surrender') }));
 vi.mock('./SaveSandboxModal', () => ({ SaveSandboxModal: stub('save') }));
 vi.mock('./AdminToolsModal', () => ({ AdminToolsModal: stub('admin') }));
+vi.mock('./AdminActionWarningModal', () => ({
+  AdminActionWarningModal: stub('admin-warning'),
+}));
 vi.mock('./AuthModal', () => ({ AuthModal: stub('auth') }));
 
 const STATE = { season: 'Fall', year: 1903 } as GameState;
@@ -53,10 +56,9 @@ function props(over: Partial<AppModalsProps> = {}): AppModalsProps {
     adminModalOpen: false,
     setAdminModalOpen: vi.fn(),
     adminOverrideActive: true,
-    setAdminOverrideActive: vi.fn(),
+    onToggleDirectEdit: vi.fn(),
     applyServerState: vi.fn(),
     fetchGamesList: vi.fn(async () => {}),
-    handleLoadScenario: vi.fn(),
     triggerToast: vi.fn(),
     authUser: USER,
     setAuthUser: vi.fn(),
@@ -162,12 +164,7 @@ describe('AppModals', () => {
     expect(p.applyServerState).toHaveBeenCalledWith(STATE);
     expect(p.fetchGamesList).toHaveBeenCalledTimes(1);
     a.onToggleAdminOverride();
-    const flip = vi.mocked(p.setAdminOverrideActive).mock.calls[0][0] as (
-      on: boolean,
-    ) => boolean;
-    expect(flip(true)).toBe(false);
-    a.onResetScenario();
-    expect(p.handleLoadScenario).toHaveBeenCalledWith('standard_1901');
+    expect(p.onToggleDirectEdit).toHaveBeenCalledTimes(1);
   });
 
   it('shows no admin console to anyone else', () => {

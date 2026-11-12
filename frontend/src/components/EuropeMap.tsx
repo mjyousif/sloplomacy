@@ -1,6 +1,9 @@
 import type React from 'react';
 import { forwardRef } from 'react';
-import { MAP_VIEWBOX } from '../data/europeMapGeometry';
+import {
+  EUROPE_PROVINCE_GEOMETRY,
+  MAP_VIEWBOX,
+} from '../data/europeMapGeometry';
 import type {
   Order,
   Power,
@@ -8,8 +11,10 @@ import type {
   SimulationResult,
   Unit,
   UnitMoveOptions,
+  UnitType,
   ValidationIssue,
 } from '../types/diplomacy';
+import type { StagedChangeEntry } from '../utils/adminHelpers';
 import type { PieceStyle, UnitMark } from '../utils/displayPrefs';
 import { useEuropeMap } from './map/hooks/useEuropeMap';
 import { BuildMenu } from './map/hud/BuildMenu';
@@ -17,6 +22,7 @@ import { CoastPicker } from './map/hud/CoastPicker';
 import { MapZoomControls } from './map/hud/MapZoomControls';
 import { SimulationBanner } from './map/hud/SimulationBanner';
 import { UnitMenu } from './map/hud/UnitMenu';
+import { AdminOwnershipChangesLayer } from './map/layers/AdminOwnershipChangesLayer';
 import { ArrowMarkerDefs } from './map/layers/ArrowMarkerDefs';
 import { BuildTokensLayer } from './map/layers/BuildTokensLayer';
 import { MapNamesLayer } from './map/layers/MapNamesLayer';
@@ -36,6 +42,36 @@ export interface EuropeMapHandle {
   getZoom: () => number;
 }
 
+export interface DirectEditMapHandlers {
+  inspectedProvince: string | null;
+  setInspectedProvince: (prov: string | null) => void;
+  relocatingUnitId: string | null;
+  setRelocatingUnitId: (unitId: string | null) => void;
+  stagedChanges?: StagedChangeEntry[];
+  diffLines?: string[];
+  committing?: boolean;
+  discardChanges?: () => void;
+  /** Asks for confirmation, then discards every staged (unapplied) board edit. */
+  clearStagedChanges?: () => void | Promise<void>;
+  onUndoStagedChange?: (changeId: string) => void;
+  applyChanges?: () => void | Promise<boolean>;
+  handleToggleDirectEdit?: () => void | Promise<void>;
+  onStageRelocateUnit: (
+    unitId: string,
+    targetProv: string,
+    targetCoast?: string | null,
+  ) => boolean;
+  onStageSpawnOrUpdateUnit: (
+    province: string,
+    power: Power,
+    unitType: UnitType,
+    coast?: string | null,
+  ) => boolean;
+  onStageDestroyUnit: (unitId: string) => void;
+  onStageOwnership: (province: string, power: Power | null) => void;
+  onStageUnitOrder: (order: Order) => void;
+}
+
 export interface EuropeMapProps {
   provinces: Record<string, ProvinceInfo>;
   units: Unit[];
@@ -44,6 +80,7 @@ export interface EuropeMapProps {
   activePower: Power;
   sandboxMode: boolean;
   directEditActive?: boolean;
+  directEdit?: DirectEditMapHandlers;
   selectedUnitId: string | null;
   hoveredUnitId: string | null;
   highlightedProvinces: string[];
@@ -91,8 +128,12 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       units,
       orders,
       ownership,
+      displayOwnership,
       activePower,
       sandboxMode,
+      directEditActive,
+      directEdit,
+      phase,
       selectedUnitId,
       hoveredUnitId,
       highlightedProvinces,
@@ -108,6 +149,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       unitMark,
       compact,
       historyView,
+      historyPower,
+      unitsByProv,
       containerRef,
       svgRef,
       cameraGroupRef,
@@ -134,6 +177,11 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       interactionMode,
       pendingAuxOrigin,
       pendingCoastChoice,
+      directEditCoastChoice,
+      setDirectEditCoastChoice,
+      inspectedProvince,
+      relocatingUnit,
+      handleDirectEditClickProvince,
       hoveredProv,
       clearSelection,
       commitMoveOrRetreatOrder,
@@ -167,7 +215,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         {overlay}
 
         {/* Coast Disambiguation Popup */}
-        {selectedUnit && pendingCoastChoice && (
+        {!directEditActive && selectedUnit && pendingCoastChoice && (
           <CoastPicker
             compact={compact}
             dockRef={dockRef}
@@ -184,23 +232,49 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
           />
         )}
 
-        {/* DRAGGABLE COMPACT FLOATING TACTICAL MENU (FOR BUILD SLOTS IN WINTER ADJUSTMENTS) */}
-        {showBuildMenu && selectedBuildProv && selectedUnitId && (
-          <BuildMenu
+        {/* Direct-Edit Coast Disambiguation Popup */}
+        {directEditActive && directEdit && directEditCoastChoice && (
+          <CoastPicker
             compact={compact}
-            placement={menuPlacement}
+            dockRef={dockRef}
             provinces={provinces}
-            slotId={selectedUnitId}
-            home={selectedBuildProv}
-            order={selectedBuildOrder}
-            power={controllableBuildHomes[selectedBuildProv] || activePower}
-            onUpdateOrder={onUpdateOrder}
-            onClose={clearSelection}
+            choice={{
+              target: directEditCoastChoice.target,
+              coasts: directEditCoastChoice.coasts,
+            }}
+            onPick={(c) => {
+              directEdit.onStageRelocateUnit(
+                directEditCoastChoice.unitId,
+                directEditCoastChoice.target,
+                c,
+              );
+              onSelectUnit(directEditCoastChoice.unitId);
+              setDirectEditCoastChoice(null);
+            }}
+            onCancel={() => setDirectEditCoastChoice(null)}
           />
         )}
 
+        {/* DRAGGABLE COMPACT FLOATING TACTICAL MENU (FOR BUILD SLOTS IN WINTER ADJUSTMENTS) */}
+        {!directEditActive &&
+          showBuildMenu &&
+          selectedBuildProv &&
+          selectedUnitId && (
+            <BuildMenu
+              compact={compact}
+              placement={menuPlacement}
+              provinces={provinces}
+              slotId={selectedUnitId}
+              home={selectedBuildProv}
+              order={selectedBuildOrder}
+              power={controllableBuildHomes[selectedBuildProv] || activePower}
+              onUpdateOrder={onUpdateOrder}
+              onClose={clearSelection}
+            />
+          )}
+
         {/* DRAGGABLE COMPACT FLOATING TACTICAL MENU (FOR UNITS) */}
-        {showUnitMenu && selectedUnit && (
+        {!directEditActive && showUnitMenu && selectedUnit && (
           <UnitMenu
             compact={compact}
             placement={menuPlacement}
@@ -218,7 +292,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         <svg
           ref={svgRef}
           viewBox={MAP_VIEWBOX}
-          className="europe-svg-canvas"
+          className={`europe-svg-canvas${relocatingUnit ? ' relocating-unit' : ''}`}
           {...gestures.pointerHandlers}
         >
           <defs>
@@ -239,9 +313,11 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
             {/* 2. INTERACTIVE PROVINCE POLYGONS (Sea, Land, Coastal & Split Coasts) */}
             <ProvincesLayer
               provinces={provinces}
-              ownership={ownership}
+              ownership={displayOwnership}
               layout={layout}
               isAdjustmentPhase={isAdjustmentPhase}
+              directEditActive={directEditActive}
+              relocatingUnit={relocatingUnit}
               buildHomes={controllableBuildHomes}
               selectedUnit={selectedUnit}
               selectedUnitOptions={selectedUnitOptions}
@@ -253,25 +329,57 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
               hoveredProv={hoveredProv}
               highlightedProvinces={highlightedProvinces}
               issuesByProvince={issuesByProvince}
-              onClickProvince={interaction.onClickProvince}
+              onClickProvince={
+                directEditActive && directEdit
+                  ? handleDirectEditClickProvince
+                  : interaction.onClickProvince
+              }
               onHoverProvince={interaction.onHoverProvince}
             />
 
             {/* 3. AUTHENTIC FOREGROUND BORDERS, COASTLINES, ISLANDS, SWITZERLAND & COMPASS ROSE */}
             <StaticForegroundLayer />
 
+            {/* 3B. ADMIN DIRECT-EDIT SELECTED PROVINCE OUTLINE (preserves owner fill inside) */}
+            {directEditActive &&
+              inspectedProvince &&
+              EUROPE_PROVINCE_GEOMETRY[inspectedProvince] && (
+                <g
+                  className="admin-inspected-province-outline"
+                  data-testid="admin-inspected-province-outline"
+                  data-province-id={inspectedProvince}
+                  pointerEvents="none"
+                >
+                  <path
+                    d={EUROPE_PROVINCE_GEOMETRY[inspectedProvince].path}
+                    fill="none"
+                    stroke="#0f172a"
+                    strokeWidth={7}
+                    strokeOpacity={0.65}
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d={EUROPE_PROVINCE_GEOMETRY[inspectedProvince].path}
+                    fill="none"
+                    stroke="#ffffff"
+                    strokeWidth={3.5}
+                    strokeLinejoin="round"
+                  />
+                </g>
+              )}
+
             {/* 4. AUTHENTIC HAND-TYPESET PROVINCE & SEA ZONE NAMES */}
             <MapNamesLayer
               pieceStyle={pieceStyle}
               provinces={provinces}
-              ownership={ownership}
+              ownership={displayOwnership}
               occupied={occupiedProvinces}
             />
 
             {/* 5. SUPPLY CENTER STAR EMBLEMS (34 Supply Centers) */}
             <SupplyCentersLayer
               provinces={provinces}
-              ownership={ownership}
+              ownership={displayOwnership}
               pieceStyle={pieceStyle}
               occupied={occupiedProvinces}
             />
@@ -280,26 +388,48 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
             <OrderArrowsLayer units={units} ctx={orderLayerContext} />
 
             {/* 6D. WINTER ADJUSTMENTS BUILD TOKENS LAYER */}
-            {isAdjustmentPhase && (
-              <BuildTokensLayer
-                buildHomes={controllableBuildHomes}
-                orders={orders}
-                provinces={provinces}
-                selectedUnitId={selectedUnitId}
-                hoveredUnitId={hoveredUnitId}
-                pieceStyle={pieceStyle}
-                unitMark={unitMark}
-                getProvincePoint={getProvincePoint}
-                describePiece={describePiece}
-                touchHitRadius={touchHitRadius}
-                dragMovedRef={dragMovedRef}
-                onSelectUnit={onSelectUnit}
-                onHoverUnit={onHoverUnit}
-              />
-            )}
+            {(isAdjustmentPhase || (historyView && phase === 'Admin')) &&
+              !directEditActive && (
+                <BuildTokensLayer
+                  buildHomes={controllableBuildHomes}
+                  orders={orders}
+                  provinces={provinces}
+                  selectedUnitId={selectedUnitId}
+                  hoveredUnitId={hoveredUnitId}
+                  pieceStyle={pieceStyle}
+                  unitMark={unitMark}
+                  getProvincePoint={getProvincePoint}
+                  describePiece={describePiece}
+                  touchHitRadius={touchHitRadius}
+                  dragMovedRef={dragMovedRef}
+                  onSelectUnit={onSelectUnit}
+                  onHoverUnit={onHoverUnit}
+                />
+              )}
 
             {/* 7. UNITS LAYER (Armies & Fleets + Hold Halos + Warning Badges + Dislodged/Disband Tags) */}
             <UnitsLayer units={units} ctx={unitLayerContext} />
+
+            {/* 7B. ADMIN OWNERSHIP OVERRIDE BADGES (Turn History "Admin" Phase) */}
+            {historyView &&
+              phase === 'Admin' &&
+              simulationResult?.new_ownership &&
+              !directEditActive && (
+                <AdminOwnershipChangesLayer
+                  beforeOwnership={ownership}
+                  afterOwnership={simulationResult.new_ownership}
+                  provinces={provinces}
+                  historyPower={historyPower ?? null}
+                  occupiedProvinces={
+                    new Set([
+                      ...Object.keys(unitsByProv),
+                      ...Object.keys(controllableBuildHomes),
+                    ])
+                  }
+                  getProvincePoint={getProvincePoint}
+                  describePiece={describePiece}
+                />
+              )}
           </g>
         </svg>
 

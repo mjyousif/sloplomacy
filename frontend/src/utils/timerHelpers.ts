@@ -17,6 +17,9 @@ export const TIMER_OPTIONS: { choice: TimerChoice; label: string }[] = [
 export function turnLabel(
   state: Pick<GameState, 'season' | 'year' | 'phase'>,
 ): string {
+  if (state.phase === 'Admin') {
+    return `${state.season} ${state.year} — Admin Edit`;
+  }
   return `${state.season} ${state.year} ${state.phase}`;
 }
 
