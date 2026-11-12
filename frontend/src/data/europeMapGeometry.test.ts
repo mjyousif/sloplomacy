@@ -28,9 +28,13 @@ describe('Map Cartography & Aesthetics (Issues #42-#48)', () => {
     expect(AUTHENTIC_BACKGROUND_SVG).not.toContain('id="water-wave-texture"');
   });
 
-  it('removes the water pond cutout between Finland and St. Petersburg and fills it with purple (#48)', () => {
+  it('removes the water pond cutout between Finland and St. Petersburg and merges it into Finland (#48)', () => {
     expect(AUTHENTIC_BACKGROUND_SVG).not.toContain('m 654.27195,-72.10929');
-    expect(EUROPE_PROVINCE_GEOMETRY.STP.path).toContain('M 1013.88,376.35');
+    expect(EUROPE_PROVINCE_GEOMETRY.STP.path).not.toContain('M 1013.88,376.35');
+    expect(EUROPE_PROVINCE_GEOMETRY.FIN.path).not.toContain('-4.6312,6.77249');
+    expect(EUROPE_PROVINCE_GEOMETRY.FIN.path).toContain(
+      '1.4766,3.67529 v 6.87838',
+    );
   });
 
   it('scales down water location font sizes by 20% (#43)', () => {
