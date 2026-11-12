@@ -128,13 +128,13 @@ Marks show whether a piece is an army or a fleet: `icons` (crossed swords and a 
 
 `mapLayouts.test.ts` checks every placement against the province outlines, so values can be edited by hand and the test reports any province that stops fitting. Text widths come from `data/mapTextMetrics.ts`, which holds Libre Baskerville Bold advance widths measured in the browser. Those widths also size the pills at render time.
 
-**Drawing (`components/MapPiece.tsx`)** is the only place piece bodies are drawn: units, simulation ghosts, winter builds and the previews in the settings menu all use `MapPiece`. `getPieceFrame` returns a `PieceFrame` for each style, which sets ring sizes, badge offsets, banner positions, the step-aside offset for a dislodged unit, and an invisible hit area that keeps small pieces as easy to click as the original token.
+**Drawing (`components/MapPiece.tsx`)** is the only place piece bodies are drawn: units, simulation ghosts, winter builds and the previews in the settings menu all use `MapPiece`. It picks a body by style and re-exports the rest of `components/pieces/`, so every importer keeps one path: `pieceFrame.ts` (the frame, the pill and the arrow scales), `PieceOutlines.tsx` (rings, the hold ring and the hit area), `marks.tsx` (the marks and the supply star) and `styles/` (`DiscPiece` for classic, seated and compact, `FlagPiece`, `PillPiece`). Nothing under `pieces/` imports `MapPiece.tsx`. `getPieceFrame` returns a `PieceFrame` for each style, which sets ring sizes, badge offsets, banner positions, the step-aside offset for a dislodged unit, and an invisible hit area that keeps small pieces as easy to click as the original token.
 
 `getProvincePoint` and `getUnitPoint` read the active layout, so arrows, support lines, convoy paths, reticles and the floating unit menu all follow the pieces.
 
 ![Classic beside Star seat with every province occupied](images/display-settings-before-after.jpg)
 
-**Classic must stay pixel-identical to the original map.** With `letters`, its values in `getPieceFrame` and `DISC_SHAPES` are the original numbers. One known oddity is kept for this reason: `EUROPE_PROVINCE_GEOMETRY.CLY.unitPos` lies in the North Atlantic, so a Clyde unit draws on water in Classic. The other styles move it ashore.
+**Classic must stay pixel-identical to the original map.** With `letters`, its values in `getPieceFrame` (`pieces/pieceFrame.ts`) and `DISC_SHAPES` (`pieces/styles/DiscPiece.tsx`) are the original numbers. One known oddity is kept for this reason: `EUROPE_PROVINCE_GEOMETRY.CLY.unitPos` lies in the North Atlantic, so a Clyde unit draws on water in Classic. The other styles move it ashore.
 
 ---
 

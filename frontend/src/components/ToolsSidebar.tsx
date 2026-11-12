@@ -1,88 +1,15 @@
-import {
-  AlertTriangle,
-  Anchor,
-  ArrowUpDown,
-  Bot,
-  CheckCircle2,
-  ChevronRight,
-  Crosshair,
-  Eye,
-  Flag,
-  Maximize2,
-  MoveRight,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Play,
-  RotateCcw,
-  Save,
-  Shield,
-  ShieldAlert,
-  Sliders,
-  Sparkles,
-  Trash2,
-  X,
-  ZoomIn,
-  ZoomOut,
-} from 'lucide-react';
+import { PanelLeftClose, Sliders, X } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ALL_POWERS,
-  type GameParticipant,
-  POWER_METADATA,
-  type Power,
-  type Unit,
-  type ValidationIssue,
-} from '../types/diplomacy';
-import { rankPowers } from '../utils/powerHelpers';
-import { CollapsibleSection } from './CollapsibleSection';
-import { PowerFlag } from './PowerFlag';
+import { useEffect, useRef } from 'react';
+import { AdminSection } from './tools/AdminSection';
+import { CollapsedRail } from './tools/CollapsedRail';
+import { MapControlsSection } from './tools/MapControlsSection';
+import { MapLegendSection } from './tools/MapLegendSection';
+import { SandboxToolsSection } from './tools/SandboxToolsSection';
+import { StandingsSection } from './tools/StandingsSection';
+import type { ToolsSidebarProps } from './tools/toolsSidebarProps';
 
-export interface ToolsSidebarProps {
-  collapsed: boolean;
-  onToggleCollapse: () => void;
-  // Zoom & Camera
-  zoomPercent: number;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onResetCamera: () => void;
-  // Powers & Sovereignty
-  activePower: Power;
-  onSelectPower: (power: Power) => void;
-  ownership: Record<string, Power>;
-  units: Unit[];
-  finalizedPowers: Power[];
-  surrenderedPowers?: Power[];
-  issues: ValidationIssue[];
-  isMultiplayer?: boolean;
-  participants?: Record<string, GameParticipant>;
-  // Sandbox & AI
-  sandboxMode: boolean;
-  onToggleSandboxMode: () => void;
-  onClearForeignPreMoves: () => void;
-  foreignModifiedOrdersCount: number;
-  onGenerateAIMoves?: (powers?: Power[], includeActive?: boolean) => void;
-  onAIStepTurn?: () => void;
-  onLoadScenario: (scenarioId: string) => void;
-  onSaveSandboxClick?: () => void;
-  // Admin
-  isGameCreator?: boolean;
-  onOpenAdminTools?: () => void;
-  adminOverrideActive?: boolean;
-  onToggleAdminOverride?: () => void;
-  /**
-   * 'panel' is the desktop sidebar with its rail. 'drawer' is the phone's slide-over, opened from
-   * the top bar's ≡ button: always expanded, with a backdrop, and without the zoom section,
-   * because a phone's zoom buttons sit on the map.
-   */
-  variant?: 'panel' | 'drawer';
-  /** Drawer only: whether it is showing. */
-  open?: boolean;
-  /** Drawer only: closes it (backdrop tap, Escape or the close button). */
-  onClose?: () => void;
-  /** The turn selector, pinned below the scrolling sections (not shown on the collapsed rail). */
-  historyFooter?: React.ReactNode;
-}
+export type { ToolsSidebarProps };
 
 export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   collapsed,
@@ -131,155 +58,21 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isDrawer, open, onClose]);
 
-  // Compute Supply Centers per power
-  const scCountByPower: Record<Power, number> = {
-    AUSTRIA: 0,
-    ENGLAND: 0,
-    FRANCE: 0,
-    GERMANY: 0,
-    ITALY: 0,
-    RUSSIA: 0,
-    TURKEY: 0,
-  };
-  for (const [, pwr] of Object.entries(ownership)) {
-    if (scCountByPower[pwr] !== undefined) scCountByPower[pwr]++;
-  }
-
-  // Compute unit counts per power
-  const unitCountByPower: Record<Power, number> = {
-    AUSTRIA: 0,
-    ENGLAND: 0,
-    FRANCE: 0,
-    GERMANY: 0,
-    ITALY: 0,
-    RUSSIA: 0,
-    TURKEY: 0,
-  };
-  for (const u of units) {
-    if (!u.is_dislodged && unitCountByPower[u.power] !== undefined) {
-      unitCountByPower[u.power]++;
-    }
-  }
-
-  // Standings sort mode (Score / Victory Points vs Default standard order)
-  const [sortMode, setSortMode] = useState<'score' | 'default'>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('sloplomacy_standings_sort');
-        if (saved === 'default' || saved === 'score') return saved;
-      } catch {
-        // Ignore storage errors in sandbox/incognito
-      }
-    }
-    return 'score';
-  });
-
-  const handleSetSortMode = (mode: 'score' | 'default') => {
-    setSortMode(mode);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('sloplomacy_standings_sort', mode);
-      } catch {
-        // Ignore storage errors
-      }
-    }
-  };
-
-  const displayedPowers = useMemo(() => {
-    if (sortMode === 'score') {
-      return rankPowers(scCountByPower, unitCountByPower);
-    }
-    return ALL_POWERS.map((pwr) => ({
-      power: pwr,
-      rank: null,
-      scCount: scCountByPower[pwr] || 0,
-      unitCount: unitCountByPower[pwr] || 0,
-    }));
-  }, [sortMode, scCountByPower, unitCountByPower]);
-
   // Collapsed Minimalist Rail
   if (collapsed && !isDrawer) {
     return (
-      <aside
-        className="tools-sidebar tools-sidebar-collapsed"
-        aria-label="Tools Sidebar Collapsed"
-      >
-        <button
-          type="button"
-          data-testid="tools-sidebar-expand-btn"
-          className="sidebar-rail-btn rail-toggle-btn"
-          onClick={onToggleCollapse}
-          title="Expand Chancellery Tools & Intel"
-        >
-          <PanelLeftOpen size={16} />
-        </button>
-
-        <div className="rail-divider" />
-
-        <div className="rail-group" title={`Current Zoom: ${zoomPercent}%`}>
-          <button
-            type="button"
-            className="sidebar-rail-btn"
-            onClick={onZoomIn}
-            title="Zoom In (+)"
-          >
-            <ZoomIn size={15} />
-          </button>
-          <button
-            type="button"
-            className="sidebar-rail-btn"
-            onClick={onZoomOut}
-            title="Zoom Out (-)"
-          >
-            <ZoomOut size={15} />
-          </button>
-          <button
-            type="button"
-            className="sidebar-rail-btn"
-            onClick={onResetCamera}
-            title="Fit Map / Reset Camera"
-          >
-            <Maximize2 size={14} />
-          </button>
-        </div>
-
-        <div className="rail-divider" />
-
-        <button
-          type="button"
-          className={`sidebar-rail-btn ${sandboxMode ? 'rail-active-glow' : ''}`}
-          onClick={onToggleSandboxMode}
-          title={
-            sandboxMode
-              ? 'Hypothetical Mode ACTIVE (Click to toggle)'
-              : 'Enter Hypothetical Mode'
-          }
-        >
-          <Eye size={16} />
-        </button>
-
-        {isGameCreator && onOpenAdminTools && (
-          <button
-            type="button"
-            className={`sidebar-rail-btn ${adminOverrideActive ? 'rail-admin-glow' : ''}`}
-            onClick={onOpenAdminTools}
-            title="Creator Admin Console"
-          >
-            <ShieldAlert size={16} />
-          </button>
-        )}
-
-        <div className="rail-spacer" />
-
-        <button
-          type="button"
-          className="sidebar-rail-btn rail-expand-chevron"
-          onClick={onToggleCollapse}
-          title="Expand Tools"
-        >
-          <ChevronRight size={16} />
-        </button>
-      </aside>
+      <CollapsedRail
+        onToggleCollapse={onToggleCollapse}
+        zoomPercent={zoomPercent}
+        onZoomIn={onZoomIn}
+        onZoomOut={onZoomOut}
+        onResetCamera={onResetCamera}
+        sandboxMode={sandboxMode}
+        onToggleSandboxMode={onToggleSandboxMode}
+        isGameCreator={isGameCreator}
+        onOpenAdminTools={onOpenAdminTools}
+        adminOverrideActive={adminOverrideActive}
+      />
     );
   }
 
@@ -331,389 +124,52 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
         {/* 2. CAMERA & MAP CONTROLS */}
         {/* Phones zoom with the buttons on the map instead. */}
         {!isDrawer && (
-          <CollapsibleSection
-            title="MAP VIEW & CAMERA"
-            badge={<span className="tools-zoom-badge">{zoomPercent}%</span>}
-            collapsible={false}
-          >
-            <div className="tools-zoom-toolbar">
-              <button
-                type="button"
-                className="tools-btn"
-                onClick={onZoomOut}
-                title="Zoom Out"
-              >
-                <ZoomOut size={13} />
-                <span>Out</span>
-              </button>
-              <button
-                type="button"
-                className="tools-btn"
-                onClick={onZoomIn}
-                title="Zoom In"
-              >
-                <ZoomIn size={13} />
-                <span>In</span>
-              </button>
-              <button
-                type="button"
-                className="tools-btn"
-                onClick={onResetCamera}
-                title="Reset Map to 105% Default View"
-              >
-                <Maximize2 size={13} />
-                <span>Fit Map</span>
-              </button>
-            </div>
-          </CollapsibleSection>
+          <MapControlsSection
+            zoomPercent={zoomPercent}
+            onZoomIn={onZoomIn}
+            onZoomOut={onZoomOut}
+            onResetCamera={onResetCamera}
+          />
         )}
 
         {/* 3. CARTOGRAPHIC TACTICAL LEGEND */}
-        <CollapsibleSection
-          title="TACTICAL MAP LEGEND"
-          collapsible={true}
-          defaultOpen={true}
-        >
-          <div className="tools-legend-grid">
-            <div className="legend-item" title="Army or Fleet movement arrow">
-              <span className="legend-swatch swatch-move">
-                <MoveRight size={12} />
-              </span>
-              <span className="legend-label">Move / Attack</span>
-            </div>
-            <div
-              className="legend-item"
-              title="Fleet convoying an army across sea"
-            >
-              <span className="legend-swatch swatch-convoy">
-                <Anchor size={12} />
-              </span>
-              <span className="legend-label">Fleet Convoy</span>
-            </div>
-            <div className="legend-item" title="Support order to hold or move">
-              <span className="legend-swatch swatch-support">
-                <Crosshair size={12} />
-              </span>
-              <span className="legend-label">Support Link</span>
-            </div>
-            <div className="legend-item" title="Tactical issue or warning">
-              <span className="legend-swatch swatch-warn">
-                <AlertTriangle size={12} />
-              </span>
-              <span className="legend-label">Warning</span>
-            </div>
-          </div>
-        </CollapsibleSection>
+        <MapLegendSection />
 
         {/* 4. GREAT POWERS STANDING & SELECTION */}
-        <CollapsibleSection
-          title={
-            isMultiplayer ? 'DIPLOMATIC STANDING' : 'COMMAND NATION (SELECT)'
-          }
-          badge={<span className="tools-section-count">7 Powers</span>}
-          collapsible={true}
-          defaultOpen={true}
-        >
-          {/* Standings sort toggle */}
-          <div
-            className="powers-sort-segmented"
-            role="group"
-            aria-label="Sort standings"
-          >
-            <button
-              type="button"
-              className={`powers-sort-pill ${sortMode === 'score' ? 'active' : ''}`}
-              data-testid="standings-sort-score"
-              onClick={() => handleSetSortMode('score')}
-              title="Sort by Victory Points (Supply Centers & Units)"
-            >
-              <ArrowUpDown size={10} />
-              <span>By Score</span>
-            </button>
-            <button
-              type="button"
-              className={`powers-sort-pill ${sortMode === 'default' ? 'active' : ''}`}
-              data-testid="standings-sort-default"
-              onClick={() => handleSetSortMode('default')}
-              title="Standard canonical power order"
-            >
-              <span>Default</span>
-            </button>
-          </div>
-
-          <div className="powers-standing-list">
-            {displayedPowers.map(
-              ({ power: pwr, rank, scCount: scs, unitCount: un }) => {
-                const meta = POWER_METADATA[pwr];
-                const isSelected = pwr === activePower;
-                const isFinal = finalizedPowers.includes(pwr);
-                const isSurr = surrenderedPowers.includes(pwr);
-                const canSeePowerIssues =
-                  isSelected || sandboxMode || adminOverrideActive;
-                const pwrIssues = canSeePowerIssues
-                  ? issues.filter(
-                      (i) => i.power === pwr && i.severity !== 'info',
-                    )
-                  : [];
-                const occupant = participants?.[pwr];
-                const playerName =
-                  occupant?.display_name ||
-                  (isMultiplayer && !occupant ? 'Open' : undefined);
-
-                return (
-                  <div
-                    key={pwr}
-                    data-testid="power-standing-card"
-                    data-power={pwr}
-                    className={`power-standing-card ${isSelected ? 'selected' : ''} ${!isMultiplayer ? 'clickable' : ''}`}
-                    onClick={() => {
-                      if (!isMultiplayer) onSelectPower(pwr);
-                    }}
-                    title={
-                      !isMultiplayer
-                        ? `Click to command ${meta.name}`
-                        : `${meta.name}${playerName ? ` (${playerName})` : ''}: ${isFinal ? 'Orders Finalized' : 'Drafting'}`
-                    }
-                    style={{
-                      borderLeftColor: meta.color,
-                      background: isSelected ? meta.lightBg : undefined,
-                    }}
-                  >
-                    <div className="power-card-left">
-                      {rank !== null && (
-                        <span
-                          className="power-card-rank"
-                          data-testid="power-rank"
-                          title={`Rank ${rank}`}
-                        >
-                          {rank}
-                        </span>
-                      )}
-                      <span className="power-card-crest">
-                        <PowerFlag power={pwr} width={20} height={14} />
-                      </span>
-                      <div className="power-card-info">
-                        <div className="power-card-name">
-                          <span
-                            className="power-dot"
-                            style={{ backgroundColor: meta.color }}
-                          />
-                          <strong>{meta.shortName}</strong>
-                          {playerName && (
-                            <span
-                              className="power-card-player"
-                              title={`Player: ${playerName}`}
-                            >
-                              ({playerName})
-                            </span>
-                          )}
-                        </div>
-                        <div className="power-card-metrics">
-                          <span>{scs} SC</span>
-                          <span className="metric-dot">•</span>
-                          <span>{un} Units</span>
-                          {isSelected && (
-                            <span className="active-tag">Active</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="power-card-status">
-                      {isSurr ? (
-                        <span
-                          className="mini-status-tag surrendered"
-                          title="Civil Disorder"
-                        >
-                          <Flag size={10} /> CD
-                        </span>
-                      ) : isFinal ? (
-                        <span
-                          className="mini-status-tag finalized"
-                          title="Finalized"
-                        >
-                          <CheckCircle2 size={11} />
-                        </span>
-                      ) : pwrIssues.length > 0 ? (
-                        <span
-                          className="mini-status-tag warning"
-                          title={`${pwrIssues.length} issues`}
-                        >
-                          {pwrIssues.length}⚠
-                        </span>
-                      ) : (
-                        <span
-                          className="mini-status-tag pending"
-                          title="Drafting Orders"
-                        >
-                          Draft
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              },
-            )}
-          </div>
-        </CollapsibleSection>
+        <StandingsSection
+          activePower={activePower}
+          onSelectPower={onSelectPower}
+          ownership={ownership}
+          units={units}
+          finalizedPowers={finalizedPowers}
+          surrenderedPowers={surrenderedPowers}
+          issues={issues}
+          isMultiplayer={isMultiplayer}
+          participants={participants}
+          sandboxMode={sandboxMode}
+          adminOverrideActive={adminOverrideActive}
+        />
 
         {/* 5. HYPOTHETICAL MODE & TACTICAL AI GENERAL STAFF */}
-        <CollapsibleSection
-          title="HYPOTHETICAL MODE & PRE-MOVES"
-          badge={
-            sandboxMode ? (
-              <span className="sandbox-live-pill">ACTIVE</span>
-            ) : undefined
-          }
-          collapsible={true}
-          defaultOpen={true}
-        >
-          <button
-            type="button"
-            data-testid="btn-toggle-sandbox"
-            className={`tools-sandbox-toggle-btn ${sandboxMode ? 'active' : ''}`}
-            onClick={onToggleSandboxMode}
-          >
-            <Eye size={14} />
-            <span>
-              {sandboxMode
-                ? 'Exit Mode (Discard Guesses)'
-                : 'Enter Hypothetical Mode'}
-            </span>
-          </button>
-
-          <p className="tools-micro-desc">
-            {sandboxMode
-              ? 'Hypothetical Mode active: Test moves for foreign units on the board. Exiting discards foreign guesses.'
-              : 'Enter Hypothetical Mode to guess enemy moves and test what-if scenarios with the General Staff AI.'}
-          </p>
-
-          {/* AI General Staff Quick Tools */}
-          {(!isMultiplayer || sandboxMode) && onGenerateAIMoves && (
-            <div className="tools-ai-block">
-              <div className="tools-ai-header">
-                <Bot size={13} />
-                <span>Tactical General Staff AI</span>
-              </div>
-              <div className="tools-ai-grid">
-                <button
-                  type="button"
-                  className="tools-btn tools-ai-btn"
-                  onClick={() => onGenerateAIMoves(undefined, false)}
-                  title="Generate DATC-compliant moves for all foreign powers"
-                >
-                  <Bot size={12} />
-                  <span>Plan Opponents</span>
-                </button>
-                <button
-                  type="button"
-                  className="tools-btn tools-ai-btn"
-                  onClick={() => onGenerateAIMoves(undefined, true)}
-                  title="Generate orders for all 7 powers"
-                >
-                  <Sparkles size={12} />
-                  <span>Plan All 7</span>
-                </button>
-                {onAIStepTurn && !isMultiplayer && (
-                  <button
-                    type="button"
-                    className="tools-btn tools-ai-btn ai-step"
-                    onClick={onAIStepTurn}
-                    title="Auto-plan foreign powers and step to the next phase"
-                  >
-                    <Play size={12} />
-                    <span>AI Step Turn</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Foreign Pre-Moves Count / Clear */}
-          {sandboxMode && foreignModifiedOrdersCount > 0 && (
-            <div className="tools-foreign-summary">
-              <span>{foreignModifiedOrdersCount} foreign moves plotted</span>
-              <button
-                type="button"
-                className="tools-btn-mini"
-                onClick={onClearForeignPreMoves}
-                title="Discard all foreign pre-moves"
-              >
-                <Trash2 size={11} /> Clear
-              </button>
-            </div>
-          )}
-
-          {/* Scenario Reset & Save */}
-          {!isMultiplayer && (
-            <div className="tools-scenario-actions">
-              <button
-                type="button"
-                data-testid="btn-reset-scenario"
-                className="tools-btn"
-                onClick={() => onLoadScenario('standard_1901')}
-                title="Reset to clean Spring 1901 start"
-              >
-                <RotateCcw size={12} />
-                <span>Reset 1901</span>
-              </button>
-              {onSaveSandboxClick && (
-                <button
-                  type="button"
-                  data-testid="btn-save-sandbox"
-                  className="tools-btn"
-                  onClick={onSaveSandboxClick}
-                  title="Save current board state to your account"
-                >
-                  <Save size={12} />
-                  <span>Save Sandbox</span>
-                </button>
-              )}
-            </div>
-          )}
-        </CollapsibleSection>
+        <SandboxToolsSection
+          sandboxMode={sandboxMode}
+          onToggleSandboxMode={onToggleSandboxMode}
+          onClearForeignPreMoves={onClearForeignPreMoves}
+          foreignModifiedOrdersCount={foreignModifiedOrdersCount}
+          onGenerateAIMoves={onGenerateAIMoves}
+          onAIStepTurn={onAIStepTurn}
+          onLoadScenario={onLoadScenario}
+          onSaveSandboxClick={onSaveSandboxClick}
+          isMultiplayer={isMultiplayer}
+        />
 
         {/* 6. CREATOR ADMINISTRATOR CONTROLS */}
         {isGameCreator && onOpenAdminTools && (
-          <CollapsibleSection
-            title="CREATOR ADMIN TOOLS"
-            icon={<ShieldAlert size={12} />}
-            collapsible={true}
-            defaultOpen={true}
-            className="admin-tools-section"
-          >
-            <p className="tools-micro-desc">
-              Roll back turns, teleport units, spawn or destroy forces
-              arbitrarily.
-            </p>
-            <div className="admin-actions-column">
-              <button
-                type="button"
-                data-testid="btn-open-admin-console"
-                className="tools-btn tools-admin-console-btn"
-                onClick={onOpenAdminTools}
-                title="Open comprehensive administrator modal"
-              >
-                <Sliders size={13} />
-                <span>Open Admin Console</span>
-              </button>
-              {onToggleAdminOverride && (
-                <button
-                  type="button"
-                  className={`tools-btn admin-override-toggle-btn ${adminOverrideActive ? 'active' : ''}`}
-                  onClick={onToggleAdminOverride}
-                  title="Toggle Direct-Edit Override on the board"
-                >
-                  <Shield size={13} />
-                  <span>
-                    {adminOverrideActive
-                      ? 'Direct-Edit: ON'
-                      : 'Direct-Edit: OFF'}
-                  </span>
-                </button>
-              )}
-            </div>
-          </CollapsibleSection>
+          <AdminSection
+            onOpenAdminTools={onOpenAdminTools}
+            adminOverrideActive={adminOverrideActive}
+            onToggleAdminOverride={onToggleAdminOverride}
+          />
         )}
       </div>
 
