@@ -37,6 +37,13 @@ describe('JoinWithCodeCard', () => {
     ).toBeInTheDocument();
   });
 
+  it('explains what the card is for', () => {
+    setup();
+    expect(
+      screen.getByText(/Have a Game ID and passcode from a host\?/),
+    ).toBeInTheDocument();
+  });
+
   it('shows the fields and reports each edit', async () => {
     const { props } = setup({ joinCodeGameId: 'mp_9', joinCodePasscode: 'pw' });
     expect(screen.getByLabelText('Game ID')).toHaveValue('mp_9');

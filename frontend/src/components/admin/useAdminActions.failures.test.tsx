@@ -126,6 +126,27 @@ describe('useAdminActions: failures', () => {
     },
   );
 
+  it.each(CASES)(
+    '%s: is loading while its call is out',
+    async (endpoint, _f, _n, run) => {
+      let release: () => void = () => {};
+      net.hold[endpoint] = new Promise<void>((r) => {
+        release = r;
+      });
+      const { hook } = await open(endpoint);
+      let p: Promise<unknown> = Promise.resolve();
+      act(() => {
+        p = run(hook);
+      });
+      await waitFor(() => expect(hook.result.current.loading).toBe(true));
+      await act(async () => {
+        release();
+        await p;
+      });
+      expect(hook.result.current.loading).toBe(false);
+    },
+  );
+
   it('shows the loading state while a call is out', async () => {
     let release: (v: unknown) => void = () => {};
     const f = vi.mocked(fetch);

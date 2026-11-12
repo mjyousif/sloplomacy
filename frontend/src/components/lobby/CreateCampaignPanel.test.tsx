@@ -37,7 +37,7 @@ describe('CreateCampaignPanel', () => {
   });
 
   it('reports the name, and public or private', async () => {
-    const { props, user } = setup({ isPrivate: true });
+    const { props, user } = setup({ isPrivate: true, passcode: 'abc' });
     fireEvent.change(screen.getByLabelText('Campaign Name'), {
       target: { value: 'Vienna' },
     });
@@ -64,6 +64,27 @@ describe('CreateCampaignPanel', () => {
     expect(input).toBeRequired();
     fireEvent.change(input, { target: { value: 'v2' } });
     expect(props.setPasscode).toHaveBeenCalledWith('v2');
+  });
+
+  it('marks the active access button and the chosen country', () => {
+    const pub = setup({ isPrivate: false, selectedCreatePower: 'ITALY' });
+    expect(screen.getByRole('button', { name: /Public Lobby/ })).toHaveClass(
+      'active',
+    );
+    expect(
+      screen.getByRole('button', { name: /Private \(Passcode\)/ }),
+    ).not.toHaveClass('active');
+    const marked = document.querySelectorAll('.create-power-option.selected');
+    expect(marked).toHaveLength(1);
+    expect(marked[0]).toHaveTextContent('Italy');
+    pub.view.unmount();
+    setup({ isPrivate: true });
+    expect(
+      screen.getByRole('button', { name: /Private \(Passcode\)/ }),
+    ).toHaveClass('active');
+    expect(
+      screen.getByRole('button', { name: /Public Lobby/ }),
+    ).not.toHaveClass('active');
   });
 
   it('picks a country and names it on the submit button', async () => {
