@@ -1,0 +1,478 @@
+/* styles/app/03-map-viewport.css: Map viewport, cartouche, unit and build menus, coast picker, simulation banner. One contiguous slice of the old App.css; styles/index.ts imports every file in this folder in number order, which is the cascade order. */
+
+/* -------------------------------------------------------------------------
+   3. INTERACTIVE EUROPE MAP VIEWPORT (WWI DARK MAHOGANY COUNTER TOP)
+   ------------------------------------------------------------------------- */
+.map-viewport-container {
+  flex: 1;
+  position: relative;
+  height: 100%;
+  background-color: #1c0b06;
+  background-image:
+    radial-gradient(
+      circle at 50% 48%,
+      rgba(255, 214, 153, 0.08) 0%,
+      rgba(18, 6, 3, 0.55) 68%,
+      rgba(5, 2, 1, 0.92) 100%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(64, 24, 13, 0.25) 0px,
+      rgba(64, 24, 13, 0.25) 2px,
+      transparent 2px,
+      transparent 16px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      #240e07 0px,
+      #2d120a 48px,
+      #1a0905 96px,
+      #240e07 144px
+    );
+  box-shadow:
+    inset 0 0 85px rgba(0, 0, 0, 0.85),
+    inset 0 2px 0 rgba(212, 163, 73, 0.22);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Subtle warm brass lamp & bevelled table molding overlay on viewport edges */
+.map-viewport-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  border: 3px solid rgba(180, 130, 45, 0.26);
+  box-shadow: inset 0 0 42px rgba(8, 3, 1, 0.78);
+}
+
+.europe-svg-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+.europe-svg-canvas.panning {
+  cursor: grabbing;
+}
+
+/* Disable expensive polygon hit-testing and mouseenter/mouseleave only after an actual drag exceeds threshold */
+.europe-svg-canvas.actively-dragging .interactive-provinces-layer,
+.europe-svg-canvas.actively-dragging .units-layer {
+  pointer-events: none;
+}
+
+.camera-scene-group {
+  will-change: transform;
+}
+
+/* Replace heavy full-map SVG feGaussianBlur on coastline #Shape with fast vector coastline halo */
+.authentic-background-layer #Shape {
+  filter: none !important;
+  stroke: rgba(20, 14, 8, 0.26) !important;
+  stroke-width: 7px !important;
+  stroke-linejoin: round !important;
+}
+
+.province-group {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.sea-label-code {
+  font-family: "Cinzel", serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  fill: #395a6b;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+.sea-label-name {
+  font-family: "Playfair Display", Georgia, serif;
+  font-style: italic;
+  font-size: 8.2px;
+  fill: #476c7e;
+  pointer-events: none;
+}
+
+.land-label-code {
+  font-family: "Cinzel", serif;
+  font-size: 9.5px;
+  font-weight: 800;
+  fill: #26221b;
+  paint-order: stroke;
+  stroke: rgba(248, 241, 224, 0.85);
+  stroke-width: 2.4px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.land-label-name {
+  font-family: "Inter", sans-serif;
+  font-size: 7.5px;
+  font-weight: 600;
+  fill: #3d362b;
+  paint-order: stroke;
+  stroke: rgba(248, 241, 224, 0.78);
+  stroke-width: 2px;
+  pointer-events: none;
+}
+
+.coast-sub-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 7.5px;
+  font-weight: 700;
+  fill: #0c4a6e;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 2px;
+}
+
+.map-unit-token {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.map-unit-token.foreign-locked {
+  cursor: default;
+}
+
+/* Map Top-Left Cartouche (Brass-Plated Mahogany Plaque) */
+.map-cartouche-overlay {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 10;
+  background: linear-gradient(
+    180deg,
+    rgba(31, 18, 12, 0.94) 0%,
+    rgba(20, 11, 7, 0.96) 100%
+  );
+  backdrop-filter: blur(8px);
+  border: 1px solid #785322;
+  border-left: 4px solid #d4a349;
+  border-radius: 9px;
+  padding: 10px 14px;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(254, 240, 138, 0.16);
+  max-width: 470px;
+}
+
+.cartouche-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cartouche-icon {
+  color: #eab308;
+  flex-shrink: 0;
+}
+
+.cartouche-title {
+  font-family: "Cinzel", serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  color: #f8eed9;
+}
+
+.cartouche-subtitle {
+  font-size: 0.7rem;
+  color: #cbd5e1;
+  margin-top: 1px;
+}
+
+.map-legend-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.legend-move {
+  background: #38bdf8;
+}
+
+.legend-support {
+  background: repeating-linear-gradient(
+    90deg,
+    #14b8a6 0,
+    #14b8a6 4px,
+    transparent 4px,
+    transparent 7px
+  );
+}
+
+.legend-convoy {
+  background: repeating-linear-gradient(
+    90deg,
+    #a855f7 0,
+    #a855f7 4px,
+    transparent 4px,
+    transparent 7px
+  );
+}
+
+.legend-warn-pill {
+  color: #fbbf24;
+}
+
+/* Floating Tactical Menu Anchored Next to the Selected Troop */
+.unit-floating-menu {
+  position: absolute;
+  z-index: 25;
+  width: 248px;
+  background: rgba(18, 22, 29, 0.96);
+  backdrop-filter: blur(10px);
+  border: 1.5px solid #eab308;
+  border-radius: 10px;
+  padding: 8px 10px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: pop-in 0.12s ease-out;
+}
+
+.unit-floating-menu.dragging {
+  opacity: 0.92;
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.8);
+}
+
+.floating-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.unit-floating-menu.dragging .floating-menu-header {
+  cursor: grabbing;
+}
+
+.floating-drag-grip {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.floating-unit-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #f8fafc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.floating-close-btn:hover {
+  background: #334155;
+  color: #ffffff;
+}
+
+.tactical-power-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+  flex-shrink: 0;
+}
+
+.tactical-prov-code {
+  color: #94a3b8;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+}
+
+.floating-menu-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.tactical-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #3f4859;
+  background: #252b37;
+  color: #e2e8f0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tactical-mode-btn:hover {
+  background: #333b4d;
+}
+
+.tactical-mode-btn.active {
+  background: #2563eb;
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+.tactical-mode-btn.active-hold {
+  background: #0d9488;
+  border-color: #2dd4bf;
+  color: #ffffff;
+}
+
+.floating-menu-hint {
+  font-size: 0.71rem;
+  color: #fde68a;
+  line-height: 1.35;
+}
+
+.reachable-target-reticle {
+  cursor: pointer;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Coast Picker Modal */
+.coast-picker-modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 25;
+  background: #1e242d;
+  border: 2px solid #eab308;
+  border-radius: 10px;
+  padding: 16px 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+}
+
+.coast-picker-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  color: #fef08a;
+}
+
+.coast-picker-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.coast-btn {
+  padding: 8px 14px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.coast-cancel-btn {
+  padding: 8px 12px;
+  background: #334155;
+  color: #e2e8f0;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Simulation Active Banner */
+.simulation-map-banner {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #065f46;
+  border: 1px solid #34d399;
+  color: #ecfdf5;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.sim-close-btn {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #6ee7b7;
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.sim-advance-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f59e0b;
+  border: 1px solid #fef08a;
+  color: #111827;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sim-advance-btn:hover {
+  filter: brightness(1.08);
+}

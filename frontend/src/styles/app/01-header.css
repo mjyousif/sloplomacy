@@ -1,0 +1,186 @@
+/* styles/app/01-header.css: Top command header. One contiguous slice of the old App.css; styles/index.ts imports every file in this folder in number order, which is the cascade order. */
+
+/* =========================================================================
+   DIPLOMACY 1901 — IMPERIAL WAR ROOM & VINTAGE ATLAS DESIGN SYSTEM
+   ========================================================================= */
+
+.diplomacy-app-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background: #14171c;
+  color: #f3efe6;
+}
+
+/* -------------------------------------------------------------------------
+   1. TOP COMMAND HEADER
+   ------------------------------------------------------------------------- */
+.imperial-top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 60px;
+  padding: 0 20px;
+  background: linear-gradient(180deg, #1f242d 0%, #171b22 100%);
+  border-bottom: 1px solid #353b47;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  z-index: 30;
+}
+
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-emblem {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #c8963e 0%, #8f6319 100%);
+  color: #14171c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(200, 150, 62, 0.35);
+}
+
+.brand-title {
+  font-family: "Cinzel", serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #f7ebd2;
+  line-height: 1.1;
+}
+
+.brand-subtitle {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #9ca3af;
+}
+
+.turn-chronicle-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: #232934;
+  border: 1px solid #404959;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.turn-cal-icon {
+  color: #d4a349;
+}
+
+.turn-season-text {
+  color: #fde68a;
+  font-family: "Cinzel", serif;
+}
+
+.turn-phase-divider {
+  color: #64748b;
+}
+
+.turn-phase-text {
+  color: #cbd5e1;
+  font-size: 0.72rem;
+}
+
+.header-sanity-readout {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.header-error-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-error-pill:hover {
+  background: rgba(239, 68, 68, 0.26);
+}
+
+.header-warning-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid #f59e0b;
+  color: #fde68a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  animation: pulse-amber 2.2s infinite;
+}
+
+.header-warning-pill:hover {
+  background: rgba(245, 158, 11, 0.26);
+}
+
+.header-clean-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #a7f3d0;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.header-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 7px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: #262c38;
+  color: #e2e8f0;
+  border: 1px solid #3f4859;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-btn:hover {
+  background: #313947;
+  border-color: #64748b;
+}
+
+.header-btn.sandbox-active {
+  background: rgba(14, 165, 233, 0.2);
+  border-color: #38bdf8;
+  color: #bae6fd;
+}

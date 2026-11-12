@@ -1,6 +1,6 @@
 # Styling, Themes & Cartographic Design
 
-The visual styling is defined in `frontend/src/App.css` and `frontend/src/types/diplomacy.ts`. It adopts an authentic, military war-room aesthetic inspired by turn-of-the-century European cartography, antique brass fittings, and parchment maps.
+The visual styling is defined in the stylesheets under `frontend/src/styles/` (see [Stylesheet Layout](#stylesheet-layout)) and `frontend/src/types/diplomacy.ts`. It adopts an authentic, military war-room aesthetic inspired by turn-of-the-century European cartography, antique brass fittings, and parchment maps.
 
 ---
 
@@ -49,15 +49,25 @@ Each Great Power has an authentic historical color token used for province fills
 
 ---
 
+## Stylesheet Layout
+
+All styles are plain CSS, imported once by `src/styles/index.ts` (which `App.tsx` imports). The order of those imports is the cascade, so it is load-bearing.
+
+- **`styles/app/`** is the wide layout, in 20 numbered files that are consecutive slices of what used to be one `App.css`, each under 500 lines and cut at rule boundaries, mostly at the old banner comments: `01-header`, `02-workspace`, `03-map-viewport` (cartouche, unit and build menus, coast picker, simulation banner), `04-macro-cards`, `05-macro-panels`, `06-sanity-screens` (Sanity Check modal, toast, loading and error screens), `07-navigation`, `08-lobby-games`, `09-lobby-host-modals`, `10-macro-ai-staff`, `11-auth-modal`, `12-admin-console-shell`, `13-admin-console-tabs`, `14-surrender-socket`, `15-tools-sidebar-frame`, `16-tools-sidebar-sections`, `17-turn-history`, `18-rails`, `19-version-timer`, `20-display-confirm` (province names, display settings menu, ConfirmModal). A file's name says what most of it styles, but a slice also holds whatever sat between its two cut points, so some rules sit under another feature's name (for example the macro sidebar's admin card is at the end of `13-admin-console-tabs`). Each file starts with a one-line comment saying so.
+- **`styles/compact/`** is the phone layout, in six numbered files that are the former `compact.css`'s numbered sections: `1-shell` (with the file's opening comment and two unscoped rules: the `100dvh` shell height and `.compact-only`), `2-modals`, `3-top-bar`, `4-lobby`, `5-game-screen`, `6-touch-map`. They are imported after every wide file.
+- **Rules**: never regroup rules by topic, since moving a rule past another that matches the same element changes which wins (for example `.sidebar-section` and `.admin-override-toggle-btn.active` are each written in two files). Add a rule to its feature's file. When a file reaches 500 lines, split it at a rule boundary and renumber the files after it. New files go into `styles/index.ts` where their rules need to win.
+
+---
+
 ## Responsive & Layout Specifications
 
 The app has two layouts. `useCompactLayout()` (`hooks/useCompactLayout.ts`) decides which one applies from a single media query, `COMPACT_LAYOUT_QUERY = '(max-width: 767px), (max-height: 500px)'`. The second half catches phones held sideways. `App.tsx` writes the answer on the shell as `data-layout="compact"` or `data-layout="wide"`.
 
-- **Wide (desktop and tablets)**: the original layout, styled by `App.css`.
+- **Wide (desktop and tablets)**: the original layout, styled by `styles/app/`.
   - Header: a `60px` row with the brand, Solo Sandbox, the turn, the order check pill, Live Sync, display settings and the account.
   - Workspace: the Left Tools Sidebar (`290px`, or a `44px` rail), the map (`flex: 1`), and the Right Tactical Sidebar (`360px`, between `340px` and `380px`, or a `44px` rail).
-- **Compact (phones)**: every phone rule lives in `src/compact.css` and starts with `[data-layout='compact']`. That file never writes its own width `@media` rule, so the breakpoint is defined only in `COMPACT_LAYOUT_QUERY`. Nothing in it changes the wide layout.
-  - **Viewport**: the shell is `100dvh` tall (falling back to `App.css`'s `100vh`), so mobile browser toolbars don't hide the bottom edge. `index.html` sets `viewport-fit=cover`, and the shell pads itself with `env(safe-area-inset-*)`.
+- **Compact (phones)**: every phone rule lives in `src/styles/compact/`. A rule for an element the wide layout also draws starts with `[data-layout='compact']`, while the phone-only parts (such as `CompactTopBar`'s `.compact-*` classes) have class names of their own. Those files never write their own width `@media` rule, so the breakpoint is defined only in `COMPACT_LAYOUT_QUERY`. Nothing in them changes the wide layout.
+  - **Viewport**: the shell is `100dvh` tall (falling back to `styles/app/01-header.css`'s `100vh`), so mobile browser toolbars don't hide the bottom edge. `index.html` sets `viewport-fit=cover`, and the shell pads itself with `env(safe-area-inset-*)`.
   - **Top bar**: `CompactTopBar.tsx` replaces the header. See [Phone Top Bar](sidebar-and-controls.md#phone-top-bar-compacttopbartsx).
   - **Lobby**: one column, in this order: your games, open games, Host, Join, then the intro banner. Power slots wrap to as many columns as fit (about three on a phone), and rows of buttons wrap.
   - **Modals**: cards fit the visible height and scroll. Footers stack into full-width buttons, with the main action on top and Cancel at the bottom. Close buttons are `44px` square. The admin console's tabs scroll sideways and its forms use one column.

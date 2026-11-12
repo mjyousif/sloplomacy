@@ -14,7 +14,7 @@ This repository enforces strict modularity and separation of concerns to prevent
   - Any new file exceeding 500 lines is a code smell and must be decomposed before merging.
   - Large declarative data tables (e.g. `frontend/src/data/europeMapGeometry.ts` holding SVG coordinates or `backend/engine/topology/provinces.py` holding the 76-province adjacency map) are explicit exceptions, provided they contain pure static declarations with zero tangled logic.
 - **The Ratchet Rule for Existing Large Files**:
-  - Existing files that exceed the ceiling (e.g., `EuropeMap.tsx`, `App.tsx`, `MacroSidebar.tsx`) must NOT receive new monolithic blocks of logic.
+  - Existing files that exceed the ceiling (check with `wc -l`; some long test suites still are) must NOT receive new monolithic blocks of logic.
   - When modifying an existing large file, follow the ratchet principle: extract touched features, handlers, subcomponents, or hooks into separate files under the appropriate sub-package or feature folder. Every PR touching a large file should leave it smaller or at least no more bloated.
 
 ## 2. Backend Modularity (`backend/`)
@@ -51,6 +51,8 @@ This repository enforces strict modularity and separation of concerns to prevent
     - `components/macro/`: Unit order cards (`UnitMacroCard.tsx`), build quota cards (`BuildSlotCard.tsx`).
     - `components/lobby/`: Game cards (`GameRoomCard.tsx`), creation panels (`CreateCampaignPanel.tsx`), passcode dialogs.
     - `components/admin/`: Admin tab controls (`TurnControlTab.tsx`, `UnitTeleportTab.tsx`, `UnitSpawnerTab.tsx`, `TerritoryControlTab.tsx`).
+- **Stylesheets (`frontend/src/styles/`)**:
+  - `styles/app/` (wide layout) and `styles/compact/` (phone; rules for elements the wide layout also draws start with `[data-layout='compact']`) are numbered files, each a contiguous slice of one cascade, imported only by `styles/index.ts` in that order. Keep each under 500 lines. Add a rule to its feature's slice; when a slice grows too big, split it at a rule boundary and renumber, never move rules between slices (that reorders the cascade).
 - **Hook Extraction for Stateful Logic (`frontend/src/hooks/`)**:
   - Extract complex state management, WebSockets, media queries, or device preferences into custom hooks (e.g., `useDiplomacyWebSocket.ts`, `useCompactLayout.ts`, `useDisplayPrefs.ts`) instead of jamming hundreds of lines of `useEffect` into `App.tsx`.
 - **Pure Functional Utilities (`frontend/src/utils/`)**:

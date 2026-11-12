@@ -33,7 +33,7 @@ const HANDLE_DRAG_THRESHOLD = 6;
 /** A click this soon after a handled pointer release belongs to that press. */
 const POINTER_CLICK_WINDOW_MS = 500;
 
-/** Matches the transition on `.bottom-sheet.sliding` in compact.css. */
+/** Matches the transition on `.bottom-sheet.sliding` in styles/compact/5-game-screen.css. */
 const SLIDE_MS = 220;
 
 /**

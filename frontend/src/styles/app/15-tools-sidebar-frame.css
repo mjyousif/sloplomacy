@@ -1,0 +1,245 @@
+/* styles/app/15-tools-sidebar-frame.css: Tools sidebar: frame, header and content area. One contiguous slice of the old App.css; styles/index.ts imports every file in this folder in number order, which is the cascade order. */
+
+/* =========================================================================
+   TWO-SIDEBAR LAYOUT: CHANCELLERY TOOLS (LEFT) & TACTICAL ORDERS (RIGHT)
+   ========================================================================= */
+
+/* TOOLS SIDEBAR (LEFT SIDEBAR: Intel, Legend, Zoom, Powers, Sandbox, Admin) */
+.tools-sidebar {
+  height: 100%;
+  background: #171b22;
+  border-right: 1px solid #282f3d;
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  transition:
+    width 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.35);
+}
+
+.tools-sidebar.tools-sidebar-expanded {
+  width: 290px;
+  min-width: 290px;
+  max-width: 290px;
+}
+
+.tools-sidebar.tools-sidebar-collapsed {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  align-items: center;
+  padding: 8px 0;
+  background: #13161c;
+}
+
+/* Tools Header */
+.tools-sidebar-header {
+  padding: 10px 14px;
+  background: #1f2530;
+  border-bottom: 1px solid #2d3646;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tools-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tools-header-icon {
+  color: #d4a349;
+  flex-shrink: 0;
+}
+
+.tools-header-title h3 {
+  font-family: "Cinzel", serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #f8eed9;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.tools-header-sub {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  display: block;
+}
+
+.sidebar-collapse-toggle-btn {
+  background: transparent;
+  border: 1px solid #364152;
+  border-radius: 6px;
+  color: #94a3b8;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.sidebar-collapse-toggle-btn:hover {
+  background: #2b3544;
+  color: #f1f5f9;
+  border-color: #64748b;
+}
+
+/* Tools Content Area */
+.tools-sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #333d4e transparent;
+}
+
+.tools-sidebar-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.tools-sidebar-content::-webkit-scrollbar-thumb {
+  background: #333d4e;
+  border-radius: 4px;
+}
+
+.sidebar-section,
+.tools-section {
+  padding: 10px 14px;
+  border-bottom: 1px solid #232936;
+}
+
+.sidebar-section.is-collapsed {
+  padding-bottom: 10px;
+}
+
+.sidebar-section-header,
+.tools-section-overline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8b99ad;
+  margin-bottom: 7px;
+}
+
+.sidebar-section.is-collapsed .sidebar-section-header {
+  margin-bottom: 0;
+}
+
+.sidebar-section-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: #8b99ad;
+  font-family: inherit;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.sidebar-section-toggle-btn:hover {
+  color: #e2e8f0;
+}
+
+.sidebar-section-static-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  color: #8b99ad;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar-section-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebar-section-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition:
+    transform 0.15s ease,
+    color 0.15s ease;
+}
+
+.sidebar-section-toggle-btn:hover .sidebar-section-chevron {
+  color: #cbd5e1;
+}
+
+.sidebar-section-icon {
+  display: inline-flex;
+  align-items: center;
+  color: #94a3b8;
+}
+
+.sidebar-section-badge-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sidebar-section-content {
+  margin-top: 2px;
+}
+
+.tools-zoom-badge,
+.tools-section-count {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.64rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #242c3a;
+  color: #cbd5e1;
+}
+
+.tools-zoom-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 5px;
+}
+
+.tools-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid #333e50;
+  background: #222936;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tools-btn:hover {
+  background: #2d3648;
+  border-color: #4b586e;
+  color: #ffffff;
+}

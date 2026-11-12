@@ -1,0 +1,289 @@
+/* styles/app/06-sanity-screens.css: Sanity Check modal, toast, loading and error screens. One contiguous slice of the old App.css; styles/index.ts imports every file in this folder in number order, which is the cascade order. */
+
+/* -------------------------------------------------------------------------
+   5. "ARE YOU SURE?" SANITY CHECK MODAL
+   ------------------------------------------------------------------------- */
+.sanity-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(10, 13, 18, 0.78);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.sanity-modal-card {
+  width: 100%;
+  max-width: 620px;
+  background: #1c212b;
+  border: 2px solid #f59e0b;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 86vh;
+}
+
+.sanity-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 22px;
+  background: linear-gradient(
+    180deg,
+    rgba(245, 158, 11, 0.16) 0%,
+    rgba(28, 33, 43, 0) 100%
+  );
+  border-bottom: 1px solid #333b4d;
+}
+
+.sanity-header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sanity-hazard-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sanity-overline {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #fbbf24;
+}
+
+.sanity-main-title {
+  font-family: "Cinzel", serif;
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #f8fafc;
+  margin-top: 2px;
+}
+
+.sanity-close-x {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.sanity-summary-banner {
+  padding: 12px 22px;
+  background: #161a22;
+  border-bottom: 1px solid #2b3242;
+  font-size: 0.83rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.sanity-issues-list {
+  padding: 16px 22px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sanity-issue-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #242a36;
+  border: 1px solid #394256;
+}
+
+.sanity-issue-item.severity-warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.sanity-issue-item.severity-info {
+  border-left: 4px solid #3b82f6;
+}
+
+.sanity-issue-item.severity-error {
+  border-left: 4px solid #ef4444;
+}
+
+.sanity-issue-icon {
+  margin-top: 2px;
+  color: #fbbf24;
+}
+
+.sanity-issue-item.severity-info .sanity-issue-icon {
+  color: #60a5fa;
+}
+
+.sanity-issue-item.severity-error .sanity-issue-icon {
+  color: #f87171;
+}
+
+.sanity-issue-content {
+  flex: 1;
+}
+
+.sanity-issue-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sanity-code-pill {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.sanity-code-pill.warn {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+
+.sanity-code-pill.info {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+.sanity-code-pill.err {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+}
+
+.sanity-issue-title {
+  font-size: 0.88rem;
+  color: #f8fafc;
+}
+
+.sanity-issue-message {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.sanity-inspect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: #1b2029;
+  color: #e2e8f0;
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sanity-inspect-btn:hover {
+  background: #2d3748;
+  border-color: #eab308;
+}
+
+.sanity-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 15px 22px;
+  background: #161a22;
+  border-top: 1px solid #2d3545;
+}
+
+.sanity-back-btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid #64748b;
+  background: #283140;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sanity-back-btn:hover {
+  background: #364154;
+}
+
+.sanity-force-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid #f59e0b;
+  background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sanity-force-confirm-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* Toast Notification */
+.imperial-toast-banner {
+  position: fixed;
+  bottom: 24px;
+  left: 50%; /* Centered: the bottom-left corner of the map holds the phase timer */
+  transform: translateX(-50%);
+  max-width: 360px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #1e293b;
+  border: 1px solid #c8963e;
+  color: #fef08a;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+/* Loading & Error Screens */
+.loading-screen,
+.error-screen {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #14171c;
+  color: #f3efe6;
+}
+
+@keyframes pulse-amber {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(245, 158, 11, 0);
+  }
+}

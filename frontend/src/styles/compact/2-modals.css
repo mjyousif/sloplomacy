@@ -1,0 +1,194 @@
+/* styles/compact/2-modals.css: Phone layout: modals. One contiguous slice of the old compact.css, imported after every file in styles/app/. */
+
+/* -------------------------------------------------------------------------
+   2. MODALS
+   Cards fit the visible height and scroll, footers stack into full-width
+   buttons, and close buttons get a finger-sized target.
+   ------------------------------------------------------------------------- */
+[data-layout="compact"] .sanity-modal-backdrop,
+[data-layout="compact"] .surrender-modal-backdrop,
+[data-layout="compact"] .admin-modal-backdrop,
+[data-layout="compact"] .modal-backdrop {
+  padding: 12px;
+}
+
+[data-layout="compact"] .confirm-modal-backdrop {
+  padding: 12px;
+}
+
+[data-layout="compact"] .sanity-modal-card,
+[data-layout="compact"] .admin-modal-card {
+  max-height: calc(100dvh - 24px);
+}
+
+[data-layout="compact"] .surrender-modal-card,
+[data-layout="compact"] .confirm-modal-card,
+[data-layout="compact"] .auth-modal-card,
+[data-layout="compact"] .private-created-modal-card,
+[data-layout="compact"] .passcode-prompt-card {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+[data-layout="compact"] .private-created-modal-card,
+[data-layout="compact"] .passcode-prompt-card,
+[data-layout="compact"] .auth-modal-card {
+  padding: 18px 16px;
+}
+
+[data-layout="compact"] .sanity-modal-header,
+[data-layout="compact"] .sanity-summary-banner,
+[data-layout="compact"] .sanity-issues-list,
+[data-layout="compact"] .surrender-body-content {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+[data-layout="compact"] .sanity-modal-footer,
+[data-layout="compact"] .surrender-modal-footer,
+[data-layout="compact"] .confirm-modal-footer,
+[data-layout="compact"] .created-modal-actions,
+[data-layout="compact"] .passcode-modal-actions {
+  flex-direction: column-reverse;
+  align-items: stretch;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+[data-layout="compact"] .created-modal-actions,
+[data-layout="compact"] .passcode-modal-actions {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+[data-layout="compact"] .surrender-btn-group {
+  flex-direction: column-reverse;
+  align-items: stretch;
+}
+
+[data-layout="compact"] .sanity-modal-footer button,
+[data-layout="compact"] .surrender-modal-footer button,
+[data-layout="compact"] .confirm-modal-footer button,
+[data-layout="compact"] .created-modal-actions button,
+[data-layout="compact"] .passcode-modal-actions button {
+  min-height: 44px;
+  justify-content: center;
+  white-space: normal;
+}
+
+[data-layout="compact"] .surrender-choice-note {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #94a3b8;
+  text-align: center;
+}
+
+/* A Fix Order button beside the text squeezes the message to a sliver, so it goes underneath. */
+[data-layout="compact"] .sanity-issue-item {
+  flex-wrap: wrap;
+}
+
+[data-layout="compact"] .sanity-issue-content {
+  flex: 1 1 calc(100% - 40px);
+  min-width: 0;
+}
+
+[data-layout="compact"] .sanity-inspect-btn {
+  flex: 1 1 100%;
+  justify-content: center;
+  min-height: 44px;
+}
+
+[data-layout="compact"] .sanity-issue-header-row {
+  flex-wrap: wrap;
+}
+
+/* Close buttons */
+[data-layout="compact"] .sanity-close-x,
+[data-layout="compact"] .surrender-close-x,
+[data-layout="compact"] .confirm-modal-close,
+[data-layout="compact"] .auth-close-btn,
+[data-layout="compact"] .admin-close-btn,
+[data-layout="compact"] .modal-close-btn,
+[data-layout="compact"] .modal-close-icon {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* LobbyView's private-match modals use a close button that has no style of its own. */
+[data-layout="compact"] .modal-close-btn,
+[data-layout="compact"] .modal-close-icon {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+/* The Shift+click shortcut needs a keyboard, so the tip is noise on a touch screen. */
+@media (hover: none) {
+  .confirm-modal-tip {
+    display: none;
+  }
+}
+
+/* Auth */
+[data-layout="compact"] .auth-oauth-grid {
+  grid-template-columns: 1fr;
+}
+
+[data-layout="compact"] .auth-tabs button {
+  min-height: 40px;
+}
+
+/* Admin console: reachable on a phone, not tuned for it */
+[data-layout="compact"] .admin-modal-header {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+[data-layout="compact"] .admin-status-strip {
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+}
+
+[data-layout="compact"] .admin-status-left {
+  flex-wrap: wrap;
+}
+
+[data-layout="compact"] .admin-tabs-nav {
+  overflow-x: auto;
+  padding: 0 8px;
+  scrollbar-width: none;
+}
+
+[data-layout="compact"] .admin-tab-btn {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+[data-layout="compact"] .admin-tab-body {
+  padding: 16px;
+}
+
+[data-layout="compact"] .admin-form-grid-2,
+[data-layout="compact"] .admin-form-grid-3 {
+  grid-template-columns: 1fr;
+}
+
+[data-layout="compact"] .admin-form-actions-row {
+  flex-wrap: wrap;
+}
+
+[data-layout="compact"] .admin-modal-footer {
+  flex-wrap: wrap;
+  gap: 8px;
+}

@@ -1,0 +1,288 @@
+/* styles/compact/3-top-bar.css: Phone layout: top bar (CompactTopBar). One contiguous slice of the old compact.css, imported after every file in styles/app/. */
+
+/* -------------------------------------------------------------------------
+   3. TOP BAR (CompactTopBar)
+   One row: back to lobby (or the brand in the lobby), the turn, the
+   order-problem count and a ⋯ menu.
+   ------------------------------------------------------------------------- */
+.compact-top-bar {
+  position: relative;
+  z-index: 40;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 52px;
+  padding: 0 4px;
+  background: linear-gradient(180deg, #1f242d 0%, #171b22 100%);
+  border-bottom: 1px solid #353b47;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.compact-bar-icon-btn {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.compact-bar-icon-btn:active,
+.compact-bar-icon-btn.open {
+  background: #262c38;
+}
+
+.compact-brand {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 8px;
+}
+
+.compact-brand-emblem {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.compact-brand-title {
+  font-family: "Cinzel", serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #f7ebd2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-turn-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-family: "Cinzel", serif;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.compact-turn-season,
+.compact-turn-phase {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-turn-season {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #fde68a;
+}
+
+.compact-turn-phase {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #cbb98a;
+}
+
+.compact-turn-sep {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.compact-issue-badge,
+.compact-winner-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 36px;
+  min-width: 44px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.compact-issue-badge.has-errors {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: #ef4444;
+  color: #fca5a5;
+  cursor: pointer;
+}
+
+.compact-issue-badge.has-warnings {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: #f59e0b;
+  color: #fde68a;
+  cursor: pointer;
+}
+
+.compact-issue-badge.is-clean {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #a7f3d0;
+}
+
+.compact-winner-badge {
+  background: rgba(200, 150, 62, 0.18);
+  border-color: #c8963e;
+  color: #fde68a;
+}
+
+.compact-menu-alert-dot {
+  position: absolute;
+  top: 9px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px #1d2129;
+}
+
+.compact-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 8px;
+  z-index: 50;
+  width: min(340px, calc(100vw - 16px));
+  max-height: calc(
+    100dvh -
+    76px -
+    env(safe-area-inset-top) -
+    env(safe-area-inset-bottom)
+  );
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: #1b202b;
+  border: 1px solid #3f4859;
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65);
+}
+
+.compact-menu-status,
+.compact-menu-match,
+.compact-menu-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+}
+
+.compact-menu-status .ws-status-dot {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+}
+
+.compact-menu-status-text,
+.compact-menu-user > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.compact-menu-status-text strong,
+.compact-menu-user strong {
+  font-size: 0.92rem;
+  color: #f1ede4;
+}
+
+.compact-menu-status-text span,
+.compact-menu-user span {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  overflow-wrap: anywhere;
+}
+
+.compact-menu-match {
+  color: #fde68a;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.compact-menu-user {
+  color: #cbd5e1;
+}
+
+.compact-menu-item,
+.compact-menu-back {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #e2e8f0;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.compact-menu-item:active,
+.compact-menu-back:active {
+  background: #262c38;
+}
+
+.compact-menu-item.primary {
+  margin-top: 4px;
+  background: linear-gradient(135deg, #c8963e 0%, #a87a2c 100%);
+  color: #14171c;
+}
+
+.compact-menu-item-chevron {
+  margin-left: auto;
+  color: #64748b;
+}
+
+.compact-menu-account {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #2d3545;
+}
+
+.compact-menu-back {
+  min-height: 44px;
+  color: #cbd5e1;
+}
+
+.compact-display-settings {
+  padding: 0 8px 8px;
+}
+
+[data-layout="compact"] .admin-override-banner {
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+}
+
+[data-layout="compact"] .admin-override-banner button {
+  min-height: 40px;
+}

@@ -1,0 +1,167 @@
+/* styles/app/07-navigation.css: Navigation header (brand, nav tabs, account) and the locked sovereign strip. One contiguous slice of the old App.css; styles/index.ts imports every file in this folder in number order, which is the cascade order. */
+
+/* =========================================================================
+   8. NAVIGATION HEADER, MAIN LOBBY & SUPABASE AUTHENTICATION
+   ========================================================================= */
+
+.brand-and-nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.brand-block.clickable {
+  cursor: pointer;
+}
+
+.top-view-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 16px;
+  border-left: 1px solid #353b47;
+}
+
+.nav-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nav-tab-btn:hover {
+  color: #f3efe6;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-tab-btn.active {
+  background: rgba(200, 150, 62, 0.16);
+  border-color: rgba(200, 150, 62, 0.5);
+  color: #fde68a;
+}
+
+.nav-active-match-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  background: rgba(59, 130, 246, 0.16);
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  color: #bfdbfe;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.header-center-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.header-user-Menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid #353b47;
+}
+
+.header-user-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #a7f3d0;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.header-guest-tag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.header-auth-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-auth-btn.signin {
+  background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+  border: 1px solid #e0b25b;
+  color: #14171c;
+}
+
+.header-auth-btn.signin:hover {
+  filter: brightness(1.08);
+}
+
+.header-auth-btn.signout {
+  background: #252b37;
+  border: 1px solid #3f4859;
+  color: #cbd5e1;
+}
+
+.header-auth-btn.signout:hover {
+  background: #313949;
+  color: #ffffff;
+}
+
+/* Multiplayer Locked Sovereign Strip in Sidebar */
+.mp-locked-section {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.mp-diplomatic-status-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.mp-status-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 4px;
+  border-radius: 6px;
+  border: 1px solid #333a48;
+  background: #1c2029;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+.mp-status-chip.mine {
+  color: #f8fafc;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.mp-chip-code {
+  letter-spacing: 0.03em;
+}

@@ -1,0 +1,312 @@
+/* styles/app/16-tools-sidebar-sections.css: Tools sidebar: legend, powers standing list, sandbox tools. One contiguous slice of the old App.css; styles/index.ts imports every file in this folder in number order, which is the cascade order. */
+
+/* Tactical Map Legend */
+.tools-legend-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 6px;
+  column-gap: 0;
+  /* One continuous hairline down the column seam, unbroken by the row gap. */
+  background-image: linear-gradient(#282f3d, #282f3d);
+  background-size: 1px 100%;
+  background-position: 45.5% 0;
+  background-repeat: no-repeat;
+}
+
+.legend-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: #cbd5e1;
+}
+
+/* Pair the entries into two columns split by the seam hairline above. */
+.tools-legend-grid > .legend-item:nth-child(odd) {
+  padding-right: 10px;
+}
+
+.tools-legend-grid > .legend-item:nth-child(even) {
+  padding-left: 10px;
+}
+
+.legend-swatch {
+  width: 22px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.legend-swatch.swatch-move {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.legend-swatch.swatch-support {
+  background: rgba(20, 184, 166, 0.2);
+  color: #14b8a6;
+  border: 1px solid rgba(20, 184, 166, 0.4);
+}
+
+.legend-swatch.swatch-convoy {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.legend-swatch.swatch-warn {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.legend-label {
+  font-weight: 500;
+  /* Centres the first line against the 20px swatch when the label wraps. */
+  padding-top: 3px;
+}
+
+/* Powers Standing List */
+.powers-sort-segmented {
+  display: flex;
+  background: #141820;
+  border: 1px solid #28303e;
+  border-radius: 5px;
+  padding: 2px;
+  margin-bottom: 6px;
+  gap: 2px;
+}
+
+.powers-sort-pill {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  color: #8b99ad;
+  font-size: 0.64rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.powers-sort-pill:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.powers-sort-pill.active {
+  background: #262f3e;
+  color: #60a5fa;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.powers-standing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.power-standing-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid #27303e;
+  border-left: 3px solid #64748b;
+  background: #1c222c;
+  transition: all 0.12s ease;
+  overflow: hidden;
+}
+
+.power-standing-card.clickable {
+  cursor: pointer;
+}
+
+.power-standing-card.clickable:hover {
+  background: #252d3a;
+  border-color: #3a475c;
+}
+
+.power-standing-card.selected {
+  border-color: #4b586e;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.power-card-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.power-card-rank {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94a3b8;
+  min-width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.power-card-crest {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.power-card-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.power-card-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: #e2e8f0;
+  min-width: 0;
+}
+
+.power-card-name strong {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.power-card-player {
+  font-size: 0.62rem;
+  color: #94a3b8;
+  font-weight: 500;
+  max-width: 68px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+}
+
+.active-tag {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 4px;
+  line-height: 1.2;
+  border-radius: 3px;
+  background: #2563eb;
+  color: #ffffff;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+.power-card-metrics {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.63rem;
+  color: #8b99ad;
+  white-space: nowrap;
+}
+
+.metric-dot {
+  opacity: 0.6;
+}
+
+.power-card-status {
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+.mini-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.mini-status-tag.finalized {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+}
+
+.mini-status-tag.warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.mini-status-tag.surrendered {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.mini-status-tag.pending {
+  background: #283241;
+  color: #94a3b8;
+}
+
+/* Sandbox & War Room Tools */
+.tools-sandbox-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid #38bdf8;
+  background: rgba(14, 165, 233, 0.12);
+  color: #38bdf8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tools-sandbox-toggle-btn:hover {
+  background: rgba(14, 165, 233, 0.22);
+}
+
+.tools-sandbox-toggle-btn.active {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(14, 165, 233, 0.45);
+}
+
+.sandbox-live-pill {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #0284c7;
+  color: #ffffff;
+  animation: pulse-live 2s infinite ease-in-out;
+}
+
+.tools-micro-desc {
+  font-size: 0.65rem;
+  color: #8b99ad;
+  line-height: 1.35;
+  margin: 6px 0 8px 0;
+}

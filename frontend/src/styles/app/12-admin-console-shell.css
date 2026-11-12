@@ -1,0 +1,230 @@
+/* styles/app/12-admin-console-shell.css: Admin console: header button, override banner, modal shell, status strip. One contiguous slice of the old App.css; styles/index.ts imports every file in this folder in number order, which is the cascade order. */
+
+/* =========================================================================
+   ADMINISTRATOR / GAME CREATOR CONSOLE & STATE EDITOR STYLES
+   ========================================================================= */
+
+.header-btn.admin-btn {
+  background: rgba(185, 28, 28, 0.22);
+  border: 1px solid #dc2626;
+  color: #fca5a5;
+  transition: all 0.2s ease;
+}
+
+.header-btn.admin-btn:hover {
+  background: rgba(220, 38, 38, 0.35);
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.header-btn.admin-btn.admin-override-on {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  border-color: #f87171;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+  animation: pulse-border 2s infinite;
+}
+
+.admin-override-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(90deg, #7f1d1d 0%, #991b1b 50%, #7f1d1d 100%);
+  border-bottom: 2px solid #ef4444;
+  color: #fee2e2;
+  padding: 8px 20px;
+  font-size: 0.8rem;
+  z-index: 25;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.admin-override-banner span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-override-banner button {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #fca5a5;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-override-banner button:hover {
+  background: rgba(0, 0, 0, 0.6);
+  border-color: #ffffff;
+}
+
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(8, 10, 15, 0.82);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.admin-modal-card {
+  width: 100%;
+  max-width: 780px;
+  background: #171b23;
+  border: 2px solid #b91c1c;
+  border-radius: 16px;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.85),
+    0 0 24px rgba(185, 28, 28, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.admin-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 24px;
+  background: linear-gradient(
+    180deg,
+    rgba(185, 28, 28, 0.2) 0%,
+    rgba(23, 27, 35, 0) 100%
+  );
+  border-bottom: 1px solid #2e3544;
+}
+
+.admin-title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-emblem-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(185, 28, 28, 0.25);
+  border: 1px solid #ef4444;
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.admin-overline-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #f59e0b;
+}
+
+.admin-main-title {
+  font-family: "Cinzel", serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #fef2f2;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+.admin-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.admin-close-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.admin-status-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  background: #12151c;
+  border-bottom: 1px solid #262c38;
+}
+
+.admin-status-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-clock-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #1e2430;
+  border: 1px solid #3d475a;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fde68a;
+}
+
+.admin-history-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.admin-override-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: #1e2430;
+  border: 1px solid #475569;
+  color: #cbd5e1;
+  transition: all 0.15s ease;
+}
+
+.admin-override-toggle-btn.active {
+  background: rgba(185, 28, 28, 0.35);
+  border-color: #ef4444;
+  color: #fecaca;
+}
+
+.admin-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 24px 0;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  font-size: 0.78rem;
+}

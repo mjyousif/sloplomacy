@@ -5,7 +5,7 @@ import type { Unit } from '../../../types/diplomacy';
 import type { CameraState } from '../../../utils/mapCameraHelpers';
 import type { PendingCoastChoice } from './useMapInteraction';
 
-/** How far the docked unit bar sits above the bottom of the map (`.unit-docked-bar` in compact.css). */
+/** How far the docked unit bar sits above the bottom of the map (`.unit-docked-bar` in styles/compact/5-game-screen.css). */
 const DOCKED_BAR_INSET = 8;
 
 export interface UseUnitMenuPlacementOptions {
@@ -62,7 +62,7 @@ export function useUnitMenuPlacement({
 
   // On a phone the unit menu, build menu and coast picker dock as one bar at the bottom of the
   // map instead of floating beside the unit. The space the bar takes (its height plus the 8px
-  // it sits above the map's edge, see compact.css) goes on the map as --docked-bar-h, so the
+  // it sits above the map's edge, see styles/compact/5-game-screen.css) goes on the map as --docked-bar-h, so the
   // zoom buttons can sit above it.
   const dockObserverRef = useRef<ResizeObserver | null>(null);
   const dockRef = useCallback(

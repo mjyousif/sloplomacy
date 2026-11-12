@@ -1,0 +1,218 @@
+/* styles/app/18-rails.css: Creator admin section, collapsed rails, macro sidebar expanded adjustments. One contiguous slice of the old App.css; styles/index.ts imports every file in this folder in number order, which is the cascade order. */
+
+/* Creator Admin Section */
+.admin-tools-section {
+  background: rgba(220, 38, 38, 0.05);
+  border-bottom-color: rgba(220, 38, 38, 0.2);
+}
+
+.admin-tools-section .sidebar-section-icon {
+  color: #f87171;
+}
+
+.admin-tools-section .sidebar-section-toggle-btn:hover .sidebar-section-icon {
+  color: #fca5a5;
+}
+
+.creator-overline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #f87171;
+}
+
+.admin-actions-column {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tools-admin-console-btn {
+  background: #7f1d1d;
+  border-color: #dc2626;
+  color: #fecaca;
+  font-weight: 700;
+}
+
+.tools-admin-console-btn:hover {
+  background: #991b1b;
+  color: #ffffff;
+}
+
+.admin-override-toggle-btn.active {
+  background: #b91c1c;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+/* Shared Collapsed Rail Elements */
+.sidebar-rail-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #8b99ad;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.sidebar-rail-btn:hover {
+  background: #232b38;
+  color: #f1f5f9;
+  border-color: #3b4759;
+}
+
+.sidebar-rail-btn.rail-toggle-btn {
+  background: #1c222c;
+  border-color: #2e3848;
+  color: #cbd5e1;
+}
+
+.sidebar-rail-btn.rail-toggle-btn:hover {
+  background: #2b3544;
+  border-color: #4b586e;
+}
+
+.sidebar-rail-btn.rail-active-glow {
+  background: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.6);
+}
+
+.sidebar-rail-btn.rail-admin-glow {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.rail-divider {
+  width: 22px;
+  height: 1px;
+  background: #262e3c;
+  margin: 6px 0;
+}
+
+.rail-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.rail-spacer {
+  flex: 1;
+}
+
+.rail-expand-chevron {
+  opacity: 0.6;
+}
+
+.rail-expand-chevron:hover {
+  opacity: 1;
+}
+
+/* Right Sidebar (Tactical Orders) Collapsed Rail */
+.macro-sidebar.macro-sidebar-collapsed {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  align-items: center;
+  padding: 8px 0;
+  background: #13161c;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.35);
+}
+
+.rail-power-crest {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  background: #1e2430;
+  margin-bottom: 6px;
+}
+
+.rail-counter-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rail-badge-unconfirmed {
+  background: #f59e0b;
+  color: #111827;
+  font-size: 0.65rem;
+  font-weight: 800;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rail-badge-clean {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  font-size: 0.7rem;
+  font-weight: 800;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rail-warn-badge {
+  color: #f87171;
+  margin-top: 6px;
+}
+
+/* Macro Sidebar Expanded Adjustments */
+.power-banner-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.power-banner-main-col {
+  flex: 1;
+}
+
+.power-crest-icon {
+  font-size: 1.05rem;
+}
+
+.macro-phase-context-box {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.macro-phase-context-box.adjustment {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #bfdbfe;
+}
+
+.macro-phase-context-box.retreat {
+  background: rgba(234, 88, 12, 0.15);
+  border: 1px solid rgba(234, 88, 12, 0.35);
+  color: #fdba74;
+}
+
+.macro-builds-wrapper {
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

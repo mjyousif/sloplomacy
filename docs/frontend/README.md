@@ -15,9 +15,11 @@ frontend/
 └── src/
     ├── main.tsx                 # React DOM bootstrapping
     ├── App.tsx                  # Root state container and viewMode router: calls the state hooks, renders the pieces below
-    ├── App.css                  # Tactical HUD styling, CRT brass themes, animations & modals
-    ├── compact.css              # Phone layout, applied while the shell has data-layout="compact"
     ├── index.css                # Base reset & typography
+    ├── styles/                  # Every stylesheet; the import order in index.ts is the cascade
+    │   ├── index.ts             # The one place the files below are imported (App.tsx imports it once)
+    │   ├── app/                 # The wide layout: 20 consecutive slices of the former App.css, 01-header.css … 20-display-confirm.css
+    │   └── compact/             # The phone layout, applied while the shell has data-layout="compact": 1-shell.css, 2-modals.css, 3-top-bar.css, 4-lobby.css, 5-game-screen.css, 6-touch-map.css
     ├── components/
     │   ├── EuropeMap.tsx        # High-performance interactive SVG game board & order arrows
     │   ├── EuropeMap.test.tsx   # The unit menu in the DOM: each newly selected unit gets a fresh menu
@@ -50,8 +52,8 @@ frontend/
     │   │   │   ├── targetHighlight.ts     # Green (direct/active) and ocean-blue (potential/chained) target sets + reticles
     │   │   │   ├── OrderArrowsLayer.tsx   # Every drawn order: convoys under supports under moves (with its test)
     │   │   │   ├── BuildTokensLayer.tsx   # A winter's build slots (with its test)
-    │   │   │   ├── UnitsLayer.tsx         # Every unit, each drawn by units/UnitToken.tsx (with its test)
-    │   │   │   ├── orders/                # ConvoyChain, SupportVector, MoveArrow and their shared context type
+    │   │   │   ├── UnitsLayer.tsx         # Every unit, each drawn by units/UnitToken.tsx, with the shared unitLayerContext.ts (with its test)
+    │   │   │   ├── orders/                # ConvoyChain, SupportVector, MoveArrow and their shared context type (orderLayerContext.ts)
     │   │   │   ├── ArrowMarkerDefs.tsx    # The arrowheads in the SVG defs
     │   │   │   ├── StaticLayers.tsx       # Gradients, sea textures & pass-through background defs
     │   │   │   ├── ProvincePolygon.tsx    # Memoized individual SVG province polygons & boundaries
@@ -203,6 +205,12 @@ frontend/
         ├── powerHelpers.test.ts # Vitest suite for diplomatic standing ranking
         ├── sheetHelpers.ts      # Phone order sheet stops: snap heights, release and tap stepping
         ├── sheetHelpers.test.ts # Vitest suite for the sheet's snap math
+        ├── campaignName.ts      # Default campaign names ("<Player>'s <Adjective> Campaign") for a host who leaves the name blank
+        ├── campaignName.test.ts # Vitest suite for the generated names
+        ├── mapCameraHelpers.ts  # The map camera's state, bounds, clamping and map-size constants
+        ├── mapCameraHelpers.test.ts # Vitest suite for camera clamping and zoom maths
+        ├── timerHelpers.ts      # Turn clock labels, clock formatting and who has yet to vote
+        ├── timerHelpers.test.ts # Vitest suite for the clock helpers
         ├── soloSandboxStorage.ts # The draft solo sandbox id this browser remembers (localStorage)
         └── soloSandboxStorage.test.ts # Only solo_ ids are kept, and blocked storage never throws
 ```

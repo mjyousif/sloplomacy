@@ -16,7 +16,7 @@ In a fresh worktree run `npm ci` in `frontend/` (and `pip install -r backend/req
 | `backend/**` | `python -m pytest backend/ -v` (every `backend/tests/**/test_*.py` must pass, not just the file you edited), plus the matching E2E scenario if UI-visible behavior changed |
 | `backend/domain/*.py` or `frontend/src/types/diplomacy.ts` | Change **both** files together, then the backend and frontend checks |
 | `frontend/src/**` | `cd frontend; npx tsc --noEmit; npm test; npm run build` |
-| `EuropeMap.tsx`, sidebars, modals, `compact.css`, `MapPiece.tsx`, phase-flow UI | The relevant E2E scenario (below) |
+| `EuropeMap.tsx`, sidebars, modals, `styles/`, `MapPiece.tsx`, phase-flow UI | The relevant E2E scenario (below) |
 | `supabase/migrations/**` | Read the `supabase` and `supabase-postgres-best-practices` skills, then see "Migrations" |
 | `scripts/`, `Dockerfile`, `terraform/`, `.github/` | Re-read the matching section of `docs/guides/google-cloud-deployment.md` and run the script's dry or help mode if it has one |
 

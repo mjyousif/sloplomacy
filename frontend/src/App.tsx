@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
-import './App.css';
-import './compact.css';
+import './styles';
 import { AlertTriangle, Compass } from 'lucide-react';
 import { AppHeader } from './components/AppHeader';
 import { AppModals } from './components/AppModals';
@@ -95,7 +94,7 @@ export function App() {
   const [adminOverrideActive, setAdminOverrideActive] =
     useState<boolean>(false);
   const [zoomPercent, setZoomPercent] = useState<number>(105);
-  // Phone-sized screens get the compact layout, styled from compact.css.
+  // Phone-sized screens get the compact layout, styled from styles/compact/.
   const isCompact = useCompactLayout();
   // The sidebar rails on desktop; the order sheet and tools drawer on a phone.
   const {

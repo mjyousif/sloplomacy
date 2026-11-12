@@ -1,0 +1,96 @@
+/* styles/app/10-macro-ai-staff.css: Tactical AI General Staff section of the macro sidebar. One contiguous slice of the old App.css; styles/index.ts imports every file in this folder in number order, which is the cascade order. */
+
+/* Tactical AI General Staff Command Section (MacroSidebar) */
+.ai-command-section {
+  background: linear-gradient(180deg, #172033 0%, #111722 100%);
+  border: 1px solid #2563eb;
+  border-radius: 9px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.12);
+}
+
+.ai-command-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.ai-command-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #60a5fa;
+  font-family: "Cinzel", serif;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.ai-badge-pill {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(37, 99, 235, 0.2);
+  border: 1px solid #3b82f6;
+  color: #93c5fd;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.ai-command-desc {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  line-height: 1.35;
+  margin: 0 0 10px;
+}
+
+.ai-buttons-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.ai-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-size: 0.73rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ai-btn:hover {
+  background: #334155;
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+.ai-btn.primary {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+.ai-btn.primary:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 0 8px rgba(96, 165, 250, 0.35);
+}
+
+.ai-btn.step {
+  background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+  border-color: #f59e0b;
+  color: #ffffff;
+}
+
+.ai-btn.step:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.35);
+}

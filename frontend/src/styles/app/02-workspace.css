@@ -1,0 +1,11 @@
+/* styles/app/02-workspace.css: Main workspace split (map + macro sidebar). One contiguous slice of the old App.css; styles/index.ts imports every file in this folder in number order, which is the cascade order. */
+
+/* -------------------------------------------------------------------------
+   2. MAIN WORKSPACE SPLIT (MAP + MACRO SIDEBAR)
+   ------------------------------------------------------------------------- */
+.war-room-workspace {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
