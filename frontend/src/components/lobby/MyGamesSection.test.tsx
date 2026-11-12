@@ -100,6 +100,16 @@ describe('MyGamesSection', () => {
     expect(within(gamma).getByText('Saved Sandbox')).toBeInTheDocument();
   });
 
+  it('colours the seat chip with the power', () => {
+    setup({ myGames: [MINE] });
+    const chip = screen
+      .getByText(/Playing as Germany/)
+      .closest('.my-power-chip') as HTMLElement;
+    expect(chip.style.backgroundColor).not.toBe('');
+    expect(chip.style.borderColor).not.toBe('');
+    expect(chip.style.backgroundColor).not.toBe(chip.style.borderColor);
+  });
+
   it('resumes as the seat the player holds', async () => {
     const { props, user } = setup({ myGames: [MINE] });
     await user.click(screen.getByRole('button', { name: /Resume as Germany/ }));

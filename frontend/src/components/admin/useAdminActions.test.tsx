@@ -347,6 +347,29 @@ describe('useAdminActions: handlers', () => {
     expect(args.onToast).toHaveBeenLastCalledWith('Assigned BEL to France!');
   });
 
+  it.each([
+    ['unit/move', (h: any) => h.result.current.handleMoveUnit()],
+    ['unit/spawn', (h: any) => h.result.current.handleSpawnUnit()],
+    [
+      'unit/destroy',
+      (h: any) => h.result.current.handleDestroyUnit(UNITS[0], clickEvent()),
+    ],
+    ['ownership', (h: any) => h.result.current.handleSetOwnership()],
+    ['set-turn', (h: any) => h.result.current.handleSetTurn()],
+    ['unfinalize-all', (h: any) => h.result.current.handleUnfinalizeAll()],
+  ])(
+    '%s: hands the new state to onStateUpdated before the toast',
+    async (endpoint, run) => {
+      replies[endpoint] = { ok: true, body: NEW };
+      const { hook, args } = await ready();
+      await act(async () => run(hook));
+      expect(args.onStateUpdated).toHaveBeenCalledExactlyOnceWith(NEW);
+      expect(
+        vi.mocked(args.onStateUpdated).mock.invocationCallOrder[0],
+      ).toBeLessThan(vi.mocked(args.onToast).mock.invocationCallOrder[0]);
+    },
+  );
+
   it('sends no user fields for a guest', async () => {
     const { hook } = setup({ user: null });
     await waitFor(() => expect(hook.result.current.moveUnitId).toBe('A_PAR'));
