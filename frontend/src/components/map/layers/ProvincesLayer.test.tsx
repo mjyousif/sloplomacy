@@ -72,6 +72,19 @@ describe('ProvincesLayer', () => {
     expect(ids('reachable-reticle')).toEqual(['BUR', 'PIC']);
   });
 
+  it('picks a province from its reticle, once', () => {
+    const { container, onClickProvince } = draw({
+      selectedUnit: unitAt('FRANCE', 'A', 'PAR'),
+      reachableMap: { BUR: [], PIC: [] },
+    });
+    fireEvent.click(
+      container.querySelector(
+        '[data-testid="reachable-reticle"][data-province-id="BUR"] circle',
+      )!,
+    );
+    expect(onClickProvince.mock.calls).toEqual([['BUR']]);
+  });
+
   it('drops the reticles while a support or convoy is being picked', () => {
     const { ids } = draw({
       selectedUnit: unitAt('FRANCE', 'A', 'PAR'),

@@ -100,6 +100,8 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 
 ## Left Sidebar: Chancellery Tools & Intel (`ToolsSidebar.tsx`)
 
+`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Everything else is in `components/tools/`: `CollapsedRail`, then one component per section below (`MapControlsSection`, `MapLegendSection`, `StandingsSection` with `useStandingsSort`, `SandboxToolsSection`, `AdminSection`). Each section takes only the props it reads, typed as a `Pick<>` of `ToolsSidebarProps` (`tools/toolsSidebarProps.ts`). The parent decides which sections show: the zoom section is left out of the drawer, and the admin section needs the host flag and an admin handler.
+
 ### 1. Map View & Camera Controls
 - Rendered via a non-collapsible `CollapsibleSection` to retain uniform visual hierarchy with action controls.
 - **Zoom In (`+`) & Zoom Out (`-`)**: Stepped zooming across the SVG canvas.
@@ -120,7 +122,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 - **Toggleable Standings Sort**:
   - Segmented toggle at the top of the standings list allows commanders to switch between:
     - **By Score**: Dynamically sorted by victory points (Supply Centers descending, tiebreak by active unit count descending, then canonical order), with numeric ranks `1`–`7` on the left of each flag.
-    - **Default**: Standard canonical order (`ALL_POWERS`: Austria, England, France, Germany, Italy, Russia, Turkey) with flush flags.
+    - **Default**: Standard canonical order (`ALL_POWERS`: France, England, Germany, Italy, Austria, Russia, Turkey) with flush flags.
   - The commander's preference is preserved in browser storage.
 - **Compact Layout & Overflow Prevention**:
   - The `Active` badge is positioned on the metrics row (`SC • Units`) rather than the country name row, preventing long commander names from crowding or pushing the `Draft` / `Finalized` / `CD` status tags outside the card.
