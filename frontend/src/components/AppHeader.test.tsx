@@ -1,0 +1,176 @@
+// @vitest-environment jsdom
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { GameState, MultiplayerGameSummary } from '../types/diplomacy';
+import { AppHeader, type AppHeaderProps } from './AppHeader';
+
+const seen = vi.hoisted(() => ({}) as Record<string, any>);
+vi.mock('./CompactTopBar', () => ({
+  CompactTopBar: (p: any) => {
+    seen.compact = p;
+    return <nav>compact bar</nav>;
+  },
+}));
+vi.mock('./TopHeader', () => ({
+  TopHeader: (p: any) => {
+    seen.wide = p;
+    return <header>top header</header>;
+  },
+}));
+
+const STATE = {
+  season: 'Spring',
+  year: 1901,
+  phase: 'Movement',
+  winner: null,
+  issues: [
+    { power: 'FRANCE', severity: 'error' },
+    { power: 'FRANCE', severity: 'warning' },
+    { power: 'FRANCE', severity: 'warning' },
+    { power: 'GERMANY', severity: 'error' },
+    { power: 'FRANCE', severity: 'info' },
+  ],
+} as unknown as GameState;
+const MATCH = { name: 'Friday Night' } as MultiplayerGameSummary;
+
+function props(over: Partial<AppHeaderProps> = {}): AppHeaderProps {
+  return {
+    viewMode: 'multiplayer',
+    isCompact: false,
+    gameState: STATE,
+    activeGameId: 'mp_1',
+    activeGameSummary: MATCH,
+    playerPower: 'FRANCE',
+    wsConnected: true,
+    displayPrefs: { pieceStyle: 'classic', unitMark: 'letters' } as any,
+    displayPrefsSaveState: 'device',
+    updateDisplayPrefs: vi.fn(),
+    authUser: null,
+    openAuthPrompt: vi.fn(),
+    handleSignOut: vi.fn(),
+    handleBackToLobby: vi.fn(),
+    handleEnterSoloSandbox: vi.fn(),
+    handleFinalizeClick: vi.fn(),
+    toolsDrawerOpen: false,
+    setToolsDrawerOpen: vi.fn(),
+    toolsToggleRef: { current: null },
+    directEditActive: false,
+    openAdminTools: vi.fn(),
+    setAdminOverrideActive: vi.fn(),
+    toastBanner: null,
+    ...over,
+  };
+}
+
+beforeEach(() => {
+  for (const k of Object.keys(seen)) delete seen[k];
+});
+
+describe('AppHeader: the top bar', () => {
+  it("gives the desktop header the board and the player's own problems", () => {
+    const p = props();
+    render(<AppHeader {...p} />);
+    expect(screen.getByText('top header')).toBeInTheDocument();
+    expect(seen.compact).toBeUndefined();
+    const h = seen.wide;
+    expect(h.viewMode).toBe('multiplayer');
+    expect(h.turn).toBe(STATE);
+    expect(h.winner).toBeNull();
+    expect(h.errorCount).toBe(1);
+    expect(h.warningCount).toBe(2);
+    expect(h.matchSummary).toBe(MATCH);
+    expect(h.playerPower).toBe('FRANCE');
+    expect(h.wsConnected).toBe(true);
+    expect(h.gameId).toBe('mp_1');
+    expect(h.onBackToLobby).toBe(p.handleBackToLobby);
+    expect(h.onEnterSoloSandbox).toBe(p.handleEnterSoloSandbox);
+    expect(h.onChangeDisplayPrefs).toBe(p.updateDisplayPrefs);
+    expect(h.onSignOut).toBe(p.handleSignOut);
+    h.onOpenOrderCheck();
+    expect(p.handleFinalizeClick).toHaveBeenCalledWith(false);
+    h.onSignIn();
+    expect(p.openAuthPrompt).toHaveBeenCalledWith(undefined, 'signin');
+  });
+
+  it('gives a phone the one-row bar, with the match label and the tools toggle', () => {
+    const p = props({ isCompact: true, toolsDrawerOpen: true });
+    render(<AppHeader {...p} />);
+    expect(screen.getByText('compact bar')).toBeInTheDocument();
+    expect(seen.wide).toBeUndefined();
+    const c = seen.compact;
+    expect(c.turn).toBe(STATE);
+    expect(c.errorCount).toBe(1);
+    expect(c.warningCount).toBe(2);
+    expect(c.syncDetail).toBe('Game mp_1');
+    expect(c.matchLabel).toBe('Friday Night (France)');
+    expect(c.toolsOpen).toBe(true);
+    expect(c.toolsToggleRef).toBe(p.toolsToggleRef);
+    c.onToggleTools();
+    const update = vi.mocked(p.setToolsDrawerOpen).mock.calls[0][0] as (
+      open: boolean,
+    ) => boolean;
+    expect(update(false)).toBe(true);
+    expect(update(true)).toBe(false);
+    c.onOpenOrderCheck();
+    expect(p.handleFinalizeClick).toHaveBeenCalledWith(false);
+    c.onSignIn();
+    expect(p.openAuthPrompt).toHaveBeenCalledWith(undefined, 'signin');
+  });
+
+  it('shows the phone no turn and no match name in the lobby or a sandbox', () => {
+    render(<AppHeader {...props({ isCompact: true, viewMode: 'lobby' })} />);
+    expect(seen.compact.turn).toBeNull();
+    expect(seen.compact.syncDetail).toBe('Lobby feed');
+    expect(seen.compact.matchLabel).toBeNull();
+    render(<AppHeader {...props({ isCompact: true, viewMode: 'sandbox' })} />);
+    expect(seen.compact.turn).toBe(STATE);
+    expect(seen.compact.matchLabel).toBeNull();
+    render(
+      <AppHeader {...props({ isCompact: true, activeGameSummary: null })} />,
+    );
+    expect(seen.compact.matchLabel).toBeNull();
+  });
+
+  it('passes the winner on', () => {
+    const won = { ...STATE, winner: 'ITALY' } as GameState;
+    render(<AppHeader {...props({ gameState: won })} />);
+    expect(seen.wide.winner).toBe('ITALY');
+    render(<AppHeader {...props({ gameState: won, isCompact: true })} />);
+    expect(seen.compact.winner).toBe('ITALY');
+  });
+});
+
+describe('AppHeader: the banner and the toast', () => {
+  it('shows no banner or toast by default', () => {
+    const { container } = render(<AppHeader {...props()} />);
+    expect(container.querySelector('.admin-override-banner')).toBeNull();
+    expect(container.querySelector('.imperial-toast-banner')).toBeNull();
+  });
+
+  it('shows the Direct-Edit banner with its two buttons', async () => {
+    const p = props({ directEditActive: true });
+    const { container } = render(<AppHeader {...p} />);
+    expect(container.querySelector('.admin-override-banner')).toHaveTextContent(
+      "ADMIN DIRECT-EDIT ACTIVE: You have Game Creator authority to edit any power's moves or state directly on the board.",
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Admin Console' }),
+    );
+    expect(p.openAdminTools).toHaveBeenCalledTimes(1);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Disable Direct-Edit' }),
+    );
+    expect(p.setAdminOverrideActive).toHaveBeenCalledWith(false);
+  });
+
+  it('shows the toast after the header', () => {
+    const { container } = render(
+      <AppHeader {...props({ toastBanner: 'Left campaign.' })} />,
+    );
+    const toast = container.querySelector('.imperial-toast-banner');
+    expect(toast).toHaveTextContent('Left campaign.');
+    expect(container.lastElementChild).toBe(toast);
+    expect(container.firstElementChild?.textContent).toBe('top header');
+  });
+});

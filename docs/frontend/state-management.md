@@ -13,11 +13,18 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 - `hooks/useSandboxSession.ts`: the sandbox tools. Hypothetical Mode (`sandboxMode`, the private copy's `sandboxGameId`, `hypotheticalMatchTimer`, `showSimulationOverlay`, `handleToggleSandboxMode`, `handleClearForeignPreMoves`), what is worked out from the copy (`draftGameId`, `matchTimer`, `requireRealBoard`), the tactical AI (`handleGenerateAIMoves`, `handleAIStepTurn`), the scenario reset (`handleLoadScenario`) and saving to an account (`saveSandboxModalOpen`, `savingSandbox`, `handleOpenSaveSandboxModal`, `handleSaveSandboxToAccount`). It runs no effects, and App calls it just before `useGameSync`, which reads `sandboxGameId`.
 - `hooks/useSandboxExit.ts`: the one effect that closes the private copy when the player leaves the match board by any route. App calls it right after `useGameSync`, where this effect has always run, so on leaving a match from Hypothetical Mode the socket switches before `POST /api/sandbox/exit` goes out.
 - `hooks/useMatchActions.ts`: what a player does in a match: `handleUpdateOrder`, `handleConfirmAllHolds`, `handleFinalizeClick` with the Sanity Check modal (`sanityModalOpen`, `sanityModalIssues`), `handleUnfinalizeClick`, `handleAdjudicateTurn` with its double-click guard, and the clock buttons (`postTimerAction`). It runs no effects.
+- `hooks/useSeatActions.ts`: taking and giving up a seat: `handleEnterSoloSandbox` (asking first when it leaves a match), `handleCreateMultiplayerGame`, `handleJoinOrEnterMultiplayerGame` (which keeps a typed passcode in `matchPasscodes`), the Surrender & Leave modal (`surrenderModalOpen`, `surrenderModalGame`, `surrenderModalPower`, `handleOpenSurrenderModal`), `handleSurrenderPower`, `handleLeaveGame`, and `handleSelectPower` for the power a sandbox player commands. It runs no effects, and App calls it after `useMatchActions`.
 - `hooks/useAuthSession.ts`: who is signed in and the sign-in modal. It reads the saved user once on mount and then follows every sign-in and sign-out through `subscribeToAuthChanges`. `openAuthPrompt(reason?, tab?)` opens the modal with an optional reason banner and a tab (sign-in by default).
 - `hooks/useWorkspaceLayout.ts`: the desktop rails, the phone order sheet and the tools drawer, with the effect that resets the sheet and drawer.
 - `hooks/useToast.ts`: the toast banner and `triggerToast`.
 
-The desktop header is `components/TopHeader.tsx`, which keeps no state: App passes it the turn, order-problem counts, match, sync status, display settings and account, and the handlers for each button.
+App renders four pieces, none of which keeps state; each takes one prop per value it uses, named as in App:
+
+- `components/AppHeader.tsx`: the desktop header (`components/TopHeader.tsx`) or the phone bar (`CompactTopBar`), then the Direct-Edit banner and the toast. It works out the player's error and warning counts for the order check.
+- `LobbyView` in the lobby, or `components/GameWorkspace.tsx` on a board: the tools sidebar, the map with the clock and the phone's history pill over it, and the order sidebar. It also counts the other powers' changed orders for the tools sidebar. On a past turn it hands the map that turn, with the selection, hover, issues and order callbacks switched off.
+- `components/AppModals.tsx`: the Sanity Check, Surrender & Leave, Save Sandbox (and its default name), admin console (only for the host) and sign-in modals, and the confirm prompt. They render on the lobby too.
+
+The state the workspace alone uses (`mapRef`, `zoomPercent`, `hoveredUnitId`) and the turn-selector helpers (`showPastTurn`, `stepPastTurn`, `viewedEntry`) stay in App, so they survive a trip to the lobby as before.
 
 | State Property | Type | Scope | Description |
 | :--- | :--- | :--- | :--- |
@@ -45,8 +52,8 @@ The desktop header is `components/TopHeader.tsx`, which keeps no state: App pass
 | `sheetSnap` | `'peek' \| 'half' \| 'full'` | UI (phone) | Where the phone order sheet sits, from `useWorkspaceLayout`. It goes back to `'peek'` whenever the game, the view or the layout changes, and drops to `'peek'` when `EuropeMap` reports through `onDockedBarChange` that its docked unit bar is up. |
 | `toolsDrawerOpen` | `boolean` | UI (phone) | Whether the tools drawer is open, from `useWorkspaceLayout`. ≡ toggles it, and it shuts when the game, the view or the layout changes. Closing it hands focus back to ≡ (`toolsToggleRef`). |
 | `zoomPercent` | `number` | UI | Map zoom percentage (default: `105`, more on a phone). `EuropeMap` reports it at most once per frame and after a pinch ends, so zooming doesn't re-render App on every event. |
-| `isCompact` | `boolean` | Layout | True on phone-sized screens, from `useCompactLayout()`. It follows rotation and resizes. App writes it on the shell as `data-layout`, which `compact.css` styles, and uses it to swap in `CompactTopBar` for `TopHeader`. `LobbyView` reads the same hook to say whether the Host form is "below" or "on the right". |
-| `surrenderModalOpen` | `boolean` | Modal | Controls visibility of the Surrender / Civil Disorder confirmation modal. |
+| `isCompact` | `boolean` | Layout | True on phone-sized screens, from `useCompactLayout()`. It follows rotation and resizes. App writes it on the shell as `data-layout`, which `compact.css` styles, and `AppHeader` uses it to swap in `CompactTopBar` for `TopHeader`. `LobbyView` reads the same hook to say whether the Host form is "below" or "on the right". |
+| `surrenderModalOpen` | `boolean` | Modal | Controls visibility of the Surrender / Civil Disorder confirmation modal, from `useSeatActions`, with the game and power it is for (`surrenderModalGame`, `surrenderModalPower`). |
 | `sanityModalOpen` | `boolean` | Modal | Controls visibility of pre-finalization warning modal, from `useMatchActions`. |
 | `sanityModalIssues` | `ValidationIssue[]` | Modal | Issues displayed inside the Sanity Check modal, from `useMatchActions`. |
 | `saveSandboxModalOpen` | `boolean` | Modal | Controls visibility of modal to name and save/promote a draft sandbox, from `useSandboxSession`. |
