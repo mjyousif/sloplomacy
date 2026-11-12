@@ -1,0 +1,118 @@
+import type React from 'react';
+import type {
+  Order,
+  ProvinceInfo,
+  Unit,
+  UnitMoveOptions,
+} from '../../../types/diplomacy';
+import { splitProvinceCode } from '../../../utils/orderHelpers';
+
+interface MoveControlsProps {
+  unit: Unit;
+  /** The unit's MOVE order. */
+  order: Order;
+  provinces: Record<string, ProvinceInfo>;
+  reachable: { province: string; coasts: string[] }[];
+  unitOptions?: UnitMoveOptions | null;
+  onUpdateOrder: (order: Order) => void;
+}
+
+/** The "Destination" select of a MOVE order, with the coastal via-convoy options for an army. */
+export const MoveControls: React.FC<MoveControlsProps> = ({
+  unit,
+  order,
+  provinces,
+  reachable,
+  unitOptions = null,
+  onUpdateOrder,
+}) => {
+  const isCoastalArmy =
+    unit.unit_type === 'A' && provinces[unit.province]?.type === 'COAST';
+  const convoyProvinces = isCoastalArmy
+    ? unitOptions
+      ? Array.from(
+          new Set([
+            ...unitOptions.active_convoys,
+            ...unitOptions.potential_convoys,
+            ...(order.via_convoy && order.target ? [order.target] : []),
+          ]),
+        )
+      : Object.values(provinces)
+          .filter(
+            (p) =>
+              p.type === 'COAST' &&
+              p.id !== unit.province &&
+              !reachable.some((r) => r.province === p.id),
+          )
+          .map((p) => p.id)
+    : [];
+
+  const selectValue =
+    order.via_convoy && order.target && convoyProvinces.includes(order.target)
+      ? `VIA:${order.target}`
+      : order.target_coast
+        ? `${order.target}/${order.target_coast}`
+        : order.target || '';
+
+  return (
+    <div className="order-param-row">
+      <label>Destination:</label>
+      <select
+        data-testid="select-order-target"
+        value={selectValue}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw.startsWith('VIA:')) {
+            onUpdateOrder({
+              ...order,
+              target: raw.slice(4),
+              target_coast: null,
+              via_convoy: true,
+              is_explicit: true,
+            });
+            return;
+          }
+          const { base, coast } = splitProvinceCode(raw);
+          const isAdjacent = reachable.some((r) => r.province === base);
+          onUpdateOrder({
+            ...order,
+            target: base,
+            target_coast: coast,
+            via_convoy: unit.unit_type === 'A' && !isAdjacent,
+            is_explicit: true,
+          });
+        }}
+      >
+        <optgroup label="Reachable Provinces">
+          {reachable.flatMap((r) => {
+            if (r.coasts.length > 0 && unit.unit_type === 'F') {
+              return r.coasts.map((c) => (
+                <option key={`${r.province}/${c}`} value={`${r.province}/${c}`}>
+                  {provinces[r.province]?.name} ({c} Coast) [{r.province}/{c}]
+                </option>
+              ));
+            }
+            return (
+              <option key={r.province} value={r.province}>
+                {provinces[r.province]?.name} ({r.province})
+              </option>
+            );
+          })}
+        </optgroup>
+        {convoyProvinces.length > 0 && (
+          <optgroup label="Coastal (via Convoy)">
+            {convoyProvinces.map((pid) => {
+              const isReady = unitOptions?.active_convoys.includes(pid);
+              return (
+                <option key={`VIA:${pid}`} value={`VIA:${pid}`}>
+                  {provinces[pid]?.name ?? pid} ({pid}) — via Convoy
+                  {isReady ? ' [Ready]' : ''}
+                </option>
+              );
+            })}
+          </optgroup>
+        )}
+      </select>
+    </div>
+  );
+};

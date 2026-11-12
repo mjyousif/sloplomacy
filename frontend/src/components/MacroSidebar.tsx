@@ -1,23 +1,8 @@
-import {
-  AlertTriangle,
-  CheckCircle2,
-  ChevronLeft,
-  Clock,
-  Flag,
-  History,
-  Lock,
-  PanelRightClose,
-  PanelRightOpen,
-  Play,
-  Unlock,
-  Users,
-} from 'lucide-react';
 import type React from 'react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import {
   type GameParticipant,
   type Order,
-  type OrderType,
   POWER_METADATA,
   type Power,
   type ProvinceInfo,
@@ -26,18 +11,22 @@ import {
   type UnitMoveOptions,
   type ValidationIssue,
 } from '../types/diplomacy';
-import { buildDefaultOrderForType } from '../utils/orderBuilders';
+import { getConsensusStatusInfo } from '../utils/orderHelpers';
 import {
-  formatOrderSummary,
-  getConsensusStatusInfo,
-  getReachableDestinations,
-  getValidRetreatDestinations,
-} from '../utils/orderHelpers';
+  computeOrderProgress,
+  getRequiredPowers,
+} from '../utils/orderProgress';
 import type { SheetSnap } from '../utils/sheetHelpers';
 import { BottomSheet } from './BottomSheet';
-import { BuildSlotCard } from './macro/BuildSlotCard';
-import { UnitMacroCard } from './macro/UnitMacroCard';
-import { PowerFlag } from './PowerFlag';
+import { CollapsedRail } from './macro/CollapsedRail';
+import {
+  ConfirmAllButton,
+  OrderFooter,
+  SurrenderButton,
+} from './macro/OrderFooter';
+import { HistoryLockBar, PhaseContext, PowerHeader } from './macro/PowerHeader';
+import { UnitOrderList } from './macro/UnitOrderList';
+import { useSheetSelection } from './macro/useSheetSelection';
 import { VersionBadge } from './VersionBadge';
 
 export interface MacroSidebarProps {
@@ -146,80 +135,31 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   const isFinalized = finalizedPowers.includes(activePower);
   const isSurrendered = surrenderedPowers.includes(activePower);
 
-  const unitsByProv: Record<string, Unit> = {};
-  const unitsById: Record<string, Unit> = {};
-  for (const u of units) {
-    if (!u.is_dislodged) {
-      unitsByProv[u.province] = u;
-    }
-    unitsById[u.id] = u;
-  }
-
   const isAdjustmentPhase = phase === 'Adjustments' || season === 'Winter';
   const isRetreatPhase = phase === 'Retreats';
 
-  const requiredPowersInMatch = useMemo(() => {
-    if (!isMultiplayer || !participants) return [];
-    const activeParticipants = Object.values(participants).filter(
-      (p) => !p.surrendered && !surrenderedPowers.includes(p.power),
-    );
-    if (activeParticipants.length === 0) return [];
-
-    if (isAdjustmentPhase) {
-      if (!builds) return activeParticipants.map((p) => p.power);
-      return activeParticipants
-        .filter((p) => {
-          const b = builds[p.power];
-          // A power owed builds with every home center occupied has no decision to make.
-          return (
-            b &&
-            typeof b === 'object' &&
-            (b.count < 0 || (b.count > 0 && b.homes.length > 0))
-          );
-        })
-        .map((p) => p.power);
-    }
-
-    if (isRetreatPhase) {
-      const dislodgedPowers = new Set(
-        units.filter((u) => u.is_dislodged).map((u) => u.power),
-      );
-      if (retreats) {
-        Object.keys(retreats).forEach((pStr) => {
-          if (
-            retreats[pStr as Power] &&
-            Object.keys(retreats[pStr as Power]).length > 0
-          ) {
-            dislodgedPowers.add(pStr as Power);
-          }
-        });
-      }
-      return activeParticipants
-        .filter((p) => dislodgedPowers.has(p.power))
-        .map((p) => p.power);
-    }
-
-    const powersWithUnits = new Set(units.map((u) => u.power));
-    return activeParticipants
-      .filter((p) => powersWithUnits.has(p.power))
-      .map((p) => p.power);
-  }, [
-    isMultiplayer,
-    participants,
-    surrenderedPowers,
-    isAdjustmentPhase,
-    isRetreatPhase,
-    builds,
-    retreats,
-    units,
-  ]);
-
-  const _requiredFinalizedCount = requiredPowersInMatch.filter((p) =>
-    finalizedPowers.includes(p),
-  ).length;
-  const _totalRequiredCount = requiredPowersInMatch.length;
-  const _missingPowers = requiredPowersInMatch.filter(
-    (p) => !finalizedPowers.includes(p),
+  const requiredPowersInMatch = useMemo(
+    () =>
+      getRequiredPowers({
+        isMultiplayer,
+        participants,
+        surrenderedPowers,
+        isAdjustmentPhase,
+        isRetreatPhase,
+        builds,
+        retreats,
+        units,
+      }),
+    [
+      isMultiplayer,
+      participants,
+      surrenderedPowers,
+      isAdjustmentPhase,
+      isRetreatPhase,
+      builds,
+      retreats,
+      units,
+    ],
   );
 
   const consensusInfo = useMemo(
@@ -246,447 +186,109 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     ],
   );
 
-  const rawMyUnits = units.filter((u) => u.power === activePower);
-  const myUnits = isRetreatPhase
-    ? [...rawMyUnits].sort(
-        (a, b) =>
-          Number(Boolean(b.is_dislodged)) - Number(Boolean(a.is_dislodged)),
-      )
-    : rawMyUnits;
-  const myDislodgedUnits = myUnits.filter((u) => u.is_dislodged);
-  const myActiveFieldUnits = myUnits.filter((u) => !u.is_dislodged);
+  const progress = computeOrderProgress({
+    units,
+    orders,
+    ownership,
+    provinces,
+    activePower,
+    issues,
+    builds,
+    isAdjustmentPhase,
+    isRetreatPhase,
+  });
+  const {
+    myBlockingIssues,
+    unconfirmedCount,
+    confirmedCount,
+    totalActionableCount,
+  } = progress;
 
-  const myIssues = issues.filter((i) => i.power === activePower);
-  const myBlockingIssues = myIssues.filter((i) => i.severity !== 'info');
-
-  // Supply center count per power
-  const scCountByPower: Record<Power, number> = {
-    AUSTRIA: 0,
-    ENGLAND: 0,
-    FRANCE: 0,
-    GERMANY: 0,
-    ITALY: 0,
-    RUSSIA: 0,
-    TURKEY: 0,
-  };
-  for (const [, pwr] of Object.entries(ownership)) {
-    if (scCountByPower[pwr] !== undefined) scCountByPower[pwr]++;
-  }
-
-  const myBuildInfo = builds ? builds[activePower] : undefined;
-  const buildCount =
-    myBuildInfo !== undefined
-      ? myBuildInfo.count
-      : scCountByPower[activePower] - myActiveFieldUnits.length;
-  const buildHomes =
-    myBuildInfo !== undefined
-      ? myBuildInfo.homes
-      : Object.values(provinces)
-          .filter(
-            (p) =>
-              p.home_power === activePower &&
-              p.is_supply_center &&
-              ownership[p.id] === activePower &&
-              !unitsByProv[p.id],
-          )
-          .map((p) => p.id);
-
-  const maxAllowedBuilds =
-    buildCount > 0 ? Math.min(buildCount, buildHomes.length) : 0;
-  const assignedBuildsCount = buildHomes.filter(
-    (h) => orders[`BUILD_${activePower}_${h}`]?.order_type === 'BUILD',
-  ).length;
-  const neededDisbands = buildCount < 0 ? Math.abs(buildCount) : 0;
-  const assignedDisbandsCount = myUnits.filter(
-    (u) => orders[u.id]?.order_type === 'DISBAND',
-  ).length;
-
-  const issuesByUnit: Record<string, ValidationIssue[]> = {};
-  for (const iss of myIssues) {
-    for (const uid of iss.unit_ids) {
-      if (!issuesByUnit[uid]) issuesByUnit[uid] = [];
-      issuesByUnit[uid].push(iss);
-    }
-  }
-
-  // Compute confirmed / total actionable orders depending on current phase
-  let totalActionableCount = myUnits.length;
-  let confirmedCount = myUnits.filter((u) => orders[u.id]?.is_explicit).length;
-
-  if (isRetreatPhase) {
-    totalActionableCount = myDislodgedUnits.length;
-    confirmedCount = myDislodgedUnits.filter(
-      (u) => orders[u.id]?.is_explicit,
-    ).length;
-  } else if (isAdjustmentPhase) {
-    if (buildCount > 0 && buildHomes.length > 0) {
-      totalActionableCount = maxAllowedBuilds;
-      const explicitBuilds = buildHomes.filter(
-        (h) => orders[`BUILD_${activePower}_${h}`]?.is_explicit,
-      ).length;
-      confirmedCount = Math.min(maxAllowedBuilds, explicitBuilds);
-    } else if (buildCount < 0) {
-      totalActionableCount = neededDisbands;
-      confirmedCount = Math.min(neededDisbands, assignedDisbandsCount);
-    } else {
-      totalActionableCount = 0;
-      confirmedCount = 0;
-    }
-  }
-
-  const unconfirmedCount = Math.max(0, totalActionableCount - confirmedCount);
-  const simActive = showSimulationOverlay || sandboxMode;
-
-  const handleOrderTypeChange = (unit: Unit, newType: OrderType) => {
-    const nextOrder = buildDefaultOrderForType({
-      unit,
-      newType,
-      provinces,
-      units,
-      orders,
-      retreats,
-      unitOptions: unitOptions ? (unitOptions[unit.id] ?? null) : null,
-    });
-    if (nextOrder) onUpdateOrder(nextOrder);
-  };
-
-  // Phone: a finger has no hover, so the selected unit's card lights up its provinces instead,
-  // the way hovering a card does on desktop.
   const isSheet = variant === 'sheet';
-  const selectedFieldUnit = selectedUnitId
-    ? unitsById[selectedUnitId]
-    : undefined;
-  const selectedFieldOrder = selectedFieldUnit
-    ? orders[selectedFieldUnit.id]
-    : undefined;
-  const selectedProvincesKey = selectedFieldUnit
-    ? [
-        selectedFieldUnit.province,
-        selectedFieldOrder?.target,
-        selectedFieldOrder?.aux_unit_origin,
-      ]
-        .filter(Boolean)
-        .join(',')
-    : '';
-  useEffect(() => {
-    if (!isSheet) return;
-    onHighlightProvinces(
-      selectedProvincesKey ? selectedProvincesKey.split(',') : [],
-    );
-  }, [isSheet, selectedProvincesKey, onHighlightProvinces]);
-
-  // Phone: raising the sheet while a unit is selected brings its card to the top of the list.
-  // Only the sheet's own list scrolls, never the page around it.
-  const sheetBodyRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!isSheet || sheetSnap === 'peek' || !selectedUnitId) return;
-    const body = sheetBodyRef.current;
-    const scroller = body?.closest<HTMLElement>('.bottom-sheet-body');
-    const card = Array.from(
-      body?.querySelectorAll<HTMLElement>(
-        '[data-unit-id], [data-home-province]',
-      ) ?? [],
-    ).find(
-      (el) =>
-        el.dataset.unitId === selectedUnitId ||
-        `BUILD_${activePower}_${el.dataset.homeProvince}` === selectedUnitId,
-    );
-    if (!scroller || !card) return;
-    scroller.scrollTop +=
-      card.getBoundingClientRect().top -
-      scroller.getBoundingClientRect().top -
-      8;
-  }, [isSheet, sheetSnap, selectedUnitId, activePower]);
+  const sheetBodyRef = useSheetSelection({
+    isSheet,
+    sheetSnap,
+    selectedUnitId,
+    activePower,
+    units,
+    orders,
+    onHighlightProvinces,
+  });
 
   // The pieces of the expanded panel. The desktop panel and the phone sheet arrange the same
   // pieces differently, so neither copies the other.
-  const statusBadge = (
-    <div className="power-status-badge-wrap">
-      {isSurrendered ? (
-        <span className="status-badge surrendered">
-          <Flag size={11} /> Civil Disorder
-        </span>
-      ) : isFinalized ? (
-        <span className="status-badge finalized">
-          <Lock size={11} /> Finalized
-        </span>
-      ) : myBlockingIssues.length > 0 ? (
-        <span className="status-badge has-warnings">
-          <AlertTriangle size={11} /> {myBlockingIssues.length} Issue
-          {myBlockingIssues.length > 1 ? 's' : ''}
-        </span>
-      ) : (
-        <span className="status-badge drafting">Drafting</span>
-      )}
-    </div>
-  );
-
   const confirmAllButton = (
-    <button
-      type="button"
-      className="quick-action-btn"
-      data-testid="btn-confirm-all"
-      title="Mark all current orders as confirmed"
-      onClick={onConfirmAllHolds}
-    >
-      <CheckCircle2 size={12} /> Confirm All ({confirmedCount}/
-      {totalActionableCount})
-    </button>
+    <ConfirmAllButton
+      confirmedCount={confirmedCount}
+      totalActionableCount={totalActionableCount}
+      onConfirmAllHolds={onConfirmAllHolds}
+    />
   );
 
   const surrenderButton =
     isMultiplayer && onSurrenderClick ? (
-      <button
-        type="button"
-        className="quick-action-btn surrender-btn-sidebar"
-        title="Surrender sovereign command and leave this campaign"
-        onClick={onSurrenderClick}
-      >
-        <Flag size={12} /> Surrender
-      </button>
+      <SurrenderButton onSurrenderClick={onSurrenderClick} />
     ) : null;
 
   const phaseContext = (
-    <>
-      {isAdjustmentPhase && (
-        <div className="macro-phase-context-box adjustment">
-          <strong>WINTER ADJUSTMENTS:</strong>{' '}
-          {buildCount > 0 && buildHomes.length > 0
-            ? `Build up to ${maxAllowedBuilds} unit${maxAllowedBuilds > 1 ? 's' : ''} in open home centers (${assignedBuildsCount}/${maxAllowedBuilds} assigned).`
-            : buildCount > 0 && buildHomes.length === 0
-              ? `+${buildCount} surplus, but home centers are occupied.`
-              : buildCount < 0
-                ? `Disband ${neededDisbands} unit${neededDisbands > 1 ? 's' : ''} (${assignedDisbandsCount}/${neededDisbands} selected).`
-                : `Forces in equilibrium (${myActiveFieldUnits.length} units = ${scCountByPower[activePower]} SCs).`}
-        </div>
-      )}
-
-      {isRetreatPhase && (
-        <div className="macro-phase-context-box retreat">
-          <strong>RETREAT PHASE:</strong>{' '}
-          {myDislodgedUnits.length > 0
-            ? `${myDislodgedUnits.length} dislodged unit${myDislodgedUnits.length > 1 ? 's' : ''} must Retreat or Disband.`
-            : 'No dislodged units. Awaiting other powers.'}
-        </div>
-      )}
-    </>
+    <PhaseContext
+      activePower={activePower}
+      progress={progress}
+      isAdjustmentPhase={isAdjustmentPhase}
+      isRetreatPhase={isRetreatPhase}
+    />
   );
 
   // Everything inside the scrolling list of builds and unit cards.
   const unitList = (
-    <>
-      {/* Winter Builds */}
-      {isAdjustmentPhase && buildCount > 0 && buildHomes.length > 0 && (
-        <div className="macro-builds-wrapper">
-          <div className="macro-list-header">
-            <span>
-              HOME BUILDS ({assignedBuildsCount}/{maxAllowedBuilds} ASSIGNED)
-            </span>
-            <span className="macro-hint">
-              {isSheet ? 'Tap a card or the map' : 'Click card or map'}
-            </span>
-          </div>
-          {buildHomes.map((homeProv) => {
-            const bId = `BUILD_${activePower}_${homeProv}`;
-            return (
-              <BuildSlotCard
-                key={homeProv}
-                homeProv={homeProv}
-                buildOrder={orders[bId]}
-                pInfo={provinces[homeProv]}
-                activePower={activePower}
-                isSelected={selectedUnitId === bId}
-                provinces={provinces}
-                unitsByProv={unitsByProv}
-                onSelectUnit={onSelectUnit}
-                onHoverUnit={onHoverUnit}
-                onHighlightProvinces={onHighlightProvinces}
-                onUpdateOrder={onUpdateOrder}
-              />
-            );
-          })}
-        </div>
-      )}
-
-      <div className="macro-list-header">
-        <span>
-          {isAdjustmentPhase && buildCount < 0
-            ? `DISBAND UNITS (${assignedDisbandsCount}/${neededDisbands} SELECTED)`
-            : `ACTIVE FORCE ORDERS (${myUnits.length} UNITS)`}
-        </span>
-        <span className="macro-hint">
-          {isSheet ? 'Tap a card or the map' : 'Click card or map'}
-        </span>
-      </div>
-
-      {myUnits.map((unit) => {
-        const order = orders[unit.id];
-        const unitIssues = issuesByUnit[unit.id] || [];
-        const hasError = unitIssues.some((i) => i.severity === 'error');
-        const hasWarn = unitIssues.some((i) => i.severity === 'warning');
-        const isSelected = unit.id === selectedUnitId;
-        const isHovered = unit.id === hoveredUnitId;
-        const uOpts = unitOptions ? (unitOptions[unit.id] ?? null) : null;
-        const summary = formatOrderSummary(order, provinces, unitsByProv);
-        const reachable = getReachableDestinations(unit, provinces, uOpts);
-        const validRetreats = unit.is_dislodged
-          ? getValidRetreatDestinations(unit, retreats, provinces, uOpts)
-          : [];
-        const simRes = simActive
-          ? simulationResult?.resolutions[unit.id]
-          : null;
-        const isDisbanding = order?.order_type === 'DISBAND';
-
-        return (
-          <UnitMacroCard
-            key={unit.id}
-            unit={unit}
-            order={order}
-            powerMeta={powerMeta}
-            provinces={provinces}
-            units={units}
-            unitsByProv={unitsByProv}
-            orders={orders}
-            reachable={reachable}
-            validRetreats={validRetreats}
-            unitOptions={uOpts}
-            summary={summary}
-            unitIssues={unitIssues}
-            simRes={simRes}
-            isSelected={isSelected}
-            isHovered={isHovered}
-            hasError={hasError}
-            hasWarn={hasWarn}
-            isDisbanding={isDisbanding}
-            isRetreatPhase={isRetreatPhase}
-            isAdjustmentPhase={isAdjustmentPhase}
-            buildCount={buildCount}
-            onSelectUnit={onSelectUnit}
-            onHoverUnit={onHoverUnit}
-            onHighlightProvinces={onHighlightProvinces}
-            onUpdateOrder={onUpdateOrder}
-            handleOrderTypeChange={handleOrderTypeChange}
-          />
-        );
-      })}
-    </>
+    <UnitOrderList
+      activePower={activePower}
+      powerMeta={powerMeta}
+      progress={progress}
+      provinces={provinces}
+      units={units}
+      orders={orders}
+      retreats={retreats}
+      unitOptions={unitOptions}
+      selectedUnitId={selectedUnitId}
+      hoveredUnitId={hoveredUnitId}
+      simulationResult={simulationResult}
+      simActive={showSimulationOverlay || sandboxMode}
+      isAdjustmentPhase={isAdjustmentPhase}
+      isRetreatPhase={isRetreatPhase}
+      isSheet={isSheet}
+      onSelectUnit={onSelectUnit}
+      onHoverUnit={onHoverUnit}
+      onHighlightProvinces={onHighlightProvinces}
+      onUpdateOrder={onUpdateOrder}
+    />
   );
 
   // Finalize or unlock, then Resolve or the multiplayer consensus card.
   const footerActions = (
-    <>
-      {!isFinalized ? (
-        <button
-          type="button"
-          data-testid="btn-finalize-orders"
-          className={`finalize-primary-btn ${
-            myBlockingIssues.length > 0 ? 'has-warning-state' : ''
-          }`}
-          onClick={onFinalizeClick}
-        >
-          {myBlockingIssues.length > 0 ? (
-            <>
-              <AlertTriangle size={15} />
-              <span>
-                Finalize {powerMeta.shortName} ({myBlockingIssues.length}{' '}
-                Warning{myBlockingIssues.length > 1 ? 's' : ''})
-              </span>
-            </>
-          ) : (
-            <>
-              <Lock size={15} />
-              <span>
-                Finalize {powerMeta.shortName} Orders
-                {unconfirmedCount > 0
-                  ? ` (${unconfirmedCount} Unconfirmed)`
-                  : ''}
-              </span>
-            </>
-          )}
-        </button>
-      ) : (
-        <button
-          type="button"
-          data-testid="btn-unfinalize-orders"
-          className="unfinalize-btn"
-          onClick={onUnfinalizeClick}
-        >
-          <Unlock size={15} />
-          <span>Orders Finalized — Click to Unlock</span>
-        </button>
-      )}
-
-      {!isMultiplayer ? (
-        <button
-          type="button"
-          data-testid="btn-adjudicate-phase"
-          className="adjudicate-turn-btn"
-          title="Execute turn adjudication and advance to the next season"
-          onClick={onAdjudicateTurn}
-          disabled={gameOver}
-        >
-          <Play size={14} />
-          <span>
-            {gameOver
-              ? 'Game Over'
-              : isAdjustmentPhase
-                ? 'Resolve Adjustments & Advance'
-                : isRetreatPhase
-                  ? 'Resolve Retreats & Advance'
-                  : 'Resolve Phase'}
-          </span>
-        </button>
-      ) : (
-        <div className="mp-resolution-controls">
-          <div
-            className={`mp-consensus-status-card ${consensusInfo.isWaitingForPlayers ? 'waiting-mode' : ''}`}
-          >
-            <div className="mp-consensus-header">
-              {consensusInfo.isWaitingForPlayers ? (
-                <Users size={14} className="consensus-icon" />
-              ) : (
-                <Clock size={13} className="consensus-icon" />
-              )}
-              <span className="consensus-title">{consensusInfo.title}</span>
-            </div>
-            <div className="mp-consensus-desc">{consensusInfo.description}</div>
-          </div>
-
-          {isGameCreator && (
-            <button
-              type="button"
-              className={`adjudicate-turn-btn creator-override-btn ${
-                consensusInfo.isSoloAdvanceReady ? 'solo-advance-ready' : ''
-              }`}
-              title={consensusInfo.buttonTitle}
-              onClick={onAdjudicateTurn}
-              disabled={gameOver}
-            >
-              <Play size={14} />
-              <span>{consensusInfo.buttonLabel}</span>
-            </button>
-          )}
-        </div>
-      )}
-    </>
+    <OrderFooter
+      powerMeta={powerMeta}
+      isFinalized={isFinalized}
+      blockingIssueCount={myBlockingIssues.length}
+      unconfirmedCount={unconfirmedCount}
+      isMultiplayer={isMultiplayer}
+      isGameCreator={isGameCreator}
+      gameOver={gameOver}
+      isAdjustmentPhase={isAdjustmentPhase}
+      isRetreatPhase={isRetreatPhase}
+      consensusInfo={consensusInfo}
+      onFinalizeClick={onFinalizeClick}
+      onUnfinalizeClick={onUnfinalizeClick}
+      onAdjudicateTurn={onAdjudicateTurn}
+    />
   );
 
   const locked = historyLabel !== null;
   const lockBar = locked && (
-    <div className="history-lock-bar" data-testid="history-lock-bar">
-      <History size={13} aria-hidden="true" />
-      <span className="history-lock-label">
-        Viewing <strong>{historyLabel}</strong>
-      </span>
-      <button
-        type="button"
-        className="history-lock-live-btn"
-        data-testid="history-lock-live-btn"
-        onClick={onReturnToLive}
-      >
-        Back to live
-      </button>
-    </div>
+    <HistoryLockBar
+      historyLabel={historyLabel}
+      onReturnToLive={onReturnToLive}
+    />
   );
 
   // Phone: the same pieces in a pull-up sheet. The peek holds what a player needs every turn,
@@ -704,25 +306,14 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
             style={{ borderLeftColor: powerMeta.color }}
           >
             {lockBar}
-            <div className="macro-sheet-status-row" inert={locked || undefined}>
-              <span className="power-crest-icon">
-                <PowerFlag power={activePower} width={24} height={16} />
-              </span>
-              <div className="macro-sheet-power">
-                <span className="power-name-text">{powerMeta.shortName}</span>
-                <span
-                  className="macro-sheet-counts"
-                  data-testid="macro-sheet-counts"
-                >
-                  {myActiveFieldUnits.length} units ·{' '}
-                  {scCountByPower[activePower]} SCs
-                  {unconfirmedCount > 0
-                    ? ` · ${unconfirmedCount} unconfirmed`
-                    : ''}
-                </span>
-              </div>
-              {statusBadge}
-            </div>
+            <PowerHeader
+              variant="sheet"
+              activePower={activePower}
+              progress={progress}
+              isSurrendered={isSurrendered}
+              isFinalized={isFinalized}
+              locked={locked}
+            />
             <div className="macro-sheet-controls" inert={locked || undefined}>
               {confirmAllButton}
               {footerActions}
@@ -755,60 +346,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         className="macro-sidebar macro-sidebar-collapsed"
         aria-label="Tactical Orders Collapsed"
       >
-        {onToggleCollapse && (
-          <button
-            type="button"
-            data-testid="macro-sidebar-expand-btn"
-            className="sidebar-rail-btn rail-toggle-btn"
-            onClick={onToggleCollapse}
-            title="Expand Tactical Command & Orders"
-          >
-            <PanelRightOpen size={16} />
-          </button>
-        )}
-
-        <div className="rail-divider" />
-
-        <div
-          className="rail-power-crest"
-          title={`Commanding ${powerMeta.name} (${myActiveFieldUnits.length} Units, ${scCountByPower[activePower]} SC)`}
-          style={{ borderColor: powerMeta.color }}
-        >
-          <PowerFlag power={activePower} width={18} height={12} />
-        </div>
-
-        <div
-          className="rail-counter-badge"
-          title={`${unconfirmedCount} unconfirmed orders`}
-        >
-          {unconfirmedCount > 0 ? (
-            <span className="rail-badge-unconfirmed">{unconfirmedCount}</span>
-          ) : (
-            <span className="rail-badge-clean">✓</span>
-          )}
-        </div>
-
-        {myIssues.length > 0 && (
-          <div
-            className="rail-warn-badge"
-            title={`${myIssues.length} tactical issues`}
-          >
-            <AlertTriangle size={14} />
-          </div>
-        )}
-
-        <div className="rail-spacer" />
-
-        {onToggleCollapse && (
-          <button
-            type="button"
-            className="sidebar-rail-btn rail-expand-chevron"
-            onClick={onToggleCollapse}
-            title="Expand Tactical Orders"
-          >
-            <ChevronLeft size={16} />
-          </button>
-        )}
+        <CollapsedRail
+          activePower={activePower}
+          progress={progress}
+          onToggleCollapse={onToggleCollapse}
+        />
       </aside>
     );
   }
@@ -827,39 +369,15 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         className="active-power-banner"
         style={{ borderLeft: `4px solid ${powerMeta.color}` }}
       >
-        <div className="power-banner-top">
-          <div className="power-banner-main-col">
-            <div className="power-banner-title">
-              <span className="power-crest-icon">
-                <PowerFlag power={activePower} width={22} height={15} />
-              </span>
-              <span className="power-name-text">{powerMeta.name}</span>
-            </div>
-            <div className="power-banner-sub">
-              {myActiveFieldUnits.length} Units
-              {myDislodgedUnits.length > 0
-                ? ` (+${myDislodgedUnits.length} Dislodged)`
-                : ''}{' '}
-              • {scCountByPower[activePower]} SCs
-            </div>
-          </div>
-
-          <div className="power-banner-actions-right">
-            {statusBadge}
-
-            {onToggleCollapse && (
-              <button
-                type="button"
-                data-testid="macro-sidebar-collapse-btn"
-                className="sidebar-collapse-toggle-btn"
-                onClick={onToggleCollapse}
-                title="Collapse Tactical Orders"
-              >
-                <PanelRightClose size={15} />
-              </button>
-            )}
-          </div>
-        </div>
+        <PowerHeader
+          variant="panel"
+          activePower={activePower}
+          progress={progress}
+          isSurrendered={isSurrendered}
+          isFinalized={isFinalized}
+          locked={locked}
+          onToggleCollapse={onToggleCollapse}
+        />
 
         {/* Quick Command Bar */}
         <div className="macro-quick-actions">
