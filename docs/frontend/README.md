@@ -89,14 +89,24 @@ frontend/
     │   ├── sidebars.test.ts     # Vitest suite for ToolsSidebar and MacroSidebar collapsible views
     │   ├── TurnHistorySelector.tsx # Left pane footer to pick a resolved turn, nation chips, and the phone's map pill
     │   ├── PhaseTimerWidget.tsx # Bottom-left map widget: turn clock, votes, ready-up & +5 button (a pill on phones)
-    │   ├── LobbyView.tsx        # Match browser, game creation, seat claim & sandbox cards
+    │   ├── LobbyView.tsx        # The lobby: form state, create / join / seat-claim handlers and the dialogs; arranges the sections below
+    │   ├── LobbyView.test.tsx   # Layout, seat claims, the passcode box, hosting, joining by code and copy
     │   ├── lobby/               # Decomposed match browser and lobby dialogs
+    │   │   ├── LobbyHero.tsx                 # Top banner: Solo Sandbox button, sign-in button and the two mode cards
+    │   │   ├── MyGamesSection.tsx            # The player's own campaigns and saved sandboxes, with Resume and Leave
+    │   │   ├── OpenLobbiesSection.tsx        # Open multiplayer lobbies and Refresh, one GameRoomCard each
     │   │   ├── GameRoomCard.tsx              # Match listing card with power indicators and join buttons
-    │   │   ├── CreateCampaignPanel.tsx       # Public/private campaign creation form
+    │   │   ├── CreateCampaignPanel.tsx       # Host New Multiplayer Game card (public/private, passcode, country)
+    │   │   ├── JoinWithCodeCard.tsx          # Join Private Campaign card (Game ID, passcode, country)
+    │   │   ├── PowerPicker.tsx               # The seven-flag country picker both cards share
     │   │   ├── PasscodePromptModal.tsx       # Passcode entry dialog for private matches
-    │   │   └── PrivateCampaignCreatedModal.tsx # Shareable credentials modal after creating private room
-    │   ├── AdminToolsModal.tsx  # Unit teleport, spawn, destroy, turn jump & timeline rollback
+    │   │   ├── PrivateCampaignCreatedModal.tsx # Shareable credentials modal after creating private room
+    │   │   └── *.test.tsx, lobby.testkit.ts    # Each section's rendering and callbacks, with shared game fixtures
+    │   ├── AdminToolsModal.tsx  # The creator console: header, status strip, tab bar; wires `useAdminActions` into the tabs
+    │   ├── AdminToolsModal.test.tsx # Tabs, closing, and each tab's action through to its request
     │   ├── admin/               # Decomposed creator console tabs
+    │   │   ├── useAdminActions.ts      # The console's form state, status and error banners, effects and one handler per admin endpoint
+    │   │   ├── useAdminActions.test.tsx, .failures.test.tsx, .testkit.ts # Each request, its toast, and every failure path
     │   │   ├── TurnControlTab.tsx      # Timeline rollback and turn jump controls
     │   │   ├── UnitTeleportTab.tsx     # Move units instantly across provinces
     │   │   ├── UnitSpawnerTab.tsx      # Unit creation and disband tools
