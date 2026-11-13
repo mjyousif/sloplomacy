@@ -120,6 +120,6 @@ describe('JoinWithCodeCard', () => {
 
   it('shows no error box when there is none', () => {
     const { view } = setup();
-    expect(view.container.querySelector('.lobby-error-alert')).toBeNull();
+    expect(screen.queryByTestId('join-code-error')).toBeNull();
   });
 });

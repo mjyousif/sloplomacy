@@ -74,7 +74,7 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
         </div>
 
         {joinCodeError && (
-          <div className="lobby-error-alert">
+          <div className="lobby-error-alert" data-testid="join-code-error">
             <AlertTriangle size={14} />
             <span>{joinCodeError}</span>
           </div>

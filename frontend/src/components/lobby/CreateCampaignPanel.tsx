@@ -113,7 +113,10 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
         </div>
 
         {createError && (
-          <div className="lobby-error-alert">
+          <div
+            className="lobby-error-alert"
+            data-testid="create-campaign-error"
+          >
             <AlertTriangle size={14} />
             <span>{createError}</span>
           </div>

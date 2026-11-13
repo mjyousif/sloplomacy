@@ -23,7 +23,7 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
       const hostAuthModal = page.getByRole('dialog', { name: 'Diplomatic Credentials' });
       await expect(hostAuthModal).toBeVisible();
       await expect(hostAuthModal).toContainText('create an account to host a new multiplayer');
-      await expect(hostAuthModal.locator('.auth-tab.active')).toHaveText('Create Account');
+      await expect(hostAuthModal.locator('[data-testid^="auth-tab-"][data-active="true"]')).toHaveText('Create Account');
       await recorder.recordStep(page, '01b_host_prompt_opens_signup');
       await page.getByRole('button', { name: 'Close authentication modal' }).click();
       await expect(hostAuthModal).toHaveCount(0);
@@ -86,7 +86,7 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
       await recorder.recordStep(page, '06_hypothetical_exited_foreign_discarded');
 
       // 8b. Leave Solo Sandbox back to Lobby, then re-launch Solo Sandbox and verify session persistence keeps FRA_A_PAR -> BUR
-      await page.locator('.brand-block.clickable').click();
+      await page.locator('[data-testid="brand-block"]').click();
       await page.waitForSelector('[data-testid="btn-enter-sandbox"]', { timeout: 15000 });
       await page.locator('[data-testid="btn-enter-sandbox"]').click();
       await page.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
@@ -99,7 +99,7 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
 
       const authModal = page.getByRole('dialog', { name: 'Diplomatic Credentials' });
       await expect(authModal).toBeVisible();
-      await expect(authModal.locator('.auth-tab.active')).toHaveText('Create Account');
+      await expect(authModal.locator('[data-testid^="auth-tab-"][data-active="true"]')).toHaveText('Create Account');
       await recorder.recordStep(page, '07_auth_modal_prompt_on_save');
 
       // 10. Switch to Sign In and authenticate via dev credentials

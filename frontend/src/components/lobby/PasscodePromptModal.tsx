@@ -66,7 +66,10 @@ export const PasscodePromptModal: React.FC<PasscodePromptModalProps> = ({
               />
             </div>
             {passcodeModalError && (
-              <div className="lobby-error-alert compact">
+              <div
+                className="lobby-error-alert compact"
+                data-testid="passcode-modal-error"
+              >
                 <AlertTriangle size={13} />
                 <span>{passcodeModalError}</span>
               </div>

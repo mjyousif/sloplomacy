@@ -219,6 +219,7 @@ export function CompactTopBar({
         ) : (
           <span
             className="compact-issue-badge is-clean"
+            data-testid="compact-issue-clean"
             role="img"
             aria-label={describeIssueCount(0, 0)}
           >

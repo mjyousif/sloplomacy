@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthUser, MultiplayerGameSummary } from '../types/diplomacy';
@@ -51,14 +51,17 @@ describe('TopHeader: brand and navigation', () => {
   it('opens the solo sandbox and marks it while in one', async () => {
     const { props } = renderHeader();
     const tab = screen.getByTestId('nav-tab-sandbox');
-    expect(tab).toHaveClass('nav-tab-btn', 'active');
+    expect(tab).toHaveAttribute('data-active', 'true');
     await userEvent.click(tab);
     expect(props.onEnterSoloSandbox).toHaveBeenCalledTimes(1);
   });
 
   it('leaves the sandbox tab unmarked elsewhere', () => {
     renderHeader({ viewMode: 'lobby' });
-    expect(screen.getByTestId('nav-tab-sandbox')).not.toHaveClass('active');
+    expect(screen.getByTestId('nav-tab-sandbox')).toHaveAttribute(
+      'data-active',
+      'false',
+    );
   });
 
   it('names the match and the player’s power in multiplayer', () => {
@@ -72,9 +75,7 @@ describe('TopHeader: brand and navigation', () => {
     rerender(
       <TopHeader {...props} viewMode="multiplayer" matchSummary={null} />,
     );
-    expect(
-      document.querySelector('.nav-active-match-pill'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nav-match-pill')).not.toBeInTheDocument();
   });
 });
 
@@ -107,7 +108,7 @@ describe('TopHeader: the turn and order check', () => {
   it('counts errors and warnings, and opens the order check', async () => {
     const { props } = renderHeader({ errorCount: 2, warningCount: 1 });
     const pill = screen.getByText('Error: 2 • Warning: 1');
-    expect(pill.closest('div')).toHaveClass('header-error-pill');
+    expect(pill.closest('div')).toBe(screen.getByTestId('header-error-pill'));
     await userEvent.click(pill);
     expect(props.onOpenOrderCheck).toHaveBeenCalledTimes(1);
   });
@@ -126,7 +127,7 @@ describe('TopHeader: the turn and order check', () => {
   it('shows warnings alone, which also open the order check', async () => {
     const { props } = renderHeader({ warningCount: 3 });
     const pill = screen.getByText('Warning: 3');
-    expect(pill.closest('div')).toHaveClass('header-warning-pill');
+    expect(pill.closest('div')).toBe(screen.getByTestId('header-warning-pill'));
     await userEvent.click(pill);
     expect(props.onOpenOrderCheck).toHaveBeenCalledTimes(1);
   });
@@ -240,9 +241,9 @@ describe('TopHeader: display settings and account', () => {
     );
     await userEvent.click(screen.getByTestId('btn-admin-menu'));
     expect(
-      screen
-        .getByTestId('admin-settings-panel')
-        .querySelector('.admin-mode-on-badge'),
+      within(screen.getByTestId('admin-settings-panel')).queryByTestId(
+        'admin-mode-on-badge',
+      ),
     ).toBeNull();
     const exitBtn = screen.getByTestId('btn-exit-admin-mode');
     expect(exitBtn).toHaveTextContent('Exit Admin Mode');

@@ -102,6 +102,7 @@ export function TopHeader({
       <div className="brand-and-nav">
         <div
           className="brand-block clickable"
+          data-testid="brand-block"
           onClick={onBackToLobby}
           title="Return to Main Lobby"
         >
@@ -121,6 +122,7 @@ export function TopHeader({
           <button
             type="button"
             data-testid="nav-tab-sandbox"
+            data-active={viewMode === 'sandbox'}
             className={`nav-tab-btn ${viewMode === 'sandbox' ? 'active' : ''}`}
             onClick={onEnterSoloSandbox}
             title="Open standalone 7-power practice laboratory"
@@ -129,7 +131,10 @@ export function TopHeader({
             <span>Solo Sandbox</span>
           </button>
           {viewMode === 'multiplayer' && matchSummary && (
-            <span className="nav-active-match-pill">
+            <span
+              className="nav-active-match-pill"
+              data-testid="nav-match-pill"
+            >
               <Crown size={13} />
               <span>
                 {matchSummary.name} ({POWER_METADATA[playerPower].shortName})
@@ -174,6 +179,7 @@ export function TopHeader({
                   {errorCount > 0 ? (
                     <div
                       className="header-error-pill"
+                      data-testid="header-error-pill"
                       onClick={onOpenOrderCheck}
                       title="Click to open Sanity Check Diagnostics"
                     >
@@ -186,6 +192,7 @@ export function TopHeader({
                   ) : (
                     <div
                       className="header-warning-pill"
+                      data-testid="header-warning-pill"
                       onClick={onOpenOrderCheck}
                       title="Click to open Sanity Check Diagnostics"
                     >

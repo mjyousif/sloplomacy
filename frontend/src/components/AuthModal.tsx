@@ -199,6 +199,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="auth-tabs">
           <button
             type="button"
+            data-testid="auth-tab-signin"
+            data-active={tab === 'signin'}
             className={`auth-tab ${tab === 'signin' ? 'active' : ''}`}
             onClick={() => {
               setTab('signin');
@@ -211,6 +213,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
           <button
             type="button"
+            data-testid="auth-tab-signup"
+            data-active={tab === 'signup'}
             className={`auth-tab ${tab === 'signup' ? 'active' : ''}`}
             onClick={() => {
               setTab('signup');
@@ -223,6 +227,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
           <button
             type="button"
+            data-testid="auth-tab-magic"
+            data-active={tab === 'magic'}
             className={`auth-tab ${tab === 'magic' ? 'active' : ''}`}
             onClick={() => {
               setTab('magic');

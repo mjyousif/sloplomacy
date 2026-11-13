@@ -27,7 +27,9 @@ const renderModal = (isOpen: boolean, initialTab: Tab) => (
 );
 
 const activeTab = () =>
-  document.querySelector('.auth-tab.active')?.textContent?.trim();
+  document
+    .querySelector('[data-testid^="auth-tab-"][data-active="true"]')
+    ?.textContent?.trim();
 
 describe('AuthModal', () => {
   it('does not render while closed', () => {
