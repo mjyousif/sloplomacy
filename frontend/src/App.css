@@ -6267,6 +6267,22 @@
   border-radius: 5px;
 }
 
+.display-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: #1b2029;
+  color: #cbd5e1;
+}
+
+.display-option input:checked + .display-option-card .display-option-icon {
+  color: #e0b25b;
+}
+
 .display-option-card.stacked .display-option-preview {
   width: 100%;
   height: 52px;

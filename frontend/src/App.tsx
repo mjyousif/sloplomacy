@@ -18,6 +18,7 @@ import { useSandboxSession } from './hooks/useSandboxSession';
 import { useSeatActions } from './hooks/useSeatActions';
 import { useToast } from './hooks/useToast';
 import { useTurnHistory } from './hooks/useTurnHistory';
+import { useTurnNotifications } from './hooks/useTurnNotifications';
 import { useWorkspaceLayout } from './hooks/useWorkspaceLayout';
 import { signOutUser } from './lib/supabase';
 import type { SimulationResult } from './types/diplomacy';
@@ -181,6 +182,16 @@ export function App() {
     fetchGame,
     fetchGamesList,
     fetchMyGames,
+  });
+
+  useTurnNotifications({
+    viewMode,
+    gameState,
+    activeGameSummary,
+    lockedPower,
+    sandboxGameId,
+    hypotheticalMatchTimer: matchTimer,
+    soundEnabled: displayPrefs.soundNotifications,
   });
 
   // Leaving the match board by any route closes its private sandbox.

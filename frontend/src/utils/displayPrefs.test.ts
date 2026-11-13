@@ -15,10 +15,12 @@ import {
 const FLAGS_AND_TANKS: DisplayPrefs = {
   pieceStyle: 'flags',
   unitMark: 'vehicles',
+  soundNotifications: true,
 };
 const CLASSIC_LETTERS: DisplayPrefs = {
   pieceStyle: 'classic',
   unitMark: 'letters',
+  soundNotifications: false,
 };
 
 describe('sanitizeDisplayPrefs', () => {
@@ -32,6 +34,7 @@ describe('sanitizeDisplayPrefs', () => {
         expect(sanitizeDisplayPrefs({ pieceStyle, unitMark })).toEqual({
           pieceStyle,
           unitMark,
+          soundNotifications: true,
         });
       }
     }
@@ -49,10 +52,12 @@ describe('sanitizeDisplayPrefs', () => {
     ).toEqual({
       pieceStyle: DEFAULT_DISPLAY_PREFS.pieceStyle,
       unitMark: 'vehicles',
+      soundNotifications: DEFAULT_DISPLAY_PREFS.soundNotifications,
     });
     expect(sanitizeDisplayPrefs({ pieceStyle: 'flags' })).toEqual({
       pieceStyle: 'flags',
       unitMark: DEFAULT_DISPLAY_PREFS.unitMark,
+      soundNotifications: DEFAULT_DISPLAY_PREFS.soundNotifications,
     });
   });
 
