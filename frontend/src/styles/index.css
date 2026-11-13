@@ -1,0 +1,11 @@
+/* The one place the cascade order is declared. Layers run from lowest to highest, so a rule in a
+   later layer wins over one in an earlier layer whatever its specificity, and nothing may stay
+   unlayered because unlayered rules beat every layer.
+   This file must be the first stylesheet the app imports (see main.tsx): Vite orders CSS by first
+   import, so a stylesheet loaded before it would fix an order of its own. */
+@layer base, components, compact;
+
+@import "./tokens.css" layer(base);
+@import "./base.css" layer(base);
+@import "../App.css" layer(components);
+@import "../compact.css" layer(compact);

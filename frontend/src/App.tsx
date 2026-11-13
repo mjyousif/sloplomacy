@@ -1,7 +1,5 @@
-import { useRef, useState } from 'react';
-import './App.css';
-import './compact.css';
 import { AlertTriangle, Compass } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { AppHeader } from './components/AppHeader';
 import { AppModals } from './components/AppModals';
 import { useConfirm } from './components/ConfirmModal';

@@ -13,11 +13,14 @@ frontend/
 ├── vite.config.ts               # Vite bundler config with /api -> :8000 proxy, and the Vitest setup
 ├── tsconfig.json                # TypeScript compiler configuration
 └── src/
-    ├── main.tsx                 # React DOM bootstrapping
+    ├── main.tsx                 # React DOM bootstrapping; its first import is styles/index.css
     ├── App.tsx                  # Root state container and viewMode router: calls the state hooks, renders the pieces below
-    ├── App.css                  # Tactical HUD styling, CRT brass themes, animations & modals
-    ├── compact.css              # Phone layout, applied while the shell has data-layout="compact"
-    ├── index.css                # Base reset & typography
+    ├── App.css                  # Tactical HUD styling, CRT brass themes & modals: the wide layout, in the `components` layer
+    ├── compact.css              # Phone layout, applied while the shell has data-layout="compact", in the `compact` layer
+    ├── styles/
+    │   ├── index.css            # Declares the cascade layers and imports every stylesheet into one (main.tsx imports it first)
+    │   ├── tokens.css           # App-wide :root and [data-layout='compact'] variables (none yet)
+    │   └── base.css             # Reset, page defaults, shared @keyframes and .compact-only
     ├── components/
     │   ├── EuropeMap.tsx        # High-performance interactive SVG game board & order arrows
     │   ├── EuropeMap.test.tsx   # The unit menu in the DOM: each newly selected unit gets a fresh menu
