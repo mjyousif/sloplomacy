@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 
 from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
@@ -81,8 +82,13 @@ def sync_summary(game_id: str) -> None:
         summary.surrendered_powers = list(st.surrendered_powers)
         if st.winner:
             summary.status = "completed"
+            summary.winner = st.winner
+            if not summary.completed_at:
+                summary.completed_at = datetime.now(timezone.utc).isoformat()
         elif summary.status == "completed":
             summary.status = "active" if len(summary.participants) >= 2 else "waiting"
+            summary.winner = None
+            summary.completed_at = None
 
 
 async def persist_game(game_id: str) -> None:
@@ -180,6 +186,10 @@ def check_game_capacity() -> None:
         if len(GAMES) >= MAX_ACTIVE_GAMES:
             for gid, s in list(GAME_SUMMARIES.items()):
                 if s.is_draft:
+                    evict_game(gid)
+        if len(GAMES) >= MAX_ACTIVE_GAMES:
+            for gid, s in list(GAME_SUMMARIES.items()):
+                if s.status == "completed" and gid not in UNSAVED_GAMES:
                     evict_game(gid)
         if len(GAMES) >= MAX_ACTIVE_GAMES:
             raise HTTPException(

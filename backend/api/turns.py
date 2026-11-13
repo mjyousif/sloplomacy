@@ -18,6 +18,7 @@ from engine.order_utils import (
     create_default_orders,
     everyone_is_ready,
     refresh_diagnostics_and_simulation,
+    reject_if_game_over,
 )
 from engine.phase_timer import (
     close_vote,
@@ -141,8 +142,14 @@ async def _execute_adjudication(game: GameState) -> GameState:
     game.turn_history.insert(0, history_entry)
     if result.winner:
         game.winner = result.winner
+        game.timer = None
         game.last_resolution = result
         game.turn_history.insert(0, f"{result.winner.value} has won the game in {prev_label}.")
+        if summary := GAME_SUMMARIES.get(gid):
+            summary.winner = result.winner
+            summary.status = "completed"
+            if not summary.completed_at:
+                summary.completed_at = datetime.now(timezone.utc).isoformat()
     if game.timer:
         start_phase_clock(game, timer_players(game), time.time())
     refresh_diagnostics_and_simulation(game)
@@ -221,6 +228,7 @@ async def finalize_power_orders(
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
+    reject_if_game_over(game)
     reject_stale_turn(game, req.turn)
     verify_power_authorization(game.game_id, req.power, current_user)
     power_issues = validate_orders(
@@ -280,6 +288,7 @@ async def unfinalize_power_orders(
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
+    reject_if_game_over(game)
     verify_power_authorization(game.game_id, req.power, current_user)
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)

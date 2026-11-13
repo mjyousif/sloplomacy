@@ -21,6 +21,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/games/{game_id}/join` | Claim a sovereign Great Power seat (validating passcode if private) | `JoinGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/leave` | Vacate claimed power in lobby or match, or delete sandbox | `LeaveGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/surrender` | Concede sovereign command into Civil Disorder | `SurrenderRequest` | `GameBootstrapResponse` |
+| `POST` | `/api/games/{game_id}/acknowledge-game-over` | Stamp `game_over_seen_at` for the calling seated participant | *None* | `{ ok, game_over_seen_at, summary }` |
 | `POST` | `/api/games/solo-sandbox` | Mint a personal, isolated draft sandbox session (`solo_<uuid>`) | *None* | `MultiplayerGameSummary` |
 | `PATCH` | `/api/account/profile` | Update the signed-in caller's public username across `profiles` and all active games (`401` without a token) | `UpdateProfileRequest` | `UpdateProfileResponse` |
 
@@ -260,6 +261,13 @@ Concedes command of a Great Power into **Civil Disorder**. Surrendered units hol
   "vacate_seat": false
 }
 ```
+
+---
+
+### 7b. `POST /api/games/{game_id}/acknowledge-game-over`
+Stamps `participants[power].game_over_seen_at` (ISO-8601 UTC) for the calling seated participant when they witness the Game Over modal, starting the 24-hour post-witness grace period before the campaign leaves their active list.
+
+- **Authorization**: Requires authentication (`401`) and a claimed seat in the match (`403` for non-participants) on multiplayer games; rejects with `409` if the match has not concluded yet. Preserves the original `game_over_seen_at` timestamp on repeated calls.
 
 ---
 

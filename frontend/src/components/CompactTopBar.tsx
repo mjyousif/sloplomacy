@@ -57,6 +57,7 @@ export interface CompactTopBarProps {
   onToggleTools?: () => void;
   /** So the drawer can hand focus back to ≡ when it closes. */
   toolsToggleRef?: React.Ref<HTMLButtonElement>;
+  onOpenGameOverModal?: () => void;
 }
 
 /** "2 errors, 1 warning", for the problem badge's label. */
@@ -104,6 +105,7 @@ export function CompactTopBar({
   toolsOpen = false,
   onToggleTools,
   toolsToggleRef,
+  onOpenGameOverModal,
 }: CompactTopBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuView, setMenuView] = useState<'main' | 'display'>('main');
@@ -190,10 +192,15 @@ export function CompactTopBar({
 
       {inGame &&
         (winner ? (
-          <span className="compact-winner-badge">
+          <button
+            type="button"
+            className="compact-winner-badge"
+            onClick={onOpenGameOverModal}
+            aria-label={`${POWER_METADATA[winner].shortName} wins. View campaign summary.`}
+          >
             <Crown size={14} />
             <span>{POWER_METADATA[winner].shortName} wins</span>
-          </span>
+          </button>
         ) : issueTotal > 0 ? (
           <button
             type="button"

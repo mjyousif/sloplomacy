@@ -8,6 +8,7 @@ import {
   type Power,
 } from '../types/diplomacy';
 import { defaultCampaignName } from '../utils/campaignName';
+import { isVisibleInMyActiveCampaigns } from '../utils/gameOverHelpers';
 import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
 import { JoinWithCodeCard } from './lobby/JoinWithCodeCard';
 import { LobbyHero } from './lobby/LobbyHero';
@@ -97,14 +98,19 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     }, 2500);
   };
 
-  // Separate games into user's active games vs all multiplayer lobbies
+  // Separate games into user's active games (including unwitnessed & <24h grace) vs open multiplayer lobbies
   const myGames = user
-    ? games.filter((g) =>
-        Object.values(g.participants || {}).some((p) => p.user_id === user.id),
+    ? games.filter(
+        (g) =>
+          Object.values(g.participants || {}).some(
+            (p) => p.user_id === user.id,
+          ) && isVisibleInMyActiveCampaigns(g, user),
       )
     : [];
 
-  const multiplayerLobbies = games.filter((g) => !g.is_sandbox);
+  const multiplayerLobbies = games.filter(
+    (g) => !g.is_sandbox && g.status !== 'completed' && !g.winner,
+  );
 
   const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();

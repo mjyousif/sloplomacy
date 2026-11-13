@@ -277,3 +277,12 @@ def reject_stale_turn(game: GameState, turn: str | None) -> None:
         raise HTTPException(
             status_code=409, detail=f"Too late: the game has moved on to {current}."
         )
+
+
+def reject_if_game_over(game: GameState) -> None:
+    """Refuse order or finalization mutations once the campaign has concluded."""
+    if game.winner:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Game over: {game.winner.value} has already won.",
+        )
