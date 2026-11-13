@@ -1,9 +1,15 @@
 import { AlertTriangle, PanelRightClose, Wrench } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
+import {
+  fetchAdminStatus as fetchAdminStatusApi,
+  rollbackAdminTurn,
+  setAdminTurn,
+  unfinalizeAllAdmin,
+} from '../../api/admin';
+import { readErrorDetail } from '../../api/client';
 import { getAuthHeaders } from '../../lib/supabase';
 import type {
-  AdminStatusResponse,
   AuthUser,
   GameState,
   Power,
@@ -16,8 +22,6 @@ import { BottomSheet } from '../BottomSheet';
 import { useConfirm } from '../ConfirmModal';
 import { VersionBadge } from '../VersionBadge';
 import { CollapsedRail } from './CollapsedRail';
-
-const API_BASE = '/api';
 
 export interface AdminTurnClockSettings {
   isOpen: boolean;
@@ -83,19 +87,13 @@ export function AdminTurnClockSidebar({
 
   const fetchAdminStatus = useCallback(async () => {
     try {
-      const res = await fetch(
-        `${API_BASE}/admin/status?game_id=${encodeURIComponent(gameId)}`,
-        { headers: await getHeaders() },
+      const data = await fetchAdminStatusApi(gameId, await getHeaders());
+      const entries = data.history_entries ?? [];
+      setHistoryEntries(entries);
+      setSelectedSnapshotIndex(
+        entries.length > 0 ? entries[entries.length - 1].index : null,
       );
-      if (res.ok) {
-        const data: AdminStatusResponse = await res.json();
-        const entries = data.history_entries ?? [];
-        setHistoryEntries(entries);
-        setSelectedSnapshotIndex(
-          entries.length > 0 ? entries[entries.length - 1].index : null,
-        );
-        setCanRollback(data.can_rollback);
-      }
+      setCanRollback(data.can_rollback);
     } catch (e) {
       console.error('Failed to fetch admin status:', e);
     }
@@ -141,23 +139,19 @@ export function AdminTurnClockSidebar({
     setLoading(true);
     setActionError(null);
     try {
-      const res = await fetch(
-        `${API_BASE}/admin/rollback?game_id=${encodeURIComponent(gameId)}`,
+      const res = await rollbackAdminTurn(
+        gameId,
         {
-          method: 'POST',
-          headers: await getHeaders(),
-          body: JSON.stringify({
-            ...(selectedSnapshotIndex !== null
-              ? { snapshot_index: selectedSnapshotIndex }
-              : {}),
-            user_id: user?.id || 'guest',
-            email: user?.email || 'commander@diplomacy.local',
-          }),
+          ...(selectedSnapshotIndex !== null
+            ? { snapshot_index: selectedSnapshotIndex }
+            : {}),
+          user_id: user?.id || 'guest',
+          email: user?.email || 'commander@diplomacy.local',
         },
+        await getHeaders(),
       );
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setActionError(err.detail || 'Rollback failed.');
+        setActionError(await readErrorDetail(res, 'Rollback failed.'));
         return;
       }
       const st: GameState = await res.json();
@@ -177,23 +171,21 @@ export function AdminTurnClockSidebar({
     setLoading(true);
     setActionError(null);
     try {
-      const res = await fetch(
-        `${API_BASE}/admin/set-turn?game_id=${encodeURIComponent(gameId)}`,
+      const res = await setAdminTurn(
+        gameId,
         {
-          method: 'POST',
-          headers: await getHeaders(),
-          body: JSON.stringify({
-            season: selectedSeason,
-            year: selectedYear,
-            phase: selectedPhase,
-            user_id: user?.id || 'guest',
-            email: user?.email || 'commander@diplomacy.local',
-          }),
+          season: selectedSeason,
+          year: selectedYear,
+          phase: selectedPhase,
+          user_id: user?.id || 'guest',
+          email: user?.email || 'commander@diplomacy.local',
         },
+        await getHeaders(),
       );
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setActionError(err.detail || 'Failed to adjust turn clock.');
+        setActionError(
+          await readErrorDetail(res, 'Failed to adjust turn clock.'),
+        );
         return;
       }
       const st: GameState = await res.json();
@@ -212,20 +204,18 @@ export function AdminTurnClockSidebar({
     setLoading(true);
     setActionError(null);
     try {
-      const res = await fetch(
-        `${API_BASE}/admin/unfinalize-all?game_id=${encodeURIComponent(gameId)}`,
+      const res = await unfinalizeAllAdmin(
+        gameId,
         {
-          method: 'POST',
-          headers: await getHeaders(),
-          body: JSON.stringify({
-            user_id: user?.id || 'guest',
-            email: user?.email || 'commander@diplomacy.local',
-          }),
+          user_id: user?.id || 'guest',
+          email: user?.email || 'commander@diplomacy.local',
         },
+        await getHeaders(),
       );
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setActionError(err.detail || 'Failed to unfinalize powers.');
+        setActionError(
+          await readErrorDetail(res, 'Failed to unfinalize powers.'),
+        );
         return;
       }
       const st: GameState = await res.json();

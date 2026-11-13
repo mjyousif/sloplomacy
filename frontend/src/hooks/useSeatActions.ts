@@ -1,6 +1,13 @@
 import { type Dispatch, type SetStateAction, useState } from 'react';
+import { readErrorDetail } from '../api/client';
+import { createMultiplayerGame, createSoloSandbox } from '../api/games';
+import {
+  joinGame,
+  leaveGame,
+  setActivePower,
+  surrenderPower,
+} from '../api/seats';
 import type { ConfirmOptions } from '../components/ConfirmModal';
-import { authedFetch, getAuthHeaders } from '../lib/supabase';
 import {
   type AuthUser,
   type GameState,
@@ -14,8 +21,6 @@ import {
   writeStoredSoloSandboxId,
 } from '../utils/soloSandboxStorage';
 import type { AuthModalTab } from './useAuthSession';
-
-const API_BASE = '/api';
 
 type ViewMode = 'lobby' | 'sandbox' | 'multiplayer';
 
@@ -104,12 +109,7 @@ export function useSeatActions({
     try {
       setLoading(true);
       const storedDraftId = readStoredSoloSandboxId();
-      const query = storedDraftId
-        ? `?resume_game_id=${encodeURIComponent(storedDraftId)}`
-        : '';
-      const res = await authedFetch(`${API_BASE}/games/solo-sandbox${query}`, {
-        method: 'POST',
-      });
+      const res = await createSoloSandbox(storedDraftId);
       if (!res.ok) {
         throw new Error(`Failed to create solo sandbox (${res.status})`);
       }
@@ -146,23 +146,19 @@ export function useSeatActions({
       return;
     }
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(`${API_BASE}/games`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({
-          name,
-          creator_power: power,
-          user_id: authUser.id,
-          email: authUser.email,
-          display_name: authUser.displayName,
-          is_private: Boolean(isPrivate),
-          passcode: passcode?.trim() || null,
-        }),
+      const res = await createMultiplayerGame({
+        name,
+        creator_power: power,
+        user_id: authUser.id,
+        email: authUser.email,
+        display_name: authUser.displayName,
+        is_private: Boolean(isPrivate),
+        passcode: passcode?.trim() || null,
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Could not create multiplayer campaign.');
+        triggerToast(
+          await readErrorDetail(res, 'Could not create multiplayer campaign.'),
+        );
         return;
       }
       const summary: MultiplayerGameSummary = await res.json();
@@ -192,23 +188,18 @@ export function useSeatActions({
       return;
     }
     try {
-      const res = await authedFetch(
-        `${API_BASE}/games/${encodeURIComponent(gameId)}/join`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            power,
-            user_id: authUser.id,
-            email: authUser.email,
-            display_name: authUser.displayName,
-            passcode: passcode?.trim() || null,
-          }),
-        },
-      );
+      const res = await joinGame(gameId, {
+        power,
+        user_id: authUser.id,
+        email: authUser.email,
+        display_name: authUser.displayName,
+        passcode: passcode?.trim() || null,
+      });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        const msg = err.detail || 'Unable to join power in this match.';
+        const msg = await readErrorDetail(
+          res,
+          'Unable to join power in this match.',
+        );
         triggerToast(msg);
         throw new Error(msg);
       }
@@ -263,22 +254,16 @@ export function useSeatActions({
       return;
     }
     try {
-      const res = await authedFetch(
-        `${API_BASE}/games/${encodeURIComponent(gameId)}/surrender`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            power,
-            user_id: authUser.id,
-            email: authUser.email,
-            leave,
-          }),
-        },
-      );
+      const res = await surrenderPower(gameId, {
+        power,
+        user_id: authUser.id,
+        email: authUser.email,
+        leave,
+      });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Could not process surrender action.');
+        triggerToast(
+          await readErrorDetail(res, 'Could not process surrender action.'),
+        );
         return;
       }
       const data = await res.json();
@@ -310,21 +295,13 @@ export function useSeatActions({
       return;
     }
     try {
-      const res = await authedFetch(
-        `${API_BASE}/games/${encodeURIComponent(gameId)}/leave`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            power,
-            user_id: authUser.id,
-            email: authUser.email,
-          }),
-        },
-      );
+      const res = await leaveGame(gameId, {
+        power,
+        user_id: authUser.id,
+        email: authUser.email,
+      });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Could not leave match.');
+        triggerToast(await readErrorDetail(res, 'Could not leave match.'));
         return;
       }
       if (activeGameId === gameId) {
@@ -350,14 +327,7 @@ export function useSeatActions({
       return;
     }
     try {
-      const res = await authedFetch(
-        `${API_BASE}/power?game_id=${encodeURIComponent(activeGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power }),
-        },
-      );
+      const res = await setActivePower(activeGameId, power);
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);

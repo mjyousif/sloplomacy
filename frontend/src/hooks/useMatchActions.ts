@@ -1,5 +1,13 @@
 import { type Dispatch, type SetStateAction, useRef, useState } from 'react';
-import { authedFetch } from '../lib/supabase';
+import { readErrorDetail } from '../api/client';
+import {
+  adjudicateTurn,
+  confirmAllOrders,
+  finalizeOrders,
+  sendTimerAction,
+  unfinalizeOrders,
+  updateSingleOrder,
+} from '../api/orders';
 import {
   type FinalizeResponse,
   type GameState,
@@ -10,8 +18,6 @@ import {
   type ValidationIssue,
 } from '../types/diplomacy';
 import { turnLabel } from '../utils/timerHelpers';
-
-const API_BASE = '/api';
 
 export interface MatchActionsOptions {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -78,23 +84,18 @@ export function useMatchActions({
       return;
     }
     try {
-      const res = await authedFetch(
-        `${API_BASE}/order?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            order,
-            turn: gameState ? turnLabel(gameState) : undefined,
-          }),
-        },
+      const res = await updateSingleOrder(
+        draftGameId,
+        order,
+        gameState ? turnLabel(gameState) : undefined,
       );
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
       } else {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'That order was not accepted.');
+        triggerToast(
+          await readErrorDetail(res, 'That order was not accepted.'),
+        );
       }
     } catch (e) {
       console.error(e);
@@ -104,14 +105,7 @@ export function useMatchActions({
   const handleConfirmAllHolds = async () => {
     if (!gameState) return;
     try {
-      const res = await authedFetch(
-        `${API_BASE}/orders/confirm-all?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: playerPower }),
-        },
-      );
+      const res = await confirmAllOrders(draftGameId, playerPower);
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
@@ -127,18 +121,11 @@ export function useMatchActions({
   const handleFinalizeClick = async (force = false) => {
     if (!gameState || !requireRealBoard('finalize your real orders')) return;
     try {
-      const res = await authedFetch(
-        `${API_BASE}/finalize?game_id=${encodeURIComponent(activeGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            power: playerPower,
-            force,
-            turn: turnLabel(gameState),
-          }),
-        },
-      );
+      const res = await finalizeOrders(activeGameId, {
+        power: playerPower,
+        force,
+        turn: turnLabel(gameState),
+      });
       if (res.ok) {
         const data: FinalizeResponse = await res.json();
         applyServerState(data.state);
@@ -154,9 +141,10 @@ export function useMatchActions({
         }
       } else {
         // The clock can resolve the phase while the request is on its way.
-        const err = await res.json().catch(() => ({}));
         setSanityModalOpen(false);
-        triggerToast(err.detail || 'Could not finalize your orders.');
+        triggerToast(
+          await readErrorDetail(res, 'Could not finalize your orders.'),
+        );
       }
     } catch (e) {
       console.error(e);
@@ -166,14 +154,7 @@ export function useMatchActions({
   const handleUnfinalizeClick = async () => {
     if (!gameState || !requireRealBoard('unlock your real orders')) return;
     try {
-      const res = await authedFetch(
-        `${API_BASE}/unfinalize?game_id=${encodeURIComponent(activeGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: playerPower }),
-        },
-      );
+      const res = await unfinalizeOrders(activeGameId, playerPower);
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
@@ -190,17 +171,11 @@ export function useMatchActions({
     body: Record<string, unknown> = {},
   ) => {
     try {
-      const res = await authedFetch(
-        `${API_BASE}/games/${encodeURIComponent(activeGameId)}/timer/${action}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-      );
+      const res = await sendTimerAction(activeGameId, action, body);
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'The clock did not accept that.');
+        triggerToast(
+          await readErrorDetail(res, 'The clock did not accept that.'),
+        );
         return;
       }
       const st: GameState = await res.json();
@@ -222,11 +197,7 @@ export function useMatchActions({
     if (!requireRealBoard('resolve the real turn')) return;
     adjudicatingRef.current = true;
     try {
-      const turn = encodeURIComponent(turnLabel(gameState));
-      const res = await authedFetch(
-        `${API_BASE}/adjudicate?game_id=${encodeURIComponent(activeGameId)}&turn=${turn}`,
-        { method: 'POST' },
-      );
+      const res = await adjudicateTurn(activeGameId, turnLabel(gameState));
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
@@ -238,8 +209,7 @@ export function useMatchActions({
         );
         fetchGamesList();
       } else {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Could not resolve the turn.');
+        triggerToast(await readErrorDetail(res, 'Could not resolve the turn.'));
       }
     } catch (e) {
       console.error(e);

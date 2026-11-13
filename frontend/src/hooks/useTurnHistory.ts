@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getAuthHeaders } from '../lib/supabase';
+import { fetchTurnHistory, fetchTurnRecord } from '../api/history';
 import type { Power, TurnHistoryEntry, TurnRecord } from '../types/diplomacy';
 import { sameTurn, stepTurn } from '../utils/historyHelpers';
-
-const API_BASE = '/api';
 
 interface UseTurnHistoryOptions {
   /** The real game, never a private sandbox copy: the server keeps no shared history for those. */
@@ -28,21 +26,6 @@ export interface TurnHistory {
   step: (delta: -1 | 1) => void;
   setPower: (power: Power | null) => void;
   goLive: () => void;
-}
-
-async function fetchJson<T>(
-  path: string,
-  gameId: string,
-  passcode: string | null,
-): Promise<T> {
-  const headers: Record<string, string> = { ...(await getAuthHeaders()) };
-  if (passcode) headers['X-Passcode'] = passcode;
-  const res = await fetch(
-    `${API_BASE}${path}?game_id=${encodeURIComponent(gameId)}`,
-    { headers },
-  );
-  if (!res.ok) throw new Error(`Backend returned ${res.status}`);
-  return res.json();
 }
 
 /**
@@ -101,7 +84,7 @@ export function useTurnHistory({
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    fetchJson<TurnHistoryEntry[]>('/history', gameId, passcode)
+    fetchTurnHistory(gameId, passcode)
       .then((list) => {
         if (cancelled) return;
         cache.current.clear();
@@ -138,7 +121,7 @@ export function useTurnHistory({
       return;
     }
     let cancelled = false;
-    fetchJson<TurnRecord>(`/history/${viewIndex}`, gameId, passcode)
+    fetchTurnRecord(gameId, viewIndex, passcode)
       .then((record) => {
         cache.current.set(record.index, record);
         if (!cancelled) setTurn(record);

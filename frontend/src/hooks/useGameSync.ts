@@ -5,7 +5,7 @@ import {
   useEffect,
   useRef,
 } from 'react';
-import { getAuthHeaders } from '../lib/supabase';
+import { fetchGameState } from '../api/games';
 import type {
   GameState,
   MultiplayerGameSummary,
@@ -17,8 +17,6 @@ import type {
 } from '../types/diplomacy';
 import { readStoredSoloSandboxId } from '../utils/soloSandboxStorage';
 import { useDiplomacyWebSocket } from './useDiplomacyWebSocket';
-
-const API_BASE = '/api';
 
 export interface GameSyncOptions {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -159,15 +157,7 @@ export function useGameSync({
       if (typeof document !== 'undefined' && document.hidden) return;
 
       try {
-        const effectivePower = playerPower;
-        const params = new URLSearchParams({ game_id: activeGameId });
-        if (effectivePower) {
-          params.set('power', effectivePower);
-        }
-        const authHeaders = await getAuthHeaders();
-        const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
-          headers: { ...authHeaders },
-        });
+        const res = await fetchGameState(activeGameId, playerPower);
         if (!res.ok) return;
         const data = await res.json();
         // A reply still in flight must not repaint a board the player has since left.

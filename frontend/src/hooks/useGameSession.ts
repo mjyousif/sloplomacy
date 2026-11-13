@@ -1,4 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
+import {
+  fetchGameState,
+  fetchMyGames as fetchMyGamesApi,
+  fetchPublicGames,
+} from '../api/games';
 import { getAuthHeaders } from '../lib/supabase';
 import type {
   GameState,
@@ -12,8 +17,6 @@ import {
   readStoredSoloSandboxId,
   writeStoredSoloSandboxId,
 } from '../utils/soloSandboxStorage';
-
-const API_BASE = '/api';
 
 export interface GameSessionOptions {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -75,9 +78,7 @@ export function useGameSession({
         setMyGamesList([]);
         return;
       }
-      const res = await fetch(`${API_BASE}/games/mine`, {
-        headers: { ...authHeaders },
-      });
+      const res = await fetchMyGamesApi();
       if (res.ok) {
         setMyGamesList(await res.json());
       } else if (res.status === 401) {
@@ -91,10 +92,7 @@ export function useGameSession({
   const fetchGamesList = async () => {
     try {
       setLoadingGames(true);
-      const [res] = await Promise.all([
-        fetch(`${API_BASE}/games`),
-        fetchMyGames(),
-      ]);
+      const [res] = await Promise.all([fetchPublicGames(), fetchMyGames()]);
       if (res.ok) {
         const list: MultiplayerGameSummary[] = await res.json();
         setGamesList(list);
@@ -119,14 +117,7 @@ export function useGameSession({
       setLoading(true);
       const effectivePower =
         targetPower !== undefined ? targetPower : playerPower;
-      const params = new URLSearchParams({ game_id: gid });
-      if (effectivePower) {
-        params.set('power', effectivePower);
-      }
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
-        headers: { ...authHeaders },
-      });
+      const res = await fetchGameState(gid, effectivePower);
       if (!res.ok) {
         if (gid !== 'proto_1901' && gid === readStoredSoloSandboxId()) {
           writeStoredSoloSandboxId(null);

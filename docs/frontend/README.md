@@ -185,6 +185,10 @@ frontend/
     │   └── useToast.test.ts     # Expiry, and a newer message outliving the older one's timer
     ├── lib/
     │   └── supabase.ts          # Supabase client singleton & auth helpers
+    ├── api/
+    │   ├── client.ts            # Shared API_BASE, query builder, auth attachment & error detail parsing
+    │   ├── client.test.ts       # Unit tests for apiUrl, readErrorDetail, apiFetch & apiJson
+    │   └── *.ts                 # Domain-grouped HTTP endpoint wrappers (games, seats, orders, sandbox, history, admin, account)
     ├── test/
     │   ├── setup.ts             # Runs before every test file: jest-dom matchers and Testing Library cleanup
     │   ├── mapDom.ts            # A map <svg> with an on-screen box and pointer capture, for map hook tests

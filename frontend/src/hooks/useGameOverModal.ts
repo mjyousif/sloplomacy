@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getAuthHeaders } from '../lib/supabase';
+import { acknowledgeGameOver } from '../api/games';
 import type {
   AuthUser,
   GameState,
@@ -41,23 +41,9 @@ export function useGameOverModal({
 
     ackedGamesRef.current.add(gid);
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
-        `/api/games/${encodeURIComponent(gid)}/acknowledge-game-over`,
-        {
-          method: 'POST',
-          headers: { ...authHeaders },
-        },
-      );
-      if (res.ok) {
-        const data = (await res.json()) as {
-          summary?: MultiplayerGameSummary;
-        };
-        if (data.summary && onSummaryUpdated) {
-          onSummaryUpdated(data.summary);
-        }
-      } else {
-        ackedGamesRef.current.delete(gid);
+      const data = await acknowledgeGameOver(gid);
+      if (data.summary && onSummaryUpdated) {
+        onSummaryUpdated(data.summary);
       }
     } catch {
       ackedGamesRef.current.delete(gid);

@@ -1,4 +1,4 @@
-import { authedFetch } from '../lib/supabase';
+import { acknowledgeAdminEntries, postAdminBoardEdit } from '../api/admin';
 import type {
   AdminActionLogEntry,
   AuthUser,
@@ -189,19 +189,12 @@ export async function acknowledgeAdminEntriesRequest(
   authUser: AuthUser | null,
   lockedPower: Power | null,
 ): Promise<AdminAcknowledgeResponse | null> {
-  const res = await authedFetch(
-    `/api/admin/acknowledge?game_id=${encodeURIComponent(activeGameId)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        entry_ids: entryIds,
-        user_id: authUser?.id || (!lockedPower ? 'guest' : undefined),
-        email: authUser?.email,
-        power: lockedPower,
-      }),
-    },
-  );
+  const res = await acknowledgeAdminEntries(activeGameId, {
+    entry_ids: entryIds,
+    user_id: authUser?.id || (!lockedPower ? 'guest' : undefined),
+    email: authUser?.email,
+    power: lockedPower,
+  });
   if (!res.ok) return null;
   return res.json();
 }
@@ -210,14 +203,7 @@ export async function postAdminBoardEditRequest(
   activeGameId: string,
   payload: Record<string, unknown>,
 ): Promise<Response> {
-  return authedFetch(
-    `/api/admin/board-edit?game_id=${encodeURIComponent(activeGameId)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    },
-  );
+  return postAdminBoardEdit(activeGameId, payload);
 }
 
 export {
