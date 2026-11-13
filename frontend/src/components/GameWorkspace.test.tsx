@@ -393,11 +393,12 @@ describe('GameWorkspace: a past turn', () => {
     expect(seen.macro.onReturnToLive).toBe(th.goLive);
   });
 
-  it('shows no pill on desktop or on the live turn', () => {
+  it('shows no pill or left-drawer selector on desktop, and no pill on the live turn', () => {
     const desk = props({ viewedEntry: ENTRY });
     const a = render(<GameWorkspace {...desk} />);
     expect(a.queryByText('pill')).toBeNull();
-    expect(seen.selector.onPickedTurn).toBeUndefined();
+    expect(seen.tools.historyFooter).toBeUndefined();
+    expect(seen.selector).toBeUndefined();
     a.unmount();
     const live = props({ isCompact: true });
     const b = render(<GameWorkspace {...live} />);

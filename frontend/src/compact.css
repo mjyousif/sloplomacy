@@ -4,6 +4,8 @@
    The breakpoint lives in one place, COMPACT_LAYOUT_QUERY in hooks/useCompactLayout.ts,
    so this file never writes its own @media width rule. Desktop styles stay in App.css
    and are not changed by anything below.
+   This file is the `compact` layer (styles/index.css), which beats the wide layer whatever the
+   specificity, so a wide rule that used to win on specificity needs its state restated here.
    ========================================================================= */
 
 /* Mobile browsers show and hide their toolbars, so 100vh is taller than the visible page
@@ -13,15 +15,6 @@
 .error-screen {
   height: 100vh;
   height: 100dvh;
-}
-
-/* Elements that only exist to say on a phone what a desktop tooltip says. */
-.compact-only {
-  display: none;
-}
-
-[data-layout="compact"] .compact-only {
-  display: revert;
 }
 
 /* -------------------------------------------------------------------------
@@ -41,6 +34,18 @@
 [data-layout="compact"] select,
 [data-layout="compact"] textarea {
   font-size: 16px;
+}
+
+/* The Turn & Clock sidebar's fields are 0.78rem on a phone, because wide's
+   `.admin-turn-clock-sidebar-body .admin-form-group input` used to beat the 16px rule above on
+   specificity. Cascade layers would make them 16px, so this keeps them as they were.
+   That leaves the iOS zoom-on-focus problem for these fields, which should be fixed on its own. */
+[data-layout="compact"] .admin-turn-clock-sidebar-body .admin-form-group input,
+[data-layout="compact"]
+  .admin-turn-clock-sidebar-body
+  .admin-form-group
+  select {
+  font-size: 0.78rem;
 }
 
 /* Toasts drop from under the top bar: the bottom of a game belongs to the order sheet, and a
@@ -184,6 +189,15 @@
   color: #94a3b8;
   cursor: pointer;
   border-radius: 8px;
+}
+
+/* Under cascade layers the rule above always wins over the wide layout's hover rule, which used
+   to win on specificity, so the hover colour, background and border colour are restated here. */
+[data-layout="compact"] .modal-close-btn:hover:not(:disabled),
+[data-layout="compact"] .modal-close-icon:hover:not(:disabled) {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #334155;
 }
 
 /* The Shift+click shortcut needs a keyboard, so the tip is noise on a touch screen. */
@@ -1080,6 +1094,12 @@
   border: none;
   background: transparent;
   color: #d4a349;
+}
+
+/* Wide's `.phase-timer-widget button:hover` used to beat the transparent background above on
+   specificity. Cascade layers rank this layer higher, so the hover tint is restated. */
+[data-layout="compact"] .phase-timer-collapse:hover:not(:disabled) {
+  background: rgba(212, 163, 73, 0.3);
 }
 
 /* -------------------------------------------------------------------------

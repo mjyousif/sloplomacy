@@ -19,7 +19,11 @@ export interface IconSelectDropdownProps<T extends string = string> {
     testId?: string;
   };
   placeholder?: string;
+  title?: string;
   disabled?: boolean;
+  leadingIcon?: ReactNode;
+  hideChevron?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /** Custom accessible dropdown supporting leading icons/flags beside labels. */
@@ -31,10 +35,18 @@ export function IconSelectDropdown<T extends string = string>({
   onChange,
   emptyOption,
   placeholder = 'Select…',
+  title,
   disabled = false,
+  leadingIcon,
+  hideChevron = false,
+  onOpenChange,
 }: IconSelectDropdownProps<T>) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    onOpenChange?.(open && !disabled);
+  }, [open, disabled, onOpenChange]);
 
   useEffect(() => {
     if (disabled && open) {
@@ -84,6 +96,7 @@ export function IconSelectDropdown<T extends string = string>({
         id={id}
         data-testid={testId}
         className="icon-select-dropdown-trigger"
+        title={title}
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={isMenuOpen}
@@ -93,6 +106,11 @@ export function IconSelectDropdown<T extends string = string>({
           }
         }}
       >
+        {leadingIcon && (
+          <span className="icon-select-dropdown-leading" aria-hidden="true">
+            {leadingIcon}
+          </span>
+        )}
         <span className="icon-select-dropdown-value">
           {selectedOption ? (
             <>
@@ -107,10 +125,12 @@ export function IconSelectDropdown<T extends string = string>({
             </span>
           )}
         </span>
-        <ChevronDown
-          size={13}
-          className={`icon-select-dropdown-chevron${isMenuOpen ? ' open' : ''}`}
-        />
+        {!hideChevron && (
+          <ChevronDown
+            size={13}
+            className={`icon-select-dropdown-chevron${isMenuOpen ? ' open' : ''}`}
+          />
+        )}
       </button>
 
       {isMenuOpen && (

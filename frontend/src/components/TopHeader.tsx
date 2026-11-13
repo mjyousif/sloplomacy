@@ -1,13 +1,11 @@
 import {
   AlertOctagon,
   AlertTriangle,
-  Calendar,
   Compass,
   Crown,
   FlaskConical,
   LogIn,
   LogOut,
-  ShieldCheck,
   User as UserIcon,
 } from 'lucide-react';
 import type { DisplayPrefsSaveState } from '../hooks/useDisplayPrefs';
@@ -16,10 +14,12 @@ import {
   type MultiplayerGameSummary,
   POWER_METADATA,
   type Power,
+  type TurnHistoryEntry,
 } from '../types/diplomacy';
 import type { DisplayPrefs } from '../utils/displayPrefs';
 import { AdminSettingsMenu } from './AdminSettingsMenu';
 import { DisplaySettingsMenu } from './DisplaySettingsMenu';
+import { TurnChronicle } from './TurnChronicle';
 
 export interface TopHeaderProps {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -35,9 +35,6 @@ export interface TopHeaderProps {
   /** The match being played, named with the player's power in multiplayer. */
   matchSummary: MultiplayerGameSummary | null;
   playerPower: Power;
-  wsConnected: boolean;
-  /** The game the live connection follows, for its tooltip. */
-  gameId: string;
   displayPrefs: DisplayPrefs;
   displayPrefsSaveState: DisplayPrefsSaveState;
   onChangeDisplayPrefs: (change: Partial<DisplayPrefs>) => void;
@@ -51,12 +48,20 @@ export interface TopHeaderProps {
   onSignIn: () => void;
   onSignOut: () => void;
   onOpenAccount?: () => void;
+  /** Turn history controls unified with the top-bar turn chronicle. */
+  historyEntries?: TurnHistoryEntry[];
+  historyViewIndex?: number | null;
+  historyPower?: Power | null;
+  historyLocked?: boolean;
+  onSelectHistoryTurn?: (index: number | null) => void;
+  onStepHistoryTurn?: (delta: -1 | 1) => void;
+  onSelectHistoryPower?: (power: Power | null) => void;
 }
 
 /**
  * The desktop top bar: brand and navigation on the left, the turn and order check in the
- * middle while a board is open, and the live-sync badge, display settings and account on
- * the right. Phones get `CompactTopBar` instead.
+ * middle while a board is open, and display settings and account on the right. Phones
+ * get `CompactTopBar` instead.
  */
 export function TopHeader({
   viewMode,
@@ -69,8 +74,6 @@ export function TopHeader({
   onEnterSoloSandbox,
   matchSummary,
   playerPower,
-  wsConnected,
-  gameId,
   displayPrefs,
   displayPrefsSaveState,
   onChangeDisplayPrefs,
@@ -84,6 +87,13 @@ export function TopHeader({
   onSignIn,
   onSignOut,
   onOpenAccount,
+  historyEntries,
+  historyViewIndex,
+  historyPower,
+  historyLocked = false,
+  onSelectHistoryTurn,
+  onStepHistoryTurn,
+  onSelectHistoryPower,
 }: TopHeaderProps) {
   return (
     <header className="imperial-top-header">
@@ -130,19 +140,16 @@ export function TopHeader({
       {/* Center Board Readout (Only when viewing Map Board) */}
       {viewMode !== 'lobby' && (
         <div className="header-center-telemetry">
-          <div
-            className="turn-chronicle-pill"
-            data-testid="turn-chronicle-pill"
-          >
-            <Calendar size={15} className="turn-cal-icon" />
-            <span className="turn-season-text">
-              {turn.season.toUpperCase()} {turn.year}
-            </span>
-            <span className="turn-phase-divider">•</span>
-            <span className="turn-phase-text">
-              {turn.phase.toUpperCase()} PHASE
-            </span>
-          </div>
+          <TurnChronicle
+            turn={turn}
+            entries={historyEntries}
+            viewIndex={historyViewIndex}
+            power={historyPower}
+            locked={historyLocked}
+            onSelect={onSelectHistoryTurn}
+            onStep={onStepHistoryTurn}
+            onSelectPower={onSelectHistoryPower}
+          />
 
           {winner && (
             <span className="game-over-pill">
@@ -151,59 +158,44 @@ export function TopHeader({
             </span>
           )}
 
-          <div className="header-sanity-readout">
-            {errorCount > 0 ? (
-              <div
-                className="header-error-pill"
-                onClick={onOpenOrderCheck}
-                title="Click to open Sanity Check Diagnostics"
-              >
-                <AlertOctagon size={15} />
-                <span>
-                  Error: {errorCount}
-                  {warningCount > 0 ? ` • Warning: ${warningCount}` : ''}
-                </span>
-              </div>
-            ) : warningCount > 0 ? (
-              <div
-                className="header-warning-pill"
-                onClick={onOpenOrderCheck}
-                title="Click to open Sanity Check Diagnostics"
-              >
-                <AlertTriangle size={15} />
-                <span>Warning: {warningCount}</span>
-              </div>
-            ) : (
-              <div className="header-clean-pill">
-                <ShieldCheck size={15} />
-                <span>Valid Moves</span>
-              </div>
-            )}
-          </div>
+          {(errorCount > 0 || warningCount > 0) && (
+            <div className="header-sanity-readout">
+              {errorCount > 0 ? (
+                <div
+                  className="header-error-pill"
+                  onClick={onOpenOrderCheck}
+                  title="Click to open Sanity Check Diagnostics"
+                >
+                  <AlertOctagon size={15} />
+                  <span>
+                    Error: {errorCount}
+                    {warningCount > 0 ? ` • Warning: ${warningCount}` : ''}
+                  </span>
+                </div>
+              ) : (
+                <div
+                  className="header-warning-pill"
+                  onClick={onOpenOrderCheck}
+                  title="Click to open Sanity Check Diagnostics"
+                >
+                  <AlertTriangle size={15} />
+                  <span>Warning: {warningCount}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* Right Header Controls: Board Actions + User Account */}
       <div className="header-right-actions">
-        <div
-          className={`header-ws-badge ${wsConnected ? 'ws-connected' : 'ws-disconnected'}`}
-          title={
-            wsConnected
-              ? `Real-time synchronization connected (${viewMode === 'lobby' ? 'Lobby Feed' : gameId})`
-              : 'Connecting to real-time synchronization...'
-          }
-        >
-          <span
-            className={`ws-status-dot ${wsConnected ? 'dot-online' : 'dot-offline'}`}
+        {viewMode !== 'lobby' && (
+          <DisplaySettingsMenu
+            prefs={displayPrefs}
+            saveState={displayPrefsSaveState}
+            onChange={onChangeDisplayPrefs}
           />
-          <span>{wsConnected ? 'Live Sync' : 'Connecting...'}</span>
-        </div>
-
-        <DisplaySettingsMenu
-          prefs={displayPrefs}
-          saveState={displayPrefsSaveState}
-          onChange={onChangeDisplayPrefs}
-        />
+        )}
 
         {viewMode !== 'lobby' && isGameCreator && (
           <AdminSettingsMenu
