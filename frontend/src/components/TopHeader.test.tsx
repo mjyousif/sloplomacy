@@ -163,12 +163,17 @@ describe('TopHeader: live sync, display settings and account', () => {
     expect(badge?.querySelector('.ws-status-dot')).toHaveClass('dot-offline');
   });
 
-  it('includes the display settings menu', () => {
-    renderHeader();
+  it('includes the display settings menu only outside the lobby', () => {
+    const { rerender, props } = renderHeader();
     expect(
       screen.getByRole('button', { name: 'Display settings' }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('btn-admin-menu')).not.toBeInTheDocument();
+
+    rerender(<TopHeader {...props} viewMode="lobby" />);
+    expect(
+      screen.queryByRole('button', { name: 'Display settings' }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows the administrator dropdown next to display settings only for the game creator outside the lobby', async () => {
