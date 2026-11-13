@@ -81,14 +81,14 @@ describe('CollapsedRail', () => {
         stagedChangesCount={0}
       />,
     );
-    expect(container.querySelector('.rail-power-crest')).toBeNull();
+    expect(
+      container.querySelector('[data-testid="rail-power-crest"]'),
+    ).toBeNull();
     expect(container.querySelector('svg.power-flag')).toBeNull();
-    expect(container.querySelector('.rail-badge-unconfirmed')).toBeNull();
-    expect(container.querySelector('.rail-warn-badge')).toBeNull();
-    expect(container.querySelector('.rail-admin-badge')).toBeNull();
-    const editCrest = container.querySelector(
-      '.rail-admin-crest',
-    ) as HTMLElement;
+    expect(
+      container.querySelector('[data-testid="rail-warn-badge"]'),
+    ).toBeNull();
+    const editCrest = screen.getByTestId('rail-admin-crest');
     expect(editCrest).toHaveAttribute('title', 'Edit Board');
     expect(editCrest.querySelector('svg.lucide-pencil')).not.toBeNull();
     expect(screen.getByTestId('macro-sidebar-expand-btn')).toHaveAttribute(
@@ -105,9 +105,7 @@ describe('CollapsedRail', () => {
         stagedChangesCount={2}
       />,
     );
-    expect(container.querySelector('.rail-badge-staged')).toHaveTextContent(
-      '2',
-    );
+    expect(screen.getByTestId('rail-badge-staged')).toHaveTextContent('2');
   });
 
   it('shows admin turn-clock clock icon instead of country/unit icons or shield', () => {
@@ -119,13 +117,14 @@ describe('CollapsedRail', () => {
         adminMode="turn-clock"
       />,
     );
-    expect(container.querySelector('.rail-power-crest')).toBeNull();
+    expect(
+      container.querySelector('[data-testid="rail-power-crest"]'),
+    ).toBeNull();
     expect(container.querySelector('svg.power-flag')).toBeNull();
-    expect(container.querySelector('.rail-warn-badge')).toBeNull();
-    expect(container.querySelector('.rail-admin-badge')).toBeNull();
-    const clockCrest = container.querySelector(
-      '.rail-admin-crest',
-    ) as HTMLElement;
+    expect(
+      container.querySelector('[data-testid="rail-warn-badge"]'),
+    ).toBeNull();
+    const clockCrest = screen.getByTestId('rail-admin-crest');
     expect(clockCrest).toHaveAttribute('title', 'Turn and Clock Settings');
     expect(clockCrest.querySelector('svg.lucide-clock')).not.toBeNull();
     expect(screen.getByTestId('macro-sidebar-expand-btn')).toHaveAttribute(

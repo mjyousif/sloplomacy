@@ -148,12 +148,12 @@ describe('PowerHeader', () => {
   it('panel: full power name, unit and center counts, and a collapse button', () => {
     const onToggleCollapse = vi.fn();
     const c = header({ onToggleCollapse });
-    expect(c.querySelector('.power-banner-title')).toHaveTextContent(
-      'French Republic',
-    );
-    expect(c.querySelector('.power-banner-sub')).toHaveTextContent(
-      '3 Units • 3 SCs',
-    );
+    expect(
+      c.querySelector('[data-testid="power-banner-title"]'),
+    ).toHaveTextContent('French Republic');
+    expect(
+      c.querySelector('[data-testid="power-banner-sub"]'),
+    ).toHaveTextContent('3 Units • 3 SCs');
     fireEvent.click(screen.getByTestId('macro-sidebar-collapse-btn'));
     expect(onToggleCollapse).toHaveBeenCalledTimes(1);
   });

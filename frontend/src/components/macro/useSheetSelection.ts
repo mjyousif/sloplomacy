@@ -53,7 +53,9 @@ export function useSheetSelection({
   useEffect(() => {
     if (!isSheet || sheetSnap === 'peek' || !selectedUnitId) return;
     const body = sheetBodyRef.current;
-    const scroller = body?.closest<HTMLElement>('.bottom-sheet-body');
+    const scroller = body?.closest<HTMLElement>(
+      '[data-testid="bottom-sheet-body"]',
+    );
     const card = Array.from(
       body?.querySelectorAll<HTMLElement>(
         '[data-unit-id], [data-home-province]',

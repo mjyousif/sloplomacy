@@ -37,7 +37,7 @@ function Probe({
     onHighlightProvinces,
   });
   return (
-    <div className="bottom-sheet-body" data-testid="scroller">
+    <div data-testid="bottom-sheet-body">
       <div ref={ref}>
         <div data-unit-id={A_PAR.id} data-testid="card-par" />
         <div data-unit-id={A_BRE.id} data-testid="card-bre" />
@@ -51,9 +51,10 @@ const rects = (positions: Record<string, number>) => {
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
     function (this: Element) {
       const el = this as HTMLElement;
-      const top = el.classList.contains('bottom-sheet-body')
-        ? 100
-        : (positions[el.dataset.testid ?? ''] ?? 0);
+      const top =
+        el.dataset.testid === 'bottom-sheet-body'
+          ? 100
+          : (positions[el.dataset.testid ?? ''] ?? 0);
       return {
         top,
         bottom: top + 50,
@@ -164,7 +165,9 @@ describe('useSheetSelection', () => {
 
   describe('scrolling the card to the top', () => {
     const scrollerOf = (c: HTMLElement) =>
-      c.querySelector<HTMLElement>('[data-testid="scroller"]') as HTMLElement;
+      c.querySelector<HTMLElement>(
+        '[data-testid="bottom-sheet-body"]',
+      ) as HTMLElement;
 
     it("scrolls a raised sheet by the card's distance from the top, less a margin", () => {
       const { container } = render(

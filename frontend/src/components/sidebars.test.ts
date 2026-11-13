@@ -342,16 +342,16 @@ describe('MacroSidebar', () => {
       const body = html.slice(html.indexOf('bottom-sheet-body'));
       expect(body).toContain('ACTIVE FORCE ORDERS (2 UNITS)');
       expect(body).toContain('data-unit-id="A_PAR"');
-      expect(html).not.toContain('macro-sidebar-collapsed');
-      expect(html).not.toContain('macro-sidebar-collapse-btn');
+      expect(html).not.toContain('data-testid="macro-sidebar-collapsed"');
+      expect(html).not.toContain('data-testid="macro-sidebar-collapse-btn"');
     });
 
     it('makes the body inert while lowered, since it is off screen', () => {
       expect(sheet({ sheetSnap: 'peek' })).toMatch(
-        /class="bottom-sheet-body"[^>]*inert/,
+        /data-testid="bottom-sheet-body"[^>]*inert/,
       );
       expect(sheet({ sheetSnap: 'half' })).not.toMatch(
-        /class="bottom-sheet-body"[^>]*inert/,
+        /data-testid="bottom-sheet-body"[^>]*inert/,
       );
     });
 
@@ -363,7 +363,7 @@ describe('MacroSidebar', () => {
       );
       expect(peek).not.toContain('Surrender');
       expect(html.slice(html.indexOf('bottom-sheet-body'))).toContain(
-        'macro-sheet-surrender',
+        'data-testid="macro-sheet-surrender"',
       );
     });
 
@@ -371,7 +371,7 @@ describe('MacroSidebar', () => {
       const html = renderToString(
         React.createElement(MacroSidebar, baseMacroProps),
       );
-      expect(html).not.toContain('bottom-sheet');
+      expect(html).not.toContain('data-testid="bottom-sheet-handle"');
       expect(html).toContain('aria-label="Tactical Command &amp; Orders"');
     });
   });
@@ -381,8 +381,8 @@ describe('MacroSidebar', () => {
       React.createElement(MacroSidebar, { ...baseMacroProps, collapsed: true }),
     );
     expect(html).toContain('aria-label="Tactical Orders Collapsed"');
-    expect(html).toContain('macro-sidebar-collapsed');
-    expect(html).toContain('rail-power-crest');
+    expect(html).toContain('data-testid="macro-sidebar-collapsed"');
+    expect(html).toContain('data-testid="rail-power-crest"');
     expect(html).not.toContain('ACTIVE FORCE ORDERS');
   });
 

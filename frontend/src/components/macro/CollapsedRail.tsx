@@ -53,7 +53,11 @@ export const CollapsedRail: React.FC<{
 
         <div className="rail-divider" />
 
-        <div className="rail-admin-crest" title={modeTitle}>
+        <div
+          className="rail-admin-crest"
+          data-testid="rail-admin-crest"
+          title={modeTitle}
+        >
           {isDirectEdit ? <Pencil size={14} /> : <Clock size={14} />}
         </div>
 
@@ -62,7 +66,9 @@ export const CollapsedRail: React.FC<{
             className="rail-counter-badge"
             title={`${stagedChangesCount} staged board change${stagedChangesCount === 1 ? '' : 's'}`}
           >
-            <span className="rail-badge-staged">{stagedChangesCount}</span>
+            <span className="rail-badge-staged" data-testid="rail-badge-staged">
+              {stagedChangesCount}
+            </span>
           </div>
         )}
 
@@ -103,6 +109,7 @@ export const CollapsedRail: React.FC<{
 
       <div
         className="rail-power-crest"
+        data-testid="rail-power-crest"
         title={`Commanding ${powerMeta.name} (${myActiveFieldUnits.length} Units, ${scCountByPower[activePower]} SC)`}
         style={{ borderColor: powerMeta.color }}
       >
@@ -123,6 +130,7 @@ export const CollapsedRail: React.FC<{
       {myIssues.length > 0 && (
         <div
           className="rail-warn-badge"
+          data-testid="rail-warn-badge"
           title={`${myIssues.length} tactical issues`}
         >
           <AlertTriangle size={14} />

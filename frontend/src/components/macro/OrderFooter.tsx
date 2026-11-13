@@ -37,6 +37,7 @@ export const SurrenderButton: React.FC<{ onSurrenderClick: () => void }> = ({
   <button
     type="button"
     className="quick-action-btn surrender-btn-sidebar"
+    data-testid="btn-surrender-sidebar"
     title="Surrender sovereign command and leave this campaign"
     onClick={onSurrenderClick}
   >
@@ -85,6 +86,7 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
       <button
         type="button"
         data-testid="btn-finalize-orders"
+        data-warning={blockingIssueCount > 0 ? 'true' : undefined}
         className={`finalize-primary-btn ${
           blockingIssueCount > 0 ? 'has-warning-state' : ''
         }`}
@@ -144,6 +146,8 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
       <div className="mp-resolution-controls">
         <div
           className={`mp-consensus-status-card ${consensusInfo.isWaitingForPlayers ? 'waiting-mode' : ''}`}
+          data-testid="mp-consensus-status-card"
+          data-waiting={consensusInfo.isWaitingForPlayers ? 'true' : undefined}
         >
           <div className="mp-consensus-header">
             {consensusInfo.isWaitingForPlayers ? (
@@ -151,14 +155,22 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
             ) : (
               <Clock size={13} className="consensus-icon" />
             )}
-            <span className="consensus-title">{consensusInfo.title}</span>
+            <span className="consensus-title" data-testid="consensus-title">
+              {consensusInfo.title}
+            </span>
           </div>
-          <div className="mp-consensus-desc">{consensusInfo.description}</div>
+          <div className="mp-consensus-desc" data-testid="mp-consensus-desc">
+            {consensusInfo.description}
+          </div>
         </div>
 
         {isGameCreator && (
           <button
             type="button"
+            data-testid="btn-creator-override"
+            data-solo-ready={
+              consensusInfo.isSoloAdvanceReady ? 'true' : undefined
+            }
             className={`adjudicate-turn-btn creator-override-btn ${
               consensusInfo.isSoloAdvanceReady ? 'solo-advance-ready' : ''
             }`}

@@ -192,7 +192,7 @@ describe('MacroSidebar panel', () => {
 
   describe('the powers the match waits on', () => {
     const consensus = (c: HTMLElement) =>
-      c.querySelector('.consensus-title')?.textContent;
+      c.querySelector('[data-testid="consensus-title"]')?.textContent;
 
     it('follows the participants as they change', () => {
       // A stable list: an omitted prop is a new array on every render and would refresh the memo.
@@ -259,15 +259,18 @@ describe('MacroSidebar panel', () => {
         historyLabel: 'Fall 1901 Movement',
         onReturnToLive,
       });
-      expect(container.querySelector('aside')).toHaveClass('history-locked');
-      expect(container.querySelector('.active-power-banner')).toHaveAttribute(
-        'inert',
+      expect(container.querySelector('aside')).toHaveAttribute(
+        'data-history-locked',
+        'true',
       );
       expect(
-        container.querySelector('.macro-units-scroll-area'),
+        container.querySelector('[data-testid="active-power-banner"]'),
       ).toHaveAttribute('inert');
       expect(
-        container.querySelector('.sidebar-footer-actions'),
+        container.querySelector('[data-testid="macro-units-scroll-area"]'),
+      ).toHaveAttribute('inert');
+      expect(
+        container.querySelector('[data-testid="macro-footer-actions"]'),
       ).toHaveAttribute('inert');
       fireEvent.click(screen.getByTestId('history-lock-live-btn'));
       expect(onReturnToLive).toHaveBeenCalledTimes(1);
@@ -275,8 +278,8 @@ describe('MacroSidebar panel', () => {
 
     it('leaves the live panel alone', () => {
       const { container } = sidebar();
-      expect(container.querySelector('aside')).not.toHaveClass(
-        'history-locked',
+      expect(container.querySelector('aside')).not.toHaveAttribute(
+        'data-history-locked',
       );
       expect(container.querySelector('[inert]')).toBeNull();
       expect(screen.queryByTestId('history-lock-bar')).toBeNull();
@@ -297,8 +300,7 @@ describe('MacroSidebar panel', () => {
         onToggleCollapse: vi.fn(),
       });
       const aside = container.querySelector('aside') as HTMLElement;
-      expect(aside).toHaveClass('macro-sidebar-collapsed');
-      expect(aside).not.toHaveAttribute('data-testid');
+      expect(aside).toHaveAttribute('data-testid', 'macro-sidebar-collapsed');
       expect(
         screen.getByTestId('macro-sidebar-expand-btn'),
       ).toBeInTheDocument();
@@ -310,10 +312,10 @@ describe('MacroSidebar panel', () => {
       const aside = container.querySelector('aside');
       fireEvent.click(screen.getByTestId('macro-sidebar-collapse-btn'));
       expect(container.querySelector('aside')).toBe(aside);
-      expect(aside).toHaveClass('macro-sidebar-collapsed');
+      expect(aside).toHaveAttribute('data-testid', 'macro-sidebar-collapsed');
       fireEvent.click(screen.getByTestId('macro-sidebar-expand-btn'));
       expect(container.querySelector('aside')).toBe(aside);
-      expect(aside).toHaveClass('macro-sidebar-expanded');
+      expect(aside).toHaveAttribute('data-testid', 'macro-sidebar');
     });
   });
 });
@@ -326,9 +328,15 @@ describe('MacroSidebar sheet', () => {
 
   it('shows the power, Confirm All and the footer at the peek, the cards in the body', () => {
     const { container } = sheet();
-    const peek = container.querySelector('.macro-sheet-peek') as HTMLElement;
-    expect(peek.querySelector('.macro-sheet-status-row')).not.toBeNull();
-    const controls = peek.querySelector('.macro-sheet-controls') as HTMLElement;
+    const peek = container.querySelector(
+      '[data-testid="macro-sheet-peek"]',
+    ) as HTMLElement;
+    expect(
+      peek.querySelector('[data-testid="macro-sheet-status-row"]'),
+    ).not.toBeNull();
+    const controls = peek.querySelector(
+      '[data-testid="macro-sheet-controls"]',
+    ) as HTMLElement;
     expect(
       Array.from(controls.children).map((c) => c.getAttribute('data-testid')),
     ).toEqual([
@@ -336,13 +344,13 @@ describe('MacroSidebar sheet', () => {
       'btn-finalize-orders',
       'btn-adjudicate-phase',
     ]);
-    const body = container.querySelector('.macro-sheet-body') as HTMLElement;
+    const body = container.querySelector(
+      '[data-testid="macro-sheet-body"]',
+    ) as HTMLElement;
     expect(
       body.querySelectorAll('[data-testid="unit-macro-card"]'),
     ).toHaveLength(3);
-    expect(body.querySelector('.macro-hint')).toHaveTextContent(
-      'Tap a card or the map',
-    );
+    expect(body).toHaveTextContent('Tap a card or the map');
   });
 
   it('puts Surrender at the foot of the body', () => {
@@ -352,28 +360,30 @@ describe('MacroSidebar sheet', () => {
     });
     expect(
       container.querySelector(
-        '.macro-sheet-body .macro-sheet-surrender .surrender-btn-sidebar',
+        '[data-testid="macro-sheet-body"] [data-testid="macro-sheet-surrender"] [data-testid="btn-surrender-sidebar"]',
       ),
     ).not.toBeNull();
   });
 
   it('shows the lock bar in the peek and goes inert for a past turn', () => {
     const { container } = sheet({ historyLabel: 'Fall 1901 Movement' });
-    const peek = container.querySelector('.macro-sheet-peek') as HTMLElement;
-    expect(peek).toHaveClass('history-locked');
+    const peek = container.querySelector(
+      '[data-testid="macro-sheet-peek"]',
+    ) as HTMLElement;
+    expect(peek).toHaveAttribute('data-history-locked', 'true');
     expect(peek.firstElementChild).toHaveAttribute(
       'data-testid',
       'history-lock-bar',
     );
-    expect(peek.querySelector('.macro-sheet-status-row')).toHaveAttribute(
-      'inert',
-    );
-    expect(peek.querySelector('.macro-sheet-controls')).toHaveAttribute(
-      'inert',
-    );
-    expect(container.querySelector('.macro-sheet-body')).toHaveAttribute(
-      'inert',
-    );
+    expect(
+      peek.querySelector('[data-testid="macro-sheet-status-row"]'),
+    ).toHaveAttribute('inert');
+    expect(
+      peek.querySelector('[data-testid="macro-sheet-controls"]'),
+    ).toHaveAttribute('inert');
+    expect(
+      container.querySelector('[data-testid="macro-sheet-body"]'),
+    ).toHaveAttribute('inert');
   });
 
   it("lights up the selected unit's provinces, as a finger has no hover", () => {
@@ -385,11 +395,12 @@ describe('MacroSidebar sheet', () => {
     vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
       function (this: Element) {
         const el = this as HTMLElement;
-        const top = el.classList.contains('bottom-sheet-body')
-          ? 100
-          : el.dataset.unitId === A_BRE.id
-            ? 500
-            : 0;
+        const top =
+          el.dataset.testid === 'bottom-sheet-body'
+            ? 100
+            : el.dataset.unitId === A_BRE.id
+              ? 500
+              : 0;
         return {
           top,
           bottom: top,
@@ -408,16 +419,18 @@ describe('MacroSidebar sheet', () => {
       selectedUnitId: A_BRE.id,
     });
     expect(
-      (container.querySelector('.bottom-sheet-body') as HTMLElement).scrollTop,
+      (
+        container.querySelector(
+          '[data-testid="bottom-sheet-body"]',
+        ) as HTMLElement
+      ).scrollTop,
     ).toBe(500 - 100 - 8);
   });
 
   it('steps the sheet through its stops from the handle', () => {
     const onSheetSnapChange = vi.fn();
-    const { container } = sheet({ onSheetSnapChange });
-    fireEvent.click(
-      container.querySelector('.bottom-sheet-handle') as HTMLElement,
-    );
+    sheet({ onSheetSnapChange });
+    fireEvent.click(screen.getByTestId('bottom-sheet-handle'));
     expect(onSheetSnapChange).toHaveBeenCalledWith('half');
   });
 
@@ -624,7 +637,7 @@ describe('MacroSidebar: auto-scroll and compact orders', () => {
     vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
       function (this: Element) {
         const el = this as HTMLElement;
-        if (el.classList.contains('macro-units-scroll-area')) {
+        if (el.dataset.testid === 'macro-units-scroll-area') {
           return {
             top: 100,
             bottom: 300,
@@ -665,8 +678,11 @@ describe('MacroSidebar: auto-scroll and compact orders', () => {
     );
     const { container } = sidebar({ selectedUnitId: A_BRE.id });
     expect(
-      (container.querySelector('.macro-units-scroll-area') as HTMLElement)
-        .scrollTop,
+      (
+        container.querySelector(
+          '[data-testid="macro-units-scroll-area"]',
+        ) as HTMLElement
+      ).scrollTop,
     ).toBe(480 - 300 + 8);
   });
 
@@ -691,19 +707,25 @@ describe('MacroSidebar: auto-scroll and compact orders', () => {
 
     const toggle = screen.getByTestId('btn-toggle-compact-orders');
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
-    expect(container.querySelector('.unit-compact-row')).toBeNull();
+    expect(
+      container.querySelector('[data-testid="unit-compact-row"]'),
+    ).toBeNull();
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-pressed', 'true');
-    expect(container.querySelectorAll('.unit-compact-row')).toHaveLength(3);
+    expect(
+      container.querySelectorAll('[data-testid="unit-compact-row"]'),
+    ).toHaveLength(3);
     expect(window.localStorage.getItem('sloplomacy_compact_orders')).toBe('1');
 
     const cards = container.querySelectorAll('[data-testid="unit-macro-card"]');
     const firstCard = cards[0] as HTMLElement;
     const secondCard = cards[1] as HTMLElement;
-    expect(firstCard).toHaveClass('unit-macro-card-compact');
+    expect(firstCard).toHaveAttribute('data-compact', 'true');
     expect(
-      firstCard.querySelectorAll('.order-tab-btn.compact-square'),
+      firstCard.querySelectorAll(
+        '[data-testid="order-type-tabs"] button[data-compact="true"]',
+      ),
     ).toHaveLength(4);
     expect(
       secondCard.querySelector('[data-testid="select-order-target"]'),
@@ -724,7 +746,9 @@ describe('MacroSidebar: auto-scroll and compact orders', () => {
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
-    expect(container.querySelector('.unit-compact-row')).toBeNull();
+    expect(
+      container.querySelector('[data-testid="unit-compact-row"]'),
+    ).toBeNull();
     window.localStorage.removeItem('sloplomacy_compact_orders');
   });
 });

@@ -222,14 +222,22 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
         <Icon size={14} />
         <span role="timer">{clockPillLabel(timer, seconds, isHost)}</span>
         {hypothetical && timer && (
-          <span className="phase-timer-pill-dot" aria-hidden="true" />
+          <span
+            className="phase-timer-pill-dot"
+            data-testid="phase-timer-pill-dot"
+            aria-hidden="true"
+          />
         )}
       </button>
     );
   }
 
   return (
-    <aside className="phase-timer-widget" aria-label="Turn clock">
+    <aside
+      className="phase-timer-widget"
+      data-testid="phase-timer-widget"
+      aria-label="Turn clock"
+    >
       {compact && (
         <button
           type="button"

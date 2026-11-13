@@ -40,11 +40,13 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
   if (isRetreatPhase) {
     if (!unit.is_dislodged) return null;
     return (
-      <div className="order-type-tabs">
+      <div className="order-type-tabs" data-testid="order-type-tabs">
         {validRetreats.length > 0 && (
           <button
             type="button"
             data-testid="btn-order-retreat"
+            aria-pressed={order?.order_type === 'RETREAT'}
+            data-active={order?.order_type === 'RETREAT' ? 'true' : undefined}
             className={`order-tab-btn ${order?.order_type === 'RETREAT' ? 'active' : ''}`}
             style={
               order?.order_type === 'RETREAT'
@@ -63,6 +65,8 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
         <button
           type="button"
           data-testid="btn-order-disband"
+          aria-pressed={order?.order_type === 'DISBAND'}
+          data-active={order?.order_type === 'DISBAND' ? 'true' : undefined}
           className={`order-tab-btn ${order?.order_type === 'DISBAND' ? 'active' : ''}`}
           style={
             order?.order_type === 'DISBAND'
@@ -84,10 +88,12 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
   if (isAdjustmentPhase) {
     if (!(buildCount < 0)) return null;
     return (
-      <div className="order-type-tabs">
+      <div className="order-type-tabs" data-testid="order-type-tabs">
         <button
           type="button"
           data-testid="btn-adjustment-keep"
+          aria-pressed={!isDisbanding}
+          data-active={!isDisbanding ? 'true' : undefined}
           className={`order-tab-btn ${!isDisbanding ? 'active' : ''}`}
           onClick={() => handleOrderTypeChange(unit, 'HOLD')}
         >
@@ -96,6 +102,8 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
         <button
           type="button"
           data-testid="btn-adjustment-disband"
+          aria-pressed={isDisbanding}
+          data-active={isDisbanding ? 'true' : undefined}
           className={`order-tab-btn ${isDisbanding ? 'active' : ''}`}
           style={
             isDisbanding
@@ -115,7 +123,11 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
   }
 
   return (
-    <div className={`order-type-tabs ${compact ? 'compact' : ''}`}>
+    <div
+      className={`order-type-tabs ${compact ? 'compact' : ''}`}
+      data-testid="order-type-tabs"
+      data-compact={compact ? 'true' : undefined}
+    >
       {(['HOLD', 'MOVE', 'SUPPORT', 'CONVOY'] as OrderType[]).map((oType) => {
         const convoyUnsupported =
           oType === 'CONVOY' &&
@@ -132,6 +144,9 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
             disabled={convoyUnsupported}
             className={`order-tab-btn ${compact ? 'compact-square' : ''} ${active ? 'active' : ''}`}
             data-testid={`btn-order-type-${oType}`}
+            data-compact={compact ? 'true' : undefined}
+            data-active={active ? 'true' : undefined}
+            aria-pressed={active}
             title={convoyUnsupported ? 'Only fleets at sea can convoy' : oType}
             onClick={() => handleOrderTypeChange(unit, oType)}
           >

@@ -146,7 +146,11 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
 
   if (variant === 'sheet') {
     return (
-      <div className="macro-sheet-status-row" inert={locked || undefined}>
+      <div
+        className="macro-sheet-status-row"
+        data-testid="macro-sheet-status-row"
+        inert={locked || undefined}
+      >
         <span className="power-crest-icon">
           <PowerFlag power={activePower} width={24} height={16} />
         </span>
@@ -166,13 +170,13 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
   return (
     <div className="power-banner-top">
       <div className="power-banner-main-col">
-        <div className="power-banner-title">
+        <div className="power-banner-title" data-testid="power-banner-title">
           <span className="power-crest-icon">
             <PowerFlag power={activePower} width={22} height={15} />
           </span>
           <span className="power-name-text">{powerMeta.name}</span>
         </div>
-        <div className="power-banner-sub">
+        <div className="power-banner-sub" data-testid="power-banner-sub">
           {myActiveFieldUnits.length} Units
           {myDislodgedUnits.length > 0
             ? ` (+${myDislodgedUnits.length} Dislodged)`

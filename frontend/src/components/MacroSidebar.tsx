@@ -403,6 +403,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         peek={
           <div
             className={`macro-sheet-peek ${locked ? 'history-locked' : ''}`.trim()}
+            data-testid="macro-sheet-peek"
+            data-history-locked={locked ? 'true' : undefined}
             style={{ borderLeftColor: powerMeta.color }}
           >
             {lockBar}
@@ -414,7 +416,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
               isFinalized={isFinalized}
               locked={locked}
             />
-            <div className="macro-sheet-controls" inert={locked || undefined}>
+            <div
+              className="macro-sheet-controls"
+              data-testid="macro-sheet-controls"
+              inert={locked || undefined}
+            >
               {confirmAllButton}
               {footerActions}
             </div>
@@ -423,13 +429,25 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       >
         <div
           className={`macro-sheet-body ${locked ? 'history-locked' : ''}`.trim()}
+          data-testid="macro-sheet-body"
+          data-history-locked={locked ? 'true' : undefined}
           ref={sheetBodyRef}
           inert={locked || undefined}
         >
           {phaseContext}
-          <div className="macro-units-scroll-area">{unitList}</div>
+          <div
+            className="macro-units-scroll-area"
+            data-testid="macro-units-scroll-area"
+          >
+            {unitList}
+          </div>
           {surrenderButton && (
-            <div className="macro-sheet-surrender">{surrenderButton}</div>
+            <div
+              className="macro-sheet-surrender"
+              data-testid="macro-sheet-surrender"
+            >
+              {surrenderButton}
+            </div>
           )}
           <div className="sidebar-version-footer">
             <VersionBadge />
@@ -444,6 +462,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     return (
       <aside
         className="macro-sidebar macro-sidebar-collapsed"
+        data-testid="macro-sidebar-collapsed"
         aria-label="Tactical Orders Collapsed"
       >
         <CollapsedRail
@@ -460,6 +479,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     <aside
       className={`macro-sidebar macro-sidebar-expanded ${locked ? 'history-locked' : ''}`.trim()}
       data-testid="macro-sidebar"
+      data-history-locked={locked ? 'true' : undefined}
       aria-label="Tactical Command & Orders"
     >
       {lockBar}
@@ -467,6 +487,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       <div
         inert={locked || undefined}
         className="active-power-banner"
+        data-testid="active-power-banner"
         style={{ borderLeft: `4px solid ${powerMeta.color}` }}
       >
         <PowerHeader
@@ -491,6 +512,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       {/* 2. UNIT ORDERS LIST (BUILDS + FIELD UNITS) */}
       <div
         className="macro-units-scroll-area"
+        data-testid="macro-units-scroll-area"
         ref={panelScrollRef}
         inert={locked || undefined}
       >
@@ -498,7 +520,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       </div>
 
       {/* 3. STICKY FOOTER: FINALIZE & ADJUDICATE */}
-      <div className="sidebar-footer-actions" inert={locked || undefined}>
+      <div
+        className="sidebar-footer-actions"
+        data-testid="macro-footer-actions"
+        inert={locked || undefined}
+      >
         {footerActions}
       </div>
       <div className="sidebar-version-footer">

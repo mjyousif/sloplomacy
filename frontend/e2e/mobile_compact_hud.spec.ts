@@ -43,7 +43,9 @@ test.describe('Scenario 06: Phone game screen', () => {
 
       // The map spans the screen: no sidebar rails on a phone.
       await expect(
-        page.locator('[data-testid="tools-sidebar-collapsed"], .macro-sidebar-collapsed'),
+        page.locator(
+          '[data-testid="tools-sidebar-collapsed"], [data-testid="macro-sidebar-collapsed"]',
+        ),
       ).toHaveCount(0);
       const mapBox = await page.locator('[data-testid="map-viewport-container"]').boundingBox();
       expect(mapBox).not.toBeNull();

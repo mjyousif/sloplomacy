@@ -230,12 +230,15 @@ export function BottomSheet({
           >
             <span className="bottom-sheet-grip" aria-hidden="true" />
           </button>
-          <div className="bottom-sheet-peek">{peek}</div>
+          <div className="bottom-sheet-peek" data-testid="bottom-sheet-peek">
+            {peek}
+          </div>
         </div>
         {/* Padding as tall as the part below the screen's edge, so the last card can scroll into
             view. While lowered, the body is off screen, so it is inert: no focus, taps or reading. */}
         <div
           className="bottom-sheet-body"
+          data-testid="bottom-sheet-body"
           style={{ paddingBottom: settledHidden }}
           inert={snap === 'peek' && dragVisible === null}
         >

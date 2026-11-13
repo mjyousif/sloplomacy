@@ -56,22 +56,26 @@ const card = (over: Partial<Props> = {}) => {
 };
 
 const pill = (root: HTMLElement) =>
-  root.querySelector('.unit-mini-pill')?.textContent?.trim();
+  root.querySelector('[data-testid="unit-mini-pill"]')?.textContent?.trim();
 
 describe('UnitMacroCard header', () => {
   it("shows the province, the unit type and the unit's coast", () => {
     const fleet = unitAt('FRANCE', 'F', 'BRE', { coast: 'NC' });
     const { root } = card({ unit: fleet });
-    expect(root.querySelector('.unit-prov-title')).toHaveTextContent(
-      'BrestBRE/NC',
-    );
-    expect(root.querySelector('.unit-type-badge')).toHaveClass('fleet');
-    expect(card().root.querySelector('.unit-type-badge')).toHaveClass('army');
+    expect(
+      root.querySelector('[data-testid="unit-prov-title"]'),
+    ).toHaveTextContent('BrestBRE/NC');
+    expect(
+      root.querySelector('[data-testid="unit-type-badge"]'),
+    ).toHaveAttribute('data-unit-type', 'fleet');
+    expect(
+      card().root.querySelector('[data-testid="unit-type-badge"]'),
+    ).toHaveAttribute('data-unit-type', 'army');
   });
 
   it('colours the badge by power, orange when dislodged, red when disbanding', () => {
     const badge = (r: HTMLElement) =>
-      r.querySelector('.unit-type-badge') as HTMLElement;
+      r.querySelector('[data-testid="unit-type-badge"]') as HTMLElement;
     expect(badge(card().root)).toHaveStyle({
       backgroundColor: POWER_METADATA.FRANCE.color,
     });
@@ -118,10 +122,16 @@ describe('UnitMacroCard header', () => {
       isHovered: true,
       hasError: true,
     });
-    expect(root).toHaveClass('selected', 'hovered', 'card-error');
-    expect(card({ hasWarn: true }).root).toHaveClass('card-warning');
-    expect(card({ hasError: true, hasWarn: true }).root).not.toHaveClass(
-      'card-warning',
+    expect(root).toHaveAttribute('data-selected', 'true');
+    expect(root).toHaveAttribute('data-hovered', 'true');
+    expect(root).toHaveAttribute('data-status', 'error');
+    expect(card({ hasWarn: true }).root).toHaveAttribute(
+      'data-status',
+      'warning',
+    );
+    expect(card({ hasError: true, hasWarn: true }).root).toHaveAttribute(
+      'data-status',
+      'error',
     );
   });
 
@@ -129,21 +139,23 @@ describe('UnitMacroCard header', () => {
     const { root } = card({
       summary: { verb: 'MOVE', targetText: 'to Paris', badgeColor: '#123456' },
     });
-    expect(root.querySelector('.behavior-verb-tag')).toHaveTextContent('MOVE');
-    expect(root.querySelector('.behavior-target-text')).toHaveTextContent(
-      'to Paris',
-    );
-    const winter = card({ isAdjustmentPhase: true });
-    expect(winter.root.querySelector('.behavior-verb-tag')).toHaveTextContent(
-      'RETAIN',
-    );
     expect(
-      winter.root.querySelector('.behavior-target-text'),
+      root.querySelector('[data-testid="behavior-verb-tag"]'),
+    ).toHaveTextContent('MOVE');
+    expect(
+      root.querySelector('[data-testid="behavior-target-text"]'),
+    ).toHaveTextContent('to Paris');
+    const winter = card({ isAdjustmentPhase: true });
+    expect(
+      winter.root.querySelector('[data-testid="behavior-verb-tag"]'),
+    ).toHaveTextContent('RETAIN');
+    expect(
+      winter.root.querySelector('[data-testid="behavior-target-text"]'),
     ).toHaveTextContent('Retained in Brest');
     const disband = card({ isAdjustmentPhase: true, isDisbanding: true });
-    expect(disband.root.querySelector('.behavior-verb-tag')).toHaveTextContent(
-      'HOLD',
-    );
+    expect(
+      disband.root.querySelector('[data-testid="behavior-verb-tag"]'),
+    ).toHaveTextContent('HOLD');
   });
 });
 
@@ -194,8 +206,13 @@ describe('UnitMacroCard order controls', () => {
     const { root } = card({
       order: orderFor(A_BRE, 'MOVE', { target: 'PAR' }),
     });
-    const controls = root.querySelector('.unit-inline-controls') as HTMLElement;
-    expect(controls.children[0]).toHaveClass('order-type-tabs');
+    const controls = root.querySelector(
+      '[data-testid="unit-inline-controls"]',
+    ) as HTMLElement;
+    expect(controls.children[0]).toHaveAttribute(
+      'data-testid',
+      'order-type-tabs',
+    );
     expect(
       controls.querySelector('[data-testid="select-order-target"]'),
     ).not.toBeNull();
@@ -204,7 +221,9 @@ describe('UnitMacroCard order controls', () => {
   it('movement: a hold has tabs and no selects', () => {
     const { root } = card();
     expect(root.querySelectorAll('select')).toHaveLength(0);
-    expect(root.querySelectorAll('.order-tab-btn').length).toBeGreaterThan(0);
+    expect(
+      root.querySelectorAll('[data-testid="order-type-tabs"] button').length,
+    ).toBeGreaterThan(0);
   });
 
   it('retreat: a dislodged unit gets the retreat tabs and its select', () => {
@@ -223,7 +242,9 @@ describe('UnitMacroCard order controls', () => {
 
   it('retreat: a unit that stands gets nothing to choose', () => {
     const { root } = card({ isRetreatPhase: true });
-    expect(root.querySelector('.unit-inline-controls')?.innerHTML).toBe('');
+    expect(
+      root.querySelector('[data-testid="unit-inline-controls"]')?.innerHTML,
+    ).toBe('');
   });
 
   it('winter: keep or disband only when units must go, and never a select', () => {
@@ -236,9 +257,10 @@ describe('UnitMacroCard order controls', () => {
     expect(owed.root.querySelectorAll('select')).toHaveLength(0);
     owed.unmount();
     const none = card({ isAdjustmentPhase: true, buildCount: 1 });
-    expect(none.root.querySelector('.unit-inline-controls')?.innerHTML).toBe(
-      '',
-    );
+    expect(
+      none.root.querySelector('[data-testid="unit-inline-controls"]')
+        ?.innerHTML,
+    ).toBe('');
   });
 });
 
@@ -247,11 +269,13 @@ describe('UnitMacroCard diagnostics and simulation', () => {
     const { root } = card({
       unitIssues: [issue(A_PAR, 'error', 'e1'), issue(A_PAR, 'info', 'i1')],
     });
-    const alerts = root.querySelectorAll('.unit-diagnostic-alert');
+    const alerts = root.querySelectorAll(
+      '[data-testid="unit-diagnostic-alert"]',
+    );
     expect(alerts).toHaveLength(2);
-    expect(alerts[0]).toHaveClass('error');
+    expect(alerts[0]).toHaveAttribute('data-severity', 'error');
     expect(alerts[0]).toHaveTextContent('Title e1: Message e1');
-    expect(alerts[1]).toHaveClass('info');
+    expect(alerts[1]).toHaveAttribute('data-severity', 'info');
   });
 
   it('shows how a simulated order resolved', () => {
@@ -267,26 +291,28 @@ describe('UnitMacroCard diagnostics and simulation', () => {
         reason: 'Moved.',
       } as never,
     });
-    expect(ok.root.querySelector('.unit-sim-result-strip')).toHaveClass(
-      'sim-ok',
-    );
-    expect(ok.root.querySelector('.unit-sim-result-strip')).toHaveTextContent(
-      '✓ SIMULATED: Moved.',
-    );
+    expect(
+      ok.root.querySelector('[data-testid="unit-sim-result-strip"]'),
+    ).toHaveAttribute('data-outcome', 'ok');
+    expect(
+      ok.root.querySelector('[data-testid="unit-sim-result-strip"]'),
+    ).toHaveTextContent('✓ SIMULATED: Moved.');
     ok.unmount();
     const bad = card({
       simRes: { succeeded: false, reason: 'Bounced.' } as never,
     });
-    expect(bad.root.querySelector('.unit-sim-result-strip')).toHaveClass(
-      'sim-fail',
-    );
-    expect(bad.root.querySelector('.unit-sim-result-strip')).toHaveTextContent(
-      '✕ BOUNCED / CUT: Bounced.',
-    );
+    expect(
+      bad.root.querySelector('[data-testid="unit-sim-result-strip"]'),
+    ).toHaveAttribute('data-outcome', 'fail');
+    expect(
+      bad.root.querySelector('[data-testid="unit-sim-result-strip"]'),
+    ).toHaveTextContent('✕ BOUNCED / CUT: Bounced.');
   });
 
   it('shows no strip without a result', () => {
-    expect(card().root.querySelector('.unit-sim-result-strip')).toBeNull();
+    expect(
+      card().root.querySelector('[data-testid="unit-sim-result-strip"]'),
+    ).toBeNull();
   });
 });
 
