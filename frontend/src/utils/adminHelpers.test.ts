@@ -6,10 +6,14 @@ import type {
   Unit,
 } from '../types/diplomacy';
 import {
+  applyUndoStagedChange,
   canPlaceUnitTypeInProvince,
   checkIsGameCreator,
+  computeStagedChanges,
+  computeStagedDiffLines,
   filterUnitsForDisband,
   getAvailableCoasts,
+  getUnacknowledgedAdminEntries,
   resolvePlayerPower,
 } from './adminHelpers';
 
@@ -145,5 +149,231 @@ describe('resolvePlayerPower', () => {
 
   it('has a default before any game has loaded', () => {
     expect(resolvePlayerPower('lobby', null, undefined)).toBe('FRANCE');
+  });
+});
+
+describe('computeStagedDiffLines & getUnacknowledgedAdminEntries', () => {
+  it('computes diff lines for unit relocations, spawns, destroys, and ownership changes', () => {
+    const baseState = {
+      units: [
+        { id: 'GER_A_BER', power: 'GERMANY', unit_type: 'A', province: 'BER' },
+        { id: 'FRA_A_PAR', power: 'FRANCE', unit_type: 'A', province: 'PAR' },
+      ] as Unit[],
+      ownership: { BER: 'GERMANY', PAR: 'FRANCE' } as const,
+      orders: {},
+    };
+    const stagedUnits: Unit[] = [
+      { id: 'GER_A_BER', power: 'GERMANY', unit_type: 'A', province: 'SYR' },
+      { id: 'ENG_F_LON', power: 'ENGLAND', unit_type: 'F', province: 'LON' },
+    ];
+    const stagedOwnership = {
+      BER: 'GERMANY' as const,
+      BEL: 'FRANCE' as const,
+    };
+    const testProvinces: Record<string, ProvinceInfo> = {
+      BER: {
+        id: 'BER',
+        name: 'Berlin',
+        type: 'COAST',
+        is_supply_center: true,
+        home_power: 'GERMANY',
+        coasts: [],
+        army_adj: [],
+        fleet_adj: {},
+      },
+      PAR: {
+        id: 'PAR',
+        name: 'Paris',
+        type: 'LAND',
+        is_supply_center: true,
+        home_power: 'FRANCE',
+        coasts: [],
+        army_adj: [],
+        fleet_adj: {},
+      },
+      SYR: {
+        id: 'SYR',
+        name: 'Syria',
+        type: 'COAST',
+        is_supply_center: false,
+        home_power: null,
+        coasts: [],
+        army_adj: [],
+        fleet_adj: {},
+      },
+      LON: {
+        id: 'LON',
+        name: 'London',
+        type: 'COAST',
+        is_supply_center: true,
+        home_power: 'ENGLAND',
+        coasts: [],
+        army_adj: [],
+        fleet_adj: {},
+      },
+      BEL: {
+        id: 'BEL',
+        name: 'Belgium',
+        type: 'COAST',
+        is_supply_center: true,
+        home_power: null,
+        coasts: [],
+        army_adj: [],
+        fleet_adj: {},
+      },
+    };
+    const lines = computeStagedDiffLines(
+      baseState,
+      stagedUnits,
+      stagedOwnership,
+      {},
+      testProvinces,
+    );
+    expect(lines).toEqual([
+      'Destroyed France Army in Paris',
+      'Relocated Germany Army from Berlin to Syria',
+      'Spawned England Fleet at London',
+      'Set ownership of Belgium to France',
+      'Reset ownership of Paris to Neutral',
+    ]);
+  });
+
+  it('filters unacknowledged admin log entries for the viewer', () => {
+    const entries = [
+      {
+        id: 'a1',
+        timestamp: '2026-11-12T00:00:00Z',
+        actor: 'bismarck',
+        season: 'Spring',
+        year: 1901,
+        phase: 'Movement',
+        summary_lines: ['Relocated GER A BER to SYR'],
+        acknowledged_by: ['usr_1'],
+      },
+    ];
+    expect(
+      getUnacknowledgedAdminEntries(
+        entries,
+        { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
+        'GERMANY',
+        'multiplayer',
+      ),
+    ).toHaveLength(0);
+    expect(
+      getUnacknowledgedAdminEntries(
+        entries,
+        { id: 'usr_2', email: 'c@d.com', displayName: 'C' },
+        'FRANCE',
+        'multiplayer',
+      ),
+    ).toHaveLength(1);
+    expect(
+      getUnacknowledgedAdminEntries(entries, null, 'FRANCE', 'lobby'),
+    ).toHaveLength(0);
+  });
+
+  it('computes structured staged changes and undoes individual changes cleanly', () => {
+    const baseState = {
+      units: [
+        {
+          id: 'FRA_A_PAR',
+          power: 'FRANCE' as const,
+          unit_type: 'A' as const,
+          province: 'PAR',
+        },
+        {
+          id: 'GER_A_BER',
+          power: 'GERMANY' as const,
+          unit_type: 'A' as const,
+          province: 'BER',
+        },
+      ],
+      ownership: { PAR: 'FRANCE' as const },
+      orders: {
+        FRA_A_PAR: {
+          unit_id: 'FRA_A_PAR',
+          power: 'FRANCE' as const,
+          unit_type: 'A' as const,
+          origin: 'PAR',
+          origin_coast: null,
+          order_type: 'HOLD' as const,
+          via_convoy: false,
+          is_explicit: false,
+        },
+      },
+    };
+    const stagedUnits: Unit[] = [
+      { id: 'GER_A_BER', power: 'GERMANY', unit_type: 'A', province: 'SYR' },
+      { id: 'ENG_F_LON', power: 'ENGLAND', unit_type: 'F', province: 'LON' },
+    ];
+    const stagedOwnership = { PAR: 'FRANCE' as const, BEL: 'FRANCE' as const };
+    const stagedOrders = {};
+
+    const changes = computeStagedChanges(
+      baseState,
+      stagedUnits,
+      stagedOwnership,
+      stagedOrders,
+    );
+    expect(changes.map((c) => c.id)).toEqual([
+      'destroy:FRA_A_PAR',
+      'relocate:GER_A_BER',
+      'spawn:ENG_F_LON',
+      'ownership:BEL',
+    ]);
+
+    // Undo only the relocate change
+    const afterUndoRelocate = applyUndoStagedChange(
+      baseState,
+      stagedUnits,
+      stagedOwnership,
+      stagedOrders,
+      'relocate:GER_A_BER',
+    );
+    expect(
+      afterUndoRelocate.units.find((u) => u.id === 'GER_A_BER')?.province,
+    ).toBe('BER');
+    expect(afterUndoRelocate.units.some((u) => u.id === 'ENG_F_LON')).toBe(
+      true,
+    );
+    expect(afterUndoRelocate.ownership.BEL).toBe('FRANCE');
+
+    // Undo the spawn change
+    const afterUndoSpawn = applyUndoStagedChange(
+      baseState,
+      afterUndoRelocate.units,
+      afterUndoRelocate.ownership,
+      afterUndoRelocate.orders,
+      'spawn:ENG_F_LON',
+    );
+    expect(afterUndoSpawn.units.some((u) => u.id === 'ENG_F_LON')).toBe(false);
+
+    // Undo the destroy change restores FRA_A_PAR and its base HOLD order
+    const afterUndoDestroy = applyUndoStagedChange(
+      baseState,
+      afterUndoSpawn.units,
+      afterUndoSpawn.ownership,
+      afterUndoSpawn.orders,
+      'destroy:FRA_A_PAR',
+    );
+    expect(afterUndoDestroy.units.some((u) => u.id === 'FRA_A_PAR')).toBe(true);
+    expect(afterUndoDestroy.orders.FRA_A_PAR?.order_type).toBe('HOLD');
+
+    // Undo the ownership change leaves no remaining staged changes
+    const afterUndoOwnership = applyUndoStagedChange(
+      baseState,
+      afterUndoDestroy.units,
+      afterUndoDestroy.ownership,
+      afterUndoDestroy.orders,
+      'ownership:BEL',
+    );
+    expect(
+      computeStagedChanges(
+        baseState,
+        afterUndoOwnership.units,
+        afterUndoOwnership.ownership,
+        afterUndoOwnership.orders,
+      ),
+    ).toEqual([]);
   });
 });

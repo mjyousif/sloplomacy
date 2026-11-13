@@ -1219,3 +1219,12 @@
 [data-layout="compact"] .history-lock-live-btn {
   min-height: 36px;
 }
+
+[data-layout="compact"] .display-admin-btn {
+  min-height: 40px;
+}
+
+[data-layout="compact"] .admin-tile-inspector.docked {
+  max-height: 55vh;
+  overflow-y: auto;
+}

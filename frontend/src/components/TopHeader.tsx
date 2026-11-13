@@ -18,6 +18,7 @@ import {
   type Power,
 } from '../types/diplomacy';
 import type { DisplayPrefs } from '../utils/displayPrefs';
+import { AdminSettingsMenu } from './AdminSettingsMenu';
 import { DisplaySettingsMenu } from './DisplaySettingsMenu';
 
 export interface TopHeaderProps {
@@ -40,6 +41,12 @@ export interface TopHeaderProps {
   displayPrefs: DisplayPrefs;
   displayPrefsSaveState: DisplayPrefsSaveState;
   onChangeDisplayPrefs: (change: Partial<DisplayPrefs>) => void;
+  isGameCreator?: boolean;
+  onOpenAdminTools?: () => void;
+  adminOverrideActive?: boolean;
+  onToggleAdminOverride?: () => void;
+  turnClockOpen?: boolean;
+  onExitAdmin?: () => void;
   authUser: AuthUser | null;
   onSignIn: () => void;
   onSignOut: () => void;
@@ -66,6 +73,12 @@ export function TopHeader({
   displayPrefs,
   displayPrefsSaveState,
   onChangeDisplayPrefs,
+  isGameCreator = false,
+  onOpenAdminTools,
+  adminOverrideActive = false,
+  onToggleAdminOverride,
+  turnClockOpen = false,
+  onExitAdmin,
   authUser,
   onSignIn,
   onSignOut,
@@ -189,6 +202,16 @@ export function TopHeader({
           saveState={displayPrefsSaveState}
           onChange={onChangeDisplayPrefs}
         />
+
+        {viewMode !== 'lobby' && isGameCreator && (
+          <AdminSettingsMenu
+            onOpenAdminTools={onOpenAdminTools}
+            adminOverrideActive={adminOverrideActive}
+            onToggleAdminOverride={onToggleAdminOverride}
+            turnClockOpen={turnClockOpen}
+            onExitAdmin={onExitAdmin}
+          />
+        )}
 
         {/* User Authentication Controls */}
         {authUser ? (

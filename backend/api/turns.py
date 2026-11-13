@@ -137,6 +137,7 @@ async def _execute_adjudication(game: GameState) -> GameState:
     game.builds = result.builds
     game.retreats = result.retreats
     game.finalized_powers = []
+    game.state_revision += 1
     game.turn_history.insert(0, history_entry)
     if result.winner:
         game.winner = result.winner
@@ -248,6 +249,7 @@ async def finalize_power_orders(
 
     if req.power not in game.finalized_powers:
         game.finalized_powers.append(req.power)
+    game.state_revision += 1
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
@@ -281,6 +283,7 @@ async def unfinalize_power_orders(
     verify_power_authorization(game.game_id, req.power, current_user)
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)
+    game.state_revision += 1
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
     await persist_game(game.game_id)

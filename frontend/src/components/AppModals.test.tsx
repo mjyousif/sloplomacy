@@ -20,7 +20,9 @@ const { seen, stub } = vi.hoisted(() => {
 vi.mock('./SanityCheckModal', () => ({ SanityCheckModal: stub('sanity') }));
 vi.mock('./SurrenderModal', () => ({ SurrenderModal: stub('surrender') }));
 vi.mock('./SaveSandboxModal', () => ({ SaveSandboxModal: stub('save') }));
-vi.mock('./AdminToolsModal', () => ({ AdminToolsModal: stub('admin') }));
+vi.mock('./AdminActionWarningModal', () => ({
+  AdminActionWarningModal: stub('admin-warning'),
+}));
 vi.mock('./AuthModal', () => ({ AuthModal: stub('auth') }));
 
 const STATE = { season: 'Fall', year: 1903 } as GameState;
@@ -30,8 +32,6 @@ const GAME = { game_id: 'mp_1' } as MultiplayerGameSummary;
 function props(over: Partial<AppModalsProps> = {}): AppModalsProps {
   return {
     gameState: STATE,
-    provinces: {},
-    activeGameId: 'mp_1',
     playerPower: 'FRANCE',
     sanityModalOpen: true,
     setSanityModalOpen: vi.fn(),
@@ -49,14 +49,7 @@ function props(over: Partial<AppModalsProps> = {}): AppModalsProps {
     setSaveSandboxModalOpen: vi.fn(),
     savingSandbox: true,
     handleSaveSandboxToAccount: vi.fn(),
-    isGameCreator: true,
-    adminModalOpen: false,
-    setAdminModalOpen: vi.fn(),
-    adminOverrideActive: true,
-    setAdminOverrideActive: vi.fn(),
-    applyServerState: vi.fn(),
     fetchGamesList: vi.fn(async () => {}),
-    handleLoadScenario: vi.fn(),
     triggerToast: vi.fn(),
     authUser: USER,
     setAuthUser: vi.fn(),
@@ -83,7 +76,6 @@ describe('AppModals', () => {
       'sanity',
       'surrender',
       'save',
-      'admin',
       'auth',
       'confirm here',
     ]);
@@ -143,39 +135,6 @@ describe('AppModals', () => {
     const blank = { season: '', year: 0 } as unknown as GameState;
     render(<AppModals {...props({ gameState: blank })} />);
     expect(seen.save.defaultName).toBe("Ada's Spring 1901 Study (France)");
-  });
-
-  it('gives the host the admin console', async () => {
-    const p = props();
-    render(<AppModals {...p} />);
-    const a = seen.admin;
-    expect(a.isOpen).toBe(false);
-    expect(a.gameId).toBe('mp_1');
-    expect(a.gameState).toBe(STATE);
-    expect(a.provinces).toBe(p.provinces);
-    expect(a.user).toBe(USER);
-    expect(a.onToast).toBe(p.triggerToast);
-    expect(a.adminOverrideActive).toBe(true);
-    a.onClose();
-    expect(p.setAdminModalOpen).toHaveBeenCalledWith(false);
-    a.onStateUpdated(STATE);
-    expect(p.applyServerState).toHaveBeenCalledWith(STATE);
-    expect(p.fetchGamesList).toHaveBeenCalledTimes(1);
-    a.onToggleAdminOverride();
-    const flip = vi.mocked(p.setAdminOverrideActive).mock.calls[0][0] as (
-      on: boolean,
-    ) => boolean;
-    expect(flip(true)).toBe(false);
-    a.onResetScenario();
-    expect(p.handleLoadScenario).toHaveBeenCalledWith('standard_1901');
-  });
-
-  it('shows no admin console to anyone else', () => {
-    const { container } = render(
-      <AppModals {...props({ isGameCreator: false })} />,
-    );
-    expect(seen.admin).toBeUndefined();
-    expect(container.querySelector('[data-modal="admin"]')).toBeNull();
   });
 
   it('wires the sign-in modal', () => {

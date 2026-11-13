@@ -221,7 +221,9 @@ async def leave_game(
     if len(summary.participants) < 2 and summary.status == "active":
         summary.status = "waiting"
 
+    game_state.state_revision += 1
     refresh_timer(game_state)
+    game_state.state_revision += 1
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
     await persist_game(game_id)
@@ -299,6 +301,7 @@ async def surrender_power(
             part.surrendered_at = datetime.now(timezone.utc).isoformat()
 
     refresh_timer(game_state)
+    game_state.state_revision += 1
     refresh_diagnostics_and_simulation(game_state)
     sync_summary(game_id)
     await persist_game(game_id)

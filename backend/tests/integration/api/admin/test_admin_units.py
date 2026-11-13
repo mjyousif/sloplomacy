@@ -118,8 +118,8 @@ def test_admin_set_turn_and_ownership():
     assert "BEL" not in clear_res.json()["ownership"]
 
 
-@pytest.mark.parametrize("province", ["BUR", "NTH", "SWI"])
-def test_ownership_is_only_for_supply_centers(province):
+@pytest.mark.parametrize("province", ["NTH", "SWI"])
+def test_ownership_rejects_sea_and_impassable(province):
     client = TestClient(app)
 
     res = client.post(
@@ -129,6 +129,25 @@ def test_ownership_is_only_for_supply_centers(province):
 
     assert res.status_code == 400
     assert province not in GAMES["proto_1901"].ownership
+
+
+def test_ownership_allows_non_supply_center_land_territories():
+    client = TestClient(app)
+
+    res = client.post(
+        "/api/admin/ownership?game_id=proto_1901",
+        json={"province": "BUR", "power": "GERMANY"},
+    )
+
+    assert res.status_code == 200
+    assert res.json()["ownership"]["BUR"] == "GERMANY"
+
+    clear_res = client.post(
+        "/api/admin/ownership?game_id=proto_1901",
+        json={"province": "BUR", "power": None},
+    )
+    assert clear_res.status_code == 200
+    assert "BUR" not in clear_res.json()["ownership"]
 
 
 client = TestClient(app)

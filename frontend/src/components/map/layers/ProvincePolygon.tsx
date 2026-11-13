@@ -15,6 +15,8 @@ export interface ProvincePolygonProps {
   isHovered: boolean;
   isHighlighted: boolean;
   hasWarning: boolean;
+  isMoveIncompatible?: boolean;
+  isMoveCompatible?: boolean;
   onClickProvince: (provId: string, explicitCoast?: string | null) => void;
   onHoverProvince: (provId: string | null) => void;
 }
@@ -33,6 +35,8 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
     isHovered,
     isHighlighted,
     hasWarning,
+    isMoveIncompatible = false,
+    isMoveCompatible = false,
     onClickProvince,
     onHoverProvince,
   }) => {
@@ -107,7 +111,14 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
           stroke={strokeColor}
           strokeWidth={isHighlighted || isReachable || hasWarning ? 3.5 : 0}
           strokeDasharray={isBlueReachable ? '6 3' : undefined}
-          className="province-interactive-path"
+          className={`province-interactive-path${isMoveIncompatible ? ' move-incompatible' : ''}${isMoveCompatible ? ' move-compatible' : ''}`}
+          style={
+            isMoveIncompatible
+              ? { cursor: 'not-allowed' }
+              : isMoveCompatible
+                ? { cursor: 'pointer' }
+                : undefined
+          }
           data-testid="province-path"
           data-province-id={geom.id}
           data-reachable-color={isReachable ? reachableColor : undefined}

@@ -34,6 +34,14 @@ To prevent interface bloat and preserve a clean, focused tactical workspace, adh
 - **Army and fleet marks**: Swords and ship, Tank and warship, NATO symbols, or A and F letters.
 - **Status line**: says where the choice is saved, such as "Saved to your account" or "Saved on this device. Sign in to keep it across devices".
 
+### Top Bar Administrator Menu (`AdminSettingsMenu.tsx`)
+
+Shown to the game creator (`isGameCreator`) beside `DisplaySettingsMenu` (via the `Wrench` button, `data-testid="btn-admin-menu"`):
+
+- **`Edit Board`** (`data-testid="btn-toggle-direct-edit"`): toggles interactive Direct-Edit Mode on the map (`AdminDirectEditSidebar.tsx`).
+- **`Turn and Clock Settings`** (`data-testid="btn-open-admin-console"`): opens `AdminTurnClockSidebar.tsx` in the right sidebar for Revert to Past Turn (`TurnControlTab`), Adjust Game Clock & Season, and Unlock All Power Orders.
+- **`Exit Admin Mode`** (`data-testid="btn-exit-admin-mode"`): appears whenever an admin mode is active (asking for confirmation if board edits are staged).
+
 The previews render with the real `MapPiece`, so they always match the map. These settings only affect this player's own view.
 
 ---
@@ -100,7 +108,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 
 ## Left Sidebar: Chancellery Tools & Intel (`ToolsSidebar.tsx`)
 
-`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Everything else is in `components/tools/`: `CollapsedRail`, then one component per section below (`MapControlsSection`, `MapLegendSection`, `StandingsSection` with `useStandingsSort`, `SandboxToolsSection`, `AdminSection`). Each section takes only the props it reads, typed as a `Pick<>` of `ToolsSidebarProps` (`tools/toolsSidebarProps.ts`). The parent decides which sections show: the zoom section is left out of the drawer, and the admin section needs the host flag and an admin handler.
+`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Everything else is in `components/tools/`: `CollapsedRail`, then one component per section below (`MapControlsSection`, `MapLegendSection`, `StandingsSection` with `useStandingsSort`, `SandboxToolsSection`). Each section takes only the props it reads, typed as a `Pick<>` of `ToolsSidebarProps` (`tools/toolsSidebarProps.ts`). The parent decides which sections show: the zoom section is left out of the drawer, while Administrator controls live in Display Settings (`DisplaySettingsMenu.tsx`).
 
 ### 1. Map View & Camera Controls
 - Rendered via a non-collapsible `CollapsibleSection` to retain uniform visual hierarchy with action controls.
@@ -143,13 +151,15 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 - **Foreign Guesses Counter & Clear**: Displays count of drafted foreign guesses with a one-click "Clear" button.
 - **Scenario Management & Saving**: One-click "Reset 1901" scenario start and "Save Sandbox". Clicking "Save Sandbox" opens `SaveSandboxModal.tsx`, letting the commander specify a custom name (e.g., "Balkans 1901 Tactical Analysis") before promoting their personal draft sandbox in-place to a permanent saved sandbox.
 
-### 5. Creator Administrator Controls (Game Creator Only)
-- Visible exclusively to room creators, rendered inside a collapsible `CollapsibleSection` (`defaultOpen={true}`) with a warning red `ShieldAlert` icon.
-- **"Open Admin Console"**: Launches `AdminToolsModal.tsx` for timeline rollbacks, unit teleportation, and arbitrary unit spawning/destruction. The modal draws the header, status strip and tab bar and hands each tab its props; `admin/useAdminActions.ts` holds everything the tabs act on (the four forms, the timeline status, the error banner, and one handler per `/api/admin/*` endpoint). A handler posts with the caller's token and `X-User-Id` / `X-User-Email` headers, hands the server's new state to `onStateUpdated`, then toasts through `onToast`.
-  - Destroy, Roll Back and Hard Reset ask for confirmation in an in-app `ConfirmModal`, never a browser dialog. A browser dialog the player has blocked answers "no" without showing anything, which made these buttons silently do nothing (issues #75, #77). Holding Shift while clicking skips the confirmation, and the modal says so. Escape or Cancel backs out.
-  - Known bug: the effect that resets the turn form lists `fetchAdminStatus`, a new function every render, in its dependencies, so it runs after every render while the console is open. It re-reads the timeline status each time, puts the Season, Year and Phase fields back on the game's turn after any edit, and clears the error banner, so an error shows only briefly. It was meant to run only when the console opens or the game reaches another turn.
-- **"Solo Sandbox"** (top bar): leaving a multiplayer match for the solo board asks through the same `ConfirmModal`.
-- **"Direct-Edit Board Override"**: While on, the host can select and order any power's units on the map, and sees all their orders. Other players are unaffected, and the toggle has no effect in a game the player does not host.
+### 5. Interactive Direct-Edit Mode & Administrator Controls (Game Creator Only)
+- **Top Bar Administrator Menu (`AdminSettingsMenu.tsx`)**: Room creators access `Edit Board` and `Turn and Clock Settings` from the `Wrench` button (`btn-admin-menu`) in the top bar (or ⋯ menu on phones).
+- **Turn and Clock Settings (`AdminTurnClockSidebar.tsx`)**: Repurposes the right sidebar (or phone bottom sheet) for turn and clock arbitration (`TurnControlTab`: Revert to Past Turn with snapshot dropdown, Adjust Game Clock & Season, and Unlock All Power Orders).
+- **Interactive Direct-Edit Mode (`useAdminDirectEdit.ts`, `AdminTileInspector.tsx`)**:
+  - Suppresses reachability reticles and green/amber/purple province highlights on the map.
+  - Clicking any province or unit opens `AdminTileInspector` (floating on desktop, docked on phones), allowing the host to reassign Supply Center ownership, spawn or modify a unit (`Power`, `A`/`F`, split coast), relocate a unit anywhere on the board without adjacency checks, set its order, or destroy it.
+  - All edits stage locally (`stagedUnits`, `stagedOwnership`, `stagedOrders`) and update the map immediately without network requests until committed via the Staged Diff Bar (`Apply All Changes` -> `POST /api/admin/board-edit` with `expected_revision` optimistic concurrency check, or `Discard Changes`).
+  - Leaving Direct-Edit Mode or the live board with unapplied staged edits prompts `ConfirmModal`.
+- **Per-Participant Warning Modal (`AdminActionWarningModal.tsx`)**: Whenever an admin action modifies a match, participants receive `AdminActionWarningModal` (live via WebSocket or on first load) and acknowledge via `POST /api/admin/acknowledge`. Consecutive admin actions within the same turn are consolidated into a single `"Admin"` phase entry in `TurnHistorySelector`.
 
 ### 6. Turn History footer (`TurnHistorySelector.tsx`)
 - Pinned below the scrolling sections, so it is always in reach. It only appears once the game has a resolved phase, and it is not on the collapsed rail.

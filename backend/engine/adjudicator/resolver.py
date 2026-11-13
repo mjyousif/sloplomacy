@@ -12,6 +12,7 @@ from engine.adjudicator.movement import build_movement_orders, resolve_movement
 from engine.adjudicator.retreats import build_retreat_orders, resolve_retreats
 from engine.adjudicator.translator import parse_diplomacy_phase, to_diplomacy_phase_code
 from engine.topology.graph import split_province_code
+from engine.topology.provinces import PROVINCES
 
 
 def create_diplomacy_game(
@@ -169,8 +170,12 @@ def adjudicate_turn(
     else:
         next_season, next_year, next_phase = parse_diplomacy_phase(game.phase)
 
-    # Supply center ownership from diplomacy engine
-    new_ownership: dict[str, Power] = {}
+    # Supply center ownership from diplomacy engine (preserving any non-SC land territory ownership)
+    new_ownership: dict[str, Power] = {
+        prov: pwr
+        for prov, pwr in ownership.items()
+        if prov in PROVINCES and not PROVINCES[prov].is_supply_center
+    }
     engine_centers = game.get_centers()
     for p_name, c_list in engine_centers.items():
         pwr = Power(p_name)

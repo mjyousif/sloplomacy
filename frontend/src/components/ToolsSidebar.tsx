@@ -1,7 +1,6 @@
 import { PanelLeftClose, Sliders, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef } from 'react';
-import { AdminSection } from './tools/AdminSection';
 import { CollapsedRail } from './tools/CollapsedRail';
 import { MapControlsSection } from './tools/MapControlsSection';
 import { MapLegendSection } from './tools/MapLegendSection';
@@ -35,10 +34,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   onAIStepTurn,
   onLoadScenario,
   onSaveSandboxClick,
-  isGameCreator = false,
-  onOpenAdminTools,
   adminOverrideActive = false,
-  onToggleAdminOverride,
   variant = 'panel',
   open = false,
   onClose,
@@ -69,9 +65,6 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
         onResetCamera={onResetCamera}
         sandboxMode={sandboxMode}
         onToggleSandboxMode={onToggleSandboxMode}
-        isGameCreator={isGameCreator}
-        onOpenAdminTools={onOpenAdminTools}
-        adminOverrideActive={adminOverrideActive}
       />
     );
   }
@@ -162,15 +155,6 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           onSaveSandboxClick={onSaveSandboxClick}
           isMultiplayer={isMultiplayer}
         />
-
-        {/* 6. CREATOR ADMINISTRATOR CONTROLS */}
-        {isGameCreator && onOpenAdminTools && (
-          <AdminSection
-            onOpenAdminTools={onOpenAdminTools}
-            adminOverrideActive={adminOverrideActive}
-            onToggleAdminOverride={onToggleAdminOverride}
-          />
-        )}
       </div>
 
       {historyFooter}

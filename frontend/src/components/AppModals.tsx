@@ -1,15 +1,15 @@
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { AuthModalTab } from '../hooks/useAuthSession';
 import {
+  type AdminActionLogEntry,
   type AuthUser,
   type GameState,
   type MultiplayerGameSummary,
   POWER_METADATA,
   type Power,
-  type ProvinceInfo,
   type ValidationIssue,
 } from '../types/diplomacy';
-import { AdminToolsModal } from './AdminToolsModal';
+import { AdminActionWarningModal } from './AdminActionWarningModal';
 import { AuthModal } from './AuthModal';
 import { SanityCheckModal } from './SanityCheckModal';
 import { SaveSandboxModal } from './SaveSandboxModal';
@@ -17,8 +17,6 @@ import { SurrenderModal } from './SurrenderModal';
 
 export interface AppModalsProps {
   gameState: GameState;
-  provinces: Record<string, ProvinceInfo>;
-  activeGameId: string;
   playerPower: Power;
   /** The Sanity Check modal, from `useMatchActions`. */
   sanityModalOpen: boolean;
@@ -43,16 +41,10 @@ export interface AppModalsProps {
   setSaveSandboxModalOpen: Dispatch<SetStateAction<boolean>>;
   savingSandbox: boolean;
   handleSaveSandboxToAccount: (customName: string) => void;
-  /** The host's admin console. */
-  isGameCreator: boolean;
-  adminModalOpen: boolean;
-  setAdminModalOpen: Dispatch<SetStateAction<boolean>>;
-  adminOverrideActive: boolean;
-  setAdminOverrideActive: Dispatch<SetStateAction<boolean>>;
-  applyServerState: (st: GameState) => void;
-  fetchGamesList: () => Promise<void>;
-  handleLoadScenario: (scenarioId: string) => void;
-  triggerToast: (msg: string) => void;
+  /** Admin action warning modal for participants. */
+  unacknowledgedAdminEntries?: AdminActionLogEntry[];
+  onAcknowledgeAdminEntries?: () => Promise<void>;
+  acknowledgingAdminEntries?: boolean;
   /** The sign-in modal, from `useAuthSession`. */
   authUser: AuthUser | null;
   setAuthUser: Dispatch<SetStateAction<AuthUser | null>>;
@@ -60,18 +52,18 @@ export interface AppModalsProps {
   setAuthModalOpen: Dispatch<SetStateAction<boolean>>;
   authModalTab: AuthModalTab;
   authModalReason: string | null;
+  fetchGamesList: () => Promise<void>;
+  triggerToast: (msg: string) => void;
   /** From `useConfirm`. */
   confirmModal: ReactNode;
 }
 
 /**
  * The app's modals, on the lobby and the board alike: the finalize Sanity Check, Surrender &
- * Leave, Save Sandbox, the host's admin console, sign-in, and the confirm prompt.
+ * Leave, Save Sandbox, admin action warning, sign-in, and the confirm prompt.
  */
 export function AppModals({
   gameState,
-  provinces,
-  activeGameId,
   playerPower,
   sanityModalOpen,
   setSanityModalOpen,
@@ -89,21 +81,17 @@ export function AppModals({
   setSaveSandboxModalOpen,
   savingSandbox,
   handleSaveSandboxToAccount,
-  isGameCreator,
-  adminModalOpen,
-  setAdminModalOpen,
-  adminOverrideActive,
-  setAdminOverrideActive,
-  applyServerState,
-  fetchGamesList,
-  handleLoadScenario,
-  triggerToast,
+  unacknowledgedAdminEntries = [],
+  onAcknowledgeAdminEntries,
+  acknowledgingAdminEntries = false,
   authUser,
   setAuthUser,
   authModalOpen,
   setAuthModalOpen,
   authModalTab,
   authModalReason,
+  fetchGamesList,
+  triggerToast,
   confirmModal,
 }: AppModalsProps) {
   return (
@@ -151,23 +139,13 @@ export function AppModals({
         onCancel={() => setSaveSandboxModalOpen(false)}
       />
 
-      {/* GAME CREATOR ADMINISTRATOR MODAL */}
-      {isGameCreator && gameState && (
-        <AdminToolsModal
-          isOpen={adminModalOpen}
-          onClose={() => setAdminModalOpen(false)}
-          gameId={activeGameId}
-          gameState={gameState}
-          provinces={provinces}
-          user={authUser}
-          onStateUpdated={(newState) => {
-            applyServerState(newState);
-            fetchGamesList();
-          }}
-          onToast={triggerToast}
-          adminOverrideActive={adminOverrideActive}
-          onToggleAdminOverride={() => setAdminOverrideActive((prev) => !prev)}
-          onResetScenario={() => handleLoadScenario('standard_1901')}
+      {/* ADMIN ACTION WARNING MODAL */}
+      {onAcknowledgeAdminEntries && (
+        <AdminActionWarningModal
+          isOpen={unacknowledgedAdminEntries.length > 0}
+          entries={unacknowledgedAdminEntries}
+          onAcknowledge={onAcknowledgeAdminEntries}
+          loading={acknowledgingAdminEntries}
         />
       )}
 

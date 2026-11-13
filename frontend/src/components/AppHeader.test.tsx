@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameState, MultiplayerGameSummary } from '../types/diplomacy';
 import { AppHeader, type AppHeaderProps } from './AppHeader';
@@ -57,7 +56,7 @@ function props(over: Partial<AppHeaderProps> = {}): AppHeaderProps {
     toolsToggleRef: { current: null },
     directEditActive: false,
     openAdminTools: vi.fn(),
-    setAdminOverrideActive: vi.fn(),
+    onToggleDirectEdit: vi.fn(),
     toastBanner: null,
     ...over,
   };
@@ -141,27 +140,14 @@ describe('AppHeader: the top bar', () => {
   });
 });
 
-describe('AppHeader: the banner and the toast', () => {
-  it('shows no banner or toast by default', () => {
-    const { container } = render(<AppHeader {...props()} />);
+describe('AppHeader: the toast and no red Direct-Edit banner', () => {
+  it('shows no banner or toast by default, and never renders a red Direct-Edit banner when directEditActive is true', () => {
+    const { container, rerender } = render(<AppHeader {...props()} />);
     expect(container.querySelector('.admin-override-banner')).toBeNull();
     expect(container.querySelector('.imperial-toast-banner')).toBeNull();
-  });
 
-  it('shows the Direct-Edit banner with its two buttons', async () => {
-    const p = props({ directEditActive: true });
-    const { container } = render(<AppHeader {...p} />);
-    expect(container.querySelector('.admin-override-banner')).toHaveTextContent(
-      "ADMIN DIRECT-EDIT ACTIVE: You have Game Creator authority to edit any power's moves or state directly on the board.",
-    );
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Admin Console' }),
-    );
-    expect(p.openAdminTools).toHaveBeenCalledTimes(1);
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Disable Direct-Edit' }),
-    );
-    expect(p.setAdminOverrideActive).toHaveBeenCalledWith(false);
+    rerender(<AppHeader {...props({ directEditActive: true })} />);
+    expect(container.querySelector('.admin-override-banner')).toBeNull();
   });
 
   it('shows the toast after the header', () => {

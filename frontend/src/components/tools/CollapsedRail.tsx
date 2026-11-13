@@ -3,7 +3,6 @@ import {
   Eye,
   Maximize2,
   PanelLeftOpen,
-  ShieldAlert,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -19,9 +18,6 @@ export type CollapsedRailProps = Pick<
   | 'onResetCamera'
   | 'sandboxMode'
   | 'onToggleSandboxMode'
-  | 'isGameCreator'
-  | 'onOpenAdminTools'
-  | 'adminOverrideActive'
 >;
 
 /** The minimalist rail the desktop panel folds into. The drawer is never collapsed. */
@@ -33,9 +29,6 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
   onResetCamera,
   sandboxMode,
   onToggleSandboxMode,
-  isGameCreator = false,
-  onOpenAdminTools,
-  adminOverrideActive = false,
 }) => (
   <aside
     className="tools-sidebar tools-sidebar-collapsed"
@@ -94,17 +87,6 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
     >
       <Eye size={16} />
     </button>
-
-    {isGameCreator && onOpenAdminTools && (
-      <button
-        type="button"
-        className={`sidebar-rail-btn ${adminOverrideActive ? 'rail-admin-glow' : ''}`}
-        onClick={onOpenAdminTools}
-        title="Creator Admin Console"
-      >
-        <ShieldAlert size={16} />
-      </button>
-    )}
 
     <div className="rail-spacer" />
 

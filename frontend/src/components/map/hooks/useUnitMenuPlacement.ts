@@ -16,6 +16,7 @@ export interface UseUnitMenuPlacementOptions {
   selectedUnitId: string | null;
   selectedUnit: Unit | null;
   selectedBuildProv: string | null;
+  inspectedProvince?: string | null;
   /** The selected unit's destinations, which the floating menu keeps clear of. */
   reachableList: { province: string; coasts: string[] }[];
   pendingCoastChoice: PendingCoastChoice | null;
@@ -52,6 +53,7 @@ export function useUnitMenuPlacement({
   selectedUnitId,
   selectedUnit,
   selectedBuildProv,
+  inspectedProvince = null,
   reachableList,
   pendingCoastChoice,
   getUnitPoint,
@@ -91,11 +93,12 @@ export function useUnitMenuPlacement({
   const menuDragOffsetRef = useRef<Point>({ x: 0, y: 0 });
   const menuDragStartRef = useRef<Point>({ x: 0, y: 0 });
 
-  // Reset the menu drag offset whenever a different unit is selected: during render, not in
+  // Reset the menu drag offset whenever a different unit or province is selected: during render, not in
   // an effect, which would run after the new menu was placed with the old offset.
-  const offsetUnitRef = useRef(selectedUnitId);
-  if (offsetUnitRef.current !== selectedUnitId) {
-    offsetUnitRef.current = selectedUnitId;
+  const targetKey = inspectedProvince || selectedUnitId;
+  const offsetUnitRef = useRef(targetKey);
+  if (offsetUnitRef.current !== targetKey) {
+    offsetUnitRef.current = targetKey;
     menuDragOffsetRef.current = { x: 0, y: 0 };
   }
 
@@ -125,9 +128,11 @@ export function useUnitMenuPlacement({
   } | null => {
     const anchorPt = selectedUnit
       ? getUnitPoint(selectedUnit)
-      : selectedBuildProv
-        ? getProvincePoint(selectedBuildProv)
-        : null;
+      : inspectedProvince
+        ? getProvincePoint(inspectedProvince)
+        : selectedBuildProv
+          ? getProvincePoint(selectedBuildProv)
+          : null;
     if (!anchorPt) return null;
 
     const W = containerRef.current?.clientWidth || 980;
@@ -190,6 +195,7 @@ export function useUnitMenuPlacement({
     };
   }, [
     selectedUnit,
+    inspectedProvince,
     selectedBuildProv,
     reachableList,
     svgPointToScreen,
@@ -262,13 +268,22 @@ export function useUnitMenuPlacement({
         onLostPointerCapture: handleMenuDragEnd,
       };
   const showBuildMenu = Boolean(
-    selectedBuildProv && selectedUnitId && (compact || floatingPos),
+    !inspectedProvince &&
+      selectedBuildProv &&
+      selectedUnitId &&
+      (compact || floatingPos),
   );
   // A phone shows the coast picker in the bar's place while it is open.
   const showUnitMenu = Boolean(
-    selectedUnit && (compact ? !pendingCoastChoice : floatingPos),
+    !inspectedProvince &&
+      selectedUnit &&
+      (compact ? !pendingCoastChoice : floatingPos),
   );
-  const dockedBarVisible = compact && (showBuildMenu || Boolean(selectedUnit));
+  const dockedBarVisible =
+    compact &&
+    (showBuildMenu ||
+      Boolean(!inspectedProvince && selectedUnit) ||
+      Boolean(pendingCoastChoice));
 
   const onDockedBarChangeRef = useRef(onDockedBarChange);
   onDockedBarChangeRef.current = onDockedBarChange;

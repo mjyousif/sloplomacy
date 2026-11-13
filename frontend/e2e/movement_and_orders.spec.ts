@@ -127,20 +127,22 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await expect(advancedArmy).toBeVisible();
       await recorder.recordStep(page, '07_fall_1901_adjudicated');
 
-      // 9. Open Admin Console and roll back to Spring 1901 Movement
+      // 9. Open Turn and Clock Settings from the Administrator menu and revert to Spring 1901 Movement
+      await page.locator('[data-testid="btn-admin-menu"]').click();
       const openAdminBtn = page.locator('[data-testid="btn-open-admin-console"]');
       await expect(openAdminBtn).toBeVisible();
       await openAdminBtn.click();
 
-      const adminModal = page.locator('[data-testid="admin-tools-modal"]');
-      await expect(adminModal).toBeVisible();
+      const adminPanel = page.locator('[data-testid="admin-tools-modal"]');
+      await expect(adminPanel).toBeVisible();
 
-      const rollbackBtn = adminModal.locator('[data-testid="btn-admin-rollback"]');
+      const rollbackBtn = adminPanel.locator('[data-testid="btn-admin-rollback"]');
       await expect(rollbackBtn).toBeEnabled({ timeout: 5000 });
       await rollbackBtn.click({ modifiers: ['Shift'] });
 
       await expect(turnPill).toContainText(/SPRING 1901/i, { timeout: 10000 });
-      await adminModal.locator('[data-testid="btn-admin-close"]').click();
+      await page.locator('[data-testid="btn-admin-menu"]').click();
+      await page.locator('[data-testid="btn-exit-admin-mode"]').click();
       await expect(
         page.locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"][data-province="PAR"]')
       ).toBeVisible();
@@ -153,6 +155,11 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await page.waitForSelector('[data-testid="unit-token"][data-unit-id="FRA_F_ENG"]', {
         timeout: 15000,
       });
+      const adminWarningModal = page.locator('[data-testid="admin-action-warning-modal"]');
+      if (await adminWarningModal.isVisible()) {
+        await page.locator('[data-testid="admin-warning-acknowledge-btn"]').click();
+        await expect(adminWarningModal).toHaveCount(0);
+      }
 
       const fleetEng = page.locator('[data-testid="unit-token"][data-unit-id="FRA_F_ENG"]');
       const armyPic = page.locator('[data-testid="unit-token"][data-unit-id="FRA_A_PIC"]');
