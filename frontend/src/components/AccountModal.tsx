@@ -1,4 +1,4 @@
-import { ShieldCheck, User as UserIcon, X } from 'lucide-react';
+import { Lock, LogOut, ShieldCheck, User as UserIcon, X } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { updateAccountDisplayName } from '../lib/supabase';
@@ -101,14 +101,13 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="auth-field">
-            <label htmlFor="account-email">Signed-in Email (Private)</label>
-            <input
-              id="account-email"
-              type="text"
-              value={user.email}
-              disabled
-              readOnly
-            />
+            <span className="account-field-label">
+              Signed-in Email (Private)
+            </span>
+            <div className="account-readonly-value" data-testid="account-email">
+              <Lock size={13} />
+              <span>{user.email}</span>
+            </div>
           </div>
 
           <div className="auth-field">
@@ -149,13 +148,14 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           {!onboarding && (
             <button
               type="button"
-              className="auth-oauth-btn"
+              className="account-signout-btn"
               onClick={() => {
                 onClose();
                 onSignOut();
               }}
               disabled={submitting}
             >
+              <LogOut size={14} />
               <span>Sign Out</span>
             </button>
           )}
