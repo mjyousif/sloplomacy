@@ -39,7 +39,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
   handleCreateMatch,
 }) => {
   return (
-    <div className="lobby-create-card">
+    <div className="lobby-create-card" data-testid="create-campaign-card">
       <div className="lobby-create-header">
         <PlusCircle size={18} />
         <h3>Host New Multiplayer Game</h3>
@@ -67,6 +67,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
           <div className="privacy-toggle-row">
             <button
               type="button"
+              data-active={!isPrivate ? 'true' : undefined}
               className={`privacy-toggle-btn ${!isPrivate ? 'active' : ''}`}
               onClick={() => {
                 setIsPrivate(false);
@@ -78,6 +79,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
             </button>
             <button
               type="button"
+              data-active={isPrivate ? 'true' : undefined}
               className={`privacy-toggle-btn ${isPrivate ? 'active' : ''}`}
               onClick={() => setIsPrivate(true)}
             >

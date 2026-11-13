@@ -32,7 +32,11 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
     : undefined;
 
   return (
-    <div key={game.game_id} className="lobby-game-card">
+    <div
+      key={game.game_id}
+      className="lobby-game-card"
+      data-testid="lobby-game-card"
+    >
       <div className="lobby-game-card-header">
         <div>
           <div className="lobby-game-title-row">

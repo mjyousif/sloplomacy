@@ -242,9 +242,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         onOpenAuth={onOpenAuth}
       />
 
-      <div className="lobby-main-grid">
+      <div className="lobby-main-grid" data-testid="lobby-main-grid">
         {/* Left Column: My Games + Open Lobbies */}
-        <div className="lobby-games-column">
+        <div className="lobby-games-column" data-testid="lobby-games-column">
           <MyGamesSection
             user={user}
             myGames={myGames}
@@ -267,7 +267,10 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         </div>
 
         {/* Right Column: Host New Multiplayer Campaign & Join with Code */}
-        <aside className="lobby-create-column">
+        <aside
+          className="lobby-create-column"
+          data-testid="lobby-create-column"
+        >
           {/* 1. Host New Campaign Card */}
           <CreateCampaignPanel
             user={user}
@@ -301,7 +304,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       </div>
 
       {/* FOOTER BAR */}
-      <footer className="lobby-footer-bar">
+      <footer className="lobby-footer-bar" data-testid="lobby-footer">
         <span className="lobby-footer-tagline">
           Sloplomacy &bull; 1901 Tactical Engine
         </span>

@@ -70,7 +70,7 @@ describe('JoinWithCodeCard', () => {
       'placeholder',
       'Enter lobby passcode',
     );
-    const marked = document.querySelectorAll('.create-power-option.selected');
+    const marked = document.querySelectorAll('[data-selected="true"]');
     expect(marked).toHaveLength(1);
     expect(marked[0]).toHaveTextContent('Italy');
   });

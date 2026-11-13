@@ -15,7 +15,7 @@ export const LobbyHero: React.FC<LobbyHeroProps> = ({
   onOpenAuth,
 }) => {
   return (
-    <section className="lobby-hero">
+    <section className="lobby-hero" data-testid="lobby-hero">
       <div className="lobby-hero-content">
         <div className="lobby-badge-row">
           <span className="lobby-era-pill">

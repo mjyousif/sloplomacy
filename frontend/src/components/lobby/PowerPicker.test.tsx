@@ -12,7 +12,9 @@ describe('PowerPicker', () => {
     expect(buttons.map((b) => b.querySelector('span')?.textContent)).toEqual(
       ALL_POWERS.map((p) => POWER_METADATA[p].shortName),
     );
-    const selected = buttons.filter((b) => b.classList.contains('selected'));
+    const selected = buttons.filter(
+      (b) => b.getAttribute('data-selected') === 'true',
+    );
     expect(selected).toHaveLength(1);
     expect(selected[0].querySelector('span')).toHaveTextContent(
       POWER_METADATA.ITALY.shortName,

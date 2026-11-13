@@ -81,7 +81,9 @@ describe('OpenLobbiesSection', () => {
     const open = game({ game_id: 'b', name: 'Open' });
     const { props, user } = setup({ multiplayerLobbies: [mine, open] });
     const card = (n: string) =>
-      screen.getByText(n).closest('.lobby-game-card') as HTMLElement;
+      screen
+        .getByText(n)
+        .closest('[data-testid="lobby-game-card"]') as HTMLElement;
     await user.click(within(card('Open')).getByText(/Claim Germany/));
     expect(props.handlePowerSlotClick).toHaveBeenCalledExactlyOnceWith(
       open,

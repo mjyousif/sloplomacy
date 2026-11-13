@@ -35,7 +35,11 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
   handleJoinCodeSubmit,
 }) => {
   return (
-    <div className="lobby-create-card join-card" style={{ marginTop: '20px' }}>
+    <div
+      className="lobby-create-card join-card"
+      data-testid="join-with-code-card"
+      style={{ marginTop: '20px' }}
+    >
       <div className="lobby-create-header">
         <KeyRound size={18} />
         <h3>Join Private Campaign</h3>

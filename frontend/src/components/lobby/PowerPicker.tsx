@@ -22,6 +22,7 @@ export const PowerPicker: React.FC<PowerPickerProps> = ({
             key={pwr}
             type="button"
             onClick={() => onSelect(pwr)}
+            data-selected={selected ? 'true' : undefined}
             className={`create-power-option ${selected ? 'selected' : ''}`}
             style={{
               borderColor: selected ? meta.color : undefined,

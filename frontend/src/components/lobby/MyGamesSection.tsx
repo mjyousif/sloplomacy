@@ -40,7 +40,7 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
           <h2>My Active Campaigns &amp; Saved Games</h2>
         </div>
         {user && (
-          <span className="lobby-count-badge">
+          <span className="lobby-count-badge" data-testid="my-games-count">
             {myGames.length} {myGames.length === 1 ? 'Game' : 'Games'}
           </span>
         )}
@@ -85,10 +85,16 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
             const isConcluded = completion.phase !== 'active';
 
             return (
-              <div key={game.game_id} className="my-game-row">
+              <div
+                key={game.game_id}
+                className="my-game-row"
+                data-testid="my-game-row"
+              >
                 <div className="my-game-info">
                   <div className="my-game-top">
-                    <span className="my-game-name">{game.name}</span>
+                    <span className="my-game-name" data-testid="my-game-name">
+                      {game.name}
+                    </span>
                     <span className="my-game-turn-pill">
                       {game.season} {game.year} · {game.phase}
                     </span>
@@ -104,6 +110,7 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
                   <div className="my-game-sub">
                     <span
                       className="my-power-chip"
+                      data-testid="my-power-chip"
                       style={{
                         backgroundColor: pMeta.lightBg,
                         borderColor: pMeta.color,
@@ -119,6 +126,15 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
                       Playing as {pMeta.shortName} (Locked)
                     </span>
                     <span
+                      data-status={
+                        isConcluded
+                          ? completion.phase === 'unwitnessed'
+                            ? 'pending'
+                            : 'ready'
+                          : isFinalized
+                            ? 'ready'
+                            : 'pending'
+                      }
                       className={`my-finalize-status ${
                         isConcluded
                           ? completion.phase === 'unwitnessed'
@@ -156,6 +172,7 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
                   <button
                     type="button"
                     className="leave-campaign-btn"
+                    data-testid="leave-campaign-btn"
                     title={
                       game.is_sandbox
                         ? 'Delete saved solo sandbox scenario'
