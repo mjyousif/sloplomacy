@@ -327,7 +327,9 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
       );
       await expect(picCard).toBeVisible();
       // Picardy card shows ONLY its own 1 info note — never F ENG's note and never England's North Sea note!
-      await expect(picCard.locator('.unit-diagnostic-alert')).toHaveCount(1);
+      await expect(
+        picCard.locator('[data-testid="unit-diagnostic-alert"]'),
+      ).toHaveCount(1);
       await expect(picCard).not.toContainText('North Sea');
       // Finalize button is green (info notes are not blocking warnings)
       await expect(page.locator('[data-testid="btn-finalize-orders"]')).not.toContainText(

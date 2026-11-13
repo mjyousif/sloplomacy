@@ -1,0 +1,86 @@
+@layer components {
+  .adminTurnClockSidebarBody {
+    padding: 10px 12px 16px;
+  }
+
+  .adminTurnClockSidebarBody :global(.admin-error-banner) {
+    margin: 0 0 10px;
+  }
+
+  .adminTurnClockSidebarBody :global(.admin-tab-panel) {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .adminTurnClockSidebarBody :global(.admin-card-section) {
+    padding: 12px;
+  }
+
+  .adminTurnClockSidebarBody :global(.admin-card-title-row) h4 {
+    font-size: 0.84rem;
+  }
+
+  .adminTurnClockSidebarBody :global(.admin-section-desc) {
+    font-size: 0.74rem;
+    margin: 5px 0 10px;
+  }
+
+  .adminTurnClockSidebarBody :global(.admin-form-grid-3) {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 10px;
+  }
+
+  .adminTurnClockSidebarBody :global(.admin-form-grid-3) > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .adminTurnClockSidebarBody :global(.admin-form-group) {
+    min-width: 0;
+    gap: 5px;
+  }
+
+  .adminTurnClockSidebarBody :global(.admin-form-group) select,
+  .adminTurnClockSidebarBody :global(.admin-form-group) input,
+  .adminTurnClockSidebarBody :global(.icon-select-dropdown-trigger) {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    font-size: 0.78rem;
+    border-radius: 8px;
+  }
+
+  .adminTurnClockSidebarBody :global(.admin-form-actions-row) {
+    margin-top: 12px;
+  }
+
+  .adminTurnClockSidebarBody :global(.admin-rollback-action-box) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .adminTurnClockSidebarBody :global(.admin-primary-btn),
+  .adminTurnClockSidebarBody :global(.admin-secondary-btn) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@layer compact {
+  /* The Turn & Clock sidebar's fields are 0.78rem on a phone, because wide's
+     `.admin-turn-clock-sidebar-body .admin-form-group input` used to beat the 16px rule on
+     specificity. Cascade layers would make them 16px, so this keeps them as they were.
+     That leaves the iOS zoom-on-focus problem for these fields, which should be fixed on its own. */
+  :global([data-layout="compact"])
+    .adminTurnClockSidebarBody
+    :global(.admin-form-group)
+    input,
+  :global([data-layout="compact"])
+    .adminTurnClockSidebarBody
+    :global(.admin-form-group)
+    select {
+    font-size: 0.78rem;
+  }
+}

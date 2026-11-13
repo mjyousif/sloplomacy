@@ -27,7 +27,9 @@ test.describe('Scenario: Foreign Support Diagnostic Inspection', () => {
       await page.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
       await recorder.recordStep(page, '01_foreign_support_board_view');
 
-      const alert = page.locator('.unit-diagnostic-alert.info');
+      const alert = page.locator(
+        '[data-testid="unit-diagnostic-alert"][data-severity="info"]',
+      );
       await expect(alert).toBeVisible({ timeout: 5000 });
       await recorder.recordStep(page, '02_info_alert_detail');
 

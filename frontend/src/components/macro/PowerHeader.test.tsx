@@ -190,18 +190,22 @@ describe('PowerHeader', () => {
       {},
       progressFor({ units: [A_PAR, dislodged], isRetreatPhase: true }),
     );
-    expect(c.querySelector('.power-banner-sub')).toHaveTextContent(
-      '1 Units (+1 Dislodged) • 3 SCs',
-    );
+    expect(
+      c.querySelector('[data-testid="power-banner-sub"]'),
+    ).toHaveTextContent('1 Units (+1 Dislodged) • 3 SCs');
   });
 
   it('sheet: short name, counts with the unconfirmed number, and the status', () => {
     const c = header({ variant: 'sheet' });
-    expect(c.querySelector('.power-name-text')).toHaveTextContent('France');
+    expect(
+      c.querySelector('[data-testid="power-name-text"]'),
+    ).toHaveTextContent('France');
     expect(screen.getByTestId('macro-sheet-counts')).toHaveTextContent(
       '3 units · 3 SCs · 3 unconfirmed',
     );
-    expect(c.querySelector('.status-badge')).toHaveTextContent('Drafting');
+    expect(c.querySelector('[data-testid="status-badge"]')).toHaveTextContent(
+      'Drafting',
+    );
   });
 
   it('sheet: drops the unconfirmed count once everything is confirmed', () => {
@@ -219,10 +223,12 @@ describe('PowerHeader', () => {
 
   it('sheet: goes inert when the sheet shows a past turn', () => {
     const c = header({ variant: 'sheet', locked: true });
-    expect(c.querySelector('.macro-sheet-status-row')).toHaveAttribute('inert');
+    expect(
+      c.querySelector('[data-testid="macro-sheet-status-row"]'),
+    ).toHaveAttribute('inert');
     const live = header({ variant: 'sheet', locked: false });
-    expect(live.querySelector('.macro-sheet-status-row')).not.toHaveAttribute(
-      'inert',
-    );
+    expect(
+      live.querySelector('[data-testid="macro-sheet-status-row"]'),
+    ).not.toHaveAttribute('inert');
   });
 });

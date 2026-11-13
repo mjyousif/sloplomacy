@@ -1,0 +1,284 @@
+@layer components {
+  .unitMacroCard {
+    background: #232934;
+    border: 1px solid #353e4f;
+    border-radius: 9px;
+    padding: 9px 11px;
+    cursor: pointer;
+    transition: all 0.14s ease;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+
+  .unitMacroCard:hover,
+  .unitMacroCard.hovered {
+    border-color: #64748b;
+    background: #272e3b;
+  }
+
+  .unitMacroCard.selected {
+    border-color: #eab308;
+    box-shadow: 0 0 0 1px #eab308;
+  }
+
+  .unitMacroCard.cardWarning {
+    border-left: 4px solid #f59e0b;
+  }
+
+  .unitMacroCard.cardError {
+    border-left: 4px solid #ef4444;
+  }
+
+  .unitCardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .unitIdentity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .unitTypeBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-family: "Cinzel", serif;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #ffffff;
+  }
+
+  .unitProvTitle {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .unitProvCode {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #94a3b8;
+    background: #1a1e26;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .unitMiniPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+
+  .unitMiniPill.confirmed {
+    background: rgba(16, 185, 129, 0.16);
+    color: #6ee7b7;
+  }
+
+  .unitMiniPill.unconfirmed {
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+  }
+
+  .unitMiniPill.warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+  }
+
+  .unitMiniPill.error {
+    background: rgba(239, 68, 68, 0.22);
+    color: #fca5a5;
+  }
+
+  /* Visual Behavior Bar inside Card */
+  .unitBehaviorVisualizer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: #191d25;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    border: 1px solid #2c3342;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .behaviorVerbTag {
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  .behaviorTargetText {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Inline Order Controls */
+  .unitInlineControls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Compact one-line order rows (#223) */
+  .unitMacroCardCompact {
+    padding: 4px 7px;
+    border-radius: 7px;
+  }
+
+  .unitCompactRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    height: 26px;
+  }
+
+  .unitTypeBadge.compact {
+    padding: 2px 5px;
+    gap: 3px;
+    font-size: 0.68rem;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .unitCompactProv {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #f8fafc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .unitCompactControls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+
+  .unitCompactTargetPlaceholder {
+    flex: 0 0 104px;
+    width: 104px;
+  }
+
+  .unitCompactControls :global(.icon-select-dropdown) {
+    flex: 0 0 104px;
+    width: 104px;
+  }
+
+  .unitCompactControls :global(.icon-select-dropdown-trigger) {
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    gap: 4px;
+  }
+
+  .unitCompactControls :global(.icon-select-dropdown-value) {
+    gap: 5px;
+    overflow: hidden;
+  }
+
+  .unitCompactControls :global(.icon-select-dropdown-value) > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .unitCompactControls :global(.icon-select-dropdown-menu) {
+    left: auto;
+    right: 0;
+    min-width: 156px;
+  }
+
+  .unitCompactSubcontrols {
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1px solid #2c3342;
+  }
+
+  /* Diagnostic Alert inside Unit Card */
+  .unitDiagnosticAlert {
+    margin-top: 8px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    font-size: 0.73rem;
+    line-height: 1.35;
+  }
+
+  .unitDiagnosticAlert.warning {
+    background: rgba(245, 158, 11, 0.14);
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    color: #fde68a;
+  }
+
+  .unitDiagnosticAlert.info {
+    background: rgba(59, 130, 246, 0.14);
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    color: #bfdbfe;
+  }
+
+  .unitDiagnosticAlert.error {
+    background: rgba(239, 68, 68, 0.16);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    color: #fecaca;
+  }
+
+  .diagIcon {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .unitSimResultStrip {
+    margin-top: 8px;
+    padding: 6px 9px;
+    border-radius: 6px;
+    font-size: 0.73rem;
+  }
+
+  .unitSimResultStrip.simOk {
+    background: rgba(16, 185, 129, 0.16);
+    border: 1px solid rgba(16, 185, 129, 0.45);
+    color: #a7f3d0;
+  }
+
+  .unitSimResultStrip.simFail {
+    background: rgba(225, 29, 72, 0.18);
+    border: 1px solid rgba(225, 29, 72, 0.5);
+    color: #fecdd3;
+  }
+}

@@ -1,0 +1,145 @@
+@layer components {
+  .macro-sidebar {
+    height: 100%;
+    background: #171b22;
+    border-left: 1px solid #282f3d;
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+    transition:
+      width 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+      min-width 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -2px 0 12px rgba(0, 0, 0, 0.35);
+  }
+
+  .macro-sidebar[data-expanded="true"] {
+    width: 360px;
+    min-width: 340px;
+    max-width: 380px;
+  }
+
+  .macro-sidebar[data-collapsed="true"] {
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    align-items: center;
+    padding: 8px 0;
+    background: #13161c;
+    box-shadow: -2px 0 12px rgba(0, 0, 0, 0.35);
+  }
+
+  .active-power-banner {
+    padding: 12px 16px;
+    background: #212631;
+    border-bottom: 1px solid #2f3746;
+  }
+
+  .macro-quick-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .macro-units-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: #333d4e transparent;
+  }
+
+  .macro-units-scroll-area::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .macro-units-scroll-area::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .macro-units-scroll-area::-webkit-scrollbar-thumb {
+    background: #333d4e;
+    border-radius: 4px;
+  }
+
+  .macro-units-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
+
+  .macro-sidebar[data-history-locked="true"] > [inert],
+  .macro-sheet-peek[data-history-locked="true"] > [inert],
+  .macro-sheet-body[data-history-locked="true"] {
+    opacity: 0.4;
+    filter: grayscale(0.5);
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .macro-sheet-peek {
+    padding: 0 14px 12px 10px;
+    border-left: 4px solid transparent;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-controls > button {
+    min-height: 44px;
+    margin: 0;
+  }
+
+  :global([data-layout="compact"])
+    .macro-sheet-controls
+    > [data-testid="btn-confirm-all"] {
+    flex: 0 0 auto;
+    font-size: 0.82rem;
+  }
+
+  /* Portrait: Confirm All and Finalize share a row and Resolve gets its own. A phone held
+     sideways has room for all three in one row, which keeps the peek short. */
+  :global([data-layout="compact"])
+    .macro-sheet-controls
+    > [data-testid="btn-finalize-orders"],
+  :global([data-layout="compact"])
+    .macro-sheet-controls
+    > [data-testid="btn-unfinalize-orders"] {
+    flex: 1 1 150px;
+    min-width: 150px;
+  }
+
+  :global([data-layout="compact"])
+    .macro-sheet-controls
+    > [data-testid="btn-adjudicate-phase"] {
+    flex: 1 1 200px;
+  }
+
+  :global([data-layout="compact"])
+    .macro-sheet-controls
+    > [data-testid="mp-resolution-controls"] {
+    flex: 1 1 100%;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-body .macro-units-scroll-area {
+    flex: none;
+    overflow: visible;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-surrender {
+    display: flex;
+    padding: 4px 12px 12px;
+  }
+
+  :global([data-layout="compact"])
+    .macro-sheet-surrender
+    [data-testid="btn-surrender-sidebar"] {
+    min-height: 44px;
+    font-size: 0.85rem;
+  }
+}

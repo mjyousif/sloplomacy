@@ -64,15 +64,19 @@ describe('MacroSidebar panel', () => {
   it('shows the power, its orders and the footer, in that order', () => {
     const { container } = sidebar();
     const aside = container.querySelector('aside') as HTMLElement;
-    expect(aside).toHaveClass('macro-sidebar-expanded');
-    expect(Array.from(aside.children).map((c) => c.className)).toEqual([
+    expect(aside).toHaveAttribute('data-expanded', 'true');
+    expect(
+      Array.from(aside.children).map((c) => c.getAttribute('data-testid')),
+    ).toEqual([
       'active-power-banner',
       'macro-units-scroll-area',
-      'sidebar-footer-actions',
-      'sidebar-version-footer',
+      'macro-footer-actions',
+      null,
     ]);
     expect(
-      aside.querySelector('.active-power-banner')?.getAttribute('style'),
+      aside
+        .querySelector('[data-testid="active-power-banner"]')
+        ?.getAttribute('style'),
     ).toContain('border-left');
     expect(screen.getAllByTestId('unit-macro-card')).toHaveLength(3);
     expect(screen.getByTestId('btn-finalize-orders')).toBeInTheDocument();
@@ -111,18 +115,24 @@ describe('MacroSidebar panel', () => {
 
   it('offers Surrender only in a multiplayer match that handles it', () => {
     const solo = sidebar({ onSurrenderClick: vi.fn() });
-    expect(solo.container.querySelector('.surrender-btn-sidebar')).toBeNull();
+    expect(
+      solo.container.querySelector('[data-testid="btn-surrender-sidebar"]'),
+    ).toBeNull();
     solo.unmount();
     const onSurrenderClick = vi.fn();
     const mp = sidebar({ isMultiplayer: true, onSurrenderClick });
     fireEvent.click(
-      mp.container.querySelector('.surrender-btn-sidebar') as HTMLElement,
+      mp.container.querySelector(
+        '[data-testid="btn-surrender-sidebar"]',
+      ) as HTMLElement,
     );
     expect(onSurrenderClick).toHaveBeenCalledTimes(1);
     mp.unmount();
     const noHandler = sidebar({ isMultiplayer: true });
     expect(
-      noHandler.container.querySelector('.surrender-btn-sidebar'),
+      noHandler.container.querySelector(
+        '[data-testid="btn-surrender-sidebar"]',
+      ),
     ).toBeNull();
   });
 
@@ -133,28 +143,28 @@ describe('MacroSidebar panel', () => {
       lobbyStatus: 'active',
       finalizedPowers: ['FRANCE'],
     });
-    expect(container.querySelector('.consensus-title')).toHaveTextContent(
-      'Resolution Progress: 1/2 Ready',
-    );
-    expect(container.querySelector('.mp-consensus-desc')).toHaveTextContent(
-      'Waiting on: England',
-    );
+    expect(
+      container.querySelector('[data-testid="consensus-title"]'),
+    ).toHaveTextContent('Resolution Progress: 1/2 Ready');
+    expect(
+      container.querySelector('[data-testid="mp-consensus-desc"]'),
+    ).toHaveTextContent('Waiting on: England');
   });
 
   it('puts the phase context in the banner during winter and retreats', () => {
     const winter = sidebar({ season: 'Winter', phase: 'Adjustments' });
     expect(
       winter.container.querySelector(
-        '.active-power-banner .macro-phase-context-box',
+        '[data-testid="active-power-banner"] [data-testid="macro-phase-context-box"]',
       ),
-    ).toHaveClass('adjustment');
+    ).toHaveAttribute('data-phase', 'adjustment');
     winter.unmount();
     const retreat = sidebar({ phase: 'Retreats', season: 'Fall' });
     expect(
       retreat.container.querySelector(
-        '.active-power-banner .macro-phase-context-box',
+        '[data-testid="active-power-banner"] [data-testid="macro-phase-context-box"]',
       ),
-    ).toHaveClass('retreat');
+    ).toHaveAttribute('data-phase', 'retreat');
   });
 
   it("shows the unit cards' controls for a dislodged unit in a retreat phase", () => {
@@ -176,11 +186,13 @@ describe('MacroSidebar panel', () => {
       resolutions: { [A_PAR.id]: { succeeded: true, reason: 'Held.' } },
     } as never;
     const off = sidebar({ simulationResult });
-    expect(off.container.querySelector('.unit-sim-result-strip')).toBeNull();
+    expect(
+      off.container.querySelector('[data-testid="unit-sim-result-strip"]'),
+    ).toBeNull();
     off.unmount();
     expect(
       sidebar({ simulationResult, sandboxMode: true }).container.querySelector(
-        '.unit-sim-result-strip',
+        '[data-testid="unit-sim-result-strip"]',
       ),
     ).not.toBeNull();
   });

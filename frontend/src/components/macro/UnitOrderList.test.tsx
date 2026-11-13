@@ -66,17 +66,19 @@ describe('UnitOrderList', () => {
       A_BRE.id,
       F_ENG.id,
     ]);
-    expect(container.querySelector('.macro-list-header')).toHaveTextContent(
-      'ACTIVE FORCE ORDERS (3 UNITS)',
-    );
+    expect(
+      container.querySelector('[data-testid="macro-list-header"]'),
+    ).toHaveTextContent('ACTIVE FORCE ORDERS (3 UNITS)');
   });
 
   it('words the hint for a finger on the phone sheet', () => {
-    expect(list().container.querySelector('.macro-hint')).toHaveTextContent(
-      'Click card or map',
-    );
     expect(
-      list({ isSheet: true }).container.querySelector('.macro-hint'),
+      list().container.querySelector('[data-testid="macro-hint"]'),
+    ).toHaveTextContent('Click card or map');
+    expect(
+      list({ isSheet: true }).container.querySelector(
+        '[data-testid="macro-hint"]',
+      ),
     ).toHaveTextContent('Tap a card or the map');
   });
 
@@ -86,9 +88,10 @@ describe('UnitOrderList', () => {
       hoveredUnitId: F_ENG.id,
     });
     const [par, bre, eng] = cards(container);
-    expect(par).not.toHaveClass('selected', 'hovered');
-    expect(bre).toHaveClass('selected');
-    expect(eng).toHaveClass('hovered');
+    expect(par).not.toHaveAttribute('data-selected');
+    expect(par).not.toHaveAttribute('data-hovered');
+    expect(bre).toHaveAttribute('data-selected', 'true');
+    expect(eng).toHaveAttribute('data-hovered', 'true');
   });
 
   it('hands each card its own issues and colours it by severity', () => {
@@ -97,10 +100,12 @@ describe('UnitOrderList', () => {
       { issues: [issue(A_PAR, 'error'), issue(A_BRE, 'warning')] },
     );
     const [par, bre, eng] = cards(container);
-    expect(par).toHaveClass('card-error');
-    expect(par.querySelectorAll('.unit-diagnostic-alert')).toHaveLength(1);
-    expect(bre).toHaveClass('card-warning');
-    expect(eng).not.toHaveClass('card-error', 'card-warning');
+    expect(par).toHaveAttribute('data-status', 'error');
+    expect(
+      par.querySelectorAll('[data-testid="unit-diagnostic-alert"]'),
+    ).toHaveLength(1);
+    expect(bre).toHaveAttribute('data-status', 'warning');
+    expect(eng).not.toHaveAttribute('data-status');
   });
 
   it('shows the simulation result only while the simulation is on', () => {
@@ -111,15 +116,17 @@ describe('UnitOrderList', () => {
     } as unknown as SimulationResult;
     expect(
       list({ simulationResult, simActive: false }).container.querySelector(
-        '.unit-sim-result-strip',
+        '[data-testid="unit-sim-result-strip"]',
       ),
     ).toBeNull();
     const { container } = list({ simulationResult, simActive: true });
-    expect(container.querySelectorAll('.unit-sim-result-strip')).toHaveLength(
-      1,
-    );
     expect(
-      cards(container)[0].querySelector('.unit-sim-result-strip'),
+      container.querySelectorAll('[data-testid="unit-sim-result-strip"]'),
+    ).toHaveLength(1);
+    expect(
+      cards(container)[0].querySelector(
+        '[data-testid="unit-sim-result-strip"]',
+      ),
     ).not.toBeNull();
   });
 
@@ -201,7 +208,9 @@ describe('UnitOrderList', () => {
         { isAdjustmentPhase: true },
         { isAdjustmentPhase: true, builds },
       );
-      const headers = container.querySelectorAll('.macro-list-header');
+      const headers = container.querySelectorAll(
+        '[data-testid="macro-list-header"]',
+      );
       expect(headers[0]).toHaveTextContent('HOME BUILDS (0/2 ASSIGNED)');
       expect(
         Array.from(
@@ -219,7 +228,9 @@ describe('UnitOrderList', () => {
         { isAdjustmentPhase: true, builds: owed(1, ['MAR']) as never },
       );
       expect(
-        container.querySelector('.macro-builds-wrapper .macro-hint'),
+        container.querySelector(
+          '[data-testid="macro-builds-wrapper"] [data-testid="macro-hint"]',
+        ),
       ).toHaveTextContent('Tap a card or the map');
     });
 
@@ -228,7 +239,9 @@ describe('UnitOrderList', () => {
         { isAdjustmentPhase: true },
         { isAdjustmentPhase: true, builds: owed(1, []) as never },
       );
-      expect(container.querySelector('.macro-builds-wrapper')).toBeNull();
+      expect(
+        container.querySelector('[data-testid="macro-builds-wrapper"]'),
+      ).toBeNull();
     });
 
     it('headlines the disbands when units must go', () => {
@@ -236,9 +249,9 @@ describe('UnitOrderList', () => {
         { isAdjustmentPhase: true },
         { isAdjustmentPhase: true, builds: owed(-1, []) as never },
       );
-      expect(container.querySelector('.macro-list-header')).toHaveTextContent(
-        'DISBAND UNITS (0/1 SELECTED)',
-      );
+      expect(
+        container.querySelector('[data-testid="macro-list-header"]'),
+      ).toHaveTextContent('DISBAND UNITS (0/1 SELECTED)');
     });
 
     it('gives each card the keep and disband choice when units must go', () => {

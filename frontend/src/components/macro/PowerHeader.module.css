@@ -1,0 +1,185 @@
+@layer components {
+  .power-banner-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .power-banner-main-col {
+    flex: 1;
+  }
+
+  .power-banner-title {
+    font-family: "Cinzel", serif;
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: #f8eed9;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .power-banner-sub {
+    font-size: 0.73rem;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+
+  .power-banner-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .power-crest-icon {
+    font-size: 1.05rem;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .status-badge[data-status="finalized"] {
+    background: rgba(16, 185, 129, 0.18);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+  }
+
+  .status-badge[data-status="has-warnings"] {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fcd34d;
+    border: 1px solid rgba(245, 158, 11, 0.45);
+  }
+
+  .status-badge[data-status="drafting"] {
+    background: #2d3544;
+    color: #cbd5e1;
+  }
+
+  .status-badge[data-status="surrendered"] {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    color: #fca5a5;
+  }
+
+  .macro-phase-context-box {
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    line-height: 1.35;
+  }
+
+  .macro-phase-context-box[data-phase="adjustment"] {
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #bfdbfe;
+  }
+
+  .macro-phase-context-box[data-phase="retreat"] {
+    background: rgba(234, 88, 12, 0.15);
+    border: 1px solid rgba(234, 88, 12, 0.35);
+    color: #fdba74;
+  }
+
+  /* The orders panel while the map shows a past turn: read-only under a bar back to live. */
+  .history-lock-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 7px 10px;
+    border-bottom: 1px solid #6b5426;
+    background: #1b1a16;
+    color: #f59e0b;
+    font-size: 0.72rem;
+  }
+
+  .history-lock-label {
+    flex: 1;
+    min-width: 0;
+    color: #e2d5b8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .history-lock-label strong {
+    color: #fde68a;
+  }
+
+  .history-lock-live-btn {
+    flex-shrink: 0;
+    padding: 4px 9px;
+    border: 1px solid #b45309;
+    border-radius: 5px;
+    background: #78350f;
+    color: #fde68a;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .history-lock-live-btn:hover {
+    background: #92400e;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .macro-sheet-status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-status-row .power-crest-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-power {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-power .power-name-text {
+    font-family: "Cinzel", serif;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #f8eed9;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-counts {
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-status-row .status-badge {
+    font-size: 0.78rem;
+  }
+
+  :global([data-layout="compact"]) .macro-phase-context-box {
+    margin: 10px 12px 0;
+  }
+
+  :global([data-layout="compact"]) .history-lock-bar {
+    padding: 4px 10px;
+    margin: -2px 0 6px;
+    border: 1px solid #6b5426;
+    border-radius: 8px;
+  }
+
+  :global([data-layout="compact"]) .history-lock-live-btn {
+    min-height: 36px;
+  }
+}

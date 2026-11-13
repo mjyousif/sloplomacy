@@ -36,18 +36,6 @@
   font-size: 16px;
 }
 
-/* The Turn & Clock sidebar's fields are 0.78rem on a phone, because wide's
-   `.admin-turn-clock-sidebar-body .admin-form-group input` used to beat the 16px rule above on
-   specificity. Cascade layers would make them 16px, so this keeps them as they were.
-   That leaves the iOS zoom-on-focus problem for these fields, which should be fixed on its own. */
-[data-layout="compact"] .admin-turn-clock-sidebar-body .admin-form-group input,
-[data-layout="compact"]
-  .admin-turn-clock-sidebar-body
-  .admin-form-group
-  select {
-  font-size: 0.78rem;
-}
-
 /* -------------------------------------------------------------------------
    2. ADMIN
    Not moved into a module yet. The modals and the top bar have their own
@@ -257,181 +245,6 @@
   min-height: 0;
 }
 
-[data-layout="compact"] .bottom-sheet-spacer {
-  flex: none;
-}
-
-[data-layout="compact"] .bottom-sheet {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  background: #171b22;
-  border-top: 1px solid #2f3746;
-  border-radius: 14px 14px 0 0;
-  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.55);
-  overflow: hidden;
-  will-change: transform;
-}
-
-/* Only while moving between stops, so measuring or rotating never plays as a slide. */
-[data-layout="compact"] .bottom-sheet.sliding {
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-layout="compact"] .bottom-sheet.sliding {
-    transition: none;
-  }
-}
-
-[data-layout="compact"] .bottom-sheet-head {
-  flex: none;
-}
-
-[data-layout="compact"] .bottom-sheet-handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 28px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor: grab;
-  touch-action: none;
-}
-
-[data-layout="compact"] .bottom-sheet-grip {
-  width: 40px;
-  height: 5px;
-  border-radius: 3px;
-  background: #4b5567;
-}
-
-[data-layout="compact"] .bottom-sheet-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  border-top: 1px solid #262d3a;
-  scrollbar-width: thin;
-  scrollbar-color: #333d4e transparent;
-}
-
-[data-layout="compact"] .bottom-sheet-body::-webkit-scrollbar {
-  width: 6px;
-}
-
-[data-layout="compact"] .bottom-sheet-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-[data-layout="compact"] .bottom-sheet-body::-webkit-scrollbar-thumb {
-  background: #333d4e;
-  border-radius: 4px;
-}
-
-[data-layout="compact"] .bottom-sheet-body::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
-
-[data-layout="compact"] .macro-sheet-peek {
-  padding: 0 14px 12px 10px;
-  border-left: 4px solid transparent;
-}
-
-[data-layout="compact"] .macro-sheet-status-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-[data-layout="compact"] .macro-sheet-status-row .power-crest-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.3rem;
-}
-
-[data-layout="compact"] .macro-sheet-power {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-
-[data-layout="compact"] .macro-sheet-power .power-name-text {
-  font-family: "Cinzel", serif;
-  font-size: 1rem;
-  font-weight: 800;
-  color: #f8eed9;
-}
-
-[data-layout="compact"] .macro-sheet-counts {
-  font-size: 0.8rem;
-  color: #94a3b8;
-}
-
-[data-layout="compact"] .macro-sheet-status-row .status-badge {
-  font-size: 0.78rem;
-}
-
-[data-layout="compact"] .macro-sheet-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-[data-layout="compact"] .macro-sheet-controls > button {
-  min-height: 44px;
-  margin: 0;
-}
-
-[data-layout="compact"] .macro-sheet-controls > .quick-action-btn {
-  flex: 0 0 auto;
-  font-size: 0.82rem;
-}
-
-/* Portrait: Confirm All and Finalize share a row and Resolve gets its own. A phone held
-   sideways has room for all three in one row, which keeps the peek short. */
-[data-layout="compact"] .macro-sheet-controls > .finalize-primary-btn,
-[data-layout="compact"] .macro-sheet-controls > .unfinalize-btn {
-  flex: 1 1 150px;
-  min-width: 150px;
-}
-
-[data-layout="compact"] .macro-sheet-controls > .adjudicate-turn-btn {
-  flex: 1 1 200px;
-}
-
-[data-layout="compact"] .macro-sheet-controls > .mp-resolution-controls {
-  flex: 1 1 100%;
-}
-
-[data-layout="compact"] .macro-sheet-body .macro-units-scroll-area {
-  flex: none;
-  overflow: visible;
-}
-
-[data-layout="compact"] .macro-sheet-body .macro-phase-context-box {
-  margin: 10px 12px 0;
-}
-
-[data-layout="compact"] .macro-sheet-surrender {
-  display: flex;
-  padding: 4px 12px 12px;
-}
-
-[data-layout="compact"] .macro-sheet-surrender .quick-action-btn {
-  min-height: 44px;
-  font-size: 0.85rem;
-}
-
 /* The docked unit bar: on a phone the unit menu, the build menu and the coast picker sit in
    one full-width bar at the bottom of the map, just above the order sheet's peek, so they
    never cover the provinces you need to tap. It can't be dragged, so the grip is hidden. */
@@ -527,81 +340,12 @@
 }
 
 [data-layout="compact"]
-  .map-viewport-container:has(.phase-timer-pill, .phase-timer-widget)
+  .map-viewport-container:has(
+    [data-testid="phase-timer-pill"],
+    [data-testid="phase-timer-widget"]
+  )
   .simulation-map-banner {
   top: 58px;
-}
-
-/* The turn clock: a pill at the top of the map, opening into the full widget on a tap. */
-[data-layout="compact"] .phase-timer-pill {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid #785322;
-  border-radius: 999px;
-  background: rgba(20, 11, 7, 0.94);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-  color: #f5e6c8;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.9rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-[data-layout="compact"] .phase-timer-pill.phase-timer-low {
-  border-color: #b91c1c;
-  color: #f87171;
-}
-
-/* In Hypothetical Mode the real clock keeps running; the full widget says so. */
-[data-layout="compact"] .phase-timer-pill-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #f59e0b;
-}
-
-[data-layout="compact"] .phase-timer-widget {
-  top: 10px;
-  bottom: auto;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 26;
-  width: min(300px, calc(100% - 20px));
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-[data-layout="compact"] .phase-timer-widget button {
-  min-height: 44px;
-}
-
-[data-layout="compact"] .phase-timer-collapse {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: #d4a349;
-}
-
-/* Wide's `.phase-timer-widget button:hover` used to beat the transparent background above on
-   specificity. Cascade layers rank this layer higher, so the hover tint is restated. */
-[data-layout="compact"] .phase-timer-collapse:hover:not(:disabled) {
-  background: rgba(212, 163, 73, 0.3);
 }
 
 /* -------------------------------------------------------------------------
@@ -645,17 +389,6 @@
 [data-layout="compact"] .unit-floating-menu {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-}
-
-[data-layout="compact"] .history-lock-bar {
-  padding: 4px 10px;
-  margin: -2px 0 6px;
-  border: 1px solid #6b5426;
-  border-radius: 8px;
-}
-
-[data-layout="compact"] .history-lock-live-btn {
-  min-height: 36px;
 }
 
 [data-layout="compact"] .admin-tile-inspector.docked {

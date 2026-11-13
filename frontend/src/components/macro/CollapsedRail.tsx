@@ -9,6 +9,7 @@ import type React from 'react';
 import { POWER_METADATA, type Power } from '../../types/diplomacy';
 import type { OrderProgress } from '../../utils/orderProgress';
 import { PowerFlag } from '../PowerFlag';
+import styles from './CollapsedRail.module.css';
 
 export type CollapsedRailAdminMode = 'direct-edit' | 'turn-clock';
 
@@ -54,7 +55,7 @@ export const CollapsedRail: React.FC<{
         <div className="rail-divider" />
 
         <div
-          className="rail-admin-crest"
+          className={styles.railAdminCrest}
           data-testid="rail-admin-crest"
           title={modeTitle}
         >
@@ -63,10 +64,13 @@ export const CollapsedRail: React.FC<{
 
         {isDirectEdit && stagedChangesCount > 0 && (
           <div
-            className="rail-counter-badge"
+            className={styles.railCounterBadge}
             title={`${stagedChangesCount} staged board change${stagedChangesCount === 1 ? '' : 's'}`}
           >
-            <span className="rail-badge-staged" data-testid="rail-badge-staged">
+            <span
+              className={styles.railBadgeStaged}
+              data-testid="rail-badge-staged"
+            >
               {stagedChangesCount}
             </span>
           </div>
@@ -108,7 +112,7 @@ export const CollapsedRail: React.FC<{
       <div className="rail-divider" />
 
       <div
-        className="rail-power-crest"
+        className={styles.railPowerCrest}
         data-testid="rail-power-crest"
         title={`Commanding ${powerMeta.name} (${myActiveFieldUnits.length} Units, ${scCountByPower[activePower]} SC)`}
         style={{ borderColor: powerMeta.color }}
@@ -117,19 +121,29 @@ export const CollapsedRail: React.FC<{
       </div>
 
       <div
-        className="rail-counter-badge"
+        className={styles.railCounterBadge}
         title={`${unconfirmedCount} unconfirmed orders`}
       >
         {unconfirmedCount > 0 ? (
-          <span className="rail-badge-unconfirmed">{unconfirmedCount}</span>
+          <span
+            className={styles.railBadgeUnconfirmed}
+            data-testid="rail-badge-unconfirmed"
+          >
+            {unconfirmedCount}
+          </span>
         ) : (
-          <span className="rail-badge-clean">✓</span>
+          <span
+            className={styles.railBadgeClean}
+            data-testid="rail-badge-clean"
+          >
+            ✓
+          </span>
         )}
       </div>
 
       {myIssues.length > 0 && (
         <div
-          className="rail-warn-badge"
+          className={styles.railWarnBadge}
           data-testid="rail-warn-badge"
           title={`${myIssues.length} tactical issues`}
         >

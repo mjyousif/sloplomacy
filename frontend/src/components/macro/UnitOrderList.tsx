@@ -19,6 +19,7 @@ import {
 import type { OrderProgress } from '../../utils/orderProgress';
 import { BuildSlotCard } from './BuildSlotCard';
 import { UnitMacroCard } from './UnitMacroCard';
+import styles from './UnitOrderList.module.css';
 
 interface UnitOrderListProps {
   activePower: Power;
@@ -102,12 +103,18 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
     <>
       {/* Winter Builds */}
       {isAdjustmentPhase && buildCount > 0 && buildHomes.length > 0 && (
-        <div className="macro-builds-wrapper">
-          <div className="macro-list-header">
+        <div
+          className={styles.macroBuildsWrapper}
+          data-testid="macro-builds-wrapper"
+        >
+          <div
+            className={styles.macroListHeader}
+            data-testid="macro-list-header"
+          >
             <span>
               HOME BUILDS ({assignedBuildsCount}/{maxAllowedBuilds} ASSIGNED)
             </span>
-            <span className="macro-hint">
+            <span className={styles.macroHint} data-testid="macro-hint">
               {isSheet ? 'Tap a card or the map' : 'Click card or map'}
             </span>
           </div>
@@ -133,7 +140,7 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
         </div>
       )}
 
-      <div className="macro-list-header">
+      <div className={styles.macroListHeader} data-testid="macro-list-header">
         <span>
           {isAdjustmentPhase && buildCount < 0
             ? `DISBAND UNITS (${assignedDisbandsCount}/${neededDisbands} SELECTED)`
@@ -146,7 +153,7 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
           <button
             type="button"
             data-testid="btn-toggle-compact-orders"
-            className={`macro-density-toggle ${compactOrders ? 'active' : ''}`}
+            className={styles.macroDensityToggle}
             aria-pressed={compactOrders}
             onClick={onToggleCompactOrders}
             title={
@@ -159,7 +166,7 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
             <span>{compactOrders ? 'Detailed' : 'Compact'}</span>
           </button>
         ) : (
-          <span className="macro-hint">
+          <span className={styles.macroHint} data-testid="macro-hint">
             {isSheet ? 'Tap a card or the map' : 'Click card or map'}
           </span>
         )}

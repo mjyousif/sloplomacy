@@ -1,6 +1,7 @@
 import type React from 'react';
 import type { Order, ProvinceInfo, Unit } from '../../../types/diplomacy';
 import { splitProvinceCode } from '../../../utils/orderHelpers';
+import styles from '../OrderParameterControls.module.css';
 
 interface RetreatControlsProps {
   unit: Unit;
@@ -20,7 +21,7 @@ export const RetreatControls: React.FC<RetreatControlsProps> = ({
   onUpdateOrder,
 }) => {
   return (
-    <div className="order-param-row">
+    <div className={styles.orderParamRow}>
       <label>Retreat To:</label>
       {validRetreats.length === 0 ? (
         <span style={{ fontSize: 11, color: '#f87171' }}>

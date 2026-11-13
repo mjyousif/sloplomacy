@@ -13,6 +13,7 @@ import {
 } from '../../types/diplomacy';
 import type { OrderProgress } from '../../utils/orderProgress';
 import { PowerFlag } from '../PowerFlag';
+import styles from './PowerHeader.module.css';
 
 /** Civil Disorder, Finalized, the issue count or Drafting. */
 export const StatusBadge: React.FC<{
@@ -20,22 +21,40 @@ export const StatusBadge: React.FC<{
   isFinalized: boolean;
   blockingIssues: ValidationIssue[];
 }> = ({ isSurrendered, isFinalized, blockingIssues }) => (
-  <div className="power-status-badge-wrap">
+  <div>
     {isSurrendered ? (
-      <span className="status-badge surrendered">
+      <span
+        className={styles.statusBadge}
+        data-testid="status-badge"
+        data-status="surrendered"
+      >
         <Flag size={11} /> Civil Disorder
       </span>
     ) : isFinalized ? (
-      <span className="status-badge finalized">
+      <span
+        className={styles.statusBadge}
+        data-testid="status-badge"
+        data-status="finalized"
+      >
         <Lock size={11} /> Finalized
       </span>
     ) : blockingIssues.length > 0 ? (
-      <span className="status-badge has-warnings">
+      <span
+        className={styles.statusBadge}
+        data-testid="status-badge"
+        data-status="has-warnings"
+      >
         <AlertTriangle size={11} /> {blockingIssues.length} Issue
         {blockingIssues.length > 1 ? 's' : ''}
       </span>
     ) : (
-      <span className="status-badge drafting">Drafting</span>
+      <span
+        className={styles.statusBadge}
+        data-testid="status-badge"
+        data-status="drafting"
+      >
+        Drafting
+      </span>
     )}
   </div>
 );
@@ -61,7 +80,11 @@ export const PhaseContext: React.FC<{
   return (
     <>
       {isAdjustmentPhase && (
-        <div className="macro-phase-context-box adjustment">
+        <div
+          className={styles.macroPhaseContextBox}
+          data-testid="macro-phase-context-box"
+          data-phase="adjustment"
+        >
           <strong>WINTER ADJUSTMENTS:</strong>{' '}
           {buildCount > 0 && buildHomes.length > 0
             ? `Build up to ${maxAllowedBuilds} unit${maxAllowedBuilds > 1 ? 's' : ''} in open home centers (${assignedBuildsCount}/${maxAllowedBuilds} assigned).`
@@ -74,7 +97,11 @@ export const PhaseContext: React.FC<{
       )}
 
       {isRetreatPhase && (
-        <div className="macro-phase-context-box retreat">
+        <div
+          className={styles.macroPhaseContextBox}
+          data-testid="macro-phase-context-box"
+          data-phase="retreat"
+        >
           <strong>RETREAT PHASE:</strong>{' '}
           {myDislodgedUnits.length > 0
             ? `${myDislodgedUnits.length} dislodged unit${myDislodgedUnits.length > 1 ? 's' : ''} must Retreat or Disband.`
@@ -90,14 +117,14 @@ export const HistoryLockBar: React.FC<{
   historyLabel: string;
   onReturnToLive?: () => void;
 }> = ({ historyLabel, onReturnToLive }) => (
-  <div className="history-lock-bar" data-testid="history-lock-bar">
+  <div className={styles.historyLockBar} data-testid="history-lock-bar">
     <History size={13} aria-hidden="true" />
-    <span className="history-lock-label">
+    <span className={styles.historyLockLabel}>
       Viewing <strong>{historyLabel}</strong>
     </span>
     <button
       type="button"
-      className="history-lock-live-btn"
+      className={styles.historyLockLiveBtn}
       data-testid="history-lock-live-btn"
       onClick={onReturnToLive}
     >
@@ -147,16 +174,21 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
   if (variant === 'sheet') {
     return (
       <div
-        className="macro-sheet-status-row"
+        className={styles.macroSheetStatusRow}
         data-testid="macro-sheet-status-row"
         inert={locked || undefined}
       >
-        <span className="power-crest-icon">
+        <span className={styles.powerCrestIcon}>
           <PowerFlag power={activePower} width={24} height={16} />
         </span>
-        <div className="macro-sheet-power">
-          <span className="power-name-text">{powerMeta.shortName}</span>
-          <span className="macro-sheet-counts" data-testid="macro-sheet-counts">
+        <div className={styles.macroSheetPower}>
+          <span className={styles.powerNameText} data-testid="power-name-text">
+            {powerMeta.shortName}
+          </span>
+          <span
+            className={styles.macroSheetCounts}
+            data-testid="macro-sheet-counts"
+          >
             {myActiveFieldUnits.length} units · {scCountByPower[activePower]}{' '}
             SCs
             {unconfirmedCount > 0 ? ` · ${unconfirmedCount} unconfirmed` : ''}
@@ -168,15 +200,18 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
   }
 
   return (
-    <div className="power-banner-top">
-      <div className="power-banner-main-col">
-        <div className="power-banner-title" data-testid="power-banner-title">
-          <span className="power-crest-icon">
+    <div className={styles.powerBannerTop}>
+      <div className={styles.powerBannerMainCol}>
+        <div
+          className={styles.powerBannerTitle}
+          data-testid="power-banner-title"
+        >
+          <span className={styles.powerCrestIcon}>
             <PowerFlag power={activePower} width={22} height={15} />
           </span>
-          <span className="power-name-text">{powerMeta.name}</span>
+          <span className={styles.powerNameText}>{powerMeta.name}</span>
         </div>
-        <div className="power-banner-sub" data-testid="power-banner-sub">
+        <div className={styles.powerBannerSub} data-testid="power-banner-sub">
           {myActiveFieldUnits.length} Units
           {myDislodgedUnits.length > 0
             ? ` (+${myDislodgedUnits.length} Dislodged)`
@@ -185,7 +220,7 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
         </div>
       </div>
 
-      <div className="power-banner-actions-right">
+      <div className={styles.powerBannerActionsRight}>
         {statusBadge}
 
         {onToggleCollapse && (

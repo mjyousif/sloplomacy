@@ -16,7 +16,9 @@ const rail = (progress = progressFor(), onToggleCollapse?: () => void) =>
 describe('CollapsedRail', () => {
   it('shows the crest with the power, its units and its centers', () => {
     const c = rail();
-    const crest = c.querySelector('.rail-power-crest') as HTMLElement;
+    const crest = c.querySelector(
+      '[data-testid="rail-power-crest"]',
+    ) as HTMLElement;
     expect(crest).toHaveAttribute(
       'title',
       'Commanding French Republic (3 Units, 3 SC)',
@@ -32,9 +34,9 @@ describe('CollapsedRail', () => {
   });
 
   it('shows the unconfirmed count, or a check when everything is confirmed', () => {
-    expect(rail().querySelector('.rail-badge-unconfirmed')).toHaveTextContent(
-      '3',
-    );
+    expect(
+      rail().querySelector('[data-testid="rail-badge-unconfirmed"]'),
+    ).toHaveTextContent('3');
     const confirmed = Object.fromEntries(
       Object.values(progressFor().unitsByProv).map((u) => [
         u.id,
@@ -42,13 +44,15 @@ describe('CollapsedRail', () => {
       ]),
     );
     const c = rail(progressFor({ orders: confirmed as never }));
-    expect(c.querySelectorAll('.rail-badge-clean')[0]).toHaveTextContent('✓');
+    expect(
+      c.querySelectorAll('[data-testid="rail-badge-clean"]')[0],
+    ).toHaveTextContent('✓');
   });
 
   it('warns about every issue, informational ones included', () => {
-    expect(rail().querySelector('.rail-warn-badge')).toBeNull();
+    expect(rail().querySelector('[data-testid="rail-warn-badge"]')).toBeNull();
     const c = rail(progressFor({ issues: [issue(A_PAR, 'info')] }));
-    expect(c.querySelector('.rail-warn-badge')).toHaveAttribute(
+    expect(c.querySelector('[data-testid="rail-warn-badge"]')).toHaveAttribute(
       'title',
       '1 tactical issues',
     );

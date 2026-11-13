@@ -9,6 +9,7 @@ import {
   IconSelectDropdown,
   type IconSelectOption,
 } from '../../map/hud/IconSelectDropdown';
+import styles from '../OrderParameterControls.module.css';
 
 interface ConvoyControlsProps {
   /** The fleet's CONVOY order. */
@@ -184,7 +185,7 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
       label: provinces[pid]?.name ?? pid,
     }));
     return (
-      <div className="order-param-inline">
+      <div className={styles.orderParamInline}>
         <IconSelectDropdown
           value={order.aux_unit_origin || null}
           options={armyOpts}
@@ -210,7 +211,7 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
             });
           }}
         />
-        <span className="order-param-arrow" aria-hidden="true">
+        <span className={styles.orderParamArrow} aria-hidden="true">
           →
         </span>
         <IconSelectDropdown
@@ -234,9 +235,9 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
 
   if (compact) {
     return (
-      <div className="order-param-inline">
+      <div className={styles.orderParamInline}>
         {armySelect}
-        <span className="order-param-arrow" aria-hidden="true">
+        <span className={styles.orderParamArrow} aria-hidden="true">
           →
         </span>
         {targetSelect}
@@ -245,12 +246,12 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
   }
 
   return (
-    <div className="order-param-grid">
-      <div className="order-param-row">
+    <div className={styles.orderParamGrid}>
+      <div className={styles.orderParamRow}>
         <label>Army:</label>
         {armySelect}
       </div>
-      <div className="order-param-row">
+      <div className={styles.orderParamRow}>
         <label>To Coast:</label>
         {targetSelect}
       </div>

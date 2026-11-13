@@ -15,6 +15,7 @@ import {
   type SheetSnapHeights,
   snapHeights,
 } from '../utils/sheetHelpers';
+import styles from './BottomSheet.module.css';
 
 export interface BottomSheetProps {
   snap: SheetSnap;
@@ -33,7 +34,7 @@ const HANDLE_DRAG_THRESHOLD = 6;
 /** A click this soon after a handled pointer release belongs to that press. */
 const POINTER_CLICK_WINDOW_MS = 500;
 
-/** Matches the transition on `.bottom-sheet.sliding` in compact.css. */
+/** Matches the transition on `.bottom-sheet[data-sliding="true"]` in BottomSheet.module.css. */
 const SLIDE_MS = 220;
 
 /**
@@ -195,22 +196,23 @@ export function BottomSheet({
   return (
     <>
       <div
-        className="bottom-sheet-spacer"
+        className={styles.bottomSheetSpacer}
         style={{ height: heights.peek }}
         aria-hidden="true"
       />
       <section
         ref={sheetRef}
-        className={`bottom-sheet ${sliding && dragVisible === null ? 'sliding' : ''}`}
+        className={styles.bottomSheet}
+        data-sliding={sliding && dragVisible === null ? 'true' : undefined}
         data-snap={snap}
         data-testid={testId}
         aria-label={label}
         style={sheetStyle}
       >
-        <div ref={headRef} className="bottom-sheet-head">
+        <div ref={headRef} className={styles.bottomSheetHead}>
           <button
             type="button"
-            className="bottom-sheet-handle"
+            className={styles.bottomSheetHandle}
             data-testid="bottom-sheet-handle"
             aria-label={snap === 'full' ? `Lower ${label}` : `Raise ${label}`}
             aria-expanded={snap !== 'peek'}
@@ -228,16 +230,19 @@ export function BottomSheet({
               onSnapChange(nextSnap(snap));
             }}
           >
-            <span className="bottom-sheet-grip" aria-hidden="true" />
+            <span className={styles.bottomSheetGrip} aria-hidden="true" />
           </button>
-          <div className="bottom-sheet-peek" data-testid="bottom-sheet-peek">
+          <div
+            className={styles.bottomSheetPeek}
+            data-testid="bottom-sheet-peek"
+          >
             {peek}
           </div>
         </div>
         {/* Padding as tall as the part below the screen's edge, so the last card can scroll into
             view. While lowered, the body is off screen, so it is inert: no focus, taps or reading. */}
         <div
-          className="bottom-sheet-body"
+          className={styles.bottomSheetBody}
           data-testid="bottom-sheet-body"
           style={{ paddingBottom: settledHidden }}
           inert={snap === 'peek' && dragVisible === null}
