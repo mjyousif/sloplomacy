@@ -96,7 +96,9 @@ frontend/
     │   │   ├── BuildSlotCard.tsx # Winter adjustment build/disband quota cards
     │   │   └── *.test.tsx       # Tests beside each piece (BuildSlotCard has none yet)
     │   ├── sidebars.test.ts     # Vitest suite for ToolsSidebar and MacroSidebar collapsible views
-    │   ├── TurnHistorySelector.tsx # Left pane footer to pick a resolved turn, nation chips, and the phone's map pill
+    │   ├── TurnChronicle.tsx    # Desktop top-bar turn pill unified with turn stepping, selector, and hover-expanding nation filter tray
+    │   ├── TurnChronicle.test.tsx # Hover/touch/keyboard tray expansion, stepping, selection, and nation filter tests
+    │   ├── TurnHistorySelector.tsx # Shared PowerFilterChips, phone ≡ drawer history footer, and phone map pill
     │   ├── PhaseTimerWidget.tsx # Bottom-left map widget: turn clock, votes, ready-up & +5 button (a pill on phones)
     │   ├── LobbyView.tsx        # The lobby: form state, create / join / seat-claim handlers and the dialogs; arranges the sections below
     │   ├── LobbyView.test.tsx, LobbyView.hosting.test.tsx, LobbyView.testkit.tsx # Layout and seat claims; hosting, joining by code and copy; shared setup
@@ -119,7 +121,7 @@ frontend/
     │   ├── BottomSheet.tsx      # Phone pull-up panel with peek, half and full stops (holds the order sheet)
     │   ├── CompactTopBar.tsx    # Phone top bar: back, ≡ tools, turn, order-problem count and a ⋯ menu
     │   ├── CompactTopBar.test.ts # Vitest suite for the phone top bar and the surrender note
-    │   ├── TopHeader.tsx        # Desktop top bar: brand, Solo Sandbox, turn, order check, Live Sync, display settings, account
+    │   ├── TopHeader.tsx        # Desktop top bar: brand, Solo Sandbox, turn, order check, display settings, account
     │   ├── TopHeader.test.tsx   # Each part of the desktop top bar and the buttons it hands back to App
     │   ├── AppHeader.tsx        # Above the board: TopHeader or CompactTopBar, the Direct-Edit banner and the toast
     │   ├── AppHeader.test.tsx   # Which bar shows, the problem counts, the banner's buttons and the toast
@@ -231,7 +233,7 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 ├── View 2: GameWorkspace.tsx (when viewMode === 'multiplayer' | 'sandbox')
 │   ├── Imperial Header Bar (AppHeader.tsx, on every view: TopHeader.tsx; CompactTopBar.tsx on phones: back, ≡ tools, turn, problem count, ⋯ menu; then the Direct-Edit banner and the toast)
 │   │   ├── Return to Lobby (Clickable Brand Emblem & Title)
-│   │   ├── Turn Chronicle Pill (Season, Year, Phase & Winner)
+│   │   ├── Turn Chronicle Pill & History Viewer (TurnChronicle.tsx: turn, ‹ › step, dropdown, Live, hover-expanding nation chips)
 │   │   ├── Sanity Check Diagnostics Warning Pill
 │   │   ├── Real-Time WebSocket Synchronization Badge
 │   │   └── User Auth Profile / Guest Mode
@@ -244,7 +246,7 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   │   ├── Hypothetical Mode (What-If Opponent Guesses) & Tactical AI (CollapsibleSection toggle)
 │   │   ├── Foreign Guesses Count & Discard Actions
 │   │   ├── Creator Admin Console & Direct-Edit Override Trigger (CollapsibleSection toggle)
-│   │   └── Turn History footer (TurnHistorySelector.tsx: ‹ turn › Live, nation chips)
+│   │   └── Turn History footer on phones (TurnHistorySelector.tsx inside ≡ drawer)
 │   │
 │   ├── EuropeMap.tsx (Center Interactive SVG Board)
 │   │   ├── Authentic Cartographic Background Layer

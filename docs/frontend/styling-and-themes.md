@@ -53,8 +53,8 @@ Each Great Power has an authentic historical color token used for province fills
 
 The app has two layouts. `useCompactLayout()` (`hooks/useCompactLayout.ts`) decides which one applies from a single media query, `COMPACT_LAYOUT_QUERY = '(max-width: 767px), (max-height: 500px)'`. The second half catches phones held sideways. `App.tsx` writes the answer on the shell as `data-layout="compact"` or `data-layout="wide"`.
 
-- **Wide (desktop and tablets)**: the original layout, styled by `App.css` (the `components` layer).
-  - Header: a `60px` row with the brand, Solo Sandbox, the turn, the order check pill, Live Sync, display settings and the account.
+- **Wide (desktop and tablets)**: the original layout, styled by `App.css`.
+  - Header: a `60px` row with the brand, Solo Sandbox, the turn, the order check pill, display settings and the account.
   - Workspace: the Left Tools Sidebar (`290px`, or a `44px` rail), the map (`flex: 1`), and the Right Tactical Sidebar (`360px`, between `340px` and `380px`, or a `44px` rail).
 - **Compact (phones)**: every phone rule lives in `src/compact.css` (the `compact` layer) and starts with `[data-layout='compact']`. That file never writes its own width `@media` rule, so the breakpoint is defined only in `COMPACT_LAYOUT_QUERY`. Nothing in it changes the wide layout.
   - **Viewport**: the shell is `100dvh` tall (falling back to `App.css`'s `100vh`), so mobile browser toolbars don't hide the bottom edge. `index.html` sets `viewport-fit=cover`, and the shell pads itself with `env(safe-area-inset-*)`.

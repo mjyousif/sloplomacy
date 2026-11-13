@@ -29,8 +29,6 @@ function renderHeader(overrides: Partial<TopHeaderProps> = {}) {
     onEnterSoloSandbox: vi.fn(),
     matchSummary: null,
     playerPower: 'FRANCE',
-    wsConnected: true,
-    gameId: 'proto_1901',
     displayPrefs: DEFAULT_DISPLAY_PREFS,
     displayPrefsSaveState: 'device',
     onChangeDisplayPrefs: vi.fn(),
@@ -84,7 +82,7 @@ describe('TopHeader: the turn and order check', () => {
   it('shows the turn on a board', () => {
     renderHeader({ turn: { season: 'Fall', year: 1903, phase: 'Retreats' } });
     const pill = screen.getByTestId('turn-chronicle-pill');
-    expect(pill).toHaveTextContent('FALL 1903•RETREATS PHASE');
+    expect(pill).toHaveTextContent('Fall 1903 Retreats');
   });
 
   it('hides the board readout in the lobby', () => {
@@ -99,9 +97,9 @@ describe('TopHeader: the turn and order check', () => {
     expect(screen.getByText('ENGLAND WINS')).toBeInTheDocument();
   });
 
-  it('says the moves are valid with no problems', () => {
+  it('hides the valid-moves pill when there are no problems', () => {
     renderHeader();
-    expect(screen.getByText('Valid Moves')).toBeInTheDocument();
+    expect(screen.queryByText('Valid Moves')).not.toBeInTheDocument();
   });
 
   it('counts errors and warnings, and opens the order check', async () => {
@@ -130,37 +128,51 @@ describe('TopHeader: the turn and order check', () => {
     await userEvent.click(pill);
     expect(props.onOpenOrderCheck).toHaveBeenCalledTimes(1);
   });
+
+  it('shows unified turn history controls when resolved turns exist', async () => {
+    const onStepHistoryTurn = vi.fn();
+    const onSelectHistoryTurn = vi.fn();
+    const onSelectHistoryPower = vi.fn();
+    renderHeader({
+      turn: { season: 'Fall', year: 1901, phase: 'Movement' },
+      historyEntries: [
+        { index: 0, season: 'Spring', year: 1901, phase: 'Movement' },
+      ],
+      historyViewIndex: 0,
+      historyPower: 'FRANCE',
+      onStepHistoryTurn,
+      onSelectHistoryTurn,
+      onSelectHistoryPower,
+    });
+    expect(screen.getByTestId('turn-history')).toBeInTheDocument();
+    expect(screen.getByTestId('turn-chronicle-pill')).toHaveClass(
+      'viewing-past',
+    );
+    await userEvent.click(screen.getByTestId('turn-history-select'));
+    await userEvent.click(screen.getByTestId('turn-history-option-live'));
+    expect(onSelectHistoryTurn).toHaveBeenCalledWith(null);
+  });
+
+  it('locks the turn chronicle controls when historyLocked is true', () => {
+    renderHeader({
+      turn: { season: 'Fall', year: 1901, phase: 'Movement' },
+      historyEntries: [
+        { index: 0, season: 'Spring', year: 1901, phase: 'Movement' },
+      ],
+      historyViewIndex: null,
+      historyLocked: true,
+    });
+    expect(screen.getByTestId('turn-history-select')).toBeDisabled();
+    expect(screen.getByTestId('turn-history-prev')).toBeDisabled();
+    expect(screen.getByTestId('turn-history-filter-toggle')).toBeDisabled();
+  });
 });
 
-describe('TopHeader: live sync, display settings and account', () => {
-  it('shows a live connection to the game', () => {
+describe('TopHeader: display settings and account', () => {
+  it('omits any Live Sync indicator', () => {
     renderHeader();
-    const badge = screen.getByText('Live Sync').parentElement;
-    expect(badge).toHaveClass('header-ws-badge', 'ws-connected');
-    expect(badge).toHaveAttribute(
-      'title',
-      'Real-time synchronization connected (proto_1901)',
-    );
-    expect(badge?.querySelector('.ws-status-dot')).toHaveClass('dot-online');
-  });
-
-  it('names the lobby feed in the lobby', () => {
-    renderHeader({ viewMode: 'lobby' });
-    expect(screen.getByText('Live Sync').parentElement).toHaveAttribute(
-      'title',
-      'Real-time synchronization connected (Lobby Feed)',
-    );
-  });
-
-  it('shows a connection still being made', () => {
-    renderHeader({ wsConnected: false });
-    const badge = screen.getByText('Connecting...').parentElement;
-    expect(badge).toHaveClass('ws-disconnected');
-    expect(badge).toHaveAttribute(
-      'title',
-      'Connecting to real-time synchronization...',
-    );
-    expect(badge?.querySelector('.ws-status-dot')).toHaveClass('dot-offline');
+    expect(screen.queryByText('Live Sync')).not.toBeInTheDocument();
+    expect(screen.queryByText('Connecting...')).not.toBeInTheDocument();
   });
 
   it('includes the display settings menu only outside the lobby', () => {
