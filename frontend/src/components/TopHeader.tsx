@@ -197,11 +197,13 @@ export function TopHeader({
           <span>{wsConnected ? 'Live Sync' : 'Connecting...'}</span>
         </div>
 
-        <DisplaySettingsMenu
-          prefs={displayPrefs}
-          saveState={displayPrefsSaveState}
-          onChange={onChangeDisplayPrefs}
-        />
+        {viewMode !== 'lobby' && (
+          <DisplaySettingsMenu
+            prefs={displayPrefs}
+            saveState={displayPrefsSaveState}
+            onChange={onChangeDisplayPrefs}
+          />
+        )}
 
         {viewMode !== 'lobby' && isGameCreator && (
           <AdminSettingsMenu
