@@ -242,6 +242,31 @@ describe('OrderArrowsLayer', () => {
     expect(ring).toHaveAttribute('fill', 'none');
   });
 
+  it('draws a projected move arrow and +N badge when supporting a foreign unit move', () => {
+    const F_PIC_GER = unitAt('GERMANY', 'F', 'PIC');
+    const { arrow } = draw([F_PIC_GER, A_BUR, A_PAR], {
+      [A_BUR.id]: orderFor(A_BUR, 'SUPPORT', {
+        aux_unit_origin: 'PIC',
+        target: 'BRE',
+      }),
+      [A_PAR.id]: orderFor(A_PAR, 'SUPPORT', {
+        aux_unit_origin: 'PIC',
+        target: 'BRE',
+      }),
+    });
+    const first = arrow(A_BUR);
+    const second = arrow(A_PAR);
+    expect(
+      first.querySelector('[data-testid="projected-support-move"]'),
+    ).not.toBeNull();
+    expect(first).toHaveTextContent('+2');
+    // Only drawn once per (aux_unit_origin, target) pair
+    expect(
+      second.querySelector('[data-testid="projected-support-move"]'),
+    ).toBeNull();
+    expect(second).not.toHaveTextContent('+2');
+  });
+
   it('shows a simulated outcome: a landing ghost, a bounce, and a cut support', () => {
     const orders = {
       [A_PAR.id]: moveOf(A_PAR, 'PIC'),
@@ -303,7 +328,7 @@ describe('OrderArrowsLayer', () => {
 });
 
 describe('ArrowMarkerDefs', () => {
-  it('defines the five arrowheads the arrows point to', () => {
+  it('defines the arrowheads the arrows point to', () => {
     const { container } = render(
       <svg>
         <defs>
@@ -319,6 +344,7 @@ describe('ArrowMarkerDefs', () => {
       'arrow-error',
       'arrow-sim-ok',
       'arrow-sim-bounce',
+      'arrow-support',
     ]);
   });
 });

@@ -166,6 +166,20 @@ describe('useOrderOverlay', () => {
     expect(supportCountByUnitId).toEqual({ [A_PAR.id]: 1, [A_BUR.id]: 1 });
   });
 
+  it('counts a support to hold for a foreign unit whose orders are hidden', () => {
+    const orders: Record<string, Order> = {
+      [A_PAR.id]: orderFor(A_PAR, 'SUPPORT', {
+        aux_unit_origin: 'PIC',
+        target: 'PIC',
+      }),
+    };
+    const { supportCountByUnitId } = overlay({
+      units: [A_PAR, A_PIC_GER],
+      orders,
+    });
+    expect(supportCountByUnitId).toEqual({ [A_PIC_GER.id]: 1 });
+  });
+
   it("doesn't count a support to hold for a unit that is moving away", () => {
     const orders: Record<string, Order> = {
       [A_PAR.id]: orderFor(A_PAR, 'MOVE', { target: 'PIC' }),

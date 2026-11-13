@@ -61,6 +61,18 @@ export function ArrowMarkerDefs() {
       >
         <path d="M 0 1 L 9.5 5 L 0 9 L 2.2 5 z" fill="#e11d48" />
       </marker>
+
+      <marker
+        id="arrow-support"
+        viewBox="0 0 10 10"
+        refX="7"
+        refY="5"
+        markerWidth="5.5"
+        markerHeight="5.5"
+        orient="auto-start-reverse"
+      >
+        <path d="M 0 1.2 L 9 5 L 0 8.8 L 2.2 5 z" fill="#0d9488" />
+      </marker>
     </>
   );
 }
