@@ -78,7 +78,8 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   │      data from hooks/useOrderOverlay.ts, curves from curveGeometry.ts: computeQuadraticCurve):
   │      - ConvoyChain: a dashed blue line army → fleet → shore, and a dashed ring on the fleet
   │      - SupportVector: a dashed teal line to the supported unit, or to the middle of the move it
-  │        supports (moveMidpointsByOrigin); a ring around a unit supported to hold
+  │        supports (`moveMidpointsByOrigin`, or a projected dashed move arrow with `+N` when the
+  │        supported move isn't visible, such as for a foreign unit); a ring around a unit supported to hold
   │      - MoveArrow: a curved arrow in the power's colour (convoyed moves dashed), retreats orange
   │        and dashed, thicker and badged +N for each valid support, red or amber for issues
   │      - Arrowheads in the SVG defs (layers/ArrowMarkerDefs.tsx)
