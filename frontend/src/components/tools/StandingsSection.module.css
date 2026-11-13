@@ -1,0 +1,201 @@
+@layer components {
+  .powers-sort-segmented {
+    display: flex;
+    background: #141820;
+    border: 1px solid #28303e;
+    border-radius: 5px;
+    padding: 2px;
+    margin-bottom: 6px;
+    gap: 2px;
+  }
+
+  .powers-sort-pill {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    border: none;
+    background: transparent;
+    color: #8b99ad;
+    font-size: 0.64rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+
+  .powers-sort-pill:hover {
+    color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .powers-sort-pill[data-active="true"] {
+    background: #262f3e;
+    color: #60a5fa;
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  .powers-standing-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .power-standing-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid #27303e;
+    border-left: 3px solid #64748b;
+    background: #1c222c;
+    transition: all 0.12s ease;
+    overflow: hidden;
+  }
+
+  .power-standing-card[data-clickable="true"] {
+    cursor: pointer;
+  }
+
+  .power-standing-card[data-clickable="true"]:hover {
+    background: #252d3a;
+    border-color: #3a475c;
+  }
+
+  .power-standing-card[data-selected="true"] {
+    border-color: #4b586e;
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .power-card-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .power-card-rank {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #94a3b8;
+    min-width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .power-card-crest {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .power-card-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .power-card-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: #e2e8f0;
+    min-width: 0;
+  }
+
+  .power-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .power-card-name strong {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .power-card-player {
+    font-size: 0.62rem;
+    color: #94a3b8;
+    font-weight: 500;
+    max-width: 68px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 1;
+  }
+
+  .active-tag {
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 1px 4px;
+    line-height: 1.2;
+    border-radius: 3px;
+    background: #2563eb;
+    color: #ffffff;
+    margin-left: 2px;
+    flex-shrink: 0;
+  }
+
+  .power-card-metrics {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.63rem;
+    color: #8b99ad;
+    white-space: nowrap;
+  }
+
+  .metric-dot {
+    opacity: 0.6;
+  }
+
+  .power-card-status {
+    flex-shrink: 0;
+    margin-left: 6px;
+  }
+
+  .mini-status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .mini-status-tag[data-status="finalized"] {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+  }
+
+  .mini-status-tag[data-status="warning"] {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+  }
+
+  .mini-status-tag[data-status="surrendered"] {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+  }
+
+  .mini-status-tag[data-status="pending"] {
+    background: #283241;
+    color: #94a3b8;
+  }
+}

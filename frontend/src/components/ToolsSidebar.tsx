@@ -1,6 +1,8 @@
 import { PanelLeftClose, Sliders, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef } from 'react';
+import { cx } from '../utils/cx';
+import styles from './ToolsSidebar.module.css';
 import { CollapsedRail } from './tools/CollapsedRail';
 import { MapControlsSection } from './tools/MapControlsSection';
 import { MapLegendSection } from './tools/MapLegendSection';
@@ -72,7 +74,11 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   // Expanded Tools Sidebar
   const panel = (
     <aside
-      className={`tools-sidebar tools-sidebar-expanded ${isDrawer ? 'tools-drawer' : ''}`.trim()}
+      className={cx(
+        styles.toolsSidebar,
+        styles.toolsSidebarExpanded,
+        isDrawer && styles.toolsDrawer,
+      )}
       aria-label="Chancellery Tools & Intel"
       data-testid={isDrawer ? 'tools-drawer' : 'tools-sidebar'}
       data-drawer={isDrawer ? 'true' : undefined}
@@ -80,12 +86,12 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
       aria-modal={isDrawer ? true : undefined}
     >
       {/* 1. SIDEBAR HEADER */}
-      <div className="tools-sidebar-header">
-        <div className="tools-header-title">
-          <Sliders size={16} className="tools-header-icon" />
+      <div className={styles.toolsSidebarHeader}>
+        <div className={styles.toolsHeaderTitle}>
+          <Sliders size={16} className={styles.toolsHeaderIcon} />
           <div>
             <h3>CHANCELLERY TOOLS</h3>
-            <span className="tools-header-sub">
+            <span className={styles.toolsHeaderSub}>
               Intel, Camera &amp; War Room
             </span>
           </div>
@@ -95,7 +101,10 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
             ref={closeButtonRef}
             type="button"
             data-testid="tools-drawer-close-btn"
-            className="sidebar-collapse-toggle-btn tools-drawer-close-btn"
+            className={cx(
+              'sidebar-collapse-toggle-btn',
+              styles.toolsDrawerCloseBtn,
+            )}
             onClick={onClose}
             aria-label="Close tools"
           >
@@ -114,7 +123,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
         )}
       </div>
 
-      <div className="tools-sidebar-content">
+      <div className={styles.toolsSidebarContent}>
         {/* 2. CAMERA & MAP CONTROLS */}
         {/* Phones zoom with the buttons on the map instead. */}
         {!isDrawer && (
@@ -168,13 +177,13 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   // focus and screen readers.
   return (
     <div
-      className={`tools-drawer-layer ${open ? 'open' : ''}`}
+      className={styles.toolsDrawerLayer}
       data-testid="tools-drawer-layer"
       data-open={open ? 'true' : undefined}
       inert={!open}
     >
       <div
-        className="tools-drawer-backdrop"
+        className={styles.toolsDrawerBackdrop}
         data-testid="tools-drawer-backdrop"
         onClick={onClose}
       />

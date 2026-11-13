@@ -1,0 +1,17 @@
+@layer components {
+  .tools-zoom-badge {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.64rem;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #242c3a;
+    color: #cbd5e1;
+  }
+
+  .tools-zoom-toolbar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.2fr;
+    gap: 5px;
+  }
+}

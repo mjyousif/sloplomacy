@@ -194,8 +194,11 @@ describe('ToolsSidebar', () => {
         activePower: 'FRANCE',
       }),
     );
-    expect(html).toContain('power-card-metrics');
-    expect(html).toContain('active-tag');
+    expect(html).toContain('data-testid="power-card-metrics"');
+    expect(html).toContain('data-testid="active-tag"');
+    expect(html).toMatch(
+      /data-testid="power-card-metrics"[^>]*>.*?data-testid="active-tag"/,
+    );
   });
 
   it('renders player names in diplomatic standings when participants are provided (issue 122)', () => {

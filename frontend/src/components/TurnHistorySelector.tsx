@@ -6,8 +6,10 @@ import {
   type Power,
   type TurnHistoryEntry,
 } from '../types/diplomacy';
+import { cx } from '../utils/cx';
 import { shortTurnLabel } from '../utils/historyHelpers';
 import { turnLabel } from '../utils/timerHelpers';
+import styles from './TurnHistorySelector.module.css';
 
 /** "AUS", "ENG" …: the nation chips' labels. */
 export const powerCode = (power: Power) =>
@@ -20,6 +22,8 @@ export interface PowerFilterChipsProps {
   power: Power | null;
   disabled: boolean;
   onSelectPower: (power: Power | null) => void;
+  className?: string;
+  chipClassName?: string;
 }
 
 /** Nation filter chips for narrowing a past turn's orders on the map. */
@@ -27,16 +31,18 @@ export const PowerFilterChips: React.FC<PowerFilterChipsProps> = ({
   power,
   disabled,
   onSelectPower,
+  className,
+  chipClassName,
 }) => (
   <fieldset
-    className="turn-history-powers"
+    className={cx(styles.turnHistoryPowers, className)}
     aria-label="Nations shown"
     disabled={disabled}
     title={disabled ? 'Filter by nation' : undefined}
   >
     <button
       type="button"
-      className={`turn-history-chip ${power === null ? 'active' : ''}`}
+      className={cx(styles.turnHistoryChip, chipClassName)}
       data-testid="turn-history-power"
       data-power="ALL"
       data-active={power === null ? 'true' : undefined}
@@ -49,7 +55,7 @@ export const PowerFilterChips: React.FC<PowerFilterChipsProps> = ({
       <button
         key={p}
         type="button"
-        className={`turn-history-chip ${power === p ? 'active' : ''}`}
+        className={cx(styles.turnHistoryChip, chipClassName)}
         data-testid="turn-history-power"
         data-power={p}
         data-active={power === p ? 'true' : undefined}
@@ -110,15 +116,15 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
 
   return (
     <section
-      className={`turn-history ${viewingPast ? 'viewing-past' : ''}`.trim()}
+      className={styles.turnHistory}
       aria-label="Turn history"
       data-testid="turn-history"
       data-viewing-past={viewingPast ? 'true' : undefined}
     >
-      <div className="turn-history-row">
+      <div className={styles.turnHistoryRow}>
         <button
           type="button"
-          className="turn-history-step"
+          className={styles.turnHistoryStep}
           data-testid="turn-history-prev"
           onClick={() => {
             onStep(-1);
@@ -131,7 +137,7 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
           <ChevronLeft size={14} />
         </button>
         <select
-          className="turn-history-select"
+          className={styles.turnHistorySelect}
           data-testid="turn-history-select"
           aria-label="Turn to show"
           title={locked ? 'Locked while in admin mode' : undefined}
@@ -150,7 +156,7 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
         </select>
         <button
           type="button"
-          className="turn-history-step"
+          className={styles.turnHistoryStep}
           data-testid="turn-history-next"
           onClick={() => onStep(1)}
           disabled={locked || !viewingPast}
@@ -162,7 +168,7 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
         {viewingPast ? (
           <button
             type="button"
-            className="turn-history-live"
+            className={styles.turnHistoryLive}
             data-testid="turn-history-live"
             disabled={locked}
             onClick={() => onSelect(null)}
@@ -172,7 +178,7 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
           </button>
         ) : (
           <span
-            className="turn-history-live-tag"
+            className={styles.turnHistoryLiveTag}
             title="Showing the current turn"
           >
             Live
@@ -206,24 +212,24 @@ export const TurnHistoryPill: React.FC<TurnHistoryPillProps> = ({
   onGoLive,
 }) => (
   <div
-    className="turn-history-pill"
+    className={styles.turnHistoryPill}
     data-testid="turn-history-pill"
     role="group"
     aria-label={`Showing ${turnLabel(entry)}`}
   >
     <button
       type="button"
-      className="turn-history-step"
+      className={styles.turnHistoryStep}
       onClick={() => onStep(-1)}
       disabled={isOldest}
       aria-label="Previous turn"
     >
       <ChevronLeft size={16} />
     </button>
-    <span className="turn-history-pill-label">{shortTurnLabel(entry)}</span>
+    <span className={styles.turnHistoryPillLabel}>{shortTurnLabel(entry)}</span>
     <button
       type="button"
-      className="turn-history-step"
+      className={styles.turnHistoryStep}
       onClick={() => onStep(1)}
       aria-label="Next turn"
     >
@@ -231,7 +237,7 @@ export const TurnHistoryPill: React.FC<TurnHistoryPillProps> = ({
     </button>
     <button
       type="button"
-      className="turn-history-live"
+      className={styles.turnHistoryLive}
       data-testid="turn-history-pill-live"
       onClick={onGoLive}
     >

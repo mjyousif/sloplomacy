@@ -15,7 +15,7 @@ frontend/
 └── src/
     ├── main.tsx                 # React DOM bootstrapping; its first import is styles/index.css
     ├── App.tsx                  # Root state container and viewMode router: calls the state hooks, renders the pieces below
-    ├── App.css                  # Tactical HUD styling and CRT brass themes: the wide layout, in the `components` layer (the modals and top bars moved to `*.module.css` beside them)
+    ├── App.css                  # Tactical HUD styling and CRT brass themes: the wide layout, in the `components` layer (modals, top bars, tools sidebar, turn history and chronicle moved to `*.module.css`)
     ├── compact.css              # Phone layout, applied while the shell has data-layout="compact", in the `compact` layer
     ├── styles/
     │   ├── layerOrder.test.ts   # main.tsx must import styles/index.css first
@@ -69,16 +69,17 @@ frontend/
     │   │       └── curveGeometry.ts       # Quadratic Bezier control point math for order arrows
     │   ├── CollapsibleSection.tsx # Reusable collapsible/static section container with accessible toggles
     │   ├── CollapsibleSection.test.tsx # Vitest suite for CollapsibleSection behavior and accessibility
-    │   ├── ToolsSidebar.tsx     # Left collapsible sidebar: header, the sections below, history footer (a ≡ drawer on phones)
+    │   ├── ToolsSidebar.tsx     # Left collapsible sidebar: header, the sections below, history footer (a ≡ drawer on phones) (+ .module.css)
     │   ├── ToolsSidebar.test.tsx # Panel and drawer: section order, collapse, Escape, backdrop, focus, admin gate
     │   ├── tools/               # The sidebar's parts, each with a co-located test
     │   │   ├── toolsSidebarProps.ts      # ToolsSidebarProps; sections take a Pick<> of it
+    │   │   ├── ToolsButton.module.css    # Shared .tools-btn styles (wide + 44px compact)
     │   │   ├── CollapsedRail.tsx         # The 44px rail the desktop panel folds into
-    │   │   ├── MapControlsSection.tsx    # Zoom readout, Zoom In/Out and Fit Map (panel only)
-    │   │   ├── MapLegendSection.tsx      # The four order marks
-    │   │   ├── StandingsSection.tsx      # Power cards, ranks, status tags and the sort toggle
+    │   │   ├── MapControlsSection.tsx    # Zoom readout, Zoom In/Out and Fit Map (panel only) (+ .module.css)
+    │   │   ├── MapLegendSection.tsx      # The four order marks (+ .module.css)
+    │   │   ├── StandingsSection.tsx      # Power cards, ranks, status tags and the sort toggle (+ .module.css)
     │   │   ├── useStandingsSort.ts       # Supply Centre and unit tallies, ranking and the remembered sort mode
-    │   │   ├── SandboxToolsSection.tsx   # Hypothetical Mode, General Staff AI, foreign moves, reset and save
+    │   │   ├── SandboxToolsSection.tsx   # Hypothetical Mode, General Staff AI, foreign moves, reset and save (+ .module.css)
     │   │   └── *.test.tsx
     │   ├── MacroSidebar.tsx     # Right collapsible sidebar: core gameplay orders, builds, finalize & adjudicate (the order sheet on phones)
     │   ├── MacroSidebar.test.tsx # Panel, collapsed rail and phone sheet: layout, handlers, history lock, one <aside> across collapse
@@ -97,9 +98,9 @@ frontend/
     │   │   ├── BuildSlotCard.tsx # Winter adjustment build/disband quota cards
     │   │   └── *.test.tsx       # Tests beside each piece (BuildSlotCard has none yet)
     │   ├── sidebars.test.ts     # Vitest suite for ToolsSidebar and MacroSidebar collapsible views
-    │   ├── TurnChronicle.tsx    # Desktop top-bar turn pill unified with turn stepping, selector, and hover-expanding nation filter tray
+    │   ├── TurnChronicle.tsx    # Desktop top-bar turn pill unified with turn stepping, selector, and hover-expanding nation filter tray (+ .module.css)
     │   ├── TurnChronicle.test.tsx # Hover/touch/keyboard tray expansion, stepping, selection, and nation filter tests
-    │   ├── TurnHistorySelector.tsx # Shared PowerFilterChips, phone ≡ drawer history footer, and phone map pill
+    │   ├── TurnHistorySelector.tsx # Shared PowerFilterChips, phone ≡ drawer history footer, and phone map pill (+ .module.css)
     │   ├── PhaseTimerWidget.tsx # Bottom-left map widget: turn clock, votes, ready-up & +5 button (a pill on phones)
     │   ├── LobbyView.tsx        # The lobby: form state, create / join / seat-claim handlers and the dialogs; arranges the sections below
     │   ├── LobbyView.test.tsx, LobbyView.hosting.test.tsx, LobbyView.testkit.tsx # Layout and seat claims; hosting, joining by code and copy; shared setup
