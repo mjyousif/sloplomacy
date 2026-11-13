@@ -5,6 +5,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../../types/diplomacy';
+import fieldStyles from '../FormField.module.css';
 import { PowerPicker } from './PowerPicker';
 
 export interface CreateCampaignPanelProps {
@@ -49,7 +50,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
       </p>
 
       <form onSubmit={handleCreateMatch} className="lobby-create-form">
-        <div className="lobby-field">
+        <div className={fieldStyles.lobbyField}>
           <label htmlFor="new-game-name">Campaign Name</label>
           <input
             id="new-game-name"
@@ -61,7 +62,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
         </div>
 
         {/* Public vs Private Campaign Toggle */}
-        <div className="lobby-field">
+        <div className={fieldStyles.lobbyField}>
           <label>Campaign Access</label>
           <div className="privacy-toggle-row">
             <button
@@ -87,7 +88,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
         </div>
 
         {isPrivate && (
-          <div className="lobby-field">
+          <div className={fieldStyles.lobbyField}>
             <label htmlFor="private-passcode">Campaign Passcode / PIN</label>
             <input
               id="private-passcode"
@@ -104,7 +105,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
           </div>
         )}
 
-        <div className="lobby-field">
+        <div className={fieldStyles.lobbyField}>
           <label>Pick Your Sovereign Country</label>
           <PowerPicker
             selected={selectedCreatePower}
@@ -114,7 +115,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
 
         {createError && (
           <div
-            className="lobby-error-alert"
+            className={fieldStyles.lobbyErrorAlert}
             data-testid="create-campaign-error"
           >
             <AlertTriangle size={14} />

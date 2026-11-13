@@ -1,6 +1,9 @@
 import { Clock, LogOut, Pencil, Wrench } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
+import { cx } from '../utils/cx';
+import styles from './AdminSettingsMenu.module.css';
+import displayStyles from './DisplaySettings.module.css';
 
 export interface AdminSettingsMenuProps {
   onOpenAdminTools?: () => void;
@@ -82,12 +85,14 @@ export function AdminSettingsMenu({
   ];
 
   return (
-    <div className="display-settings admin-settings" ref={rootRef}>
+    <div className={displayStyles.displaySettings} ref={rootRef}>
       <button
         ref={toggleRef}
         type="button"
         data-testid="btn-admin-menu"
-        className={`display-settings-toggle ${open ? 'open' : ''} ${anyModeActive ? 'admin-active' : ''}`.trim()}
+        className={displayStyles.displaySettingsToggle}
+        data-open={open}
+        data-admin-active={anyModeActive}
         aria-label="Administrator tools"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
@@ -100,18 +105,21 @@ export function AdminSettingsMenu({
       {open && (
         <div
           id={panelId}
-          className="display-settings-panel admin-settings-panel"
+          className={displayStyles.displaySettingsPanel}
           data-testid="admin-settings-panel"
           role="dialog"
           aria-label="Administrator tools"
         >
-          <h2 className="display-settings-title">Administrator</h2>
-          <p className="display-settings-note">
+          <h2 className={displayStyles.displaySettingsTitle}>Administrator</h2>
+          <p className={displayStyles.displaySettingsNote}>
             Board override and turn management tools.
           </p>
 
           <div
-            className="display-settings-group display-admin-actions"
+            className={cx(
+              displayStyles.displaySettingsGroup,
+              styles.displayAdminActions,
+            )}
             data-testid="display-settings-admin-group"
           >
             {options.map(
@@ -122,16 +130,22 @@ export function AdminSettingsMenu({
                     type="button"
                     data-testid={opt.testId}
                     aria-pressed={opt.active}
-                    className={`display-option-card admin-mode-card ${opt.active ? 'active' : ''}`.trim()}
+                    className={cx(
+                      displayStyles.displayOptionCard,
+                      styles.adminModeCard,
+                    )}
+                    data-active={opt.active}
                     onClick={() => {
                       setOpen(false);
                       if (!opt.active) opt.onSelect?.();
                     }}
                   >
-                    <span className="admin-mode-icon">{opt.icon}</span>
-                    <span className="display-option-text">
-                      <span className="display-option-name">{opt.name}</span>
-                      <span className="display-option-description">
+                    <span className={styles.adminModeIcon}>{opt.icon}</span>
+                    <span className={displayStyles.displayOptionText}>
+                      <span className={displayStyles.displayOptionName}>
+                        {opt.name}
+                      </span>
+                      <span className={displayStyles.displayOptionDescription}>
                         {opt.description}
                       </span>
                     </span>
@@ -144,7 +158,7 @@ export function AdminSettingsMenu({
             <button
               type="button"
               data-testid="btn-exit-admin-mode"
-              className="admin-mode-exit-btn"
+              className={styles.adminModeExitBtn}
               onClick={() => {
                 setOpen(false);
                 onExitAdmin();

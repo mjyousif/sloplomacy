@@ -1,0 +1,13 @@
+@layer components {
+  .brand-emblem {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #c8963e 0%, #8f6319 100%);
+    color: #14171c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(200, 150, 62, 0.35);
+  }
+}

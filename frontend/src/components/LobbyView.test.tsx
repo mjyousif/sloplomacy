@@ -133,9 +133,7 @@ describe('LobbyView details', () => {
     expect(screen.getByTitle('Copy Passcode')).toHaveTextContent('Copied');
     vi.useRealTimers();
     await user.click(
-      document.querySelector(
-        '.created-modal-card .modal-enter-btn, .modal-enter-btn',
-      ) as Element,
+      screen.getByRole('button', { name: 'Enter Lobby Browser' }),
     );
     expect(
       screen.queryByText('Private Campaign Created!'),

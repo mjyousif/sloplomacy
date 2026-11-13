@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthUser, MultiplayerGameSummary } from '../types/diplomacy';
@@ -206,9 +206,9 @@ describe('TopHeader: display settings and account', () => {
     expect(adminMenuBtn).toBeInTheDocument();
     await userEvent.click(adminMenuBtn);
     expect(screen.getByTestId('admin-settings-panel')).toBeInTheDocument();
-    expect(screen.getByTestId('btn-toggle-direct-edit')).toHaveClass(
-      'display-option-card',
-      'admin-mode-card',
+    expect(screen.getByTestId('btn-toggle-direct-edit')).toHaveAttribute(
+      'data-active',
+      'false',
     );
     expect(
       screen
@@ -240,11 +240,6 @@ describe('TopHeader: display settings and account', () => {
       />,
     );
     await userEvent.click(screen.getByTestId('btn-admin-menu'));
-    expect(
-      within(screen.getByTestId('admin-settings-panel')).queryByTestId(
-        'admin-mode-on-badge',
-      ),
-    ).toBeNull();
     const exitBtn = screen.getByTestId('btn-exit-admin-mode');
     expect(exitBtn).toHaveTextContent('Exit Admin Mode');
     await userEvent.click(exitBtn);

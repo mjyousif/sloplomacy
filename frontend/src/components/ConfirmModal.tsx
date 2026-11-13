@@ -1,6 +1,8 @@
 import { AlertTriangle, X } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import styles from './ConfirmModal.module.css';
+import { Modal, ModalCloseButton, ModalFooter } from './modal/Modal';
 
 /**
  * In-app confirmation for destructive actions.
@@ -45,55 +47,55 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   }, [onCancel]);
 
   return (
-    <div className="confirm-modal-backdrop" onClick={onCancel}>
-      <div
-        className="confirm-modal-card"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="confirm-modal-title"
-        aria-describedby="confirm-modal-message"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="confirm-modal-header">
-          <div className="confirm-modal-title-group">
-            <AlertTriangle size={20} className="confirm-modal-icon" />
-            <h3 id="confirm-modal-title">{title}</h3>
-          </div>
-          <button
-            type="button"
-            className="confirm-modal-close"
-            onClick={onCancel}
-            aria-label="Cancel"
-          >
-            <X size={16} />
-          </button>
+    <Modal
+      scrim="blocking"
+      onBackdropClick={onCancel}
+      cardClassName={styles.confirmModalCard}
+      cardProps={{
+        role: 'alertdialog',
+        'aria-modal': true,
+        'aria-labelledby': 'confirm-modal-title',
+        'aria-describedby': 'confirm-modal-message',
+      }}
+    >
+      <div className={styles.confirmModalHeader}>
+        <div className={styles.confirmModalTitleGroup}>
+          <AlertTriangle size={20} className={styles.confirmModalIcon} />
+          <h3 id="confirm-modal-title">{title}</h3>
         </div>
-        <p id="confirm-modal-message" className="confirm-modal-message">
-          {message}
-        </p>
-        <p className="confirm-modal-tip">
-          Tip: hold <kbd>Shift</kbd> while clicking to skip this confirmation.
-        </p>
-        <div className="confirm-modal-footer">
-          <button
-            type="button"
-            className="confirm-modal-cancel"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            ref={confirmRef}
-            data-testid="btn-confirm-modal-confirm"
-            className="confirm-modal-confirm"
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </button>
-        </div>
+        <ModalCloseButton
+          className={styles.confirmModalClose}
+          onClick={onCancel}
+          aria-label="Cancel"
+        >
+          <X size={16} />
+        </ModalCloseButton>
       </div>
-    </div>
+      <p id="confirm-modal-message" className={styles.confirmModalMessage}>
+        {message}
+      </p>
+      <p className={styles.confirmModalTip}>
+        Tip: hold <kbd>Shift</kbd> while clicking to skip this confirmation.
+      </p>
+      <ModalFooter className={styles.confirmModalFooter}>
+        <button
+          type="button"
+          className={styles.confirmModalCancel}
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          ref={confirmRef}
+          data-testid="btn-confirm-modal-confirm"
+          className={styles.confirmModalConfirm}
+          onClick={onConfirm}
+        >
+          {confirmLabel}
+        </button>
+      </ModalFooter>
+    </Modal>
   );
 };
 

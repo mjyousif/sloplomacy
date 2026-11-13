@@ -15,9 +15,10 @@ frontend/
 └── src/
     ├── main.tsx                 # React DOM bootstrapping; its first import is styles/index.css
     ├── App.tsx                  # Root state container and viewMode router: calls the state hooks, renders the pieces below
-    ├── App.css                  # Tactical HUD styling, CRT brass themes & modals: the wide layout, in the `components` layer
+    ├── App.css                  # Tactical HUD styling and CRT brass themes: the wide layout, in the `components` layer (the modals and top bars moved to `*.module.css` beside them)
     ├── compact.css              # Phone layout, applied while the shell has data-layout="compact", in the `compact` layer
     ├── styles/
+    │   ├── layerOrder.test.ts   # main.tsx must import styles/index.css first
     │   ├── index.css            # Declares the cascade layers and imports every stylesheet into one (main.tsx imports it first)
     │   ├── tokens.css           # App-wide :root and [data-layout='compact'] variables (none yet)
     │   └── base.css             # Reset, page defaults, shared @keyframes and .compact-only
@@ -111,25 +112,33 @@ frontend/
     │   │   ├── JoinWithCodeCard.tsx          # Join Private Campaign card (Game ID, passcode, country)
     │   │   ├── PowerPicker.tsx               # The seven-flag country picker both cards share
     │   │   ├── PasscodePromptModal.tsx       # Passcode entry dialog for private matches
-    │   │   ├── PrivateCampaignCreatedModal.tsx # Shareable credentials modal after creating private room
+    │   │   ├── PrivateCampaignCreatedModal.tsx # Shareable credentials modal after creating private room (+ .module.css for the credentials box)
     │   │   └── *.test.tsx, lobby.testkit.ts    # Each section's rendering and callbacks, with shared game fixtures
-    │   ├── AdminSettingsMenu.tsx        # Top-bar Wrench menu toggling Edit Board, Turn & Clock Settings, and Exit Admin Mode
-    │   ├── AdminActionWarningModal.tsx  # Unacknowledged admin mutation audit log warning prompt
+    │   ├── AdminSettingsMenu.tsx        # Top-bar Wrench menu toggling Edit Board, Turn & Clock Settings, and Exit Admin Mode (+ .module.css for the mode cards)
+    │   ├── AdminActionWarningModal.tsx  # Unacknowledged admin mutation audit log warning prompt (styled by SanityCheckModal.module.css)
     │   ├── admin/
     │   │   └── TurnControlTab.tsx       # Snapshot revert selector, clock/season adjustment, unlock all orders
-    │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
+    │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle (+ .module.css, which AccountModal reuses)
+    │   ├── AccountModal.tsx     # Public username and sign-out (+ .module.css for its own parts)
+    │   ├── GameOverModal.tsx    # The campaign-concluded dialogue and final standings (+ .module.css)
     │   ├── BottomSheet.tsx      # Phone pull-up panel with peek, half and full stops (holds the order sheet)
-    │   ├── CompactTopBar.tsx    # Phone top bar: back, ≡ tools, turn, order-problem count and a ⋯ menu
+    │   ├── CompactTopBar.tsx    # Phone top bar: back, ≡ tools, turn, order-problem count and a ⋯ menu (+ .module.css, almost all in the compact layer)
     │   ├── CompactTopBar.test.ts # Vitest suite for the phone top bar and the surrender note
-    │   ├── TopHeader.tsx        # Desktop top bar: brand, Solo Sandbox, turn, order check, display settings, account
+    │   ├── TopHeader.tsx        # Desktop top bar: brand, Solo Sandbox, turn, order check, display settings, account (+ .module.css)
+    │   ├── BrandEmblem.tsx      # The gold compass badge both top bars share (+ .module.css)
     │   ├── TopHeader.test.tsx   # Each part of the desktop top bar and the buttons it hands back to App
-    │   ├── AppHeader.tsx        # Above the board: TopHeader or CompactTopBar, the Direct-Edit banner and the toast
+    │   ├── AppHeader.tsx        # Above the board: TopHeader or CompactTopBar, the Direct-Edit banner and the toast (+ .module.css for the toast)
     │   ├── AppHeader.test.tsx   # Which bar shows, the problem counts, the banner's buttons and the toast
     │   ├── GameWorkspace.tsx    # The game screen: ToolsSidebar, EuropeMap with the clock and history pill, MacroSidebar
     │   ├── GameWorkspace.test.tsx # Phone and desktop variants, a past turn drawn read-only, the clock, zoom and rail wiring
     │   ├── AppModals.tsx        # Sanity Check, Surrender & Leave, Save Sandbox, admin console, sign-in and confirm
     │   ├── AppModals.test.tsx   # Each modal's wiring, the saved sandbox's default name, admin only for the host
     │   ├── DisplaySettingsMenu.tsx # Top bar menu for this player's piece style and army and fleet marks
+    │   ├── DisplaySettings.module.css # Its panel, groups and option cards; AdminSettingsMenu reuses them
+    │   ├── FormField.module.css # The field, icon input and error alert the Host and Join cards and two dialogs share
+    │   ├── modal/               # The shell every dialog uses
+    │   │   ├── Modal.tsx        # Modal (backdrop + card), ModalCloseButton and ModalFooter, with the phone rules in Modal.module.css
+    │   │   └── PromptDialog.module.css # The look the passcode, save-sandbox and private-campaign dialogs share
     │   ├── MapPiece.tsx         # Draws a unit piece for every display style; the one import path, re-exports the pieces/ helpers
     │   ├── MapPiece.test.tsx    # Every style x mark x unit type x variant, flags, plates and the seated star
     │   ├── pieces/              # What a map piece is made of
@@ -137,9 +146,9 @@ frontend/
     │   │   ├── PieceOutlines.tsx # PieceOutline, PieceHoldOutline and PieceHitArea (with its test)
     │   │   ├── marks.tsx        # The letter, icon, vehicle and NATO marks and the SupplyStar (with its test)
     │   │   └── styles/          # One body per family: DiscPiece (classic, seated, compact), FlagPiece, PillPiece (nameplate)
-    │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation
-    │   ├── SanityCheckModal.tsx # Pre-finalization tactical blunder warning dialogue
-    │   ├── ConfirmModal.tsx     # In-app confirmation for destructive actions; Shift+click skips it
+    │   ├── SurrenderModal.tsx   # Concession flow & Civil Disorder confirmation (+ .module.css)
+    │   ├── SanityCheckModal.tsx # Pre-finalization tactical blunder warning dialogue (+ .module.css, shared with AdminActionWarningModal)
+    │   ├── ConfirmModal.tsx     # In-app confirmation for destructive actions; Shift+click skips it (+ .module.css)
     │   ├── ConfirmModal.test.ts # Vitest suite for the confirmation and its Shift rule
     │   ├── useConfirm.test.tsx  # Asking, confirming, dismissing and Shift-skipping in the DOM
     │   ├── SaveSandboxModal.tsx # Accessible modal to name and save/promote a personal draft sandbox
@@ -193,6 +202,7 @@ frontend/
     ├── types/
     │   └── diplomacy.ts         # TypeScript definitions synchronized with backend/domain/*.py
     └── utils/
+        ├── cx.ts                # Joins class names, skipping falsy ones (with its test)
         ├── orderBuilders.ts     # Hold, move, retreat, support, convoy, disband, build and waive orders, built one way everywhere
         ├── orderBuilders.test.ts # Each order's exact fields and field order
         ├── orderHelpers.ts      # Reachability calculations, retreat targeting & symbolic formatters
@@ -292,6 +302,9 @@ The frontend dev server (port `5173`) proxies requests under `/api` to the FastA
 // vite.config.ts
 export default defineConfig({
   plugins: [react()],
+  css: {
+    modules: { localsConvention: 'camelCaseOnly' }, // `.sanity-modal-card` is `styles.sanityModalCard`
+  },
   server: {
     proxy: {
       '/api': {

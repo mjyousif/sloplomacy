@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Compass,
   Crown,
   FlaskConical,
   LogIn,
@@ -21,6 +20,8 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { DisplayPrefsSaveState } from '../hooks/useDisplayPrefs';
 import { type AuthUser, POWER_METADATA, type Power } from '../types/diplomacy';
 import type { DisplayPrefs } from '../utils/displayPrefs';
+import { BrandEmblem } from './BrandEmblem';
+import styles from './CompactTopBar.module.css';
 import { DisplaySettingsOptions } from './DisplaySettingsMenu';
 
 export interface CompactTopBarProps {
@@ -141,7 +142,7 @@ export function CompactTopBar({
 
   return (
     <header
-      className="compact-top-bar"
+      className={styles.compactTopBar}
       ref={rootRef}
       data-testid="compact-top-bar"
     >
@@ -149,18 +150,20 @@ export function CompactTopBar({
         <button
           type="button"
           data-testid="compact-back-lobby-btn"
-          className="compact-bar-icon-btn"
+          className={styles.compactBarIconBtn}
           onClick={onBackToLobby}
           aria-label="Back to lobby"
         >
           <ArrowLeft size={20} />
         </button>
       ) : (
-        <div className="compact-brand" data-testid="compact-brand">
-          <span className="brand-emblem compact-brand-emblem">
-            <Compass size={18} />
-          </span>
-          <span className="compact-brand-title">Sloplomacy</span>
+        <div className={styles.compactBrand} data-testid="compact-brand">
+          <BrandEmblem
+            as="span"
+            iconSize={18}
+            className={styles.compactBrandEmblem}
+          />
+          <span className={styles.compactBrandTitle}>Sloplomacy</span>
         </div>
       )}
 
@@ -169,7 +172,8 @@ export function CompactTopBar({
           ref={toolsToggleRef}
           type="button"
           data-testid="compact-tools-toggle"
-          className={`compact-bar-icon-btn ${toolsOpen ? 'open' : ''}`}
+          className={styles.compactBarIconBtn}
+          data-open={toolsOpen}
           onClick={onToggleTools}
           aria-label={toolsOpen ? 'Close tools' : 'Tools'}
           aria-expanded={toolsOpen}
@@ -181,12 +185,28 @@ export function CompactTopBar({
       {turn && (
         // Two lines, so the full phase name still fits beside ←, ≡, the problem badge and ⋯ at 360px.
         // The separator is only hidden from sight, so the text still reads "Spring 1901 · Movement".
-        <span className="compact-turn-text" data-testid="compact-turn-text">
-          <span className="compact-turn-season">
+        <span
+          className={styles.compactTurnText}
+          data-testid="compact-turn-text"
+        >
+          <span
+            className={styles.compactTurnSeason}
+            data-testid="compact-turn-season"
+          >
             {turn.season} {turn.year}
           </span>
-          <span className="compact-turn-sep"> · </span>
-          <span className="compact-turn-phase">{turn.phase}</span>
+          <span
+            className={styles.compactTurnSep}
+            data-testid="compact-turn-sep"
+          >
+            {' · '}
+          </span>
+          <span
+            className={styles.compactTurnPhase}
+            data-testid="compact-turn-phase"
+          >
+            {turn.phase}
+          </span>
         </span>
       )}
 
@@ -194,7 +214,7 @@ export function CompactTopBar({
         (winner ? (
           <button
             type="button"
-            className="compact-winner-badge"
+            className={styles.compactWinnerBadge}
             onClick={onOpenGameOverModal}
             aria-label={`${POWER_METADATA[winner].shortName} wins. View campaign summary.`}
           >
@@ -205,7 +225,8 @@ export function CompactTopBar({
           <button
             type="button"
             data-testid="compact-issue-badge"
-            className={`compact-issue-badge ${errorCount > 0 ? 'has-errors' : 'has-warnings'}`}
+            className={styles.compactIssueBadge}
+            data-status={errorCount > 0 ? 'errors' : 'warnings'}
             onClick={onOpenOrderCheck}
             aria-label={`${describeIssueCount(errorCount, warningCount)}. Open the order check.`}
           >
@@ -218,7 +239,8 @@ export function CompactTopBar({
           </button>
         ) : (
           <span
-            className="compact-issue-badge is-clean"
+            className={styles.compactIssueBadge}
+            data-status="clean"
             data-testid="compact-issue-clean"
             role="img"
             aria-label={describeIssueCount(0, 0)}
@@ -231,7 +253,8 @@ export function CompactTopBar({
         ref={toggleRef}
         type="button"
         data-testid="compact-menu-toggle"
-        className={`compact-bar-icon-btn compact-menu-toggle ${menuOpen ? 'open' : ''}`}
+        className={styles.compactBarIconBtn}
+        data-open={menuOpen}
         aria-label={wsConnected ? 'Menu' : 'Menu (live sync is reconnecting)'}
         aria-expanded={menuOpen}
         aria-controls={menuOpen ? menuId : undefined}
@@ -239,14 +262,18 @@ export function CompactTopBar({
       >
         <MoreHorizontal size={22} />
         {!wsConnected && (
-          <span className="compact-menu-alert-dot" aria-hidden="true" />
+          <span
+            className={styles.compactMenuAlertDot}
+            data-testid="compact-menu-alert-dot"
+            aria-hidden="true"
+          />
         )}
       </button>
 
       {menuOpen && (
         <div
           id={menuId}
-          className="compact-menu-panel"
+          className={styles.compactMenuPanel}
           data-testid="compact-menu-panel"
           role="dialog"
           aria-label="Menu"
@@ -256,13 +283,13 @@ export function CompactTopBar({
               <button
                 type="button"
                 data-testid="compact-menu-display-back"
-                className="compact-menu-back"
+                className={styles.compactMenuBack}
                 onClick={() => setMenuView('main')}
               >
                 <ChevronLeft size={18} />
                 <span>Menu</span>
               </button>
-              <div className="compact-display-settings">
+              <div className={styles.compactDisplaySettings}>
                 <DisplaySettingsOptions
                   prefs={displayPrefs}
                   saveState={displayPrefsSaveState}
@@ -272,19 +299,20 @@ export function CompactTopBar({
             </>
           ) : (
             <>
-              <div className="compact-menu-status">
+              <div className={styles.compactMenuStatus}>
                 <span
-                  className={`ws-status-dot ${wsConnected ? 'dot-online' : 'dot-offline'}`}
+                  className={styles.wsStatusDot}
+                  data-online={wsConnected}
                   aria-hidden="true"
                 />
-                <div className="compact-menu-status-text">
+                <div className={styles.compactMenuStatusText}>
                   <strong>{wsConnected ? 'Live Sync' : 'Connecting…'}</strong>
                   <span>{syncDetail}</span>
                 </div>
               </div>
 
               {matchLabel && (
-                <div className="compact-menu-match">
+                <div className={styles.compactMenuMatch}>
                   <Crown size={15} />
                   <span>{matchLabel}</span>
                 </div>
@@ -294,7 +322,7 @@ export function CompactTopBar({
                 <button
                   type="button"
                   data-testid="compact-menu-solo-sandbox"
-                  className="compact-menu-item"
+                  className={styles.compactMenuItem}
                   onClick={(event) => {
                     closeMenu();
                     onEnterSoloSandbox(event);
@@ -309,14 +337,14 @@ export function CompactTopBar({
                 <button
                   type="button"
                   data-testid="compact-menu-display-settings"
-                  className="compact-menu-item"
+                  className={styles.compactMenuItem}
                   onClick={() => setMenuView('display')}
                 >
                   <SlidersHorizontal size={18} />
                   <span>Display settings</span>
                   <ChevronRight
                     size={18}
-                    className="compact-menu-item-chevron"
+                    className={styles.compactMenuItemChevron}
                   />
                 </button>
               )}
@@ -327,7 +355,7 @@ export function CompactTopBar({
                     <button
                       type="button"
                       data-testid="btn-toggle-direct-edit"
-                      className="compact-menu-item"
+                      className={styles.compactMenuItem}
                       onClick={() => {
                         closeMenu();
                         if (!adminOverrideActive) onToggleAdminOverride();
@@ -343,7 +371,7 @@ export function CompactTopBar({
                     <button
                       type="button"
                       data-testid="btn-open-admin-console"
-                      className="compact-menu-item"
+                      className={styles.compactMenuItem}
                       onClick={() => {
                         closeMenu();
                         onOpenAdminTools();
@@ -359,7 +387,7 @@ export function CompactTopBar({
                     <button
                       type="button"
                       data-testid="btn-exit-admin-mode"
-                      className="compact-menu-item"
+                      className={styles.compactMenuItem}
                       onClick={() => {
                         closeMenu();
                         onExitAdmin();
@@ -372,10 +400,10 @@ export function CompactTopBar({
                 </>
               )}
 
-              <div className="compact-menu-account">
+              <div className={styles.compactMenuAccount}>
                 {authUser ? (
                   <>
-                    <div className="compact-menu-user">
+                    <div className={styles.compactMenuUser}>
                       <UserIcon size={16} />
                       <div>
                         <strong>{authUser.displayName}</strong>
@@ -385,7 +413,7 @@ export function CompactTopBar({
                     {onOpenAccount && (
                       <button
                         type="button"
-                        className="compact-menu-item"
+                        className={styles.compactMenuItem}
                         onClick={() => {
                           closeMenu();
                           onOpenAccount();
@@ -397,7 +425,7 @@ export function CompactTopBar({
                     )}
                     <button
                       type="button"
-                      className="compact-menu-item"
+                      className={styles.compactMenuItem}
                       onClick={() => {
                         closeMenu();
                         onSignOut();
@@ -409,7 +437,7 @@ export function CompactTopBar({
                   </>
                 ) : (
                   <>
-                    <div className="compact-menu-user">
+                    <div className={styles.compactMenuUser}>
                       <UserIcon size={16} />
                       <div>
                         <strong>Guest Mode</strong>
@@ -417,7 +445,8 @@ export function CompactTopBar({
                     </div>
                     <button
                       type="button"
-                      className="compact-menu-item primary"
+                      className={styles.compactMenuItem}
+                      data-variant="primary"
                       onClick={() => {
                         closeMenu();
                         onSignIn();

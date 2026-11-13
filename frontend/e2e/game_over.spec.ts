@@ -130,7 +130,7 @@ test.describe('Scenario: Game Over Modal & Final Board Inspection', () => {
       await inspectBtn.click();
       await expect(modal).toHaveCount(0);
 
-      const winnerPill = page.locator('.game-over-pill');
+      const winnerPill = page.locator('[data-testid="game-over-pill"]');
       await expect(winnerPill).toBeVisible();
       await expect(winnerPill).toContainText('FRANCE WINS');
       await recorder.recordStep(page, '02_inspect_final_board');

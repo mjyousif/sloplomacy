@@ -5,6 +5,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../../types/diplomacy';
+import fieldStyles from '../FormField.module.css';
 import { PowerPicker } from './PowerPicker';
 
 export interface JoinWithCodeCardProps {
@@ -45,7 +46,7 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
       </p>
 
       <form onSubmit={handleJoinCodeSubmit} className="lobby-create-form">
-        <div className="lobby-field">
+        <div className={fieldStyles.lobbyField}>
           <label htmlFor="join-code-id">Game ID</label>
           <input
             id="join-code-id"
@@ -57,7 +58,7 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
           />
         </div>
 
-        <div className="lobby-field">
+        <div className={fieldStyles.lobbyField}>
           <label htmlFor="join-code-passcode">Lobby Passcode</label>
           <input
             id="join-code-passcode"
@@ -68,13 +69,16 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
           />
         </div>
 
-        <div className="lobby-field">
+        <div className={fieldStyles.lobbyField}>
           <label>Nation to Claim</label>
           <PowerPicker selected={joinCodePower} onSelect={setJoinCodePower} />
         </div>
 
         {joinCodeError && (
-          <div className="lobby-error-alert" data-testid="join-code-error">
+          <div
+            className={fieldStyles.lobbyErrorAlert}
+            data-testid="join-code-error"
+          >
             <AlertTriangle size={14} />
             <span>{joinCodeError}</span>
           </div>
