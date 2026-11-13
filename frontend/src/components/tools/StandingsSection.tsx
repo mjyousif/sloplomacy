@@ -1,4 +1,4 @@
-import { ArrowUpDown, CheckCircle2, Flag } from 'lucide-react';
+import { AlertTriangle, ArrowUpDown, CheckCircle2, Flag } from 'lucide-react';
 import type React from 'react';
 import { POWER_METADATA } from '../../types/diplomacy';
 import { CollapsibleSection } from '../CollapsibleSection';
@@ -42,7 +42,6 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
   return (
     <CollapsibleSection
       title={isMultiplayer ? 'DIPLOMATIC STANDING' : 'COMMAND NATION (SELECT)'}
-      badge={<span className="tools-section-count">7 Powers</span>}
       collapsible={true}
       defaultOpen={true}
     >
@@ -167,7 +166,8 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                       className="mini-status-tag warning"
                       title={`${pwrIssues.length} issues`}
                     >
-                      {pwrIssues.length}⚠
+                      {pwrIssues.length}
+                      <AlertTriangle size={10} />
                     </span>
                   ) : (
                     <span

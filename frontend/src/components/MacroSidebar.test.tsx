@@ -618,3 +618,113 @@ describe('MacroSidebar sheet', () => {
     fetchMock.mockRestore();
   });
 });
+
+describe('MacroSidebar: auto-scroll and compact orders', () => {
+  it('scrolls the desktop order list when a unit outside the viewport is selected', () => {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: Element) {
+        const el = this as HTMLElement;
+        if (el.classList.contains('macro-units-scroll-area')) {
+          return {
+            top: 100,
+            bottom: 300,
+            left: 0,
+            right: 0,
+            width: 0,
+            height: 200,
+            x: 0,
+            y: 100,
+            toJSON() {},
+          };
+        }
+        if (el.dataset.unitId === A_BRE.id) {
+          return {
+            top: 420,
+            bottom: 480,
+            left: 0,
+            right: 0,
+            width: 0,
+            height: 60,
+            x: 0,
+            y: 420,
+            toJSON() {},
+          };
+        }
+        return {
+          top: 120,
+          bottom: 180,
+          left: 0,
+          right: 0,
+          width: 0,
+          height: 60,
+          x: 0,
+          y: 120,
+          toJSON() {},
+        };
+      },
+    );
+    const { container } = sidebar({ selectedUnitId: A_BRE.id });
+    expect(
+      (container.querySelector('.macro-units-scroll-area') as HTMLElement)
+        .scrollTop,
+    ).toBe(480 - 300 + 8);
+  });
+
+  it('toggles between detailed and compact one-line order rows', () => {
+    window.localStorage.removeItem('sloplomacy_compact_orders');
+    const onUpdateOrder = vi.fn();
+    const { container } = sidebar({
+      orders: {
+        [A_PAR.id]: {
+          unit_id: A_PAR.id,
+          power: 'FRANCE',
+          unit_type: 'A',
+          origin: 'PAR',
+          order_type: 'MOVE',
+          target: 'PIC',
+          via_convoy: false,
+          is_explicit: true,
+        },
+      },
+      onUpdateOrder,
+    });
+
+    const toggle = screen.getByTestId('btn-toggle-compact-orders');
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(container.querySelector('.unit-compact-row')).toBeNull();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(container.querySelectorAll('.unit-compact-row')).toHaveLength(3);
+    expect(window.localStorage.getItem('sloplomacy_compact_orders')).toBe('1');
+
+    const cards = container.querySelectorAll('[data-testid="unit-macro-card"]');
+    const firstCard = cards[0] as HTMLElement;
+    const secondCard = cards[1] as HTMLElement;
+    expect(firstCard).toHaveClass('unit-macro-card-compact');
+    expect(
+      firstCard.querySelectorAll('.order-tab-btn.compact-square'),
+    ).toHaveLength(4);
+    expect(
+      secondCard.querySelector('[data-testid="select-order-target"]'),
+    ).toBeNull();
+
+    const targetTrigger = firstCard.querySelector(
+      '[data-testid="select-order-target"]',
+    ) as HTMLButtonElement;
+    fireEvent.click(targetTrigger);
+    fireEvent.click(screen.getByRole('option', { name: 'Burgundy' }));
+    expect(onUpdateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        unit_id: A_PAR.id,
+        order_type: 'MOVE',
+        target: 'BUR',
+      }),
+    );
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(container.querySelector('.unit-compact-row')).toBeNull();
+    window.localStorage.removeItem('sloplomacy_compact_orders');
+  });
+});

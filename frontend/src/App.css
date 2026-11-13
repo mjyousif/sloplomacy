@@ -15,9 +15,9 @@
    1. TOP COMMAND HEADER
    ------------------------------------------------------------------------- */
 .imperial-top-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   height: 60px;
   padding: 0 14px;
@@ -25,6 +25,16 @@
   border-bottom: 1px solid #353b47;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
   z-index: 30;
+}
+
+.brand-and-nav {
+  grid-column: 1;
+  justify-self: start;
+}
+
+.header-right-actions {
+  grid-column: 3;
+  justify-self: end;
 }
 
 .brand-block {
@@ -1103,6 +1113,33 @@
   color: #64748b;
 }
 
+.macro-density-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid #353f52;
+  background: #1d222c;
+  color: #94a3b8;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.macro-density-toggle:hover {
+  border-color: #64748b;
+  color: #e2e8f0;
+}
+
+.macro-density-toggle.active {
+  background: rgba(234, 179, 8, 0.15);
+  border-color: rgba(234, 179, 8, 0.55);
+  color: #fde047;
+}
+
 .unit-macro-card {
   background: #232934;
   border: 1px solid #353e4f;
@@ -1273,6 +1310,181 @@
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+}
+
+/* Compact one-line order rows (#223) */
+.unit-macro-card-compact {
+  padding: 4px 7px;
+  border-radius: 7px;
+}
+
+.unit-compact-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 26px;
+}
+
+.unit-type-badge.compact {
+  padding: 2px 5px;
+  gap: 3px;
+  font-size: 0.68rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.unit-compact-prov {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unit-compact-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.order-type-tabs.compact {
+  width: auto;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.order-tab-btn.compact-square {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 0.66rem;
+  border-radius: 4px;
+}
+
+.order-tab-btn.compact-square:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.unit-compact-target-select {
+  flex: 0 0 104px;
+  width: 104px;
+  max-width: 104px;
+  height: 22px;
+  line-height: 20px;
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid #353f52;
+  background: #191d25;
+  color: #e2e8f0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unit-compact-target-select:focus {
+  outline: none;
+  border-color: #eab308;
+}
+
+.unit-compact-target-placeholder {
+  flex: 0 0 104px;
+  width: 104px;
+}
+
+.unit-compact-controls .icon-select-dropdown {
+  flex: 0 0 104px;
+  width: 104px;
+}
+
+.unit-compact-controls .icon-select-dropdown-trigger,
+.order-param-inline .icon-select-dropdown-trigger {
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  gap: 4px;
+}
+
+.unit-compact-controls .icon-select-dropdown-value,
+.order-param-inline .icon-select-dropdown-value {
+  gap: 5px;
+  overflow: hidden;
+}
+
+.unit-compact-controls .icon-select-dropdown-value > span,
+.order-param-inline .icon-select-dropdown-value > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unit-compact-controls .icon-select-dropdown-menu {
+  left: auto;
+  right: 0;
+  min-width: 156px;
+}
+
+.order-param-inline .icon-select-dropdown {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.order-param-inline .icon-select-dropdown-menu {
+  min-width: 148px;
+}
+
+.unit-compact-subcontrols {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid #2c3342;
+}
+
+.order-param-inline {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.order-param-inline select {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 22px;
+  line-height: 20px;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid #353f52;
+  background: #191d25;
+  color: #e2e8f0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.order-param-inline select:focus {
+  outline: none;
+  border-color: #eab308;
+}
+
+.order-param-arrow {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
 }
 
 .order-tab-btn:hover {
@@ -2117,9 +2329,23 @@
 }
 
 .header-center-telemetry {
+  grid-column: 2;
+  justify-self: center;
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+}
+
+.header-center-badges {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
 }
 
 .header-user-Menu {
@@ -3495,6 +3721,10 @@
 }
 
 .auth-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   padding: 10px 16px;
   border-radius: 8px;
   background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
@@ -3504,6 +3734,59 @@
   font-weight: 800;
   cursor: pointer;
   margin-top: 4px;
+}
+
+.account-field-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.account-readonly-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px dashed #2e3545;
+  color: #94a3b8;
+  font-size: 0.84rem;
+  user-select: text;
+}
+
+.account-readonly-value svg {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.account-signout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 2px;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.account-signout-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(248, 113, 113, 0.55);
+}
+
+.account-signout-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .auth-footer-note {

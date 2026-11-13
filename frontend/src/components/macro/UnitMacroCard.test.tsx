@@ -296,3 +296,61 @@ describe('UnitMacroCard convoy tab', () => {
     expect(screen.getByTestId('btn-order-type-CONVOY')).toBeInTheDocument();
   });
 });
+
+describe('UnitMacroCard compact dropdown hover', () => {
+  it('highlights the hovered dropdown option province on the map and restores on leave', () => {
+    const { root, onHighlightProvinces } = card({
+      compact: true,
+      unitOptions: null,
+      order: orderFor(A_BRE, 'SUPPORT', {
+        target: 'PIC',
+        aux_unit_origin: 'PAR',
+      }),
+    });
+    fireEvent.pointerEnter(root, { pointerType: 'mouse' });
+    expect(onHighlightProvinces).toHaveBeenLastCalledWith([
+      'BRE',
+      'PIC',
+      'PAR',
+    ]);
+
+    fireEvent.click(screen.getByTestId('select-support-unit'));
+    const parisOpt = screen.getByRole('option', { name: /Paris/ });
+    fireEvent.pointerEnter(parisOpt, { pointerType: 'mouse' });
+    expect(onHighlightProvinces).toHaveBeenLastCalledWith(['PAR']);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onHighlightProvinces).toHaveBeenLastCalledWith([
+      'BRE',
+      'PIC',
+      'PAR',
+    ]);
+  });
+
+  it('uses native select elements when useNativeSelect is true (mobile sheet)', () => {
+    const first = card({
+      compact: true,
+      useNativeSelect: true,
+      unitOptions: null,
+      order: orderFor(A_BRE, 'SUPPORT', {
+        target: 'PIC',
+        aux_unit_origin: 'PAR',
+      }),
+    });
+    expect(screen.getByTestId('select-support-unit').tagName).toBe('SELECT');
+    expect(screen.getByTestId('select-support-target').tagName).toBe('SELECT');
+    first.unmount();
+
+    card({
+      compact: false,
+      useNativeSelect: true,
+      unitOptions: null,
+      order: orderFor(A_BRE, 'SUPPORT', {
+        target: 'PIC',
+        aux_unit_origin: 'PAR',
+      }),
+    });
+    expect(screen.getByTestId('select-support-unit').tagName).toBe('SELECT');
+    expect(screen.getByTestId('select-support-target').tagName).toBe('SELECT');
+  });
+});

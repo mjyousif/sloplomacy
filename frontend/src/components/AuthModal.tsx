@@ -6,6 +6,7 @@ import {
   Sparkles,
   UserPlus,
   X,
+  Zap,
 } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
@@ -162,7 +163,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </span>
           ) : (
             <span className="status-pill supabase-local">
-              ⚡ Local Dev Auth Mode (Add VITE_SUPABASE_URL in .env for cloud)
+              <Zap size={12} /> Local Dev Auth Mode (Add VITE_SUPABASE_URL in
+              .env for cloud)
             </span>
           )}
         </div>
