@@ -48,8 +48,14 @@ export function UnitToken({
     handleSelectUnitOnMap,
     onHoverUnit,
   } = ctx;
+  const hasOwnershipData = Object.keys(ownership).length > 0;
   const getStarOwnerColor = (province: string): string | undefined => {
-    const owner = ownership[province] || provinces[province]?.home_power;
+    const pInfo = provinces[province];
+    const owner =
+      ownership[province] ||
+      (pInfo?.is_supply_center && hasOwnershipData
+        ? undefined
+        : pInfo?.home_power);
     return owner ? POWER_METADATA[owner].color : undefined;
   };
 

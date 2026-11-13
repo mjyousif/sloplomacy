@@ -161,9 +161,6 @@ function props(over: Partial<GameWorkspaceProps> = {}): GameWorkspaceProps {
     handleOpenSurrenderModal: vi.fn(),
     isGameCreator: false,
     directEditActive: false,
-    openAdminTools: vi.fn(),
-    adminOverrideActive: false,
-    setAdminOverrideActive: vi.fn(),
     ...over,
   };
 }
@@ -238,15 +235,15 @@ describe('GameWorkspace: the live turn', () => {
     expect(seen.map.onZoomChange).toBe(p.setZoomPercent);
   });
 
-  it('flips the rails and the Direct-Edit switch', () => {
-    const p = props();
+  it('flips the rails and passes directEditActive down', () => {
+    const p = props({ directEditActive: true });
     render(<GameWorkspace {...p} />);
     seen.tools.onToggleCollapse();
     seen.macro.onToggleCollapse();
-    seen.tools.onToggleAdminOverride();
     expect(applied(p.setLeftSidebarCollapsed, false)).toBe(true);
     expect(applied(p.setRightSidebarCollapsed, true)).toBe(false);
-    expect(applied(p.setAdminOverrideActive, false)).toBe(true);
+    expect(seen.tools.adminOverrideActive).toBe(true);
+    expect(seen.map.directEditActive).toBe(true);
   });
 
   it('finalizes without forcing, and surrenders only a held seat', () => {

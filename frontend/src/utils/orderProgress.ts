@@ -157,7 +157,8 @@ export function computeOrderProgress({
     RUSSIA: 0,
     TURKEY: 0,
   };
-  for (const [, pwr] of Object.entries(ownership)) {
+  for (const [prov, pwr] of Object.entries(ownership)) {
+    if (provinces[prov] && !provinces[prov].is_supply_center) continue;
     if (scCountByPower[pwr] !== undefined) scCountByPower[pwr]++;
   }
 

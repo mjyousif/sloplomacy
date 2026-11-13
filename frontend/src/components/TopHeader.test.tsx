@@ -168,6 +168,79 @@ describe('TopHeader: live sync, display settings and account', () => {
     expect(
       screen.getByRole('button', { name: 'Display settings' }),
     ).toBeInTheDocument();
+    expect(screen.queryByTestId('btn-admin-menu')).not.toBeInTheDocument();
+  });
+
+  it('shows the administrator dropdown next to display settings only for the game creator outside the lobby', async () => {
+    const onOpenAdminTools = vi.fn();
+    const onToggleAdminOverride = vi.fn();
+    const onExitAdmin = vi.fn();
+    const { rerender, props } = renderHeader({
+      isGameCreator: true,
+      onOpenAdminTools,
+      onToggleAdminOverride,
+      onExitAdmin,
+    });
+
+    const adminMenuBtn = screen.getByTestId('btn-admin-menu');
+    expect(adminMenuBtn).toBeInTheDocument();
+    await userEvent.click(adminMenuBtn);
+    expect(screen.getByTestId('admin-settings-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('btn-toggle-direct-edit')).toHaveClass(
+      'display-option-card',
+      'admin-mode-card',
+    );
+    expect(
+      screen
+        .getByTestId('btn-toggle-direct-edit')
+        .querySelector('.lucide-pencil'),
+    ).toBeInTheDocument();
+    expect(
+      screen
+        .getByTestId('btn-open-admin-console')
+        .querySelector('.lucide-clock'),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('btn-exit-admin-mode')).toBeNull();
+
+    await userEvent.click(screen.getByTestId('btn-toggle-direct-edit'));
+    expect(onToggleAdminOverride).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(adminMenuBtn);
+    await userEvent.click(screen.getByTestId('btn-open-admin-console'));
+    expect(onOpenAdminTools).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <TopHeader
+        {...props}
+        isGameCreator={true}
+        adminOverrideActive={true}
+        onOpenAdminTools={onOpenAdminTools}
+        onToggleAdminOverride={onToggleAdminOverride}
+        onExitAdmin={onExitAdmin}
+      />,
+    );
+    await userEvent.click(screen.getByTestId('btn-admin-menu'));
+    expect(
+      screen
+        .getByTestId('admin-settings-panel')
+        .querySelector('.admin-mode-on-badge'),
+    ).toBeNull();
+    const exitBtn = screen.getByTestId('btn-exit-admin-mode');
+    expect(exitBtn).toHaveTextContent('Exit Admin Mode');
+    await userEvent.click(exitBtn);
+    expect(onExitAdmin).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <TopHeader
+        {...props}
+        viewMode="lobby"
+        isGameCreator={true}
+        onOpenAdminTools={onOpenAdminTools}
+        onToggleAdminOverride={onToggleAdminOverride}
+        onExitAdmin={onExitAdmin}
+      />,
+    );
+    expect(screen.queryByTestId('btn-admin-menu')).not.toBeInTheDocument();
   });
 
   it('offers a guest sign-in', async () => {

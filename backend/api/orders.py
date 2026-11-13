@@ -131,6 +131,7 @@ async def update_single_order(
     if req.active_power:
         game.active_power = req.active_power
 
+    game.state_revision += 1
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
     await persist_game(game.game_id)
@@ -186,6 +187,7 @@ async def update_batch_orders(
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)
 
+    game.state_revision += 1
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
     await persist_game(game.game_id)
@@ -210,6 +212,7 @@ async def confirm_all_power_orders(
     for ord_obj in game.orders.values():
         if ord_obj.power == req.power:
             ord_obj.is_explicit = True
+    game.state_revision += 1
     refresh_diagnostics_and_simulation(game)
     await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)

@@ -88,6 +88,9 @@ export function useMapSelection({
     selectedUnit && unitOptions ? (unitOptions[selectedUnit.id] ?? null) : null;
 
   const { reachableList, reachableMap } = useMemo(() => {
+    if (directEditActive) {
+      return { reachableList: [], reachableMap: {} };
+    }
     const list = selectedUnit
       ? isRetreatPhase
         ? getValidRetreatDestinations(
@@ -110,6 +113,7 @@ export function useMapSelection({
     }
     return { reachableList: list, reachableMap: map };
   }, [
+    directEditActive,
     selectedUnit,
     selectedUnitOptions,
     isRetreatPhase,

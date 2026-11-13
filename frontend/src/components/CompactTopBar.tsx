@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Compass,
   Crown,
   FlaskConical,
@@ -11,6 +12,7 @@ import {
   LogOut,
   Menu,
   MoreHorizontal,
+  Pencil,
   ShieldCheck,
   SlidersHorizontal,
   User as UserIcon,
@@ -40,6 +42,12 @@ export interface CompactTopBarProps {
   displayPrefs: DisplayPrefs;
   displayPrefsSaveState: DisplayPrefsSaveState;
   onChangeDisplayPrefs: (change: Partial<DisplayPrefs>) => void;
+  isGameCreator?: boolean;
+  onOpenAdminTools?: () => void;
+  adminOverrideActive?: boolean;
+  onToggleAdminOverride?: () => void;
+  turnClockOpen?: boolean;
+  onExitAdmin?: () => void;
   authUser: AuthUser | null;
   onSignIn: () => void;
   onSignOut: () => void;
@@ -83,6 +91,12 @@ export function CompactTopBar({
   displayPrefs,
   displayPrefsSaveState,
   onChangeDisplayPrefs,
+  isGameCreator = false,
+  onOpenAdminTools,
+  adminOverrideActive = false,
+  onToggleAdminOverride,
+  turnClockOpen = false,
+  onExitAdmin,
   authUser,
   onSignIn,
   onSignOut,
@@ -293,6 +307,57 @@ export function CompactTopBar({
                 <span>Display settings</span>
                 <ChevronRight size={18} className="compact-menu-item-chevron" />
               </button>
+
+              {inGame && isGameCreator && (
+                <>
+                  {onToggleAdminOverride && (
+                    <button
+                      type="button"
+                      data-testid="btn-toggle-direct-edit"
+                      className="compact-menu-item"
+                      onClick={() => {
+                        closeMenu();
+                        if (!adminOverrideActive) onToggleAdminOverride();
+                      }}
+                    >
+                      <Pencil size={18} />
+                      <span>
+                        {adminOverrideActive ? 'Edit Board: ON' : 'Edit Board'}
+                      </span>
+                    </button>
+                  )}
+                  {onOpenAdminTools && (
+                    <button
+                      type="button"
+                      data-testid="btn-open-admin-console"
+                      className="compact-menu-item"
+                      onClick={() => {
+                        closeMenu();
+                        onOpenAdminTools();
+                      }}
+                    >
+                      <Clock size={18} />
+                      <span>
+                        Turn and Clock Settings{turnClockOpen ? ': ON' : ''}
+                      </span>
+                    </button>
+                  )}
+                  {(adminOverrideActive || turnClockOpen) && onExitAdmin && (
+                    <button
+                      type="button"
+                      data-testid="btn-exit-admin-mode"
+                      className="compact-menu-item"
+                      onClick={() => {
+                        closeMenu();
+                        onExitAdmin();
+                      }}
+                    >
+                      <LogOut size={18} />
+                      <span>Exit Admin Mode</span>
+                    </button>
+                  )}
+                </>
+              )}
 
               <div className="compact-menu-account">
                 {authUser ? (

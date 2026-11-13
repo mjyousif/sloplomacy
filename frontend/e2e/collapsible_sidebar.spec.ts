@@ -23,7 +23,7 @@ test.describe('Collapsible Sidebar Sections', () => {
       const sidebar = page.locator('.tools-sidebar');
       await expect(sidebar).toBeVisible();
 
-      // Find the toggle buttons for sections
+      // Find the toggle buttons for sections (Creator Admin Tools moved to Display Settings)
       const legendToggle = page.locator('.sidebar-section-toggle-btn:has-text("TACTICAL MAP LEGEND")');
       const powersToggle = page.locator('.sidebar-section-toggle-btn:has-text("COMMAND NATION")');
       const sandboxToggle = page.locator('.sidebar-section-toggle-btn:has-text("HYPOTHETICAL MODE")');
@@ -32,7 +32,7 @@ test.describe('Collapsible Sidebar Sections', () => {
       await expect(legendToggle).toBeVisible();
       await expect(powersToggle).toBeVisible();
       await expect(sandboxToggle).toBeVisible();
-      await expect(adminToggle).toBeVisible();
+      await expect(adminToggle).toHaveCount(0);
 
       // 1. Initial State: All expanded
       await recorder.recordStep(page, '01_all_sections_expanded');
@@ -53,13 +53,18 @@ test.describe('Collapsible Sidebar Sections', () => {
       // But the ACTIVE pill in the header should still be visible!
       await expect(activePill).toBeVisible();
 
-      // 4. Collapse Admin section
-      await adminToggle.click();
-      await page.waitForTimeout(300);
-      const adminConsoleBtn = page.locator('[data-testid="btn-open-admin-console"]');
-      await expect(adminConsoleBtn).not.toBeVisible();
+      // 4. Verify Administrator modes live in the top bar Administrator dropdown
+      const adminMenuBtn = page.locator('[data-testid="btn-admin-menu"]');
+      await expect(adminMenuBtn).toBeVisible();
+      await adminMenuBtn.click();
+      await expect(page.locator('[data-testid="display-settings-admin-group"]')).toBeVisible();
+      await expect(page.locator('[data-testid="btn-open-admin-console"]')).toBeVisible();
+      await expect(page.locator('[data-testid="btn-toggle-direct-edit"]')).toBeVisible();
 
-      await recorder.recordStep(page, '03_sandbox_and_admin_collapsed');
+      await recorder.recordStep(page, '03_sandbox_collapsed_and_display_admin_menu');
+
+      // Close Administrator dropdown
+      await adminMenuBtn.click();
 
       // 5. Expand Sandbox back open
       await sandboxToggle.click();

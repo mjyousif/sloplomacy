@@ -1,10 +1,10 @@
 """Request and response bodies for the HTTP API and WebSocket messages."""
 
-from domain.board import Power, ProvinceInfo, UnitType
-from domain.game_state import GameState, MultiplayerGameSummary, TimerChoice
+from domain.board import Power, ProvinceInfo, Unit, UnitType
+from domain.game_state import GameState, MultiplayerGameSummary, TimerChoice, TurnHistoryEntry
 from domain.issues import ValidationIssue
 from domain.orders import Order
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class OrderSubmissionRequest(BaseModel):
@@ -110,6 +110,7 @@ class AuthUser(BaseModel):
 
 
 class AdminRollbackRequest(BaseModel):
+    snapshot_index: int | None = None
     user_id: str | None = None
     email: str | None = None
 
@@ -152,10 +153,31 @@ class AdminSetOwnershipRequest(BaseModel):
     email: str | None = None
 
 
+class AdminAcknowledgeRequest(BaseModel):
+    entry_ids: list[str] | None = None
+    user_id: str | None = None
+    email: str | None = None
+    power: Power | None = None
+
+
+class AdminBatchBoardEditRequest(BaseModel):
+    expected_revision: int
+    expected_season: str
+    expected_year: int
+    expected_phase: str
+    units: list[Unit]
+    ownership: dict[str, Power]
+    orders: dict[str, Order] | None = None
+    summary_lines: list[str] | None = None
+    user_id: str | None = None
+    email: str | None = None
+
+
 class AdminStatusResponse(BaseModel):
     is_creator: bool
     can_rollback: bool
     history_count: int
+    history_entries: list[TurnHistoryEntry] = Field(default_factory=list)
     creator_email: str
     creator_id: str | None = None
 

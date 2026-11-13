@@ -70,10 +70,21 @@ def test_admin_rollback_turn():
     assert adj_res.json()["season"] == "Fall"
     assert adj_res.json()["year"] == 1901
 
-    # Status check indicates can_rollback is True
+    # Status check indicates can_rollback is True and includes history_entries
     st_res = client.get(f"/api/admin/status?game_id={game_id}", headers=creator_headers)
     assert st_res.json()["can_rollback"] is True
     assert st_res.json()["history_count"] == 1
+    assert st_res.json()["history_entries"] == [
+        {"index": 0, "season": "Spring", "year": 1901, "phase": "Movement"}
+    ]
+
+    # Non-creator sees history_count/can_rollback=bool without leaking history_entries
+    non_creator_headers = make_auth_headers("other_user", "other@diplomacy.eu")
+    non_creator_res = client.get(
+        f"/api/admin/status?game_id={game_id}", headers=non_creator_headers
+    )
+    assert non_creator_res.json()["is_creator"] is False
+    assert non_creator_res.json()["history_entries"] == []
 
     # Roll back as creator
     rb_res = client.post(f"/api/admin/rollback?game_id={game_id}", headers=creator_headers)
@@ -82,6 +93,57 @@ def test_admin_rollback_turn():
     assert restored["season"] == "Spring"
     assert restored["year"] == 1901
     assert any("[ADMIN OVERRIDE] Rolled back turn" in h for h in restored["turn_history"])
+
+
+def test_admin_rollback_to_selected_snapshot_index():
+    """Creator can roll back to any earlier snapshot by snapshot_index and discard later ones."""
+    client = TestClient(app)
+    creator_headers = make_auth_headers("bot_bismarck", "bismarck@diplomacy.eu")
+    game_id = "mp_concert_104"
+
+    # Advance twice: Spring 1901 -> Fall 1901 -> Winter 1901 Adjustments
+    assert (
+        client.post(f"/api/adjudicate?game_id={game_id}", headers=creator_headers).status_code
+        == 200
+    )
+    assert (
+        client.post(f"/api/adjudicate?game_id={game_id}", headers=creator_headers).status_code
+        == 200
+    )
+
+    st_res = client.get(f"/api/admin/status?game_id={game_id}", headers=creator_headers)
+    assert st_res.status_code == 200
+    entries = st_res.json()["history_entries"]
+    assert entries == [
+        {"index": 0, "season": "Spring", "year": 1901, "phase": "Movement"},
+        {"index": 1, "season": "Fall", "year": 1901, "phase": "Movement"},
+    ]
+
+    # Out-of-range snapshot_index returns 400 without mutating history
+    bad_res = client.post(
+        f"/api/admin/rollback?game_id={game_id}",
+        headers=creator_headers,
+        json={"snapshot_index": 99},
+    )
+    assert bad_res.status_code == 400
+
+    # Roll back directly to index 0 (Spring 1901 Movement), truncating index 1
+    rb_res = client.post(
+        f"/api/admin/rollback?game_id={game_id}",
+        headers=creator_headers,
+        json={"snapshot_index": 0},
+    )
+    assert rb_res.status_code == 200
+    restored = rb_res.json()
+    assert (restored["season"], restored["year"], restored["phase"]) == (
+        "Spring",
+        1901,
+        "Movement",
+    )
+
+    after_res = client.get(f"/api/admin/status?game_id={game_id}", headers=creator_headers)
+    assert after_res.json()["history_count"] == 0
+    assert after_res.json()["history_entries"] == []
 
 
 @pytest.mark.parametrize(

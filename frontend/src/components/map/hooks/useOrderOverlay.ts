@@ -100,8 +100,10 @@ export function useOrderOverlay({
         const o = orders[u.id];
         if (o && o.order_type === 'SUPPORT' && o.aux_unit_origin && o.target) {
           const targetUnit = unitsByProv[o.aux_unit_origin];
-          if (targetUnit && isUnitOrderVisible(targetUnit)) {
-            const targetOrder = orders[targetUnit.id];
+          if (targetUnit) {
+            const targetOrder = isUnitOrderVisible(targetUnit)
+              ? orders[targetUnit.id]
+              : undefined;
             const isHoldSup = o.aux_unit_origin === o.target;
             if (
               (isHoldSup &&

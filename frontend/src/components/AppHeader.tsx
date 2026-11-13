@@ -1,4 +1,4 @@
-import { CheckCircle2, ShieldAlert } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import type { AuthModalTab } from '../hooks/useAuthSession';
 import type { DisplayPrefsSaveState } from '../hooks/useDisplayPrefs';
@@ -37,9 +37,12 @@ export interface AppHeaderProps {
   setToolsDrawerOpen: Dispatch<SetStateAction<boolean>>;
   toolsToggleRef: RefObject<HTMLButtonElement | null>;
   /** The host's Direct-Edit, on and in this game, which shows a banner. */
+  isGameCreator?: boolean;
   directEditActive: boolean;
   openAdminTools: () => void;
-  setAdminOverrideActive: Dispatch<SetStateAction<boolean>>;
+  onToggleDirectEdit: () => void;
+  turnClockOpen?: boolean;
+  onExitAdmin?: () => void;
   toastBanner: string | null;
 }
 
@@ -68,9 +71,12 @@ export function AppHeader({
   toolsDrawerOpen,
   setToolsDrawerOpen,
   toolsToggleRef,
+  isGameCreator = false,
   directEditActive,
   openAdminTools,
-  setAdminOverrideActive,
+  onToggleDirectEdit,
+  turnClockOpen = false,
+  onExitAdmin,
   toastBanner,
 }: AppHeaderProps) {
   const activePowerIssues = gameState.issues.filter(
@@ -106,6 +112,12 @@ export function AppHeader({
           displayPrefs={displayPrefs}
           displayPrefsSaveState={displayPrefsSaveState}
           onChangeDisplayPrefs={updateDisplayPrefs}
+          isGameCreator={isGameCreator}
+          onOpenAdminTools={openAdminTools}
+          adminOverrideActive={directEditActive}
+          onToggleAdminOverride={onToggleDirectEdit}
+          turnClockOpen={turnClockOpen}
+          onExitAdmin={onExitAdmin}
           authUser={authUser}
           onSignIn={() => openAuthPrompt(undefined, 'signin')}
           onSignOut={handleSignOut}
@@ -133,6 +145,12 @@ export function AppHeader({
           displayPrefs={displayPrefs}
           displayPrefsSaveState={displayPrefsSaveState}
           onChangeDisplayPrefs={updateDisplayPrefs}
+          isGameCreator={isGameCreator}
+          onOpenAdminTools={openAdminTools}
+          adminOverrideActive={directEditActive}
+          onToggleAdminOverride={onToggleDirectEdit}
+          turnClockOpen={turnClockOpen}
+          onExitAdmin={onExitAdmin}
           authUser={authUser}
           onSignIn={() => openAuthPrompt(undefined, 'signin')}
           onSignOut={handleSignOut}
@@ -140,25 +158,6 @@ export function AppHeader({
             openAccountModal ? () => openAccountModal(false) : undefined
           }
         />
-      )}
-
-      {/* ADMIN DIRECT-EDIT OVERRIDE BANNER */}
-      {directEditActive && (
-        <div className="admin-override-banner">
-          <span>
-            <ShieldAlert size={16} />
-            <strong>ADMIN DIRECT-EDIT ACTIVE:</strong> You have Game Creator
-            authority to edit any power's moves or state directly on the board.
-          </span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" onClick={openAdminTools}>
-              Admin Console
-            </button>
-            <button type="button" onClick={() => setAdminOverrideActive(false)}>
-              Disable Direct-Edit
-            </button>
-          </div>
-        </div>
       )}
 
       {/* TOAST NOTIFICATION */}

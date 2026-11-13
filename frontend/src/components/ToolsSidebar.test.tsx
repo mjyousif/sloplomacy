@@ -62,30 +62,10 @@ describe('ToolsSidebar panel', () => {
     expect(screen.queryByText('CHANCELLERY TOOLS')).toBeNull();
   });
 
-  it('shows the admin section to the creator with an admin handler, and passes the override through', async () => {
-    const onOpenAdminTools = vi.fn();
-    const onToggleAdminOverride = vi.fn();
-    const { rerender } = render(
-      <ToolsSidebar {...props({ isGameCreator: true })} />,
-    );
+  it('does not render any creator admin section in the left sidebar', () => {
+    render(<ToolsSidebar {...props({ adminOverrideActive: true })} />);
     expect(screen.queryByText('CREATOR ADMIN TOOLS')).toBeNull();
-    rerender(
-      <ToolsSidebar
-        {...props({
-          isGameCreator: true,
-          onOpenAdminTools,
-          onToggleAdminOverride,
-          adminOverrideActive: true,
-        })}
-      />,
-    );
-    expect(screen.getByText('Direct-Edit: ON')).toBeInTheDocument();
-    await userEvent.click(screen.getByTestId('btn-open-admin-console'));
-    await userEvent.click(screen.getByText('Direct-Edit: ON'));
-    expect(onOpenAdminTools).toHaveBeenCalledTimes(1);
-    expect(onToggleAdminOverride).toHaveBeenCalledTimes(1);
-    rerender(<ToolsSidebar {...props({ onOpenAdminTools })} />);
-    expect(screen.queryByText('CREATOR ADMIN TOOLS')).toBeNull();
+    expect(screen.queryByTestId('btn-open-admin-console')).toBeNull();
   });
 
   it('hands each section what it reads', async () => {
@@ -174,8 +154,6 @@ function spies() {
     onAIStepTurn: vi.fn(),
     onLoadScenario: vi.fn(),
     onSaveSandboxClick: vi.fn(),
-    onOpenAdminTools: vi.fn(),
-    onToggleAdminOverride: vi.fn(),
     onClose: vi.fn(),
   };
 }
@@ -198,7 +176,6 @@ describe('ToolsSidebar wiring', () => {
   const full = (s: ReturnType<typeof spies>) =>
     props({
       ...s,
-      isGameCreator: true,
       sandboxMode: true,
       foreignModifiedOrdersCount: 2,
     });
@@ -225,8 +202,6 @@ describe('ToolsSidebar wiring', () => {
       ],
       ['onLoadScenario', () => screen.getByTestId('btn-reset-scenario')],
       ['onSaveSandboxClick', () => screen.getByTestId('btn-save-sandbox')],
-      ['onOpenAdminTools', () => screen.getByTestId('btn-open-admin-console')],
-      ['onToggleAdminOverride', () => screen.getByText('Direct-Edit: OFF')],
     ];
     for (const [name, find] of buttons) {
       const s = spies();
@@ -246,7 +221,6 @@ describe('ToolsSidebar wiring', () => {
       ['onZoomOut', () => screen.getByTitle('Zoom Out (-)')],
       ['onResetCamera', () => screen.getByTitle('Fit Map / Reset Camera')],
       ['onToggleSandboxMode', () => screen.getByTitle(/Hypothetical Mode/)],
-      ['onOpenAdminTools', () => screen.getByTitle('Creator Admin Console')],
     ];
     for (const [name, find] of buttons) {
       const s = spies();
@@ -258,11 +232,9 @@ describe('ToolsSidebar wiring', () => {
     }
   });
 
-  it('shows the panel state on the rail: sandbox glow, override glow and the host-only button', () => {
+  it('shows the panel state on the rail: sandbox glow', () => {
     const { rerender } = render(
-      <ToolsSidebar
-        {...props({ collapsed: true, onOpenAdminTools: vi.fn() })}
-      />,
+      <ToolsSidebar {...props({ collapsed: true })} />,
     );
     expect(screen.getByTitle('Enter Hypothetical Mode')).not.toHaveClass(
       'rail-active-glow',
@@ -273,8 +245,6 @@ describe('ToolsSidebar wiring', () => {
         {...props({
           collapsed: true,
           sandboxMode: true,
-          isGameCreator: true,
-          onOpenAdminTools: vi.fn(),
           adminOverrideActive: true,
         })}
       />,
@@ -282,9 +252,7 @@ describe('ToolsSidebar wiring', () => {
     expect(screen.getByTitle(/Hypothetical Mode ACTIVE/)).toHaveClass(
       'rail-active-glow',
     );
-    expect(screen.getByTitle('Creator Admin Console')).toHaveClass(
-      'rail-admin-glow',
-    );
+    expect(screen.queryByTitle('Creator Admin Console')).toBeNull();
   });
 
   it('feeds the standings from the game state it is given', () => {

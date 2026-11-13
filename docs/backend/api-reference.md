@@ -73,6 +73,8 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/admin/unit/destroy` | Disband and remove any unit from the board | `AdminDestroyUnitRequest` | `GameState` |
 | `POST` | `/api/admin/ownership` | Reassign province / supply center ownership | `AdminSetOwnershipRequest` | `GameState` |
 | `POST` | `/api/admin/unfinalize-all` | Unlock and unfinalize orders for all 7 powers | *None* | `GameState` |
+| `POST` | `/api/admin/board-edit` | Atomically commit staged Direct-Edit board changes with concurrency check | `AdminBoardEditRequest` | `GameState` |
+| `POST` | `/api/admin/acknowledge` | Acknowledge admin action log entries for the calling viewer | `AdminAcknowledgeRequest` | `GameState` |
 
 ### Developer & Testing Utilities
 | Method | Endpoint | Description | Request Body | Response Model |
@@ -529,7 +531,7 @@ Lists the phases of a game that have resolved, oldest first, for the turn select
 ```
 
 ### `GET /api/history/{index}`
-Returns one resolved phase from `GET /api/history`, as the board stood when it began, with **every** power's orders and how each resolved. `resolution` comes from running the snapshot through the adjudicator again. Adjudication is deterministic, so it is exactly what happened. Same parameters and access rules as the list, and `404` for an index out of range. Only what the map needs is returned: the snapshot's clock, log and finalize marks stay on the server.
+Returns one resolved phase from `GET /api/history`, as the board stood when it began, with **every** power's orders and how each resolved. For standard phases (`Movement`, `Retreats`, `Adjustments`), `resolution` comes from running the snapshot through the adjudicator again. For consolidated `"Admin"` snapshots (`phase: "Admin"`), `resolution` returns the stored `snap.last_resolution` (containing the post-admin `new_units`, `new_ownership`, and `summary` audit lines) directly, with `orders` showing the before/after diff (`BUILD`, `DISBAND`, `MOVE`, `HOLD`). Same parameters and access rules as the list, and `404` for an index out of range. Only what the map needs is returned: the snapshot's clock, log and finalize marks stay on the server.
 
 #### Response (`TurnRecord`):
 ```json
@@ -590,16 +592,17 @@ Strictly restricted to the creator/host of the room in multiplayer matches. Auth
   - `403 Forbidden`: Authenticated caller's `sub` or `email` does not match the room creator (`creator_id` / `created_by`).
 
 ### 11. `GET /api/admin/status`
-Checks creator authorization and available timeline rollback snapshots.
+Checks creator authorization and available timeline rollback snapshots (`AdminStatusResponse`, including `history_entries` as `{index, season, year, phase}` metadata for creators).
 
 ---
 
 ### 12. `POST /api/admin/rollback`
-Rolls back match state to the snapshot taken immediately prior to the latest turn adjudication.
+Rolls back match state to a snapshot from timeline history. Accepts an optional `snapshot_index` (defaults to the most recent snapshot); rolling back to an earlier index restores that snapshot and removes it along with any subsequent snapshots. Returns `400` if history is empty or `snapshot_index` is out of range.
 
 #### Request (`AdminRollbackRequest`):
 ```json
 {
+  "snapshot_index": 0,
   "user_id": "usr_1020",
   "email": "marshal@slop.eu"
 }
@@ -676,6 +679,18 @@ Reassigns supply center ownership to any Great Power or clears it to neutral. Re
 
 ### 18. `POST /api/admin/unfinalize-all`
 Unlocks and unfinalizes order submissions across all 7 Great Powers simultaneously.
+
+---
+
+### 18b. `POST /api/admin/board-edit`
+Applies an atomic batch of staged Direct-Edit board mutations (`units`, `ownership`, `orders`, `summary_lines`) with optimistic concurrency checking against `expected_revision` (and optional `expected_season`, `expected_year`, `expected_phase`).
+- Rejects stale commits with `409 Conflict` if the underlying `GameState` (`state_revision` or turn clock) changed while the admin was drafting edits.
+- Increments `state_revision`, appends an `AdminActionLogEntry` to `GameState.admin_log`, consolidates consecutive `"Admin"` snapshots in `GAME_HISTORY[game_id]`, marks `HISTORY_UNSAVED`, persists to Supabase, and broadcasts over WebSocket.
+
+---
+
+### 18c. `POST /api/admin/acknowledge`
+Marks one or more `AdminActionLogEntry` items in `GameState.admin_log` as acknowledged by the calling participant (`user_id`, `email`, and/or `power`) and persists the updated `GameState` to Supabase so the player is not re-prompted after a page reload or cold start.
 
 
 ---

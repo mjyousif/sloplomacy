@@ -29,6 +29,7 @@ export const MapNamesLayer = memo<{
   const layout = getMapLayout(pieceStyle);
   const isNameplate = pieceStyle === 'nameplate';
   const hidden = isNameplate ? new Set(occupied.split(',')) : null;
+  const hasOwnershipData = Object.keys(ownership).length > 0;
 
   return (
     <g className="authentic-names-layer" pointerEvents="none">
@@ -39,7 +40,11 @@ export const MapNamesLayer = memo<{
         if (!placement || !pInfo || hidden?.has(geom.id)) return null;
 
         const hasStar = isNameplate && pInfo.is_supply_center;
-        const owner = ownership[geom.id] || pInfo.home_power;
+        const owner =
+          ownership[geom.id] ||
+          (pInfo.is_supply_center && hasOwnershipData
+            ? undefined
+            : pInfo.home_power);
         const nameWidth = measureMapName(pInfo.name, placement.size);
         return (
           <g

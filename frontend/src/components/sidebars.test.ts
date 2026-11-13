@@ -104,7 +104,6 @@ describe('ToolsSidebar', () => {
     onClearForeignPreMoves: vi.fn(),
     foreignModifiedOrdersCount: 0,
     onLoadScenario: vi.fn(),
-    isGameCreator: false,
   };
 
   it('renders collapsed rail view when collapsed is true', () => {
@@ -155,24 +154,10 @@ describe('ToolsSidebar', () => {
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
-  it('renders creator admin section only when isGameCreator is true', () => {
+  it('renders sandbox as collapsible section with toggle buttons (admin tools moved to display settings)', () => {
     const html = renderToString(
       React.createElement(ToolsSidebar, {
         ...baseToolsProps,
-        isGameCreator: true,
-        onOpenAdminTools: vi.fn(),
-      }),
-    );
-    expect(html).toContain('CREATOR ADMIN TOOLS');
-    expect(html).toContain('Open Admin Console');
-  });
-
-  it('renders sandbox and admin as collapsible sections with toggle buttons', () => {
-    const html = renderToString(
-      React.createElement(ToolsSidebar, {
-        ...baseToolsProps,
-        isGameCreator: true,
-        onOpenAdminTools: vi.fn(),
         sandboxMode: true,
       }),
     );
@@ -180,14 +165,12 @@ describe('ToolsSidebar', () => {
     expect(html).toContain('HYPOTHETICAL MODE &amp; PRE-MOVES');
     expect(html).toContain('sandbox-live-pill');
     expect(html).toContain('ACTIVE');
-    // Admin collapsible section
-    expect(html).toContain('CREATOR ADMIN TOOLS');
-    expect(html).toContain('admin-tools-section');
+    // Admin collapsible section is no longer in ToolsSidebar
+    expect(html).not.toContain('CREATOR ADMIN TOOLS');
 
-    // Both use the collapsible toggle button with aria-expanded
     const buttons = html.match(/sidebar-section-toggle-btn/g);
-    // Legend, Powers, Sandbox, Admin -> 4 collapsible sections
-    expect(buttons?.length).toBe(4);
+    // Legend, Powers, Sandbox -> 3 collapsible sections
+    expect(buttons?.length).toBe(3);
   });
 
   it('renders SVG flags and rank badges in diplomatic standings', () => {
@@ -576,7 +559,6 @@ describe('MacroSidebar', () => {
         foreignModifiedOrdersCount: 0,
         onLoadScenario: vi.fn(),
         isMultiplayer: false,
-        isGameCreator: false,
         issues: [{ ...foreignLeakAttempt, severity: 'warning' }, ownInfoNote],
       }),
     );

@@ -64,16 +64,19 @@ async def get_turn_record(
     if not 0 <= index < len(history):
         raise HTTPException(status_code=404, detail=f"No resolved turn at index {index}.")
     snap = history[index]
-    # Adjudication is deterministic, so this is exactly how the phase resolved.
-    resolution = adjudicate_turn(
-        snap.units,
-        snap.orders,
-        snap.ownership,
-        snap.season,
-        snap.year,
-        snap.phase,
-        retreats=snap.retreats,
-    )
+    if snap.phase == "Admin" and snap.last_resolution is not None:
+        resolution = snap.last_resolution
+    else:
+        # Adjudication is deterministic, so this is exactly how the phase resolved.
+        resolution = adjudicate_turn(
+            snap.units,
+            snap.orders,
+            snap.ownership,
+            snap.season,
+            snap.year,
+            snap.phase,
+            retreats=snap.retreats,
+        )
     return TurnRecord(
         index=index,
         season=snap.season,

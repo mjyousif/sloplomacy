@@ -10,6 +10,7 @@ export interface UseBuildHomesOptions {
   historyView: boolean;
   historyPower: Power | null;
   isAdjustmentPhase: boolean;
+  phase?: string;
 }
 
 /**
@@ -24,13 +25,14 @@ export function useBuildHomes({
   historyView,
   historyPower,
   isAdjustmentPhase,
+  phase,
 }: UseBuildHomesOptions): Record<string, Power> {
-  // Build homes map for Adjustments phase
+  // Build homes map for Adjustments phase (and Admin history snapshots with spawned units)
   return useMemo(() => {
     const homes: Record<string, Power> = {};
-    // A past winter shows the builds that were ordered, by every power (or the chosen one).
+    // A past winter or Admin snapshot shows the builds that were ordered, by every power (or the chosen one).
     if (historyView) {
-      if (isAdjustmentPhase) {
+      if (isAdjustmentPhase || phase === 'Admin') {
         for (const o of adjustmentOrdersFor(orders, historyPower)) {
           if (o.order_type === 'BUILD') homes[o.origin] = o.power;
         }
@@ -53,6 +55,7 @@ export function useBuildHomes({
     historyPower,
     orders,
     isAdjustmentPhase,
+    phase,
     builds,
     activePower,
     canEditAnyPower,
