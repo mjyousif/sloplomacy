@@ -18,7 +18,7 @@ describe('MapControlsSection', () => {
       />,
     );
     expect(screen.getByText('MAP VIEW & CAMERA')).toBeInTheDocument();
-    expect(screen.getByText('140%')).toHaveClass('tools-zoom-badge');
+    expect(screen.getByTestId('tools-zoom-badge')).toHaveTextContent('140%');
     await userEvent.click(screen.getByTitle('Zoom In'));
     expect(
       [onZoomIn, onZoomOut, onResetCamera].map((f) => f.mock.calls.length),

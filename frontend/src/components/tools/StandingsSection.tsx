@@ -3,6 +3,7 @@ import type React from 'react';
 import { POWER_METADATA } from '../../types/diplomacy';
 import { CollapsibleSection } from '../CollapsibleSection';
 import { PowerFlag } from '../PowerFlag';
+import styles from './StandingsSection.module.css';
 import type { ToolsSidebarProps } from './toolsSidebarProps';
 import { useStandingsSort } from './useStandingsSort';
 
@@ -47,14 +48,15 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
     >
       {/* Standings sort toggle */}
       <div
-        className="powers-sort-segmented"
+        className={styles.powersSortSegmented}
         role="group"
         aria-label="Sort standings"
       >
         <button
           type="button"
-          className={`powers-sort-pill ${sortMode === 'score' ? 'active' : ''}`}
+          className={styles.powersSortPill}
           data-testid="standings-sort-score"
+          data-active={sortMode === 'score' ? 'true' : undefined}
           onClick={() => setSortMode('score')}
           title="Sort by Victory Points (Supply Centers & Units)"
         >
@@ -63,8 +65,9 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
         </button>
         <button
           type="button"
-          className={`powers-sort-pill ${sortMode === 'default' ? 'active' : ''}`}
+          className={styles.powersSortPill}
           data-testid="standings-sort-default"
+          data-active={sortMode === 'default' ? 'true' : undefined}
           onClick={() => setSortMode('default')}
           title="Standard canonical power order"
         >
@@ -72,7 +75,7 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
         </button>
       </div>
 
-      <div className="powers-standing-list">
+      <div className={styles.powersStandingList}>
         {displayedPowers.map(
           ({ power: pwr, rank, scCount: scs, unitCount: un }) => {
             const meta = POWER_METADATA[pwr];
@@ -94,7 +97,9 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                 key={pwr}
                 data-testid="power-standing-card"
                 data-power={pwr}
-                className={`power-standing-card ${isSelected ? 'selected' : ''} ${!isMultiplayer ? 'clickable' : ''}`}
+                data-selected={isSelected ? 'true' : undefined}
+                data-clickable={!isMultiplayer ? 'true' : undefined}
+                className={styles.powerStandingCard}
                 onClick={() => {
                   if (!isMultiplayer) onSelectPower(pwr);
                 }}
@@ -108,62 +113,75 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                   background: isSelected ? meta.lightBg : undefined,
                 }}
               >
-                <div className="power-card-left">
+                <div className={styles.powerCardLeft}>
                   {rank !== null && (
                     <span
-                      className="power-card-rank"
+                      className={styles.powerCardRank}
                       data-testid="power-rank"
                       title={`Rank ${rank}`}
                     >
                       {rank}
                     </span>
                   )}
-                  <span className="power-card-crest">
+                  <span className={styles.powerCardCrest}>
                     <PowerFlag power={pwr} width={20} height={14} />
                   </span>
-                  <div className="power-card-info">
-                    <div className="power-card-name">
+                  <div className={styles.powerCardInfo}>
+                    <div className={styles.powerCardName}>
                       <span
-                        className="power-dot"
+                        className={styles.powerDot}
                         style={{ backgroundColor: meta.color }}
                       />
                       <strong>{meta.shortName}</strong>
                       {playerName && (
                         <span
-                          className="power-card-player"
+                          className={styles.powerCardPlayer}
                           title={`Player: ${playerName}`}
                         >
                           ({playerName})
                         </span>
                       )}
                     </div>
-                    <div className="power-card-metrics">
+                    <div
+                      className={styles.powerCardMetrics}
+                      data-testid="power-card-metrics"
+                    >
                       <span>{scs} SC</span>
-                      <span className="metric-dot">•</span>
+                      <span className={styles.metricDot}>•</span>
                       <span>{un} Units</span>
-                      {isSelected && <span className="active-tag">Active</span>}
+                      {isSelected && (
+                        <span
+                          className={styles.activeTag}
+                          data-testid="active-tag"
+                        >
+                          Active
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="power-card-status">
+                <div className={styles.powerCardStatus}>
                   {isSurr ? (
                     <span
-                      className="mini-status-tag surrendered"
+                      className={styles.miniStatusTag}
+                      data-status="surrendered"
                       title="Civil Disorder"
                     >
                       <Flag size={10} /> CD
                     </span>
                   ) : isFinal ? (
                     <span
-                      className="mini-status-tag finalized"
+                      className={styles.miniStatusTag}
+                      data-status="finalized"
                       title="Finalized"
                     >
                       <CheckCircle2 size={11} />
                     </span>
                   ) : pwrIssues.length > 0 ? (
                     <span
-                      className="mini-status-tag warning"
+                      className={styles.miniStatusTag}
+                      data-status="warning"
                       title={`${pwrIssues.length} issues`}
                     >
                       {pwrIssues.length}
@@ -171,7 +189,8 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                     </span>
                   ) : (
                     <span
-                      className="mini-status-tag pending"
+                      className={styles.miniStatusTag}
+                      data-status="pending"
                       title="Drafting Orders"
                     >
                       Draft

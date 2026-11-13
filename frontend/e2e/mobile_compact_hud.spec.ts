@@ -42,7 +42,9 @@ test.describe('Scenario 06: Phone game screen', () => {
       await expect(page.locator('[data-testid="compact-turn-text"]')).toContainText('Spring 1901 · Movement');
 
       // The map spans the screen: no sidebar rails on a phone.
-      await expect(page.locator('.tools-sidebar-collapsed, .macro-sidebar-collapsed')).toHaveCount(0);
+      await expect(
+        page.locator('[data-testid="tools-sidebar-collapsed"], .macro-sidebar-collapsed'),
+      ).toHaveCount(0);
       const mapBox = await page.locator('[data-testid="map-viewport-container"]').boundingBox();
       expect(mapBox).not.toBeNull();
       expect(mapBox!.width).toBeGreaterThanOrEqual(380);
@@ -80,16 +82,16 @@ test.describe('Scenario 06: Phone game screen', () => {
       // 4. ≡ opens the tools drawer. It has no zoom section, since the zoom buttons are on the map.
       const toolsToggle = page.locator('[data-testid="compact-tools-toggle"]');
       await toolsToggle.tap();
-      const drawerLayer = page.locator('.tools-drawer-layer');
-      await expect(drawerLayer).toHaveClass(/open/);
+      const drawerLayer = page.locator('[data-testid="tools-drawer-layer"]');
+      await expect(drawerLayer).toHaveAttribute('data-open', 'true');
       await expect(page.locator('[data-testid="tools-drawer"]')).toBeVisible();
-      await expect(page.locator('[data-testid="tools-drawer"] .tools-zoom-toolbar')).toHaveCount(0);
+      await expect(page.locator('[data-testid="tools-drawer"] [data-testid="tools-zoom-toolbar"]')).toHaveCount(0);
       await expect(page.locator('.map-zoom-controls')).toHaveCount(1);
       await recorder.recordStep(page, '04_tools_drawer_open');
 
       // Tapping the backdrop beside it closes it and hands focus back to ≡.
       await page.touchscreen.tap(375, 500);
-      await expect(drawerLayer).not.toHaveClass(/open/);
+      await expect(drawerLayer).not.toHaveAttribute('data-open', 'true');
       await expect(toolsToggle).toBeFocused();
 
       // 5. Raise the sheet with its handle, then pick Paris from its card.
@@ -191,7 +193,7 @@ test.describe('Scenario 06: Phone game screen', () => {
 
       // The selector sits at the foot of the ≡ drawer.
       await page.locator('[data-testid="compact-tools-toggle"]').tap();
-      await expect(page.locator('.tools-drawer-layer')).toHaveClass(/open/);
+      await expect(page.locator('[data-testid="tools-drawer-layer"]')).toHaveAttribute('data-open', 'true');
       await expect(
         page.locator(
           '[data-testid="tools-drawer"] [data-testid="turn-history"]',
@@ -203,7 +205,7 @@ test.describe('Scenario 06: Phone game screen', () => {
       await page
         .locator('[data-testid="turn-history-select"]')
         .selectOption('0');
-      await expect(page.locator('.tools-drawer-layer')).not.toHaveClass(/open/);
+      await expect(page.locator('[data-testid="tools-drawer-layer"]')).not.toHaveAttribute('data-open', 'true');
       const pill = page.locator('[data-testid="turn-history-pill"]');
       await expect(pill).toContainText('S1901 M');
       await expect(

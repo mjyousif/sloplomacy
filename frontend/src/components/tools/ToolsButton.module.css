@@ -1,0 +1,29 @@
+@layer components {
+  .tools-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid #333e50;
+    background: #222936;
+    color: #cbd5e1;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+
+  .tools-btn:hover {
+    background: #2d3648;
+    border-color: #4b586e;
+    color: #ffffff;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .tools-btn {
+    min-height: 44px;
+  }
+}

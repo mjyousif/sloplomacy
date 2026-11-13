@@ -1,0 +1,122 @@
+@layer components {
+  .tools-sandbox-toggle-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid #38bdf8;
+    background: rgba(14, 165, 233, 0.12);
+    color: #38bdf8;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .tools-sandbox-toggle-btn:hover {
+    background: rgba(14, 165, 233, 0.22);
+  }
+
+  .tools-sandbox-toggle-btn[data-active="true"] {
+    background: #0284c7;
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(14, 165, 233, 0.45);
+  }
+
+  .sandbox-live-pill {
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: #0284c7;
+    color: #ffffff;
+    /* @keyframes live in styles/base.css, so global() keeps their name. */
+    /* biome-ignore lint/correctness/noUnknownFunction: global() is CSS Modules syntax */
+    animation: 2s infinite ease-in-out global(pulse-live);
+  }
+
+  .tools-micro-desc {
+    font-size: 0.65rem;
+    color: #8b99ad;
+    line-height: 1.35;
+    margin: 6px 0 8px 0;
+  }
+
+  .tools-ai-block {
+    background: #151a22;
+    border: 1px solid #283141;
+    border-radius: 6px;
+    padding: 7px 8px;
+    margin-bottom: 7px;
+  }
+
+  .tools-ai-header {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.67rem;
+    font-weight: 700;
+    color: #93c5fd;
+    margin-bottom: 6px;
+  }
+
+  .tools-ai-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+
+  button.tools-ai-btn {
+    font-size: 0.68rem;
+    padding: 4px 6px;
+  }
+
+  button.tools-ai-btn[data-step="true"] {
+    grid-column: span 2;
+    background: #1e3a5f;
+    border-color: #3b82f6;
+    color: #93c5fd;
+  }
+
+  button.tools-ai-btn[data-step="true"]:hover {
+    background: #2563eb;
+    color: #ffffff;
+  }
+
+  .tools-foreign-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 8px;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 5px;
+    font-size: 0.67rem;
+    color: #fbbf24;
+    margin-bottom: 6px;
+  }
+
+  .tools-btn-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    border: 1px solid #475569;
+    background: #334155;
+    color: #f1f5f9;
+    font-size: 0.62rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .tools-scenario-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+}

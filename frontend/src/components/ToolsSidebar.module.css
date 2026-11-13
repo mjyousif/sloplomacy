@@ -1,0 +1,162 @@
+@layer components {
+  .tools-sidebar {
+    height: 100%;
+    background: #171b22;
+    border-right: 1px solid #282f3d;
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+    transition:
+      width 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+      min-width 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.35);
+  }
+
+  .tools-sidebar.tools-sidebar-expanded {
+    width: 290px;
+    min-width: 290px;
+    max-width: 290px;
+  }
+
+  .tools-sidebar.tools-sidebar-collapsed {
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    align-items: center;
+    padding: 8px 0;
+    background: #13161c;
+  }
+
+  .tools-sidebar-header {
+    padding: 10px 14px;
+    background: #1f2530;
+    border-bottom: 1px solid #2d3646;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tools-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tools-header-icon {
+    color: #d4a349;
+    flex-shrink: 0;
+  }
+
+  .tools-header-title h3 {
+    font-family: "Cinzel", serif;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #f8eed9;
+    margin: 0;
+    line-height: 1.15;
+  }
+
+  .tools-header-sub {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    display: block;
+  }
+
+  .tools-sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #333d4e transparent;
+  }
+
+  .tools-sidebar-content::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .tools-sidebar-content::-webkit-scrollbar-thumb {
+    background: #333d4e;
+    border-radius: 4px;
+  }
+
+  .rail-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  button.rail-active-glow[data-active="true"] {
+    background: #0284c7;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(14, 165, 233, 0.6);
+  }
+}
+
+@layer compact {
+  /* The tools drawer slides over the game area from the left, below the top bar, so ≡ stays
+     reachable. It stays mounted while closed (inert) so it can slide both ways. */
+  :global([data-layout="compact"]) .tools-drawer-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 45;
+    pointer-events: none;
+    visibility: hidden;
+    transition: visibility 0s linear 0.22s;
+  }
+
+  :global([data-layout="compact"]) .tools-drawer-layer[data-open="true"] {
+    pointer-events: auto;
+    visibility: visible;
+    transition: none;
+  }
+
+  :global([data-layout="compact"]) .tools-drawer-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 7, 10, 0.55);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+  }
+
+  :global([data-layout="compact"])
+    .tools-drawer-layer[data-open="true"]
+    .tools-drawer-backdrop {
+    opacity: 1;
+  }
+
+  :global([data-layout="compact"]) .tools-sidebar.tools-drawer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(320px, calc(100vw - 56px));
+    min-width: 0;
+    max-width: none;
+    height: auto;
+    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.75);
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  :global([data-layout="compact"])
+    .tools-drawer-layer[data-open="true"]
+    .tools-sidebar.tools-drawer {
+    transform: translateX(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global([data-layout="compact"]) .tools-drawer-layer,
+    :global([data-layout="compact"]) .tools-drawer-backdrop,
+    :global([data-layout="compact"]) .tools-sidebar.tools-drawer {
+      transition: none;
+    }
+  }
+
+  :global([data-layout="compact"]) .tools-drawer-close-btn {
+    width: 44px;
+    height: 44px;
+  }
+}

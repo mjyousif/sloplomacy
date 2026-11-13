@@ -1,0 +1,240 @@
+@layer components {
+  /* Turn history: the left pane's footer, pinned under the scrolling sections. */
+  .turn-history {
+    flex-shrink: 0;
+    padding: 8px 10px 9px;
+    border-top: 1px solid #2d3646;
+    background: #141820;
+  }
+
+  .turn-history[data-viewing-past="true"] {
+    background: #1b1a16;
+    border-top-color: #6b5426;
+  }
+
+  .turn-history-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .turn-history-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 22px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid #2d3646;
+    border-radius: 5px;
+    background: #1c222d;
+    color: #cbd5e1;
+    cursor: pointer;
+  }
+
+  .turn-history-step:hover:not(:disabled) {
+    background: #2d3648;
+    color: #ffffff;
+  }
+
+  .turn-history-step:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .turn-history-select {
+    flex: 1;
+    min-width: 0;
+    height: 26px;
+    padding: 0 2px 0 5px;
+    border: 1px solid #2d3646;
+    border-radius: 5px;
+    background: #1c222d;
+    color: #e2e8f0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+
+  .turn-history-select:focus-visible,
+  .turn-history-step:focus-visible,
+  .turn-history-live:focus-visible,
+  .turn-history-chip:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: 1px;
+  }
+
+  .turn-history-live,
+  .turn-history-live-tag {
+    flex-shrink: 0;
+    height: 26px;
+    padding: 0 6px;
+    border-radius: 5px;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .turn-history-live-tag {
+    color: #34d399;
+    border: 1px solid transparent;
+  }
+
+  .turn-history-live {
+    border: 1px solid #b45309;
+    background: #78350f;
+    color: #fde68a;
+    cursor: pointer;
+  }
+
+  .turn-history-live:hover {
+    background: #92400e;
+  }
+
+  .turn-history-powers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin: 7px 0 0;
+    padding: 0;
+    border: none;
+  }
+
+  .turn-history-chip {
+    --chip-color: #94a3b8;
+    flex: 1 0 auto;
+    min-width: 30px;
+    height: 21px;
+    padding: 0 5px;
+    border: 1px solid #2d3646;
+    border-bottom: 2px solid var(--chip-color);
+    border-radius: 4px;
+    background: #1c222d;
+    color: #94a3b8;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .turn-history-chip:hover:not(:disabled) {
+    color: #ffffff;
+  }
+
+  .turn-history-powers:disabled {
+    opacity: 0.35;
+  }
+
+  .turn-history-chip:disabled {
+    cursor: default;
+  }
+
+  .turn-history-chip[data-active="true"] {
+    background: #2d3648;
+    border-color: var(--chip-color);
+    color: #ffffff;
+  }
+
+  .turn-history-pill {
+    display: none;
+  }
+
+  .turn-history-pill-label {
+    font-family: inherit;
+  }
+}
+
+@layer compact {
+  /* Turn history: phone drawer puts 40px controls at the foot; picking a turn leaves a pill on
+     the map (under the clock, if there is one), because the drawer closes when a turn is picked. */
+  :global([data-layout="compact"]) .turn-history {
+    padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  :global([data-layout="compact"]) .turn-history-step,
+  :global([data-layout="compact"]) .turn-history-select,
+  :global([data-layout="compact"]) .turn-history-live,
+  :global([data-layout="compact"]) .turn-history-live-tag {
+    height: 40px;
+  }
+
+  :global([data-layout="compact"]) .turn-history-step {
+    width: 40px;
+  }
+
+  :global([data-layout="compact"]) .turn-history-select {
+    font-size: 0.85rem;
+  }
+
+  /* The menu already names the turn on show, and a phone needs the width for it. */
+  :global([data-layout="compact"]) .turn-history-live-tag {
+    display: none;
+  }
+
+  /* Eight chips don't fit one row at a finger's width, so they sit in an even 4 × 2 grid. */
+  :global([data-layout="compact"]) .turn-history-powers {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+
+  :global([data-layout="compact"]) .turn-history-chip {
+    height: 34px;
+    min-width: 40px;
+    font-size: 0.72rem;
+  }
+
+  :global([data-layout="compact"]) .turn-history-pill {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 21;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid #b45309;
+    border-radius: 999px;
+    background: rgba(27, 26, 22, 0.95);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+  }
+
+  :global([data-layout="compact"])
+    :global(.map-viewport-container):has(
+      :global(.phase-timer-pill),
+      :global(.phase-timer-widget)
+    )
+    .turn-history-pill {
+    top: 58px;
+  }
+
+  :global([data-layout="compact"]) .turn-history-pill .turn-history-step {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+  }
+
+  :global([data-layout="compact"]) .turn-history-pill .turn-history-live {
+    height: 36px;
+    border-radius: 999px;
+    padding: 0 12px;
+  }
+
+  :global([data-layout="compact"]) .turn-history-pill-label {
+    padding: 0 4px;
+    color: #fde68a;
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+}

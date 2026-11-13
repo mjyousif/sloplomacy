@@ -74,21 +74,21 @@ describe('StandingsSection: list', () => {
 
   it('marks the active power', () => {
     render(<StandingsSection {...base({ activePower: 'ENGLAND' })} />);
-    expect(card('ENGLAND')).toHaveClass('selected');
+    expect(card('ENGLAND')).toHaveAttribute('data-selected', 'true');
     expect(within(card('ENGLAND')).getByText('Active')).toBeInTheDocument();
-    expect(card('FRANCE')).not.toHaveClass('selected');
+    expect(card('FRANCE')).not.toHaveAttribute('data-selected', 'true');
   });
 
   it('swaps to the standard order and drops the ranks with the Default pill', async () => {
     render(<StandingsSection {...base()} />);
     const byScore = screen.getByTestId('standings-sort-score');
     const byDefault = screen.getByTestId('standings-sort-default');
-    expect(byScore).toHaveClass('active');
+    expect(byScore).toHaveAttribute('data-active', 'true');
     await userEvent.click(byDefault);
     expect(powersShown()[0]).toBe('FRANCE');
     expect(screen.queryAllByTestId('power-rank')).toHaveLength(0);
-    expect(byDefault).toHaveClass('active');
-    expect(byScore).not.toHaveClass('active');
+    expect(byDefault).toHaveAttribute('data-active', 'true');
+    expect(byScore).not.toHaveAttribute('data-active', 'true');
     await userEvent.click(byScore);
     expect(powersShown()[0]).toBe('GERMANY');
     expect(screen.getAllByTestId('power-rank')).toHaveLength(7);
@@ -106,7 +106,7 @@ describe('StandingsSection: choosing a power', () => {
     const onSelectPower = vi.fn();
     render(<StandingsSection {...base({ onSelectPower })} />);
     expect(screen.getByText('COMMAND NATION (SELECT)')).toBeInTheDocument();
-    expect(card('GERMANY')).toHaveClass('clickable');
+    expect(card('GERMANY')).toHaveAttribute('data-clickable', 'true');
     expect(card('GERMANY')).toHaveAttribute(
       'title',
       'Click to command German Empire',
@@ -121,7 +121,7 @@ describe('StandingsSection: choosing a power', () => {
       <StandingsSection {...base({ onSelectPower, isMultiplayer: true })} />,
     );
     expect(screen.getByText('DIPLOMATIC STANDING')).toBeInTheDocument();
-    expect(card('GERMANY')).not.toHaveClass('clickable');
+    expect(card('GERMANY')).not.toHaveAttribute('data-clickable', 'true');
     await userEvent.click(card('GERMANY'));
     expect(onSelectPower).not.toHaveBeenCalled();
   });

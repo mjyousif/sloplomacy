@@ -7,6 +7,8 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import type React from 'react';
+import { cx } from '../../utils/cx';
+import styles from '../ToolsSidebar.module.css';
 import type { ToolsSidebarProps } from './toolsSidebarProps';
 
 export type CollapsedRailProps = Pick<
@@ -31,7 +33,8 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
   onToggleSandboxMode,
 }) => (
   <aside
-    className="tools-sidebar tools-sidebar-collapsed"
+    className={cx(styles.toolsSidebar, styles.toolsSidebarCollapsed)}
+    data-testid="tools-sidebar-collapsed"
     aria-label="Tools Sidebar Collapsed"
   >
     <button
@@ -46,7 +49,7 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
 
     <div className="rail-divider" />
 
-    <div className="rail-group" title={`Current Zoom: ${zoomPercent}%`}>
+    <div className={styles.railGroup} title={`Current Zoom: ${zoomPercent}%`}>
       <button
         type="button"
         className="sidebar-rail-btn"
@@ -77,7 +80,8 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
 
     <button
       type="button"
-      className={`sidebar-rail-btn ${sandboxMode ? 'rail-active-glow' : ''}`}
+      className={cx('sidebar-rail-btn', sandboxMode && styles.railActiveGlow)}
+      data-active={sandboxMode ? 'true' : undefined}
       onClick={onToggleSandboxMode}
       title={
         sandboxMode

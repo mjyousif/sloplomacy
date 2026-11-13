@@ -48,12 +48,12 @@ describe('TurnChronicle', () => {
     const { container, props, rerender } = renderChronicle();
 
     const tray = screen.getByTestId('turn-history-tray');
-    expect(tray).not.toHaveClass('open');
+    expect(tray).not.toHaveAttribute('data-open', 'true');
     expect(tray).toHaveAttribute('inert');
     const history = screen.getByTestId('turn-history');
 
     await user.hover(history);
-    expect(tray).not.toHaveClass('open');
+    expect(tray).not.toHaveAttribute('data-open', 'true');
     expect(tray).toHaveAttribute('inert');
 
     const toggle = screen.getByTestId('turn-history-filter-toggle');
@@ -63,14 +63,14 @@ describe('TurnChronicle', () => {
       'Select a past turn to filter by nation',
     );
     await user.click(toggle);
-    expect(tray).not.toHaveClass('open');
+    expect(tray).not.toHaveAttribute('data-open', 'true');
 
     rerender(<TurnChronicle {...props} viewIndex={0} />);
     expect(toggle).toBeEnabled();
     expect(toggle).toHaveAttribute('title', 'Filter by nation');
 
     await user.click(toggle);
-    expect(tray).toHaveClass('open');
+    expect(tray).toHaveAttribute('data-open', 'true');
     expect(tray).not.toHaveAttribute('inert');
     expect(screen.getByText('Filter by nation')).toBeInTheDocument();
     const allChip = screen
@@ -79,20 +79,20 @@ describe('TurnChronicle', () => {
     expect(allChip).toBeEnabled();
 
     await user.click(toggle);
-    expect(tray).not.toHaveClass('open');
+    expect(tray).not.toHaveAttribute('data-open', 'true');
     expect(tray).toHaveAttribute('inert');
 
     await user.click(toggle);
-    expect(tray).toHaveClass('open');
+    expect(tray).toHaveAttribute('data-open', 'true');
     fireEvent.pointerDown(container.ownerDocument.body);
-    expect(tray).not.toHaveClass('open');
+    expect(tray).not.toHaveAttribute('data-open', 'true');
     expect(tray).toHaveAttribute('inert');
 
     await user.click(toggle);
-    expect(tray).toHaveClass('open');
+    expect(tray).toHaveAttribute('data-open', 'true');
     rerender(<TurnChronicle {...props} viewIndex={null} />);
     expect(toggle).toBeDisabled();
-    expect(tray).not.toHaveClass('open');
+    expect(tray).not.toHaveAttribute('data-open', 'true');
     expect(tray).toHaveAttribute('inert');
   });
 
@@ -115,8 +115,9 @@ describe('TurnChronicle', () => {
     expect(props.onSelect).toHaveBeenCalledWith(0);
 
     rerender(<TurnChronicle {...props} viewIndex={1} />);
-    expect(screen.getByTestId('turn-chronicle-pill')).toHaveClass(
-      'viewing-past',
+    expect(screen.getByTestId('turn-chronicle-pill')).toHaveAttribute(
+      'data-viewing-past',
+      'true',
     );
     expect(screen.getByTestId('turn-history-select')).toHaveTextContent(
       'Spring 1901 — Admin Edit',
@@ -124,10 +125,10 @@ describe('TurnChronicle', () => {
     expect(screen.getByTestId('turn-history-next')).toBeEnabled();
 
     await user.click(screen.getByTestId('turn-history-filter-toggle'));
-    expect(tray).toHaveClass('open');
+    expect(tray).toHaveAttribute('data-open', 'true');
 
     await user.click(screen.getByTestId('turn-history-select'));
-    expect(tray).not.toHaveClass('open');
+    expect(tray).not.toHaveAttribute('data-open', 'true');
     expect(tray).toHaveAttribute('inert');
 
     const liveBtn = screen.getByTestId('turn-history-live');
@@ -162,7 +163,7 @@ describe('TurnChronicle', () => {
     rerender(<TurnChronicle {...props} viewIndex={0} power="GERMANY" />);
     const toggle = screen.getByTestId('turn-history-filter-toggle');
     expect(toggle).toHaveTextContent('GER');
-    expect(toggle).toHaveClass('has-filter');
+    expect(toggle).toHaveAttribute('data-has-filter', 'true');
     expect(toggle).toHaveStyle({ borderColor: '#6f7785' });
 
     await user.click(
@@ -180,10 +181,10 @@ describe('TurnChronicle', () => {
     const tray = screen.getByTestId('turn-history-tray');
 
     await user.click(screen.getByTestId('turn-history-filter-toggle'));
-    expect(tray).toHaveClass('open');
+    expect(tray).toHaveAttribute('data-open', 'true');
 
     fireEvent.keyDown(history, { key: 'Escape' });
-    expect(tray).not.toHaveClass('open');
+    expect(tray).not.toHaveAttribute('data-open', 'true');
     expect(tray).toHaveAttribute('inert');
   });
 
@@ -193,11 +194,11 @@ describe('TurnChronicle', () => {
     const tray = screen.getByTestId('turn-history-tray');
 
     await user.click(screen.getByTestId('turn-history-filter-toggle'));
-    expect(tray).toHaveClass('open');
+    expect(tray).toHaveAttribute('data-open', 'true');
 
     rerender(<TurnChronicle {...props} viewIndex={0} locked />);
 
-    expect(tray).not.toHaveClass('open');
+    expect(tray).not.toHaveAttribute('data-open', 'true');
     expect(tray).toHaveAttribute('inert');
     expect(screen.getByTestId('turn-history-select')).toBeDisabled();
     expect(screen.getByTestId('turn-history-select')).toHaveAttribute(

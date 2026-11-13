@@ -8,7 +8,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import type React from 'react';
+import { cx } from '../../utils/cx';
 import { CollapsibleSection } from '../CollapsibleSection';
+import styles from './SandboxToolsSection.module.css';
+import buttonStyles from './ToolsButton.module.css';
 import type { ToolsSidebarProps } from './toolsSidebarProps';
 
 export type SandboxToolsSectionProps = Pick<
@@ -40,7 +43,12 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
       title="HYPOTHETICAL MODE & PRE-MOVES"
       badge={
         sandboxMode ? (
-          <span className="sandbox-live-pill">ACTIVE</span>
+          <span
+            className={styles.sandboxLivePill}
+            data-testid="sandbox-live-pill"
+          >
+            ACTIVE
+          </span>
         ) : undefined
       }
       collapsible={true}
@@ -49,7 +57,8 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
       <button
         type="button"
         data-testid="btn-toggle-sandbox"
-        className={`tools-sandbox-toggle-btn ${sandboxMode ? 'active' : ''}`}
+        data-active={sandboxMode ? 'true' : undefined}
+        className={styles.toolsSandboxToggleBtn}
         onClick={onToggleSandboxMode}
       >
         <Eye size={14} />
@@ -60,7 +69,7 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
         </span>
       </button>
 
-      <p className="tools-micro-desc">
+      <p className={styles.toolsMicroDesc}>
         {sandboxMode
           ? 'Hypothetical Mode active: Test moves for foreign units on the board. Exiting discards foreign guesses.'
           : 'Enter Hypothetical Mode to guess enemy moves and test what-if scenarios with the General Staff AI.'}
@@ -68,15 +77,15 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
 
       {/* AI General Staff Quick Tools */}
       {(!isMultiplayer || sandboxMode) && onGenerateAIMoves && (
-        <div className="tools-ai-block">
-          <div className="tools-ai-header">
+        <div className={styles.toolsAiBlock}>
+          <div className={styles.toolsAiHeader}>
             <Bot size={13} />
             <span>Tactical General Staff AI</span>
           </div>
-          <div className="tools-ai-grid">
+          <div className={styles.toolsAiGrid}>
             <button
               type="button"
-              className="tools-btn tools-ai-btn"
+              className={cx(buttonStyles.toolsBtn, styles.toolsAiBtn)}
               onClick={() => onGenerateAIMoves(undefined, false)}
               title="Generate DATC-compliant moves for all foreign powers"
             >
@@ -85,7 +94,7 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
             </button>
             <button
               type="button"
-              className="tools-btn tools-ai-btn"
+              className={cx(buttonStyles.toolsBtn, styles.toolsAiBtn)}
               onClick={() => onGenerateAIMoves(undefined, true)}
               title="Generate orders for all 7 powers"
             >
@@ -95,7 +104,8 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
             {onAIStepTurn && !isMultiplayer && (
               <button
                 type="button"
-                className="tools-btn tools-ai-btn ai-step"
+                className={cx(buttonStyles.toolsBtn, styles.toolsAiBtn)}
+                data-step="true"
                 onClick={onAIStepTurn}
                 title="Auto-plan foreign powers and step to the next phase"
               >
@@ -109,11 +119,11 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
 
       {/* Foreign Pre-Moves Count / Clear */}
       {sandboxMode && foreignModifiedOrdersCount > 0 && (
-        <div className="tools-foreign-summary">
+        <div className={styles.toolsForeignSummary}>
           <span>{foreignModifiedOrdersCount} foreign moves plotted</span>
           <button
             type="button"
-            className="tools-btn-mini"
+            className={styles.toolsBtnMini}
             onClick={onClearForeignPreMoves}
             title="Discard all foreign pre-moves"
           >
@@ -124,11 +134,11 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
 
       {/* Scenario Reset & Save */}
       {!isMultiplayer && (
-        <div className="tools-scenario-actions">
+        <div className={styles.toolsScenarioActions}>
           <button
             type="button"
             data-testid="btn-reset-scenario"
-            className="tools-btn"
+            className={buttonStyles.toolsBtn}
             onClick={() => onLoadScenario('standard_1901')}
             title="Reset to clean Spring 1901 start"
           >
@@ -139,7 +149,7 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
             <button
               type="button"
               data-testid="btn-save-sandbox"
-              className="tools-btn"
+              className={buttonStyles.toolsBtn}
               onClick={onSaveSandboxClick}
               title="Save current board state to your account"
             >

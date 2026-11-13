@@ -6,12 +6,15 @@ import {
   type Power,
   type TurnHistoryEntry,
 } from '../types/diplomacy';
+import { cx } from '../utils/cx';
 import { turnLabel } from '../utils/timerHelpers';
 import {
   IconSelectDropdown,
   type IconSelectOption,
 } from './map/hud/IconSelectDropdown';
+import styles from './TurnChronicle.module.css';
 import { PowerFilterChips, powerCode } from './TurnHistorySelector';
+import historyStyles from './TurnHistorySelector.module.css';
 
 const LIVE_VALUE = 'live';
 
@@ -122,8 +125,10 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
   return (
     <div
       ref={rootRef}
-      className={`turn-chronicle-history ${expanded ? 'expanded' : ''} ${viewingPast ? 'viewing-past' : ''}`.trim()}
+      className={styles.turnChronicleHistory}
       data-testid="turn-history"
+      data-expanded={expanded ? 'true' : undefined}
+      data-viewing-past={viewingPast ? 'true' : undefined}
       onBlur={(e) => {
         if (
           e.relatedTarget instanceof Node &&
@@ -139,13 +144,15 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
       }}
     >
       <div
-        className={`turn-chronicle-pill ${viewingPast ? 'viewing-past' : ''}`.trim()}
+        className={styles.turnChroniclePill}
         data-testid="turn-chronicle-pill"
+        data-viewing-past={viewingPast ? 'true' : undefined}
       >
         <button
           type="button"
-          className={`turn-chronicle-filter-btn ${activeFilterColor ? 'has-filter' : ''}`.trim()}
+          className={styles.turnChronicleFilterBtn}
           data-testid="turn-history-filter-toggle"
+          data-has-filter={activeFilterColor ? 'true' : undefined}
           disabled={filterDisabled}
           aria-label={
             viewingPast && power
@@ -175,13 +182,13 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
         >
           <Filter size={viewingPast && power ? 10 : 13} />
           {viewingPast && power && (
-            <span className="turn-chronicle-filter-code">
+            <span className={styles.turnChronicleFilterCode}>
               {powerCode(power)}
             </span>
           )}
         </button>
 
-        <div className="turn-chronicle-select-wrap">
+        <div className={styles.turnChronicleSelectWrap}>
           <IconSelectDropdown<string>
             id={selectId}
             testId="turn-history-select"
@@ -189,8 +196,15 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
             options={options}
             title={locked ? 'Locked while in admin mode' : undefined}
             disabled={controlsDisabled}
-            leadingIcon={<Calendar size={14} className="turn-cal-icon" />}
+            leadingIcon={<Calendar size={14} className={styles.turnCalIcon} />}
             hideChevron
+            classNames={{
+              trigger: styles.dropdownTrigger,
+              leading: styles.dropdownLeading,
+              value: styles.dropdownValue,
+              menu: styles.dropdownMenu,
+              option: styles.dropdownOption,
+            }}
             onOpenChange={(open) => {
               if (open) setTrayOpen(false);
             }}
@@ -204,7 +218,7 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
 
         <button
           type="button"
-          className="turn-history-step"
+          className={cx(historyStyles.turnHistoryStep, styles.chronicleStep)}
           data-testid="turn-history-prev"
           onClick={() => onStep?.(-1)}
           disabled={controlsDisabled || viewIndex === 0}
@@ -216,7 +230,7 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
 
         <button
           type="button"
-          className="turn-history-step"
+          className={cx(historyStyles.turnHistoryStep, styles.chronicleStep)}
           data-testid="turn-history-next"
           onClick={() => onStep?.(1)}
           disabled={controlsDisabled || !viewingPast}
@@ -230,7 +244,7 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
       {viewingPast && (
         <button
           type="button"
-          className="turn-chronicle-live-btn"
+          className={styles.turnChronicleLiveBtn}
           data-testid="turn-history-live"
           onClick={() => onSelect?.(null)}
           aria-label="Back to live"
@@ -243,20 +257,24 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
       {hasHistory && (
         <div
           id={trayId}
-          className={`turn-history-tray-wrap ${expanded ? 'open' : ''}`.trim()}
+          className={styles.turnHistoryTrayWrap}
           data-testid="turn-history-tray"
+          data-open={expanded ? 'true' : undefined}
           inert={!expanded}
         >
           <div
-            className={`turn-history-tray ${viewingPast ? 'viewing-past' : ''}`.trim()}
+            className={styles.turnHistoryTray}
+            data-viewing-past={viewingPast ? 'true' : undefined}
           >
-            <div className="turn-history-tray-header">
+            <div className={styles.turnHistoryTrayHeader}>
               <span>Filter by nation</span>
             </div>
             <PowerFilterChips
               power={power}
               disabled={!viewingPast}
               onSelectPower={(nextPower) => onSelectPower?.(nextPower)}
+              className={styles.trayPowers}
+              chipClassName={styles.trayChip}
             />
           </div>
         </div>

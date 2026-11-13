@@ -1,6 +1,8 @@
 import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 import type React from 'react';
 import { CollapsibleSection } from '../CollapsibleSection';
+import styles from './MapControlsSection.module.css';
+import buttonStyles from './ToolsButton.module.css';
 import type { ToolsSidebarProps } from './toolsSidebarProps';
 
 export type MapControlsSectionProps = Pick<
@@ -17,13 +19,17 @@ export const MapControlsSection: React.FC<MapControlsSectionProps> = ({
   return (
     <CollapsibleSection
       title="MAP VIEW & CAMERA"
-      badge={<span className="tools-zoom-badge">{zoomPercent}%</span>}
+      badge={
+        <span className={styles.toolsZoomBadge} data-testid="tools-zoom-badge">
+          {zoomPercent}%
+        </span>
+      }
       collapsible={false}
     >
-      <div className="tools-zoom-toolbar">
+      <div className={styles.toolsZoomToolbar} data-testid="tools-zoom-toolbar">
         <button
           type="button"
-          className="tools-btn"
+          className={buttonStyles.toolsBtn}
           onClick={onZoomOut}
           title="Zoom Out"
         >
@@ -32,7 +38,7 @@ export const MapControlsSection: React.FC<MapControlsSectionProps> = ({
         </button>
         <button
           type="button"
-          className="tools-btn"
+          className={buttonStyles.toolsBtn}
           onClick={onZoomIn}
           title="Zoom In"
         >
@@ -41,7 +47,7 @@ export const MapControlsSection: React.FC<MapControlsSectionProps> = ({
         </button>
         <button
           type="button"
-          className="tools-btn"
+          className={buttonStyles.toolsBtn}
           onClick={onResetCamera}
           title="Reset Map to 105% Default View"
         >

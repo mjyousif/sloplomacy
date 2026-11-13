@@ -1,0 +1,71 @@
+@layer components {
+  .tools-legend-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    row-gap: 6px;
+    column-gap: 0;
+    /* One continuous hairline down the column seam, unbroken by the row gap. */
+    background-image: linear-gradient(#282f3d, #282f3d);
+    background-size: 1px 100%;
+    background-position: 45.5% 0;
+    background-repeat: no-repeat;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.7rem;
+    line-height: 1.3;
+    color: #cbd5e1;
+  }
+
+  /* Pair the entries into two columns split by the seam hairline above. */
+  .tools-legend-grid > .legend-item:nth-child(odd) {
+    padding-right: 10px;
+  }
+
+  .tools-legend-grid > .legend-item:nth-child(even) {
+    padding-left: 10px;
+  }
+
+  .legend-swatch {
+    width: 22px;
+    height: 20px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .legend-swatch[data-swatch="move"] {
+    background: rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+  }
+
+  .legend-swatch[data-swatch="support"] {
+    background: rgba(20, 184, 166, 0.2);
+    color: #14b8a6;
+    border: 1px solid rgba(20, 184, 166, 0.4);
+  }
+
+  .legend-swatch[data-swatch="convoy"] {
+    background: rgba(168, 85, 247, 0.2);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+  }
+
+  .legend-swatch[data-swatch="warn"] {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+  }
+
+  .legend-label {
+    font-weight: 500;
+    /* Centres the first line against the 20px swatch when the label wraps. */
+    padding-top: 3px;
+  }
+}
