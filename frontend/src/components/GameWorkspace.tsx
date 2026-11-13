@@ -98,6 +98,7 @@ export interface GameWorkspaceProps {
   /** The host's tools. */
   isGameCreator: boolean;
   directEditActive: boolean;
+  historyLocked?: boolean;
   directEdit?: DirectEditMapHandlers;
   turnClockSettings?: AdminTurnClockSettings;
 }
@@ -162,6 +163,7 @@ export function GameWorkspace({
   handleOpenSurrenderModal,
   isGameCreator,
   directEditActive,
+  historyLocked = false,
   directEdit,
   turnClockSettings,
 }: GameWorkspaceProps) {
@@ -177,16 +179,19 @@ export function GameWorkspace({
         open={toolsDrawerOpen}
         onClose={closeToolsDrawer}
         historyFooter={
-          <TurnHistorySelector
-            entries={turnHistory.entries}
-            viewIndex={turnHistory.viewIndex}
-            liveLabel={turnLabel(gameState)}
-            power={turnHistory.power}
-            onSelect={showPastTurn}
-            onStep={stepPastTurn}
-            onSelectPower={turnHistory.setPower}
-            onPickedTurn={isCompact ? closeToolsDrawer : undefined}
-          />
+          isCompact ? (
+            <TurnHistorySelector
+              entries={turnHistory.entries}
+              viewIndex={turnHistory.viewIndex}
+              liveLabel={turnLabel(gameState)}
+              power={turnHistory.power}
+              locked={historyLocked}
+              onSelect={showPastTurn}
+              onStep={stepPastTurn}
+              onSelectPower={turnHistory.setPower}
+              onPickedTurn={closeToolsDrawer}
+            />
+          ) : undefined
         }
         zoomPercent={zoomPercent}
         onZoomIn={() => mapRef.current?.stepZoom(0.2)}

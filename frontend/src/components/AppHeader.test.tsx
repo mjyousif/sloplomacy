@@ -80,8 +80,6 @@ describe('AppHeader: the top bar', () => {
     expect(h.warningCount).toBe(2);
     expect(h.matchSummary).toBe(MATCH);
     expect(h.playerPower).toBe('FRANCE');
-    expect(h.wsConnected).toBe(true);
-    expect(h.gameId).toBe('mp_1');
     expect(h.onBackToLobby).toBe(p.handleBackToLobby);
     expect(h.onEnterSoloSandbox).toBe(p.handleEnterSoloSandbox);
     expect(h.onChangeDisplayPrefs).toBe(p.updateDisplayPrefs);
@@ -131,10 +129,34 @@ describe('AppHeader: the top bar', () => {
     expect(seen.compact.matchLabel).toBeNull();
   });
 
-  it('passes the winner on', () => {
+  it('passes the winner and turn history props on', () => {
     const won = { ...STATE, winner: 'ITALY' } as GameState;
-    render(<AppHeader {...props({ gameState: won })} />);
+    const onSelectHistoryTurn = vi.fn();
+    const onStepHistoryTurn = vi.fn();
+    const onSelectHistoryPower = vi.fn();
+    const historyEntries = [
+      { index: 0, season: 'Spring', year: 1901, phase: 'Movement' },
+    ];
+    render(
+      <AppHeader
+        {...props({
+          gameState: won,
+          historyEntries,
+          historyViewIndex: 0,
+          historyPower: 'FRANCE',
+          onSelectHistoryTurn,
+          onStepHistoryTurn,
+          onSelectHistoryPower,
+        })}
+      />,
+    );
     expect(seen.wide.winner).toBe('ITALY');
+    expect(seen.wide.historyEntries).toBe(historyEntries);
+    expect(seen.wide.historyViewIndex).toBe(0);
+    expect(seen.wide.historyPower).toBe('FRANCE');
+    expect(seen.wide.onSelectHistoryTurn).toBe(onSelectHistoryTurn);
+    expect(seen.wide.onStepHistoryTurn).toBe(onStepHistoryTurn);
+    expect(seen.wide.onSelectHistoryPower).toBe(onSelectHistoryPower);
     render(<AppHeader {...props({ gameState: won, isCompact: true })} />);
     expect(seen.compact.winner).toBe('ITALY');
   });

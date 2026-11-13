@@ -276,10 +276,12 @@ export function App() {
     if (isCompact) layout.setSheetSnap('half');
   };
   const handleToggleEditBoard = () => {
+    if (!directEditActive) turnHistory.goLive();
     setAdminModalOpen(false);
     layout.setRightSidebarCollapsed(false);
     directEdit.handleToggleDirectEdit();
   };
+  const adminModeActive = directEditActive || (isGameCreator && adminModalOpen);
   // Leaves either admin mode; Edit Board asks first if edits are still staged.
   const handleExitAdmin = async () => {
     if (directEditActive) await directEdit.handleToggleDirectEdit();
@@ -292,6 +294,7 @@ export function App() {
       ? null
       : (turnHistory.entries[turnHistory.viewIndex] ?? null);
   const showPastTurn = async (index: number | null) => {
+    if (adminModeActive) return;
     if (
       index !== null &&
       !(await directEdit.confirmIfDirty('view a past turn'))
@@ -304,6 +307,7 @@ export function App() {
     turnHistory.select(index);
   };
   const stepPastTurn = async (delta: -1 | 1) => {
+    if (adminModeActive) return;
     if (!(await directEdit.confirmIfDirty('view a past turn'))) return;
     setSelectedUnitId(null);
     setHighlightedProvinces([]);
@@ -357,6 +361,13 @@ export function App() {
         turnClockOpen={isGameCreator && adminModalOpen}
         onExitAdmin={handleExitAdmin}
         toastBanner={toastBanner}
+        historyEntries={turnHistory.entries}
+        historyViewIndex={turnHistory.viewIndex}
+        historyPower={turnHistory.power}
+        historyLocked={adminModeActive}
+        onSelectHistoryTurn={showPastTurn}
+        onStepHistoryTurn={stepPastTurn}
+        onSelectHistoryPower={turnHistory.setPower}
       />
 
       {/* VIEW 1: MAIN PAGE / LOBBY */}
@@ -430,6 +441,7 @@ export function App() {
           handleOpenSurrenderModal={seats.handleOpenSurrenderModal}
           isGameCreator={isGameCreator}
           directEditActive={directEditActive}
+          historyLocked={adminModeActive}
           directEdit={directEdit}
           turnClockSettings={
             isGameCreator && adminModalOpen

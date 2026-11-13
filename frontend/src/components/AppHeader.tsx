@@ -8,6 +8,7 @@ import {
   type MultiplayerGameSummary,
   POWER_METADATA,
   type Power,
+  type TurnHistoryEntry,
 } from '../types/diplomacy';
 import type { DisplayPrefs } from '../utils/displayPrefs';
 import { CompactTopBar } from './CompactTopBar';
@@ -43,6 +44,13 @@ export interface AppHeaderProps {
   turnClockOpen?: boolean;
   onExitAdmin?: () => void;
   toastBanner: string | null;
+  historyEntries?: TurnHistoryEntry[];
+  historyViewIndex?: number | null;
+  historyPower?: Power | null;
+  historyLocked?: boolean;
+  onSelectHistoryTurn?: (index: number | null) => void;
+  onStepHistoryTurn?: (delta: -1 | 1) => void;
+  onSelectHistoryPower?: (power: Power | null) => void;
 }
 
 /**
@@ -76,6 +84,13 @@ export function AppHeader({
   turnClockOpen = false,
   onExitAdmin,
   toastBanner,
+  historyEntries,
+  historyViewIndex,
+  historyPower,
+  historyLocked = false,
+  onSelectHistoryTurn,
+  onStepHistoryTurn,
+  onSelectHistoryPower,
 }: AppHeaderProps) {
   const activePowerIssues = gameState.issues.filter(
     (i) => i.power === playerPower,
@@ -135,8 +150,6 @@ export function AppHeader({
           onEnterSoloSandbox={handleEnterSoloSandbox}
           matchSummary={activeGameSummary}
           playerPower={playerPower}
-          wsConnected={wsConnected}
-          gameId={activeGameId}
           displayPrefs={displayPrefs}
           displayPrefsSaveState={displayPrefsSaveState}
           onChangeDisplayPrefs={updateDisplayPrefs}
@@ -149,6 +162,13 @@ export function AppHeader({
           authUser={authUser}
           onSignIn={() => openAuthPrompt(undefined, 'signin')}
           onSignOut={handleSignOut}
+          historyEntries={historyEntries}
+          historyViewIndex={historyViewIndex}
+          historyPower={historyPower}
+          historyLocked={historyLocked}
+          onSelectHistoryTurn={onSelectHistoryTurn}
+          onStepHistoryTurn={onStepHistoryTurn}
+          onSelectHistoryPower={onSelectHistoryPower}
         />
       )}
 

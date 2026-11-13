@@ -207,6 +207,4 @@ To guarantee seamless multiplayer coordination, the frontend maintains a persist
    - `handleAdjudicateTurn` (in `useMatchActions`) ignores a click while a resolve is in flight and sends the turn it means (`?turn=`), so a double-click resolves one phase.
    - `fetchGame` (in `useGameSession`) and joining a match bump `boardRequestSeq`. A `GET /api/game` reply that comes back after a newer request is dropped, so the startup load of `proto_1901` cannot replace a match the player has just joined.
 6. **Visual Telemetry**:
-   - The header displays a real-time badge (`.header-ws-badge`):
-     - `Live Sync` with a pulsating green indicator when actively connected.
-     - `Connecting...` with amber indicator during connection attempts or fallbacks.
+   - On phones, the `⋯` overflow menu displays the real-time connection row (`Live Sync` or `Connecting…`, plus an amber dot on `⋯` when offline).

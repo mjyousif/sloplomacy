@@ -51,8 +51,11 @@ The previews render with the real `MapPiece`, so they always match the map. Thes
 On a wide screen the header is `TopHeader.tsx`. `AppHeader.tsx` picks it (or `CompactTopBar` on a phone) and passes it the data and handlers it shows, and it keeps no state of its own:
 
 - **Left**: the brand, which goes back to the lobby, then the Solo Sandbox tab (marked while in the solo sandbox) and, in a multiplayer match, the match name with your power.
-- **Center**, only on a board: the turn ("SPRING 1901 • MOVEMENT PHASE"), the winner once there is one, and the order check: a red pill with the error count (and warnings after it), an amber pill with the warning count, or a green "Valid Moves". The red and amber pills ask to finalize, and the server answers with the order check.
-- **Right**: the Live Sync badge, whose tooltip names what it follows (the lobby feed or the game id), the [display settings](#top-bar-display-settings), and Guest Mode with Sign In / Register, or your name (email in the tooltip) with Sign Out.
+- **Center**, only on a board: the unified fixed-width turn chronicle and history viewer (`TurnChronicle.tsx`), the winner once there is one, and, when errors or warnings exist, the red/amber order-check pill (which asks to finalize and opens the order check; nothing is shown when there are no errors or warnings).
+  - The chronicle shows the fixed-width nation filter button (icon-only until a nation is chosen, then showing its 3-letter code) to the left of the calendar phase `IconSelectDropdown` menu (chevron-free, e.g. `"Spring 1901 Movement"`), followed by `‹` and `›` regardless of whether resolved phases exist yet. While viewing a past turn, a yellow revert-icon button appears beside `›` to jump straight back to live.
+  - Before the first phase resolves, the history controls stay disabled and there is no filter tray. Entering an admin mode (Edit Board or Turn and Clock Settings) puts the view back on the latest turn and locks the chronicle controls until admin mode exits.
+  - Once resolved phases exist, clicking the filter button expands a tray below it labeled `"Filter by nation"` with the nation filter chips (`All`, `AUS` … `TUR`), which narrow a past turn's orders to one nation and outline the filter button in the selected nation's color. Clicking outside, pressing Escape, or opening the phase dropdown closes the tray so the two menus never overlap.
+- **Right**: the [display settings](#top-bar-display-settings), host admin tools (for the creator outside the lobby), and Guest Mode with Sign In / Register, or your name (email in the tooltip) with Sign Out.
 
 ---
 
@@ -161,11 +164,11 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
   - Leaving Direct-Edit Mode or the live board with unapplied staged edits prompts `ConfirmModal`.
 - **Per-Participant Warning Modal (`AdminActionWarningModal.tsx`)**: Whenever an admin action modifies a match, participants receive `AdminActionWarningModal` (live via WebSocket or on first load) and acknowledge via `POST /api/admin/acknowledge`. Consecutive admin actions within the same turn are consolidated into a single `"Admin"` phase entry in `TurnHistorySelector`.
 
-### 6. Turn History footer (`TurnHistorySelector.tsx`)
-- Pinned below the scrolling sections, so it is always in reach. It only appears once the game has a resolved phase, and it is not on the collapsed rail.
+### 6. Turn History (`TurnChronicle.tsx` on desktop, `TurnHistorySelector.tsx` on phones)
+- On desktop, turn history is unified with the top bar's turn chronicle pill (`TurnChronicle.tsx`): `‹`, the turn dropdown, `›`, and `Live` sit inline in the header, and hovering over the pill expands a tray below it with the **nation chips** (All, AUS … TUR). On phones, `TurnHistorySelector.tsx` remains pinned at the foot of the ≡ drawer (plus `TurnHistoryPill` on the map).
 - **‹ [turn] ›**: steps through, or picks from, the resolved phases (newest first in the menu, after the current turn). **Live** is a quiet tag while the current turn is on show and an amber button while a past one is.
 - A past turn shows on the map as it began, with every nation's orders coloured by how they resolved: green arrows succeeded, red dashed ones bounced with a "BOUNCED" label, and broken supports carry "CUT". Past winters show the builds that were ordered. Nothing can be selected or ordered on it.
-- **Nation chips** (All, AUS … TUR) narrow a past turn's arrows to one nation. The row is always there, greyed out and disabled on the live turn, so picking a past turn never shifts the arrows above it and a quick run of clicks on ‹ can't land on a chip.
+- **Nation chips** (All, AUS … TUR) narrow a past turn's arrows to one nation. They are greyed out and disabled on the live turn, and when collapsed on desktop, an active nation filter shows its 3-letter code badge on the pill.
 - While a past turn is on show, the right sidebar is dimmed and `inert` under a "Viewing Spring 1901 Movement · Back to live" bar, so no order is changed out of sight. Entering Hypothetical Mode, opening the admin console or switching games returns to live. A turn resolving does not move the player off what they are looking at.
 - The data comes from `GET /api/history` and `GET /api/history/{index}` through `useTurnHistory`, always for the real game, never a private sandbox copy.
 

@@ -10,10 +10,61 @@ import { shortTurnLabel } from '../utils/historyHelpers';
 import { turnLabel } from '../utils/timerHelpers';
 
 /** "AUS", "ENG" …: the nation chips' labels. */
-const powerCode = (power: Power) =>
+export const powerCode = (power: Power) =>
   POWER_METADATA[power].shortName.slice(0, 3).toUpperCase();
 
 const LIVE_VALUE = 'live';
+
+export interface PowerFilterChipsProps {
+  /** The nation chip picked, or null for every nation. */
+  power: Power | null;
+  disabled: boolean;
+  onSelectPower: (power: Power | null) => void;
+}
+
+/** Nation filter chips for narrowing a past turn's orders on the map. */
+export const PowerFilterChips: React.FC<PowerFilterChipsProps> = ({
+  power,
+  disabled,
+  onSelectPower,
+}) => (
+  <fieldset
+    className="turn-history-powers"
+    aria-label="Nations shown"
+    disabled={disabled}
+    title={disabled ? 'Filter by nation' : undefined}
+  >
+    <button
+      type="button"
+      className={`turn-history-chip ${power === null ? 'active' : ''}`}
+      data-testid="turn-history-power"
+      data-power="ALL"
+      aria-pressed={power === null}
+      onClick={() => onSelectPower(null)}
+    >
+      All
+    </button>
+    {ALL_POWERS.map((p) => (
+      <button
+        key={p}
+        type="button"
+        className={`turn-history-chip ${power === p ? 'active' : ''}`}
+        data-testid="turn-history-power"
+        data-power={p}
+        aria-pressed={power === p}
+        title={`Show only ${POWER_METADATA[p].name}'s orders`}
+        style={
+          {
+            '--chip-color': POWER_METADATA[p].color,
+          } as React.CSSProperties
+        }
+        onClick={() => onSelectPower(power === p ? null : p)}
+      >
+        {powerCode(p)}
+      </button>
+    ))}
+  </fieldset>
+);
 
 export interface TurnHistorySelectorProps {
   entries: TurnHistoryEntry[];
@@ -23,6 +74,8 @@ export interface TurnHistorySelectorProps {
   liveLabel: string;
   /** The nation chip picked, or null for every nation. */
   power: Power | null;
+  /** Locks turn navigation (for example, while an admin mode is active). */
+  locked?: boolean;
   onSelect: (index: number | null) => void;
   onStep: (delta: -1 | 1) => void;
   onSelectPower: (power: Power | null) => void;
@@ -39,6 +92,7 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
   viewIndex,
   liveLabel,
   power,
+  locked = false,
   onSelect,
   onStep,
   onSelectPower,
@@ -67,9 +121,9 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
             onStep(-1);
             onPickedTurn?.();
           }}
-          disabled={viewIndex === 0}
+          disabled={locked || viewIndex === 0}
           aria-label="Previous turn"
-          title="Previous turn"
+          title={locked ? 'Locked while in admin mode' : 'Previous turn'}
         >
           <ChevronLeft size={14} />
         </button>
@@ -77,6 +131,8 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
           className="turn-history-select"
           data-testid="turn-history-select"
           aria-label="Turn to show"
+          title={locked ? 'Locked while in admin mode' : undefined}
+          disabled={locked}
           value={viewIndex === null ? LIVE_VALUE : String(viewIndex)}
           onChange={(e) =>
             pick(e.target.value === LIVE_VALUE ? null : Number(e.target.value))
@@ -94,9 +150,9 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
           className="turn-history-step"
           data-testid="turn-history-next"
           onClick={() => onStep(1)}
-          disabled={!viewingPast}
+          disabled={locked || !viewingPast}
           aria-label="Next turn"
-          title="Next turn"
+          title={locked ? 'Locked while in admin mode' : 'Next turn'}
         >
           <ChevronRight size={14} />
         </button>
@@ -105,6 +161,7 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
             type="button"
             className="turn-history-live"
             data-testid="turn-history-live"
+            disabled={locked}
             onClick={() => onSelect(null)}
             title="Back to the current turn"
           >
@@ -122,42 +179,11 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
 
       {/* Always laid out, so the arrows above never move when a past turn is picked and a
           quick run of clicks on ‹ can't land on a chip. On the live turn it is greyed out. */}
-      <fieldset
-        className="turn-history-powers"
-        aria-label="Nations shown"
-        disabled={!viewingPast}
-        title={viewingPast ? undefined : 'Pick a past turn to filter by nation'}
-      >
-        <button
-          type="button"
-          className={`turn-history-chip ${power === null ? 'active' : ''}`}
-          data-testid="turn-history-power"
-          data-power="ALL"
-          aria-pressed={power === null}
-          onClick={() => onSelectPower(null)}
-        >
-          All
-        </button>
-        {ALL_POWERS.map((p) => (
-          <button
-            key={p}
-            type="button"
-            className={`turn-history-chip ${power === p ? 'active' : ''}`}
-            data-testid="turn-history-power"
-            data-power={p}
-            aria-pressed={power === p}
-            title={`Show only ${POWER_METADATA[p].name}'s orders`}
-            style={
-              {
-                '--chip-color': POWER_METADATA[p].color,
-              } as React.CSSProperties
-            }
-            onClick={() => onSelectPower(power === p ? null : p)}
-          >
-            {powerCode(p)}
-          </button>
-        ))}
-      </fieldset>
+      <PowerFilterChips
+        power={power}
+        disabled={locked || !viewingPast}
+        onSelectPower={onSelectPower}
+      />
     </section>
   );
 };

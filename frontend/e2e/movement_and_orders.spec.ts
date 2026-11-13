@@ -135,6 +135,9 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
 
       const adminPanel = page.locator('[data-testid="admin-tools-modal"]');
       await expect(adminPanel).toBeVisible();
+      await expect(
+        page.locator('[data-testid="turn-history-select"]'),
+      ).toBeDisabled();
 
       const rollbackBtn = adminPanel.locator('[data-testid="btn-admin-rollback"]');
       await expect(rollbackBtn).toBeEnabled({ timeout: 5000 });
