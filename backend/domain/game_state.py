@@ -158,12 +158,15 @@ class GameParticipant(BaseModel):
     joined_at: str
     surrendered: bool = False
     surrendered_at: str | None = None
+    game_over_seen_at: str | None = None
 
 
 class MultiplayerGameSummary(BaseModel):
     game_id: str
     name: str
     status: str = "waiting"  # "waiting" | "active" | "completed"
+    winner: Power | None = None
+    completed_at: str | None = None
     season: str = "Spring"
     year: int = 1901
     phase: str = "Movement"

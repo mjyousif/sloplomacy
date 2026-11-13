@@ -7,10 +7,12 @@ import {
   type MultiplayerGameSummary,
   POWER_METADATA,
   type Power,
+  type ProvinceInfo,
   type ValidationIssue,
 } from '../types/diplomacy';
 import { AdminActionWarningModal } from './AdminActionWarningModal';
 import { AuthModal } from './AuthModal';
+import { GameOverModal } from './GameOverModal';
 import { SanityCheckModal } from './SanityCheckModal';
 import { SaveSandboxModal } from './SaveSandboxModal';
 import { SurrenderModal } from './SurrenderModal';
@@ -56,6 +58,13 @@ export interface AppModalsProps {
   triggerToast: (msg: string) => void;
   /** From `useConfirm`. */
   confirmModal: ReactNode;
+  /** Game Over Modal, from `useGameOverModal`. */
+  viewMode?: 'lobby' | 'sandbox' | 'multiplayer';
+  provinces?: Record<string, ProvinceInfo>;
+  activeGameSummary?: MultiplayerGameSummary | null;
+  gameOverModalOpen?: boolean;
+  onCloseGameOverModal?: () => void;
+  onReturnToLobby?: () => void;
 }
 
 /**
@@ -93,6 +102,12 @@ export function AppModals({
   fetchGamesList,
   triggerToast,
   confirmModal,
+  viewMode = 'lobby',
+  provinces = {},
+  activeGameSummary = null,
+  gameOverModalOpen = false,
+  onCloseGameOverModal,
+  onReturnToLobby,
 }: AppModalsProps) {
   return (
     <>
@@ -161,6 +176,18 @@ export function AppModals({
           fetchGamesList();
         }}
       />
+      {onCloseGameOverModal && onReturnToLobby && (
+        <GameOverModal
+          isOpen={gameOverModalOpen}
+          gameState={gameState}
+          provinces={provinces}
+          summary={activeGameSummary}
+          authUser={authUser}
+          viewMode={viewMode}
+          onInspectBoard={onCloseGameOverModal}
+          onReturnToLobby={onReturnToLobby}
+        />
+      )}
       {confirmModal}
     </>
   );

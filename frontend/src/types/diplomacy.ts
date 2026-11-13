@@ -318,12 +318,15 @@ export interface GameParticipant {
   joined_at: string;
   surrendered?: boolean;
   surrendered_at?: string | null;
+  game_over_seen_at?: string | null;
 }
 
 export interface MultiplayerGameSummary {
   game_id: string;
   name: string;
   status: 'waiting' | 'active' | 'completed' | string;
+  winner?: Power | null;
+  completed_at?: string | null;
   season: string;
   year: number;
   phase: string;

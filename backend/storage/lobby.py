@@ -23,6 +23,8 @@ def is_public_listing(game_id: str, summary: MultiplayerGameSummary) -> bool:
         and not summary.is_private
         and not summary.is_sandbox
         and not summary.is_draft
+        and summary.status != "completed"
+        and summary.winner is None
     )
 
 

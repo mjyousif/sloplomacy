@@ -6,6 +6,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../../types/diplomacy';
+import { getCompletedCampaignStatus } from '../../utils/gameOverHelpers';
 import { PowerFlag } from '../PowerFlag';
 
 export interface MyGamesSectionProps {
@@ -80,6 +81,8 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
             const pMeta = POWER_METADATA[myPower];
             const isFinalized =
               game.finalized_powers?.includes(myPower) ?? false;
+            const completion = getCompletedCampaignStatus(game, user);
+            const isConcluded = completion.phase !== 'active';
 
             return (
               <div key={game.game_id} className="my-game-row">
@@ -117,10 +120,22 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
                     </span>
                     <span
                       className={`my-finalize-status ${
-                        isFinalized ? 'ready' : 'pending'
+                        isConcluded
+                          ? completion.phase === 'unwitnessed'
+                            ? 'pending'
+                            : 'ready'
+                          : isFinalized
+                            ? 'ready'
+                            : 'pending'
                       }`}
                     >
-                      {isFinalized ? '✓ Orders Finalized' : '● Orders Pending'}
+                      {isConcluded
+                        ? completion.phase === 'unwitnessed'
+                          ? '● Campaign Concluded — Awaiting Review'
+                          : `✓ Completed · Archiving in ${completion.hoursRemaining}h`
+                        : isFinalized
+                          ? '✓ Orders Finalized'
+                          : '● Orders Pending'}
                     </span>
                   </div>
                 </div>
@@ -132,7 +147,11 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
                     onClick={() => handlePowerSlotClick(game, myPower)}
                   >
                     <Play size={14} />
-                    <span>Resume as {pMeta.shortName}</span>
+                    <span>
+                      {isConcluded
+                        ? 'Review Board'
+                        : `Resume as ${pMeta.shortName}`}
+                    </span>
                   </button>
                   <button
                     type="button"

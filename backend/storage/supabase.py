@@ -9,6 +9,7 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
+from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
 
 logger = logging.getLogger("diplomacy.database")
@@ -33,8 +34,8 @@ class SupabaseUnavailable(Exception):
 # What the lobby reads for each game. Leaving out the state and history keeps a refresh small, and
 # the packed summary arrives as the row's `summary`, which build_summary_from_row accepts.
 LOBBY_COLUMNS = (
-    "room_code,name,status,phase,season,year,created_at,host_user_id,is_sandbox,is_private,"
-    "summary:game_state->summary"
+    "room_code,name,status,winner,completed_at,phase,season,year,created_at,"
+    "host_user_id,is_sandbox,is_private,summary:game_state->summary"
 )
 
 # Status mapping between Application and Database check constraint
@@ -190,10 +191,19 @@ def build_summary_from_row(row: dict[str, Any]) -> MultiplayerGameSummary:
     raw_status = row.get("status", "lobby")
     app_status = to_app_status(raw_status)
     created_at = row.get("created_at") or datetime.now(timezone.utc).isoformat()
+    raw_winner = row.get("winner")
+    parsed_winner: Power | None = None
+    if raw_winner:
+        try:
+            parsed_winner = Power(raw_winner)
+        except ValueError:
+            parsed_winner = None
     return MultiplayerGameSummary(
         game_id=room_code,
         name=row.get("name") or f"Match {room_code}",
         status=app_status,
+        winner=parsed_winner,
+        completed_at=row.get("completed_at"),
         season=row.get("season", "Spring"),
         year=int(row.get("year", 1901)),
         phase=row.get("phase", "Movement"),
@@ -360,9 +370,12 @@ async def save_game_to_db(
         "room_code": game_id,
         "name": (summary.name if summary and summary.name else f"Match {game_id}").strip(),
         "status": db_status,
+        "winner": state.winner.value if state.winner else None,
+        "completed_at": summary.completed_at if summary else None,
         "phase": state.phase,
         "season": state.season,
         "year": state.year,
+        "summary": summary.model_dump(mode="json") if summary else None,
         "game_state": {
             "state": state.model_dump(mode="json", exclude=DERIVED_STATE_FIELDS),
             "summary": summary.model_dump(mode="json") if summary else None,

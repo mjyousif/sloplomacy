@@ -336,3 +336,62 @@ async def set_active_power(
     await persist_game(gid)
     await broadcast_game_update(gid, game)
     return sanitize_game_state_for_viewer(game, viewer_power_for(gid, current_user, req.power))
+
+
+@router.post(
+    "/api/games/{game_id}/acknowledge-game-over",
+    summary="Acknowledge Game Over Modal",
+    description="Stamp game_over_seen_at for the caller's seat when they witness the Game Over modal.",
+)
+async def acknowledge_game_over(
+    game_id: str,
+    current_user: AuthUser | None = Depends(get_current_user),
+):
+    game = await resolve_game(game_id)
+    gid = game.game_id
+    summary = GAME_SUMMARIES.get(gid)
+    if not summary:
+        raise HTTPException(status_code=404, detail=f"Game lobby '{gid}' not found.")
+    if not game.winner and summary.status != "completed":
+        raise HTTPException(status_code=409, detail="Game has not concluded yet.")
+
+    if not current_user and not summary.is_sandbox:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required to acknowledge game over.",
+        )
+
+    matched = [
+        part
+        for part in summary.participants.values()
+        if (
+            current_user is not None
+            and (
+                part.user_id == current_user.user_id
+                or (
+                    part.email
+                    and current_user.email
+                    and part.email.lower() == current_user.email.lower()
+                )
+            )
+        )
+        or (current_user is None and summary.is_sandbox and not is_valid_uuid(part.user_id))
+    ]
+    if not matched:
+        if not summary.is_sandbox:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not hold a seat in this campaign.",
+            )
+        return {"ok": True, "game_over_seen_at": None, "summary": summary}
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    seen_at: str | None = None
+    for part in matched:
+        if not part.game_over_seen_at:
+            part.game_over_seen_at = now_iso
+        seen_at = part.game_over_seen_at
+
+    sync_summary(gid)
+    await persist_game(gid)
+    return {"ok": True, "game_over_seen_at": seen_at, "summary": summary}

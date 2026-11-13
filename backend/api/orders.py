@@ -7,6 +7,7 @@ from domain.requests import OrderSubmissionRequest, SetPowerRequest, SingleOrder
 from engine.order_utils import (
     build_slot_power,
     refresh_diagnostics_and_simulation,
+    reject_if_game_over,
     reject_stale_turn,
     validate_order_references,
 )
@@ -42,6 +43,7 @@ async def update_single_order(
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
+    reject_if_game_over(game)
     reject_stale_turn(game, req.turn)
     validate_order_references(req.order)
     unit_map = {u.id: u for u in game.units}
@@ -151,6 +153,7 @@ async def update_batch_orders(
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
+    reject_if_game_over(game)
     verify_power_authorization(game.game_id, req.power, current_user)
     unit_map = {u.id: u for u in game.units}
     for o in req.orders:
@@ -208,6 +211,7 @@ async def confirm_all_power_orders(
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await resolve_game(game_id)
+    reject_if_game_over(game)
     verify_power_authorization(game.game_id, req.power, current_user)
     for ord_obj in game.orders.values():
         if ord_obj.power == req.power:

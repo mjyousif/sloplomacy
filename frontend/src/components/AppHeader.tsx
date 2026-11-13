@@ -51,6 +51,7 @@ export interface AppHeaderProps {
   onSelectHistoryTurn?: (index: number | null) => void;
   onStepHistoryTurn?: (delta: -1 | 1) => void;
   onSelectHistoryPower?: (power: Power | null) => void;
+  onOpenGameOverModal?: () => void;
 }
 
 /**
@@ -91,6 +92,7 @@ export function AppHeader({
   onSelectHistoryTurn,
   onStepHistoryTurn,
   onSelectHistoryPower,
+  onOpenGameOverModal,
 }: AppHeaderProps) {
   const activePowerIssues = gameState.issues.filter(
     (i) => i.power === playerPower,
@@ -137,6 +139,7 @@ export function AppHeader({
           toolsOpen={toolsDrawerOpen}
           onToggleTools={() => setToolsDrawerOpen((open) => !open)}
           toolsToggleRef={toolsToggleRef}
+          onOpenGameOverModal={onOpenGameOverModal}
         />
       ) : (
         <TopHeader
@@ -169,6 +172,7 @@ export function AppHeader({
           onSelectHistoryTurn={onSelectHistoryTurn}
           onStepHistoryTurn={onStepHistoryTurn}
           onSelectHistoryPower={onSelectHistoryPower}
+          onOpenGameOverModal={onOpenGameOverModal}
         />
       )}
 

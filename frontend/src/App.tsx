@@ -10,6 +10,7 @@ import { useAdminDirectEdit } from './hooks/useAdminDirectEdit';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useCompactLayout } from './hooks/useCompactLayout';
 import { useDisplayPrefs } from './hooks/useDisplayPrefs';
+import { useGameOverModal } from './hooks/useGameOverModal';
 import { useGameSession } from './hooks/useGameSession';
 import { useGameSync } from './hooks/useGameSync';
 import { useMatchActions } from './hooks/useMatchActions';
@@ -189,6 +190,19 @@ export function App() {
     setShowSimulationOverlay,
   });
 
+  const { gameOverModalOpen, openGameOverModal, closeGameOverModal } =
+    useGameOverModal({
+      viewMode,
+      activeGameId,
+      gameState,
+      activeGameSummary,
+      authUser,
+      onSummaryUpdated: (updatedSummary) => {
+        setActiveGameSummary(updatedSummary);
+        void fetchMyGames();
+      },
+    });
+
   // Orders, finalizing, resolving the turn and the turn clock.
   const {
     sanityModalOpen,
@@ -366,6 +380,7 @@ export function App() {
         onSelectHistoryTurn={showPastTurn}
         onStepHistoryTurn={stepPastTurn}
         onSelectHistoryPower={turnHistory.setPower}
+        onOpenGameOverModal={openGameOverModal}
       />
 
       {/* VIEW 1: MAIN PAGE / LOBBY */}
@@ -488,6 +503,15 @@ export function App() {
         authModalTab={authModalTab}
         authModalReason={authModalReason}
         confirmModal={confirmModal}
+        viewMode={viewMode}
+        provinces={provinces}
+        activeGameSummary={activeGameSummary}
+        gameOverModalOpen={gameOverModalOpen}
+        onCloseGameOverModal={closeGameOverModal}
+        onReturnToLobby={() => {
+          closeGameOverModal();
+          void handleBackToLobby();
+        }}
       />
     </div>
   );

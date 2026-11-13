@@ -55,6 +55,7 @@ export interface TopHeaderProps {
   onSelectHistoryTurn?: (index: number | null) => void;
   onStepHistoryTurn?: (delta: -1 | 1) => void;
   onSelectHistoryPower?: (power: Power | null) => void;
+  onOpenGameOverModal?: () => void;
 }
 
 /**
@@ -92,6 +93,7 @@ export function TopHeader({
   onSelectHistoryTurn,
   onStepHistoryTurn,
   onSelectHistoryPower,
+  onOpenGameOverModal,
 }: TopHeaderProps) {
   return (
     <header className="imperial-top-header">
@@ -150,10 +152,15 @@ export function TopHeader({
           />
 
           {winner && (
-            <span className="game-over-pill">
+            <button
+              type="button"
+              className="game-over-pill"
+              onClick={onOpenGameOverModal}
+              title="View Campaign Conclusion Summary"
+            >
               <Crown size={14} />
               <span>{POWER_METADATA[winner].shortName.toUpperCase()} WINS</span>
-            </span>
+            </button>
           )}
 
           {(errorCount > 0 || warningCount > 0) && (
