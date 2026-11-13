@@ -178,9 +178,9 @@ describe('StandingsSection: players and status', () => {
       within(card('FRANCE')).getByTitle('Civil Disorder'),
     ).toHaveTextContent('CD');
     expect(within(card('ENGLAND')).getByTitle('Finalized')).toBeInTheDocument();
-    expect(within(card('GERMANY')).getByTitle('1 issues')).toHaveTextContent(
-      '1⚠',
-    );
+    const germanyIssueBadge = within(card('GERMANY')).getByTitle('1 issues');
+    expect(germanyIssueBadge).toHaveTextContent('1');
+    expect(germanyIssueBadge.querySelector('svg')).toBeInTheDocument();
     expect(
       within(card('ITALY')).getByTitle('Drafting Orders'),
     ).toHaveTextContent('Draft');

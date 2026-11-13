@@ -1,3 +1,4 @@
+import { LayoutList, Rows3 } from 'lucide-react';
 import type React from 'react';
 import type {
   Order,
@@ -37,6 +38,8 @@ interface UnitOrderListProps {
   isRetreatPhase: boolean;
   /** The phone sheet words its hints for a finger. */
   isSheet: boolean;
+  compactOrders?: boolean;
+  onToggleCompactOrders?: () => void;
   onSelectUnit: (unitId: string | null) => void;
   onHoverUnit: (unitId: string | null) => void;
   onHighlightProvinces: (provinces: string[]) => void;
@@ -63,6 +66,8 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
   isAdjustmentPhase,
   isRetreatPhase,
   isSheet,
+  compactOrders = false,
+  onToggleCompactOrders,
   onSelectUnit,
   onHoverUnit,
   onHighlightProvinces,
@@ -134,9 +139,30 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
             ? `DISBAND UNITS (${assignedDisbandsCount}/${neededDisbands} SELECTED)`
             : `ACTIVE FORCE ORDERS (${myUnits.length} UNITS)`}
         </span>
-        <span className="macro-hint">
-          {isSheet ? 'Tap a card or the map' : 'Click card or map'}
-        </span>
+        {!isSheet &&
+        !isAdjustmentPhase &&
+        !isRetreatPhase &&
+        onToggleCompactOrders ? (
+          <button
+            type="button"
+            data-testid="btn-toggle-compact-orders"
+            className={`macro-density-toggle ${compactOrders ? 'active' : ''}`}
+            aria-pressed={compactOrders}
+            onClick={onToggleCompactOrders}
+            title={
+              compactOrders
+                ? 'Switch to detailed order cards'
+                : 'Switch to compact one-line order rows'
+            }
+          >
+            {compactOrders ? <Rows3 size={12} /> : <LayoutList size={12} />}
+            <span>{compactOrders ? 'Detailed' : 'Compact'}</span>
+          </button>
+        ) : (
+          <span className="macro-hint">
+            {isSheet ? 'Tap a card or the map' : 'Click card or map'}
+          </span>
+        )}
       </div>
 
       {myUnits.map((unit) => {
@@ -181,6 +207,7 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
             isRetreatPhase={isRetreatPhase}
             isAdjustmentPhase={isAdjustmentPhase}
             buildCount={buildCount}
+            compact={compactOrders}
             onSelectUnit={onSelectUnit}
             onHoverUnit={onHoverUnit}
             onHighlightProvinces={onHighlightProvinces}

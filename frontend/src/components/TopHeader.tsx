@@ -151,35 +151,41 @@ export function TopHeader({
             onSelectPower={onSelectHistoryPower}
           />
 
-          {winner && (
-            <span className="game-over-pill">
-              <Crown size={14} />
-              <span>{POWER_METADATA[winner].shortName.toUpperCase()} WINS</span>
-            </span>
-          )}
-
-          {(errorCount > 0 || warningCount > 0) && (
-            <div className="header-sanity-readout">
-              {errorCount > 0 ? (
-                <div
-                  className="header-error-pill"
-                  onClick={onOpenOrderCheck}
-                  title="Click to open Sanity Check Diagnostics"
-                >
-                  <AlertOctagon size={15} />
+          {(winner || errorCount > 0 || warningCount > 0) && (
+            <div className="header-center-badges">
+              {winner && (
+                <span className="game-over-pill">
+                  <Crown size={14} />
                   <span>
-                    Error: {errorCount}
-                    {warningCount > 0 ? ` • Warning: ${warningCount}` : ''}
+                    {POWER_METADATA[winner].shortName.toUpperCase()} WINS
                   </span>
-                </div>
-              ) : (
-                <div
-                  className="header-warning-pill"
-                  onClick={onOpenOrderCheck}
-                  title="Click to open Sanity Check Diagnostics"
-                >
-                  <AlertTriangle size={15} />
-                  <span>Warning: {warningCount}</span>
+                </span>
+              )}
+
+              {(errorCount > 0 || warningCount > 0) && (
+                <div className="header-sanity-readout">
+                  {errorCount > 0 ? (
+                    <div
+                      className="header-error-pill"
+                      onClick={onOpenOrderCheck}
+                      title="Click to open Sanity Check Diagnostics"
+                    >
+                      <AlertOctagon size={15} />
+                      <span>
+                        Error: {errorCount}
+                        {warningCount > 0 ? ` • Warning: ${warningCount}` : ''}
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      className="header-warning-pill"
+                      onClick={onOpenOrderCheck}
+                      title="Click to open Sanity Check Diagnostics"
+                    >
+                      <AlertTriangle size={15} />
+                      <span>Warning: {warningCount}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

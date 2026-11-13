@@ -21,7 +21,9 @@ interface OrderParameterControlsProps {
   validRetreats: { province: string; coasts: string[] }[];
   unitOptions?: UnitMoveOptions | null;
   isRetreatPhase: boolean;
+  compact?: boolean;
   onUpdateOrder: (order: Order) => void;
+  onHoverProvince?: (province: string | null) => void;
 }
 
 /**
@@ -39,7 +41,9 @@ export const OrderParameterControls: React.FC<OrderParameterControlsProps> = ({
   validRetreats,
   unitOptions = null,
   isRetreatPhase,
+  compact = false,
   onUpdateOrder,
+  onHoverProvince,
 }) => {
   if (isRetreatPhase) {
     if (order?.order_type !== 'RETREAT') return null;
@@ -78,7 +82,9 @@ export const OrderParameterControls: React.FC<OrderParameterControlsProps> = ({
         orders={orders}
         reachable={reachable}
         unitOptions={unitOptions}
+        compact={compact}
         onUpdateOrder={onUpdateOrder}
+        onHoverProvince={onHoverProvince}
       />
     );
   }
@@ -90,7 +96,9 @@ export const OrderParameterControls: React.FC<OrderParameterControlsProps> = ({
         provinces={provinces}
         units={units}
         unitOptions={unitOptions}
+        compact={compact}
         onUpdateOrder={onUpdateOrder}
+        onHoverProvince={onHoverProvince}
       />
     );
   }

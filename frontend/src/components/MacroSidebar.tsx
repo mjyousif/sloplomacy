@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   type GameParticipant,
   type Order,
@@ -219,6 +219,56 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   } = progress;
 
   const isSheet = variant === 'sheet';
+  const [compactOrders, setCompactOrders] = useState<boolean>(() => {
+    try {
+      return (
+        typeof window !== 'undefined' &&
+        window.localStorage.getItem('sloplomacy_compact_orders') === '1'
+      );
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleCompactOrders = () => {
+    setCompactOrders((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(
+          'sloplomacy_compact_orders',
+          next ? '1' : '0',
+        );
+      } catch {
+        // Ignore storage failures in restricted contexts.
+      }
+      return next;
+    });
+  };
+
+  const panelScrollRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (isSheet || collapsed || !selectedUnitId) return;
+    const scroller = panelScrollRef.current;
+    if (!scroller) return;
+    const card = Array.from(
+      scroller.querySelectorAll<HTMLElement>(
+        '[data-unit-id], [data-home-province]',
+      ),
+    ).find(
+      (el) =>
+        el.dataset.unitId === selectedUnitId ||
+        `BUILD_${activePower}_${el.dataset.homeProvince}` === selectedUnitId,
+    );
+    if (!card) return;
+    const scrollerRect = scroller.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    if (cardRect.top < scrollerRect.top) {
+      scroller.scrollTop += cardRect.top - scrollerRect.top - 8;
+    } else if (cardRect.bottom > scrollerRect.bottom) {
+      scroller.scrollTop += cardRect.bottom - scrollerRect.bottom + 8;
+    }
+  }, [isSheet, collapsed, selectedUnitId, activePower]);
+
   const sheetBodyRef = useSheetSelection({
     isSheet,
     sheetSnap,
@@ -271,6 +321,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       isAdjustmentPhase={isAdjustmentPhase}
       isRetreatPhase={isRetreatPhase}
       isSheet={isSheet}
+      compactOrders={compactOrders}
+      onToggleCompactOrders={handleToggleCompactOrders}
       onSelectUnit={onSelectUnit}
       onHoverUnit={onHoverUnit}
       onHighlightProvinces={onHighlightProvinces}
@@ -437,7 +489,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       </div>
 
       {/* 2. UNIT ORDERS LIST (BUILDS + FIELD UNITS) */}
-      <div className="macro-units-scroll-area" inert={locked || undefined}>
+      <div
+        className="macro-units-scroll-area"
+        ref={panelScrollRef}
+        inert={locked || undefined}
+      >
         {unitList}
       </div>
 

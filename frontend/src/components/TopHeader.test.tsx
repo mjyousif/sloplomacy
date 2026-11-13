@@ -97,9 +97,11 @@ describe('TopHeader: the turn and order check', () => {
     expect(screen.getByText('ENGLAND WINS')).toBeInTheDocument();
   });
 
-  it('hides the valid-moves pill when there are no problems', () => {
+  it('shows no status pill when there are no errors or warnings', () => {
     renderHeader();
     expect(screen.queryByText('Valid Moves')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Error/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Warning/)).not.toBeInTheDocument();
   });
 
   it('counts errors and warnings, and opens the order check', async () => {

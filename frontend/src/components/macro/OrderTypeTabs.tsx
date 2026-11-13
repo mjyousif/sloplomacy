@@ -16,6 +16,7 @@ interface OrderTypeTabsProps {
   isRetreatPhase: boolean;
   isAdjustmentPhase: boolean;
   buildCount: number;
+  compact?: boolean;
   handleOrderTypeChange: (unit: Unit, type: OrderType) => void;
 }
 
@@ -33,6 +34,7 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
   isRetreatPhase,
   isAdjustmentPhase,
   buildCount,
+  compact = false,
   handleOrderTypeChange,
 }) => {
   if (isRetreatPhase) {
@@ -113,28 +115,37 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
   }
 
   return (
-    <div className="order-type-tabs">
+    <div className={`order-type-tabs ${compact ? 'compact' : ''}`}>
       {(['HOLD', 'MOVE', 'SUPPORT', 'CONVOY'] as OrderType[]).map((oType) => {
-        if (
+        const convoyUnsupported =
           oType === 'CONVOY' &&
-          (unit.unit_type !== 'F' || provinces[unit.province]?.type !== 'SEA')
-        ) {
+          (unit.unit_type !== 'F' || provinces[unit.province]?.type !== 'SEA');
+        if (convoyUnsupported && !compact) {
           return null;
         }
         const active = (order?.order_type || 'HOLD') === oType;
+        const shortLetter = oType[0];
         return (
           <button
             key={oType}
             type="button"
-            className={`order-tab-btn ${active ? 'active' : ''}`}
+            disabled={convoyUnsupported}
+            className={`order-tab-btn ${compact ? 'compact-square' : ''} ${active ? 'active' : ''}`}
             data-testid={`btn-order-type-${oType}`}
+            title={convoyUnsupported ? 'Only fleets at sea can convoy' : oType}
             onClick={() => handleOrderTypeChange(unit, oType)}
           >
-            {oType === 'HOLD' && <Shield size={11} />}
-            {oType === 'MOVE' && <MoveRight size={11} />}
-            {oType === 'SUPPORT' && <Crosshair size={11} />}
-            {oType === 'CONVOY' && <Anchor size={11} />}
-            {oType}
+            {compact ? (
+              shortLetter
+            ) : (
+              <>
+                {oType === 'HOLD' && <Shield size={11} />}
+                {oType === 'MOVE' && <MoveRight size={11} />}
+                {oType === 'SUPPORT' && <Crosshair size={11} />}
+                {oType === 'CONVOY' && <Anchor size={11} />}
+                {oType}
+              </>
+            )}
           </button>
         );
       })}

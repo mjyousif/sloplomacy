@@ -146,7 +146,7 @@ describe('LobbyView details', () => {
 describe('LobbyView claiming a seat', () => {
   it('asks a guest to sign in, naming the country and game', async () => {
     const { props, user } = setup({ user: null, games: [OPEN] });
-    await user.click(within(card('Open Table')).getByText('+ Claim France'));
+    await user.click(within(card('Open Table')).getByText(/Claim France/));
     expect(props.onOpenAuth).toHaveBeenCalledWith(
       'Sign in or create an account to claim France in "Open Table".',
       'signin',
@@ -160,7 +160,7 @@ describe('LobbyView claiming a seat', () => {
       () => new Promise<void>((r) => (finish = r)),
     );
     const { user } = setup({ games: [OPEN], onJoinOrEnterGame });
-    await user.click(within(card('Open Table')).getByText('+ Claim Russia'));
+    await user.click(within(card('Open Table')).getByText(/Claim Russia/));
     expect(onJoinOrEnterGame).toHaveBeenCalledExactlyOnceWith(
       'mp_open',
       'RUSSIA',
@@ -176,7 +176,7 @@ describe('LobbyView claiming a seat', () => {
       throw new Error('full');
     });
     const { user } = setup({ games: [OPEN], onJoinOrEnterGame });
-    await user.click(within(card('Open Table')).getByText('+ Claim Russia'));
+    await user.click(within(card('Open Table')).getByText(/Claim Russia/));
     expect(err).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Entering...')).not.toBeInTheDocument();
     err.mockRestore();
@@ -184,7 +184,7 @@ describe('LobbyView claiming a seat', () => {
 
   it('asks a newcomer for the passcode of a private game', async () => {
     const { props, user } = setup({ games: [SECRET] });
-    await user.click(within(card('Secret Table')).getByText('🔒 Claim Italy'));
+    await user.click(within(card('Secret Table')).getByText(/Claim Italy/));
     expect(props.onJoinOrEnterGame).not.toHaveBeenCalled();
     expect(screen.getByText('Enter Campaign Passcode')).toBeInTheDocument();
     await user.type(screen.getByLabelText('Passcode'), '  v1901 ');
@@ -206,7 +206,7 @@ describe('LobbyView claiming a seat', () => {
       throw new Error('Wrong passcode');
     });
     const { user } = setup({ games: [SECRET], onJoinOrEnterGame });
-    await user.click(within(card('Secret Table')).getByText('🔒 Claim Italy'));
+    await user.click(within(card('Secret Table')).getByText(/Claim Italy/));
     await user.type(screen.getByLabelText('Passcode'), 'nope');
     await user.click(
       screen.getByRole('button', { name: /Unlock & Claim Italy/ }),
@@ -220,7 +220,7 @@ describe('LobbyView claiming a seat', () => {
       throw new Error('');
     });
     const { user } = setup({ games: [SECRET], onJoinOrEnterGame });
-    await user.click(within(card('Secret Table')).getByText('🔒 Claim Italy'));
+    await user.click(within(card('Secret Table')).getByText(/Claim Italy/));
     await user.type(screen.getByLabelText('Passcode'), 'x');
     await user.click(
       screen.getByRole('button', { name: /Unlock & Claim Italy/ }),
@@ -235,7 +235,7 @@ describe('LobbyView claiming a seat', () => {
       throw new Error('Wrong passcode');
     });
     const { user } = setup({ games: [SECRET], onJoinOrEnterGame });
-    await user.click(within(card('Secret Table')).getByText('🔒 Claim Italy'));
+    await user.click(within(card('Secret Table')).getByText(/Claim Italy/));
     await user.type(screen.getByLabelText('Passcode'), 'nope');
     await user.click(
       screen.getByRole('button', { name: /Unlock & Claim Italy/ }),
@@ -244,7 +244,7 @@ describe('LobbyView claiming a seat', () => {
     expect(
       screen.queryByText('Enter Campaign Passcode'),
     ).not.toBeInTheDocument();
-    await user.click(within(card('Secret Table')).getByText('🔒 Claim Italy'));
+    await user.click(within(card('Secret Table')).getByText(/Claim Italy/));
     expect(screen.getByLabelText('Passcode')).toHaveValue('');
     expect(screen.queryByText('Wrong passcode')).not.toBeInTheDocument();
   });
