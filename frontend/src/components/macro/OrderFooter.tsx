@@ -10,7 +10,9 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import type { PowerMeta } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import type { ConsensusStatusInfo } from '../../utils/orderHelpers';
+import styles from './OrderFooter.module.css';
 
 /** "Confirm All (n/m)": marks every current order as confirmed. */
 export const ConfirmAllButton: React.FC<{
@@ -20,7 +22,7 @@ export const ConfirmAllButton: React.FC<{
 }> = ({ confirmedCount, totalActionableCount, onConfirmAllHolds }) => (
   <button
     type="button"
-    className="quick-action-btn"
+    className={styles.quickActionBtn}
     data-testid="btn-confirm-all"
     title="Mark all current orders as confirmed"
     onClick={onConfirmAllHolds}
@@ -36,7 +38,8 @@ export const SurrenderButton: React.FC<{ onSurrenderClick: () => void }> = ({
 }) => (
   <button
     type="button"
-    className="quick-action-btn surrender-btn-sidebar"
+    className={cx(styles.quickActionBtn, styles.surrenderBtnSidebar)}
+    data-testid="btn-surrender-sidebar"
     title="Surrender sovereign command and leave this campaign"
     onClick={onSurrenderClick}
   >
@@ -85,9 +88,8 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
       <button
         type="button"
         data-testid="btn-finalize-orders"
-        className={`finalize-primary-btn ${
-          blockingIssueCount > 0 ? 'has-warning-state' : ''
-        }`}
+        data-warning={blockingIssueCount > 0 ? 'true' : undefined}
+        className={styles.finalizePrimaryBtn}
         onClick={onFinalizeClick}
       >
         {blockingIssueCount > 0 ? (
@@ -112,7 +114,7 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
       <button
         type="button"
         data-testid="btn-unfinalize-orders"
-        className="unfinalize-btn"
+        className={styles.unfinalizeBtn}
         onClick={onUnfinalizeClick}
       >
         <Unlock size={15} />
@@ -124,7 +126,7 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
       <button
         type="button"
         data-testid="btn-adjudicate-phase"
-        className="adjudicate-turn-btn"
+        className={styles.adjudicateTurnBtn}
         title="Execute turn adjudication and advance to the next season"
         onClick={onAdjudicateTurn}
         disabled={gameOver}
@@ -141,27 +143,36 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
         </span>
       </button>
     ) : (
-      <div className="mp-resolution-controls">
+      <div className={styles.mpResolutionControls}>
         <div
-          className={`mp-consensus-status-card ${consensusInfo.isWaitingForPlayers ? 'waiting-mode' : ''}`}
+          className={styles.mpConsensusStatusCard}
+          data-testid="mp-consensus-status-card"
+          data-waiting={consensusInfo.isWaitingForPlayers ? 'true' : undefined}
         >
-          <div className="mp-consensus-header">
+          <div className={styles.mpConsensusHeader}>
             {consensusInfo.isWaitingForPlayers ? (
-              <Users size={14} className="consensus-icon" />
+              <Users size={14} className={styles.consensusIcon} />
             ) : (
-              <Clock size={13} className="consensus-icon" />
+              <Clock size={13} className={styles.consensusIcon} />
             )}
-            <span className="consensus-title">{consensusInfo.title}</span>
+            <span data-testid="consensus-title">{consensusInfo.title}</span>
           </div>
-          <div className="mp-consensus-desc">{consensusInfo.description}</div>
+          <div
+            className={styles.mpConsensusDesc}
+            data-testid="mp-consensus-desc"
+          >
+            {consensusInfo.description}
+          </div>
         </div>
 
         {isGameCreator && (
           <button
             type="button"
-            className={`adjudicate-turn-btn creator-override-btn ${
-              consensusInfo.isSoloAdvanceReady ? 'solo-advance-ready' : ''
-            }`}
+            data-testid="btn-creator-override"
+            data-solo-ready={
+              consensusInfo.isSoloAdvanceReady ? 'true' : undefined
+            }
+            className={cx(styles.adjudicateTurnBtn, styles.creatorOverrideBtn)}
             title={consensusInfo.buttonTitle}
             onClick={onAdjudicateTurn}
             disabled={gameOver}

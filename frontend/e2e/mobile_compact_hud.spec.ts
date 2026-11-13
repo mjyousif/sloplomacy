@@ -43,7 +43,9 @@ test.describe('Scenario 06: Phone game screen', () => {
 
       // The map spans the screen: no sidebar rails on a phone.
       await expect(
-        page.locator('[data-testid="tools-sidebar-collapsed"], .macro-sidebar-collapsed'),
+        page.locator(
+          '[data-testid="tools-sidebar-collapsed"], [data-testid="macro-sidebar-collapsed"]',
+        ),
       ).toHaveCount(0);
       const mapBox = await page.locator('[data-testid="map-viewport-container"]').boundingBox();
       expect(mapBox).not.toBeNull();
@@ -101,8 +103,8 @@ test.describe('Scenario 06: Phone game screen', () => {
 
       const parisCard = page.locator('[data-testid="unit-macro-card"][data-unit-id="FRA_A_PAR"]');
       // The header, not the order controls inside the card, which keep their own taps.
-      await parisCard.locator('.unit-card-header').tap();
-      await expect(parisCard).toHaveClass(/selected/);
+      await parisCard.locator('[data-testid="unit-card-header"]').tap();
+      await expect(parisCard).toHaveAttribute('data-selected', 'true');
       // The sheet gets out of the way and the docked bar takes the unit's orders.
       await expect.poll(() => sheetSnap(page)).toBe('peek');
       const dockedBar = page.locator('[data-testid="unit-docked-bar"]');
@@ -124,7 +126,9 @@ test.describe('Scenario 06: Phone game screen', () => {
       await picardy.tap();
       await expect(dockedBar).toHaveCount(0);
       // The order line, not the whole card: its Destination list always names Picardy.
-      await expect(parisCard.locator('.behavior-target-text')).toContainText('Picardy');
+      await expect(
+        parisCard.locator('[data-testid="behavior-target-text"]'),
+      ).toContainText('Picardy');
       // No problems left: the tappable count gives way to a plain check.
       await expect(page.locator('[data-testid="compact-issue-badge"]')).toHaveCount(0);
       await expect(page.locator('[data-testid="compact-issue-clean"]')).toBeVisible();
@@ -170,7 +174,9 @@ test.describe('Scenario 06: Phone game screen', () => {
       await page.locator('[data-testid="bottom-sheet-handle"]').tap();
       await expect.poll(() => sheetSnap(page)).toBe('half');
       const parBuild = page.locator('[data-testid="build-macro-card"][data-home-province="PAR"]');
-      await expect(parBuild.locator('[data-testid="btn-build-army"]')).toHaveClass(/active/);
+      await expect(
+        parBuild.locator('[data-testid="btn-build-army"]'),
+      ).toHaveAttribute('data-active', 'true');
       await recorder.recordStep(page, '02_army_built_in_paris');
 
       recorder.finalize('PASSED');

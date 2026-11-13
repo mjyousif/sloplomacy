@@ -77,7 +77,7 @@ describe('OrderFooter', () => {
     const { onFinalizeClick } = footer({ unconfirmedCount: 2 });
     const btn = screen.getByTestId('btn-finalize-orders');
     expect(btn).toHaveTextContent('Finalize France Orders (2 Unconfirmed)');
-    expect(btn).not.toHaveClass('has-warning-state');
+    expect(btn).not.toHaveAttribute('data-warning');
     fireEvent.click(btn);
     expect(onFinalizeClick).toHaveBeenCalledTimes(1);
   });
@@ -93,7 +93,7 @@ describe('OrderFooter', () => {
     footer({ blockingIssueCount: 1, unconfirmedCount: 3 });
     const btn = screen.getByTestId('btn-finalize-orders');
     expect(btn).toHaveTextContent('Finalize France (1 Warning)');
-    expect(btn).toHaveClass('has-warning-state');
+    expect(btn).toHaveAttribute('data-warning', 'true');
     footer({ blockingIssueCount: 2 });
     expect(screen.getAllByTestId('btn-finalize-orders')[1]).toHaveTextContent(
       'Finalize France (2 Warnings)',
@@ -135,30 +135,35 @@ describe('OrderFooter', () => {
 
   describe('multiplayer', () => {
     it('shows the consensus card and no solo Resolve button', () => {
-      const { container } = footer({ isMultiplayer: true });
+      footer({ isMultiplayer: true });
       expect(screen.queryByTestId('btn-adjudicate-phase')).toBeNull();
-      expect(container.querySelector('.consensus-title')).toHaveTextContent(
+      expect(screen.getByTestId('consensus-title')).toHaveTextContent(
         CONSENSUS.title,
       );
-      expect(container.querySelector('.mp-consensus-desc')).toHaveTextContent(
+      expect(screen.getByTestId('mp-consensus-desc')).toHaveTextContent(
         CONSENSUS.description,
       );
-      expect(container.querySelector('.waiting-mode')).toBeNull();
+      expect(
+        screen.getByTestId('mp-consensus-status-card'),
+      ).not.toHaveAttribute('data-waiting');
     });
 
     it('marks the card as waiting when the match is waiting for players', () => {
-      const { container } = footer({
+      footer({
         isMultiplayer: true,
         consensusInfo: { ...CONSENSUS, isWaitingForPlayers: true },
       });
-      expect(container.querySelector('.mp-consensus-status-card')).toHaveClass(
-        'waiting-mode',
+      expect(screen.getByTestId('mp-consensus-status-card')).toHaveAttribute(
+        'data-waiting',
+        'true',
       );
     });
 
     it('gives only the host the override, which carries the consensus label', () => {
       const guest = footer({ isMultiplayer: true });
-      expect(guest.container.querySelector('.creator-override-btn')).toBeNull();
+      expect(
+        guest.container.querySelector('[data-testid="btn-creator-override"]'),
+      ).toBeNull();
       guest.unmount();
 
       const host = footer({
@@ -166,23 +171,21 @@ describe('OrderFooter', () => {
         isGameCreator: true,
         consensusInfo: { ...CONSENSUS, isSoloAdvanceReady: true },
       });
-      const btn = host.container.querySelector(
-        '.creator-override-btn',
-      ) as HTMLElement;
+      const btn = screen.getByTestId('btn-creator-override');
       expect(btn).toHaveTextContent(CONSENSUS.buttonLabel);
       expect(btn).toHaveAttribute('title', CONSENSUS.buttonTitle);
-      expect(btn).toHaveClass('solo-advance-ready');
+      expect(btn).toHaveAttribute('data-solo-ready', 'true');
       fireEvent.click(btn);
       expect(host.onAdjudicateTurn).toHaveBeenCalledTimes(1);
     });
 
     it('disables the host override when the game is over', () => {
-      const { container } = footer({
+      footer({
         isMultiplayer: true,
         isGameCreator: true,
         gameOver: true,
       });
-      expect(container.querySelector('.creator-override-btn')).toBeDisabled();
+      expect(screen.getByTestId('btn-creator-override')).toBeDisabled();
     });
   });
 });

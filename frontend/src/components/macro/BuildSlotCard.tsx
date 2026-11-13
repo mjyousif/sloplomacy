@@ -1,7 +1,10 @@
 import { Anchor, CheckCircle2, PlusCircle, Swords } from 'lucide-react';
 import type React from 'react';
 import type { Order, Power, ProvinceInfo, Unit } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import { formatOrderSummary } from '../../utils/orderHelpers';
+import tabStyles from './OrderTypeTabs.module.css';
+import styles from './UnitMacroCard.module.css';
 
 export interface BuildSlotCardProps {
   homeProv: string;
@@ -40,7 +43,7 @@ export const BuildSlotCard: React.FC<BuildSlotCardProps> = ({
 
   return (
     <div
-      className={`unit-macro-card ${isSelected ? 'selected' : ''}`}
+      className={cx(styles.unitMacroCard, isSelected && styles.selected)}
       data-testid="build-macro-card"
       data-home-province={homeProv}
       style={{
@@ -58,10 +61,10 @@ export const BuildSlotCard: React.FC<BuildSlotCardProps> = ({
         onHighlightProvinces([]);
       }}
     >
-      <div className="unit-card-header">
-        <div className="unit-identity">
+      <div className={styles.unitCardHeader}>
+        <div className={styles.unitIdentity}>
           <span
-            className="unit-type-badge"
+            className={styles.unitTypeBadge}
             style={{
               backgroundColor: isWaived ? '#64748b' : '#16a34a',
             }}
@@ -70,20 +73,22 @@ export const BuildSlotCard: React.FC<BuildSlotCardProps> = ({
             {isWaived ? '—' : buildOrder?.unit_type || 'A'}
           </span>
           <div>
-            <div className="unit-prov-title">
+            <div className={styles.unitProvTitle}>
               {pInfo?.name || homeProv}
-              <span className="unit-prov-code">
+              <span className={styles.unitProvCode}>
                 {homeProv}
                 {isFleet && activeCoast ? `/${activeCoast}` : ''}
               </span>
             </div>
           </div>
         </div>
-        <div className="unit-status-pill-wrap">
+        <div>
           {isWaived ? (
-            <span className="unit-mini-pill unconfirmed">Waived</span>
+            <span className={cx(styles.unitMiniPill, styles.unconfirmed)}>
+              Waived
+            </span>
           ) : (
-            <span className="unit-mini-pill confirmed">
+            <span className={cx(styles.unitMiniPill, styles.confirmed)}>
               <CheckCircle2 size={11} /> Build{' '}
               {buildOrder?.unit_type === 'F' ? 'Fleet' : 'Army'}
             </span>
@@ -91,25 +96,26 @@ export const BuildSlotCard: React.FC<BuildSlotCardProps> = ({
         </div>
       </div>
 
-      <div className="unit-behavior-visualizer">
+      <div className={styles.unitBehaviorVisualizer}>
         <span
-          className="behavior-verb-tag"
+          className={styles.behaviorVerbTag}
           style={{ backgroundColor: summary.badgeColor }}
         >
           {summary.verb}
         </span>
-        <span className="behavior-target-text">{summary.targetText}</span>
+        <span className={styles.behaviorTargetText}>{summary.targetText}</span>
       </div>
 
       <div
-        className="unit-inline-controls"
+        className={styles.unitInlineControls}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="order-type-tabs">
+        <div className={tabStyles.orderTypeTabs}>
           <button
             type="button"
             data-testid="btn-build-army"
-            className={`order-tab-btn ${isArmy ? 'active' : ''}`}
+            data-active={isArmy ? 'true' : undefined}
+            className={tabStyles.orderTabBtn}
             style={
               isArmy
                 ? {
@@ -144,7 +150,8 @@ export const BuildSlotCard: React.FC<BuildSlotCardProps> = ({
                     key={cst}
                     type="button"
                     data-testid={`btn-build-fleet-${cst}`}
-                    className={`order-tab-btn ${isThisCoastFleet ? 'active' : ''}`}
+                    data-active={isThisCoastFleet ? 'true' : undefined}
+                    className={tabStyles.orderTabBtn}
                     style={
                       isThisCoastFleet
                         ? {
@@ -175,7 +182,8 @@ export const BuildSlotCard: React.FC<BuildSlotCardProps> = ({
               <button
                 type="button"
                 data-testid="btn-build-fleet"
-                className={`order-tab-btn ${isFleet ? 'active' : ''}`}
+                data-active={isFleet ? 'true' : undefined}
+                className={tabStyles.orderTabBtn}
                 style={
                   isFleet
                     ? {
@@ -205,7 +213,8 @@ export const BuildSlotCard: React.FC<BuildSlotCardProps> = ({
           <button
             type="button"
             data-testid="btn-build-waive"
-            className={`order-tab-btn ${isWaived ? 'active' : ''}`}
+            data-active={isWaived ? 'true' : undefined}
+            className={tabStyles.orderTabBtn}
             onClick={() =>
               onUpdateOrder({
                 unit_id: bId,

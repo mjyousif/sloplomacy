@@ -11,6 +11,7 @@ import {
   powersYetToVote,
   TIMER_OPTIONS,
 } from '../utils/timerHelpers';
+import styles from './PhaseTimerWidget.module.css';
 
 export interface PhaseTimerWidgetProps {
   timer: PhaseTimer | null;
@@ -91,7 +92,8 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
 
   const renderClock = () => (
     <div
-      className={`phase-timer-clock ${lowTime ? 'phase-timer-low' : ''}`}
+      className={styles.phaseTimerClock}
+      data-low={lowTime ? 'true' : undefined}
       role="timer"
     >
       {seconds === null ? '--:--' : formatClock(seconds)}
@@ -102,20 +104,19 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
     if (!timer) {
       return (
         <>
-          <div className="phase-timer-title">
+          <div className={styles.phaseTimerTitle}>
             <Clock size={14} /> Turn Clock
           </div>
           {isHost ? (
             <button
               type="button"
               data-testid="btn-timer-start"
-              className="phase-timer-primary"
               onClick={onStart}
             >
               <Play size={13} /> Start First Vote
             </button>
           ) : (
-            <p className="phase-timer-note">
+            <p className={styles.phaseTimerNote}>
               Waiting for the host to start the clock.
             </p>
           )}
@@ -128,16 +129,16 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
       const myVote = seatPower ? timer.votes[seatPower] : undefined;
       return (
         <>
-          <div className="phase-timer-title">
+          <div className={styles.phaseTimerTitle}>
             <Clock size={14} /> Vote: Phase Length
           </div>
           {renderClock()}
-          <div className="phase-timer-options">
+          <div className={styles.phaseTimerOptions}>
             {TIMER_OPTIONS.map(({ choice, label }) => (
               <button
                 key={choice}
                 type="button"
-                className={myVote === choice ? 'selected' : ''}
+                data-selected={myVote === choice ? 'true' : undefined}
                 aria-pressed={myVote === choice}
                 disabled={!isPlayer}
                 onClick={() => onVote(choice)}
@@ -147,7 +148,7 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
               </button>
             ))}
           </div>
-          <p className="phase-timer-note">
+          <p className={styles.phaseTimerNote}>
             <strong>Yet to vote:</strong> {powerNames(pending)}
           </p>
         </>
@@ -159,21 +160,21 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
       const amReady = !!seatPower && timer.ready_powers.includes(seatPower);
       return (
         <>
-          <div className="phase-timer-title">
+          <div className={styles.phaseTimerTitle}>
             <Pause size={14} /> Game Paused
           </div>
           {isPlayer && (
             <button
               type="button"
               data-testid="btn-timer-ready"
-              className={`phase-timer-primary ${amReady ? 'selected' : ''}`}
+              data-selected={amReady ? 'true' : undefined}
               aria-pressed={amReady}
               onClick={() => onReady(!amReady)}
             >
               {amReady ? 'Ready: Click to Undo' : 'Ready Up'}
             </button>
           )}
-          <p className="phase-timer-note">
+          <p className={styles.phaseTimerNote}>
             <strong>
               Ready {timer.ready_powers.length}/{timer.players.length}.
             </strong>{' '}
@@ -188,7 +189,7 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
       !!seatPower && timer.extend_requests.includes(seatPower);
     return (
       <>
-        <div className="phase-timer-title">
+        <div className={styles.phaseTimerTitle}>
           <Clock size={14} /> Time Left
         </div>
         {renderClock()}
@@ -196,7 +197,7 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
           <button
             type="button"
             data-testid="btn-timer-extend"
-            className={`phase-timer-extend ${askedForMore ? 'selected' : ''}`}
+            data-selected={askedForMore ? 'true' : undefined}
             aria-pressed={askedForMore}
             onClick={() => onExtend(!askedForMore)}
           >
@@ -214,7 +215,8 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
       <button
         type="button"
         data-testid="phase-timer-pill"
-        className={`phase-timer-pill ${lowTime ? 'phase-timer-low' : ''}`}
+        className={styles.phaseTimerPill}
+        data-low={lowTime ? 'true' : undefined}
         aria-label={`Turn clock: ${clockPillLabel(timer, seconds, isHost)}. Show details.`}
         aria-expanded={false}
         onClick={() => setExpanded(true)}
@@ -222,19 +224,27 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
         <Icon size={14} />
         <span role="timer">{clockPillLabel(timer, seconds, isHost)}</span>
         {hypothetical && timer && (
-          <span className="phase-timer-pill-dot" aria-hidden="true" />
+          <span
+            className={styles.phaseTimerPillDot}
+            data-testid="phase-timer-pill-dot"
+            aria-hidden="true"
+          />
         )}
       </button>
     );
   }
 
   return (
-    <aside className="phase-timer-widget" aria-label="Turn clock">
+    <aside
+      className={styles.phaseTimerWidget}
+      data-testid="phase-timer-widget"
+      aria-label="Turn clock"
+    >
       {compact && (
         <button
           type="button"
           data-testid="phase-timer-collapse"
-          className="phase-timer-collapse"
+          className={styles.phaseTimerCollapse}
           aria-label="Hide turn clock"
           aria-expanded={true}
           onClick={() => setExpanded(false)}
@@ -244,7 +254,7 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
       )}
       {renderBody()}
       {hypothetical && timer && (
-        <p className="phase-timer-note phase-timer-warning">
+        <p className={`${styles.phaseTimerNote} ${styles.phaseTimerWarning}`}>
           The real clock is still running. Exit Hypothetical Mode before it ends
           to keep your orders.
         </p>

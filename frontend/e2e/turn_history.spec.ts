@@ -90,7 +90,7 @@ test.describe('Scenario 07: Turn history', () => {
         page.locator('[data-testid="history-lock-bar"]'),
       ).toContainText('Spring 1901 Movement');
       await expect(
-        page.locator('[data-testid="macro-sidebar"] .macro-units-scroll-area'),
+        page.locator('[data-testid="macro-units-scroll-area"]'),
       ).toHaveAttribute('inert', '');
       await recorder.recordStep(page, '02_spring_1901_all_nations');
 

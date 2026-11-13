@@ -54,7 +54,7 @@ describe('OrderParameterControls picks the control for the order type', () => {
       aux_unit_origin: 'BRE',
       target: 'LON',
     });
-    expect(c.querySelectorAll('.order-param-row select')).toHaveLength(2);
+    expect(c.querySelectorAll('select')).toHaveLength(2);
     expect(c.textContent).toContain('Army:');
   });
 

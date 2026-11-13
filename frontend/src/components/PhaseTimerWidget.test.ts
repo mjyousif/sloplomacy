@@ -54,7 +54,7 @@ describe('PhaseTimerWidget on a phone', () => {
     expect(html).toContain('data-testid="phase-timer-pill"');
     expect(html).toContain('14:05');
     expect(html).not.toContain('5 Minutes');
-    expect(html).not.toContain('phase-timer-widget');
+    expect(html).not.toContain('data-testid="phase-timer-widget"');
   });
 
   it('labels each stage in one short line', () => {
@@ -71,17 +71,17 @@ describe('PhaseTimerWidget on a phone', () => {
   it('marks the pill while the real clock runs behind Hypothetical Mode', () => {
     expect(
       render({ compact: true, timer: running, hypothetical: true }),
-    ).toContain('phase-timer-pill-dot');
+    ).toContain('data-testid="phase-timer-pill-dot"');
     expect(render({ compact: true, timer: running })).not.toContain(
-      'phase-timer-pill-dot',
+      'data-testid="phase-timer-pill-dot"',
     );
   });
 
   it('is unchanged on a wide screen', () => {
     const html = render({ timer: running });
-    expect(html).toContain('phase-timer-widget');
-    expect(html).not.toContain('phase-timer-pill');
-    expect(html).not.toContain('phase-timer-collapse');
+    expect(html).toContain('data-testid="phase-timer-widget"');
+    expect(html).not.toContain('data-testid="phase-timer-pill"');
+    expect(html).not.toContain('data-testid="phase-timer-collapse"');
   });
 });
 

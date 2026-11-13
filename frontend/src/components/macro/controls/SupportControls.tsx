@@ -11,6 +11,7 @@ import {
   type IconSelectOption,
 } from '../../map/hud/IconSelectDropdown';
 import { PowerFlag } from '../../PowerFlag';
+import styles from '../OrderParameterControls.module.css';
 
 interface SupportControlsProps {
   unit: Unit;
@@ -104,7 +105,7 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
     ];
 
     return (
-      <div className="order-param-inline">
+      <div className={styles.orderParamInline}>
         <IconSelectDropdown
           testId="select-support-unit"
           value={order.aux_unit_origin || null}
@@ -115,7 +116,7 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
             if (val) handleSupportUnitChange(val);
           }}
         />
-        <span className="order-param-arrow" aria-hidden="true">
+        <span className={styles.orderParamArrow} aria-hidden="true">
           →
         </span>
         <IconSelectDropdown
@@ -189,9 +190,9 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
 
   if (compact) {
     return (
-      <div className="order-param-inline">
+      <div className={styles.orderParamInline}>
         {unitSelect}
-        <span className="order-param-arrow" aria-hidden="true">
+        <span className={styles.orderParamArrow} aria-hidden="true">
           →
         </span>
         {targetSelect}
@@ -200,12 +201,12 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
   }
 
   return (
-    <div className="order-param-grid">
-      <div className="order-param-row">
+    <div className={styles.orderParamGrid}>
+      <div className={styles.orderParamRow}>
         <label>Unit:</label>
         {unitSelect}
       </div>
-      <div className="order-param-row">
+      <div className={styles.orderParamRow}>
         <label>Into:</label>
         {targetSelect}
       </div>

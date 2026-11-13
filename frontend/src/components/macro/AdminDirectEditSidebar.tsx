@@ -9,10 +9,12 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import type { Order, Power, ProvinceInfo, Unit } from '../../types/diplomacy';
 import type { StagedChangeEntry } from '../../utils/adminHelpers';
+import { cx } from '../../utils/cx';
 import type { OrderProgress } from '../../utils/orderProgress';
 import type { SheetSnap } from '../../utils/sheetHelpers';
 import { BottomSheet } from '../BottomSheet';
 import type { DirectEditMapHandlers } from '../EuropeMap';
+import macroStyles from '../MacroSidebar.module.css';
 import { AdminTileInspector } from '../map/hud/AdminTileInspector';
 import { VersionBadge } from '../VersionBadge';
 import { CollapsedRail } from './CollapsedRail';
@@ -259,7 +261,7 @@ export function AdminDirectEditSidebar({
         testId="macro-sidebar"
         peek={
           <div
-            className="macro-sheet-peek admin-sheet-peek"
+            className={cx(macroStyles.macroSheetPeek, 'admin-sheet-peek')}
             style={{ borderLeftColor: '#b91c1c' }}
           >
             <div className="admin-sidebar-header-row">
@@ -274,9 +276,11 @@ export function AdminDirectEditSidebar({
           </div>
         }
       >
-        <div className="macro-sheet-body">
+        <div className={macroStyles.macroSheetBody}>
           {stagedChangesDrawer}
-          <div className="macro-units-scroll-area">{inspectorContent}</div>
+          <div className={macroStyles.macroUnitsScrollArea}>
+            {inspectorContent}
+          </div>
           <div className="sidebar-version-footer">
             <VersionBadge />
           </div>
@@ -288,7 +292,8 @@ export function AdminDirectEditSidebar({
   if (collapsed) {
     return (
       <aside
-        className="macro-sidebar macro-sidebar-collapsed"
+        className={macroStyles.macroSidebar}
+        data-collapsed="true"
         aria-label="Edit Board Collapsed"
       >
         <CollapsedRail
@@ -304,12 +309,13 @@ export function AdminDirectEditSidebar({
 
   return (
     <aside
-      className="macro-sidebar macro-sidebar-expanded admin-direct-edit-sidebar"
+      className={cx(macroStyles.macroSidebar, 'admin-direct-edit-sidebar')}
+      data-expanded="true"
       data-testid="macro-sidebar"
       aria-label="Edit Board"
     >
       <div
-        className="active-power-banner admin-sidebar-banner"
+        className={cx(macroStyles.activePowerBanner, 'admin-sidebar-banner')}
         style={{ borderLeft: '4px solid #b91c1c' }}
       >
         <div className="admin-sidebar-header-row">
@@ -338,7 +344,7 @@ export function AdminDirectEditSidebar({
         {stagedChangesDrawer}
       </div>
 
-      <div className="macro-units-scroll-area">{inspectorContent}</div>
+      <div className={macroStyles.macroUnitsScrollArea}>{inspectorContent}</div>
 
       <div className="sidebar-version-footer">
         <VersionBadge />

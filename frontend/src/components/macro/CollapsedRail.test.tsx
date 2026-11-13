@@ -16,7 +16,9 @@ const rail = (progress = progressFor(), onToggleCollapse?: () => void) =>
 describe('CollapsedRail', () => {
   it('shows the crest with the power, its units and its centers', () => {
     const c = rail();
-    const crest = c.querySelector('.rail-power-crest') as HTMLElement;
+    const crest = c.querySelector(
+      '[data-testid="rail-power-crest"]',
+    ) as HTMLElement;
     expect(crest).toHaveAttribute(
       'title',
       'Commanding French Republic (3 Units, 3 SC)',
@@ -32,9 +34,9 @@ describe('CollapsedRail', () => {
   });
 
   it('shows the unconfirmed count, or a check when everything is confirmed', () => {
-    expect(rail().querySelector('.rail-badge-unconfirmed')).toHaveTextContent(
-      '3',
-    );
+    expect(
+      rail().querySelector('[data-testid="rail-badge-unconfirmed"]'),
+    ).toHaveTextContent('3');
     const confirmed = Object.fromEntries(
       Object.values(progressFor().unitsByProv).map((u) => [
         u.id,
@@ -42,13 +44,15 @@ describe('CollapsedRail', () => {
       ]),
     );
     const c = rail(progressFor({ orders: confirmed as never }));
-    expect(c.querySelectorAll('.rail-badge-clean')[0]).toHaveTextContent('✓');
+    expect(
+      c.querySelectorAll('[data-testid="rail-badge-clean"]')[0],
+    ).toHaveTextContent('✓');
   });
 
   it('warns about every issue, informational ones included', () => {
-    expect(rail().querySelector('.rail-warn-badge')).toBeNull();
+    expect(rail().querySelector('[data-testid="rail-warn-badge"]')).toBeNull();
     const c = rail(progressFor({ issues: [issue(A_PAR, 'info')] }));
-    expect(c.querySelector('.rail-warn-badge')).toHaveAttribute(
+    expect(c.querySelector('[data-testid="rail-warn-badge"]')).toHaveAttribute(
       'title',
       '1 tactical issues',
     );
@@ -81,14 +85,14 @@ describe('CollapsedRail', () => {
         stagedChangesCount={0}
       />,
     );
-    expect(container.querySelector('.rail-power-crest')).toBeNull();
+    expect(
+      container.querySelector('[data-testid="rail-power-crest"]'),
+    ).toBeNull();
     expect(container.querySelector('svg.power-flag')).toBeNull();
-    expect(container.querySelector('.rail-badge-unconfirmed')).toBeNull();
-    expect(container.querySelector('.rail-warn-badge')).toBeNull();
-    expect(container.querySelector('.rail-admin-badge')).toBeNull();
-    const editCrest = container.querySelector(
-      '.rail-admin-crest',
-    ) as HTMLElement;
+    expect(
+      container.querySelector('[data-testid="rail-warn-badge"]'),
+    ).toBeNull();
+    const editCrest = screen.getByTestId('rail-admin-crest');
     expect(editCrest).toHaveAttribute('title', 'Edit Board');
     expect(editCrest.querySelector('svg.lucide-pencil')).not.toBeNull();
     expect(screen.getByTestId('macro-sidebar-expand-btn')).toHaveAttribute(
@@ -105,9 +109,7 @@ describe('CollapsedRail', () => {
         stagedChangesCount={2}
       />,
     );
-    expect(container.querySelector('.rail-badge-staged')).toHaveTextContent(
-      '2',
-    );
+    expect(screen.getByTestId('rail-badge-staged')).toHaveTextContent('2');
   });
 
   it('shows admin turn-clock clock icon instead of country/unit icons or shield', () => {
@@ -119,13 +121,14 @@ describe('CollapsedRail', () => {
         adminMode="turn-clock"
       />,
     );
-    expect(container.querySelector('.rail-power-crest')).toBeNull();
+    expect(
+      container.querySelector('[data-testid="rail-power-crest"]'),
+    ).toBeNull();
     expect(container.querySelector('svg.power-flag')).toBeNull();
-    expect(container.querySelector('.rail-warn-badge')).toBeNull();
-    expect(container.querySelector('.rail-admin-badge')).toBeNull();
-    const clockCrest = container.querySelector(
-      '.rail-admin-crest',
-    ) as HTMLElement;
+    expect(
+      container.querySelector('[data-testid="rail-warn-badge"]'),
+    ).toBeNull();
+    const clockCrest = screen.getByTestId('rail-admin-crest');
     expect(clockCrest).toHaveAttribute('title', 'Turn and Clock Settings');
     expect(clockCrest.querySelector('svg.lucide-clock')).not.toBeNull();
     expect(screen.getByTestId('macro-sidebar-expand-btn')).toHaveAttribute(

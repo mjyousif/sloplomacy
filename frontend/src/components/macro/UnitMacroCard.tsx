@@ -18,10 +18,12 @@ import type {
   UnitMoveOptions,
   ValidationIssue,
 } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import { splitProvinceCode } from '../../utils/orderHelpers';
 import { MoveControls } from './controls/MoveControls';
 import { OrderParameterControls } from './OrderParameterControls';
 import { OrderTypeTabs } from './OrderTypeTabs';
+import styles from './UnitMacroCard.module.css';
 
 export interface UnitMacroCardProps {
   unit: Unit;
@@ -115,13 +117,19 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
   return (
     <div
       key={unit.id}
-      className={`unit-macro-card ${isCompactRow ? 'unit-macro-card-compact' : ''} ${
-        isSelected ? 'selected' : ''
-      } ${isHovered ? 'hovered' : ''} ${
-        hasError ? 'card-error' : hasWarn ? 'card-warning' : ''
-      }`.trim()}
+      className={cx(
+        styles.unitMacroCard,
+        isCompactRow && styles.unitMacroCardCompact,
+        isSelected && styles.selected,
+        isHovered && styles.hovered,
+        hasError ? styles.cardError : hasWarn && styles.cardWarning,
+      )}
       data-testid="unit-macro-card"
       data-unit-id={unit.id}
+      data-compact={isCompactRow ? 'true' : undefined}
+      data-selected={isSelected ? 'true' : undefined}
+      data-hovered={isHovered ? 'true' : undefined}
+      data-status={hasError ? 'error' : hasWarn ? 'warning' : undefined}
       style={
         unit.is_dislodged
           ? { borderLeft: '4px solid #ea580c' }
@@ -145,9 +153,11 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
     >
       {isCompactRow ? (
         <>
-          <div className="unit-compact-row">
+          <div className={styles.unitCompactRow} data-testid="unit-compact-row">
             <span
-              className={`unit-type-badge compact ${unit.unit_type === 'A' ? 'army' : 'fleet'}`}
+              className={cx(styles.unitTypeBadge, styles.compact)}
+              data-testid="unit-type-badge"
+              data-unit-type={unit.unit_type === 'A' ? 'army' : 'fleet'}
               style={{
                 backgroundColor: unit.is_dislodged
                   ? '#ea580c'
@@ -165,13 +175,13 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
               {unit.unit_type}
             </span>
             <span
-              className="unit-compact-prov"
+              className={styles.unitCompactProv}
               title={`${provinces[unit.province]?.name ?? unit.province} (${unit.province}${unit.coast ? `/${unit.coast}` : ''})`}
             >
               {provinces[unit.province]?.name ?? unit.province}
             </span>
             <div
-              className="unit-compact-controls"
+              className={styles.unitCompactControls}
               onClick={(e) => e.stopPropagation()}
             >
               <OrderTypeTabs
@@ -200,7 +210,7 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
                 />
               ) : (
                 <span
-                  className="unit-compact-target-placeholder"
+                  className={styles.unitCompactTargetPlaceholder}
                   aria-hidden="true"
                 />
               )}
@@ -209,7 +219,7 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
           {(order?.order_type === 'SUPPORT' ||
             order?.order_type === 'CONVOY') && (
             <div
-              className="unit-compact-subcontrols"
+              className={styles.unitCompactSubcontrols}
               onClick={(e) => e.stopPropagation()}
             >
               <OrderParameterControls
@@ -234,10 +244,12 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
       ) : (
         <>
           {/* Unit Card Header */}
-          <div className="unit-card-header">
-            <div className="unit-identity">
+          <div className={styles.unitCardHeader} data-testid="unit-card-header">
+            <div className={styles.unitIdentity}>
               <span
-                className={`unit-type-badge ${unit.unit_type === 'A' ? 'army' : 'fleet'}`}
+                className={styles.unitTypeBadge}
+                data-testid="unit-type-badge"
+                data-unit-type={unit.unit_type === 'A' ? 'army' : 'fleet'}
                 style={{
                   backgroundColor: unit.is_dislodged
                     ? '#ea580c'
@@ -254,9 +266,12 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
                 {unit.unit_type}
               </span>
               <div>
-                <div className="unit-prov-title">
+                <div
+                  className={styles.unitProvTitle}
+                  data-testid="unit-prov-title"
+                >
                   {provinces[unit.province]?.name}
-                  <span className="unit-prov-code">
+                  <span className={styles.unitProvCode}>
                     {unit.province}
                     {unit.coast ? `/${unit.coast}` : ''}
                   </span>
@@ -264,47 +279,74 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
               </div>
             </div>
 
-            <div className="unit-status-pill-wrap">
+            <div>
               {unit.is_dislodged ? (
-                <span className="unit-mini-pill error">
+                <span
+                  className={cx(styles.unitMiniPill, styles.error)}
+                  data-testid="unit-mini-pill"
+                >
                   <AlertTriangle size={11} /> Dislodged
                 </span>
               ) : isDisbanding ? (
-                <span className="unit-mini-pill error">
+                <span
+                  className={cx(styles.unitMiniPill, styles.error)}
+                  data-testid="unit-mini-pill"
+                >
                   <Trash2 size={11} /> Disbanding
                 </span>
               ) : hasError ? (
-                <span className="unit-mini-pill error">
+                <span
+                  className={cx(styles.unitMiniPill, styles.error)}
+                  data-testid="unit-mini-pill"
+                >
                   <AlertCircle size={11} /> Illegal
                 </span>
               ) : hasWarn ? (
-                <span className="unit-mini-pill warning">
+                <span
+                  className={cx(styles.unitMiniPill, styles.warning)}
+                  data-testid="unit-mini-pill"
+                >
                   <AlertTriangle size={11} /> Warning
                 </span>
               ) : isAdjustmentPhase ||
                 (isRetreatPhase && !unit.is_dislodged) ? (
-                <span className="unit-mini-pill confirmed">
+                <span
+                  className={cx(styles.unitMiniPill, styles.confirmed)}
+                  data-testid="unit-mini-pill"
+                >
                   <CheckCircle2 size={11} /> Retained
                 </span>
               ) : order?.is_explicit ? (
-                <span className="unit-mini-pill confirmed">
+                <span
+                  className={cx(styles.unitMiniPill, styles.confirmed)}
+                  data-testid="unit-mini-pill"
+                >
                   <CheckCircle2 size={11} /> Ready
                 </span>
               ) : (
-                <span className="unit-mini-pill unconfirmed">Hold</span>
+                <span
+                  className={cx(styles.unitMiniPill, styles.unconfirmed)}
+                  data-testid="unit-mini-pill"
+                >
+                  Hold
+                </span>
               )}
             </div>
           </div>
 
           {/* Behavior Bar */}
-          <div className="unit-behavior-visualizer">
+          <div className={styles.unitBehaviorVisualizer}>
             <span
-              className="behavior-verb-tag"
+              className={styles.behaviorVerbTag}
+              data-testid="behavior-verb-tag"
               style={{ backgroundColor: summary.badgeColor }}
             >
               {isAdjustmentPhase && !isDisbanding ? 'RETAIN' : summary.verb}
             </span>
-            <span className="behavior-target-text">
+            <span
+              className={styles.behaviorTargetText}
+              data-testid="behavior-target-text"
+            >
               {isAdjustmentPhase && !isDisbanding
                 ? `Retained in ${provinces[unit.province]?.name}`
                 : summary.targetText}
@@ -313,7 +355,8 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
 
           {/* Order Controls */}
           <div
-            className="unit-inline-controls"
+            className={styles.unitInlineControls}
+            data-testid="unit-inline-controls"
             onClick={(e) => e.stopPropagation()}
           >
             <OrderTypeTabs
@@ -351,11 +394,16 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
 
       {/* Diagnostic Alerts */}
       {unitIssues.map((iss) => (
-        <div key={iss.id} className={`unit-diagnostic-alert ${iss.severity}`}>
+        <div
+          key={iss.id}
+          className={cx(styles.unitDiagnosticAlert, styles[iss.severity])}
+          data-testid="unit-diagnostic-alert"
+          data-severity={iss.severity}
+        >
           {iss.severity === 'info' ? (
-            <Info size={13} className="diag-icon" />
+            <Info size={13} className={styles.diagIcon} />
           ) : (
-            <AlertTriangle size={13} className="diag-icon" />
+            <AlertTriangle size={13} className={styles.diagIcon} />
           )}
           <div>
             <strong>{iss.title}:</strong> {iss.message}
@@ -366,9 +414,12 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
       {/* Simulation Result */}
       {simRes && (
         <div
-          className={`unit-sim-result-strip ${
-            simRes.succeeded ? 'sim-ok' : 'sim-fail'
-          }`}
+          className={cx(
+            styles.unitSimResultStrip,
+            simRes.succeeded ? styles.simOk : styles.simFail,
+          )}
+          data-testid="unit-sim-result-strip"
+          data-outcome={simRes.succeeded ? 'ok' : 'fail'}
         >
           <strong>
             {simRes.succeeded ? '✓ SIMULATED:' : '✕ BOUNCED / CUT:'}

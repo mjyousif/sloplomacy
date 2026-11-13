@@ -9,12 +9,15 @@ import type {
   Power,
   TurnHistoryEntry,
 } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import type { OrderProgress } from '../../utils/orderProgress';
 import type { SheetSnap } from '../../utils/sheetHelpers';
 import { TurnControlTab } from '../admin/TurnControlTab';
 import { BottomSheet } from '../BottomSheet';
 import { useConfirm } from '../ConfirmModal';
+import macroStyles from '../MacroSidebar.module.css';
 import { VersionBadge } from '../VersionBadge';
+import styles from './AdminTurnClockSidebar.module.css';
 import { CollapsedRail } from './CollapsedRail';
 
 const API_BASE = '/api';
@@ -242,7 +245,7 @@ export function AdminTurnClockSidebar({
 
   const bodyContent = (
     <div
-      className="admin-turn-clock-sidebar-body"
+      className={styles.adminTurnClockSidebarBody}
       data-testid="admin-tools-modal"
     >
       {actionError && (
@@ -280,7 +283,7 @@ export function AdminTurnClockSidebar({
         testId="macro-sidebar"
         peek={
           <div
-            className="macro-sheet-peek admin-sheet-peek"
+            className={cx(macroStyles.macroSheetPeek, 'admin-sheet-peek')}
             style={{ borderLeftColor: '#b91c1c' }}
           >
             <div className="admin-sidebar-header-row">
@@ -292,8 +295,8 @@ export function AdminTurnClockSidebar({
           </div>
         }
       >
-        <div className="macro-sheet-body">
-          <div className="macro-units-scroll-area">{bodyContent}</div>
+        <div className={macroStyles.macroSheetBody}>
+          <div className={macroStyles.macroUnitsScrollArea}>{bodyContent}</div>
           <div className="sidebar-version-footer">
             <VersionBadge />
           </div>
@@ -305,7 +308,8 @@ export function AdminTurnClockSidebar({
   if (collapsed) {
     return (
       <aside
-        className="macro-sidebar macro-sidebar-collapsed"
+        className={macroStyles.macroSidebar}
+        data-collapsed="true"
         aria-label="Turn and Clock Settings Collapsed"
       >
         <CollapsedRail
@@ -320,12 +324,17 @@ export function AdminTurnClockSidebar({
 
   return (
     <aside
-      className="macro-sidebar macro-sidebar-expanded admin-direct-edit-sidebar admin-turn-clock-sidebar"
+      className={cx(
+        macroStyles.macroSidebar,
+        'admin-direct-edit-sidebar',
+        'admin-turn-clock-sidebar',
+      )}
+      data-expanded="true"
       data-testid="macro-sidebar"
       aria-label="Turn and Clock Settings"
     >
       <div
-        className="active-power-banner admin-sidebar-banner"
+        className={cx(macroStyles.activePowerBanner, 'admin-sidebar-banner')}
         style={{ borderLeft: '4px solid #b91c1c' }}
       >
         <div className="admin-sidebar-header-row">
@@ -347,7 +356,7 @@ export function AdminTurnClockSidebar({
         </div>
       </div>
 
-      <div className="macro-units-scroll-area">{bodyContent}</div>
+      <div className={macroStyles.macroUnitsScrollArea}>{bodyContent}</div>
 
       <div className="sidebar-version-footer">
         <VersionBadge />

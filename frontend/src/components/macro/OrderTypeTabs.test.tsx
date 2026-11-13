@@ -31,7 +31,9 @@ describe('OrderTypeTabs in a movement phase', () => {
   it('offers Hold, Move and Support to an army, with Hold active by default', () => {
     const { container } = tabs();
     expect(names(container)).toEqual(['HOLD', 'MOVE', 'SUPPORT']);
-    expect(container.querySelector('.active')).toHaveTextContent('HOLD');
+    expect(container.querySelector('[data-active="true"]')).toHaveTextContent(
+      'HOLD',
+    );
   });
 
   it('offers a convoy only to a fleet at sea', () => {
@@ -47,8 +49,10 @@ describe('OrderTypeTabs in a movement phase', () => {
 
   it("marks the unit's current order type active", () => {
     const { container } = tabs({ order: orderFor(A_BRE, 'SUPPORT') });
-    expect(container.querySelectorAll('.active')).toHaveLength(1);
-    expect(container.querySelector('.active')).toHaveTextContent('SUPPORT');
+    expect(container.querySelectorAll('[data-active="true"]')).toHaveLength(1);
+    expect(container.querySelector('[data-active="true"]')).toHaveTextContent(
+      'SUPPORT',
+    );
   });
 
   it('asks for the type that was pressed', () => {
@@ -98,11 +102,12 @@ describe('OrderTypeTabs in a retreat phase', () => {
     });
     r.container.remove();
     const d = retreat({ order: orderFor(dislodged, 'DISBAND') });
-    expect(d.container.querySelector('.active')).toHaveStyle({
+    expect(d.container.querySelector('[data-active="true"]')).toHaveStyle({
       backgroundColor: '#dc2626',
     });
     expect(
-      (d.container.querySelector('.active') as HTMLElement).style.borderColor,
+      (d.container.querySelector('[data-active="true"]') as HTMLElement).style
+        .borderColor,
     ).toBe('rgb(252, 165, 165)');
   });
 });
@@ -121,7 +126,9 @@ describe('OrderTypeTabs in winter', () => {
   it('offers Keep or Disband when units must go, and Keep is active', () => {
     const { container, handleOrderTypeChange } = winter({ buildCount: -1 });
     expect(names(container)).toEqual(['KEEP UNIT', 'DISBAND UNIT']);
-    expect(container.querySelector('.active')).toHaveTextContent('KEEP UNIT');
+    expect(container.querySelector('[data-active="true"]')).toHaveTextContent(
+      'KEEP UNIT',
+    );
     fireEvent.click(screen.getByTestId('btn-adjustment-keep'));
     expect(handleOrderTypeChange).toHaveBeenCalledWith(A_BRE, 'HOLD');
     fireEvent.click(screen.getByTestId('btn-adjustment-disband'));
@@ -130,14 +137,15 @@ describe('OrderTypeTabs in winter', () => {
 
   it('moves the active mark to Disband, in red, for a unit being disbanded', () => {
     const { container } = winter({ buildCount: -1, isDisbanding: true });
-    expect(container.querySelector('.active')).toHaveTextContent(
+    expect(container.querySelector('[data-active="true"]')).toHaveTextContent(
       'DISBAND UNIT',
     );
-    expect(container.querySelector('.active')).toHaveStyle({
+    expect(container.querySelector('[data-active="true"]')).toHaveStyle({
       backgroundColor: '#dc2626',
     });
     expect(
-      (container.querySelector('.active') as HTMLElement).style.borderColor,
+      (container.querySelector('[data-active="true"]') as HTMLElement).style
+        .borderColor,
     ).toBe('rgb(252, 165, 165)');
   });
 });

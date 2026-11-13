@@ -10,6 +10,7 @@ import {
   IconSelectDropdown,
   type IconSelectOption,
 } from '../../map/hud/IconSelectDropdown';
+import styles from '../OrderParameterControls.module.css';
 
 interface MoveControlsProps {
   unit: Unit;
@@ -176,7 +177,7 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
   }
 
   return (
-    <div className="order-param-row">
+    <div className={styles.orderParamRow}>
       <label>Destination:</label>
       <select
         data-testid="select-order-target"
