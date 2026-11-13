@@ -1,4 +1,4 @@
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Volume2, VolumeX } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { DisplayPrefsSaveState } from '../hooks/useDisplayPrefs';
 import {
@@ -171,6 +171,35 @@ export function DisplaySettingsOptions({
             </label>
           ))}
         </div>
+      </fieldset>
+
+      <fieldset className="display-settings-group">
+        <legend>Notifications</legend>
+        <label className="display-option">
+          <input
+            type="checkbox"
+            checked={prefs.soundNotifications}
+            onChange={(event) =>
+              onChange({ soundNotifications: event.target.checked })
+            }
+          />
+          <span className="display-option-card">
+            <span className="display-option-icon" aria-hidden="true">
+              {prefs.soundNotifications ? (
+                <Volume2 size={18} />
+              ) : (
+                <VolumeX size={18} />
+              )}
+            </span>
+            <span className="display-option-text">
+              <span className="display-option-name">Turn &amp; vote chime</span>
+              <span className="display-option-description">
+                Play an audio chime when a turn or vote needs your attention in
+                a background tab.
+              </span>
+            </span>
+          </span>
+        </label>
       </fieldset>
 
       <p className="display-settings-status" role="status">
