@@ -1,0 +1,37 @@
+@layer components {
+  /* Toast Notification */
+  .imperial-toast-banner {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    /* Centered: the bottom-left corner of the map holds the phase timer */
+    transform: translateX(-50%);
+    max-width: 360px;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: #1e293b;
+    border: 1px solid #c8963e;
+    color: #fef08a;
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@layer compact {
+  /* Toasts drop from under the top bar: the bottom of a game belongs to the order sheet, and a
+   toast there would sit on Finalize. They only inform, so taps pass through them. */
+  :global([data-layout="compact"]) .imperial-toast-banner {
+    top: calc(64px + env(safe-area-inset-top));
+    bottom: auto;
+    left: 16px;
+    right: 16px;
+    transform: none;
+    max-width: none;
+    pointer-events: none;
+  }
+}

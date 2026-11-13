@@ -3,6 +3,9 @@ import type React from 'react';
 import { useState } from 'react';
 import { updateAccountDisplayName } from '../lib/supabase';
 import type { AuthUser } from '../types/diplomacy';
+import styles from './AccountModal.module.css';
+import authStyles from './AuthModal.module.css';
+import { Modal, ModalCloseButton } from './modal/Modal';
 
 interface AccountModalProps {
   isOpen: boolean;
@@ -67,100 +70,102 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop auth-modal-backdrop" onClick={onClose}>
-      <div
-        className="auth-modal-card"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="account-modal-title"
-      >
-        <div className="auth-modal-header">
-          <div className="auth-modal-title-row">
-            <ShieldCheck size={20} className="auth-shield-icon" />
-            <h2 id="account-modal-title">
-              {onboarding ? 'Choose Your Public Username' : 'Account Settings'}
-            </h2>
-          </div>
-          <button
-            type="button"
-            className="auth-close-btn"
-            onClick={onClose}
-            aria-label="Close account modal"
+    <Modal
+      onBackdropClick={onClose}
+      cardClassName={authStyles.authModalCard}
+      cardProps={{
+        role: 'dialog',
+        'aria-modal': true,
+        'aria-labelledby': 'account-modal-title',
+      }}
+    >
+      <div className={authStyles.authModalHeader}>
+        <div className={authStyles.authModalTitleRow}>
+          <ShieldCheck size={20} className={authStyles.authShieldIcon} />
+          <h2 id="account-modal-title">
+            {onboarding ? 'Choose Your Public Username' : 'Account Settings'}
+          </h2>
+        </div>
+        <ModalCloseButton
+          className={authStyles.authCloseBtn}
+          onClick={onClose}
+          aria-label="Close account modal"
+        >
+          <X size={18} />
+        </ModalCloseButton>
+      </div>
+
+      {onboarding && (
+        <div className={authStyles.authReasonBanner}>
+          Pick a public username so other players do not see your real name or
+          email. If you skip this step, your name stays &ldquo;Envoy&rdquo;.
+        </div>
+      )}
+
+      <form className={authStyles.authForm} onSubmit={handleSubmit}>
+        <div className={authStyles.authField}>
+          <span className={styles.accountFieldLabel}>
+            Signed-in Email (Private)
+          </span>
+          <div
+            className={styles.accountReadonlyValue}
+            data-testid="account-email"
           >
-            <X size={18} />
-          </button>
+            <Lock size={13} />
+            <span>{user.email}</span>
+          </div>
         </div>
 
-        {onboarding && (
-          <div className="auth-reason-banner">
-            Pick a public username so other players do not see your real name or
-            email. If you skip this step, your name stays &ldquo;Envoy&rdquo;.
-          </div>
-        )}
+        <div className={authStyles.authField}>
+          <label htmlFor="account-username">Public Username</label>
+          <input
+            id="account-username"
+            type="text"
+            placeholder="e.g. Metternich, IronChancellor"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            minLength={2}
+            maxLength={24}
+            required
+            autoFocus
+          />
+          <span>
+            2–24 characters. Shown in lobbies, room cards, and game standings.
+          </span>
+        </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="auth-field">
-            <span className="account-field-label">
-              Signed-in Email (Private)
-            </span>
-            <div className="account-readonly-value" data-testid="account-email">
-              <Lock size={13} />
-              <span>{user.email}</span>
-            </div>
-          </div>
+        {error && <div>{error}</div>}
 
-          <div className="auth-field">
-            <label htmlFor="account-username">Public Username</label>
-            <input
-              id="account-username"
-              type="text"
-              placeholder="e.g. Metternich, IronChancellor"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              minLength={2}
-              maxLength={24}
-              required
-              autoFocus
-            />
-            <span className="auth-field-hint">
-              2–24 characters. Shown in lobbies, room cards, and game standings.
-            </span>
-          </div>
+        <button
+          type="submit"
+          className={authStyles.authSubmitBtn}
+          disabled={submitting}
+        >
+          <UserIcon size={15} />
+          <span>
+            {submitting
+              ? 'Saving...'
+              : onboarding
+                ? 'Set Username'
+                : 'Save Username'}
+          </span>
+        </button>
 
-          {error && <div className="auth-error-banner">{error}</div>}
-
+        {!onboarding && (
           <button
-            type="submit"
-            className="auth-submit-btn"
+            type="button"
+            className={styles.accountSignoutBtn}
+            onClick={() => {
+              onClose();
+              onSignOut();
+            }}
             disabled={submitting}
           >
-            <UserIcon size={15} />
-            <span>
-              {submitting
-                ? 'Saving...'
-                : onboarding
-                  ? 'Set Username'
-                  : 'Save Username'}
-            </span>
+            <LogOut size={14} />
+            <span>Sign Out</span>
           </button>
-
-          {!onboarding && (
-            <button
-              type="button"
-              className="account-signout-btn"
-              onClick={() => {
-                onClose();
-                onSignOut();
-              }}
-              disabled={submitting}
-            >
-              <LogOut size={14} />
-              <span>Sign Out</span>
-            </button>
-          )}
-        </form>
-      </div>
-    </div>
+        )}
+      </form>
+    </Modal>
   );
 };

@@ -15,6 +15,10 @@ const apiTarget = process.env.VITE_API_TARGET || 'http://127.0.0.1:8000';
 
 export default defineConfig({
   plugins: [react()],
+  css: {
+    // Module class names are written in kebab-case and read as `styles.camelCase`.
+    modules: { localsConvention: 'camelCaseOnly' },
+  },
   define: {
     __COMMIT_HASH__: JSON.stringify(commitHash),
   },

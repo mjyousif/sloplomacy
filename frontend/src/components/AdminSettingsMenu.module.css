@@ -1,0 +1,75 @@
+/* The Administrator menu: the Display settings menu's panel, group and option cards
+   (DisplaySettings.module.css) with the mode cards and the exit button on top. The type selector
+   on the card keeps it above `.display-option-card` whatever the order the two modules load in. */
+@layer components {
+  .display-admin-actions:last-child {
+    margin-bottom: 0;
+  }
+
+  button.admin-mode-card {
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+    color: inherit;
+    cursor: pointer;
+    padding: 8px 10px;
+  }
+
+  button.admin-mode-card:hover {
+    background: #2a3140;
+    border-color: #4b5568;
+  }
+
+  button.admin-mode-card[data-active="true"] {
+    border-color: #dc2626;
+    background: rgba(153, 27, 27, 0.22);
+  }
+
+  button.admin-mode-card:focus-visible {
+    outline: 2px solid #dc2626;
+    outline-offset: 1px;
+  }
+
+  .admin-mode-icon {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: #1a1f28;
+    border: 1px solid #353b47;
+    color: #e05252;
+  }
+
+  button.admin-mode-card[data-active="true"] .admin-mode-icon {
+    background: rgba(185, 28, 28, 0.24);
+    border-color: rgba(220, 38, 38, 0.55);
+    color: #fecaca;
+  }
+
+  .admin-mode-exit-btn {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 7px;
+    border: 1px solid #475569;
+    background: #232936;
+    color: #f1f5f9;
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .admin-mode-exit-btn:hover {
+    border-color: #f87171;
+    background: rgba(185, 28, 28, 0.24);
+    color: #ffffff;
+  }
+}

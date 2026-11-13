@@ -125,7 +125,7 @@ test.describe('Scenario 06: Phone game screen', () => {
       await expect(parisCard.locator('.behavior-target-text')).toContainText('Picardy');
       // No problems left: the tappable count gives way to a plain check.
       await expect(page.locator('[data-testid="compact-issue-badge"]')).toHaveCount(0);
-      await expect(page.locator('.compact-issue-badge.is-clean')).toBeVisible();
+      await expect(page.locator('[data-testid="compact-issue-clean"]')).toBeVisible();
       await recorder.recordStep(page, '07_paris_to_picardy_by_tap');
 
       // 7. Back to the lobby.

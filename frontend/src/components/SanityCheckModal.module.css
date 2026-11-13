@@ -1,0 +1,322 @@
+@layer components {
+  .sanity-modal-card {
+    max-width: 620px;
+    background: #1c212b;
+    border: 2px solid #f59e0b;
+    border-radius: 14px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 86vh;
+  }
+
+  .sanity-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px 22px;
+    background: linear-gradient(
+      180deg,
+      rgba(245, 158, 11, 0.16) 0%,
+      rgba(28, 33, 43, 0) 100%
+    );
+    border-bottom: 1px solid #333b4d;
+  }
+
+  .sanity-header-title-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .sanity-hazard-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: rgba(245, 158, 11, 0.2);
+    border: 1px solid #f59e0b;
+    color: #fbbf24;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .sanity-overline {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: #fbbf24;
+  }
+
+  .sanity-main-title {
+    font-family: "Cinzel", serif;
+    font-size: 1.12rem;
+    font-weight: 800;
+    color: #f8fafc;
+    margin-top: 2px;
+  }
+
+  .sanity-close-x {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+  }
+
+  .sanity-summary-banner {
+    padding: 12px 22px;
+    background: #161a22;
+    border-bottom: 1px solid #2b3242;
+    font-size: 0.83rem;
+    color: #cbd5e1;
+    line-height: 1.45;
+  }
+
+  .sanity-issues-list {
+    padding: 16px 22px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sanity-issue-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #242a36;
+    border: 1px solid #394256;
+  }
+
+  .sanity-issue-item[data-severity="warning"] {
+    border-left: 4px solid #f59e0b;
+  }
+
+  .sanity-issue-item[data-severity="info"] {
+    border-left: 4px solid #3b82f6;
+  }
+
+  .sanity-issue-item[data-severity="error"] {
+    border-left: 4px solid #ef4444;
+  }
+
+  .sanity-issue-icon {
+    margin-top: 2px;
+    color: #fbbf24;
+  }
+
+  .sanity-issue-item[data-severity="info"] .sanity-issue-icon {
+    color: #60a5fa;
+  }
+
+  .sanity-issue-item[data-severity="error"] .sanity-issue-icon {
+    color: #f87171;
+  }
+
+  .sanity-issue-content {
+    flex: 1;
+  }
+
+  .sanity-issue-header-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .sanity-code-pill {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.64rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .sanity-code-pill[data-severity="warning"] {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fcd34d;
+  }
+
+  .sanity-code-pill[data-severity="info"] {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+  }
+
+  .sanity-code-pill[data-severity="error"] {
+    background: rgba(239, 68, 68, 0.25);
+    color: #fca5a5;
+  }
+
+  .sanity-issue-title {
+    font-size: 0.88rem;
+    color: #f8fafc;
+  }
+
+  .sanity-issue-message {
+    font-size: 0.78rem;
+    color: #cbd5e1;
+    line-height: 1.4;
+  }
+
+  .sanity-inspect-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #475569;
+    background: #1b2029;
+    color: #e2e8f0;
+    font-size: 0.73rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .sanity-inspect-btn:hover {
+    background: #2d3748;
+    border-color: #eab308;
+  }
+
+  .sanity-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 15px 22px;
+    background: #161a22;
+    border-top: 1px solid #2d3545;
+  }
+
+  .sanity-back-btn {
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid #64748b;
+    background: #283140;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .sanity-back-btn:hover {
+    background: #364154;
+  }
+
+  .sanity-force-confirm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid #f59e0b;
+    background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .sanity-force-confirm-btn:hover {
+    filter: brightness(1.1);
+  }
+
+  /* Admin Action Warning Modal */
+  .admin-warning-intro {
+    margin: 0 0 12px;
+    font-size: 0.84rem;
+    color: #cbd5e1;
+    line-height: 1.45;
+  }
+
+  .admin-warning-entries-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .admin-warning-entry-card {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    background: rgba(127, 29, 29, 0.18);
+  }
+
+  .admin-warning-entry-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 0.74rem;
+    color: #fca5a5;
+  }
+
+  .admin-warning-turn-badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.25);
+    color: #fee2e2;
+    font-weight: 700;
+  }
+
+  .admin-warning-time {
+    margin-left: auto;
+    color: #94a3b8;
+  }
+
+  .admin-warning-summary-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 0.8rem;
+    color: #f8fafc;
+    line-height: 1.45;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .sanity-modal-header,
+  :global([data-layout="compact"]) .sanity-summary-banner,
+  :global([data-layout="compact"]) .sanity-issues-list {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  :global([data-layout="compact"]) .sanity-modal-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  /* A Fix Order button beside the text squeezes the message to a sliver, so it goes underneath. */
+  :global([data-layout="compact"]) .sanity-issue-item {
+    flex-wrap: wrap;
+  }
+
+  :global([data-layout="compact"]) .sanity-issue-content {
+    flex: 1 1 calc(100% - 40px);
+    min-width: 0;
+  }
+
+  :global([data-layout="compact"]) .sanity-inspect-btn {
+    flex: 1 1 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  :global([data-layout="compact"]) .sanity-issue-header-row {
+    flex-wrap: wrap;
+  }
+
+  /* Small pills and labels get at least 12px of text on a phone. */
+  :global([data-layout="compact"]) .sanity-code-pill,
+  :global([data-layout="compact"]) .sanity-overline {
+    font-size: 0.75rem;
+  }
+}

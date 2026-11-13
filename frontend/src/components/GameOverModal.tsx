@@ -12,6 +12,8 @@ import {
   getMyParticipant,
   getSupplyCenterCounts,
 } from '../utils/gameOverHelpers';
+import styles from './GameOverModal.module.css';
+import { Modal } from './modal/Modal';
 import { PowerFlag } from './PowerFlag';
 
 export interface GameOverModalProps {
@@ -71,131 +73,132 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
     : 'Inspect Final Board';
 
   return (
-    <div
-      className="game-over-modal-backdrop"
-      data-testid="game-over-modal-backdrop"
-      onClick={onInspectBoard}
+    <Modal
+      scrim="raised"
+      phone="none"
+      onBackdropClick={onInspectBoard}
+      cardClassName={styles.gameOverModalCard}
+      backdropProps={{ 'data-testid': 'game-over-modal-backdrop' }}
+      cardProps={{
+        'data-testid': 'game-over-modal',
+        'data-victory': String(isVictory),
+        role: 'dialog',
+        'aria-modal': true,
+        'aria-labelledby': 'game-over-modal-title',
+      }}
     >
-      <div
-        className={`game-over-modal-card ${isVictory ? 'victory' : ''}`}
-        data-testid="game-over-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="game-over-modal-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="game-over-modal-header">
-          <span className="game-over-badge">
-            <Crown size={14} />
-            <span>{badgeText}</span>
-          </span>
-          <button
-            type="button"
-            className="game-over-close-btn"
-            aria-label="Close Game Over modal"
-            onClick={onInspectBoard}
-          >
-            <X size={18} />
-          </button>
+      <div className={styles.gameOverModalHeader}>
+        <span className={styles.gameOverBadge}>
+          <Crown size={14} />
+          <span>{badgeText}</span>
+        </span>
+        <button
+          type="button"
+          className={styles.gameOverCloseBtn}
+          aria-label="Close Game Over modal"
+          onClick={onInspectBoard}
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className={styles.gameOverHero}>
+        <div
+          className={styles.gameOverCrest}
+          style={{
+            borderColor: winnerMeta.color,
+            backgroundColor: winnerMeta.lightBg,
+          }}
+        >
+          <PowerFlag power={winner} width={38} height={26} />
         </div>
+        <h2 id="game-over-modal-title" className={styles.gameOverTitle}>
+          {title}
+        </h2>
+      </div>
 
-        <div className="game-over-hero">
-          <div
-            className="game-over-crest"
-            style={{
-              borderColor: winnerMeta.color,
-              backgroundColor: winnerMeta.lightBg,
-            }}
-          >
-            <PowerFlag power={winner} width={38} height={26} />
-          </div>
-          <h2 id="game-over-modal-title" className="game-over-title">
-            {title}
-          </h2>
+      <p className={styles.gameOverBody}>
+        {isVictory ? (
+          <>
+            Congratulations, Envoy <strong>{displayName}</strong>. Under the
+            banner of <strong>{winnerPowerName}</strong>, your General Staff has
+            secured <strong>{winnerScCount} supply centers</strong> and
+            established undisputed dominion across the European theatre. The
+            Chancellery records this campaign in your honor.
+          </>
+        ) : isParticipantDefeat && viewerPower ? (
+          <>
+            Envoy <strong>{displayName}</strong>, the instruments of peace have
+            been signed. <strong>{winnerPowerName}</strong> has secured{' '}
+            <strong>{winnerScCount} supply centers</strong>, bringing the{' '}
+            <strong>{seasonYear}</strong> campaign to a close. Though{' '}
+            <strong>{POWER_METADATA[viewerPower].shortName}</strong> did not
+            claim continental hegemony, your dispatches and maneuvers are
+            preserved in the Chancellery archives.
+          </>
+        ) : (
+          <>
+            The campaign has concluded in <strong>{seasonYear}</strong>.{' '}
+            <strong>{winnerPowerName}</strong> has secured{' '}
+            <strong>{winnerScCount} supply centers</strong>, achieving the
+            majority threshold required for victory.
+          </>
+        )}
+      </p>
+
+      <div className={styles.gameOverStandings}>
+        <div className={styles.gameOverStandingsLabel}>
+          Final Supply Center Standings
         </div>
-
-        <p className="game-over-body">
-          {isVictory ? (
-            <>
-              Congratulations, Envoy <strong>{displayName}</strong>. Under the
-              banner of <strong>{winnerPowerName}</strong>, your General Staff
-              has secured <strong>{winnerScCount} supply centers</strong> and
-              established undisputed dominion across the European theatre. The
-              Chancellery records this campaign in your honor.
-            </>
-          ) : isParticipantDefeat && viewerPower ? (
-            <>
-              Envoy <strong>{displayName}</strong>, the instruments of peace
-              have been signed. <strong>{winnerPowerName}</strong> has secured{' '}
-              <strong>{winnerScCount} supply centers</strong>, bringing the{' '}
-              <strong>{seasonYear}</strong> campaign to a close. Though{' '}
-              <strong>{POWER_METADATA[viewerPower].shortName}</strong> did not
-              claim continental hegemony, your dispatches and maneuvers are
-              preserved in the Chancellery archives.
-            </>
-          ) : (
-            <>
-              The campaign has concluded in <strong>{seasonYear}</strong>.{' '}
-              <strong>{winnerPowerName}</strong> has secured{' '}
-              <strong>{winnerScCount} supply centers</strong>, achieving the
-              majority threshold required for victory.
-            </>
-          )}
-        </p>
-
-        <div className="game-over-standings">
-          <div className="game-over-standings-label">
-            Final Supply Center Standings
-          </div>
-          <div className="game-over-standings-grid">
-            {standings.map(({ power, count }) => {
-              const meta = POWER_METADATA[power];
-              const isWinner = power === winner;
-              return (
-                <div
-                  key={power}
-                  className={`game-over-standing-chip ${isWinner ? 'winner' : ''}`}
-                  style={
-                    isWinner
-                      ? {
-                          borderColor: meta.color,
-                          backgroundColor: meta.lightBg,
-                        }
-                      : undefined
-                  }
-                >
-                  <PowerFlag power={power} width={16} height={11} />
-                  <span className="game-over-standing-name">
-                    {meta.shortName}
-                  </span>
-                  <span className="game-over-standing-count">{count}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="game-over-actions">
-          <button
-            type="button"
-            className="game-over-primary-btn"
-            data-testid="game-over-inspect-btn"
-            onClick={onInspectBoard}
-          >
-            <Eye size={15} />
-            <span>{inspectLabel}</span>
-          </button>
-          <button
-            type="button"
-            className="game-over-secondary-btn"
-            data-testid="game-over-lobby-btn"
-            onClick={onReturnToLobby}
-          >
-            <Home size={15} />
-            <span>Return to Chancellery</span>
-          </button>
+        <div className={styles.gameOverStandingsGrid}>
+          {standings.map(({ power, count }) => {
+            const meta = POWER_METADATA[power];
+            const isWinner = power === winner;
+            return (
+              <div
+                key={power}
+                className={styles.gameOverStandingChip}
+                data-winner={isWinner}
+                style={
+                  isWinner
+                    ? {
+                        borderColor: meta.color,
+                        backgroundColor: meta.lightBg,
+                      }
+                    : undefined
+                }
+              >
+                <PowerFlag power={power} width={16} height={11} />
+                <span className={styles.gameOverStandingName}>
+                  {meta.shortName}
+                </span>
+                <span className={styles.gameOverStandingCount}>{count}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
-    </div>
+
+      <div className={styles.gameOverActions}>
+        <button
+          type="button"
+          className={styles.gameOverPrimaryBtn}
+          data-testid="game-over-inspect-btn"
+          onClick={onInspectBoard}
+        >
+          <Eye size={15} />
+          <span>{inspectLabel}</span>
+        </button>
+        <button
+          type="button"
+          className={styles.gameOverSecondaryBtn}
+          data-testid="game-over-lobby-btn"
+          onClick={onReturnToLobby}
+        >
+          <Home size={15} />
+          <span>Return to Chancellery</span>
+        </button>
+      </div>
+    </Modal>
   );
 };

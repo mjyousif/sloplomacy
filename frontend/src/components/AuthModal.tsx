@@ -18,6 +18,8 @@ import {
   signUpWithEmailPassword,
 } from '../lib/supabase';
 import type { AuthUser } from '../types/diplomacy';
+import styles from './AuthModal.module.css';
+import { Modal, ModalCloseButton } from './modal/Modal';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -130,189 +132,199 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop auth-modal-backdrop" onClick={onClose}>
-      <div
-        className="auth-modal-card"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="auth-modal-title"
-      >
-        <div className="auth-modal-header">
-          <div className="auth-modal-title-row">
-            <ShieldCheck size={20} className="auth-shield-icon" />
-            <h2 id="auth-modal-title">Diplomatic Credentials</h2>
-          </div>
-          <button
-            className="auth-close-btn"
-            onClick={onClose}
-            aria-label="Close authentication modal"
-          >
-            <X size={18} />
-          </button>
+    <Modal
+      onBackdropClick={onClose}
+      cardClassName={styles.authModalCard}
+      cardProps={{
+        role: 'dialog',
+        'aria-modal': true,
+        'aria-labelledby': 'auth-modal-title',
+      }}
+    >
+      <div className={styles.authModalHeader}>
+        <div className={styles.authModalTitleRow}>
+          <ShieldCheck size={20} className={styles.authShieldIcon} />
+          <h2 id="auth-modal-title">Diplomatic Credentials</h2>
         </div>
+        <ModalCloseButton
+          className={styles.authCloseBtn}
+          onClick={onClose}
+          aria-label="Close authentication modal"
+        >
+          <X size={18} />
+        </ModalCloseButton>
+      </div>
 
-        {reasonBanner && (
-          <div className="auth-reason-banner">{reasonBanner}</div>
+      {reasonBanner && (
+        <div className={styles.authReasonBanner}>{reasonBanner}</div>
+      )}
+
+      <div className={styles.authProviderStatus}>
+        {isSupabaseConfigured ? (
+          <span className={styles.statusPill} data-source="live">
+            ● Connected to Supabase Auth
+          </span>
+        ) : (
+          <span className={styles.statusPill} data-source="local">
+            <Zap size={12} /> Local Dev Auth Mode (Add VITE_SUPABASE_URL in .env
+            for cloud)
+          </span>
         )}
+      </div>
 
-        <div className="auth-provider-status">
-          {isSupabaseConfigured ? (
-            <span className="status-pill supabase-live">
-              ● Connected to Supabase Auth
-            </span>
-          ) : (
-            <span className="status-pill supabase-local">
-              <Zap size={12} /> Local Dev Auth Mode (Add VITE_SUPABASE_URL in
-              .env for cloud)
-            </span>
-          )}
-        </div>
+      {/* One-Click OAuth Providers */}
+      <div className={styles.authOauthGrid}>
+        <button
+          type="button"
+          className={styles.oauthBtn}
+          onClick={() => handleOAuth('google')}
+          disabled={submitting}
+        >
+          <span className={styles.oauthIcon}>G</span>
+          Continue with Google
+        </button>
+        <button
+          type="button"
+          className={styles.oauthBtn}
+          onClick={() => handleOAuth('discord')}
+          disabled={submitting}
+        >
+          <span className={styles.oauthIcon}>◈</span>
+          Continue with Discord
+        </button>
+      </div>
 
-        {/* One-Click OAuth Providers */}
-        <div className="auth-oauth-grid">
-          <button
-            type="button"
-            className="oauth-btn"
-            onClick={() => handleOAuth('google')}
-            disabled={submitting}
-          >
-            <span className="oauth-icon">G</span>
-            Continue with Google
-          </button>
-          <button
-            type="button"
-            className="oauth-btn"
-            onClick={() => handleOAuth('discord')}
-            disabled={submitting}
-          >
-            <span className="oauth-icon">◈</span>
-            Continue with Discord
-          </button>
-        </div>
+      <div className={styles.authDivider}>
+        <span>or use email credentials</span>
+      </div>
 
-        <div className="auth-divider">
-          <span>or use email credentials</span>
-        </div>
+      {/* Mode Switcher Tabs */}
+      <div className={styles.authTabs}>
+        <button
+          type="button"
+          data-testid="auth-tab-signin"
+          data-active={tab === 'signin'}
+          className={styles.authTab}
+          onClick={() => {
+            setTab('signin');
+            setError(null);
+            setInfoMessage(null);
+          }}
+        >
+          <LogIn size={14} />
+          Sign In
+        </button>
+        <button
+          type="button"
+          data-testid="auth-tab-signup"
+          data-active={tab === 'signup'}
+          className={styles.authTab}
+          onClick={() => {
+            setTab('signup');
+            setError(null);
+            setInfoMessage(null);
+          }}
+        >
+          <UserPlus size={14} />
+          Create Account
+        </button>
+        <button
+          type="button"
+          data-testid="auth-tab-magic"
+          data-active={tab === 'magic'}
+          className={styles.authTab}
+          onClick={() => {
+            setTab('magic');
+            setError(null);
+            setInfoMessage(null);
+          }}
+        >
+          <Sparkles size={14} />
+          Magic Link
+        </button>
+      </div>
 
-        {/* Mode Switcher Tabs */}
-        <div className="auth-tabs">
-          <button
-            type="button"
-            className={`auth-tab ${tab === 'signin' ? 'active' : ''}`}
-            onClick={() => {
-              setTab('signin');
-              setError(null);
-              setInfoMessage(null);
-            }}
-          >
-            <LogIn size={14} />
-            Sign In
-          </button>
-          <button
-            type="button"
-            className={`auth-tab ${tab === 'signup' ? 'active' : ''}`}
-            onClick={() => {
-              setTab('signup');
-              setError(null);
-              setInfoMessage(null);
-            }}
-          >
-            <UserPlus size={14} />
-            Create Account
-          </button>
-          <button
-            type="button"
-            className={`auth-tab ${tab === 'magic' ? 'active' : ''}`}
-            onClick={() => {
-              setTab('magic');
-              setError(null);
-              setInfoMessage(null);
-            }}
-          >
-            <Sparkles size={14} />
-            Magic Link
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="auth-form">
-          {tab === 'signup' && (
-            <div className="auth-field">
-              <label htmlFor="auth-display-name"> Envoy / Commander Name</label>
-              <input
-                id="auth-display-name"
-                type="text"
-                name="name"
-                autoComplete="name"
-                placeholder="e.g. Talleyrand"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-              />
-            </div>
-          )}
-
-          <div className="auth-field">
-            <label htmlFor="auth-email">
-              <Mail size={13} /> Email Address
-            </label>
+      <form onSubmit={handleSubmit} className={styles.authForm}>
+        {tab === 'signup' && (
+          <div className={styles.authField}>
+            <label htmlFor="auth-display-name"> Envoy / Commander Name</label>
             <input
-              id="auth-email"
-              type="email"
-              name="email"
-              autoComplete="username webauthn"
-              placeholder="envoy@chancellery.eu"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="auth-display-name"
+              type="text"
+              name="name"
+              autoComplete="name"
+              placeholder="e.g. Talleyrand"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
             />
           </div>
+        )}
 
-          {tab !== 'magic' && (
-            <div className="auth-field">
-              <label htmlFor="auth-password">
-                <KeyRound size={13} /> Password
-              </label>
-              <input
-                id="auth-password"
-                type="password"
-                name="password"
-                autoComplete={
-                  tab === 'signup' ? 'new-password' : 'current-password'
-                }
-                placeholder="Minimum 6 characters"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-          )}
-
-          {error && <div className="auth-error-box">{error}</div>}
-          {infoMessage && <div className="auth-info-box">{infoMessage}</div>}
-
-          <button
-            type="submit"
-            className="auth-submit-btn"
-            disabled={submitting}
-          >
-            {submitting
-              ? 'Authenticating...'
-              : tab === 'signin'
-                ? 'Sign In to Chancellery'
-                : tab === 'signup'
-                  ? 'Create Diplomatic Account'
-                  : 'Send Passwordless Magic Link'}
-          </button>
-        </form>
-
-        <div className="auth-footer-note">
-          <span>Just want to experiment with moves?</span>
-          <button type="button" className="auth-guest-link" onClick={onClose}>
-            Continue in Guest Sandbox Mode →
-          </button>
+        <div className={styles.authField}>
+          <label htmlFor="auth-email">
+            <Mail size={13} /> Email Address
+          </label>
+          <input
+            id="auth-email"
+            type="email"
+            name="email"
+            autoComplete="username webauthn"
+            placeholder="envoy@chancellery.eu"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
         </div>
+
+        {tab !== 'magic' && (
+          <div className={styles.authField}>
+            <label htmlFor="auth-password">
+              <KeyRound size={13} /> Password
+            </label>
+            <input
+              id="auth-password"
+              type="password"
+              name="password"
+              autoComplete={
+                tab === 'signup' ? 'new-password' : 'current-password'
+              }
+              placeholder="Minimum 6 characters"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+        )}
+
+        {error && <div className={styles.authErrorBox}>{error}</div>}
+        {infoMessage && <div className={styles.authInfoBox}>{infoMessage}</div>}
+
+        <button
+          type="submit"
+          className={styles.authSubmitBtn}
+          disabled={submitting}
+        >
+          {submitting
+            ? 'Authenticating...'
+            : tab === 'signin'
+              ? 'Sign In to Chancellery'
+              : tab === 'signup'
+                ? 'Create Diplomatic Account'
+                : 'Send Passwordless Magic Link'}
+        </button>
+      </form>
+
+      <div className={styles.authFooterNote}>
+        <span>Just want to experiment with moves?</span>
+        <button
+          type="button"
+          className={styles.authGuestLink}
+          onClick={onClose}
+        >
+          Continue in Guest Sandbox Mode →
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 };

@@ -166,7 +166,7 @@ describe('AppHeader: the toast and no red Direct-Edit banner', () => {
   it('shows no banner or toast by default, and never renders a red Direct-Edit banner when directEditActive is true', () => {
     const { container, rerender } = render(<AppHeader {...props()} />);
     expect(container.querySelector('.admin-override-banner')).toBeNull();
-    expect(container.querySelector('.imperial-toast-banner')).toBeNull();
+    expect(screen.queryByTestId('toast-banner')).toBeNull();
 
     rerender(<AppHeader {...props({ directEditActive: true })} />);
     expect(container.querySelector('.admin-override-banner')).toBeNull();
@@ -176,7 +176,7 @@ describe('AppHeader: the toast and no red Direct-Edit banner', () => {
     const { container } = render(
       <AppHeader {...props({ toastBanner: 'Left campaign.' })} />,
     );
-    const toast = container.querySelector('.imperial-toast-banner');
+    const toast = screen.getByTestId('toast-banner');
     expect(toast).toHaveTextContent('Left campaign.');
     expect(container.lastElementChild).toBe(toast);
     expect(container.firstElementChild?.textContent).toBe('top header');

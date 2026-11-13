@@ -10,6 +10,7 @@ import {
   UNIT_MARKS,
   type UnitMark,
 } from '../utils/displayPrefs';
+import styles from './DisplaySettings.module.css';
 import { getPieceFrame, MapPiece, makePiecePill, SupplyStar } from './MapPiece';
 
 const PREVIEW_COLOR = '#2f6e49';
@@ -49,7 +50,7 @@ function PieceStylePreview({
 
   return (
     <svg
-      className="display-option-preview"
+      className={styles.displayOptionPreview}
       viewBox="-36 -22 72 44"
       aria-hidden="true"
     >
@@ -79,7 +80,7 @@ function UnitMarkPreview({ mark }: { mark: UnitMark }) {
   const frame = getPieceFrame('classic');
   return (
     <svg
-      className="display-option-preview"
+      className={styles.displayOptionPreview}
       viewBox="-38 -22 76 44"
       aria-hidden="true"
     >
@@ -123,26 +124,28 @@ export function DisplaySettingsOptions({
 }: DisplaySettingsMenuProps) {
   return (
     <>
-      <h2 className="display-settings-title">Display settings</h2>
-      <p className="display-settings-note">These only change what you see.</p>
+      <h2 className={styles.displaySettingsTitle}>Display settings</h2>
+      <p className={styles.displaySettingsNote}>
+        These only change what you see.
+      </p>
 
-      <fieldset className="display-settings-group">
+      <fieldset className={styles.displaySettingsGroup}>
         <legend>Piece style</legend>
         {PIECE_STYLES.map((style) => (
-          <label key={style} className="display-option">
+          <label key={style} className={styles.displayOption}>
             <input
               type="radio"
               name="display-piece-style"
               checked={prefs.pieceStyle === style}
               onChange={() => onChange({ pieceStyle: style })}
             />
-            <span className="display-option-card">
+            <span className={styles.displayOptionCard}>
               <PieceStylePreview style={style} mark={prefs.unitMark} />
-              <span className="display-option-text">
-                <span className="display-option-name">
+              <span className={styles.displayOptionText}>
+                <span className={styles.displayOptionName}>
                   {PIECE_STYLE_LABELS[style].name}
                 </span>
-                <span className="display-option-description">
+                <span className={styles.displayOptionDescription}>
                   {PIECE_STYLE_LABELS[style].description}
                 </span>
               </span>
@@ -151,20 +154,20 @@ export function DisplaySettingsOptions({
         ))}
       </fieldset>
 
-      <fieldset className="display-settings-group">
+      <fieldset className={styles.displaySettingsGroup}>
         <legend>Army and fleet marks</legend>
-        <div className="display-mark-grid">
+        <div className={styles.displayMarkGrid}>
           {UNIT_MARKS.map((mark) => (
-            <label key={mark} className="display-option">
+            <label key={mark} className={styles.displayOption}>
               <input
                 type="radio"
                 name="display-unit-mark"
                 checked={prefs.unitMark === mark}
                 onChange={() => onChange({ unitMark: mark })}
               />
-              <span className="display-option-card stacked">
+              <span className={styles.displayOptionCard} data-stacked="true">
                 <UnitMarkPreview mark={mark} />
-                <span className="display-option-name">
+                <span className={styles.displayOptionName}>
                   {UNIT_MARK_LABELS[mark]}
                 </span>
               </span>
@@ -173,9 +176,9 @@ export function DisplaySettingsOptions({
         </div>
       </fieldset>
 
-      <fieldset className="display-settings-group">
+      <fieldset className={styles.displaySettingsGroup}>
         <legend>Notifications</legend>
-        <label className="display-option">
+        <label className={styles.displayOption}>
           <input
             type="checkbox"
             checked={prefs.soundNotifications}
@@ -183,17 +186,19 @@ export function DisplaySettingsOptions({
               onChange({ soundNotifications: event.target.checked })
             }
           />
-          <span className="display-option-card">
-            <span className="display-option-icon" aria-hidden="true">
+          <span className={styles.displayOptionCard}>
+            <span className={styles.displayOptionIcon} aria-hidden="true">
               {prefs.soundNotifications ? (
                 <Volume2 size={18} />
               ) : (
                 <VolumeX size={18} />
               )}
             </span>
-            <span className="display-option-text">
-              <span className="display-option-name">Turn &amp; vote chime</span>
-              <span className="display-option-description">
+            <span className={styles.displayOptionText}>
+              <span className={styles.displayOptionName}>
+                Turn &amp; vote chime
+              </span>
+              <span className={styles.displayOptionDescription}>
                 Play an audio chime when a turn or vote needs your attention in
                 a background tab.
               </span>
@@ -202,7 +207,7 @@ export function DisplaySettingsOptions({
         </label>
       </fieldset>
 
-      <p className="display-settings-status" role="status">
+      <p className={styles.displaySettingsStatus} role="status">
         {SAVE_MESSAGES[saveState]}
       </p>
     </>
@@ -245,11 +250,12 @@ export function DisplaySettingsMenu({
   }, [open]);
 
   return (
-    <div className="display-settings" ref={rootRef}>
+    <div className={styles.displaySettings} ref={rootRef}>
       <button
         ref={toggleRef}
         type="button"
-        className={`display-settings-toggle ${open ? 'open' : ''}`}
+        className={styles.displaySettingsToggle}
+        data-open={open}
         aria-label="Display settings"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
@@ -263,7 +269,7 @@ export function DisplaySettingsMenu({
         <div
           ref={panelRef}
           id={panelId}
-          className="display-settings-panel"
+          className={styles.displaySettingsPanel}
           role="dialog"
           aria-label="Display settings"
         >

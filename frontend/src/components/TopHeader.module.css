@@ -1,0 +1,286 @@
+@layer components {
+  .imperial-top-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    height: 60px;
+    padding: 0 14px;
+    background: linear-gradient(180deg, #1f242d 0%, #171b22 100%);
+    border-bottom: 1px solid #353b47;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    z-index: 30;
+  }
+
+  .brand-and-nav {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .header-right-actions {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .brand-block {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .brand-title {
+    font-family: "Cinzel", serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #f7ebd2;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .brand-subtitle {
+    display: block;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #9ca3af;
+    white-space: nowrap;
+  }
+
+  .header-sanity-readout {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+  .header-error-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    background: rgba(239, 68, 68, 0.16);
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .header-error-pill:hover {
+    background: rgba(239, 68, 68, 0.26);
+  }
+
+  .header-warning-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    background: rgba(245, 158, 11, 0.16);
+    border: 1px solid #f59e0b;
+    color: #fde68a;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    /* @keyframes live in styles/base.css, so global() keeps their name. */
+    /* biome-ignore lint/correctness/noUnknownFunction: global() is CSS Modules syntax */
+    animation: 2.2s infinite global(pulse-amber);
+  }
+
+  .header-warning-pill:hover {
+    background: rgba(245, 158, 11, 0.26);
+  }
+
+  .header-right-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .game-over-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid #d4af37;
+    background: rgba(212, 175, 55, 0.14);
+    color: #f5e6b3;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      transform 0.12s ease;
+  }
+
+  .game-over-pill:hover {
+    background: rgba(212, 175, 55, 0.26);
+  }
+
+  .brand-and-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .brand-block[data-clickable="true"] {
+    cursor: pointer;
+  }
+
+  .top-view-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 12px;
+    border-left: 1px solid #353b47;
+  }
+
+  .nav-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #9ca3af;
+    font-size: 0.76rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .nav-tab-btn:hover {
+    color: #f3efe6;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .nav-tab-btn[data-active="true"] {
+    background: rgba(200, 150, 62, 0.16);
+    border-color: rgba(200, 150, 62, 0.5);
+    color: #fde68a;
+  }
+
+  .nav-active-match-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 7px;
+    background: rgba(59, 130, 246, 0.16);
+    border: 1px solid rgba(96, 165, 250, 0.45);
+    color: #bfdbfe;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .header-center-telemetry {
+    grid-column: 2;
+    justify-self: center;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .header-center-badges {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+  }
+
+  .header-user-Menu {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 8px;
+    border-left: 1px solid #353b47;
+  }
+
+  .header-user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.14);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #a7f3d0;
+    font-size: 0.76rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .header-user-badge-btn {
+    cursor: pointer;
+    font-family: inherit;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .header-user-badge-btn:hover {
+    background: rgba(16, 185, 129, 0.24);
+    border-color: rgba(16, 185, 129, 0.7);
+  }
+
+  .header-guest-tag {
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    color: #cbd5e1;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .header-auth-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .header-auth-btn[data-variant="signin"] {
+    background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+    border: 1px solid #e0b25b;
+    color: #14171c;
+  }
+
+  .header-auth-btn[data-variant="signin"]:hover {
+    filter: brightness(1.08);
+  }
+
+  .header-auth-btn[data-variant="signout"] {
+    background: #252b37;
+    border: 1px solid #3f4859;
+    color: #cbd5e1;
+  }
+
+  .header-auth-btn[data-variant="signout"]:hover {
+    background: #313949;
+    color: #ffffff;
+  }
+}

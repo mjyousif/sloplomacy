@@ -1,0 +1,82 @@
+@layer components {
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .backdrop[data-scrim="standard"] {
+    z-index: 100;
+    background: rgba(10, 13, 18, 0.78);
+    backdrop-filter: blur(6px);
+    padding: 20px;
+  }
+
+  /* The game-over notice sits above the standard scrim. */
+  .backdrop[data-scrim="raised"] {
+    z-index: 110;
+    background: rgba(10, 13, 18, 0.78);
+    backdrop-filter: blur(6px);
+    padding: 20px;
+  }
+
+  /* Surrender and leave sit above the standard scrim. */
+  .backdrop[data-scrim="emphatic"] {
+    z-index: 120;
+    background: rgba(10, 13, 18, 0.82);
+    backdrop-filter: blur(6px);
+    padding: 20px;
+  }
+
+  /* In-app confirmation (ConfirmModal), shown above every other modal. */
+  .backdrop[data-scrim="blocking"] {
+    z-index: 160;
+    background: rgba(8, 10, 15, 0.7);
+    padding: 16px;
+  }
+
+  .card {
+    width: 100%;
+  }
+}
+
+/* Phones: cards fit the visible height and scroll, footers stack into full-width buttons, and
+   close buttons get a finger-sized target. */
+@layer compact {
+  /* The game-over notice (`raised`) never had a phone rule: it keeps its 20px. */
+  :global([data-layout="compact"]) .backdrop:not([data-scrim="raised"]) {
+    padding: 12px;
+  }
+
+  :global([data-layout="compact"]) .card[data-phone="scroll"],
+  :global([data-layout="compact"]) .card[data-phone="fit"] {
+    max-height: calc(100dvh - 24px);
+  }
+
+  :global([data-layout="compact"]) .card[data-phone="scroll"] {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  :global([data-layout="compact"]) .footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  :global([data-layout="compact"]) .footer button {
+    min-height: 44px;
+    justify-content: center;
+    white-space: normal;
+  }
+
+  :global([data-layout="compact"]) .close {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+}

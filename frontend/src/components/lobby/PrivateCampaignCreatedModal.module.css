@@ -1,0 +1,43 @@
+@layer components {
+  /* The credentials box of a new private campaign (the dialog itself is PromptDialog and Modal). */
+
+  .cred-label {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .cred-value {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.95rem;
+    color: #38bdf8;
+    font-weight: 700;
+  }
+
+  .cred-copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    color: #38bdf8;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .cred-copy-btn:hover {
+    background: rgba(56, 189, 248, 0.25);
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .cred-copy-btn {
+    min-height: 44px;
+  }
+}

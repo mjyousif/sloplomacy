@@ -11,6 +11,7 @@ import {
   type TurnHistoryEntry,
 } from '../types/diplomacy';
 import type { DisplayPrefs } from '../utils/displayPrefs';
+import styles from './AppHeader.module.css';
 import { CompactTopBar } from './CompactTopBar';
 import { TopHeader } from './TopHeader';
 
@@ -186,7 +187,7 @@ export function AppHeader({
 
       {/* TOAST NOTIFICATION */}
       {toastBanner && (
-        <div className="imperial-toast-banner">
+        <div className={styles.imperialToastBanner} data-testid="toast-banner">
           <CheckCircle2 size={16} />
           <span>{toastBanner}</span>
         </div>

@@ -61,8 +61,8 @@ describe('CompactTopBar', () => {
     expect(html).toContain('Sloplomacy');
     expect(html).toContain('aria-label="Menu"');
     expect(html).not.toContain('Back to lobby');
-    expect(html).not.toContain('compact-turn-text');
-    expect(html).not.toContain('compact-issue-badge');
+    expect(html).not.toContain('data-testid="compact-turn-text"');
+    expect(html).not.toContain('data-testid="compact-issue-');
   });
 
   it('shows the way back, the turn and a tappable problem count in a game', () => {
@@ -70,38 +70,42 @@ describe('CompactTopBar', () => {
     expect(html).toContain('aria-label="Back to lobby"');
     // Two lines: the season and year above the phase, with a separator that only screen readers see.
     expect(html).toContain(
-      'class="compact-turn-season">Spring<!-- --> <!-- -->1901</span>',
+      'data-testid="compact-turn-season">Spring<!-- --> <!-- -->1901</span>',
     );
-    expect(html).toContain('class="compact-turn-sep"> · </span>');
-    expect(html).toContain('class="compact-turn-phase">Movement</span>');
-    expect(html).toMatch(/<button[^>]*class="compact-issue-badge has-errors"/);
+    expect(html).toContain('data-testid="compact-turn-sep"> · </span>');
+    expect(html).toContain('data-testid="compact-turn-phase">Movement</span>');
+    expect(html).toMatch(
+      /<button(?=[^>]*data-testid="compact-issue-badge")(?=[^>]*data-status="errors")/,
+    );
     expect(html).toContain('1 error, 2 warnings. Open the order check.');
     expect(html).toContain('<span>3</span>');
   });
 
   it('uses the warning colour when there are only warnings', () => {
-    expect(renderBar({ warningCount: 1 })).toContain(
-      'compact-issue-badge has-warnings',
+    expect(renderBar({ warningCount: 1 })).toMatch(
+      /<button(?=[^>]*data-testid="compact-issue-badge")(?=[^>]*data-status="warnings")/,
     );
   });
 
   it('shows a plain check, not a button, when the orders are clean', () => {
     const html = renderBar();
-    expect(html).toContain('compact-issue-badge is-clean');
-    expect(html).not.toMatch(/<button[^>]*compact-issue-badge/);
+    expect(html).toMatch(
+      /<span(?=[^>]*data-testid="compact-issue-clean")(?=[^>]*data-status="clean")/,
+    );
+    expect(html).not.toMatch(/<button[^>]*data-testid="compact-issue-badge"/);
   });
 
   it('shows the winner instead of the problem count once the game is over', () => {
     const html = renderBar({ winner: 'FRANCE', errorCount: 2 });
     expect(html).toContain('France<!-- --> wins');
-    expect(html).not.toContain('compact-issue-badge');
+    expect(html).not.toContain('data-testid="compact-issue-');
   });
 
   it('marks the menu button while live sync is reconnecting', () => {
     const html = renderBar({ wsConnected: false });
     expect(html).toContain('Menu (live sync is reconnecting)');
-    expect(html).toContain('compact-menu-alert-dot');
-    expect(renderBar()).not.toContain('compact-menu-alert-dot');
+    expect(html).toContain('data-testid="compact-menu-alert-dot"');
+    expect(renderBar()).not.toContain('data-testid="compact-menu-alert-dot"');
   });
 
   it('offers ≡ for the tools drawer in a game, but not in the lobby', () => {
@@ -174,13 +178,16 @@ describe('SurrenderModal on a phone', () => {
 
   it('spells out the difference between the two surrender buttons in an active match', () => {
     const html = render(game);
-    expect(html).toContain('surrender-choice-note compact-only');
+    expect(html).toContain('data-testid="surrender-choice-note"');
+    expect(html).toMatch(
+      /<p(?=[^>]*class="[^"]*compact-only")(?=[^>]*data-testid="surrender-choice-note")/,
+    );
     expect(html).toContain('Spectate keeps you in the room as an observer');
   });
 
   it('has no such note before the match starts', () => {
     expect(render({ ...game, status: 'waiting' })).not.toContain(
-      'surrender-choice-note',
+      'data-testid="surrender-choice-note"',
     );
   });
 });

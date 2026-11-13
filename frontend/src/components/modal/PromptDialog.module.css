@@ -1,0 +1,161 @@
+@layer components {
+  /* The dialogs of private campaigns and saved sandboxes (Modal supplies the shell). */
+  .card {
+    max-width: 480px;
+    background: #181d26;
+    border: 1px solid #c8963e;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65);
+    /* No @keyframes named modalFadeIn exists, so nothing animates; kept as it was. */
+    /* biome-ignore lint/correctness/noUnknownFunction: global() is CSS Modules syntax */
+    animation: 0.2s ease-out global(modalFadeIn);
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fde68a;
+    font-family: "Cinzel", serif;
+    font-size: 1.1rem;
+  }
+
+  .title h3 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  .close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .close:hover:not(:disabled) {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: #334155;
+  }
+
+  .close:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .description {
+    font-size: 0.84rem;
+    color: #cbd5e1;
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .enter-button {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 18px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+    border: 1px solid #e5b964;
+    color: #14171c;
+    font-size: 0.84rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition:
+      filter 0.15s ease,
+      opacity 0.15s ease;
+  }
+
+  .enter-button:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+
+  .enter-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .cancel-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 11px 18px;
+    border-radius: 8px;
+    background: #222836;
+    border: 1px solid #3b4456;
+    color: #cbd5e1;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .cancel-button:hover:not(:disabled) {
+    background: #2d3548;
+    color: #f8fafc;
+    border-color: #4f5b73;
+  }
+
+  .cancel-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .card {
+    padding: 18px 16px;
+  }
+
+  /* The close button drops its wide-layout frame for a plain, finger-sized target (Modal sizes it). */
+  :global([data-layout="compact"]) .close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    border-radius: 8px;
+  }
+
+  /* The phone layer beats the hover rule above whatever its specificity, so the hover tint is
+     restated here. */
+  :global([data-layout="compact"]) .close:hover:not(:disabled) {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: #334155;
+  }
+}
