@@ -241,7 +241,7 @@ export function CompactTopBar({
           role="dialog"
           aria-label="Menu"
         >
-          {menuView === 'display' ? (
+          {inGame && menuView === 'display' ? (
             <>
               <button
                 type="button"
@@ -295,16 +295,21 @@ export function CompactTopBar({
                 </button>
               )}
 
-              <button
-                type="button"
-                data-testid="compact-menu-display-settings"
-                className="compact-menu-item"
-                onClick={() => setMenuView('display')}
-              >
-                <SlidersHorizontal size={18} />
-                <span>Display settings</span>
-                <ChevronRight size={18} className="compact-menu-item-chevron" />
-              </button>
+              {inGame && (
+                <button
+                  type="button"
+                  data-testid="compact-menu-display-settings"
+                  className="compact-menu-item"
+                  onClick={() => setMenuView('display')}
+                >
+                  <SlidersHorizontal size={18} />
+                  <span>Display settings</span>
+                  <ChevronRight
+                    size={18}
+                    className="compact-menu-item-chevron"
+                  />
+                </button>
+              )}
 
               {inGame && isGameCreator && (
                 <>

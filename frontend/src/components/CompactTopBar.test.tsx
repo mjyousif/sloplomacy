@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -12,8 +15,10 @@ import { SurrenderModal } from './SurrenderModal';
 
 const noop = () => {};
 
-function renderBar(overrides: Partial<CompactTopBarProps> = {}): string {
-  const props: CompactTopBarProps = {
+function makeProps(
+  overrides: Partial<CompactTopBarProps> = {},
+): CompactTopBarProps {
+  return {
     viewMode: 'sandbox',
     turn: { season: 'Spring', year: 1901, phase: 'Movement' },
     winner: null,
@@ -33,7 +38,12 @@ function renderBar(overrides: Partial<CompactTopBarProps> = {}): string {
     onSignOut: noop,
     ...overrides,
   };
-  return renderToString(React.createElement(CompactTopBar, props));
+}
+
+function renderBar(overrides: Partial<CompactTopBarProps> = {}): string {
+  return renderToString(
+    React.createElement(CompactTopBar, makeProps(overrides)),
+  );
 }
 
 describe('describeIssueCount', () => {
@@ -110,6 +120,28 @@ describe('CompactTopBar', () => {
     const html = renderBar();
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('compact-menu-panel');
+  });
+
+  it('shows Display settings in the menu only outside the lobby', async () => {
+    const { rerender } = render(<CompactTopBar {...makeProps()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(
+      screen.getByTestId('compact-menu-display-settings'),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('compact-menu-display-settings'));
+    expect(screen.getByTestId('compact-menu-display-back')).toBeInTheDocument();
+
+    rerender(
+      <CompactTopBar {...makeProps({ viewMode: 'lobby', turn: null })} />,
+    );
+    expect(
+      screen.queryByTestId('compact-menu-display-back'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('compact-menu-display-settings'),
+    ).not.toBeInTheDocument();
   });
 });
 

@@ -31,20 +31,15 @@ test.describe('Scenario 07: Turn history', () => {
       await expect(
         page.locator('[data-testid="turn-history-select"]'),
       ).toContainText('Fall 1901 Movement');
-      // Hovering must not open the tray; only clicking the filter button opens it.
+      // Hovering must not open the tray, and on the live turn the filter button is disabled.
       const filterToggle = page.locator(
         '[data-testid="turn-history-filter-toggle"]',
       );
       await selector.hover();
-      await expect(page.locator('[data-testid="turn-history-tray"]')).toBeHidden();
-
-      // Clicking the filter button expands the country filters, disabled on the live turn.
-      await filterToggle.click();
-      const chips = page.locator(
-        '[data-testid="turn-history-power"][data-power="ALL"]',
-      );
-      await expect(chips).toBeVisible();
-      await expect(chips).toBeDisabled();
+      await expect(
+        page.locator('[data-testid="turn-history-tray"]'),
+      ).toBeHidden();
+      await expect(filterToggle).toBeDisabled();
       // Live: only France's own orders are drawn, and nobody else's.
       await expect(
         page.locator(
@@ -52,8 +47,6 @@ test.describe('Scenario 07: Turn history', () => {
         ),
       ).toHaveCount(0);
       await recorder.recordStep(page, '01_live_turn_with_history_hover');
-      await page.mouse.click(10, 300);
-      await expect(page.locator('[data-testid="turn-history-tray"]')).toBeHidden();
 
       // 2. Step back to Spring 1901 with ‹: every nation's orders, coloured by how they resolved.
       // Neither the outer box width nor the ‹ arrow may move as the turn or filter changes.
@@ -65,7 +58,7 @@ test.describe('Scenario 07: Turn history', () => {
       await expect(
         page.locator('[data-testid="turn-history-select"]'),
       ).toContainText('Spring 1901 Movement');
-      await expect(chips).toBeEnabled();
+      await expect(filterToggle).toBeEnabled();
       expect(await prev.boundingBox()).toEqual(prevBoxLive);
       expect(await pill.boundingBox()).toEqual(pillBoxLive);
       const germanMove = page.locator(
@@ -86,7 +79,9 @@ test.describe('Scenario 07: Turn history', () => {
       ).toBeVisible();
 
       // The yellow icon-only back-to-live button appears when viewing a past turn without shifting the chronicle.
-      const backToLiveTopBtn = page.locator('[data-testid="turn-history-live"]');
+      const backToLiveTopBtn = page.locator(
+        '[data-testid="turn-history-live"]',
+      );
       await expect(backToLiveTopBtn).toBeVisible();
       await expect(backToLiveTopBtn).toHaveText('');
 
@@ -107,7 +102,9 @@ test.describe('Scenario 07: Turn history', () => {
       await expect(germanMove).toBeVisible();
       await expect(englishMove).toHaveCount(0);
       await page.mouse.click(10, 300);
-      await expect(page.locator('[data-testid="turn-history-tray"]')).toBeHidden();
+      await expect(
+        page.locator('[data-testid="turn-history-tray"]'),
+      ).toBeHidden();
       await expect(filterToggle).toContainText('GER');
       await expect(filterToggle).toHaveClass(/has-filter/);
       expect(await pill.boundingBox()).toEqual(pillBoxLive);
@@ -126,20 +123,21 @@ test.describe('Scenario 07: Turn history', () => {
       await expect(filterToggle).toBeDisabled();
       await expect(backToLiveTopBtn).toHaveCount(0);
 
-      // Exit admin mode: turn history unlocks again, still on live.
+      // Exit admin mode: turn history unlocks again, still on live (filter stays disabled until a past turn is viewed).
       await page.locator('[data-testid="btn-admin-menu"]').click();
       await page.locator('[data-testid="btn-exit-admin-mode"]').click();
       await expect(
         page.locator('[data-testid="turn-history-select"]'),
       ).toBeEnabled();
       await expect(prev).toBeEnabled();
-      await expect(filterToggle).toBeEnabled();
+      await expect(filterToggle).toBeDisabled();
 
       // Step back once more and verify the top bar's yellow back-to-live button returns to live.
       await prev.click();
       await expect(
         page.locator('[data-testid="turn-history-select"]'),
       ).toContainText('Spring 1901 Movement');
+      await expect(filterToggle).toBeEnabled();
       await backToLiveTopBtn.click();
       await expect(backToLiveTopBtn).toHaveCount(0);
       await expect(
@@ -149,7 +147,7 @@ test.describe('Scenario 07: Turn history', () => {
         page.locator('[data-testid="turn-history-select"]'),
       ).toContainText('Fall 1901 Movement');
       await expect(germanMove).toHaveCount(0);
-      await expect(chips).toBeDisabled();
+      await expect(filterToggle).toBeDisabled();
       expect(await prev.boundingBox()).toEqual(prevBoxLive);
       expect(await pill.boundingBox()).toEqual(pillBoxLive);
       await recorder.recordStep(page, '04_back_to_live');

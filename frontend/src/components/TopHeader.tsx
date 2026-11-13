@@ -187,11 +187,13 @@ export function TopHeader({
 
       {/* Right Header Controls: Board Actions + User Account */}
       <div className="header-right-actions">
-        <DisplaySettingsMenu
-          prefs={displayPrefs}
-          saveState={displayPrefsSaveState}
-          onChange={onChangeDisplayPrefs}
-        />
+        {viewMode !== 'lobby' && (
+          <DisplaySettingsMenu
+            prefs={displayPrefs}
+            saveState={displayPrefsSaveState}
+            onChange={onChangeDisplayPrefs}
+          />
+        )}
 
         {viewMode !== 'lobby' && isGameCreator && (
           <AdminSettingsMenu

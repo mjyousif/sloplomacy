@@ -81,13 +81,14 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
   const viewedEntry =
     hasHistory && viewIndex !== null ? (entries[viewIndex] ?? null) : null;
   const viewingPast = viewedEntry !== null;
-  const expanded = !controlsDisabled && trayOpen;
+  const filterDisabled = controlsDisabled || !viewingPast;
+  const expanded = !filterDisabled && trayOpen;
   const activeFilterColor =
     viewingPast && power ? POWER_METADATA[power].fillColor : null;
 
   useEffect(() => {
-    if (controlsDisabled) setTrayOpen(false);
-  }, [controlsDisabled]);
+    if (filterDisabled) setTrayOpen(false);
+  }, [filterDisabled]);
 
   useEffect(() => {
     if (!trayOpen) return;
@@ -145,7 +146,7 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
           type="button"
           className={`turn-chronicle-filter-btn ${activeFilterColor ? 'has-filter' : ''}`.trim()}
           data-testid="turn-history-filter-toggle"
-          disabled={controlsDisabled}
+          disabled={filterDisabled}
           aria-label={
             viewingPast && power
               ? `Nation filter: ${POWER_METADATA[power].shortName}`
@@ -153,7 +154,13 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
           }
           aria-expanded={expanded}
           aria-controls={expanded ? trayId : undefined}
-          title={locked ? 'Locked while in admin mode' : 'Filter by nation'}
+          title={
+            locked
+              ? 'Locked while in admin mode'
+              : viewingPast
+                ? 'Filter by nation'
+                : 'Select a past turn to filter by nation'
+          }
           style={
             activeFilterColor
               ? ({
@@ -163,7 +170,7 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
               : undefined
           }
           onClick={() => {
-            if (!controlsDisabled) setTrayOpen((open) => !open);
+            if (!filterDisabled) setTrayOpen((open) => !open);
           }}
         >
           <Filter size={viewingPast && power ? 10 : 13} />

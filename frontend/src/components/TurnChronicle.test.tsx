@@ -43,9 +43,9 @@ describe('TurnChronicle', () => {
     expect(screen.queryByTestId('turn-history-tray')).toBeNull();
   });
 
-  it('does not expand on hover, and toggles the country filter tray only on filter-button click', async () => {
+  it('disables the filter button on the live turn and toggles the country filter tray on past turns', async () => {
     const user = userEvent.setup();
-    const { container } = renderChronicle();
+    const { container, props, rerender } = renderChronicle();
 
     const tray = screen.getByTestId('turn-history-tray');
     expect(tray).not.toHaveClass('open');
@@ -57,6 +57,18 @@ describe('TurnChronicle', () => {
     expect(tray).toHaveAttribute('inert');
 
     const toggle = screen.getByTestId('turn-history-filter-toggle');
+    expect(toggle).toBeDisabled();
+    expect(toggle).toHaveAttribute(
+      'title',
+      'Select a past turn to filter by nation',
+    );
+    await user.click(toggle);
+    expect(tray).not.toHaveClass('open');
+
+    rerender(<TurnChronicle {...props} viewIndex={0} />);
+    expect(toggle).toBeEnabled();
+    expect(toggle).toHaveAttribute('title', 'Filter by nation');
+
     await user.click(toggle);
     expect(tray).toHaveClass('open');
     expect(tray).not.toHaveAttribute('inert');
@@ -64,7 +76,7 @@ describe('TurnChronicle', () => {
     const allChip = screen
       .getAllByTestId('turn-history-power')
       .find((el) => el.getAttribute('data-power') === 'ALL');
-    expect(allChip).toBeDisabled();
+    expect(allChip).toBeEnabled();
 
     await user.click(toggle);
     expect(tray).not.toHaveClass('open');
@@ -73,6 +85,13 @@ describe('TurnChronicle', () => {
     await user.click(toggle);
     expect(tray).toHaveClass('open');
     fireEvent.pointerDown(container.ownerDocument.body);
+    expect(tray).not.toHaveClass('open');
+    expect(tray).toHaveAttribute('inert');
+
+    await user.click(toggle);
+    expect(tray).toHaveClass('open');
+    rerender(<TurnChronicle {...props} viewIndex={null} />);
+    expect(toggle).toBeDisabled();
     expect(tray).not.toHaveClass('open');
     expect(tray).toHaveAttribute('inert');
   });
@@ -91,13 +110,7 @@ describe('TurnChronicle', () => {
       /\bLIVE\b/i,
     );
 
-    await user.click(screen.getByTestId('turn-history-filter-toggle'));
-    expect(tray).toHaveClass('open');
-
     await user.click(screen.getByTestId('turn-history-select'));
-    expect(tray).not.toHaveClass('open');
-    expect(tray).toHaveAttribute('inert');
-
     await user.click(screen.getByTestId('turn-history-option-0'));
     expect(props.onSelect).toHaveBeenCalledWith(0);
 
@@ -109,6 +122,13 @@ describe('TurnChronicle', () => {
       'Spring 1901 — Admin Edit',
     );
     expect(screen.getByTestId('turn-history-next')).toBeEnabled();
+
+    await user.click(screen.getByTestId('turn-history-filter-toggle'));
+    expect(tray).toHaveClass('open');
+
+    await user.click(screen.getByTestId('turn-history-select'));
+    expect(tray).not.toHaveClass('open');
+    expect(tray).toHaveAttribute('inert');
 
     const liveBtn = screen.getByTestId('turn-history-live');
     expect(liveBtn).toHaveAttribute('aria-label', 'Back to live');
@@ -155,7 +175,7 @@ describe('TurnChronicle', () => {
 
   it('closes the tray when pressing Escape', async () => {
     const user = userEvent.setup();
-    renderChronicle();
+    renderChronicle({ viewIndex: 0 });
     const history = screen.getByTestId('turn-history');
     const tray = screen.getByTestId('turn-history-tray');
 
@@ -169,13 +189,13 @@ describe('TurnChronicle', () => {
 
   it('locks the dropdown, steps and filter tray while locked is true', async () => {
     const user = userEvent.setup();
-    const { props, rerender } = renderChronicle();
+    const { props, rerender } = renderChronicle({ viewIndex: 0 });
     const tray = screen.getByTestId('turn-history-tray');
 
     await user.click(screen.getByTestId('turn-history-filter-toggle'));
     expect(tray).toHaveClass('open');
 
-    rerender(<TurnChronicle {...props} locked />);
+    rerender(<TurnChronicle {...props} viewIndex={0} locked />);
 
     expect(tray).not.toHaveClass('open');
     expect(tray).toHaveAttribute('inert');
