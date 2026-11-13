@@ -27,6 +27,7 @@ from storage.store import (
     GAME_PASSCODES,
     GAME_SUMMARIES,
     GAMES,
+    PROFILE_NAMES,
     SANDBOX_CHECKPOINTS,
     UNSAVED_GAMES,
     cache_loaded_game,
@@ -182,7 +183,9 @@ async def create_multiplayer_game(
 
     effective_user_id = current_user.user_id if current_user else req.user_id
     effective_email = (current_user.email or req.email) if current_user else req.email
-    display_name = req.display_name or effective_email.split("@")[0]
+    display_name = (
+        PROFILE_NAMES.get(effective_user_id) or req.display_name or effective_email.split("@")[0]
+    )
     participant = GameParticipant(
         user_id=effective_user_id,
         email=effective_email,
@@ -298,7 +301,7 @@ async def create_solo_sandbox(
     effective_email = (
         (current_user.email or "guest@diplomacy.local") if current_user else "guest@diplomacy.local"
     )
-    display_name = effective_email.split("@")[0]
+    display_name = PROFILE_NAMES.get(effective_user_id) or "Envoy"
     summary = MultiplayerGameSummary(
         game_id=gid,
         name=f"Draft Tactical Sandbox ({game_state.season} {game_state.year})",
@@ -348,7 +351,9 @@ async def save_sandbox_to_account(
 
     effective_user_id = current_user.user_id if current_user else req.user_id
     effective_email = (current_user.email or req.email) if current_user else req.email
-    display_name = req.display_name or effective_email.split("@")[0]
+    display_name = (
+        PROFILE_NAMES.get(effective_user_id) or req.display_name or effective_email.split("@")[0]
+    )
 
     existing_summary = GAME_SUMMARIES.get(gid)
     if existing_summary and existing_summary.is_sandbox and existing_summary.is_draft:

@@ -433,3 +433,79 @@ async def delete_game_from_db(
     except Exception as ex:
         logger.warning("Supabase exception deleting game '%s': %s", game_id, ex)
         return False
+
+
+async def load_profile_names_from_db(
+    client: httpx.AsyncClient | None = None,
+) -> dict[str, str]:
+    """Load user_id -> display_name mappings from public.profiles."""
+    if not is_persistence_enabled():
+        return {}
+
+    url = f"{get_supabase_url()}/rest/v1/profiles?select=id,display_name"
+    headers = get_headers()
+
+    try:
+        if client:
+            resp = await client.get(url, headers=headers, timeout=10.0)
+        else:
+            async with httpx.AsyncClient() as c:
+                resp = await c.get(url, headers=headers, timeout=10.0)
+
+        if resp.status_code != 200:
+            logger.warning("Supabase profiles read failed: HTTP %d %s", resp.status_code, resp.text)
+            return {}
+
+        rows = resp.json()
+        if not isinstance(rows, list):
+            return {}
+
+        profiles: dict[str, str] = {}
+        for row in rows:
+            uid = row.get("id")
+            name = (row.get("display_name") or "").strip()
+            if uid and name:
+                profiles[str(uid)] = name
+        return profiles
+
+    except Exception as ex:
+        logger.warning("Supabase exception loading profiles: %s", ex)
+        return {}
+
+
+async def upsert_profile_display_name(
+    user_id: str,
+    display_name: str,
+    client: httpx.AsyncClient | None = None,
+) -> bool:
+    """Persist a user's display_name into public.profiles."""
+    if not is_persistence_enabled() or not is_valid_uuid(user_id):
+        return False
+
+    url = f"{get_supabase_url()}/rest/v1/profiles?on_conflict=id"
+    headers = {
+        **get_headers(),
+        "Prefer": "resolution=merge-duplicates,return=minimal",
+    }
+    payload = {
+        "id": user_id,
+        "display_name": display_name,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    try:
+        if client:
+            resp = await client.post(url, headers=headers, json=payload, timeout=10.0)
+        else:
+            async with httpx.AsyncClient() as c:
+                resp = await c.post(url, headers=headers, json=payload, timeout=10.0)
+
+        if resp.status_code in (200, 201, 204):
+            return True
+
+        logger.warning("Supabase profile upsert failed: HTTP %d %s", resp.status_code, resp.text)
+        return False
+
+    except Exception as ex:
+        logger.warning("Supabase exception upserting profile: %s", ex)
+        return False

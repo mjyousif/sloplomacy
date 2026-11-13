@@ -46,16 +46,18 @@ function setLocalStoredUser(user: AuthUser | null) {
 
 function mapSupabaseUser(sbUser: any): AuthUser {
   const email = sbUser.email || 'commander@diplomacy.eu';
-  const displayName =
-    sbUser.user_metadata?.display_name ||
-    sbUser.user_metadata?.full_name ||
-    email.split('@')[0];
+  const explicitName =
+    typeof sbUser.user_metadata?.display_name === 'string'
+      ? sbUser.user_metadata.display_name.trim()
+      : '';
+  const needsUsernameSetup = !explicitName;
   return {
     id: sbUser.id,
     user_id: sbUser.id,
     email,
-    displayName,
+    displayName: explicitName || 'Envoy',
     isLocalDemo: false,
+    needsUsernameSetup,
   };
 }
 
@@ -155,8 +157,9 @@ export async function signInWithEmailPassword(
   const demoUser: AuthUser = {
     id: `local_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`,
     email: cleanEmail,
-    displayName: cleanEmail.split('@')[0],
+    displayName: 'Envoy',
     isLocalDemo: true,
+    needsUsernameSetup: true,
   };
   setLocalStoredUser(demoUser);
   return { user: demoUser, error: null };
@@ -235,8 +238,9 @@ export async function sendMagicLink(
   const demoUser: AuthUser = {
     id: `local_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`,
     email: cleanEmail,
-    displayName: cleanEmail.split('@')[0],
+    displayName: 'Envoy',
     isLocalDemo: true,
+    needsUsernameSetup: true,
   };
   setLocalStoredUser(demoUser);
   return { error: null, sent: true };
@@ -260,8 +264,9 @@ export async function signInWithOAuthProvider(
   const demoUser: AuthUser = {
     id: `local_oauth_${provider}`,
     email,
-    displayName: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Envoy`,
+    displayName: 'Envoy',
     isLocalDemo: true,
+    needsUsernameSetup: true,
   };
   setLocalStoredUser(demoUser);
   return { error: null };
@@ -342,4 +347,64 @@ export async function saveAccountDisplayPrefs(
     // ignore storage errors
   }
   return { error: null };
+}
+
+export async function updateAccountDisplayName(
+  user: AuthUser,
+  displayName: string,
+): Promise<{ user: AuthUser | null; error: string | null }> {
+  const clean = displayName.trim().replace(/\s+/g, ' ');
+  if (clean.length < 2 || clean.length > 24) {
+    return {
+      user: null,
+      error: 'Username must be between 2 and 24 characters.',
+    };
+  }
+
+  let updatedUser: AuthUser = {
+    ...user,
+    displayName: clean,
+    needsUsernameSetup: false,
+  };
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: { display_name: clean },
+      });
+      if (error) return { user: null, error: error.message };
+      if (data.user) {
+        updatedUser = mapSupabaseUser(data.user);
+      }
+    } catch (err) {
+      return {
+        user: null,
+        error: err instanceof Error ? err.message : 'Account unavailable.',
+      };
+    }
+  } else {
+    setLocalStoredUser(updatedUser);
+  }
+
+  try {
+    const res = await authedFetch('/api/account/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ display_name: clean }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return {
+        user: updatedUser,
+        error:
+          typeof data?.detail === 'string'
+            ? data.detail
+            : 'Saved locally, but failed to sync active games.',
+      };
+    }
+  } catch {
+    // Backend may be offline in pure-client unit tests; auth metadata is already saved.
+  }
+
+  return { user: updatedUser, error: null };
 }

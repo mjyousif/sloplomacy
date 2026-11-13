@@ -357,6 +357,7 @@ export interface AuthUser {
   email: string;
   displayName: string;
   isLocalDemo?: boolean;
+  needsUsernameSetup?: boolean;
 }
 export interface AdminStatusResponse {
   is_creator: boolean;

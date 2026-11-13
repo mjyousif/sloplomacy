@@ -99,9 +99,49 @@ jobs:
           npm test
           npm run build
 
+  test-migrations:
+    name: Supabase Migration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: diplomacy_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Bootstrap auth stubs & run migrations twice (idempotency check)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d diplomacy_test -v ON_ERROR_STOP=1 -f supabase/tests/bootstrap_auth_stubs.sql
+          files=()
+          for sql_file in $(ls -1 supabase/migrations/*.sql | sort); do
+            echo "--> Migration: $sql_file"
+            files+=(-f "$sql_file")
+          done
+          psql -h 127.0.0.1 -U postgres -d diplomacy_test -v ON_ERROR_STOP=1 --single-transaction "${files[@]}"
+          psql -h 127.0.0.1 -U postgres -d diplomacy_test -v ON_ERROR_STOP=1 --single-transaction "${files[@]}"
+
+      - name: Verify triggers and RLS policies
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d diplomacy_test -v ON_ERROR_STOP=1 --single-transaction -f supabase/tests/verify_migrations.sql
+
   deploy:
     name: Deploy to Google Cloud Run
-    needs: [code-quality, backend-tests, frontend-tests]
+    needs: [code-quality, backend-tests, frontend-tests, test-migrations]
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
     runs-on: ubuntu-latest
     timeout-minutes: 30

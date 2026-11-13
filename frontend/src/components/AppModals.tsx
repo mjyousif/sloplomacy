@@ -9,6 +9,7 @@ import {
   type ProvinceInfo,
   type ValidationIssue,
 } from '../types/diplomacy';
+import { AccountModal } from './AccountModal';
 import { AdminToolsModal } from './AdminToolsModal';
 import { AuthModal } from './AuthModal';
 import { SanityCheckModal } from './SanityCheckModal';
@@ -60,6 +61,10 @@ export interface AppModalsProps {
   setAuthModalOpen: Dispatch<SetStateAction<boolean>>;
   authModalTab: AuthModalTab;
   authModalReason: string | null;
+  accountModalOpen?: boolean;
+  setAccountModalOpen?: Dispatch<SetStateAction<boolean>>;
+  accountModalOnboarding?: boolean;
+  handleSignOut?: () => void;
   /** From `useConfirm`. */
   confirmModal: ReactNode;
 }
@@ -104,6 +109,10 @@ export function AppModals({
   setAuthModalOpen,
   authModalTab,
   authModalReason,
+  accountModalOpen = false,
+  setAccountModalOpen,
+  accountModalOnboarding = false,
+  handleSignOut,
   confirmModal,
 }: AppModalsProps) {
   return (
@@ -182,6 +191,18 @@ export function AppModals({
           if (msg) triggerToast(msg);
           fetchGamesList();
         }}
+      />
+      <AccountModal
+        isOpen={accountModalOpen}
+        user={authUser}
+        onboarding={accountModalOnboarding}
+        onClose={() => setAccountModalOpen?.(false)}
+        onUpdated={(u, msg) => {
+          setAuthUser(u);
+          if (msg) triggerToast(msg);
+          fetchGamesList();
+        }}
+        onSignOut={() => handleSignOut?.()}
       />
       {confirmModal}
     </>
