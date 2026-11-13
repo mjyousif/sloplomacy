@@ -24,7 +24,7 @@ App renders four pieces, none of which keeps state; each takes one prop per valu
 
 - `components/AppHeader.tsx`: the desktop header (`components/TopHeader.tsx`) or the phone bar (`CompactTopBar`), then the Direct-Edit banner and the toast. It works out the player's error and warning counts for the order check.
 - `LobbyView` in the lobby, or `components/GameWorkspace.tsx` on a board: the tools sidebar, the map with the clock and the phone's history pill over it, and the order sidebar. It also counts the other powers' changed orders for the tools sidebar. On a past turn it hands the map that turn, with the selection, hover, issues and order callbacks switched off.
-- `components/AppModals.tsx`: the Sanity Check, Surrender & Leave, Save Sandbox (and its default name), admin console (only for the host) and sign-in modals, and the confirm prompt. They render on the lobby too. The admin console keeps its own state in `components/admin/useAdminActions.ts` (turn, move, spawn and ownership forms, status, error banner and the endpoint handlers), which `AdminToolsModal` calls on every render; App hands the modal its game, user and the `onStateUpdated` / `onToast` callbacks, and the modal passes them on with its `useConfirm` prompt.
+- `components/AppModals.tsx`: the Sanity Check, Surrender & Leave, Save Sandbox (and its default name), admin action warning and sign-in modals, and the confirm prompt. They render on the lobby too.
 
 The state the workspace alone uses (`mapRef`, `zoomPercent`, `hoveredUnitId`) and the turn-selector helpers (`showPastTurn`, `stepPastTurn`, `viewedEntry`) stay in App, so they survive a trip to the lobby as before.
 

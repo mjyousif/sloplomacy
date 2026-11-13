@@ -7,11 +7,9 @@ import {
   type MultiplayerGameSummary,
   POWER_METADATA,
   type Power,
-  type ProvinceInfo,
   type ValidationIssue,
 } from '../types/diplomacy';
 import { AdminActionWarningModal } from './AdminActionWarningModal';
-import { AdminToolsModal } from './AdminToolsModal';
 import { AuthModal } from './AuthModal';
 import { SanityCheckModal } from './SanityCheckModal';
 import { SaveSandboxModal } from './SaveSandboxModal';
@@ -19,8 +17,6 @@ import { SurrenderModal } from './SurrenderModal';
 
 export interface AppModalsProps {
   gameState: GameState;
-  provinces: Record<string, ProvinceInfo>;
-  activeGameId: string;
   playerPower: Power;
   /** The Sanity Check modal, from `useMatchActions`. */
   sanityModalOpen: boolean;
@@ -45,15 +41,6 @@ export interface AppModalsProps {
   setSaveSandboxModalOpen: Dispatch<SetStateAction<boolean>>;
   savingSandbox: boolean;
   handleSaveSandboxToAccount: (customName: string) => void;
-  /** The host's admin console. */
-  isGameCreator: boolean;
-  adminModalOpen: boolean;
-  setAdminModalOpen: Dispatch<SetStateAction<boolean>>;
-  adminOverrideActive: boolean;
-  onToggleDirectEdit: () => void;
-  applyServerState: (st: GameState) => void;
-  fetchGamesList: () => Promise<void>;
-  triggerToast: (msg: string) => void;
   /** Admin action warning modal for participants. */
   unacknowledgedAdminEntries?: AdminActionLogEntry[];
   onAcknowledgeAdminEntries?: () => Promise<void>;
@@ -65,18 +52,18 @@ export interface AppModalsProps {
   setAuthModalOpen: Dispatch<SetStateAction<boolean>>;
   authModalTab: AuthModalTab;
   authModalReason: string | null;
+  fetchGamesList: () => Promise<void>;
+  triggerToast: (msg: string) => void;
   /** From `useConfirm`. */
   confirmModal: ReactNode;
 }
 
 /**
  * The app's modals, on the lobby and the board alike: the finalize Sanity Check, Surrender &
- * Leave, Save Sandbox, the host's admin console, sign-in, and the confirm prompt.
+ * Leave, Save Sandbox, admin action warning, sign-in, and the confirm prompt.
  */
 export function AppModals({
   gameState,
-  provinces,
-  activeGameId,
   playerPower,
   sanityModalOpen,
   setSanityModalOpen,
@@ -94,14 +81,6 @@ export function AppModals({
   setSaveSandboxModalOpen,
   savingSandbox,
   handleSaveSandboxToAccount,
-  isGameCreator,
-  adminModalOpen,
-  setAdminModalOpen,
-  adminOverrideActive,
-  onToggleDirectEdit,
-  applyServerState,
-  fetchGamesList,
-  triggerToast,
   unacknowledgedAdminEntries = [],
   onAcknowledgeAdminEntries,
   acknowledgingAdminEntries = false,
@@ -111,6 +90,8 @@ export function AppModals({
   setAuthModalOpen,
   authModalTab,
   authModalReason,
+  fetchGamesList,
+  triggerToast,
   confirmModal,
 }: AppModalsProps) {
   return (
@@ -157,25 +138,6 @@ export function AppModals({
         onSave={handleSaveSandboxToAccount}
         onCancel={() => setSaveSandboxModalOpen(false)}
       />
-
-      {/* GAME CREATOR ADMINISTRATOR MODAL */}
-      {isGameCreator && gameState && (
-        <AdminToolsModal
-          isOpen={adminModalOpen}
-          onClose={() => setAdminModalOpen(false)}
-          gameId={activeGameId}
-          gameState={gameState}
-          provinces={provinces}
-          user={authUser}
-          onStateUpdated={(newState) => {
-            applyServerState(newState);
-            fetchGamesList();
-          }}
-          onToast={triggerToast}
-          adminOverrideActive={adminOverrideActive}
-          onToggleAdminOverride={onToggleDirectEdit}
-        />
-      )}
 
       {/* ADMIN ACTION WARNING MODAL */}
       {onAcknowledgeAdminEntries && (

@@ -108,15 +108,10 @@ frontend/
     │   │   ├── PasscodePromptModal.tsx       # Passcode entry dialog for private matches
     │   │   ├── PrivateCampaignCreatedModal.tsx # Shareable credentials modal after creating private room
     │   │   └── *.test.tsx, lobby.testkit.ts    # Each section's rendering and callbacks, with shared game fixtures
-    │   ├── AdminToolsModal.tsx  # The creator console: header, status strip, tab bar; wires `useAdminActions` into the tabs
-    │   ├── AdminToolsModal.test.tsx # Tabs, closing, and each tab's action through to its request
-    │   ├── admin/               # Decomposed creator console tabs
-    │   │   ├── useAdminActions.ts      # The console's form state, status and error banners, effects and one handler per admin endpoint
-    │   │   ├── useAdminActions.test.tsx, .failures.test.tsx, .testkit.ts # Each request, its toast, and every failure path
-    │   │   ├── TurnControlTab.tsx      # Timeline rollback and turn jump controls
-    │   │   ├── UnitTeleportTab.tsx     # Move units instantly across provinces
-    │   │   ├── UnitSpawnerTab.tsx      # Unit creation and disband tools
-    │   │   └── TerritoryControlTab.tsx # Supply center ownership modifier
+    │   ├── AdminSettingsMenu.tsx        # Top-bar Wrench menu toggling Edit Board, Turn & Clock Settings, and Exit Admin Mode
+    │   ├── AdminActionWarningModal.tsx  # Unacknowledged admin mutation audit log warning prompt
+    │   ├── admin/
+    │   │   └── TurnControlTab.tsx       # Snapshot revert selector, clock/season adjustment, unlock all orders
     │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
     │   ├── BottomSheet.tsx      # Phone pull-up panel with peek, half and full stops (holds the order sheet)
     │   ├── CompactTopBar.tsx    # Phone top bar: back, ≡ tools, turn, order-problem count and a ⋯ menu

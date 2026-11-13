@@ -449,8 +449,6 @@ export function App() {
 
       <AppModals
         gameState={gameState}
-        provinces={provinces}
-        activeGameId={activeGameId}
         playerPower={playerPower}
         sanityModalOpen={sanityModalOpen}
         setSanityModalOpen={setSanityModalOpen}
@@ -468,12 +466,6 @@ export function App() {
         setSaveSandboxModalOpen={setSaveSandboxModalOpen}
         savingSandbox={savingSandbox}
         handleSaveSandboxToAccount={handleSaveSandboxToAccount}
-        isGameCreator={isGameCreator}
-        adminModalOpen={false}
-        setAdminModalOpen={setAdminModalOpen}
-        adminOverrideActive={adminOverrideActive}
-        onToggleDirectEdit={handleToggleEditBoard}
-        applyServerState={applyServerState}
         fetchGamesList={fetchGamesList}
         triggerToast={triggerToast}
         unacknowledgedAdminEntries={directEdit.unacknowledgedAdminEntries}

@@ -33,8 +33,8 @@ The **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** is designed as 
 |   |  - SVG Path Geometry  |<------------>|  - Unit Order Editors    |  Modals:          |
 |   |  - Pan / Zoom Matrix  |  Local State |  - Power Selector        |  - AuthModal      |
 |   |  - Visual Order Arrows|  (App.tsx)   |  - Validation Warnings   |  - LobbyView      |
-|   |  - Battle Indicators  |              |  - Turn & History log    |  - AdminToolsModal|
-|   +-----------------------+              +--------------------------+  - SurrenderModal |
+|   |  - Battle Indicators  |              |  - Turn & History log    |  - SaveSandboxModal|
+|   +-----------------------+              +--------------------------+  - SurrenderModal  |
 |                               ^                                        - SanityCheck    |
 |                               | JSON REST via fetch() (?game_id=...)                    |
 +-------------------------------|---------------------------------------------------------+
