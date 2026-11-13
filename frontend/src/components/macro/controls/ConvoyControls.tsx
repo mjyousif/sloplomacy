@@ -17,6 +17,7 @@ interface ConvoyControlsProps {
   units: Unit[];
   unitOptions?: UnitMoveOptions | null;
   compact?: boolean;
+  useNativeSelect?: boolean;
   onUpdateOrder: (order: Order) => void;
   onHoverProvince?: (province: string | null) => void;
 }
@@ -28,6 +29,7 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
   units,
   unitOptions = null,
   compact = false,
+  useNativeSelect = false,
   onUpdateOrder,
   onHoverProvince,
 }) => {
@@ -166,7 +168,7 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
     </select>
   );
 
-  if (compact) {
+  if (compact && !useNativeSelect) {
     const armyIds = armyReach
       ? [...directArmies, ...chainedArmies]
       : fallbackArmies;
@@ -226,6 +228,18 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
             }
           }}
         />
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="order-param-inline">
+        {armySelect}
+        <span className="order-param-arrow" aria-hidden="true">
+          →
+        </span>
+        {targetSelect}
       </div>
     );
   }

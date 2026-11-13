@@ -22,6 +22,7 @@ interface OrderParameterControlsProps {
   unitOptions?: UnitMoveOptions | null;
   isRetreatPhase: boolean;
   compact?: boolean;
+  useNativeSelect?: boolean;
   onUpdateOrder: (order: Order) => void;
   onHoverProvince?: (province: string | null) => void;
 }
@@ -42,6 +43,7 @@ export const OrderParameterControls: React.FC<OrderParameterControlsProps> = ({
   unitOptions = null,
   isRetreatPhase,
   compact = false,
+  useNativeSelect = false,
   onUpdateOrder,
   onHoverProvince,
 }) => {
@@ -83,6 +85,7 @@ export const OrderParameterControls: React.FC<OrderParameterControlsProps> = ({
         reachable={reachable}
         unitOptions={unitOptions}
         compact={compact}
+        useNativeSelect={useNativeSelect}
         onUpdateOrder={onUpdateOrder}
         onHoverProvince={onHoverProvince}
       />
@@ -97,6 +100,7 @@ export const OrderParameterControls: React.FC<OrderParameterControlsProps> = ({
         units={units}
         unitOptions={unitOptions}
         compact={compact}
+        useNativeSelect={useNativeSelect}
         onUpdateOrder={onUpdateOrder}
         onHoverProvince={onHoverProvince}
       />

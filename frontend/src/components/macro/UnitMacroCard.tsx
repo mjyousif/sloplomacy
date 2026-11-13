@@ -51,6 +51,7 @@ export interface UnitMacroCardProps {
   isAdjustmentPhase: boolean;
   buildCount: number;
   compact?: boolean;
+  useNativeSelect?: boolean;
   onSelectUnit: (id: string | null) => void;
   onHoverUnit: (id: string | null) => void;
   onHighlightProvinces: (provs: string[]) => void;
@@ -81,6 +82,7 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
   isAdjustmentPhase,
   buildCount,
   compact = false,
+  useNativeSelect = false,
   onSelectUnit,
   onHoverUnit,
   onHighlightProvinces,
@@ -192,6 +194,7 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
                   reachable={reachable}
                   unitOptions={unitOptions}
                   compact={true}
+                  useNativeSelect={useNativeSelect}
                   onUpdateOrder={onUpdateOrder}
                   onHoverProvince={handleHoverOptionProvince}
                 />
@@ -221,6 +224,7 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
                 unitOptions={unitOptions}
                 isRetreatPhase={isRetreatPhase}
                 compact={true}
+                useNativeSelect={useNativeSelect}
                 onUpdateOrder={onUpdateOrder}
                 onHoverProvince={handleHoverOptionProvince}
               />

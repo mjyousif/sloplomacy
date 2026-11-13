@@ -208,6 +208,7 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
             isAdjustmentPhase={isAdjustmentPhase}
             buildCount={buildCount}
             compact={compactOrders}
+            useNativeSelect={isSheet}
             onSelectUnit={onSelectUnit}
             onHoverUnit={onHoverUnit}
             onHighlightProvinces={onHighlightProvinces}

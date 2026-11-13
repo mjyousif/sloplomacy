@@ -23,6 +23,7 @@ interface SupportControlsProps {
   reachable: { province: string; coasts: string[] }[];
   unitOptions?: UnitMoveOptions | null;
   compact?: boolean;
+  useNativeSelect?: boolean;
   onUpdateOrder: (order: Order) => void;
   onHoverProvince?: (province: string | null) => void;
 }
@@ -38,6 +39,7 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
   reachable,
   unitOptions = null,
   compact = false,
+  useNativeSelect = false,
   onUpdateOrder,
   onHoverProvince,
 }) => {
@@ -80,7 +82,7 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
     });
   };
 
-  if (compact) {
+  if (compact && !useNativeSelect) {
     const unitOptionsList: IconSelectOption[] = supportableUnits.map((u2) => ({
       value: u2.province,
       label: `${u2.unit_type} ${provinces[u2.province]?.name ?? u2.province}`,
@@ -144,8 +146,9 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
     >
       {supportableUnits.map((u2) => (
         <option key={u2.id} value={u2.province}>
-          [{POWER_METADATA[u2.power].shortName}] {u2.unit_type}{' '}
-          {provinces[u2.province]?.name} ({u2.province})
+          {compact
+            ? `${u2.unit_type} ${provinces[u2.province]?.name ?? u2.province}`
+            : `[${POWER_METADATA[u2.power].shortName}] ${u2.unit_type} ${provinces[u2.province]?.name} (${u2.province})`}
         </option>
       ))}
     </select>
@@ -165,21 +168,36 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
     >
       {order.aux_unit_origin && canHoldSupport && (
         <option value={order.aux_unit_origin}>
-          HOLD in {provinces[order.aux_unit_origin]?.name} (
-          {order.aux_unit_origin})
+          {compact
+            ? `Hold (${provinces[order.aux_unit_origin]?.name ?? order.aux_unit_origin})`
+            : `HOLD in ${provinces[order.aux_unit_origin]?.name} (${order.aux_unit_origin})`}
         </option>
       )}
       {moveTargets.length > 0 && (
         <optgroup label="Support Move Into:">
           {moveTargets.map((pid) => (
             <option key={pid} value={pid}>
-              → {provinces[pid]?.name ?? pid} ({pid})
+              {compact
+                ? (provinces[pid]?.name ?? pid)
+                : `→ ${provinces[pid]?.name ?? pid} (${pid})`}
             </option>
           ))}
         </optgroup>
       )}
     </select>
   );
+
+  if (compact) {
+    return (
+      <div className="order-param-inline">
+        {unitSelect}
+        <span className="order-param-arrow" aria-hidden="true">
+          →
+        </span>
+        {targetSelect}
+      </div>
+    );
+  }
 
   return (
     <div className="order-param-grid">

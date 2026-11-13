@@ -19,6 +19,7 @@ interface MoveControlsProps {
   reachable: { province: string; coasts: string[] }[];
   unitOptions?: UnitMoveOptions | null;
   compact?: boolean;
+  useNativeSelect?: boolean;
   onUpdateOrder: (order: Order) => void;
   onHoverProvince?: (province: string | null) => void;
 }
@@ -31,6 +32,7 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
   reachable,
   unitOptions = null,
   compact = false,
+  useNativeSelect = false,
   onUpdateOrder,
   onHoverProvince,
 }) => {
@@ -137,6 +139,24 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
         };
       }),
     ];
+
+    if (useNativeSelect) {
+      return (
+        <select
+          className="unit-compact-select"
+          data-testid="select-order-target"
+          value={selectValue}
+          onChange={(e) => handleTargetChange(e.target.value)}
+          title={`Target for ${provinces[unit.province]?.name ?? unit.province}`}
+        >
+          {compactOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      );
+    }
 
     return (
       <IconSelectDropdown
