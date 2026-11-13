@@ -33,11 +33,7 @@ export interface ToolsSidebarProps {
   onAIStepTurn?: () => void;
   onLoadScenario: (scenarioId: string) => void;
   onSaveSandboxClick?: () => void;
-  // Admin
-  isGameCreator?: boolean;
-  onOpenAdminTools?: () => void;
   adminOverrideActive?: boolean;
-  onToggleAdminOverride?: () => void;
   /**
    * 'panel' is the desktop sidebar with its rail. 'drawer' is the phone's slide-over, opened from
    * the top bar's ≡ button: always expanded, with a backdrop, and without the zoom section,

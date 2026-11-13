@@ -69,4 +69,68 @@ describe('CollapsedRail', () => {
     const c = rail();
     expect(c.querySelectorAll('button')).toHaveLength(0);
   });
+
+  it('shows admin edit-board icons and staged change count instead of country/unit icons', () => {
+    const onToggleCollapse = vi.fn();
+    const { container, rerender } = render(
+      <CollapsedRail
+        activePower="FRANCE"
+        progress={progressFor({ issues: [issue(A_PAR, 'info')] })}
+        onToggleCollapse={onToggleCollapse}
+        adminMode="direct-edit"
+        stagedChangesCount={0}
+      />,
+    );
+    expect(container.querySelector('.rail-power-crest')).toBeNull();
+    expect(container.querySelector('svg.power-flag')).toBeNull();
+    expect(container.querySelector('.rail-badge-unconfirmed')).toBeNull();
+    expect(container.querySelector('.rail-warn-badge')).toBeNull();
+    expect(container.querySelector('.rail-admin-badge')).toBeNull();
+    const editCrest = container.querySelector(
+      '.rail-admin-crest',
+    ) as HTMLElement;
+    expect(editCrest).toHaveAttribute('title', 'Edit Board');
+    expect(editCrest.querySelector('svg.lucide-pencil')).not.toBeNull();
+    expect(screen.getByTestId('macro-sidebar-expand-btn')).toHaveAttribute(
+      'title',
+      'Expand Edit Board',
+    );
+
+    rerender(
+      <CollapsedRail
+        activePower="FRANCE"
+        progress={progressFor({ issues: [issue(A_PAR, 'info')] })}
+        onToggleCollapse={onToggleCollapse}
+        adminMode="direct-edit"
+        stagedChangesCount={2}
+      />,
+    );
+    expect(container.querySelector('.rail-badge-staged')).toHaveTextContent(
+      '2',
+    );
+  });
+
+  it('shows admin turn-clock clock icon instead of country/unit icons or shield', () => {
+    const { container } = render(
+      <CollapsedRail
+        activePower="FRANCE"
+        progress={progressFor({ issues: [issue(A_PAR, 'info')] })}
+        onToggleCollapse={vi.fn()}
+        adminMode="turn-clock"
+      />,
+    );
+    expect(container.querySelector('.rail-power-crest')).toBeNull();
+    expect(container.querySelector('svg.power-flag')).toBeNull();
+    expect(container.querySelector('.rail-warn-badge')).toBeNull();
+    expect(container.querySelector('.rail-admin-badge')).toBeNull();
+    const clockCrest = container.querySelector(
+      '.rail-admin-crest',
+    ) as HTMLElement;
+    expect(clockCrest).toHaveAttribute('title', 'Turn and Clock Settings');
+    expect(clockCrest.querySelector('svg.lucide-clock')).not.toBeNull();
+    expect(screen.getByTestId('macro-sidebar-expand-btn')).toHaveAttribute(
+      'title',
+      'Expand Turn and Clock Settings',
+    );
+  });
 });

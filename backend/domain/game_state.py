@@ -87,11 +87,24 @@ class UnitMoveOptions(BaseModel):
     valid_supports: list[SupportOption] = Field(default_factory=list)
 
 
+class AdminActionLogEntry(BaseModel):
+    """Audit log entry for a creator/administrator intervention on a match."""
+
+    id: str
+    timestamp: str
+    actor: str
+    season: str
+    year: int
+    phase: str
+    summary_lines: list[str] = Field(default_factory=list)
+    acknowledged_by: list[str] = Field(default_factory=list)
+
+
 class GameState(BaseModel):
     game_id: str
     season: str  # "Spring", "Fall", or "Winter"
     year: int
-    phase: str  # "Movement", "Retreats", or "Adjustments"
+    phase: str  # "Movement", "Retreats", "Adjustments", or "Admin" (in history snapshots)
     scenario_id: str = "standard_1901"
     active_power: Power = Power.FRANCE
     units: list[Unit]
@@ -106,6 +119,8 @@ class GameState(BaseModel):
     retreats: dict[str, Any] | None = None
     winner: Power | None = None  # Set once the game has been won; no further turns resolve
     timer: PhaseTimer | None = None  # None until the host starts the clock
+    admin_log: list[AdminActionLogEntry] = Field(default_factory=list)
+    state_revision: int = 1
     # Per unit id: where it may move, convoy and support. Rebuilt on refresh and load, never saved.
     unit_options: dict[str, UnitMoveOptions] = Field(default_factory=dict)
 

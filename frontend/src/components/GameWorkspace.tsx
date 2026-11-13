@@ -15,8 +15,13 @@ import type {
 import type { DisplayPrefs } from '../utils/displayPrefs';
 import type { SheetSnap } from '../utils/sheetHelpers';
 import { turnLabel } from '../utils/timerHelpers';
-import { EuropeMap, type EuropeMapHandle } from './EuropeMap';
+import {
+  type DirectEditMapHandlers,
+  EuropeMap,
+  type EuropeMapHandle,
+} from './EuropeMap';
 import { MacroSidebar } from './MacroSidebar';
+import type { AdminTurnClockSettings } from './macro/AdminTurnClockSidebar';
 import { PhaseTimerWidget } from './PhaseTimerWidget';
 import { ToolsSidebar } from './ToolsSidebar';
 import { TurnHistoryPill, TurnHistorySelector } from './TurnHistorySelector';
@@ -93,9 +98,8 @@ export interface GameWorkspaceProps {
   /** The host's tools. */
   isGameCreator: boolean;
   directEditActive: boolean;
-  openAdminTools: () => void;
-  adminOverrideActive: boolean;
-  setAdminOverrideActive: Dispatch<SetStateAction<boolean>>;
+  directEdit?: DirectEditMapHandlers;
+  turnClockSettings?: AdminTurnClockSettings;
 }
 
 /**
@@ -158,9 +162,8 @@ export function GameWorkspace({
   handleOpenSurrenderModal,
   isGameCreator,
   directEditActive,
-  openAdminTools,
-  adminOverrideActive,
-  setAdminOverrideActive,
+  directEdit,
+  turnClockSettings,
 }: GameWorkspaceProps) {
   const viewingHistory = historyTurn !== null;
   const ignore = () => {};
@@ -213,10 +216,7 @@ export function GameWorkspace({
         onAIStepTurn={handleAIStepTurn}
         onLoadScenario={handleLoadScenario}
         onSaveSandboxClick={handleOpenSaveSandboxModal}
-        isGameCreator={isGameCreator}
-        onOpenAdminTools={openAdminTools}
-        adminOverrideActive={adminOverrideActive}
-        onToggleAdminOverride={() => setAdminOverrideActive((prev) => !prev)}
+        adminOverrideActive={directEditActive}
       />
 
       {/* CENTER: Europe Map */}
@@ -234,6 +234,7 @@ export function GameWorkspace({
         activePower={playerPower}
         sandboxMode={sandboxMode}
         directEditActive={directEditActive}
+        directEdit={directEdit}
         selectedUnitId={viewingHistory ? null : selectedUnitId}
         hoveredUnitId={viewingHistory ? null : hoveredUnitId}
         highlightedProvinces={
@@ -325,6 +326,9 @@ export function GameWorkspace({
         isMultiplayer={viewMode === 'multiplayer'}
         isGameCreator={isGameCreator}
         gameOver={Boolean(gameState.winner)}
+        directEditActive={directEditActive}
+        directEdit={directEdit}
+        turnClockSettings={turnClockSettings}
         participants={activeGameSummary?.participants}
         lobbyStatus={activeGameSummary?.status}
         onSelectUnit={setSelectedUnitId}

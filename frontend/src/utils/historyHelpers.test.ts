@@ -17,6 +17,9 @@ describe('shortTurnLabel', () => {
   it('fits a turn into the phone pill', () => {
     expect(shortTurnLabel(entries[1])).toBe('F1901 M');
     expect(shortTurnLabel(entries[2])).toBe('W1901 A');
+    expect(
+      shortTurnLabel({ season: 'Spring', year: 1901, phase: 'Admin' }),
+    ).toBe('S1901 Adm');
   });
 });
 

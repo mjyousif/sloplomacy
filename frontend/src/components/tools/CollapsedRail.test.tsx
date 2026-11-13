@@ -59,33 +59,4 @@ describe('CollapsedRail', () => {
       screen.getByTitle('Hypothetical Mode ACTIVE (Click to toggle)'),
     ).toHaveClass('rail-active-glow');
   });
-
-  it('shows the admin button only to the creator, with a handler', async () => {
-    const onOpenAdminTools = vi.fn();
-    const { rerender } = render(
-      <CollapsedRail {...props({ onOpenAdminTools })} />,
-    );
-    expect(screen.queryByTitle('Creator Admin Console')).toBeNull();
-    rerender(<CollapsedRail {...props({ isGameCreator: true })} />);
-    expect(screen.queryByTitle('Creator Admin Console')).toBeNull();
-    rerender(
-      <CollapsedRail {...props({ isGameCreator: true, onOpenAdminTools })} />,
-    );
-    const admin = screen.getByTitle('Creator Admin Console');
-    expect(admin).not.toHaveClass('rail-admin-glow');
-    await userEvent.click(admin);
-    expect(onOpenAdminTools).toHaveBeenCalledTimes(1);
-    rerender(
-      <CollapsedRail
-        {...props({
-          isGameCreator: true,
-          onOpenAdminTools,
-          adminOverrideActive: true,
-        })}
-      />,
-    );
-    expect(screen.getByTitle('Creator Admin Console')).toHaveClass(
-      'rail-admin-glow',
-    );
-  });
 });

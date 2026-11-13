@@ -258,6 +258,8 @@ async def load_game_from_db(
             passcode = row.get("passcode")
 
         state = GameState.model_validate(state_data)
+        if row.get("state_revision") is not None:
+            state.state_revision = max(state.state_revision, int(row["state_revision"]))
 
         summary: MultiplayerGameSummary | None = None
         if summary_data and isinstance(summary_data, dict):

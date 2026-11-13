@@ -4,6 +4,9 @@ type TurnLike = Pick<TurnHistoryEntry, 'season' | 'year' | 'phase'>;
 
 /** "F1901 M", for the phone's map pill. */
 export function shortTurnLabel(turn: TurnLike): string {
+  if (turn.phase === 'Admin') {
+    return `${turn.season.charAt(0)}${turn.year} Adm`;
+  }
   return `${turn.season.charAt(0)}${turn.year} ${turn.phase.charAt(0)}`;
 }
 

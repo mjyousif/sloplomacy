@@ -18,6 +18,12 @@ import {
 } from '../utils/orderProgress';
 import type { SheetSnap } from '../utils/sheetHelpers';
 import { BottomSheet } from './BottomSheet';
+import type { DirectEditMapHandlers } from './EuropeMap';
+import { AdminDirectEditSidebar } from './macro/AdminDirectEditSidebar';
+import {
+  type AdminTurnClockSettings,
+  AdminTurnClockSidebar,
+} from './macro/AdminTurnClockSidebar';
 import { CollapsedRail } from './macro/CollapsedRail';
 import {
   ConfirmAllButton,
@@ -88,6 +94,11 @@ export interface MacroSidebarProps {
    */
   historyLabel?: string | null;
   onReturnToLive?: () => void;
+  /** Repurposes the right sidebar into the Edit Board Inspector. */
+  directEditActive?: boolean;
+  directEdit?: DirectEditMapHandlers;
+  /** Repurposes the right sidebar into the Turn and Clock Settings panel. */
+  turnClockSettings?: AdminTurnClockSettings;
 }
 
 export const MacroSidebar: React.FC<MacroSidebarProps> = ({
@@ -130,6 +141,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   onSheetSnapChange,
   historyLabel = null,
   onReturnToLive,
+  directEditActive = false,
+  directEdit,
+  turnClockSettings,
 }) => {
   const powerMeta = POWER_METADATA[activePower];
   const isFinalized = finalizedPowers.includes(activePower);
@@ -290,6 +304,40 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       onReturnToLive={onReturnToLive}
     />
   );
+
+  if (directEditActive && directEdit) {
+    return (
+      <AdminDirectEditSidebar
+        variant={variant}
+        sheetSnap={sheetSnap}
+        onSheetSnapChange={onSheetSnapChange}
+        collapsed={collapsed}
+        onToggleCollapse={onToggleCollapse}
+        provinces={provinces}
+        orders={orders}
+        ownership={ownership}
+        activePower={activePower}
+        progress={progress}
+        directEdit={directEdit}
+        onSelectUnit={onSelectUnit}
+      />
+    );
+  }
+
+  if (turnClockSettings?.isOpen) {
+    return (
+      <AdminTurnClockSidebar
+        variant={variant}
+        sheetSnap={sheetSnap}
+        onSheetSnapChange={onSheetSnapChange}
+        collapsed={collapsed}
+        onToggleCollapse={onToggleCollapse}
+        activePower={activePower}
+        progress={progress}
+        settings={turnClockSettings}
+      />
+    );
+  }
 
   // Phone: the same pieces in a pull-up sheet. The peek holds what a player needs every turn,
   // and spells out the counts the desktop rail only gives in tooltips.

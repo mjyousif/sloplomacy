@@ -30,6 +30,7 @@ export const SupplyCentersLayer = memo<{
   const sharesUnitPoint = pieceStyle === 'seated' || pieceStyle === 'flags';
   // In Star seat the unit carries the star, so only empty centers are drawn here
   const carried = pieceStyle === 'seated' ? new Set(occupied.split(',')) : null;
+  const hasOwnershipData = Object.keys(ownership).length > 0;
 
   return (
     <g className="supply-centers-layer" pointerEvents="none">
@@ -44,7 +45,9 @@ export const SupplyCentersLayer = memo<{
           carried?.has(geom.id)
         )
           return null;
-        const owner = ownership[geom.id] || pInfo.home_power;
+        const owner =
+          ownership[geom.id] ||
+          (hasOwnershipData ? undefined : pInfo.home_power);
         return (
           <g
             key={`sc_${geom.id}`}

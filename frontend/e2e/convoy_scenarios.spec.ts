@@ -20,7 +20,7 @@ async function spawnUnit(
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ power, unit_type, province }),
+      body: JSON.stringify({ power, unit_type, province, user_id: 'guest' }),
     },
   );
   if (!res.ok) {

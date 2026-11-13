@@ -145,6 +145,17 @@ export interface UnitMoveOptions {
   valid_supports: SupportOption[];
 }
 
+export interface AdminActionLogEntry {
+  id: string;
+  timestamp: string;
+  actor: string;
+  season: string;
+  year: number;
+  phase: string;
+  summary_lines: string[];
+  acknowledged_by: string[];
+}
+
 export interface GameState {
   game_id: string;
   season: string;
@@ -164,6 +175,8 @@ export interface GameState {
   retreats?: Record<Power, Record<string, string[]>> | null;
   winner?: Power | null;
   timer?: PhaseTimer | null;
+  admin_log?: AdminActionLogEntry[];
+  state_revision?: number;
   unit_options?: Record<string, UnitMoveOptions>;
 }
 
@@ -362,8 +375,22 @@ export interface AdminStatusResponse {
   is_creator: boolean;
   can_rollback: boolean;
   history_count: number;
+  history_entries?: TurnHistoryEntry[];
   creator_email: string;
   creator_id?: string | null;
+}
+
+export interface AdminBatchBoardEditRequest {
+  expected_revision: number;
+  expected_season: string;
+  expected_year: number;
+  expected_phase: string;
+  units: Unit[];
+  ownership: Record<string, Power>;
+  orders?: Record<string, Order> | null;
+  summary_lines?: string[] | null;
+  user_id?: string | null;
+  email?: string | null;
 }
 
 export interface WebSocketGameUpdate {

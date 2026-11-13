@@ -44,10 +44,14 @@ frontend/
     │   │   │   ├── BuildMenu.tsx          # Army, fleet per coast, or waive for a winter build slot
     │   │   │   ├── CoastPicker.tsx        # Which coast of a split-coast province
     │   │   │   ├── SimulationBanner.tsx   # The Hypothetical Mode strip over the map
-    │   │   │   └── MapZoomControls.tsx    # A phone's zoom buttons on the map
+    │   │   │   ├── MapZoomControls.tsx    # A phone's zoom buttons on the map
+    │   │   │   ├── AdminTileInspector.tsx # Direct-Edit territory owner, unit spawn/edit/order/relocate & delete panel
+    │   │   │   ├── IconSelectDropdown.tsx # Reusable accessible icon dropdown for admin selects
+    │   │   │   └── PowerFlagDropdown.tsx  # Great Power dropdown with flags built on IconSelectDropdown
     │   │   ├── layers/
     │   │   │   ├── ProvincesLayer.tsx     # Every province polygon, lit where the selected unit can go (with its test)
     │   │   │   ├── targetHighlight.ts     # Green (direct/active) and ocean-blue (potential/chained) target sets + reticles
+    │   │   │   ├── AdminOwnershipChangesLayer.tsx # Ownership change badges overlaid on historical Admin turns
     │   │   │   ├── OrderArrowsLayer.tsx   # Every drawn order: convoys under supports under moves (with its test)
     │   │   │   ├── BuildTokensLayer.tsx   # A winter's build slots (with its test)
     │   │   │   ├── UnitsLayer.tsx         # Every unit, each drawn by units/UnitToken.tsx (with its test)
@@ -71,10 +75,12 @@ frontend/
     │   │   ├── StandingsSection.tsx      # Power cards, ranks, status tags and the sort toggle
     │   │   ├── useStandingsSort.ts       # Supply Centre and unit tallies, ranking and the remembered sort mode
     │   │   ├── SandboxToolsSection.tsx   # Hypothetical Mode, General Staff AI, foreign moves, reset and save
-    │   │   └── AdminSection.tsx          # Open Admin Console and the Direct-Edit override
+    │   │   └── *.test.tsx
     │   ├── MacroSidebar.tsx     # Right collapsible sidebar: core gameplay orders, builds, finalize & adjudicate (the order sheet on phones)
     │   ├── MacroSidebar.test.tsx # Panel, collapsed rail and phone sheet: layout, handlers, history lock, one <aside> across collapse
-    │   ├── macro/               # Decomposed order sheet and unit management cards
+    │   ├── macro/               # Decomposed order sheet, admin sidebars, and unit management cards
+    │   │   ├── AdminDirectEditSidebar.tsx # Direct-Edit right sidebar & phone sheet with staged changes drawer and AdminTileInspector
+    │   │   ├── AdminTurnClockSidebar.tsx  # Turn and Clock Settings right sidebar & phone sheet wrapping TurnControlTab
     │   │   ├── PowerHeader.tsx  # StatusBadge, PhaseContext, HistoryLockBar and the power header row (panel banner top or sheet status row)
     │   │   ├── UnitOrderList.tsx # The home build slots in winter and a card per unit; owns the order-type change handler
     │   │   ├── UnitMacroCard.tsx # Unit order card shell, badges, diagnostics & simulation strip
@@ -102,15 +108,10 @@ frontend/
     │   │   ├── PasscodePromptModal.tsx       # Passcode entry dialog for private matches
     │   │   ├── PrivateCampaignCreatedModal.tsx # Shareable credentials modal after creating private room
     │   │   └── *.test.tsx, lobby.testkit.ts    # Each section's rendering and callbacks, with shared game fixtures
-    │   ├── AdminToolsModal.tsx  # The creator console: header, status strip, tab bar; wires `useAdminActions` into the tabs
-    │   ├── AdminToolsModal.test.tsx # Tabs, closing, and each tab's action through to its request
-    │   ├── admin/               # Decomposed creator console tabs
-    │   │   ├── useAdminActions.ts      # The console's form state, status and error banners, effects and one handler per admin endpoint
-    │   │   ├── useAdminActions.test.tsx, .failures.test.tsx, .testkit.ts # Each request, its toast, and every failure path
-    │   │   ├── TurnControlTab.tsx      # Timeline rollback and turn jump controls
-    │   │   ├── UnitTeleportTab.tsx     # Move units instantly across provinces
-    │   │   ├── UnitSpawnerTab.tsx      # Unit creation and disband tools
-    │   │   └── TerritoryControlTab.tsx # Supply center ownership modifier
+    │   ├── AdminSettingsMenu.tsx        # Top-bar Wrench menu toggling Edit Board, Turn & Clock Settings, and Exit Admin Mode
+    │   ├── AdminActionWarningModal.tsx  # Unacknowledged admin mutation audit log warning prompt
+    │   ├── admin/
+    │   │   └── TurnControlTab.tsx       # Snapshot revert selector, clock/season adjustment, unlock all orders
     │   ├── AuthModal.tsx        # Supabase signin/signup & local dev auth toggle
     │   ├── BottomSheet.tsx      # Phone pull-up panel with peek, half and full stops (holds the order sheet)
     │   ├── CompactTopBar.tsx    # Phone top bar: back, ≡ tools, turn, order-problem count and a ⋯ menu
@@ -269,7 +270,8 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 ├── Modals & Overlays (AppModals.tsx renders the dialogues, on every view)
 │   ├── DisplaySettingsMenu.tsx (Top bar popover for piece style and marks)
 │   ├── AuthModal.tsx (Supabase login/signup & local dev auth toggle)
-│   ├── AdminToolsModal.tsx (Creator unit teleport, spawn, destroy, turn jump, rollback)
+│   ├── AdminSettingsMenu.tsx (Top bar Wrench popover: Edit Board & Turn and Clock Settings)
+│   ├── AdminActionWarningModal.tsx (Creator action notice & acknowledgment prompt)
 │   ├── SurrenderModal.tsx (Civil Disorder concession dialogue)
 │   ├── SanityCheckModal.tsx (Tactical Blunder Gatekeeper before order finalization)
 │   └── PhaseTimerWidget.tsx (Turn clock over the bottom left of the map, via EuropeMap's overlay prop)

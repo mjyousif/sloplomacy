@@ -1,5 +1,7 @@
 import type React from 'react';
-import { useImperativeHandle, useRef } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState } from 'react';
+import type { Unit } from '../../../types/diplomacy';
+import { canPlaceUnitTypeInProvince } from '../../../utils/adminHelpers';
 import type { EuropeMapHandle, EuropeMapProps } from '../../EuropeMap';
 import type { OrderLayerContext } from '../layers/orders/orderLayerContext';
 import type { UnitLayerContext } from '../layers/units/unitLayerContext';
@@ -26,6 +28,7 @@ export function useEuropeMap(
     activePower,
     sandboxMode,
     directEditActive = false,
+    directEdit,
     selectedUnitId,
     hoveredUnitId,
     highlightedProvinces,
@@ -152,6 +155,7 @@ export function useEuropeMap(
     historyView,
     historyPower,
     isAdjustmentPhase,
+    phase,
   });
 
   const touchHitRadius = useTouchHitRadius({
@@ -198,16 +202,112 @@ export function useEuropeMap(
     [stepZoom, resetCamera],
   );
 
+  const [directEditCoastChoice, setDirectEditCoastChoice] = useState<{
+    unitId: string;
+    target: string;
+    coasts: string[];
+  } | null>(null);
+
+  useEffect(() => {
+    if (!directEditActive) {
+      setDirectEditCoastChoice(null);
+    }
+  }, [directEditActive]);
+
+  const inspectedProvince =
+    directEditActive && directEdit ? directEdit.inspectedProvince : null;
+  const inspectedUnit = inspectedProvince
+    ? (unitsByProv[inspectedProvince] ?? null)
+    : null;
+  const relocatingUnit =
+    directEditActive && directEdit?.relocatingUnitId
+      ? (unitsById[directEdit.relocatingUnitId] ?? null)
+      : null;
+
+  const handleDirectEditSelectUnit = (unit: Unit, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (dragMovedRef.current || !directEdit) return;
+    setDirectEditCoastChoice(null);
+    // While moving a piece, every other piece's square is occupied and so not a legal target.
+    // Clicking the moving piece itself just cancels the move.
+    if (relocatingUnit) {
+      if (unit.id === relocatingUnit.id) directEdit.setRelocatingUnitId(null);
+      return;
+    }
+    if (directEdit.inspectedProvince === unit.province) {
+      directEdit.setInspectedProvince(null);
+      directEdit.setRelocatingUnitId(null);
+      onSelectUnit(null);
+    } else {
+      directEdit.setInspectedProvince(unit.province);
+      directEdit.setRelocatingUnitId(null);
+      onSelectUnit(unit.id);
+    }
+  };
+
+  const handleDirectEditClickProvince = (
+    provId: string,
+    explicitCoast?: string | null,
+  ) => {
+    if (dragMovedRef.current || !directEdit) return;
+    setDirectEditCoastChoice(null);
+    const relocId = directEdit.relocatingUnitId;
+    const relocUnit = relocId ? unitsById[relocId] : null;
+    const occupant = unitsByProv[provId] ?? null;
+
+    if (relocUnit) {
+      // Moving a piece: only legal targets react, and incompatible or occupied squares ignore clicks.
+      const provInfo = provinces[provId];
+      if (
+        provId === relocUnit.province ||
+        occupant ||
+        !provInfo ||
+        !canPlaceUnitTypeInProvince(relocUnit.unit_type, provInfo.type)
+      ) {
+        return;
+      }
+      if (
+        relocUnit.unit_type === 'F' &&
+        provInfo &&
+        provInfo.coasts?.length > 1 &&
+        !explicitCoast
+      ) {
+        setDirectEditCoastChoice({
+          unitId: relocUnit.id,
+          target: provId,
+          coasts: provInfo.coasts,
+        });
+        return;
+      }
+      directEdit.onStageRelocateUnit(relocUnit.id, provId, explicitCoast);
+      onSelectUnit(relocUnit.id);
+      return;
+    }
+
+    if (directEdit.inspectedProvince === provId) {
+      directEdit.setInspectedProvince(null);
+      directEdit.setRelocatingUnitId(null);
+      onSelectUnit(null);
+    } else {
+      directEdit.setInspectedProvince(provId);
+      directEdit.setRelocatingUnitId(null);
+      onSelectUnit(occupant ? occupant.id : null);
+    }
+  };
+
   const menuPlacement = useUnitMenuPlacement({
     compact,
     containerRef,
     cameraRef,
     scheduleCameraSync,
     selectedUnitId,
-    selectedUnit,
+    selectedUnit: directEditActive ? inspectedUnit : selectedUnit,
     selectedBuildProv,
+    inspectedProvince,
     reachableList,
-    pendingCoastChoice,
+    pendingCoastChoice: directEditActive
+      ? directEditCoastChoice
+      : pendingCoastChoice,
     getUnitPoint,
     getProvincePoint,
     onDockedBarChange,
@@ -248,17 +348,22 @@ export function useEuropeMap(
     simulationResult,
   };
 
+  const displayOwnership =
+    historyView && phase === 'Admin' && simulationResult?.new_ownership
+      ? simulationResult.new_ownership
+      : ownership;
+
   const unitLayerContext: UnitLayerContext = {
     orders,
     provinces,
-    ownership,
+    ownership: displayOwnership,
     unitsByProv,
     controlPower,
     canEditAnyPower,
     activePower,
     selectedUnit,
     interactionMode,
-    hoveredUnitId,
+    hoveredUnitId: relocatingUnit ? null : hoveredUnitId,
     isUnitOrderVisible,
     issuesByUnit,
     supportCountByUnitId,
@@ -270,8 +375,11 @@ export function useEuropeMap(
     getUnitPoint,
     describePiece,
     touchHitRadius,
-    handleSelectUnitOnMap,
-    onHoverUnit,
+    handleSelectUnitOnMap:
+      directEditActive && directEdit
+        ? handleDirectEditSelectUnit
+        : handleSelectUnitOnMap,
+    onHoverUnit: relocatingUnit ? () => {} : onHoverUnit,
   };
 
   return {
@@ -279,8 +387,12 @@ export function useEuropeMap(
     units,
     orders,
     ownership,
+    displayOwnership,
     activePower,
     sandboxMode,
+    directEditActive,
+    directEdit,
+    phase,
     selectedUnitId,
     hoveredUnitId,
     highlightedProvinces,
@@ -296,6 +408,8 @@ export function useEuropeMap(
     unitMark,
     compact,
     historyView,
+    historyPower,
+    unitsByProv,
     containerRef,
     svgRef,
     cameraGroupRef,
@@ -322,6 +436,12 @@ export function useEuropeMap(
     interactionMode,
     pendingAuxOrigin,
     pendingCoastChoice,
+    directEditCoastChoice,
+    setDirectEditCoastChoice,
+    inspectedProvince,
+    inspectedUnit,
+    relocatingUnit,
+    handleDirectEditClickProvince,
     hoveredProv,
     clearSelection,
     commitMoveOrRetreatOrder,

@@ -8,6 +8,7 @@ import type {
   UnitMoveOptions,
   ValidationIssue,
 } from '../../../types/diplomacy';
+import { canPlaceUnitTypeInProvince } from '../../../utils/adminHelpers';
 import type { MapInteractionMode } from '../hooks/useMapInteraction';
 import { ProvincePolygon } from './ProvincePolygon';
 import { getModeTargetHighlights } from './targetHighlight';
@@ -17,6 +18,8 @@ interface ProvincesLayerProps {
   ownership: Record<string, Power>;
   layout: MapLayout;
   isAdjustmentPhase: boolean;
+  directEditActive?: boolean;
+  relocatingUnit?: Unit | null;
   /** Home centres with a build slot drawn this winter. */
   buildHomes: Record<string, Power>;
   selectedUnit: Unit | null;
@@ -40,6 +43,8 @@ export function ProvincesLayer({
   ownership,
   layout,
   isAdjustmentPhase,
+  directEditActive = false,
+  relocatingUnit = null,
   buildHomes,
   selectedUnit,
   selectedUnitOptions = null,
@@ -56,16 +61,23 @@ export function ProvincesLayer({
 }: ProvincesLayerProps) {
   const modeTargets = useMemo(
     () =>
-      getModeTargetHighlights({
-        interactionMode,
-        selectedUnit,
-        selectedUnitOptions,
-        pendingAuxOrigin,
-        reachableMap,
-        provinces,
-        units,
-      }),
+      directEditActive
+        ? {
+            green: new Set<string>(),
+            blue: new Set<string>(),
+            reticles: new Set<string>(),
+          }
+        : getModeTargetHighlights({
+            interactionMode,
+            selectedUnit,
+            selectedUnitOptions,
+            pendingAuxOrigin,
+            reachableMap,
+            provinces,
+            units,
+          }),
     [
+      directEditActive,
       interactionMode,
       selectedUnit,
       selectedUnitOptions,
@@ -76,6 +88,8 @@ export function ProvincesLayer({
     ],
   );
 
+  const hasOwnershipData = Object.keys(ownership).length > 0;
+
   return (
     <g className="interactive-provinces-layer">
       {ALL_PROVINCE_GEOMETRIES.map((geom) => {
@@ -83,12 +97,20 @@ export function ProvincesLayer({
         if (!pInfo || geom.id === 'SWI') return null;
 
         const isSea = pInfo.type === 'SEA';
-        const owner = ownership[geom.id] || pInfo.home_power || null;
+        const owner =
+          ownership[geom.id] ||
+          (pInfo.is_supply_center && hasOwnershipData
+            ? null
+            : pInfo.home_power) ||
+          null;
         const isBuildableHome = Boolean(
-          isAdjustmentPhase && buildHomes[geom.id],
+          !directEditActive && isAdjustmentPhase && buildHomes[geom.id],
         );
         const isDirectMove = Boolean(
-          selectedUnit && reachableMap[geom.id] && interactionMode === 'MOVE',
+          !directEditActive &&
+            selectedUnit &&
+            reachableMap[geom.id] &&
+            interactionMode === 'MOVE',
         );
         const isGreen = modeTargets.green.has(geom.id) || isBuildableHome;
         const isBlue = !isGreen && modeTargets.blue.has(geom.id);
@@ -106,6 +128,24 @@ export function ProvincesLayer({
           highlightedProvinces.includes(geom.id) ||
           selectedBuildProv === geom.id;
         const hasWarning = Boolean(issuesByProvince[geom.id]?.length);
+        const movingUnit = directEditActive
+          ? relocatingUnit
+          : interactionMode === 'MOVE'
+            ? selectedUnit
+            : null;
+        const isMoveIncompatible = movingUnit
+          ? !canPlaceUnitTypeInProvince(movingUnit.unit_type, pInfo.type) ||
+            Boolean(
+              directEditActive &&
+                units.some((u) => !u.is_dislodged && u.province === geom.id),
+            )
+          : false;
+        const isMoveCompatible = Boolean(
+          directEditActive && relocatingUnit && !isMoveIncompatible,
+        );
+        const suppressIncompatibleHover = Boolean(
+          directEditActive && relocatingUnit && isMoveIncompatible,
+        );
 
         return (
           <ProvincePolygon
@@ -119,9 +159,11 @@ export function ProvincesLayer({
             showFleetCoasts={showFleetCoasts}
             showMoveReticle={showMoveReticle}
             reticlePoint={layout[geom.id]?.unit ?? geom.unitPos}
-            isHovered={isHovered}
+            isHovered={isHovered && !suppressIncompatibleHover}
             isHighlighted={isHighlighted}
             hasWarning={hasWarning}
+            isMoveIncompatible={isMoveIncompatible}
+            isMoveCompatible={isMoveCompatible}
             onClickProvince={onClickProvince}
             onHoverProvince={onHoverProvince}
           />

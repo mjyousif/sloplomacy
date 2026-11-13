@@ -16,6 +16,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 - `hooks/useSeatActions.ts`: taking and giving up a seat: `handleEnterSoloSandbox` (asking first when it leaves a match), `handleCreateMultiplayerGame`, `handleJoinOrEnterMultiplayerGame` (which keeps a typed passcode in `matchPasscodes`), the Surrender & Leave modal (`surrenderModalOpen`, `surrenderModalGame`, `surrenderModalPower`, `handleOpenSurrenderModal`), `handleSurrenderPower`, `handleLeaveGame`, and `handleSelectPower` for the power a sandbox player commands. It runs no effects, and App calls it after `useMatchActions`.
 - `hooks/useAuthSession.ts`: who is signed in and the sign-in modal. It reads the saved user once on mount and then follows every sign-in and sign-out through `subscribeToAuthChanges`. `openAuthPrompt(reason?, tab?)` opens the modal with an optional reason banner and a tab (sign-in by default).
 - `hooks/useWorkspaceLayout.ts`: the desktop rails, the phone order sheet and the tools drawer, with the effect that resets the sheet and drawer.
+- `hooks/useAdminDirectEdit.ts`: local board staging (`stagedUnits`, `stagedOwnership`, `stagedOrders`, `effectiveGameState`, `diffLines`), `AdminTileInspector` selection (`inspectedProvince`, `relocatingUnitId`), atomic batch commit (`POST /api/admin/board-edit` with `409 Conflict` detection), unapplied-edits confirmation guards (`confirmIfDirty`), and per-participant admin audit warning acknowledgement (`unacknowledgedAdminEntries`, `handleAcknowledgeAdminEntries`).
 - `components/macro/useSheetSelection.ts`: not App state but the order sheet's own reaction to `selectedUnitId` (the phone has no hover, so it calls `onHighlightProvinces` for the selected unit's provinces, and raising the sheet scrolls that unit's card to the top). `utils/orderProgress.ts` holds the order panel's derived counts, recomputed on each render of `MacroSidebar` and never stored.
 - `hooks/useToast.ts`: the toast banner and `triggerToast`.
 
@@ -23,7 +24,7 @@ App renders four pieces, none of which keeps state; each takes one prop per valu
 
 - `components/AppHeader.tsx`: the desktop header (`components/TopHeader.tsx`) or the phone bar (`CompactTopBar`), then the Direct-Edit banner and the toast. It works out the player's error and warning counts for the order check.
 - `LobbyView` in the lobby, or `components/GameWorkspace.tsx` on a board: the tools sidebar, the map with the clock and the phone's history pill over it, and the order sidebar. It also counts the other powers' changed orders for the tools sidebar. On a past turn it hands the map that turn, with the selection, hover, issues and order callbacks switched off.
-- `components/AppModals.tsx`: the Sanity Check, Surrender & Leave, Save Sandbox (and its default name), admin console (only for the host) and sign-in modals, and the confirm prompt. They render on the lobby too. The admin console keeps its own state in `components/admin/useAdminActions.ts` (turn, move, spawn and ownership forms, status, error banner and the endpoint handlers), which `AdminToolsModal` calls on every render; App hands the modal its game, user and the `onStateUpdated` / `onToast` callbacks, and the modal passes them on with its `useConfirm` prompt.
+- `components/AppModals.tsx`: the Sanity Check, Surrender & Leave, Save Sandbox (and its default name), admin action warning and sign-in modals, and the confirm prompt. They render on the lobby too.
 
 The state the workspace alone uses (`mapRef`, `zoomPercent`, `hoveredUnitId`) and the turn-selector helpers (`showPastTurn`, `stepPastTurn`, `viewedEntry`) stay in App, so they survive a trip to the lobby as before.
 
@@ -46,7 +47,7 @@ The state the workspace alone uses (`mapRef`, `zoomPercent`, `hoveredUnitId`) an
 | `sandboxGameId` | `string \| null` | Mode | Id of the private server-side copy used by a multiplayer sandbox, or `null`, from `useSandboxSession`. Drafts, AI plans and previews go to `draftGameId`, which is this id when set and `activeGameId` otherwise. |
 | `simulationResult` | `SimulationResult \| null`| UI | Cached non-destructive simulation preview from the server. |
 | `showSimulationOverlay`| `boolean` | UI | Whether combat resolutions (arrows, bounces, cuts) are projected on the map, from `useSandboxSession`. |
-| `adminModalOpen` | `boolean` | Modal | Controls visibility of the game creator's Admin Tools modal. |
+| `adminModalOpen` | `boolean` | Admin | Controls visibility of the game creator's Turn and Clock Settings sidebar panel (`AdminTurnClockSidebar`). |
 | `adminOverrideActive`| `boolean` | Admin | The host's Direct-Edit toggle. It only takes effect through the derived `directEditActive`, which also requires `isGameCreator`, so it does nothing in a game the player does not host. |
 | `leftSidebarCollapsed`| `boolean` | UI | Whether the Left Tools Sidebar is collapsed into a 44px rail, from `useWorkspaceLayout`. Desktop only: phones have no rails. |
 | `rightSidebarCollapsed`| `boolean` | UI | Whether the Right Tactical Sidebar is collapsed into a 44px rail, from `useWorkspaceLayout`. Desktop only. |
