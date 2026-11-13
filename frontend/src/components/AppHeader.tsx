@@ -27,6 +27,7 @@ export interface AppHeaderProps {
   updateDisplayPrefs: (change: Partial<DisplayPrefs>) => void;
   authUser: AuthUser | null;
   openAuthPrompt: (reason?: string, tab?: AuthModalTab) => void;
+  openAccountModal?: (onboarding?: boolean) => void;
   handleSignOut: () => void;
   handleBackToLobby: () => void;
   handleEnterSoloSandbox: (event?: React.MouseEvent) => void;
@@ -70,6 +71,7 @@ export function AppHeader({
   updateDisplayPrefs,
   authUser,
   openAuthPrompt,
+  openAccountModal,
   handleSignOut,
   handleBackToLobby,
   handleEnterSoloSandbox,
@@ -134,6 +136,9 @@ export function AppHeader({
           authUser={authUser}
           onSignIn={() => openAuthPrompt(undefined, 'signin')}
           onSignOut={handleSignOut}
+          onOpenAccount={
+            openAccountModal ? () => openAccountModal(false) : undefined
+          }
           toolsOpen={toolsDrawerOpen}
           onToggleTools={() => setToolsDrawerOpen((open) => !open)}
           toolsToggleRef={toolsToggleRef}
@@ -162,6 +167,9 @@ export function AppHeader({
           authUser={authUser}
           onSignIn={() => openAuthPrompt(undefined, 'signin')}
           onSignOut={handleSignOut}
+          onOpenAccount={
+            openAccountModal ? () => openAccountModal(false) : undefined
+          }
           historyEntries={historyEntries}
           historyViewIndex={historyViewIndex}
           historyPower={historyPower}

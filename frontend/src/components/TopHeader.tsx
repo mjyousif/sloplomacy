@@ -47,6 +47,7 @@ export interface TopHeaderProps {
   authUser: AuthUser | null;
   onSignIn: () => void;
   onSignOut: () => void;
+  onOpenAccount?: () => void;
   /** Turn history controls unified with the top-bar turn chronicle. */
   historyEntries?: TurnHistoryEntry[];
   historyViewIndex?: number | null;
@@ -85,6 +86,7 @@ export function TopHeader({
   authUser,
   onSignIn,
   onSignOut,
+  onOpenAccount,
   historyEntries,
   historyViewIndex,
   historyPower,
@@ -208,10 +210,15 @@ export function TopHeader({
         {/* User Authentication Controls */}
         {authUser ? (
           <div className="header-user-Menu">
-            <span className="header-user-badge" title={authUser.email}>
+            <button
+              type="button"
+              className="header-user-badge header-user-badge-btn"
+              onClick={onOpenAccount}
+              title={`Account Settings (${authUser.email})`}
+            >
               <UserIcon size={13} />
               <span>{authUser.displayName}</span>
-            </span>
+            </button>
             <button
               type="button"
               className="header-auth-btn signout"

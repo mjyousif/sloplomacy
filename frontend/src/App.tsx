@@ -67,6 +67,10 @@ export function App() {
     authModalReason,
     authModalTab,
     openAuthPrompt,
+    accountModalOpen,
+    setAccountModalOpen,
+    accountModalOnboarding,
+    openAccountModal,
   } = useAuthSession();
   const {
     prefs: displayPrefs,
@@ -345,6 +349,7 @@ export function App() {
         updateDisplayPrefs={updateDisplayPrefs}
         authUser={authUser}
         openAuthPrompt={openAuthPrompt}
+        openAccountModal={openAccountModal}
         handleSignOut={handleSignOut}
         handleBackToLobby={handleBackToLobby}
         handleEnterSoloSandbox={guardedEnterSoloSandbox}
@@ -487,6 +492,10 @@ export function App() {
         setAuthModalOpen={setAuthModalOpen}
         authModalTab={authModalTab}
         authModalReason={authModalReason}
+        accountModalOpen={accountModalOpen}
+        setAccountModalOpen={setAccountModalOpen}
+        accountModalOnboarding={accountModalOnboarding}
+        handleSignOut={handleSignOut}
         confirmModal={confirmModal}
       />
     </div>

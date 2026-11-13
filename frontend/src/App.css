@@ -2144,6 +2144,19 @@
   white-space: nowrap;
 }
 
+.header-user-badge-btn {
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.header-user-badge-btn:hover {
+  background: rgba(16, 185, 129, 0.24);
+  border-color: rgba(16, 185, 129, 0.7);
+}
+
 .header-guest-tag {
   padding: 4px 9px;
   border-radius: 999px;

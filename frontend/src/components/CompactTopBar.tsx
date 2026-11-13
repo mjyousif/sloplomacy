@@ -51,6 +51,7 @@ export interface CompactTopBarProps {
   authUser: AuthUser | null;
   onSignIn: () => void;
   onSignOut: () => void;
+  onOpenAccount?: () => void;
   /** In a game, ≡ opens the tools drawer. */
   toolsOpen?: boolean;
   onToggleTools?: () => void;
@@ -99,6 +100,7 @@ export function CompactTopBar({
   authUser,
   onSignIn,
   onSignOut,
+  onOpenAccount,
   toolsOpen = false,
   onToggleTools,
   toolsToggleRef,
@@ -372,6 +374,19 @@ export function CompactTopBar({
                         <span>{authUser.email}</span>
                       </div>
                     </div>
+                    {onOpenAccount && (
+                      <button
+                        type="button"
+                        className="compact-menu-item"
+                        onClick={() => {
+                          closeMenu();
+                          onOpenAccount();
+                        }}
+                      >
+                        <UserIcon size={18} />
+                        <span>Account &amp; Username</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="compact-menu-item"

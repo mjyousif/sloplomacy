@@ -271,12 +271,15 @@ describe('TopHeader: display settings and account', () => {
   });
 
   it('names a signed-in player and signs them out', async () => {
-    const { props } = renderHeader({ authUser: ALICE });
+    const onOpenAccount = vi.fn();
+    const { props } = renderHeader({ authUser: ALICE, onOpenAccount });
     expect(screen.getByText('Alice').parentElement).toHaveAttribute(
       'title',
-      'alice@example.test',
+      'Account Settings (alice@example.test)',
     );
     expect(screen.queryByText('Guest Mode')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Alice' }));
+    expect(onOpenAccount).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByRole('button', { name: 'Sign Out' }));
     expect(props.onSignOut).toHaveBeenCalledTimes(1);
     expect(props.onSignIn).not.toHaveBeenCalled();
