@@ -1,26 +1,26 @@
 # Styling, Themes & Cartographic Design
 
-The visual styling is defined in `frontend/src/App.css` and `frontend/src/types/diplomacy.ts`. It adopts an authentic, military war-room aesthetic inspired by turn-of-the-century European cartography, antique brass fittings, and parchment maps.
+The visual styling is defined in `frontend/src/App.css`, `frontend/src/compact.css` and `frontend/src/types/diplomacy.ts`, ordered by the cascade layers in `frontend/src/styles/index.css` (see [Stylesheet Layers](#stylesheet-layers)). It adopts an authentic, military war-room aesthetic inspired by turn-of-the-century European cartography, antique brass fittings, and parchment maps.
 
 ---
 
-## Design System Tokens
+## Stylesheet Layers
 
-### Neutral & Surface Palette
-```css
-:root {
-  --bg-primary: #0f172a;       /* Deep slate command surface */
-  --bg-secondary: #1e293b;     /* Card & panel backgrounds */
-  --bg-surface: #334155;       /* Elevated dialogs & headers */
-  --border-subtle: #475569;    /* Panel borders */
-  --text-main: #f8fafc;        /* High-contrast labels & headers */
-  --text-muted: #94a3b8;       /* Secondary descriptions */
-  --accent-gold: #e2b144;      /* Historical brass & brass highlights */
-  --danger-crimson: #ef4444;   /* Tactical errors & contested battles */
-  --warning-amber: #f59e0b;    /* Sanity warnings & sandbox indicators */
-  --success-emerald: #10b981;  /* Confirmed orders & successful moves */
-}
-```
+`src/styles/index.css` is the only place the cascade order is written: `@layer base, components, compact;`. It then imports each sheet into a layer, so a later layer wins over an earlier one whatever the specificity:
+
+| Layer | Holds | File |
+| :--- | :--- | :--- |
+| `base` | App-wide tokens, the reset and page defaults, the shared `@keyframes`, `.compact-only` | `styles/tokens.css`, `styles/base.css` |
+| `components` | The wide layout (desktop and tablets) | `App.css` |
+| `compact` | The phone layout | `compact.css` |
+
+- `main.tsx` imports `styles/index.css` first. Vite orders CSS by first import, and the minifier drops the `@layer` line once the blocks already come in order. A sheet imported before it is either unlayered (and beats everything) or, if it opens `@layer compact` or `@layer components`, fixes that layer's rank first. Order still decides ties inside one layer.
+- **Nothing may be unlayered.** Unlayered rules beat every layer.
+- Because `compact` outranks `components`, a phone rule now beats a wide rule that is *more specific* than it. A wide `:hover` rule used to beat a plain phone rule (specificity), and no longer does. Where that was the look, `compact.css` restates the state: `.modal-close-btn` and `.modal-close-icon` hover, the `.phase-timer-collapse` hover, and the font size of the fields in the Turn & Clock sidebar. Phone rules that are not scoped by `[data-layout='compact']` (the `.compact-*` family, the shell height, the `(hover: none)` rule) now also beat every wide rule on desktop. Check a change by comparing every element's box and computed style, plus forced `:hover` and `:focus`, between `main` and your build.
+- `.compact-only` is in the lowest layer, so a component rule that sets `display` on the same element beats it. Give such an element no `display` rule of its own.
+- `@keyframes` are found by name from any layer.
+- `.ai-btn` is styled in `App.css` but no component uses that class.
+- `tokens.css` is empty: the stylesheets still write their colours, font stacks and sizes as literals. The only custom properties are `--chip-color` (default in `App.css`, set by `TurnHistorySelector`) and `--docked-bar-h` (set from script by the map), and both belong to one feature. The page itself is `#14171c` behind `#f1ede4` text in Inter.
 
 ---
 
@@ -53,10 +53,10 @@ Each Great Power has an authentic historical color token used for province fills
 
 The app has two layouts. `useCompactLayout()` (`hooks/useCompactLayout.ts`) decides which one applies from a single media query, `COMPACT_LAYOUT_QUERY = '(max-width: 767px), (max-height: 500px)'`. The second half catches phones held sideways. `App.tsx` writes the answer on the shell as `data-layout="compact"` or `data-layout="wide"`.
 
-- **Wide (desktop and tablets)**: the original layout, styled by `App.css`.
+- **Wide (desktop and tablets)**: the original layout, styled by `App.css` (the `components` layer).
   - Header: a `60px` row with the brand, Solo Sandbox, the turn, the order check pill, Live Sync, display settings and the account.
   - Workspace: the Left Tools Sidebar (`290px`, or a `44px` rail), the map (`flex: 1`), and the Right Tactical Sidebar (`360px`, between `340px` and `380px`, or a `44px` rail).
-- **Compact (phones)**: every phone rule lives in `src/compact.css` and starts with `[data-layout='compact']`. That file never writes its own width `@media` rule, so the breakpoint is defined only in `COMPACT_LAYOUT_QUERY`. Nothing in it changes the wide layout.
+- **Compact (phones)**: every phone rule lives in `src/compact.css` (the `compact` layer) and starts with `[data-layout='compact']`. That file never writes its own width `@media` rule, so the breakpoint is defined only in `COMPACT_LAYOUT_QUERY`. Nothing in it changes the wide layout.
   - **Viewport**: the shell is `100dvh` tall (falling back to `App.css`'s `100vh`), so mobile browser toolbars don't hide the bottom edge. `index.html` sets `viewport-fit=cover`, and the shell pads itself with `env(safe-area-inset-*)`.
   - **Top bar**: `CompactTopBar.tsx` replaces the header. See [Phone Top Bar](sidebar-and-controls.md#phone-top-bar-compacttopbartsx).
   - **Lobby**: one column, in this order: your games, open games, Host, Join, then the intro banner. Power slots wrap to as many columns as fit (about three on a phone), and rows of buttons wrap.

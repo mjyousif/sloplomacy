@@ -1,0 +1,4 @@
+/* App-wide design tokens: custom properties on :root, and the ones that only the phone layout
+   changes under [data-layout='compact']. Palette, fonts, z-index and layout-level sizes belong
+   here. A variable only one feature uses stays in that feature's own stylesheet.
+   There are no tokens yet: the stylesheets still write their colours and sizes as literals. */
