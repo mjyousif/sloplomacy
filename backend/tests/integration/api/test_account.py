@@ -119,3 +119,43 @@ def test_hydrate_summary_profiles_resolves_registered_names(clean_profiles):
     hydrate_summary_profiles(summary)
     assert summary.participants["ITALY"].display_name == "Cavour"
     assert summary.participants["AUSTRIA"].display_name == "GuestPlayer"
+
+
+def test_serialize_summary_for_db_strips_uuid_display_name(clean_profiles):
+    from storage.supabase import _serialize_summary_for_db, build_summary_from_row
+
+    uid = "11111111-1111-1111-1111-111111111111"
+    summary = MultiplayerGameSummary(
+        game_id="g_norm",
+        name="Norm Test",
+        created_by="a@test.com",
+        created_at="2026-01-01T00:00:00Z",
+        participants={
+            "FRANCE": GameParticipant(
+                user_id=uid,
+                email="a@test.com",
+                display_name="Talleyrand",
+                power=Power.FRANCE,
+                joined_at="2026-01-01T00:00:00Z",
+            ),
+            "ITALY": GameParticipant(
+                user_id="guest",
+                email="g@test.com",
+                display_name="GuestPlayer",
+                power=Power.ITALY,
+                joined_at="2026-01-01T00:00:00Z",
+            ),
+        },
+    )
+
+    serialized = _serialize_summary_for_db(summary)
+    assert "display_name" not in serialized["participants"]["FRANCE"]
+    assert serialized["participants"]["ITALY"]["display_name"] == "GuestPlayer"
+
+    PROFILE_NAMES[uid] = "Talleyrand"
+    reloaded = build_summary_from_row(
+        {"room_code": "g_norm", "game_state": {"summary": serialized}}
+    )
+    hydrate_summary_profiles(reloaded)
+    assert reloaded.participants["FRANCE"].display_name == "Talleyrand"
+    assert reloaded.participants["ITALY"].display_name == "GuestPlayer"

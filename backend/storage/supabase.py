@@ -329,6 +329,17 @@ async def load_all_summaries_from_db(
         raise SupabaseUnavailable(str(ex)) from ex
 
 
+def _serialize_summary_for_db(summary: MultiplayerGameSummary) -> dict[str, Any]:
+    """Strip display_name from registered (UUID) participants; public.profiles is authoritative."""
+    data = summary.model_dump(mode="json")
+    participants = data.get("participants")
+    if isinstance(participants, dict):
+        for part in participants.values():
+            if isinstance(part, dict) and is_valid_uuid(part.get("user_id")):
+                part.pop("display_name", None)
+    return data
+
+
 async def save_game_to_db(
     game_id: str,
     state: GameState,
@@ -365,7 +376,7 @@ async def save_game_to_db(
         "year": state.year,
         "game_state": {
             "state": state.model_dump(mode="json", exclude=DERIVED_STATE_FIELDS),
-            "summary": summary.model_dump(mode="json") if summary else None,
+            "summary": _serialize_summary_for_db(summary) if summary else None,
             "passcode": passcode,
         },
         "updated_at": now_iso,

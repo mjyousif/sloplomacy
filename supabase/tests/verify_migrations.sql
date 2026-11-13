@@ -51,5 +51,55 @@ begin
   if name2 is distinct from 'Bismarck' then
     raise exception 'Expected u2 profile to remain Bismarck, got %', name2;
   end if;
+
+  -- 4. Seed a legacy multiplayer_games row with denormalized participant display_name.
+  insert into public.multiplayer_games (room_code, name, host_user_id, status, game_state)
+  values (
+    'mig_test_norm',
+    'Legacy Game',
+    u1,
+    'lobby',
+    jsonb_build_object(
+      'summary',
+      jsonb_build_object(
+        'game_id', 'mig_test_norm',
+        'name', 'Legacy Game',
+        'status', 'waiting',
+        'created_by', 'real.person@gmail.com',
+        'created_at', '2026-01-01T00:00:00Z',
+        'participants', jsonb_build_object(
+          'FRANCE', jsonb_build_object(
+            'user_id', u1::text,
+            'display_name', 'Real Person',
+            'power', 'FRANCE'
+          ),
+          'ITALY', jsonb_build_object(
+            'user_id', 'guest',
+            'display_name', 'GuestPlayer',
+            'power', 'ITALY'
+          )
+        )
+      )
+    )
+  );
+end
+$$;
+
+\i supabase/migrations/20261112000002_normalize_participant_names.sql
+
+do $$
+declare
+  parts jsonb;
+begin
+  select game_state -> 'summary' -> 'participants' into parts
+  from public.multiplayer_games
+  where room_code = 'mig_test_norm';
+
+  if (parts -> 'FRANCE') ? 'display_name' then
+    raise exception 'Expected UUID participant display_name to be stripped, got %', parts -> 'FRANCE';
+  end if;
+  if (parts -> 'ITALY' ->> 'display_name') is distinct from 'GuestPlayer' then
+    raise exception 'Expected guest participant display_name to remain GuestPlayer, got %', parts -> 'ITALY';
+  end if;
 end
 $$;
