@@ -328,8 +328,21 @@ describe('UnitMacroCard compact dropdown hover', () => {
   });
 
   it('uses native select elements when useNativeSelect is true (mobile sheet)', () => {
-    card({
+    const first = card({
       compact: true,
+      useNativeSelect: true,
+      unitOptions: null,
+      order: orderFor(A_BRE, 'SUPPORT', {
+        target: 'PIC',
+        aux_unit_origin: 'PAR',
+      }),
+    });
+    expect(screen.getByTestId('select-support-unit').tagName).toBe('SELECT');
+    expect(screen.getByTestId('select-support-target').tagName).toBe('SELECT');
+    first.unmount();
+
+    card({
+      compact: false,
       useNativeSelect: true,
       unitOptions: null,
       order: orderFor(A_BRE, 'SUPPORT', {

@@ -340,7 +340,9 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
                 unitOptions={unitOptions}
                 isRetreatPhase={isRetreatPhase}
                 compact={true}
+                useNativeSelect={useNativeSelect}
                 onUpdateOrder={onUpdateOrder}
+                onHoverProvince={handleHoverOptionProvince}
               />
             )}
           </div>
