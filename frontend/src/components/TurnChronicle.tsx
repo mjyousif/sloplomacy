@@ -124,6 +124,8 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
       ref={rootRef}
       className={`turn-chronicle-history ${expanded ? 'expanded' : ''} ${viewingPast ? 'viewing-past' : ''}`.trim()}
       data-testid="turn-history"
+      data-expanded={expanded ? 'true' : undefined}
+      data-viewing-past={viewingPast ? 'true' : undefined}
       onBlur={(e) => {
         if (
           e.relatedTarget instanceof Node &&
@@ -141,11 +143,13 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
       <div
         className={`turn-chronicle-pill ${viewingPast ? 'viewing-past' : ''}`.trim()}
         data-testid="turn-chronicle-pill"
+        data-viewing-past={viewingPast ? 'true' : undefined}
       >
         <button
           type="button"
           className={`turn-chronicle-filter-btn ${activeFilterColor ? 'has-filter' : ''}`.trim()}
           data-testid="turn-history-filter-toggle"
+          data-has-filter={activeFilterColor ? 'true' : undefined}
           disabled={filterDisabled}
           aria-label={
             viewingPast && power
@@ -245,10 +249,12 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
           id={trayId}
           className={`turn-history-tray-wrap ${expanded ? 'open' : ''}`.trim()}
           data-testid="turn-history-tray"
+          data-open={expanded ? 'true' : undefined}
           inert={!expanded}
         >
           <div
             className={`turn-history-tray ${viewingPast ? 'viewing-past' : ''}`.trim()}
+            data-viewing-past={viewingPast ? 'true' : undefined}
           >
             <div className="turn-history-tray-header">
               <span>Filter by nation</span>

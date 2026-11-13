@@ -148,8 +148,9 @@ describe('TopHeader: the turn and order check', () => {
       onSelectHistoryPower,
     });
     expect(screen.getByTestId('turn-history')).toBeInTheDocument();
-    expect(screen.getByTestId('turn-chronicle-pill')).toHaveClass(
-      'viewing-past',
+    expect(screen.getByTestId('turn-chronicle-pill')).toHaveAttribute(
+      'data-viewing-past',
+      'true',
     );
     await userEvent.click(screen.getByTestId('turn-history-select'));
     await userEvent.click(screen.getByTestId('turn-history-option-live'));

@@ -55,6 +55,7 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
           type="button"
           className={`powers-sort-pill ${sortMode === 'score' ? 'active' : ''}`}
           data-testid="standings-sort-score"
+          data-active={sortMode === 'score' ? 'true' : undefined}
           onClick={() => setSortMode('score')}
           title="Sort by Victory Points (Supply Centers & Units)"
         >
@@ -65,6 +66,7 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
           type="button"
           className={`powers-sort-pill ${sortMode === 'default' ? 'active' : ''}`}
           data-testid="standings-sort-default"
+          data-active={sortMode === 'default' ? 'true' : undefined}
           onClick={() => setSortMode('default')}
           title="Standard canonical power order"
         >
@@ -94,6 +96,8 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                 key={pwr}
                 data-testid="power-standing-card"
                 data-power={pwr}
+                data-selected={isSelected ? 'true' : undefined}
+                data-clickable={!isMultiplayer ? 'true' : undefined}
                 className={`power-standing-card ${isSelected ? 'selected' : ''} ${!isMultiplayer ? 'clickable' : ''}`}
                 onClick={() => {
                   if (!isMultiplayer) onSelectPower(pwr);
@@ -150,6 +154,7 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                   {isSurr ? (
                     <span
                       className="mini-status-tag surrendered"
+                      data-status="surrendered"
                       title="Civil Disorder"
                     >
                       <Flag size={10} /> CD
@@ -157,6 +162,7 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                   ) : isFinal ? (
                     <span
                       className="mini-status-tag finalized"
+                      data-status="finalized"
                       title="Finalized"
                     >
                       <CheckCircle2 size={11} />
@@ -164,6 +170,7 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                   ) : pwrIssues.length > 0 ? (
                     <span
                       className="mini-status-tag warning"
+                      data-status="warning"
                       title={`${pwrIssues.length} issues`}
                     >
                       {pwrIssues.length}
@@ -172,6 +179,7 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                   ) : (
                     <span
                       className="mini-status-tag pending"
+                      data-status="pending"
                       title="Drafting Orders"
                     >
                       Draft

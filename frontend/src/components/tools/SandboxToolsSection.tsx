@@ -40,7 +40,9 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
       title="HYPOTHETICAL MODE & PRE-MOVES"
       badge={
         sandboxMode ? (
-          <span className="sandbox-live-pill">ACTIVE</span>
+          <span className="sandbox-live-pill" data-testid="sandbox-live-pill">
+            ACTIVE
+          </span>
         ) : undefined
       }
       collapsible={true}
@@ -49,6 +51,7 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
       <button
         type="button"
         data-testid="btn-toggle-sandbox"
+        data-active={sandboxMode ? 'true' : undefined}
         className={`tools-sandbox-toggle-btn ${sandboxMode ? 'active' : ''}`}
         onClick={onToggleSandboxMode}
       >
@@ -96,6 +99,7 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
               <button
                 type="button"
                 className="tools-btn tools-ai-btn ai-step"
+                data-step="true"
                 onClick={onAIStepTurn}
                 title="Auto-plan foreign powers and step to the next phase"
               >

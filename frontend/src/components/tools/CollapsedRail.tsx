@@ -32,6 +32,7 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
 }) => (
   <aside
     className="tools-sidebar tools-sidebar-collapsed"
+    data-testid="tools-sidebar-collapsed"
     aria-label="Tools Sidebar Collapsed"
   >
     <button
@@ -78,6 +79,7 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
     <button
       type="button"
       className={`sidebar-rail-btn ${sandboxMode ? 'rail-active-glow' : ''}`}
+      data-active={sandboxMode ? 'true' : undefined}
       onClick={onToggleSandboxMode}
       title={
         sandboxMode

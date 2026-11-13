@@ -18,10 +18,10 @@ describe('MapLegendSection', () => {
     expect(
       screen.getByTitle('Army or Fleet movement arrow'),
     ).toBeInTheDocument();
-    expect(document.querySelector('.swatch-move')).not.toBeNull();
-    expect(document.querySelector('.swatch-convoy')).not.toBeNull();
-    expect(document.querySelector('.swatch-support')).not.toBeNull();
-    expect(document.querySelector('.swatch-warn')).not.toBeNull();
+    expect(document.querySelector('[data-swatch="move"]')).not.toBeNull();
+    expect(document.querySelector('[data-swatch="convoy"]')).not.toBeNull();
+    expect(document.querySelector('[data-swatch="support"]')).not.toBeNull();
+    expect(document.querySelector('[data-swatch="warn"]')).not.toBeNull();
   });
 
   it('starts open and folds away', async () => {

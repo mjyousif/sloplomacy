@@ -26,7 +26,7 @@ test.describe('Scenario 07: Turn history', () => {
       ).toHaveCount(0);
       // The unified control sits in the top bar and keeps the left sidebar clear of a history footer.
       await expect(
-        page.locator('.tools-sidebar [data-testid="turn-history"]'),
+        page.locator('[data-testid="tools-sidebar"] [data-testid="turn-history"]'),
       ).toHaveCount(0);
       await expect(
         page.locator('[data-testid="turn-history-select"]'),

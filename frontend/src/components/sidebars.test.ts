@@ -242,10 +242,10 @@ describe('ToolsSidebar', () => {
       expect(html).toContain('data-testid="tools-drawer"');
       expect(html).toContain('TACTICAL MAP LEGEND');
       expect(html).toContain('Enter Hypothetical Mode');
-      expect(html).not.toContain('tools-sidebar-collapsed');
+      expect(html).not.toContain('data-testid="tools-sidebar-collapsed"');
       // The zoom buttons are on the map on a phone.
       expect(html).not.toContain('MAP VIEW &amp; CAMERA');
-      expect(html).not.toContain('tools-zoom-toolbar');
+      expect(html).not.toContain('data-testid="tools-zoom-toolbar"');
     });
 
     it('closes with its own button instead of collapsing to a rail', () => {
@@ -257,10 +257,10 @@ describe('ToolsSidebar', () => {
 
     it('stays mounted but inert while shut, so it can slide both ways', () => {
       expect(drawer({ open: false })).toMatch(
-        /class="tools-drawer-layer "[^>]*inert/,
+        /data-testid="tools-drawer-layer"[^>]*inert/,
       );
       expect(drawer({ open: true })).not.toMatch(
-        /tools-drawer-layer[^>]*inert/,
+        /data-testid="tools-drawer-layer"[^>]*inert/,
       );
     });
 
@@ -268,7 +268,7 @@ describe('ToolsSidebar', () => {
       const html = renderToString(
         React.createElement(ToolsSidebar, baseToolsProps),
       );
-      expect(html).not.toContain('tools-drawer');
+      expect(html).not.toContain('data-testid="tools-drawer"');
       expect(html).toContain('MAP VIEW &amp; CAMERA');
     });
   });
@@ -563,6 +563,6 @@ describe('MacroSidebar', () => {
       }),
     );
     // Neither England's warning (sandboxMode is false) nor France's info note shows a ⚠ tag!
-    expect(toolsHtml).not.toContain('mini-status-tag warning');
+    expect(toolsHtml).not.toContain('data-status="warning"');
   });
 });

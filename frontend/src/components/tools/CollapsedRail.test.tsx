@@ -20,7 +20,8 @@ const props = (
 describe('CollapsedRail', () => {
   it('is a labelled rail that shows the zoom level', () => {
     render(<CollapsedRail {...props()} />);
-    expect(screen.getByLabelText('Tools Sidebar Collapsed')).toHaveClass(
+    expect(screen.getByLabelText('Tools Sidebar Collapsed')).toHaveAttribute(
+      'data-testid',
       'tools-sidebar-collapsed',
     );
     expect(screen.getByTitle('Current Zoom: 120%')).toBeInTheDocument();
@@ -51,12 +52,12 @@ describe('CollapsedRail', () => {
     const p = props();
     const { rerender } = render(<CollapsedRail {...p} />);
     const button = screen.getByTitle('Enter Hypothetical Mode');
-    expect(button).not.toHaveClass('rail-active-glow');
+    expect(button).not.toHaveAttribute('data-active', 'true');
     await userEvent.click(button);
     expect(p.onToggleSandboxMode).toHaveBeenCalledTimes(1);
     rerender(<CollapsedRail {...p} sandboxMode />);
     expect(
       screen.getByTitle('Hypothetical Mode ACTIVE (Click to toggle)'),
-    ).toHaveClass('rail-active-glow');
+    ).toHaveAttribute('data-active', 'true');
   });
 });

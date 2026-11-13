@@ -236,8 +236,9 @@ describe('ToolsSidebar wiring', () => {
     const { rerender } = render(
       <ToolsSidebar {...props({ collapsed: true })} />,
     );
-    expect(screen.getByTitle('Enter Hypothetical Mode')).not.toHaveClass(
-      'rail-active-glow',
+    expect(screen.getByTitle('Enter Hypothetical Mode')).not.toHaveAttribute(
+      'data-active',
+      'true',
     );
     expect(screen.queryByTitle('Creator Admin Console')).toBeNull();
     rerender(
@@ -249,8 +250,9 @@ describe('ToolsSidebar wiring', () => {
         })}
       />,
     );
-    expect(screen.getByTitle(/Hypothetical Mode ACTIVE/)).toHaveClass(
-      'rail-active-glow',
+    expect(screen.getByTitle(/Hypothetical Mode ACTIVE/)).toHaveAttribute(
+      'data-active',
+      'true',
     );
     expect(screen.queryByTitle('Creator Admin Console')).toBeNull();
   });
@@ -278,16 +280,15 @@ describe('ToolsSidebar wiring', () => {
     );
     expect(france).toHaveTextContent('3 SC');
     expect(france).toHaveTextContent('2 Units');
-    expect(england).toHaveClass('selected');
+    expect(england).toHaveAttribute('data-selected', 'true');
     expect(england?.querySelector('[title="Finalized"]')).not.toBeNull();
   });
 
   it('starts a drawer closed unless told it is open', () => {
-    const { container } = render(
-      <ToolsSidebar {...props({ variant: 'drawer' })} />,
-    );
-    expect(container.querySelector('.tools-drawer-layer')).not.toHaveClass(
-      'open',
+    render(<ToolsSidebar {...props({ variant: 'drawer' })} />);
+    expect(screen.getByTestId('tools-drawer-layer')).not.toHaveAttribute(
+      'data-open',
+      'true',
     );
   });
 
@@ -318,7 +319,7 @@ describe('ToolsSidebar drawer', () => {
     const dialog = screen.getByTestId('tools-drawer');
     expect(dialog).toHaveAttribute('role', 'dialog');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(dialog).toHaveClass('tools-drawer');
+    expect(dialog).toHaveAttribute('data-drawer', 'true');
     expect(screen.queryByText('MAP VIEW & CAMERA')).toBeNull();
     expect(screen.queryByTestId('tools-sidebar-collapse-btn')).toBeNull();
     expect(screen.getByText('TACTICAL MAP LEGEND')).toBeInTheDocument();
@@ -326,14 +327,12 @@ describe('ToolsSidebar drawer', () => {
   });
 
   it('stays mounted but inert while closed, and shows when open', () => {
-    const { rerender, container } = render(
-      <ToolsSidebar {...drawer({ open: false })} />,
-    );
-    const layer = container.querySelector('.tools-drawer-layer') as HTMLElement;
-    expect(layer).not.toHaveClass('open');
+    const { rerender } = render(<ToolsSidebar {...drawer({ open: false })} />);
+    const layer = screen.getByTestId('tools-drawer-layer');
+    expect(layer).not.toHaveAttribute('data-open', 'true');
     expect(layer).toHaveAttribute('inert');
     rerender(<ToolsSidebar {...drawer()} />);
-    expect(layer).toHaveClass('open');
+    expect(layer).toHaveAttribute('data-open', 'true');
     expect(layer).not.toHaveAttribute('inert');
   });
 

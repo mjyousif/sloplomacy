@@ -17,10 +17,14 @@ export const MapControlsSection: React.FC<MapControlsSectionProps> = ({
   return (
     <CollapsibleSection
       title="MAP VIEW & CAMERA"
-      badge={<span className="tools-zoom-badge">{zoomPercent}%</span>}
+      badge={
+        <span className="tools-zoom-badge" data-testid="tools-zoom-badge">
+          {zoomPercent}%
+        </span>
+      }
       collapsible={false}
     >
-      <div className="tools-zoom-toolbar">
+      <div className="tools-zoom-toolbar" data-testid="tools-zoom-toolbar">
         <button
           type="button"
           className="tools-btn"

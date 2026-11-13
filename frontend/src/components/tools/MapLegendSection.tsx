@@ -11,25 +11,25 @@ export const MapLegendSection: React.FC = () => {
     >
       <div className="tools-legend-grid">
         <div className="legend-item" title="Army or Fleet movement arrow">
-          <span className="legend-swatch swatch-move">
+          <span className="legend-swatch swatch-move" data-swatch="move">
             <MoveRight size={12} />
           </span>
           <span className="legend-label">Move / Attack</span>
         </div>
         <div className="legend-item" title="Fleet convoying an army across sea">
-          <span className="legend-swatch swatch-convoy">
+          <span className="legend-swatch swatch-convoy" data-swatch="convoy">
             <Anchor size={12} />
           </span>
           <span className="legend-label">Fleet Convoy</span>
         </div>
         <div className="legend-item" title="Support order to hold or move">
-          <span className="legend-swatch swatch-support">
+          <span className="legend-swatch swatch-support" data-swatch="support">
             <Crosshair size={12} />
           </span>
           <span className="legend-label">Support Link</span>
         </div>
         <div className="legend-item" title="Tactical issue or warning">
-          <span className="legend-swatch swatch-warn">
+          <span className="legend-swatch swatch-warn" data-swatch="warn">
             <AlertTriangle size={12} />
           </span>
           <span className="legend-label">Warning</span>

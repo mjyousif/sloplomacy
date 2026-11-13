@@ -74,7 +74,8 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
     <aside
       className={`tools-sidebar tools-sidebar-expanded ${isDrawer ? 'tools-drawer' : ''}`.trim()}
       aria-label="Chancellery Tools & Intel"
-      data-testid={isDrawer ? 'tools-drawer' : undefined}
+      data-testid={isDrawer ? 'tools-drawer' : 'tools-sidebar'}
+      data-drawer={isDrawer ? 'true' : undefined}
       role={isDrawer ? 'dialog' : undefined}
       aria-modal={isDrawer ? true : undefined}
     >
@@ -166,7 +167,12 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   // Kept mounted so it can slide in and out. While closed it is inert: hidden from taps,
   // focus and screen readers.
   return (
-    <div className={`tools-drawer-layer ${open ? 'open' : ''}`} inert={!open}>
+    <div
+      className={`tools-drawer-layer ${open ? 'open' : ''}`}
+      data-testid="tools-drawer-layer"
+      data-open={open ? 'true' : undefined}
+      inert={!open}
+    >
       <div
         className="tools-drawer-backdrop"
         data-testid="tools-drawer-backdrop"

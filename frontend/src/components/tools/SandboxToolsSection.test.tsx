@@ -26,7 +26,7 @@ describe('SandboxToolsSection: the mode switch', () => {
     );
     const toggle = screen.getByTestId('btn-toggle-sandbox');
     expect(toggle).toHaveTextContent('Enter Hypothetical Mode');
-    expect(toggle).not.toHaveClass('active');
+    expect(toggle).not.toHaveAttribute('data-active', 'true');
     expect(screen.queryByText('ACTIVE')).toBeNull();
     expect(
       screen.getByText(/Enter Hypothetical Mode to guess enemy moves/),
@@ -40,8 +40,8 @@ describe('SandboxToolsSection: the mode switch', () => {
       />,
     );
     expect(toggle).toHaveTextContent('Exit Mode (Discard Guesses)');
-    expect(toggle).toHaveClass('active');
-    expect(screen.getByText('ACTIVE')).toHaveClass('sandbox-live-pill');
+    expect(toggle).toHaveAttribute('data-active', 'true');
+    expect(screen.getByTestId('sandbox-live-pill')).toHaveTextContent('ACTIVE');
     expect(screen.getByText(/Hypothetical Mode active/)).toBeInTheDocument();
   });
 });

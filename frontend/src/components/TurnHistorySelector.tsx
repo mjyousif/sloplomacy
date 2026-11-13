@@ -39,6 +39,7 @@ export const PowerFilterChips: React.FC<PowerFilterChipsProps> = ({
       className={`turn-history-chip ${power === null ? 'active' : ''}`}
       data-testid="turn-history-power"
       data-power="ALL"
+      data-active={power === null ? 'true' : undefined}
       aria-pressed={power === null}
       onClick={() => onSelectPower(null)}
     >
@@ -51,6 +52,7 @@ export const PowerFilterChips: React.FC<PowerFilterChipsProps> = ({
         className={`turn-history-chip ${power === p ? 'active' : ''}`}
         data-testid="turn-history-power"
         data-power={p}
+        data-active={power === p ? 'true' : undefined}
         aria-pressed={power === p}
         title={`Show only ${POWER_METADATA[p].name}'s orders`}
         style={
@@ -111,6 +113,7 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
       className={`turn-history ${viewingPast ? 'viewing-past' : ''}`.trim()}
       aria-label="Turn history"
       data-testid="turn-history"
+      data-viewing-past={viewingPast ? 'true' : undefined}
     >
       <div className="turn-history-row">
         <button

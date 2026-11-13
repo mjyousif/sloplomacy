@@ -20,7 +20,7 @@ test.describe('Collapsible Sidebar Sections', () => {
       await page.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
 
       // Ensure ToolsSidebar is loaded
-      const sidebar = page.locator('.tools-sidebar');
+      const sidebar = page.locator('[data-testid="tools-sidebar"]');
       await expect(sidebar).toBeVisible();
 
       // Find the toggle buttons for sections (Creator Admin Tools moved to Display Settings)
@@ -40,7 +40,7 @@ test.describe('Collapsible Sidebar Sections', () => {
       // 2. Enter Hypothetical Mode so ACTIVE badge is visible
       const enterSandboxBtn = page.locator('[data-testid="btn-toggle-sandbox"]');
       await enterSandboxBtn.click();
-      const activePill = page.locator('.sandbox-live-pill');
+      const activePill = page.locator('[data-testid="sandbox-live-pill"]');
       await expect(activePill).toBeVisible();
 
       await recorder.recordStep(page, '02_hypothetical_mode_active');
