@@ -19,6 +19,7 @@ import { useSandboxSession } from './hooks/useSandboxSession';
 import { useSeatActions } from './hooks/useSeatActions';
 import { useToast } from './hooks/useToast';
 import { useTurnHistory } from './hooks/useTurnHistory';
+import { useTurnNotifications } from './hooks/useTurnNotifications';
 import { useWorkspaceLayout } from './hooks/useWorkspaceLayout';
 import { signOutUser } from './lib/supabase';
 import type { SimulationResult } from './types/diplomacy';
@@ -68,6 +69,10 @@ export function App() {
     authModalReason,
     authModalTab,
     openAuthPrompt,
+    accountModalOpen,
+    setAccountModalOpen,
+    accountModalOnboarding,
+    openAccountModal,
   } = useAuthSession();
   const {
     prefs: displayPrefs,
@@ -178,6 +183,16 @@ export function App() {
     fetchGame,
     fetchGamesList,
     fetchMyGames,
+  });
+
+  useTurnNotifications({
+    viewMode,
+    gameState,
+    activeGameSummary,
+    lockedPower,
+    sandboxGameId,
+    hypotheticalMatchTimer: matchTimer,
+    soundEnabled: displayPrefs.soundNotifications,
   });
 
   // Leaving the match board by any route closes its private sandbox.
@@ -359,6 +374,7 @@ export function App() {
         updateDisplayPrefs={updateDisplayPrefs}
         authUser={authUser}
         openAuthPrompt={openAuthPrompt}
+        openAccountModal={openAccountModal}
         handleSignOut={handleSignOut}
         handleBackToLobby={handleBackToLobby}
         handleEnterSoloSandbox={guardedEnterSoloSandbox}
@@ -502,6 +518,10 @@ export function App() {
         setAuthModalOpen={setAuthModalOpen}
         authModalTab={authModalTab}
         authModalReason={authModalReason}
+        accountModalOpen={accountModalOpen}
+        setAccountModalOpen={setAccountModalOpen}
+        accountModalOnboarding={accountModalOnboarding}
+        handleSignOut={handleSignOut}
         confirmModal={confirmModal}
         viewMode={viewMode}
         provinces={provinces}

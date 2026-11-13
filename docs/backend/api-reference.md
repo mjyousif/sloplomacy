@@ -23,6 +23,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/games/{game_id}/surrender` | Concede sovereign command into Civil Disorder | `SurrenderRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/acknowledge-game-over` | Stamp `game_over_seen_at` for the calling seated participant | *None* | `{ ok, game_over_seen_at, summary }` |
 | `POST` | `/api/games/solo-sandbox` | Mint a personal, isolated draft sandbox session (`solo_<uuid>`) | *None* | `MultiplayerGameSummary` |
+| `PATCH` | `/api/account/profile` | Update the signed-in caller's public username across `profiles` and all active games (`401` without a token) | `UpdateProfileRequest` | `UpdateProfileResponse` |
 
 ### Match & Tactical Operations
 | Method | Endpoint | Description | Request Body | Response Model |
@@ -316,6 +317,25 @@ Saves an active solo sandbox into the persistent game summary registry.
   "name": "Burgundy Opening Analysis",
   "user_id": "usr_1020",
   "email": "marshal@slop.eu"
+}
+```
+
+### `PATCH /api/account/profile`
+Updates the signed-in caller's public `display_name` (2–24 characters). Requires a valid Bearer token (`401` otherwise). Persists to `public.profiles` in Supabase, updates the in-memory profile cache, syncs the caller's `display_name` across all loaded games they participate in, and broadcasts masked per-viewer game updates and lobby updates.
+
+#### Request (`UpdateProfileRequest`):
+```json
+{
+  "display_name": "Metternich"
+}
+```
+
+#### Response (`UpdateProfileResponse`):
+```json
+{
+  "status": "ok",
+  "display_name": "Metternich",
+  "updated_games": 2
 }
 ```
 

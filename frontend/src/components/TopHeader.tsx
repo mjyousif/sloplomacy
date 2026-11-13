@@ -47,6 +47,7 @@ export interface TopHeaderProps {
   authUser: AuthUser | null;
   onSignIn: () => void;
   onSignOut: () => void;
+  onOpenAccount?: () => void;
   /** Turn history controls unified with the top-bar turn chronicle. */
   historyEntries?: TurnHistoryEntry[];
   historyViewIndex?: number | null;
@@ -86,6 +87,7 @@ export function TopHeader({
   authUser,
   onSignIn,
   onSignOut,
+  onOpenAccount,
   historyEntries,
   historyViewIndex,
   historyPower,
@@ -151,40 +153,46 @@ export function TopHeader({
             onSelectPower={onSelectHistoryPower}
           />
 
-          {winner && (
-            <button
-              type="button"
-              className="game-over-pill"
-              onClick={onOpenGameOverModal}
-              title="View Campaign Conclusion Summary"
-            >
-              <Crown size={14} />
-              <span>{POWER_METADATA[winner].shortName.toUpperCase()} WINS</span>
-            </button>
-          )}
-
-          {(errorCount > 0 || warningCount > 0) && (
-            <div className="header-sanity-readout">
-              {errorCount > 0 ? (
-                <div
-                  className="header-error-pill"
-                  onClick={onOpenOrderCheck}
-                  title="Click to open Sanity Check Diagnostics"
+          {(winner || errorCount > 0 || warningCount > 0) && (
+            <div className="header-center-badges">
+              {winner && (
+                <button
+                  type="button"
+                  className="game-over-pill"
+                  onClick={onOpenGameOverModal}
+                  title="View Campaign Conclusion Summary"
                 >
-                  <AlertOctagon size={15} />
+                  <Crown size={14} />
                   <span>
-                    Error: {errorCount}
-                    {warningCount > 0 ? ` • Warning: ${warningCount}` : ''}
+                    {POWER_METADATA[winner].shortName.toUpperCase()} WINS
                   </span>
-                </div>
-              ) : (
-                <div
-                  className="header-warning-pill"
-                  onClick={onOpenOrderCheck}
-                  title="Click to open Sanity Check Diagnostics"
-                >
-                  <AlertTriangle size={15} />
-                  <span>Warning: {warningCount}</span>
+                </button>
+              )}
+
+              {(errorCount > 0 || warningCount > 0) && (
+                <div className="header-sanity-readout">
+                  {errorCount > 0 ? (
+                    <div
+                      className="header-error-pill"
+                      onClick={onOpenOrderCheck}
+                      title="Click to open Sanity Check Diagnostics"
+                    >
+                      <AlertOctagon size={15} />
+                      <span>
+                        Error: {errorCount}
+                        {warningCount > 0 ? ` • Warning: ${warningCount}` : ''}
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      className="header-warning-pill"
+                      onClick={onOpenOrderCheck}
+                      title="Click to open Sanity Check Diagnostics"
+                    >
+                      <AlertTriangle size={15} />
+                      <span>Warning: {warningCount}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -215,10 +223,15 @@ export function TopHeader({
         {/* User Authentication Controls */}
         {authUser ? (
           <div className="header-user-Menu">
-            <span className="header-user-badge" title={authUser.email}>
+            <button
+              type="button"
+              className="header-user-badge header-user-badge-btn"
+              onClick={onOpenAccount}
+              title={`Account Settings (${authUser.email})`}
+            >
               <UserIcon size={13} />
               <span>{authUser.displayName}</span>
-            </span>
+            </button>
             <button
               type="button"
               className="header-auth-btn signout"

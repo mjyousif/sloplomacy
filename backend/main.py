@@ -15,7 +15,19 @@ for _p in (str(_BACKEND_DIR), str(_REPO_ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from api import admin, admin_units, games, history, lobby, orders, sandbox, seats, turns, websocket
+from api import (
+    account,
+    admin,
+    admin_units,
+    games,
+    history,
+    lobby,
+    orders,
+    sandbox,
+    seats,
+    turns,
+    websocket,
+)
 from engine.order_utils import resolve_static_path
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,7 +36,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from security.secrecy import saved_sandbox_guard
 from storage import supabase
-from storage.store import GAME_SUMMARIES
+from storage.store import GAME_SUMMARIES, PROFILE_NAMES, hydrate_summary_profiles
 
 logger = logging.getLogger("diplomacy.api")
 
@@ -34,9 +46,12 @@ async def lifespan(app: FastAPI):
     if supabase.is_persistence_enabled():
         logger.info("Supabase database persistence enabled. Synchronizing active games...")
         try:
+            profile_names = await supabase.load_profile_names_from_db()
+            PROFILE_NAMES.update(profile_names)
             summaries = await supabase.load_all_summaries_from_db()
             for gid, summary in summaries.items():
                 if gid not in GAME_SUMMARIES:
+                    hydrate_summary_profiles(summary)
                     GAME_SUMMARIES[gid] = summary
             logger.info("Loaded %d game summaries from Supabase on startup.", len(summaries))
         except Exception as ex:
@@ -93,7 +108,18 @@ async def add_security_headers(request: Request, call_next):
 # Include modular domain routers
 # A saved sandbox is its owner's alone, on every HTTP route. The game socket checks it itself.
 # `lobby` comes before `games` so /api/games/browse and /mine are not read as a game id.
-for http_router in (lobby, games, seats, orders, turns, sandbox, admin, admin_units, history):
+for http_router in (
+    account,
+    lobby,
+    games,
+    seats,
+    orders,
+    turns,
+    sandbox,
+    admin,
+    admin_units,
+    history,
+):
     app.include_router(http_router.router, dependencies=[Depends(saved_sandbox_guard)])
 app.include_router(websocket.router)
 

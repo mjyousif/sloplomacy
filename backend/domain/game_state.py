@@ -153,7 +153,7 @@ class TurnRecord(TurnHistoryEntry):
 class GameParticipant(BaseModel):
     user_id: str
     email: str
-    display_name: str
+    display_name: str = "Envoy"
     power: Power
     joined_at: str
     surrendered: bool = False

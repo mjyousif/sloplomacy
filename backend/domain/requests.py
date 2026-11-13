@@ -221,3 +221,13 @@ class LobbyBrowsePage(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class UpdateProfileRequest(BaseModel):
+    display_name: str
+
+
+class UpdateProfileResponse(BaseModel):
+    status: str
+    display_name: str
+    updated_games: int

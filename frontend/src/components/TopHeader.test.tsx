@@ -97,9 +97,11 @@ describe('TopHeader: the turn and order check', () => {
     expect(screen.getByText('ENGLAND WINS')).toBeInTheDocument();
   });
 
-  it('hides the valid-moves pill when there are no problems', () => {
+  it('shows no status pill when there are no errors or warnings', () => {
     renderHeader();
     expect(screen.queryByText('Valid Moves')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Error/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Warning/)).not.toBeInTheDocument();
   });
 
   it('counts errors and warnings, and opens the order check', async () => {
@@ -271,12 +273,15 @@ describe('TopHeader: display settings and account', () => {
   });
 
   it('names a signed-in player and signs them out', async () => {
-    const { props } = renderHeader({ authUser: ALICE });
+    const onOpenAccount = vi.fn();
+    const { props } = renderHeader({ authUser: ALICE, onOpenAccount });
     expect(screen.getByText('Alice').parentElement).toHaveAttribute(
       'title',
-      'alice@example.test',
+      'Account Settings (alice@example.test)',
     );
     expect(screen.queryByText('Guest Mode')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Alice' }));
+    expect(onOpenAccount).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByRole('button', { name: 'Sign Out' }));
     expect(props.onSignOut).toHaveBeenCalledTimes(1);
     expect(props.onSignIn).not.toHaveBeenCalled();

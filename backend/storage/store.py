@@ -26,6 +26,15 @@ UNSAVED_GAMES: set[str] = set()
 SAVES_RUNNING: dict[str, bool] = {}
 HISTORY_UNSAVED: set[str] = set()
 PRIVATE_SANDBOXES: dict[str, tuple[str, Power]] = {}
+PROFILE_NAMES: dict[str, str] = {}
+
+
+def hydrate_summary_profiles(summary: MultiplayerGameSummary) -> MultiplayerGameSummary:
+    """Resolve registered participants' display_name from PROFILE_NAMES when available."""
+    for part in summary.participants.values():
+        if part.user_id in PROFILE_NAMES:
+            part.display_name = PROFILE_NAMES[part.user_id]
+    return summary
 
 
 def init_default_game() -> None:
@@ -145,6 +154,7 @@ def cache_loaded_game(game_id: str, loaded: tuple) -> GameState:
     )
     GAMES[game_id] = state
     if summary:
+        hydrate_summary_profiles(summary)
         GAME_SUMMARIES[game_id] = summary
     if history:
         GAME_HISTORY[game_id] = history

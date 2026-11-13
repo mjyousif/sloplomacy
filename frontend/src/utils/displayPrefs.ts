@@ -22,12 +22,14 @@ export type UnitMark = (typeof UNIT_MARKS)[number];
 export interface DisplayPrefs {
   pieceStyle: PieceStyle;
   unitMark: UnitMark;
+  soundNotifications: boolean;
 }
 
 /** What a player sees until they choose. Star seat clears the most names without any action. */
 export const DEFAULT_DISPLAY_PREFS: DisplayPrefs = {
   pieceStyle: 'seated',
   unitMark: 'icons',
+  soundNotifications: true,
 };
 
 export const PIECE_STYLE_LABELS: Record<
@@ -83,6 +85,10 @@ export function sanitizeDisplayPrefs(raw: unknown): DisplayPrefs {
     unitMark: isUnitMark(candidate.unitMark)
       ? candidate.unitMark
       : DEFAULT_DISPLAY_PREFS.unitMark,
+    soundNotifications:
+      typeof candidate.soundNotifications === 'boolean'
+        ? candidate.soundNotifications
+        : DEFAULT_DISPLAY_PREFS.soundNotifications,
   };
 }
 

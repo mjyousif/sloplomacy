@@ -772,6 +772,25 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   border-top: 1px solid #262d3a;
+  scrollbar-width: thin;
+  scrollbar-color: #333d4e transparent;
+}
+
+[data-layout="compact"] .bottom-sheet-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+[data-layout="compact"] .bottom-sheet-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-layout="compact"] .bottom-sheet-body::-webkit-scrollbar-thumb {
+  background: #333d4e;
+  border-radius: 4px;
+}
+
+[data-layout="compact"] .bottom-sheet-body::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 [data-layout="compact"] .macro-sheet-peek {

@@ -10,6 +10,7 @@ import {
   type ProvinceInfo,
   type ValidationIssue,
 } from '../types/diplomacy';
+import { AccountModal } from './AccountModal';
 import { AdminActionWarningModal } from './AdminActionWarningModal';
 import { AuthModal } from './AuthModal';
 import { GameOverModal } from './GameOverModal';
@@ -54,6 +55,10 @@ export interface AppModalsProps {
   setAuthModalOpen: Dispatch<SetStateAction<boolean>>;
   authModalTab: AuthModalTab;
   authModalReason: string | null;
+  accountModalOpen?: boolean;
+  setAccountModalOpen?: Dispatch<SetStateAction<boolean>>;
+  accountModalOnboarding?: boolean;
+  handleSignOut?: () => void;
   fetchGamesList: () => Promise<void>;
   triggerToast: (msg: string) => void;
   /** From `useConfirm`. */
@@ -99,6 +104,10 @@ export function AppModals({
   setAuthModalOpen,
   authModalTab,
   authModalReason,
+  accountModalOpen = false,
+  setAccountModalOpen,
+  accountModalOnboarding = false,
+  handleSignOut,
   fetchGamesList,
   triggerToast,
   confirmModal,
@@ -188,6 +197,18 @@ export function AppModals({
           onReturnToLobby={onReturnToLobby}
         />
       )}
+      <AccountModal
+        isOpen={accountModalOpen}
+        user={authUser}
+        onboarding={accountModalOnboarding}
+        onClose={() => setAccountModalOpen?.(false)}
+        onUpdated={(u, msg) => {
+          setAuthUser(u);
+          if (msg) triggerToast(msg);
+          fetchGamesList();
+        }}
+        onSignOut={() => handleSignOut?.()}
+      />
       {confirmModal}
     </>
   );

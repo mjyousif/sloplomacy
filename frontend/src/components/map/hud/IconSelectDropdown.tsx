@@ -24,6 +24,7 @@ export interface IconSelectDropdownProps<T extends string = string> {
   leadingIcon?: ReactNode;
   hideChevron?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onHoverOption?: (value: T | null) => void;
 }
 
 /** Custom accessible dropdown supporting leading icons/flags beside labels. */
@@ -40,9 +41,12 @@ export function IconSelectDropdown<T extends string = string>({
   leadingIcon,
   hideChevron = false,
   onOpenChange,
+  onHoverOption,
 }: IconSelectDropdownProps<T>) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const onHoverOptionRef = useRef(onHoverOption);
+  onHoverOptionRef.current = onHoverOption;
 
   useEffect(() => {
     onOpenChange?.(open && !disabled);
@@ -81,6 +85,14 @@ export function IconSelectDropdown<T extends string = string>({
   }, [open]);
 
   const isMenuOpen = open && !disabled;
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    return () => {
+      onHoverOptionRef.current?.(null);
+    };
+  }, [isMenuOpen]);
+
   const selectedOption =
     value !== null
       ? (options.find((opt) => opt.value === value) ?? null)
@@ -138,6 +150,11 @@ export function IconSelectDropdown<T extends string = string>({
           className="icon-select-dropdown-menu"
           role="listbox"
           aria-labelledby={id}
+          onPointerLeave={(e) => {
+            if (e.pointerType !== 'touch') {
+              onHoverOption?.(null);
+            }
+          }}
         >
           {emptyOption && (
             <button
@@ -146,6 +163,11 @@ export function IconSelectDropdown<T extends string = string>({
               aria-selected={value === null}
               data-testid={emptyOption.testId}
               className={`icon-select-dropdown-option${value === null ? ' selected' : ''}`}
+              onPointerEnter={(e) => {
+                if (e.pointerType !== 'touch') {
+                  onHoverOption?.(null);
+                }
+              }}
               onClick={() => {
                 onChange(null);
                 setOpen(false);
@@ -162,6 +184,11 @@ export function IconSelectDropdown<T extends string = string>({
               aria-selected={value === opt.value}
               data-testid={opt.testId}
               className={`icon-select-dropdown-option${value === opt.value ? ' selected' : ''}`}
+              onPointerEnter={(e) => {
+                if (e.pointerType !== 'touch') {
+                  onHoverOption?.(opt.value);
+                }
+              }}
               onClick={() => {
                 onChange(opt.value);
                 setOpen(false);

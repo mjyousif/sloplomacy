@@ -217,7 +217,6 @@ export interface PowerMeta {
   fillColor: string;
   borderColor: string;
   lightBg: string;
-  crest: string;
 }
 
 export const POWER_METADATA: Record<Power, PowerMeta> = {
@@ -230,7 +229,6 @@ export const POWER_METADATA: Record<Power, PowerMeta> = {
     fillColor: '#1e3e73',
     borderColor: '#0e2244',
     lightBg: 'rgba(24, 54, 104, 0.18)',
-    crest: '👑',
   },
   FRANCE: {
     id: 'FRANCE',
@@ -241,7 +239,6 @@ export const POWER_METADATA: Record<Power, PowerMeta> = {
     fillColor: '#6aa9c9',
     borderColor: '#215473',
     lightBg: 'rgba(52, 120, 158, 0.16)',
-    crest: '⚜️',
   },
   GERMANY: {
     id: 'GERMANY',
@@ -252,7 +249,6 @@ export const POWER_METADATA: Record<Power, PowerMeta> = {
     fillColor: '#6f7785',
     borderColor: '#262a30',
     lightBg: 'rgba(61, 67, 77, 0.18)',
-    crest: '✠',
   },
   ITALY: {
     id: 'ITALY',
@@ -263,7 +259,6 @@ export const POWER_METADATA: Record<Power, PowerMeta> = {
     fillColor: '#5da177',
     borderColor: '#1e4d31',
     lightBg: 'rgba(47, 110, 73, 0.16)',
-    crest: '🌿',
   },
   AUSTRIA: {
     id: 'AUSTRIA',
@@ -274,7 +269,6 @@ export const POWER_METADATA: Record<Power, PowerMeta> = {
     fillColor: '#c96565',
     borderColor: '#6e1f1f',
     lightBg: 'rgba(156, 51, 51, 0.16)',
-    crest: '🦅',
   },
   RUSSIA: {
     id: 'RUSSIA',
@@ -285,7 +279,6 @@ export const POWER_METADATA: Record<Power, PowerMeta> = {
     fillColor: '#754e85',
     borderColor: '#431d56',
     lightBg: 'rgba(103, 56, 126, 0.16)',
-    crest: '🐻',
   },
   TURKEY: {
     id: 'TURKEY',
@@ -296,7 +289,6 @@ export const POWER_METADATA: Record<Power, PowerMeta> = {
     fillColor: '#d9aa55',
     borderColor: '#825a14',
     lightBg: 'rgba(184, 131, 40, 0.16)',
-    crest: '🌙',
   },
 };
 
@@ -373,6 +365,7 @@ export interface AuthUser {
   email: string;
   displayName: string;
   isLocalDemo?: boolean;
+  needsUsernameSetup?: boolean;
 }
 export interface AdminStatusResponse {
   is_creator: boolean;

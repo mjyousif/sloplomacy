@@ -1,4 +1,4 @@
-import { Flag, Lock, Users } from 'lucide-react';
+import { Flag, Lock, Plus, Users } from 'lucide-react';
 import type React from 'react';
 import {
   ALL_POWERS,
@@ -156,11 +156,16 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
                   </span>
                 ) : isTakenByOther ? (
                   <span className="slot-taken-label">
-                    🔒 {occupant.display_name}
+                    <Lock size={11} /> {occupant.display_name}
                   </span>
                 ) : (
                   <span className="slot-claim-label">
-                    {game.has_passcode ? '🔒' : '+'} Claim {meta.shortName}
+                    {game.has_passcode ? (
+                      <Lock size={11} />
+                    ) : (
+                      <Plus size={11} />
+                    )}{' '}
+                    Claim {meta.shortName}
                   </span>
                 )}
               </div>

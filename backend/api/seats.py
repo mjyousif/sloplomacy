@@ -28,6 +28,7 @@ from storage import supabase
 from storage.store import (
     GAME_PASSCODES,
     GAME_SUMMARIES,
+    PROFILE_NAMES,
     SANDBOX_CHECKPOINTS,
     evict_game,
     persist_game,
@@ -94,7 +95,9 @@ async def join_multiplayer_game(
             del summary.participants[p_key]
 
     now_iso = datetime.now(timezone.utc).isoformat()
-    display_name = req.display_name or effective_email.split("@")[0]
+    display_name = (
+        PROFILE_NAMES.get(effective_user_id) or req.display_name or effective_email.split("@")[0]
+    )
     summary.participants[req.power.value] = GameParticipant(
         user_id=effective_user_id,
         email=effective_email,

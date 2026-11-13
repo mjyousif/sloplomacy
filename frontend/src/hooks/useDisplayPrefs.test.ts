@@ -20,8 +20,16 @@ const ALICE: AuthUser = {
   email: 'alice@example.test',
   displayName: 'Alice',
 };
-const FLAGS: DisplayPrefs = { pieceStyle: 'flags', unitMark: 'nato' };
-const SEATED: DisplayPrefs = { pieceStyle: 'seated', unitMark: 'letters' };
+const FLAGS: DisplayPrefs = {
+  pieceStyle: 'flags',
+  unitMark: 'nato',
+  soundNotifications: true,
+};
+const SEATED: DisplayPrefs = {
+  pieceStyle: 'seated',
+  unitMark: 'letters',
+  soundNotifications: true,
+};
 
 /** A promise the test settles by hand, to hold an account read open. */
 function deferred<T>() {
@@ -68,6 +76,7 @@ describe('useDisplayPrefs for a guest', () => {
     expect(result.current.prefs).toEqual({
       pieceStyle: DEFAULT_DISPLAY_PREFS.pieceStyle,
       unitMark: 'nato',
+      soundNotifications: DEFAULT_DISPLAY_PREFS.soundNotifications,
     });
   });
 
