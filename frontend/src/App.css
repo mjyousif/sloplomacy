@@ -2002,8 +2002,8 @@
   position: fixed;
   inset: 0;
   z-index: 110;
-  background: rgba(10, 13, 18, 0.8);
-  backdrop-filter: blur(4px);
+  background: rgba(10, 13, 18, 0.78);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2012,12 +2012,12 @@
 
 .game-over-modal-card {
   width: 100%;
-  max-width: 540px;
-  background: #fdfbf6;
-  color: #1f2937;
-  border: 1px solid #c8b89a;
+  max-width: 560px;
+  background: #1c212b;
+  color: #f1f5f9;
+  border: 1.5px solid #c8963e;
   border-radius: 14px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.78);
   padding: 22px 24px 24px;
   display: flex;
   flex-direction: column;
@@ -2025,10 +2025,10 @@
 }
 
 .game-over-modal-card.victory {
-  border-color: #c8963e;
+  border-color: #d4af37;
   box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(200, 150, 62, 0.35);
+    0 24px 64px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(212, 175, 55, 0.3);
 }
 
 .game-over-modal-header {
@@ -2036,17 +2036,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #333b4d;
 }
 
 .game-over-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 4px 11px;
   border-radius: 999px;
-  background: rgba(200, 150, 62, 0.16);
-  border: 1px solid rgba(200, 150, 62, 0.55);
-  color: #7c5812;
+  background: rgba(212, 175, 55, 0.16);
+  border: 1px solid rgba(212, 175, 55, 0.65);
+  color: #f5e6b3;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -2056,18 +2058,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
-  color: #6b7280;
+  color: #94a3b8;
   cursor: pointer;
 }
 
 .game-over-close-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
-  color: #1f2937;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
 }
 
 .game-over-hero {
@@ -2089,22 +2091,27 @@
 
 .game-over-title {
   margin: 0;
-  font-size: 1.3rem;
+  font-family: "Cinzel", serif;
+  font-size: 1.25rem;
   font-weight: 800;
-  color: #18212f;
+  color: #f8fafc;
   line-height: 1.25;
 }
 
 .game-over-body {
   margin: 0;
-  font-size: 0.94rem;
-  line-height: 1.55;
-  color: #374151;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.game-over-body strong {
+  color: #f8fafc;
 }
 
 .game-over-standings {
-  background: #f5f1e8;
-  border: 1px solid #e2d9c8;
+  background: #141820;
+  border: 1px solid #2e3543;
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
@@ -2113,16 +2120,16 @@
 }
 
 .game-over-standings-label {
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #6b6355;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
 }
 
 .game-over-standings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(122px, 1fr));
   gap: 6px;
 }
 
@@ -2130,10 +2137,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 8px;
+  padding: 6px 9px;
   border-radius: 7px;
-  border: 1px solid #dfd7c6;
-  background: #ffffff;
+  border: 1px solid #2e3543;
+  background: #1e2430;
   font-size: 0.8rem;
 }
 
@@ -2143,12 +2150,12 @@
 
 .game-over-standing-name {
   flex: 1;
-  color: #1f2937;
+  color: #e2e8f0;
 }
 
 .game-over-standing-count {
-  font-weight: 700;
-  color: #111827;
+  font-weight: 800;
+  color: #f8fafc;
 }
 
 .game-over-actions {
@@ -2157,6 +2164,7 @@
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
+  padding-top: 4px;
 }
 
 .game-over-primary-btn,
@@ -2167,29 +2175,39 @@
   gap: 7px;
   padding: 9px 16px;
   border-radius: 8px;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .game-over-primary-btn {
-  border: 1px solid #1e3a5f;
-  background: #1e3a5f;
-  color: #ffffff;
+  border: 1px solid #d4af37;
+  background: linear-gradient(
+    135deg,
+    rgba(212, 175, 55, 0.28) 0%,
+    rgba(180, 130, 35, 0.2) 100%
+  );
+  color: #fef3c7;
 }
 
 .game-over-primary-btn:hover {
-  background: #162c48;
+  background: linear-gradient(
+    135deg,
+    rgba(212, 175, 55, 0.42) 0%,
+    rgba(180, 130, 35, 0.32) 100%
+  );
 }
 
 .game-over-secondary-btn {
-  border: 1px solid #c8b89a;
-  background: #ffffff;
-  color: #374151;
+  border: 1px solid #434e63;
+  background: #232a38;
+  color: #f1f5f9;
 }
 
 .game-over-secondary-btn:hover {
-  background: #f5f1e8;
+  background: #2c3547;
+  border-color: #64748b;
 }
 
 /* -------------------------------------------------------------------------
