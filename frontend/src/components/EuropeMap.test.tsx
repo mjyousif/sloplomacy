@@ -265,12 +265,12 @@ describe('EuropeMap unit menu', () => {
     expect(editBoardHeading).toBeInTheDocument();
     expect(
       editBoardHeading
-        .closest('.admin-sidebar-title')
-        ?.querySelector('.lucide-pencil.admin-sidebar-icon'),
+        .closest('[data-testid="admin-sidebar-title"]')
+        ?.querySelector('.lucide-pencil'),
     ).toBeInTheDocument();
     expect(
       editBoardHeading
-        .closest('.admin-sidebar-title')
+        .closest('[data-testid="admin-sidebar-title"]')
         ?.querySelector('.lucide-shield-alert'),
     ).toBeNull();
 
@@ -291,9 +291,8 @@ describe('EuropeMap unit menu', () => {
     expect(inspector).toHaveTextContent('Unit Settings');
     expect(
       screen
-        .getByText('Unit Settings')
-        .closest('.admin-inspector-label')
-        ?.querySelector('.lucide-pencil'),
+        .getByTestId('admin-unit-settings-label')
+        .querySelector('.lucide-pencil'),
     ).toBeInTheDocument();
     expect(inspector).toHaveTextContent('Unit Type');
     expect(inspector).toHaveTextContent('Owner');
@@ -316,7 +315,7 @@ describe('EuropeMap unit menu', () => {
     );
     expect(moveBtn).toHaveTextContent('Move Now');
     expect(destroyBtn).toHaveTextContent('Delete');
-    expect(moveBtn).not.toHaveClass('active');
+    expect(moveBtn).not.toHaveAttribute('data-active');
 
     // Unit Settings puts unit type buttons before unit owner dropdown (with flags), matching Spawn Unit order
     const unitTypeArmyBtn = screen.getByTestId('admin-inspector-type-A');
@@ -333,17 +332,19 @@ describe('EuropeMap unit menu', () => {
     const orderSelect = screen.getByTestId('admin-inspector-order-type');
     expect(orderSelect).toHaveTextContent('Hold');
     expect(orderSelect).not.toHaveTextContent('HOLD');
-    expect(orderSelect.querySelector('.admin-order-icon')).toBeInTheDocument();
+    expect(
+      orderSelect.querySelector('[data-testid="admin-order-icon"]'),
+    ).toBeInTheDocument();
     fireEvent.click(orderSelect);
     expect(
       screen
         .getByTestId('admin-inspector-order-type-option-move')
-        .querySelector('.admin-order-icon'),
+        .querySelector('[data-testid="admin-order-icon"]'),
     ).toBeInTheDocument();
     expect(
       screen
         .getByTestId('admin-inspector-order-type-option-disband')
-        .querySelector('.admin-order-icon'),
+        .querySelector('[data-testid="admin-order-icon"]'),
     ).toBeInTheDocument();
     fireEvent.click(orderSelect);
     const unitHeader = screen.getByTestId('admin-inspector-unit-header');

@@ -1,0 +1,191 @@
+@layer components {
+  .admin-sidebar-actions-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    width: 100%;
+  }
+
+  .admin-staged-pill-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .admin-staged-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(185, 28, 28, 0.2);
+    border: 1px solid rgba(220, 38, 38, 0.5);
+    color: #fca5a5;
+    font-weight: 800;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 0.12s ease,
+      border-color 0.12s ease;
+  }
+
+  .admin-staged-count:hover:not(:disabled),
+  .admin-staged-count[data-expanded="true"] {
+    background: rgba(185, 28, 28, 0.32);
+    border-color: rgba(239, 68, 68, 0.72);
+  }
+
+  .admin-staged-count:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  .admin-staged-drawer {
+    margin-top: 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(185, 28, 28, 0.45);
+    background: rgba(15, 20, 30, 0.9);
+    overflow: hidden;
+  }
+
+  .admin-staged-drawer-list {
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 190px;
+    overflow-y: auto;
+  }
+
+  .admin-staged-drawer-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 7px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .admin-staged-drawer-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .admin-staged-drawer-label {
+    font-size: 0.72rem;
+    color: #e2e8f0;
+    line-height: 1.3;
+    min-width: 0;
+    word-break: break-word;
+  }
+
+  .admin-staged-undo-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    padding: 3px 7px;
+    border-radius: 5px;
+    border: 1px solid #475569;
+    background: #1e2636;
+    color: #fca5a5;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+      background-color 0.12s ease,
+      border-color 0.12s ease,
+      color 0.12s ease;
+  }
+
+  .admin-staged-undo-btn:hover:not(:disabled) {
+    border-color: #dc2626;
+    background: rgba(185, 28, 28, 0.25);
+    color: #ffffff;
+  }
+
+  .admin-staged-undo-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .admin-apply-btn {
+    flex: 0 0 auto;
+    padding: 5px 12px;
+    margin-left: auto;
+    border-radius: 6px;
+    border: 1px solid #4ade80;
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .admin-apply-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  }
+
+  .admin-apply-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .admin-exit-btn {
+    flex-shrink: 0;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid #475569;
+    background: #1e293b;
+    color: #e2e8f0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .admin-exit-btn:hover:not(:disabled) {
+    border-color: #f87171;
+    background: rgba(185, 28, 28, 0.28);
+    color: #ffffff;
+  }
+
+  .admin-inspector-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+    padding: 28px 16px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px dashed #334155;
+    background: rgba(23, 28, 38, 0.65);
+    color: #94a3b8;
+  }
+
+  .admin-inspector-empty-icon {
+    color: #e05252;
+    opacity: 0.85;
+  }
+
+  .admin-inspector-empty-state strong {
+    font-size: 0.8rem;
+    color: #e2e8f0;
+  }
+
+  .admin-inspector-empty-state p {
+    margin: 0;
+    font-size: 0.72rem;
+    line-height: 1.45;
+    color: #94a3b8;
+  }
+}

@@ -1,0 +1,126 @@
+@layer components {
+  .admin-tile-inspector {
+    width: 100%;
+    max-width: 100%;
+    margin: 8px 0;
+    border-radius: 8px;
+    border: 1px solid #2e3848;
+    background: #171c26;
+    overflow: visible;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  }
+
+  .admin-inspector-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 12px;
+    background: #1c222e;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 1px solid #2e3848;
+  }
+
+  .admin-inspector-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 12px 12px;
+  }
+
+  .admin-inspector-divider {
+    width: 100%;
+    border: none;
+    border-top: 1px solid #334155;
+    margin: 2px 0;
+  }
+
+  .admin-inspector-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .admin-inspector-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #cbd5e1;
+  }
+
+  .admin-inspector-unit-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .admin-inspector-unit-actions-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .admin-inspector-unit-actions-row :global(.tactical-mode-btn),
+  .admin-inspector-unit-actions-row .admin-inspector-destroy-btn {
+    width: auto;
+    flex: 0 0 auto;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  .admin-inspector-destroy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 1px solid #ef4444;
+    background: rgba(239, 68, 68, 0.18);
+    color: #fca5a5;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .admin-inspector-controls-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  .admin-inspector-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .admin-inspector-sublabel {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+
+  .admin-inspector-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .admin-order-icon {
+    flex-shrink: 0;
+    color: #94a3b8;
+  }
+
+  :global(.icon-select-dropdown-option.selected) .admin-order-icon {
+    color: #fecaca;
+  }
+}

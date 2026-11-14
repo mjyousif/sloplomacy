@@ -36,63 +36,8 @@
   font-size: 16px;
 }
 
-/* -------------------------------------------------------------------------
-   2. ADMIN
-   Not moved into a module yet. The modals and the top bar have their own
-   `*.module.css` with a `compact` layer block each.
-   ------------------------------------------------------------------------- */
-
-/* Admin console: reachable on a phone, not tuned for it */
-
-[data-layout="compact"] .admin-status-strip {
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 16px;
-}
-
-[data-layout="compact"] .admin-status-left {
-  flex-wrap: wrap;
-}
-
-[data-layout="compact"] .admin-tabs-nav {
-  overflow-x: auto;
-  padding: 0 8px;
-  scrollbar-width: none;
-}
-
-[data-layout="compact"] .admin-tab-btn {
-  flex-shrink: 0;
-  min-height: 44px;
-  padding: 10px 12px;
-}
-
-[data-layout="compact"] .admin-tab-body {
-  padding: 16px;
-}
-
-[data-layout="compact"] .admin-form-grid-2,
-[data-layout="compact"] .admin-form-grid-3 {
-  grid-template-columns: 1fr;
-}
-
-[data-layout="compact"] .admin-form-actions-row {
-  flex-wrap: wrap;
-}
-
-[data-layout="compact"] .admin-override-banner {
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 12px;
-  font-size: 0.8rem;
-}
-
-[data-layout="compact"] .admin-override-banner button {
-  min-height: 40px;
-}
-
 /* Small pills and labels get at least 12px of text on a phone. */
-[data-layout="compact"] .version-badge-text,
-[data-layout="compact"] .admin-overline-tag {
+[data-layout="compact"] .version-badge-text {
   font-size: 0.75rem;
 }
 
@@ -263,9 +208,4 @@
 [data-layout="compact"] .unit-floating-menu {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-}
-
-[data-layout="compact"] .admin-tile-inspector.docked {
-  max-height: 55vh;
-  overflow-y: auto;
 }

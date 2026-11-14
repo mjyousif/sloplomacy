@@ -164,12 +164,12 @@ describe('AppHeader: the top bar', () => {
 
 describe('AppHeader: the toast and no red Direct-Edit banner', () => {
   it('shows no banner or toast by default, and never renders a red Direct-Edit banner when directEditActive is true', () => {
-    const { container, rerender } = render(<AppHeader {...props()} />);
-    expect(container.querySelector('.admin-override-banner')).toBeNull();
+    render(<AppHeader {...props()} />);
+    expect(screen.queryByText(/Direct-Edit Mode Active/i)).toBeNull();
     expect(screen.queryByTestId('toast-banner')).toBeNull();
 
-    rerender(<AppHeader {...props({ directEditActive: true })} />);
-    expect(container.querySelector('.admin-override-banner')).toBeNull();
+    render(<AppHeader {...props({ directEditActive: true })} />);
+    expect(screen.queryByText(/Direct-Edit Mode Active/i)).toBeNull();
   });
 
   it('shows the toast after the header', () => {

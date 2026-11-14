@@ -529,8 +529,6 @@ describe('MacroSidebar sheet', () => {
     expect(screen.getByTestId('select-admin-rollback-snapshot')).toBeDisabled();
     const rollbackBtn = screen.getByTestId('btn-admin-rollback');
     expect(rollbackBtn).toHaveTextContent('Revert');
-    expect(rollbackBtn).toHaveClass('admin-secondary-btn');
-    expect(rollbackBtn).not.toHaveClass('admin-primary-btn');
     expect(rollbackBtn).toBeDisabled();
   });
 
