@@ -39,15 +39,6 @@
     white-space: nowrap;
   }
 
-  .brand-subtitle {
-    display: block;
-    font-size: 0.66rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    color: #9ca3af;
-    white-space: nowrap;
-  }
-
   .header-sanity-readout {
     flex: 1;
     display: flex;

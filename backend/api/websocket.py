@@ -12,6 +12,7 @@ from security.auth import AuthUser, get_current_user
 from security.secrecy import (
     caller_owns_saved_sandbox,
     sanitize_game_state_for_viewer,
+    sanitize_summary_for_viewer,
     viewer_power_for,
 )
 from storage import supabase
@@ -110,7 +111,9 @@ async def ws_game_endpoint(
                 "type": "game_update",
                 "game_id": game_id,
                 "state": sanitized.model_dump(mode="json"),
-                "summary": summary.model_dump(mode="json") if summary else None,
+                "summary": sanitize_summary_for_viewer(summary).model_dump(mode="json")
+                if summary
+                else None,
             }
         )
         while True:
@@ -130,7 +133,9 @@ async def ws_game_endpoint(
                                 "type": "game_update",
                                 "game_id": game_id,
                                 "state": g_sanitized.model_dump(mode="json"),
-                                "summary": s.model_dump(mode="json") if s else None,
+                                "summary": sanitize_summary_for_viewer(s).model_dump(mode="json")
+                                if s
+                                else None,
                             }
                         )
     except WebSocketDisconnect:
@@ -148,7 +153,10 @@ async def ws_lobby_endpoint(websocket: WebSocket):
         await websocket.send_json(
             {
                 "type": "lobby_update",
-                "games": [s.model_dump(mode="json") for s in public_summaries()],
+                "games": [
+                    sanitize_summary_for_viewer(s).model_dump(mode="json")
+                    for s in public_summaries()
+                ],
             }
         )
         while True:
@@ -163,7 +171,10 @@ async def ws_lobby_endpoint(websocket: WebSocket):
                     await websocket.send_json(
                         {
                             "type": "lobby_update",
-                            "games": [s.model_dump(mode="json") for s in public_summaries()],
+                            "games": [
+                                sanitize_summary_for_viewer(s).model_dump(mode="json")
+                                for s in public_summaries()
+                            ],
                         }
                     )
     except WebSocketDisconnect:

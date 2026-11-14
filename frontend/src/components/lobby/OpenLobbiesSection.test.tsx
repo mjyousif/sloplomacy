@@ -105,4 +105,23 @@ describe('OpenLobbiesSection', () => {
     });
     expect(screen.getByText('Entering...')).toBeInTheDocument();
   });
+
+  it('never displays user emails in the lobby card', () => {
+    setup({
+      multiplayerLobbies: [
+        game({
+          game_id: 'a',
+          created_by: 'host.secret@example.com',
+          creator_id: 'host_id',
+          participants: {
+            FRANCE: seat('FRANCE', 'host_id', 'GeneralHost'),
+            GERMANY: seat('GERMANY', 'other_id', 'other.secret@example.com'),
+          },
+        }),
+      ],
+    });
+    expect(screen.getByText(/Hosted by GeneralHost/)).toBeInTheDocument();
+    expect(screen.getByText(/other\.secret/)).toBeInTheDocument();
+    expect(screen.queryByText(/@/)).not.toBeInTheDocument();
+  });
 });

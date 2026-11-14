@@ -25,7 +25,8 @@ def test_admin_unit_spawn_and_warning_acknowledgment():
     st = res.json()
     assert len(st["admin_log"]) == 1
     entry = st["admin_log"][0]
-    assert entry["actor"] == "host@test.com"
+    assert "@" not in entry["actor"]
+    assert entry["actor"] == "host"
     # Creator is already acknowledged
     assert "host" in entry["acknowledged_by"]
 

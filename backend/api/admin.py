@@ -134,7 +134,7 @@ def get_admin_status(
             can_rollback=len(history_stack) > 0,
             history_count=len(history_stack),
             history_entries=_build_entries(),
-            creator_email=summary.created_by if summary else "commander@diplomacy.local",
+            creator_email="",
             creator_id=summary.creator_id if summary else "guest",
         )
 
@@ -152,7 +152,7 @@ def get_admin_status(
         can_rollback=len(history_stack) > 0,
         history_count=len(history_stack),
         history_entries=_build_entries() if is_creator else [],
-        creator_email=summary.created_by,
+        creator_email="",
         creator_id=summary.creator_id,
     )
 

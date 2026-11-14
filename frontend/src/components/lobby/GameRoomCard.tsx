@@ -32,6 +32,15 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
     ? Object.values(participants).find((p) => p.user_id === user.id)
     : undefined;
 
+  const hostParticipant = game.creator_id
+    ? Object.values(participants).find((p) => p.user_id === game.creator_id)
+    : undefined;
+  const rawHostName =
+    hostParticipant?.display_name || game.created_by || 'Host';
+  const hostDisplayName = rawHostName.includes('@')
+    ? rawHostName.split('@')[0]
+    : rawHostName;
+
   return (
     <div
       key={game.game_id}
@@ -54,7 +63,7 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
           </div>
           <span className={styles.lobbyGameMeta}>
             {game.season} {game.year} ({game.phase}) · Hosted by{' '}
-            {game.created_by} ·{' '}
+            {hostDisplayName} ·{' '}
             <span className={styles.gameIdMono}>ID: {game.game_id}</span>
           </span>
         </div>
@@ -125,27 +134,19 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
               onClick={() => handlePowerSlotClick(game, pwr)}
               data-state={isMine ? 'mine' : isTakenByOther ? 'taken' : 'open'}
               className={styles.powerSlotBtn}
-              style={{
-                borderColor: isMine
-                  ? meta.color
-                  : isTakenByOther
-                    ? 'rgba(0,0,0,0.12)'
-                    : meta.color,
-                backgroundColor: isMine ? meta.lightBg : undefined,
-              }}
+              style={
+                {
+                  borderColor: isMine ? meta.color : undefined,
+                  backgroundColor: isMine ? meta.lightBg : undefined,
+                  '--power-accent': meta.fillColor,
+                } as React.CSSProperties
+              }
             >
               <div className={styles.powerSlotTop}>
                 <span>
                   <PowerFlag power={pwr} width={18} height={12} />
                 </span>
-                <span
-                  className={styles.powerSlotName}
-                  style={{
-                    color: isTakenByOther ? '#7a756c' : meta.color,
-                  }}
-                >
-                  {meta.shortName}
-                </span>
+                <span className={styles.powerSlotName}>{meta.shortName}</span>
               </div>
               <div className={styles.powerSlotStatus}>
                 {isBusy ? (
@@ -156,7 +157,10 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
                   </span>
                 ) : isTakenByOther ? (
                   <span className={styles.slotTakenLabel}>
-                    <Lock size={11} /> {occupant.display_name}
+                    <Lock size={11} />{' '}
+                    {occupant.display_name.includes('@')
+                      ? occupant.display_name.split('@')[0]
+                      : occupant.display_name}
                   </span>
                 ) : (
                   <span className={styles.slotClaimLabel}>
