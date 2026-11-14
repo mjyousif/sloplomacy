@@ -15,6 +15,7 @@ import type {
   ValidationIssue,
 } from '../types/diplomacy';
 import type { DisplayPrefs } from '../utils/displayPrefs';
+import { supplyCenterOwners } from '../utils/powerHelpers';
 import type { SheetSnap } from '../utils/sheetHelpers';
 import { turnLabel } from '../utils/timerHelpers';
 import {
@@ -212,7 +213,7 @@ export function GameWorkspace({
         onResetCamera={() => mapRef.current?.resetCamera()}
         activePower={playerPower}
         onSelectPower={handleSelectPower}
-        ownership={gameState.ownership}
+        ownership={supplyCenterOwners(gameState.ownership, provinces)}
         units={gameState.units}
         finalizedPowers={gameState.finalized_powers}
         surrenderedPowers={gameState.surrendered_powers}

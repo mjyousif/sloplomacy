@@ -4,6 +4,7 @@ from typing import Any
 from domain.board import Power, Unit, UnitType
 from domain.orders import Order, OrderType
 from engine.adjudicator.resolver import create_diplomacy_game
+from engine.adjudicator.territory import supply_center_owners
 from engine.topology.graph import split_province_code
 from engine.topology.provinces import PROVINCES
 
@@ -328,7 +329,8 @@ def generate_tactical_orders(
     neutral_scs = {
         pid for pid, pinfo in PROVINCES.items() if pinfo.is_supply_center and pid not in ownership
     }
-    enemy_scs = {pid for pid, pwr in ownership.items() if pwr not in powers_to_plan}
+    sc_owners = supply_center_owners(ownership)
+    enemy_scs = {pid for pid, pwr in sc_owners.items() if pwr not in powers_to_plan}
     occupied_provs = set(units_by_prov.keys())
 
     # Strategic water/staging choke points
@@ -398,7 +400,7 @@ def generate_tactical_orders(
                     score += (hash(dest) % 7) * 0.5
 
                 elif parsed.order_type == OrderType.HOLD:
-                    if u.province in ownership and ownership[u.province] == p:
+                    if sc_owners.get(u.province) == p:
                         score += 40.0
                     else:
                         score += 15.0

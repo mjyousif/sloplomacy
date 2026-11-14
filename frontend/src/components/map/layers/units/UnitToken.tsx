@@ -3,7 +3,10 @@ import {
   POWER_METADATA,
   type Unit,
 } from '../../../../types/diplomacy';
-import { isOrderIncomplete } from '../../../../utils/orderHelpers';
+import {
+  isChosenDisband,
+  isOrderIncomplete,
+} from '../../../../utils/orderHelpers';
 import {
   MapPiece,
   PieceHitArea,
@@ -85,7 +88,11 @@ export function UnitToken({
       : null;
 
   const isHold = !order || order.order_type === 'HOLD';
-  const isDisbanding = order?.order_type === 'DISBAND';
+  // On the turn being played, a dislodged unit's default DISBAND is not a choice yet, so it
+  // keeps its DISLODGED! banner. A past turn (no control power) shows what happened.
+  const isDisbanding =
+    order?.order_type === 'DISBAND' &&
+    (controlPower === null || isChosenDisband(order));
   const isExplicitHold = Boolean(
     isUnitOrderVisible(unit) &&
       order &&

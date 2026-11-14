@@ -193,3 +193,34 @@ def test_foreign_support_does_not_leak_into_friendly_bounce_diagnostics():
     # Italy must see equal strength self-bounce, not "Even with support on Army Venice"
     assert "equal strength (1)" in issue.message
     assert "Even with support" not in issue.message
+
+
+def test_support_hold_of_own_unit_is_not_friendly_fire():
+    """Issue #256: supporting your own unit to hold is not an attack on it."""
+    units = [
+        Unit(id="AUS_A_BOH", power=Power.AUSTRIA, unit_type=UnitType.ARMY, province="BOH"),
+        Unit(id="AUS_A_TYR", power=Power.AUSTRIA, unit_type=UnitType.ARMY, province="TYR"),
+    ]
+    orders = {
+        "AUS_A_TYR": Order(
+            unit_id="AUS_A_TYR",
+            power=Power.AUSTRIA,
+            unit_type=UnitType.ARMY,
+            origin="TYR",
+            order_type=OrderType.HOLD,
+            is_explicit=True,
+        ),
+        "AUS_A_BOH": Order(
+            unit_id="AUS_A_BOH",
+            power=Power.AUSTRIA,
+            unit_type=UnitType.ARMY,
+            origin="BOH",
+            order_type=OrderType.SUPPORT,
+            aux_unit_origin="TYR",
+            target="TYR",
+            is_explicit=True,
+        ),
+    }
+
+    issues = validate_orders(units, orders, target_power=Power.AUSTRIA)
+    assert issues == []

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Power } from '../types/diplomacy';
-import { rankPowers } from './powerHelpers';
+import type { Power, ProvinceInfo } from '../types/diplomacy';
+import { rankPowers, supplyCenterOwners } from './powerHelpers';
 
 describe('rankPowers', () => {
   const baseCounts = (): Record<Power, number> => ({
@@ -137,5 +137,18 @@ describe('rankPowers', () => {
       expect(ranked[i].scCount).toBe(3);
       expect(ranked[i].unitCount).toBe(3);
     }
+  });
+});
+
+describe('supplyCenterOwners', () => {
+  it('drops claimed land that is not a supply center (#258)', () => {
+    const provinces = {
+      VIE: { is_supply_center: true },
+      TYR: { is_supply_center: false },
+    } as unknown as Record<string, ProvinceInfo>;
+    const ownership: Record<string, Power> = { VIE: 'AUSTRIA', TYR: 'ITALY' };
+    expect(supplyCenterOwners(ownership, provinces)).toEqual({
+      VIE: 'AUSTRIA',
+    });
   });
 });

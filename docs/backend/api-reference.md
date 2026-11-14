@@ -676,7 +676,7 @@ Immediately disbands and removes a unit from the board.
 ---
 
 ### 17. `POST /api/admin/ownership`
-Reassigns supply center ownership to any Great Power or clears it to neutral. Returns `400` for a province that is not a supply center.
+Reassigns the owner of a supply center or other land province to any Great Power, or clears it to neutral. Returns `400` for a sea or impassable province.
 
 #### Request (`AdminSetOwnershipRequest`):
 ```json

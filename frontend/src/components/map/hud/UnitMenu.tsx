@@ -15,7 +15,10 @@ import {
 } from '../../../types/diplomacy';
 import { cx } from '../../../utils/cx';
 import { disbandOrder, holdOrder } from '../../../utils/orderBuilders';
-import { getActiveOrderButton } from '../../../utils/orderHelpers';
+import {
+  getActiveOrderButton,
+  isChosenDisband,
+} from '../../../utils/orderHelpers';
 import type { MapInteraction } from '../hooks/useMapInteraction';
 import type { UnitMenuPlacement } from '../hooks/useUnitMenuPlacement';
 import floatingStyles from './FloatingMenu.module.css';
@@ -135,9 +138,7 @@ export function UnitMenu({
             </button>
             <button
               className={floatingStyles.tacticalModeBtn}
-              data-state={
-                order?.order_type === 'DISBAND' ? 'active' : undefined
-              }
+              data-state={isChosenDisband(order) ? 'active' : undefined}
               style={{ borderColor: '#ef4444', color: '#fca5a5' }}
               onClick={() => {
                 onUpdateOrder(disbandOrder(unit));

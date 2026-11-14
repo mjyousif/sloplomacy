@@ -116,6 +116,15 @@ export function isOrderIncomplete(order: Order | undefined): boolean {
   return false;
 }
 
+/**
+ * A DISBAND the player chose. The server seeds every dislodged unit with a default DISBAND
+ * (`is_explicit: false`) so an unordered retreat disbands, but that is what happens if nobody
+ * acts, not a choice, so the board must not show it as one (issue #257).
+ */
+export function isChosenDisband(order: Order | undefined): boolean {
+  return order?.order_type === 'DISBAND' && order.is_explicit;
+}
+
 export function formatOrderSummary(
   order: Order | undefined,
   provinces: Record<string, ProvinceInfo>,
@@ -231,6 +240,16 @@ export function formatOrderSummary(
       targetText: `Build ${order.unit_type === 'A' ? 'Army' : 'Fleet'} in ${pName(order.origin)}${coastSuffix}`,
       badgeColor: '#16a34a',
       fullSymbolic: `+ ${order.unit_type} ${order.origin}${coastSuffix} BUILD`,
+    };
+  }
+
+  if (order.order_type === 'DISBAND' && !isChosenDisband(order)) {
+    // The server's default for a dislodged unit nobody has ordered yet (issue #257).
+    return {
+      verb: 'NO ORDER',
+      targetText: 'Disbands unless it retreats',
+      badgeColor: '#ea580c',
+      fullSymbolic: `${order.unit_type} ${order.origin} (dislodged, unordered)`,
     };
   }
 

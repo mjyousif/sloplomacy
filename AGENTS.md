@@ -217,6 +217,8 @@ The game cycles through three standard phases per year:
    - If `SC < Units`: Owning power disbands surplus units (`DISBAND`) anywhere on the board (`count` disbands required).
    - If `SC == Units`: No adjustments needed.
    - Advances to `Spring <Year + 1> Movement`.
+- **Invariant**: `GameState.ownership` also holds land provinces that are not supply centers, claimed by the last power whose unit ended a movement or retreat phase there (`engine/adjudicator/territory.py`). They only colour the map. Anything that counts centers (builds, standings, victory, who is still in the game, the diplomacy engine's `set_centers`) goes through `supply_center_owners` (backend) or `supplyCenterOwners` (frontend).
+- **Invariant**: A dislodged unit's server default is a non-explicit `DISBAND`. The UI treats it as unordered (`isChosenDisband`) on the live turn and shows DISBAND only once the player picks it.
 
 ### 2. Adjudication Library (`diplomacy>=1.1.2`)
 - Turn adjudication in `backend/engine/adjudicator/` interfaces with the standard Python `diplomacy` package (`diplomacy.Game`). `resolver.adjudicate_turn` runs a phase and hands the readback to `movement.py`, `retreats.py` or `adjustments.py`, which share a `ResolutionContext` (`context.py`).

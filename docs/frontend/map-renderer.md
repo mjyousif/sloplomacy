@@ -96,7 +96,9 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   │      layers/BuildTokensLayer.tsx):
   │      - Army / fleet pieces drawn by MapPiece in the active style and mark, placed by
   │        hooks/usePieceGeometry.ts
-  │      - Dislodged units stepped aside with an orange ring and a DISLODGED! banner
+  │      - Dislodged units stepped aside with an orange ring and a DISLODGED! banner. It turns into
+  │        ✕ DISBAND only once the player picks Disband (`isChosenDisband`); the server's default
+  │        disband for an unordered unit is not shown as a choice, except on a past turn
   │      - Winter build slots: the piece being built with a BUILD tag, or "+ BUILD HERE" while waived
   │      - Selection, hover and own-power rings, hold rings, +N supports to hold, and issue badges
   │      - On a phone, tap targets grown to a finger's width (hooks/useTouchHitRadius.ts)
