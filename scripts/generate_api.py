@@ -26,6 +26,7 @@ for _p in (str(BACKEND_DIR), str(REPO_ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+from api import websocket  # noqa: E402
 from domain.game_state import PhaseTimer  # noqa: E402
 from domain.requests import (  # noqa: E402
     WebSocketAuthMessage,
@@ -251,9 +252,22 @@ def extract_operations() -> list[dict[str, Any]]:
     return ops
 
 
+def iter_app_routes() -> list[Any]:
+    try:
+        from fastapi.routing import iter_route_contexts
+
+        routes = [ctx.route for ctx in iter_route_contexts(app.routes)]
+    except ImportError:
+        routes = list(app.routes)
+    for ws_route in websocket.router.routes:
+        if ws_route not in routes:
+            routes.append(ws_route)
+    return routes
+
+
 def extract_ws_routes() -> list[dict[str, Any]]:
     ws_routes: list[dict[str, Any]] = []
-    for route in app.routes:
+    for route in iter_app_routes():
         if isinstance(route, APIWebSocketRoute | WebSocketRoute):
             ws_routes.append(
                 {

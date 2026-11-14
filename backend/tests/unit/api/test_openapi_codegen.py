@@ -7,7 +7,6 @@ from pathlib import Path
 from types import ModuleType
 
 from fastapi.routing import APIRoute
-from main import app
 
 
 def _load_generator() -> ModuleType:
@@ -22,9 +21,10 @@ def _load_generator() -> ModuleType:
 
 def test_every_api_route_declares_response_model() -> None:
     """Every /api/ HTTP route must declare a typed response_model for OpenAPI codegen."""
+    generator = _load_generator()
     missing = [
         f"{sorted(route.methods)} {route.path}"
-        for route in app.routes
+        for route in generator.iter_app_routes()
         if isinstance(route, APIRoute)
         and route.path.startswith("/api/")
         and route.response_model is None
