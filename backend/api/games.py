@@ -34,6 +34,7 @@ from storage.store import (
     cache_loaded_game,
     check_game_capacity,
     evict_game,
+    hydrate_summary_profiles,
     load_saved_game,
     persist_game,
     resolve_game,
@@ -63,7 +64,7 @@ async def sync_lobby_with_db() -> None:
 
     for gid, summary in db_summaries.items():
         if gid not in GAMES:
-            GAME_SUMMARIES[gid] = summary
+            GAME_SUMMARIES[gid] = hydrate_summary_profiles(summary)
 
     if evicted:
         await manager.broadcast_lobby()
