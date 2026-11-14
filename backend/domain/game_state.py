@@ -170,7 +170,7 @@ class MultiplayerGameSummary(BaseModel):
     season: str = "Spring"
     year: int = 1901
     phase: str = "Movement"
-    created_by: str
+    created_by: str = ""
     creator_id: str | None = None
     created_at: str
     # When a phase last resolved. None until the first one does; the lobby then uses created_at.
