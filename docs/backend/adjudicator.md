@@ -142,6 +142,7 @@ The internal Pydantic `Order` model is serialized into standard DATC order notat
    - Commits resolution permanently to authoritative `GameState`.
    - Advances `season`, `year`, and `phase`.
    - Updates `ownership` map during Fall movement resolution.
+   - After every movement and retreat phase, gives each land province that is not a supply center to the power whose unit stands in it (`territory.py`, `claim_occupied_territory`). The diplomacy engine only ever receives supply centers (`supply_center_owners`).
    - Clears finalized order rosters and updates `turn_history`.
 
 Before a commit, `_execute_adjudication` saves a snapshot of the phase as it began, with every power's orders, in `GAME_HISTORY` (the last 30 phases). Admin rollback restores from it, and `GET /api/history/{index}` runs a snapshot through `adjudicate_turn` again to show players what happened. Adjudication is deterministic, so that gives back exactly the original result, also for games saved before the turn selector existed.

@@ -128,11 +128,25 @@ describe('UnitsLayer', () => {
     ).not.toBeNull();
 
     const orders: Record<string, Order> = {
-      [out.id]: orderFor(out, 'DISBAND'),
+      [out.id]: orderFor(out, 'DISBAND', { is_explicit: true }),
     };
     const disbanding = draw([out], { orders });
     expect(disbanding.token(out)).toHaveTextContent('✕ DISBAND');
     expect(disbanding.token(out)).not.toHaveTextContent('DISLODGED!');
+  });
+
+  it("keeps a dislodged unit's default DISBAND off the board until it is chosen (#257)", () => {
+    const out = unitAt('FRANCE', 'A', 'BUR', { is_dislodged: true });
+    const orders: Record<string, Order> = {
+      [out.id]: orderFor(out, 'DISBAND', { is_explicit: false }),
+    };
+    const live = draw([out], { orders });
+    expect(live.token(out)).toHaveTextContent('DISLODGED!');
+    expect(live.token(out)).not.toHaveTextContent('✕ DISBAND');
+
+    // A past turn shows the disband that happened.
+    const past = draw([out], { orders, controlPower: null });
+    expect(past.token(out)).toHaveTextContent('✕ DISBAND');
   });
 
   it('badges supports to hold, and the worst issue', () => {

@@ -200,7 +200,7 @@ Pieces must not be defined inside `MacroSidebar`: a component defined in a rende
 
 ### 2. Phase-Aware Instructions & Quotas
 - **Winter Adjustments**: Summarizes build allowances (`+X` home builds allowed, `Y/X` assigned) or disband requirements (`-X` units required to disband).
-- **Retreats**: Prompts commanders on dislodged units requiring retreat destinations or disband orders.
+- **Retreats**: Prompts commanders on dislodged units requiring retreat destinations or disband orders. Until the player picks, a dislodged unit's card reads `NO ORDER · Disbands unless it retreats` and neither button is pressed: the server's default DISBAND (`is_explicit: false`) is what happens if nobody acts, not a choice.
 
 ### 3. Quick Action Toolbar
 - **"Clear All Orders"**: Resets every order of the power to its phase default (units hold, dislodged units disband, build slots blank) and withdraws its finalization via `POST /api/orders/clear-all`.

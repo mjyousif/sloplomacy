@@ -1,4 +1,19 @@
-import { ALL_POWERS, type Power } from '../types/diplomacy';
+import { ALL_POWERS, type Power, type ProvinceInfo } from '../types/diplomacy';
+
+/**
+ * Only the supply centers in `ownership`. The server also records who last stood in each land
+ * province that is not a supply center (it only colours the map), and those never count.
+ */
+export function supplyCenterOwners(
+  ownership: Record<string, Power>,
+  provinces: Record<string, ProvinceInfo>,
+): Record<string, Power> {
+  const centers: Record<string, Power> = {};
+  for (const [prov, power] of Object.entries(ownership)) {
+    if (provinces[prov]?.is_supply_center) centers[prov] = power;
+  }
+  return centers;
+}
 
 export interface RankedPower {
   power: Power;
