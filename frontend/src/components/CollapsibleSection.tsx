@@ -54,7 +54,6 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   return (
     <section
       className={cx(styles.sidebarSection, className)}
-      data-collapsible={collapsible ? 'true' : 'false'}
       data-open={open ? 'true' : 'false'}
     >
       <div className={styles.sidebarSectionHeader}>

@@ -24,7 +24,6 @@ describe('CollapsibleSection', () => {
     expect(html).toContain('badge');
     expect(html).toContain('4 items');
     expect(html).toContain('Legend Content');
-    expect(html).toContain('data-collapsible="true"');
     expect(html).toContain('data-open="true"');
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain('data-testid="sidebar-section-toggle"');
@@ -72,7 +71,6 @@ describe('CollapsibleSection', () => {
     expect(html).toContain('Actions &amp; Camera');
     expect(html).toContain('105%');
     expect(html).toContain('Action Controls');
-    expect(html).toContain('data-collapsible="false"');
     expect(html).not.toContain('data-testid="sidebar-section-toggle"');
     expect(html).toContain('data-testid="sidebar-section-static-header"');
   });

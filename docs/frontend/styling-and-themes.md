@@ -47,9 +47,9 @@ The map's styles are split by owner, so no module names another module's hashed 
 
 ### Leftovers and the CSS guard
 
-- **Shell and screens.** `src/App.module.css` holds the app shell, the loading and error screens and the phone-wide rule that gives inputs, selects and textareas `16px` text (so iOS does not zoom in on focus). The shell has `data-testid="app-shell"`.
-- **Sidebar parts.** `components/SidebarChrome.module.css` holds what the sidebars and their collapsed rails share: the collapse toggle (`sidebarCollapseToggleBtn`), the rail button, divider, spacer and expand chevron, and the version footer. `CollapsibleSection.module.css` holds the section (its state is `data-open` and `data-collapsible`, and its toggle has `data-testid="sidebar-section-toggle"`), `VersionBadge.module.css` the build badge, and `MacroSidebar.module.css` the footer that holds Finalize and Resolve.
-- **The guard.** `styles/cssGuard.test.ts` (run by `npm test`) fails when a `.css` file under `src/` is neither in `styles/` nor a `*.module.css`, when a `*.module.css` has a rule outside an `@layer` block, or when a `styles/` sheet other than `index.css` is not imported with `layer(...)` in `index.css`. Unlayered rules beat every layer, so each of those would break the cascade order.
+- **Shell and screens.** `src/App.module.css` holds the app shell, the loading and error screens and the phone-wide rule that gives inputs, selects and textareas `16px` text (so iOS does not zoom in on focus).
+- **Sidebar parts.** `components/SidebarChrome.module.css` holds what the sidebars and their collapsed rails share: the collapse toggle (`sidebarCollapseToggleBtn`), the rail button, divider, spacer and expand chevron, and the version footer. `CollapsibleSection.module.css` holds the section (its state is `data-open`, and its toggle has `data-testid="sidebar-section-toggle"`), `VersionBadge.module.css` the build badge, and `MacroSidebar.module.css` the footer that holds Finalize and Resolve.
+- **The guard.** `styles/cssGuard.test.ts` (run by `npm test`) fails when a `.css` file under `src/` is neither in `styles/` nor a `*.module.css`, when a `*.module.css` has a rule outside an `@layer components` or `@layer compact` block, or when a `styles/` sheet other than `index.css` is not imported into `base` with `layer(base)` in `index.css`. Unlayered rules beat every layer, so each of those would break the cascade order.
 
 ### Modals
 

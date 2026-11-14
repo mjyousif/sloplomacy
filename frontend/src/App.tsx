@@ -360,7 +360,6 @@ export function App() {
   return (
     <div
       className={styles.diplomacyAppShell}
-      data-testid="app-shell"
       data-layout={isCompact ? 'compact' : 'wide'}
     >
       <AppHeader
