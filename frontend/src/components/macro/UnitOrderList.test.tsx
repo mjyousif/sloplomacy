@@ -108,6 +108,20 @@ describe('UnitOrderList', () => {
     expect(eng).not.toHaveAttribute('data-status');
   });
 
+  it('holds back the warning for the selected unit until its order is finished or it is deselected', () => {
+    const blank = {
+      ...orderFor(A_BRE, 'MOVE', { target: 'PAR' }),
+      target: null,
+    };
+    const orders = { ...HOLD_ORDERS, [A_BRE.id]: blank };
+    const issues = [issue(A_BRE, 'error')];
+    const picked = list({ orders, selectedUnitId: A_BRE.id }, { issues });
+    expect(cards(picked.container)[1]).not.toHaveAttribute('data-status');
+    picked.unmount();
+    const off = list({ orders, selectedUnitId: null }, { issues });
+    expect(cards(off.container)[1]).toHaveAttribute('data-status', 'error');
+  });
+
   it('shows the simulation result only while the simulation is on', () => {
     const simulationResult = {
       resolutions: {

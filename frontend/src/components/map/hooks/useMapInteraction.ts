@@ -40,6 +40,8 @@ export interface UseMapInteractionOptions {
   units: Unit[];
   builds: Record<Power, { count: number; homes: string[] }> | null;
   selectedUnitId: string | null;
+  /** The selected unit's saved order: an unfinished support or convoy resumes at its next step. */
+  selectedOrder?: Order;
   onSelectUnit: (unitId: string | null) => void;
   onUpdateOrder: (order: Order) => void;
   isAdjustmentPhase: boolean;
@@ -90,6 +92,7 @@ export function useMapInteraction({
   units,
   builds,
   selectedUnitId,
+  selectedOrder,
   onSelectUnit,
   onUpdateOrder,
   isAdjustmentPhase,
@@ -110,11 +113,10 @@ export function useMapInteraction({
   const { isPanningRef, dragMovedRef } = gestures;
 
   const [hoveredProv, setHoveredProv] = useState<string | null>(null);
-  const [interactionMode, setInteractionMode] =
-    useState<MapInteractionMode>('MOVE');
+  const [pickedMode, setInteractionMode] = useState<MapInteractionMode>('MOVE');
   // True once the player presses Move on this selection, which replaces a saved Hold's highlight
   const [moveModeChosen, setMoveModeChosen] = useState<boolean>(false);
-  const [pendingAuxOrigin, setPendingAuxOrigin] = useState<string | null>(null);
+  const [pickedAuxOrigin, setPendingAuxOrigin] = useState<string | null>(null);
   const [pendingCoastChoice, setPendingCoastChoice] =
     useState<PendingCoastChoice | null>(null);
 
@@ -124,6 +126,31 @@ export function useMapInteraction({
   if (menuUnitId !== selectedUnitId) {
     setMenuUnitId(selectedUnitId);
     setMoveModeChosen(false);
+  }
+
+  // A support or convoy opened on the sidebar card (or left unfinished) has no map step of its
+  // own yet, so the map resumes it: the next click picks the unit, then the target.
+  let interactionMode = pickedMode;
+  let pendingAuxOrigin = pickedAuxOrigin;
+  if (
+    pickedMode === 'MOVE' &&
+    !moveModeChosen &&
+    selectedUnit &&
+    selectedOrder &&
+    selectedOrder.unit_id === selectedUnit.id &&
+    (selectedOrder.order_type === 'SUPPORT' ||
+      selectedOrder.order_type === 'CONVOY') &&
+    !selectedOrder.target
+  ) {
+    const isSupport = selectedOrder.order_type === 'SUPPORT';
+    if (selectedOrder.aux_unit_origin) {
+      interactionMode = isSupport
+        ? 'SUPPORT_PICK_TARGET'
+        : 'CONVOY_PICK_TARGET';
+      pendingAuxOrigin = selectedOrder.aux_unit_origin;
+    } else {
+      interactionMode = isSupport ? 'SUPPORT_PICK_UNIT' : 'CONVOY_PICK_ARMY';
+    }
   }
 
   const clearSelection = () => {

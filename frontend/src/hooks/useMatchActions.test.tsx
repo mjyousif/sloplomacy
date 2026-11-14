@@ -151,43 +151,46 @@ describe('useMatchActions: orders', () => {
     expect(o.applyServerState).not.toHaveBeenCalled();
   });
 
-  it('confirms every order of the player’s power on the draft game', async () => {
+  it('clears every order of the player’s power on the draft game', async () => {
     const next = state({ phase: 'Retreats' });
     supabase.authedFetch.mockResolvedValue(reply(200, next));
     const o = makeOptions({ draftGameId: 'sbx_9' });
     const { result } = renderActions(o);
-    await act(() => result.current.handleConfirmAllHolds());
+    await act(() => result.current.handleClearAllOrders());
     expect(sent()).toEqual({
-      url: '/api/orders/confirm-all?game_id=sbx_9',
+      url: '/api/orders/clear-all?game_id=sbx_9',
       method: 'POST',
       body: { power: 'FRANCE' },
     });
     expect(o.applyServerState).toHaveBeenCalledWith(next);
+    expect(o.setSelectedUnitId).toHaveBeenCalledWith(null);
     expect(o.triggerToast).toHaveBeenCalledWith(
-      'Confirmed all current orders for France.',
+      'Cleared all orders for France.',
     );
   });
 
-  it('confirms for the power on screen, which in a sandbox is not a seat', async () => {
+  it('clears for the power on screen, which in a sandbox is not a seat', async () => {
     const { result } = renderActions(
       makeOptions({ viewMode: 'sandbox', lockedPower: null }),
     );
-    await act(() => result.current.handleConfirmAllHolds());
+    await act(() => result.current.handleClearAllOrders());
     expect(sent().body).toEqual({ power: 'FRANCE' });
   });
 
-  it('confirms nothing without a board, or when the server says no', async () => {
+  it('clears nothing without a board, or when the server says no', async () => {
     const o = makeOptions({ gameState: null });
     const { result } = renderActions(o);
-    await act(() => result.current.handleConfirmAllHolds());
+    await act(() => result.current.handleClearAllOrders());
     expect(supabase.authedFetch).not.toHaveBeenCalled();
 
     supabase.authedFetch.mockResolvedValue(reply(403, {}));
     const o2 = makeOptions();
     const second = renderActions(o2);
-    await act(() => second.result.current.handleConfirmAllHolds());
+    await act(() => second.result.current.handleClearAllOrders());
     expect(o2.applyServerState).not.toHaveBeenCalled();
-    expect(o2.triggerToast).not.toHaveBeenCalled();
+    expect(o2.triggerToast).toHaveBeenCalledWith(
+      'Orders could not be cleared.',
+    );
   });
 });
 

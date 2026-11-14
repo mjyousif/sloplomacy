@@ -201,10 +201,18 @@ describe('UnitMacroCard pointer behaviour', () => {
     expect(onHighlightProvinces).not.toHaveBeenCalled();
   });
 
-  it('keeps a click on the controls from selecting the card', () => {
+  it('picking an order type selects the unit once, and never deselects it', () => {
     const { onSelectUnit, handleOrderTypeChange } = card();
     fireEvent.click(screen.getByTestId('btn-order-type-MOVE'));
     expect(handleOrderTypeChange).toHaveBeenCalledWith(A_BRE, 'MOVE');
+    expect(onSelectUnit).toHaveBeenCalledTimes(1);
+    expect(onSelectUnit).toHaveBeenCalledWith(A_BRE.id);
+  });
+
+  it('leaves an already selected unit selected when an order type is picked', () => {
+    const { onSelectUnit, handleOrderTypeChange } = card({ isSelected: true });
+    fireEvent.click(screen.getByTestId('btn-order-type-SUPPORT'));
+    expect(handleOrderTypeChange).toHaveBeenCalledWith(A_BRE, 'SUPPORT');
     expect(onSelectUnit).not.toHaveBeenCalled();
   });
 });

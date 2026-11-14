@@ -1,7 +1,7 @@
 import {
   AlertTriangle,
-  CheckCircle2,
   Clock,
+  Eraser,
   Flag,
   Lock,
   Play,
@@ -14,21 +14,18 @@ import { cx } from '../../utils/cx';
 import type { ConsensusStatusInfo } from '../../utils/orderHelpers';
 import styles from './OrderFooter.module.css';
 
-/** "Confirm All (n/m)": marks every current order as confirmed. */
-export const ConfirmAllButton: React.FC<{
-  confirmedCount: number;
-  totalActionableCount: number;
-  onConfirmAllHolds: () => void;
-}> = ({ confirmedCount, totalActionableCount, onConfirmAllHolds }) => (
+/** "Clear All": resets every order of the power to its phase default. */
+export const ClearAllButton: React.FC<{
+  onClearAllOrders: () => void;
+}> = ({ onClearAllOrders }) => (
   <button
     type="button"
-    className={styles.quickActionBtn}
-    data-testid="btn-confirm-all"
-    title="Mark all current orders as confirmed"
-    onClick={onConfirmAllHolds}
+    className={cx(styles.quickActionBtn, styles.clearAllBtn)}
+    data-testid="btn-clear-all"
+    title="Clear all orders and return every unit to its default"
+    onClick={onClearAllOrders}
   >
-    <CheckCircle2 size={12} /> Confirm All ({confirmedCount}/
-    {totalActionableCount})
+    <Eraser size={12} /> Clear All Orders
   </button>
 );
 

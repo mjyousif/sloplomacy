@@ -173,6 +173,7 @@ export function useEuropeMap(
     units,
     builds,
     selectedUnitId,
+    selectedOrder: selectedUnitId ? orders[selectedUnitId] : undefined,
     onSelectUnit,
     onUpdateOrder,
     isAdjustmentPhase,

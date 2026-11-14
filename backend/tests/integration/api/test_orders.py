@@ -55,6 +55,39 @@ def test_api_order_updates_finalize_and_unfinalize():
     assert "FRANCE" not in unfin_res.json()["finalized_powers"]
 
 
+def test_api_clear_all_resets_only_the_named_power_to_defaults():
+    """Clear-all puts a power's units back on hold and withdraws its finalization."""
+    client.post("/api/scenario", json={"scenario_id": "standard_1901", "active_power": "FRANCE"})
+    for unit_id, power, unit_type, origin, target in (
+        ("FRA_A_PAR", "FRANCE", "A", "PAR", "BUR"),
+        ("GER_A_MUN", "GERMANY", "A", "MUN", "RUH"),
+    ):
+        res = client.post(
+            "/api/order",
+            json={
+                "order": {
+                    "unit_id": unit_id,
+                    "power": power,
+                    "unit_type": unit_type,
+                    "origin": origin,
+                    "order_type": "MOVE",
+                    "target": target,
+                    "is_explicit": True,
+                }
+            },
+        )
+        assert res.status_code == 200
+    client.post("/api/finalize", json={"power": "FRANCE", "force": True})
+
+    res = client.post("/api/orders/clear-all", json={"power": "FRANCE"})
+    assert res.status_code == 200
+    st = res.json()
+    assert st["orders"]["FRA_A_PAR"]["order_type"] == "HOLD"
+    assert st["orders"]["FRA_A_PAR"]["is_explicit"] is False
+    assert "FRANCE" not in st["finalized_powers"]
+    assert st["orders"]["GER_A_MUN"]["order_type"] == "MOVE"
+
+
 def test_api_winter_builds_and_slot_management():
     """Full API flow into Winter Adjustments preserves game.builds and spawns built units."""
     client.post("/api/scenario", json={"scenario_id": "standard_1901", "active_power": "FRANCE"})

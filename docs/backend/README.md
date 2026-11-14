@@ -13,7 +13,7 @@ backend/
 │   ├── games.py             # Match rooms: lobby list, creation, loading, deletion, saving a sandbox
 │   ├── lobby.py             # Lobby browser: paged public matches with filters, and the caller's own games
 │   ├── seats.py             # Seats: joining/claiming, leaving, surrendering, picking the active power
-│   ├── orders.py            # Single order submission, batch atomic updates, confirm-all
+│   ├── orders.py            # Single order submission, batch atomic updates, confirm-all, clear-all
 │   ├── turns.py             # Finalization, turn adjudication, phase timer votes and extensions
 │   ├── sandbox.py           # Isolated sandbox mode ("War Room"), hypothetical simulation, AI order generation
 │   ├── admin.py             # Administrator turn controls (status, rollback, jumps, unfinalize-all, test seed)

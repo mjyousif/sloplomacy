@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { POWER_METADATA } from '../../types/diplomacy';
 import type { ConsensusStatusInfo } from '../../utils/orderHelpers';
-import { ConfirmAllButton, OrderFooter, SurrenderButton } from './OrderFooter';
+import { ClearAllButton, OrderFooter, SurrenderButton } from './OrderFooter';
 
 const CONSENSUS: ConsensusStatusInfo = {
   isWaitingForPlayers: false,
@@ -39,20 +39,14 @@ const footer = (over: Partial<Parameters<typeof OrderFooter>[0]> = {}) => {
   return { ...view, ...fns };
 };
 
-describe('ConfirmAllButton', () => {
-  it('shows the confirmed and total counts and confirms on click', () => {
-    const onConfirmAllHolds = vi.fn();
-    render(
-      <ConfirmAllButton
-        confirmedCount={2}
-        totalActionableCount={5}
-        onConfirmAllHolds={onConfirmAllHolds}
-      />,
-    );
-    const btn = screen.getByTestId('btn-confirm-all');
-    expect(btn).toHaveTextContent('Confirm All (2/5)');
+describe('ClearAllButton', () => {
+  it('clears all orders on click', () => {
+    const onClearAllOrders = vi.fn();
+    render(<ClearAllButton onClearAllOrders={onClearAllOrders} />);
+    const btn = screen.getByTestId('btn-clear-all');
+    expect(btn).toHaveTextContent('Clear All Orders');
     fireEvent.click(btn);
-    expect(onConfirmAllHolds).toHaveBeenCalledTimes(1);
+    expect(onClearAllOrders).toHaveBeenCalledTimes(1);
   });
 });
 

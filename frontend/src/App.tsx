@@ -225,7 +225,7 @@ export function App() {
     setSanityModalOpen,
     sanityModalIssues,
     handleUpdateOrder,
-    handleConfirmAllHolds,
+    handleClearAllOrders,
     handleFinalizeClick,
     handleUnfinalizeClick,
     postTimerAction,
@@ -461,7 +461,7 @@ export function App() {
           handleUpdateOrder={
             directEditActive ? directEdit.stageUnitOrder : handleUpdateOrder
           }
-          handleConfirmAllHolds={handleConfirmAllHolds}
+          handleClearAllOrders={handleClearAllOrders}
           handleFinalizeClick={handleFinalizeClick}
           handleUnfinalizeClick={handleUnfinalizeClick}
           handleAdjudicateTurn={handleAdjudicateTurn}

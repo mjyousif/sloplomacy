@@ -118,10 +118,8 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await expect(supportArrow).toBeVisible();
       await recorder.recordStep(page, '05_move_and_support_vectors_rendered');
 
-      // 7. Confirm all French orders and finalize
-      const confirmAllBtn = page.locator('[data-testid="btn-confirm-all"]');
-      await expect(confirmAllBtn).toBeVisible();
-      await confirmAllBtn.click();
+      // 7. Finalize the French orders
+      await expect(page.locator('[data-testid="btn-clear-all"]')).toBeVisible();
 
       const finalizeBtn = page.locator('[data-testid="btn-finalize-orders"]');
       await expect(finalizeBtn).toBeVisible();

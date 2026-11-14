@@ -151,7 +151,7 @@ function props(over: Partial<GameWorkspaceProps> = {}): GameWorkspaceProps {
     handleLoadScenario: vi.fn(),
     handleOpenSaveSandboxModal: vi.fn(),
     handleUpdateOrder: vi.fn(),
-    handleConfirmAllHolds: vi.fn(),
+    handleClearAllOrders: vi.fn(),
     handleFinalizeClick: vi.fn(),
     handleUnfinalizeClick: vi.fn(),
     handleAdjudicateTurn: vi.fn(),

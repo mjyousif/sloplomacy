@@ -54,6 +54,7 @@ interface Board {
   sandboxMode?: boolean;
   historyView?: boolean;
   activePower?: Power;
+  orders?: Record<string, Order>;
 }
 
 /** The selection and the click state machine, wired the way EuropeMap wires them. */
@@ -84,7 +85,7 @@ function setup(board: Board) {
     const isRetreatPhase = phase === 'Retreats';
     const selection = useMapSelection({
       selectedUnitId,
-      orders: {},
+      orders: board.orders ?? {},
       unitsById,
       provinces: PROVINCES,
       retreats: board.retreats ?? null,
@@ -101,6 +102,9 @@ function setup(board: Board) {
       units,
       builds: board.builds ?? null,
       selectedUnitId,
+      selectedOrder: selectedUnitId
+        ? board.orders?.[selectedUnitId]
+        : undefined,
       onSelectUnit: setSelectedUnitId,
       onUpdateOrder,
       isAdjustmentPhase,
@@ -233,6 +237,28 @@ describe('useMapInteraction in a movement phase', () => {
     );
     expect(r().interaction.interactionMode).toBe('MOVE');
     expect(r().selectedUnitId).toBeNull();
+  });
+
+  it('resumes a support opened on the sidebar: the next unit click is the one supported', () => {
+    const blank: Order = {
+      ...supportOrder(A_PAR, 'BUR', 'MAR'),
+      aux_unit_origin: null,
+      target: null,
+    };
+    const { r, clickUnit, clickProvince, onUpdateOrder } = setup({
+      units: [A_PAR, A_BUR],
+      orders: { [A_PAR.id]: blank },
+    });
+    clickUnit(A_PAR);
+    expect(r().interaction.interactionMode).toBe('SUPPORT_PICK_UNIT');
+    clickUnit(A_BUR);
+    expect(r().selectedUnitId).toBe(A_PAR.id);
+    expect(r().interaction.interactionMode).toBe('SUPPORT_PICK_TARGET');
+    expect(r().interaction.pendingAuxOrigin).toBe('BUR');
+    clickProvince('MAR');
+    expect(onUpdateOrder).toHaveBeenCalledExactlyOnceWith(
+      supportOrder(A_PAR, 'BUR', 'MAR'),
+    );
   });
 
   it('supports a hold when the supported unit is clicked again', () => {

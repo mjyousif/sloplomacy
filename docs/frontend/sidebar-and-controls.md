@@ -76,7 +76,7 @@ In the compact layout the game screen is the map, with everything else layered o
 
 ### Order sheet (`BottomSheet.tsx`, `MacroSidebar variant="sheet"`)
 - **Stops**: peek, half and full (`utils/sheetHelpers.ts`). It starts at peek every time a game opens. Drag the handle and let go to settle on the nearest stop, or flick to go one stop further. A tap or the keyboard steps peek → half → full → peek. It only slides when it moves between stops, never when it is measured or the screen rotates.
-- **Peek**: the power with its unit, supply centre and unconfirmed counts (which the desktop rail only gives in tooltips), the status badge, Confirm All, then Finalize and Resolve. In a match, Resolve is the consensus card, plus Force Adjudicate for the host.
+- **Peek**: the power with its unit, supply centre and unconfirmed counts (which the desktop rail only gives in tooltips), the status badge, Clear All Orders, then Finalize and Resolve. In a match, Resolve is the consensus card, plus Force Adjudicate for the host.
 - **Body**: the phase notes, builds and unit cards, then Surrender and the version badge. While the sheet is lowered the body is off screen and `inert`.
 - **Spacer**: the sheet leaves a spacer as tall as its peek, so the map ends where the peek begins and the phone camera fits the map that is actually visible.
 
@@ -185,7 +185,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 | `UnitMacroCard` | One unit: header, status pill (`Incomplete` while a MOVE, SUPPORT or CONVOY has no target yet), behavior bar, then `OrderTypeTabs` and `OrderParameterControls`, issues and the simulation strip |
 | `OrderTypeTabs` | The order-type buttons for the phase (Retreat/Disband, Keep/Disband or Hold/Move/Support/Convoy) |
 | `OrderParameterControls` | The selects for the order's type, in `macro/controls/` (`RetreatControls`, `MoveControls`, `SupportControls`, `ConvoyControls`); each takes only the props it reads |
-| `OrderFooter` (with `ConfirmAllButton`, `SurrenderButton`) | The Confirm All and Surrender buttons, and the footer: Finalize or Unlock, then Resolve or the consensus card. `OrderFooter` itself is a fragment, because the sheet's CSS styles these buttons as direct children of `.macro-sheet-controls` |
+| `OrderFooter` (with `ClearAllButton`, `SurrenderButton`) | The Clear All Orders and Surrender buttons, and the footer: Finalize or Unlock, then Resolve or the consensus card. `OrderFooter` itself is a fragment, because the sheet's CSS styles these buttons as direct children of `.macro-sheet-controls` |
 | `CollapsedRail` | The rail's contents. The `<aside>` stays in `MacroSidebar` so collapsing keeps one element and the width transition on `.macro-sidebar` plays |
 | `useSheetSelection` | The sheet's two reactions to the selected unit (highlight its provinces, scroll its card up when the sheet is raised) |
 
@@ -203,7 +203,7 @@ Pieces must not be defined inside `MacroSidebar`: a component defined in a rende
 - **Retreats**: Prompts commanders on dislodged units requiring retreat destinations or disband orders.
 
 ### 3. Quick Action Toolbar
-- **"Confirm All (X/Y)"**: Marks all unassigned units as explicitly holding, clearing `UNASSIGNED_UNIT` warnings.
+- **"Clear All Orders"**: Resets every order of the power to its phase default (units hold, dislodged units disband, build slots blank) and withdraws its finalization via `POST /api/orders/clear-all`.
 - **"Surrender & Leave"** (Multiplayer): Accessible button to surrender sovereign command and place units in Civil Disorder.
 
 ### 4. Macro Force Orders Roster
