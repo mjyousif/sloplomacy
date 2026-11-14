@@ -6,8 +6,8 @@ import type {
   UnitMoveOptions,
 } from '../../types/diplomacy';
 import { ConvoyControls } from './controls/ConvoyControls';
-import { orderParamDropdownClassNames } from './controls/orderParamDropdown';
 import { MoveControls } from './controls/MoveControls';
+import { orderParamDropdownClassNames } from './controls/orderParamDropdown';
 import { RetreatControls } from './controls/RetreatControls';
 import { SupportControls } from './controls/SupportControls';
 

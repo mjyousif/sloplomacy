@@ -1,6 +1,6 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import type { TurnHistory } from '../hooks/useTurnHistory';
 import { useSidebarSelection } from '../hooks/useSidebarSelection';
+import type { TurnHistory } from '../hooks/useTurnHistory';
 import type {
   GameState,
   MultiplayerGameSummary,
