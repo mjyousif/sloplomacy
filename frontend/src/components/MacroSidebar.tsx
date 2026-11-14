@@ -11,7 +11,6 @@ import {
   type UnitMoveOptions,
   type ValidationIssue,
 } from '../types/diplomacy';
-import { cx } from '../utils/cx';
 import { getConsensusStatusInfo } from '../utils/orderHelpers';
 import {
   computeOrderProgress,
@@ -35,6 +34,7 @@ import {
 import { HistoryLockBar, PhaseContext, PowerHeader } from './macro/PowerHeader';
 import { UnitOrderList } from './macro/UnitOrderList';
 import { useSheetSelection } from './macro/useSheetSelection';
+import chromeStyles from './SidebarChrome.module.css';
 import { VersionBadge } from './VersionBadge';
 
 export interface MacroSidebarProps {
@@ -451,7 +451,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
               {surrenderButton}
             </div>
           )}
-          <div className="sidebar-version-footer">
+          <div className={chromeStyles.sidebarVersionFooter}>
             <VersionBadge />
           </div>
         </div>
@@ -525,13 +525,13 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
       {/* 3. STICKY FOOTER: FINALIZE & ADJUDICATE */}
       <div
-        className={cx('sidebar-footer-actions', styles.sidebarFooterActions)}
+        className={styles.sidebarFooterActions}
         data-testid="macro-footer-actions"
         inert={locked || undefined}
       >
         {footerActions}
       </div>
-      <div className="sidebar-version-footer">
+      <div className={chromeStyles.sidebarVersionFooter}>
         <VersionBadge />
       </div>
     </aside>

@@ -1,6 +1,8 @@
 import { Check, ExternalLink, GitCommit } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
+import { cx } from '../utils/cx';
+import styles from './VersionBadge.module.css';
 
 interface VersionBadgeProps {
   className?: string;
@@ -32,22 +34,22 @@ export const VersionBadge: React.FC<VersionBadgeProps> = ({
 
   return (
     <div
-      className={`version-badge-container ${className}`}
+      className={cx(styles.versionBadgeContainer, className)}
       title={`Build revision: ${commit}`}
     >
       <button
         type="button"
-        className="version-badge-copy-btn"
+        className={styles.versionBadgeCopyBtn}
         onClick={handleCopy}
         aria-label={`Copy revision hash ${commit}`}
         title="Click to copy commit hash"
       >
         {copied ? (
-          <Check size={11} className="version-badge-check-icon" />
+          <Check size={11} className={styles.versionBadgeCheckIcon} />
         ) : (
-          <GitCommit size={11} className="version-badge-commit-icon" />
+          <GitCommit size={11} className={styles.versionBadgeCommitIcon} />
         )}
-        <span className="version-badge-text">
+        <span className={styles.versionBadgeText}>
           {copied ? 'copied' : `rev ${commit}`}
         </span>
       </button>
@@ -57,7 +59,7 @@ export const VersionBadge: React.FC<VersionBadgeProps> = ({
           href={commitUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="version-badge-link"
+          className={styles.versionBadgeLink}
           title={`View commit ${commit} on GitHub`}
           aria-label="View commit on GitHub"
         >

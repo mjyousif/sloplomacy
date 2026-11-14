@@ -7,8 +7,10 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { POWER_METADATA, type Power } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import type { OrderProgress } from '../../utils/orderProgress';
 import { PowerFlag } from '../PowerFlag';
+import chromeStyles from '../SidebarChrome.module.css';
 import styles from './CollapsedRail.module.css';
 
 export type CollapsedRailAdminMode = 'direct-edit' | 'turn-clock';
@@ -44,7 +46,10 @@ export const CollapsedRail: React.FC<{
           <button
             type="button"
             data-testid="macro-sidebar-expand-btn"
-            className="sidebar-rail-btn rail-toggle-btn"
+            className={cx(
+              chromeStyles.sidebarRailBtn,
+              chromeStyles.railToggleBtn,
+            )}
             onClick={onToggleCollapse}
             title={expandTitle}
           >
@@ -52,7 +57,7 @@ export const CollapsedRail: React.FC<{
           </button>
         )}
 
-        <div className="rail-divider" />
+        <div className={chromeStyles.railDivider} />
 
         <div
           className={styles.railAdminCrest}
@@ -76,12 +81,15 @@ export const CollapsedRail: React.FC<{
           </div>
         )}
 
-        <div className="rail-spacer" />
+        <div className={chromeStyles.railSpacer} />
 
         {onToggleCollapse && (
           <button
             type="button"
-            className="sidebar-rail-btn rail-expand-chevron"
+            className={cx(
+              chromeStyles.sidebarRailBtn,
+              chromeStyles.railExpandChevron,
+            )}
             onClick={onToggleCollapse}
             title={expandTitle}
           >
@@ -101,7 +109,10 @@ export const CollapsedRail: React.FC<{
         <button
           type="button"
           data-testid="macro-sidebar-expand-btn"
-          className="sidebar-rail-btn rail-toggle-btn"
+          className={cx(
+            chromeStyles.sidebarRailBtn,
+            chromeStyles.railToggleBtn,
+          )}
           onClick={onToggleCollapse}
           title="Expand Tactical Command & Orders"
         >
@@ -109,7 +120,7 @@ export const CollapsedRail: React.FC<{
         </button>
       )}
 
-      <div className="rail-divider" />
+      <div className={chromeStyles.railDivider} />
 
       <div
         className={styles.railPowerCrest}
@@ -151,12 +162,15 @@ export const CollapsedRail: React.FC<{
         </div>
       )}
 
-      <div className="rail-spacer" />
+      <div className={chromeStyles.railSpacer} />
 
       {onToggleCollapse && (
         <button
           type="button"
-          className="sidebar-rail-btn rail-expand-chevron"
+          className={cx(
+            chromeStyles.sidebarRailBtn,
+            chromeStyles.railExpandChevron,
+          )}
           onClick={onToggleCollapse}
           title="Expand Tactical Orders"
         >

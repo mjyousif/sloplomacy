@@ -24,10 +24,10 @@ test.describe('Collapsible Sidebar Sections', () => {
       await expect(sidebar).toBeVisible();
 
       // Find the toggle buttons for sections (Creator Admin Tools moved to Display Settings)
-      const legendToggle = page.locator('.sidebar-section-toggle-btn:has-text("TACTICAL MAP LEGEND")');
-      const powersToggle = page.locator('.sidebar-section-toggle-btn:has-text("COMMAND NATION")');
-      const sandboxToggle = page.locator('.sidebar-section-toggle-btn:has-text("HYPOTHETICAL MODE")');
-      const adminToggle = page.locator('.sidebar-section-toggle-btn:has-text("CREATOR ADMIN TOOLS")');
+      const legendToggle = page.locator('[data-testid=\"sidebar-section-toggle\"]', { hasText: 'TACTICAL MAP LEGEND' });
+      const powersToggle = page.locator('[data-testid=\"sidebar-section-toggle\"]', { hasText: 'COMMAND NATION' });
+      const sandboxToggle = page.locator('[data-testid=\"sidebar-section-toggle\"]', { hasText: 'HYPOTHETICAL MODE' });
+      const adminToggle = page.locator('[data-testid=\"sidebar-section-toggle\"]', { hasText: 'CREATOR ADMIN TOOLS' });
 
       await expect(legendToggle).toBeVisible();
       await expect(powersToggle).toBeVisible();

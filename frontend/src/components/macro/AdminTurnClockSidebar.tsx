@@ -16,6 +16,7 @@ import { TurnControlTab } from '../admin/TurnControlTab';
 import { BottomSheet } from '../BottomSheet';
 import { useConfirm } from '../ConfirmModal';
 import macroStyles from '../MacroSidebar.module.css';
+import chromeStyles from '../SidebarChrome.module.css';
 import { VersionBadge } from '../VersionBadge';
 import adminSidebarStyles from './AdminSidebar.module.css';
 import styles from './AdminTurnClockSidebar.module.css';
@@ -301,7 +302,7 @@ export function AdminTurnClockSidebar({
       >
         <div className={macroStyles.macroSheetBody}>
           <div className={macroStyles.macroUnitsScrollArea}>{bodyContent}</div>
-          <div className="sidebar-version-footer">
+          <div className={chromeStyles.sidebarVersionFooter}>
             <VersionBadge />
           </div>
         </div>
@@ -354,7 +355,7 @@ export function AdminTurnClockSidebar({
           {onToggleCollapse && (
             <button
               type="button"
-              className="sidebar-collapse-toggle-btn"
+              className={chromeStyles.sidebarCollapseToggleBtn}
               onClick={onToggleCollapse}
               title="Collapse Right Sidebar"
               aria-label="Collapse Right Sidebar"
@@ -367,7 +368,7 @@ export function AdminTurnClockSidebar({
 
       <div className={macroStyles.macroUnitsScrollArea}>{bodyContent}</div>
 
-      <div className="sidebar-version-footer">
+      <div className={chromeStyles.sidebarVersionFooter}>
         <VersionBadge />
       </div>
     </aside>

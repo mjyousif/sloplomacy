@@ -15,7 +15,7 @@ frontend/
 └── src/
     ├── main.tsx                 # React DOM bootstrapping; its first import is styles/index.css
     ├── App.tsx                  # Root state coordinator and viewMode router ('lobby' | 'multiplayer' | 'sandbox')
-    ├── App.css / compact.css    # Remaining global styles (components / compact layers); migrating to *.module.css
+    ├── App.module.css           # The app shell, loading and error screens (components / compact layers)
     ├── styles/                  # Cascade layers (index.css), tokens.css, base.css, and layerOrder.test.ts
     ├── components/              # Top-level views, modals, headers, sidebars (with co-located *.module.css & *.test.ts[x])
     │   ├── map/                 # Interactive SVG board: hooks/, hud/, layers/ (orders/), and curve geometry

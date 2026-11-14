@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { cx } from '../../utils/cx';
+import chromeStyles from '../SidebarChrome.module.css';
 import styles from '../ToolsSidebar.module.css';
 import type { ToolsSidebarProps } from './toolsSidebarProps';
 
@@ -40,19 +41,19 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
     <button
       type="button"
       data-testid="tools-sidebar-expand-btn"
-      className="sidebar-rail-btn rail-toggle-btn"
+      className={cx(chromeStyles.sidebarRailBtn, chromeStyles.railToggleBtn)}
       onClick={onToggleCollapse}
       title="Expand Chancellery Tools & Intel"
     >
       <PanelLeftOpen size={16} />
     </button>
 
-    <div className="rail-divider" />
+    <div className={chromeStyles.railDivider} />
 
     <div className={styles.railGroup} title={`Current Zoom: ${zoomPercent}%`}>
       <button
         type="button"
-        className="sidebar-rail-btn"
+        className={chromeStyles.sidebarRailBtn}
         onClick={onZoomIn}
         title="Zoom In (+)"
       >
@@ -60,7 +61,7 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
       </button>
       <button
         type="button"
-        className="sidebar-rail-btn"
+        className={chromeStyles.sidebarRailBtn}
         onClick={onZoomOut}
         title="Zoom Out (-)"
       >
@@ -68,7 +69,7 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
       </button>
       <button
         type="button"
-        className="sidebar-rail-btn"
+        className={chromeStyles.sidebarRailBtn}
         onClick={onResetCamera}
         title="Fit Map / Reset Camera"
       >
@@ -76,11 +77,14 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
       </button>
     </div>
 
-    <div className="rail-divider" />
+    <div className={chromeStyles.railDivider} />
 
     <button
       type="button"
-      className={cx('sidebar-rail-btn', sandboxMode && styles.railActiveGlow)}
+      className={cx(
+        chromeStyles.sidebarRailBtn,
+        sandboxMode && styles.railActiveGlow,
+      )}
       data-active={sandboxMode ? 'true' : undefined}
       onClick={onToggleSandboxMode}
       title={
@@ -92,11 +96,14 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
       <Eye size={16} />
     </button>
 
-    <div className="rail-spacer" />
+    <div className={chromeStyles.railSpacer} />
 
     <button
       type="button"
-      className="sidebar-rail-btn rail-expand-chevron"
+      className={cx(
+        chromeStyles.sidebarRailBtn,
+        chromeStyles.railExpandChevron,
+      )}
       onClick={onToggleCollapse}
       title="Expand Tools"
     >

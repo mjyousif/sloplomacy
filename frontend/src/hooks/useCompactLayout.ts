@@ -5,7 +5,7 @@ import { useSyncExternalStore } from 'react';
  * held sideways match the second, because they are wide but very short.
  *
  * App puts the answer on the shell as `data-layout="compact"`, and every phone style in
- * `compact.css` and component `*.module.css` files keys off that attribute instead of its own
+ * component `*.module.css` files (their `@layer compact` blocks) key off that attribute instead of its own
  * `@media` rule, so this constant is the only place the breakpoint is written down.
  */
 export const COMPACT_LAYOUT_QUERY = '(max-width: 767px), (max-height: 500px)';

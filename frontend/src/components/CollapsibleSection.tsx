@@ -1,6 +1,8 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type React from 'react';
 import { useId, useState } from 'react';
+import { cx } from '../utils/cx';
+import styles from './CollapsibleSection.module.css';
 
 export interface CollapsibleSectionProps {
   /** Title or header content displayed in the section overline */
@@ -51,36 +53,46 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 
   return (
     <section
-      className={`sidebar-section ${collapsible ? 'is-collapsible' : 'is-static'} ${open ? 'is-open' : 'is-collapsed'} ${className}`.trim()}
+      className={cx(styles.sidebarSection, className)}
+      data-collapsible={collapsible ? 'true' : 'false'}
+      data-open={open ? 'true' : 'false'}
     >
-      <div className="sidebar-section-header">
+      <div className={styles.sidebarSectionHeader}>
         {collapsible ? (
           <button
             type="button"
-            className="sidebar-section-toggle-btn"
+            className={styles.sidebarSectionToggleBtn}
+            data-testid="sidebar-section-toggle"
             onClick={handleToggle}
             aria-expanded={open}
             aria-controls={contentId}
           >
-            <span className="sidebar-section-title-wrap">
-              <span className="sidebar-section-chevron" aria-hidden="true">
+            <span className={styles.sidebarSectionTitleWrap}>
+              <span className={styles.sidebarSectionChevron} aria-hidden="true">
                 {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               </span>
-              {icon && <span className="sidebar-section-icon">{icon}</span>}
-              <span className="sidebar-section-title">{title}</span>
+              {icon && (
+                <span className={styles.sidebarSectionIcon}>{icon}</span>
+              )}
+              <span>{title}</span>
             </span>
             {badge && (
-              <span className="sidebar-section-badge-wrap">{badge}</span>
+              <span className={styles.sidebarSectionBadgeWrap}>{badge}</span>
             )}
           </button>
         ) : (
-          <div className="sidebar-section-static-header">
-            <span className="sidebar-section-title-wrap">
-              {icon && <span className="sidebar-section-icon">{icon}</span>}
-              <span className="sidebar-section-title">{title}</span>
+          <div
+            className={styles.sidebarSectionStaticHeader}
+            data-testid="sidebar-section-static-header"
+          >
+            <span className={styles.sidebarSectionTitleWrap}>
+              {icon && (
+                <span className={styles.sidebarSectionIcon}>{icon}</span>
+              )}
+              <span>{title}</span>
             </span>
             {badge && (
-              <span className="sidebar-section-badge-wrap">{badge}</span>
+              <span className={styles.sidebarSectionBadgeWrap}>{badge}</span>
             )}
           </div>
         )}
@@ -89,7 +101,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
       {(!collapsible || open) && (
         <div
           id={contentId}
-          className="sidebar-section-content"
+          className={styles.sidebarSectionContent}
           role="region"
           aria-label={typeof title === 'string' ? title : undefined}
         >

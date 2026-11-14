@@ -1,0 +1,50 @@
+@layer components {
+  .diplomacy-app-shell {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+    background: #14171c;
+    color: #f3efe6;
+  }
+
+  .loading-screen,
+  .error-screen {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: #14171c;
+    color: #f3efe6;
+  }
+}
+
+@layer compact {
+  /* Mobile browsers show and hide their toolbars, so 100vh is taller than the visible page
+     there. 100dvh follows the visible height and equals 100vh on desktop. */
+  .diplomacy-app-shell,
+  .loading-screen,
+  .error-screen {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  :global([data-layout="compact"]).diplomacy-app-shell {
+    /* index.html sets viewport-fit=cover, so keep content clear of the notch and home bar. */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+      env(safe-area-inset-bottom) env(safe-area-inset-left);
+    -webkit-tap-highlight-color: rgba(200, 150, 62, 0.25);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* iOS zooms the page in when a field under 16px gets focus, and the page cannot scroll back. */
+  :global([data-layout="compact"]) input,
+  :global([data-layout="compact"]) select,
+  :global([data-layout="compact"]) textarea {
+    font-size: 16px;
+  }
+}

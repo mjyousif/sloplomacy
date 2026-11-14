@@ -1,5 +1,6 @@
 import { AlertTriangle, Compass } from 'lucide-react';
 import { useRef, useState } from 'react';
+import styles from './App.module.css';
 import { AppHeader } from './components/AppHeader';
 import { AppModals } from './components/AppModals';
 import { useConfirm } from './components/ConfirmModal';
@@ -274,7 +275,7 @@ export function App() {
 
   if (loading && !gameState) {
     return (
-      <div className="loading-screen">
+      <div className={styles.loadingScreen}>
         <Compass className="spin-icon" size={38} />
         <h2>Unrolling 1901 Imperial War Atlas...</h2>
       </div>
@@ -283,7 +284,7 @@ export function App() {
 
   if (errorMsg || !gameState) {
     return (
-      <div className="error-screen">
+      <div className={styles.errorScreen}>
         <AlertTriangle size={36} />
         <h2>Backend Connection Required</h2>
         <p>{errorMsg}</p>
@@ -358,7 +359,8 @@ export function App() {
 
   return (
     <div
-      className="diplomacy-app-shell"
+      className={styles.diplomacyAppShell}
+      data-testid="app-shell"
       data-layout={isCompact ? 'compact' : 'wide'}
     >
       <AppHeader
