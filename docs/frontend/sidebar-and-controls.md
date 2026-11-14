@@ -181,13 +181,15 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 | Piece | Draws |
 | :--- | :--- |
 | `PowerHeader` (with `StatusBadge`, `PhaseContext`, `HistoryLockBar`) | The power's name or crest, its unit and center counts, the status badge, the phase's instruction box and the past-turn bar |
-| `UnitOrderList` | The home build slots in winter and a `UnitMacroCard` per unit, and the handler that sends the default order for a picked type |
-| `UnitMacroCard` | One unit: header, status pill, behavior bar, then `OrderTypeTabs` and `OrderParameterControls`, issues and the simulation strip |
+| `UnitOrderList` | The home build slots in winter and a `UnitMacroCard` per unit, and the handler that sends the order a picked type opens (`buildDefaultOrderForType`) |
+| `UnitMacroCard` | One unit: header, status pill (`Incomplete` while a MOVE, SUPPORT or CONVOY has no target yet), behavior bar, then `OrderTypeTabs` and `OrderParameterControls`, issues and the simulation strip |
 | `OrderTypeTabs` | The order-type buttons for the phase (Retreat/Disband, Keep/Disband or Hold/Move/Support/Convoy) |
 | `OrderParameterControls` | The selects for the order's type, in `macro/controls/` (`RetreatControls`, `MoveControls`, `SupportControls`, `ConvoyControls`); each takes only the props it reads |
 | `OrderFooter` (with `ConfirmAllButton`, `SurrenderButton`) | The Confirm All and Surrender buttons, and the footer: Finalize or Unlock, then Resolve or the consensus card. `OrderFooter` itself is a fragment, because the sheet's CSS styles these buttons as direct children of `.macro-sheet-controls` |
 | `CollapsedRail` | The rail's contents. The `<aside>` stays in `MacroSidebar` so collapsing keeps one element and the width transition on `.macro-sidebar` plays |
 | `useSheetSelection` | The sheet's two reactions to the selected unit (highlight its provinces, scroll its card up when the sheet is raised) |
+
+**Picking an order type opens the order, it does not fill it in.** Choosing MOVE, SUPPORT or CONVOY on a card sends an order with no destination, supported unit or convoyed army, the way the map's unit menu waits for a click. The card shows `Choose a destination` (or unit, or army), an `Incomplete` pill, and blank selects (`Choose a destination…`), and no arrow is drawn. A default would look like an order the player meant. Until they pick, the server's validator reports it (`Missing Destination`, `Incomplete Support Order`) and the adjudicator leaves the unit holding. HOLD, DISBAND and RETREAT are complete at once (a retreat still starts on the first legal province). The MOVE destination is the same hover-aware dropdown as the SUPPORT and CONVOY selects (and the compact row's), so hovering a province in the menu previews it on the map; only the retreat select and the phone's native selects are plain `<select>`s.
 
 Pieces must not be defined inside `MacroSidebar`: a component defined in a render is a new type each time and remounts its subtree, which drops select focus.
 

@@ -16,6 +16,8 @@ export interface UseUnitMenuPlacementOptions {
   selectedUnitId: string | null;
   selectedUnit: Unit | null;
   selectedBuildProv: string | null;
+  /** Hides the floating unit menu for a unit picked on the sidebar. A phone's docked bar is the sheet's hand-off, so it stays. */
+  suppressUnitMenu?: boolean;
   inspectedProvince?: string | null;
   /** The selected unit's destinations, which the floating menu keeps clear of. */
   reachableList: { province: string; coasts: string[] }[];
@@ -54,6 +56,7 @@ export function useUnitMenuPlacement({
   selectedUnitId,
   selectedUnit,
   selectedBuildProv,
+  suppressUnitMenu = false,
   inspectedProvince = null,
   reachableList,
   pendingCoastChoice,
@@ -277,7 +280,7 @@ export function useUnitMenuPlacement({
   const showUnitMenu = Boolean(
     !inspectedProvince &&
       selectedUnit &&
-      (compact ? !pendingCoastChoice : floatingPos),
+      (compact ? !pendingCoastChoice : floatingPos && !suppressUnitMenu),
   );
   const dockedBarVisible =
     compact &&

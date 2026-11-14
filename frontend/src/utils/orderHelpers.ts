@@ -103,6 +103,19 @@ export function getActiveOrderButton(
   return 'MOVE';
 }
 
+/**
+ * A MOVE, SUPPORT or CONVOY the player has opened but not finished (no destination, unit or
+ * army yet). The server's validator flags these too, but only after it answers.
+ */
+export function isOrderIncomplete(order: Order | undefined): boolean {
+  if (!order) return false;
+  if (order.order_type === 'MOVE') return !order.target;
+  if (order.order_type === 'SUPPORT' || order.order_type === 'CONVOY') {
+    return !order.aux_unit_origin || !order.target;
+  }
+  return false;
+}
+
 export function formatOrderSummary(
   order: Order | undefined,
   provinces: Record<string, ProvinceInfo>,
@@ -122,6 +135,49 @@ export function formatOrderSummary(
       targetText: `Defending ${pName(order?.origin)}`,
       badgeColor: '#64748b',
       fullSymbolic: `${order?.unit_type || 'A'} ${order?.origin || ''} HOLD`,
+    };
+  }
+
+  // Picked in the sidebar but not finished: say so, rather than reading as a real order
+  // (a SUPPORT with no unit and no target would otherwise look like a support-hold).
+  if (order.order_type === 'MOVE' && !order.target) {
+    return {
+      verb: 'MOVE',
+      targetText: 'Choose a destination',
+      badgeColor: '#2563eb',
+      fullSymbolic: `${order.unit_type} ${order.origin} ──► ?`,
+    };
+  }
+  if (order.order_type === 'SUPPORT' && !order.aux_unit_origin) {
+    return {
+      verb: 'SUPPORT',
+      targetText: 'Choose a unit to support',
+      badgeColor: '#0d9488',
+      fullSymbolic: `${order.unit_type} ${order.origin} S ?`,
+    };
+  }
+  if (order.order_type === 'SUPPORT' && !order.target) {
+    return {
+      verb: 'SUPPORT',
+      targetText: `Supports ${pName(order.aux_unit_origin)} → choose where`,
+      badgeColor: '#0d9488',
+      fullSymbolic: `${order.unit_type} ${order.origin} S ${order.aux_unit_origin} ──► ?`,
+    };
+  }
+  if (order.order_type === 'CONVOY' && !order.aux_unit_origin) {
+    return {
+      verb: 'CONVOY',
+      targetText: 'Choose an army to convoy',
+      badgeColor: '#7c3aed',
+      fullSymbolic: `F ${order.origin} C ?`,
+    };
+  }
+  if (order.order_type === 'CONVOY' && !order.target) {
+    return {
+      verb: 'CONVOY',
+      targetText: `Convoys A ${pName(order.aux_unit_origin)} → choose where`,
+      badgeColor: '#7c3aed',
+      fullSymbolic: `F ${order.origin} C A ${order.aux_unit_origin} ──► ?`,
     };
   }
 

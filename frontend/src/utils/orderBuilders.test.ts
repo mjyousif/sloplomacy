@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FRANCE_PROVINCES, unitAt } from '../test/mapFixtures';
-import type { ProvinceInfo, Unit } from '../types/diplomacy';
+import type { ProvinceInfo, Unit, UnitMoveOptions } from '../types/diplomacy';
 import {
   buildDefaultOrderForType,
   buildOrder,
@@ -162,7 +162,7 @@ describe('order builders', () => {
     );
   });
 
-  it('picks a coastal army and a different coastal target when switching a fleet to CONVOY', () => {
+  describe('switching a unit to MOVE, SUPPORT or CONVOY', () => {
     const mao: ProvinceInfo = {
       ...FRANCE_PROVINCES.BRE,
       id: 'MAO',
@@ -176,17 +176,48 @@ describe('order builders', () => {
       MAO: mao,
     };
     const fMao = unitAt('FRANCE', 'F', 'MAO');
-    const aPar = unitAt('FRANCE', 'A', 'PAR'); // inland — must be skipped
-    const aBre = unitAt('FRANCE', 'A', 'BRE'); // coastal
-    const order = buildDefaultOrderForType({
-      unit: fMao,
-      newType: 'CONVOY',
-      provinces,
-      units: [fMao, aPar, aBre],
-      orders: {},
+    const aPar = unitAt('FRANCE', 'A', 'PAR');
+    const aBre = unitAt('FRANCE', 'A', 'BRE');
+    const options: UnitMoveOptions = {
+      direct_moves: ['BRE'],
+      active_convoys: [],
+      potential_convoys: [],
+      convoyable_armies: { direct: ['BRE'], chained: [] },
+      convoy_targets: { BRE: { direct: ['GAS'], chained: [] } },
+      valid_supports: [
+        { province: 'PAR', unit_id: aPar.id, hold: true, moves: ['BUR'] },
+      ],
+    };
+
+    // Picking a type only opens the order: the player must choose the target, so a default
+    // never reads as an intentional order (the map's unit menu behaves the same way).
+    it.each(['MOVE', 'SUPPORT', 'CONVOY'] as const)(
+      '%s starts with no unit and no target, with or without server options',
+      (newType) => {
+        for (const unitOptions of [null, options]) {
+          const order = buildDefaultOrderForType({
+            unit: fMao,
+            newType,
+            provinces,
+            unitOptions,
+          });
+          expect(order?.order_type).toBe(newType);
+          expect(order?.target).toBeNull();
+          expect(order?.aux_unit_origin ?? null).toBeNull();
+          expect(order?.via_convoy).toBe(false);
+        }
+      },
+    );
+
+    it("ignores a neighbouring unit's move when picking SUPPORT", () => {
+      const order = buildDefaultOrderForType({
+        unit: aBre,
+        newType: 'SUPPORT',
+        provinces,
+        unitOptions: options,
+      });
+      expect(order?.aux_unit_origin ?? null).toBeNull();
+      expect(order?.target).toBeNull();
     });
-    expect(order?.aux_unit_origin).toBe('BRE');
-    expect(order?.target).not.toBe('BRE');
-    expect(provinces[order?.target ?? '']?.type).toBe('COAST');
   });
 });

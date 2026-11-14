@@ -47,7 +47,8 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
       await parisCard.locator('[data-testid="btn-order-type-MOVE"]').click();
       const parisSelect = parisCard.locator('[data-testid="select-order-target"]');
       await expect(parisSelect).toBeVisible();
-      await parisSelect.selectOption('BUR');
+      await parisSelect.click();
+      await parisCard.getByRole('option', { name: 'Burgundy' }).click();
 
       const parisArrow = page.locator(
         '[data-testid="order-arrow"][data-order-unit="FRA_A_PAR"][data-order-target="BUR"]'
@@ -65,7 +66,8 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
       await londonCard.locator('[data-testid="btn-order-type-MOVE"]').click();
       const londonSelect = londonCard.locator('[data-testid="select-order-target"]');
       await expect(londonSelect).toBeVisible();
-      await londonSelect.selectOption('NTH');
+      await londonSelect.click();
+      await londonCard.getByRole('option', { name: 'North Sea' }).click();
 
       const londonArrow = page.locator(
         '[data-testid="order-arrow"][data-order-unit="ENG_F_LON"][data-order-target="NTH"]'

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TurnHistory } from '../hooks/useTurnHistory';
 import type {
@@ -206,7 +206,7 @@ describe('GameWorkspace: the live turn', () => {
     expect(m.hoveredUnitId).toBe('G1');
     expect(m.highlightedProvinces).toBe(p.highlightedProvinces);
     expect(m.issues).toBe(LIVE.issues);
-    expect(m.onSelectUnit).toBe(p.setSelectedUnitId);
+    expect(m.suppressUnitMenu).toBe(false);
     expect(m.onHoverUnit).toBe(p.setHoveredUnitId);
     expect(m.onUpdateOrder).toBe(p.handleUpdateOrder);
     expect(m.historyView).toBe(false);
@@ -218,6 +218,18 @@ describe('GameWorkspace: the live turn', () => {
     expect(m.unitOptions).toBe(LIVE.unit_options);
     expect(m.pieceStyle).toBe('classic');
     expect(m.unitMark).toBe('letters');
+  });
+
+  it('shows no map menu for a unit picked on the sidebar, but does for one picked on the map', () => {
+    const p = props();
+    render(<GameWorkspace {...p} />);
+    act(() => seen.macro.onSelectUnit('F1'));
+    expect(p.setSelectedUnitId).toHaveBeenLastCalledWith('F1');
+    expect(seen.map.suppressUnitMenu).toBe(true);
+    // The map clicking the same unit again brings its menu up.
+    act(() => seen.map.onSelectUnit('F1'));
+    expect(p.setSelectedUnitId).toHaveBeenLastCalledWith('F1');
+    expect(seen.map.suppressUnitMenu).toBe(false);
   });
 
   it("counts other powers' changed orders: any move, or an explicit hold", () => {

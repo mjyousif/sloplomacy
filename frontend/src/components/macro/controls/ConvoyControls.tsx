@@ -84,6 +84,7 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
         });
       }}
     >
+      {!order.aux_unit_origin && <option value="">Choose an army…</option>}
       {armyReach ? (
         <>
           {directArmies.length > 0 && (
@@ -133,6 +134,7 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
         })
       }
     >
+      {!order.target && <option value="">Choose a destination…</option>}
       {unitOptions ? (
         <>
           {directTargets.length > 0 && (
