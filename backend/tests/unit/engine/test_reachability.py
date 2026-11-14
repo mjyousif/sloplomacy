@@ -239,3 +239,18 @@ def test_valid_supports_include_convoyed_moves_and_split_coasts():
     # F WES borders SPA and NAF, which A LON can reach via ENG -> MAO convoy!
     assert "ENG_A_LON" in wes_sup
     assert {"NAF", "SPA"} <= set(wes_sup["ENG_A_LON"].moves)
+
+
+def test_convoy_through_another_powers_fleets_is_not_an_own_fleet_convoy():
+    """A route that needs a foreign fleet stays potential but is not one the player can arrange."""
+    army = Unit(id="RUS_A_NWY", power=Power.RUSSIA, unit_type=UnitType.ARMY, province="NWY")
+    english_fleet = Unit(
+        id="ENG_F_NTH", power=Power.ENGLAND, unit_type=UnitType.FLEET, province="NTH"
+    )
+    opts = compute_unit_options([army, english_fleet], {}, "Movement")["RUS_A_NWY"]
+    assert "LON" in opts.potential_convoys
+    assert opts.own_fleet_convoys == []
+
+    own_fleet = Unit(id="RUS_F_NTH", power=Power.RUSSIA, unit_type=UnitType.FLEET, province="NTH")
+    opts = compute_unit_options([army, own_fleet], {}, "Movement")["RUS_A_NWY"]
+    assert "LON" in opts.own_fleet_convoys

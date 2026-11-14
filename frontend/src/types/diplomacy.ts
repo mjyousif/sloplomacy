@@ -140,6 +140,8 @@ export interface UnitMoveOptions {
   direct_moves: string[];
   active_convoys: string[];
   potential_convoys: string[];
+  /** The `potential_convoys` the unit's own power can reach with its own fleets alone. */
+  own_fleet_convoys?: string[];
   convoyable_armies?: ConvoyReach | null;
   convoy_targets: Record<string, ConvoyReach>;
   valid_supports: SupportOption[];

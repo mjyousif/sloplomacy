@@ -30,6 +30,8 @@ interface ProvincesLayerProps {
   reachableMap: Record<string, string[]>;
   interactionMode: MapInteractionMode;
   units?: Unit[];
+  /** A Hold is the unit's chosen order, so no convoy destination is lit. */
+  holdActive?: boolean;
   pendingAuxOrigin?: string | null;
   hoveredProv: string | null;
   highlightedProvinces: string[];
@@ -53,6 +55,7 @@ export function ProvincesLayer({
   reachableMap,
   interactionMode,
   units = [],
+  holdActive = false,
   pendingAuxOrigin = null,
   hoveredProv,
   highlightedProvinces,
@@ -66,6 +69,7 @@ export function ProvincesLayer({
         ? {
             green: new Set<string>(),
             blue: new Set<string>(),
+            outline: new Set<string>(),
             reticles: new Set<string>(),
           }
         : getModeTargetHighlights({
@@ -76,6 +80,7 @@ export function ProvincesLayer({
             reachableMap,
             provinces,
             units,
+            holdActive,
           }),
     [
       directEditActive,
@@ -86,6 +91,7 @@ export function ProvincesLayer({
       reachableMap,
       provinces,
       units,
+      holdActive,
     ],
   );
 
@@ -115,8 +121,14 @@ export function ProvincesLayer({
         );
         const isGreen = modeTargets.green.has(geom.id) || isBuildableHome;
         const isBlue = !isGreen && modeTargets.blue.has(geom.id);
-        const isReachable = isGreen || isBlue;
-        const reachableColor: 'green' | 'blue' = isBlue ? 'blue' : 'green';
+        const isOutline =
+          !isGreen && !isBlue && modeTargets.outline.has(geom.id);
+        const isReachable = isGreen || isBlue || isOutline;
+        const reachableColor: 'green' | 'blue' | 'outline' = isOutline
+          ? 'outline'
+          : isBlue
+            ? 'blue'
+            : 'green';
         const showMoveReticle = modeTargets.reticles.has(geom.id);
         const allowedCoastsStr = isDirectMove
           ? (reachableMap[geom.id] || []).join(',')

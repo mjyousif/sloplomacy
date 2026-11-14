@@ -3,12 +3,15 @@ import type { Point, ProvinceGeometry } from '../../../data/europeMapGeometry';
 import { POWER_METADATA, type Power } from '../../../types/diplomacy';
 import styles from './ProvincePolygon.module.css';
 
+/** Thicker than the 3.5 of other reachable provinces, so an outline-only convoy still reads. */
+const OUTLINE_STROKE_WIDTH = 5.5;
+
 export interface ProvincePolygonProps {
   geom: ProvinceGeometry;
   isSea: boolean;
   owner: Power | null;
   isReachable: boolean;
-  reachableColor?: 'green' | 'blue';
+  reachableColor?: 'green' | 'blue' | 'outline';
   allowedCoastsStr: string;
   showFleetCoasts: boolean;
   showMoveReticle: boolean;
@@ -45,15 +48,18 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
     let fillOpacity = 0;
 
     const isBlueReachable = isReachable && reachableColor === 'blue';
+    // A convoy that needs another power's fleet: dashed outline only, the fill stays as is
+    const isOutlineReachable = isReachable && reachableColor === 'outline';
+    const isFilledReachable = isReachable && !isOutlineReachable;
 
     if (isSea) {
       if (isHighlighted) {
         fill = '#fde047';
         fillOpacity = 0.45;
-      } else if (isReachable && isHovered) {
+      } else if (isFilledReachable && isHovered) {
         fill = '#22c55e';
         fillOpacity = 0.42;
-      } else if (isReachable) {
+      } else if (isFilledReachable) {
         fill = '#4ade80';
         fillOpacity = 0.25;
       } else if (isHovered) {
@@ -83,10 +89,10 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
       } else if (isBlueReachable) {
         fill = '#38bdf8';
         fillOpacity = 0.34;
-      } else if (isReachable && isHovered) {
+      } else if (isFilledReachable && isHovered) {
         fill = '#22c55e';
         fillOpacity = 0.55;
-      } else if (isReachable) {
+      } else if (isFilledReachable) {
         fill = '#4ade80';
         fillOpacity = 0.32;
       }
@@ -95,7 +101,7 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
     const allowedCoasts = allowedCoastsStr ? allowedCoastsStr.split(',') : [];
     const strokeColor = isHighlighted
       ? '#eab308'
-      : isBlueReachable
+      : isBlueReachable || isOutlineReachable
         ? '#0284c7'
         : isReachable
           ? '#15803d'
@@ -110,8 +116,16 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
           fill={fill}
           fillOpacity={fillOpacity}
           stroke={strokeColor}
-          strokeWidth={isHighlighted || isReachable || hasWarning ? 3.5 : 0}
-          strokeDasharray={isBlueReachable ? '6 3' : undefined}
+          strokeWidth={
+            isOutlineReachable && !isHighlighted
+              ? OUTLINE_STROKE_WIDTH
+              : isHighlighted || isReachable || hasWarning
+                ? 3.5
+                : 0
+          }
+          strokeDasharray={
+            isBlueReachable || isOutlineReachable ? '6 3' : undefined
+          }
           className={styles.provinceInteractivePath}
           data-move={
             isMoveIncompatible

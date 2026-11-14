@@ -16,6 +16,7 @@ import type {
 } from '../types/diplomacy';
 import type { StagedChangeEntry } from '../utils/adminHelpers';
 import type { PieceStyle, UnitMark } from '../utils/displayPrefs';
+import { getActiveOrderButton } from '../utils/orderHelpers';
 import styles from './EuropeMap.module.css';
 import { useEuropeMap } from './map/hooks/useEuropeMap';
 import { BuildMenu } from './map/hud/BuildMenu';
@@ -330,6 +331,14 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
               reachableMap={reachableMap}
               interactionMode={interactionMode}
               units={units}
+              holdActive={
+                selectedUnit !== null &&
+                getActiveOrderButton(
+                  interactionMode,
+                  orders[selectedUnit.id],
+                  interaction.moveModeChosen,
+                ) === 'HOLD'
+              }
               pendingAuxOrigin={pendingAuxOrigin}
               hoveredProv={hoveredProv}
               highlightedProvinces={highlightedProvinces}

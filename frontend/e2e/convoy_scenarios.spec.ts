@@ -1,6 +1,6 @@
 // @scenario convoy_scenarios
 // @order 8
-// @description Backend-authoritative convoy reachability: fleet-in-port guard, ocean-blue chained vs solid-green active highlights, dead-end path filtering, Fog of War isolation, broken chains, 4-ship Trans-Med convoy, British Isles unlocking, and bicoastal landing.
+// @description Backend-authoritative convoy reachability: fleet-in-port guard, ocean-blue chained vs solid-green active highlights, outline-only convoys through another power's fleet, no convoy highlights on Hold, dead-end path filtering, Fog of War isolation, broken chains, 4-ship Trans-Med convoy, British Isles unlocking, and bicoastal landing.
 import { expect, test } from '@playwright/test';
 import {
   DEFAULT_E2E_API_URL,
@@ -50,9 +50,9 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
       await fleetBre.click();
       const unitMenu = page.locator('[data-testid="unit-floating-menu"]');
       await expect(unitMenu).toBeVisible();
-      await expect(unitMenu.getByRole('button', { name: 'Convoy' })).toHaveCount(
-        0,
-      );
+      await expect(
+        unitMenu.getByRole('button', { name: 'Convoy' }),
+      ).toHaveCount(0);
       await recorder.recordStep(page, '01_fleet_in_port_convoy_disabled');
       await page.locator('[data-testid="floating-close-btn"]').click();
 
@@ -73,9 +73,9 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
         .locator('[data-testid="unit-floating-menu"]')
         .getByRole('button', { name: 'Convoy' })
         .click();
-      await expect(page.locator('[data-testid="floating-menu-hint"]')).toContainText(
-        'green = adjacent shore, blue = via fleet chain',
-      );
+      await expect(
+        page.locator('[data-testid="floating-menu-hint"]'),
+      ).toContainText('green = adjacent shore, blue = via fleet chain');
       await expect(
         page.locator('[data-testid="province-path"][data-province-id="PIC"]'),
       ).toHaveAttribute('data-reachable-color', 'green');
@@ -86,9 +86,9 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
         '[data-testid="unit-token"][data-unit-id="FRA_A_PIC"]',
       );
       await armyPic.click();
-      await expect(page.locator('[data-testid="floating-menu-hint"]')).toContainText(
-        'green = direct / ready, blue = multi-ship chain',
-      );
+      await expect(
+        page.locator('[data-testid="floating-menu-hint"]'),
+      ).toContainText('green = direct / ready, blue = multi-ship chain');
       await expect(
         page.locator('[data-testid="province-path"][data-province-id="WAL"]'),
       ).toHaveAttribute('data-reachable-color', 'green');
@@ -282,7 +282,10 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
       await expect(
         page.locator('[data-testid="province-path"][data-province-id="SPA"]'),
       ).toHaveAttribute('data-reachable-color', 'green');
-      await recorder.recordStep(page, '09_trans_med_4_fleet_convoy_spain_green');
+      await recorder.recordStep(
+        page,
+        '09_trans_med_4_fleet_convoy_spain_green',
+      );
 
       // 10. Mixed-power Fog-of-War & diagnostic isolation in Sandbox:
       //     France orders A PIC -> NWY + F ENG C A PIC -> NWY; England secretly orders F NTH C A PIC -> NWY
@@ -332,9 +335,9 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
       ).toHaveCount(1);
       await expect(picCard).not.toContainText('North Sea');
       // Finalize button is green (info notes are not blocking warnings)
-      await expect(page.locator('[data-testid="btn-finalize-orders"]')).not.toContainText(
-        'Warning',
-      );
+      await expect(
+        page.locator('[data-testid="btn-finalize-orders"]'),
+      ).not.toContainText('Warning');
       await recorder.recordStep(
         page,
         '10_france_view_single_info_no_foreign_bleed',
@@ -358,6 +361,46 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
         page,
         '11_england_nth_convoy_pick_army_picardy_blue',
       );
+
+      // 12. A convoy only another power's fleet can carry is a dashed outline, not a fill,
+      //     and a chosen Hold lights no convoy destination at all.
+      await seedScenario('standard_1901', 'proto_1901', 'FRANCE');
+      await spawnUnit('FRANCE', 'A', 'PIC');
+      await spawnUnit('ENGLAND', 'F', 'ENG');
+      await page.reload();
+      await page.waitForSelector('[data-testid="unit-token"]', {
+        timeout: 15000,
+      });
+      await page
+        .locator('[data-testid="unit-token"][data-unit-id="FRA_A_PIC"]')
+        .click();
+      const walPath = page.locator(
+        '[data-testid="province-path"][data-province-id="WAL"]',
+      );
+      await expect(walPath).toHaveAttribute('data-reachable-color', 'outline');
+      await expect(walPath).toHaveAttribute('stroke-dasharray', '6 3');
+      await expect(walPath).toHaveAttribute('stroke-width', '5.5');
+      await recorder.recordStep(page, '12_foreign_fleet_convoy_outline_only');
+
+      await postOrder({
+        unit_id: 'FRA_A_PIC',
+        power: 'FRANCE',
+        unit_type: 'A',
+        origin: 'PIC',
+        order_type: 'HOLD',
+      });
+      await page.reload();
+      await page.waitForSelector('[data-testid="unit-token"]', {
+        timeout: 15000,
+      });
+      await page
+        .locator('[data-testid="unit-token"][data-unit-id="FRA_A_PIC"]')
+        .click();
+      await expect(
+        page.locator('[data-testid="unit-floating-menu"]'),
+      ).toBeVisible();
+      await expect(walPath).not.toHaveAttribute('data-reachable-color', /.+/);
+      await recorder.recordStep(page, '13_hold_lights_no_convoy_destinations');
 
       recorder.finalize('PASSED');
     } catch (err) {

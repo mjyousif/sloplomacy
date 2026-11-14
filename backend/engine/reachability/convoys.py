@@ -56,6 +56,32 @@ def army_convoy_destinations(
     return sorted(active), sorted(potential)
 
 
+def own_fleet_convoy_destinations(
+    army: Unit,
+    units: list[Unit],
+    sea_fleets: set[str],
+) -> list[str]:
+    """
+    Coastal provinces the army's own power could convoy it to with its own fleets alone.
+
+    A route that needs another power's fleet is left out: only that power can agree to it, so
+    the client draws those destinations as an outline instead of a filled highlight.
+    """
+    if army.unit_type != UnitType.ARMY or army.is_dislodged or not _is_coastal(army.province):
+        return []
+    own_seas = {
+        u.province
+        for u in units
+        if u.unit_type == UnitType.FLEET
+        and not u.is_dislodged
+        and u.power == army.power
+        and u.province in sea_fleets
+    }
+    reachable = coasts_touching(connected_seas(set(SEAS_BY_COAST[army.province]), own_seas))
+    reachable.discard(army.province)
+    return sorted(reachable)
+
+
 def fleet_convoy_options(
     fleet: Unit,
     units: list[Unit],
