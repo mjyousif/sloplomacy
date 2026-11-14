@@ -82,7 +82,7 @@ export interface GameWorkspaceProps {
   handleOpenSaveSandboxModal: () => void;
   /** From `useMatchActions` and `useGameSync`. */
   handleUpdateOrder: (order: Order) => void;
-  handleConfirmAllHolds: () => void;
+  handleClearAllOrders: () => void;
   handleFinalizeClick: (force?: boolean) => void;
   handleUnfinalizeClick: () => void;
   handleAdjudicateTurn: () => void;
@@ -155,7 +155,7 @@ export function GameWorkspace({
   handleLoadScenario,
   handleOpenSaveSandboxModal,
   handleUpdateOrder,
-  handleConfirmAllHolds,
+  handleClearAllOrders,
   handleFinalizeClick,
   handleUnfinalizeClick,
   handleAdjudicateTurn,
@@ -345,7 +345,7 @@ export function GameWorkspace({
         onHoverUnit={setHoveredUnitId}
         onHighlightProvinces={setHighlightedProvinces}
         onUpdateOrder={handleUpdateOrder}
-        onConfirmAllHolds={handleConfirmAllHolds}
+        onClearAllOrders={handleClearAllOrders}
         onFinalizeClick={() => handleFinalizeClick(false)}
         onUnfinalizeClick={handleUnfinalizeClick}
         onAdjudicateTurn={handleAdjudicateTurn}

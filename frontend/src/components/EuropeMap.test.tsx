@@ -153,7 +153,7 @@ function DirectEditMap({
         onHoverUnit={() => {}}
         onHighlightProvinces={() => {}}
         onUpdateOrder={() => {}}
-        onConfirmAllHolds={() => {}}
+        onClearAllOrders={() => {}}
         onFinalizeClick={() => {}}
         onUnfinalizeClick={() => {}}
         onAdjudicateTurn={() => {}}

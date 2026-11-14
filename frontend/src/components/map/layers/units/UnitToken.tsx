@@ -3,6 +3,7 @@ import {
   POWER_METADATA,
   type Unit,
 } from '../../../../types/diplomacy';
+import { isOrderIncomplete } from '../../../../utils/orderHelpers';
 import {
   MapPiece,
   PieceHitArea,
@@ -70,9 +71,11 @@ export function UnitToken({
   const isInteractive = isControllable || isTargetableWhileSelected;
   const isSelected = Boolean(selectedUnit && unit.id === selectedUnit.id);
   const isHovered = unit.id === hoveredUnitId && isInteractive;
-  const unitIssues = isUnitOrderVisible(unit)
-    ? issuesByUnit[unit.id] || []
-    : [];
+  // An order still being filled in raises no warning until the player moves off the unit.
+  const unitIssues =
+    isUnitOrderVisible(unit) && !(isSelected && isOrderIncomplete(order))
+      ? issuesByUnit[unit.id] || []
+      : [];
   const topSeverity: IssueSeverity | null = unitIssues.some(
     (i) => i.severity === 'error',
   )

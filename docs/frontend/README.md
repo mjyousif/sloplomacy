@@ -85,7 +85,7 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │       ├── Collapse / Expand Rail Toggle (44px collapsed rail)
 │       ├── Active Sovereign Command Header & Supply Center Telemetry
 │       ├── Phase Context Alerts (Winter Adjustments Quota, Retreats Dislodgements)
-│       ├── Quick Command Actions ("Confirm All", "Surrender & Leave")
+│       ├── Quick Command Actions ("Clear All Orders", "Surrender & Leave")
 │       ├── Home Supply Center Builds (Army / Fleet / Waive)
 │       ├── Unit Order Cards (Hold, Move, Support, Convoy, Retreat, Disband)
 │       ├── Inline Validation Diagnostics & Combat Simulation Badges

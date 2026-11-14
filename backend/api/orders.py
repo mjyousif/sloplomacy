@@ -6,6 +6,7 @@ from domain.orders import OrderType
 from domain.requests import OrderSubmissionRequest, SetPowerRequest, SingleOrderUpdateRequest
 from engine.order_utils import (
     build_slot_power,
+    create_default_orders,
     refresh_diagnostics_and_simulation,
     reject_if_game_over,
     reject_stale_turn,
@@ -190,6 +191,40 @@ async def update_batch_orders(
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)
 
+    game.state_revision += 1
+    refresh_diagnostics_and_simulation(game)
+    sync_summary(game.game_id)
+    await persist_game(game.game_id)
+    await broadcast_game_update(game.game_id, game)
+    await broadcast_lobby_update()
+    return sanitize_game_state_for_viewer(game, req.power)
+
+
+@router.post(
+    "/api/orders/clear-all",
+    response_model=GameState,
+    summary="Clear All Orders",
+    description="Reset every order of a given Great Power to the default for the phase (units hold, "
+    "dislodged units disband, build slots go back to blank) and withdraw its finalization.",
+)
+async def clear_all_power_orders(
+    req: SetPowerRequest,
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+):
+    game = await resolve_game(game_id)
+    reject_if_game_over(game)
+    verify_power_authorization(game.game_id, req.power, current_user)
+    # Build slots only exist for a count > 0, so compute them from the current board first.
+    refresh_diagnostics_and_simulation(game)
+    defaults = create_default_orders(game.units, game.phase, game.builds)
+    for key, default in defaults.items():
+        current = game.orders.get(key)
+        owner = current.power if current is not None else default.power
+        if owner == req.power:
+            game.orders[key] = default
+    if req.power in game.finalized_powers:
+        game.finalized_powers.remove(req.power)
     game.state_revision += 1
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
