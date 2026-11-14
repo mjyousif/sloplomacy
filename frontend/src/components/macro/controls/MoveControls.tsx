@@ -154,6 +154,7 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
           onChange={(e) => handleTargetChange(e.target.value)}
           title={`Target for ${provinces[unit.province]?.name ?? unit.province}`}
         >
+          {!selectValue && <option value="">Move to…</option>}
           {compactOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -189,6 +190,7 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
         value={selectValue}
         onChange={(e) => handleTargetChange(e.target.value)}
       >
+        {!selectValue && <option value="">Choose a destination…</option>}
         <optgroup label="Reachable Provinces">
           {reachable.flatMap((r) => {
             if (r.coasts.length > 0 && unit.unit_type === 'F') {

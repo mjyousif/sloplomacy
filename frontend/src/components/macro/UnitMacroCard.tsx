@@ -19,7 +19,7 @@ import type {
   ValidationIssue,
 } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
-import { splitProvinceCode } from '../../utils/orderHelpers';
+import { isOrderIncomplete, splitProvinceCode } from '../../utils/orderHelpers';
 import { MoveControls } from './controls/MoveControls';
 import { OrderParameterControls } from './OrderParameterControls';
 import { OrderTypeTabs } from './OrderTypeTabs';
@@ -285,6 +285,7 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
               </div>
             </div>
 
+            {/* An unfinished order outranks the server's error for it: it is not an order yet. */}
             <div>
               {unit.is_dislodged ? (
                 <span
@@ -299,6 +300,13 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
                   data-testid="unit-mini-pill"
                 >
                   <Trash2 size={11} /> Disbanding
+                </span>
+              ) : isOrderIncomplete(order) ? (
+                <span
+                  className={cx(styles.unitMiniPill, styles.unconfirmed)}
+                  data-testid="unit-mini-pill"
+                >
+                  <AlertTriangle size={11} /> Incomplete
                 </span>
               ) : hasError ? (
                 <span

@@ -8,7 +8,7 @@ import {
   OPTIONS_A_BRE,
 } from '../../../test/macroFixtures';
 import type { UnitMoveOptions } from '../../../types/diplomacy';
-import { moveOrder } from '../../../utils/orderBuilders';
+import { holdOrder, moveOrder } from '../../../utils/orderBuilders';
 import { MoveControls } from './MoveControls';
 
 const REACHABLE = [
@@ -141,5 +141,34 @@ describe('MoveControls', () => {
       unitOptions: { ...OPTIONS_A_BRE, potential_convoys: [] },
     });
     expect(select.value).toBe('VIA:MAR');
+  });
+
+  it('shows a blank placeholder, not the first province, while a MOVE has no destination', () => {
+    const blank = { ...moveOrder(A_BRE, 'PAR', null, false), target: null };
+    for (const compact of [false, true]) {
+      const { unmount } = render(
+        <MoveControls
+          unit={A_BRE}
+          order={blank}
+          provinces={MACRO_PROVINCES}
+          reachable={REACHABLE}
+          unitOptions={OPTIONS_A_BRE}
+          compact={compact}
+          useNativeSelect
+          onUpdateOrder={vi.fn()}
+        />,
+      );
+      const select = screen.getByTestId(
+        'select-order-target',
+      ) as HTMLSelectElement;
+      expect(select.value).toBe('');
+      expect(select.selectedOptions[0].textContent).toMatch(/choose|move to/i);
+      unmount();
+    }
+  });
+
+  it('shows the placeholder while the order is still a hold', () => {
+    const { select } = controls({ order: holdOrder(A_BRE) });
+    expect(select.value).toBe('');
   });
 });

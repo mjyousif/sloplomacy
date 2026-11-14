@@ -147,4 +147,17 @@ describe('ConvoyControls', () => {
       expect(army.options).toHaveLength(0);
     });
   });
+
+  it('shows blank placeholders until an army and a destination are chosen', () => {
+    const blank: Order = {
+      ...convoyOrder(F_ENG, 'BRE', 'LON'),
+      aux_unit_origin: null,
+      target: null,
+    };
+    const { army, target } = controls({ order: blank });
+    expect(army.value).toBe('');
+    expect(army.selectedOptions[0].textContent).toMatch(/choose/i);
+    expect(target.value).toBe('');
+    expect(target.selectedOptions[0].textContent).toMatch(/choose/i);
+  });
 });

@@ -95,6 +95,14 @@ describe('UnitMacroCard header', () => {
       { order: orderFor(A_BRE, 'MOVE', { target: 'PAR' }) },
       'Ready',
     ],
+    [
+      'a move with no destination yet',
+      {
+        order: orderFor(A_BRE, 'MOVE', { target: null }),
+        hasError: true,
+      },
+      'Incomplete',
+    ],
     ['warning', { hasWarn: true }, 'Warning'],
     ['error', { hasError: true, hasWarn: true }, 'Illegal'],
     ['disbanding', { isDisbanding: true, hasError: true }, 'Disbanding'],

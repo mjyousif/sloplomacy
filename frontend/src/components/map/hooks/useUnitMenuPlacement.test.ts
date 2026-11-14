@@ -182,6 +182,16 @@ describe('useUnitMenuPlacement on a wide screen', () => {
     expect(menu.style.left).not.toBe(before);
   });
 
+  it('shows no menu for a unit the sidebar picked, and the menu returns when the flag clears', () => {
+    const { result, rerender } = setup({
+      ...select(A_PAR),
+      suppressUnitMenu: true,
+    });
+    expect(result.current.showUnitMenu).toBe(false);
+    rerender({ suppressUnitMenu: false });
+    expect(result.current.showUnitMenu).toBe(true);
+  });
+
   it('never reports a docked bar', () => {
     const { rerender, onDockedBarChange } = setup();
     rerender(select(A_PAR));
@@ -215,6 +225,16 @@ describe('useUnitMenuPlacement on a phone', () => {
     expect(onDockedBarChange).toHaveBeenLastCalledWith(true);
     rerender({ selectedUnitId: null, selectedUnit: null });
     expect(onDockedBarChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it('keeps the docked bar for a unit the sidebar picked: the sheet hands its orders to the bar', () => {
+    const { result, onDockedBarChange } = setup({
+      compact: true,
+      ...select(A_PAR),
+      suppressUnitMenu: true,
+    });
+    expect(result.current.showUnitMenu).toBe(true);
+    expect(onDockedBarChange).toHaveBeenLastCalledWith(true);
   });
 
   it('shows the coast picker in place of the unit menu', () => {

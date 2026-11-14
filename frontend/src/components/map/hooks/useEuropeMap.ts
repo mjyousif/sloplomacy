@@ -30,6 +30,7 @@ export function useEuropeMap(
     directEditActive = false,
     directEdit,
     selectedUnitId,
+    suppressUnitMenu = false,
     hoveredUnitId,
     highlightedProvinces,
     issues,
@@ -303,6 +304,7 @@ export function useEuropeMap(
     selectedUnitId,
     selectedUnit: directEditActive ? inspectedUnit : selectedUnit,
     selectedBuildProv,
+    suppressUnitMenu,
     inspectedProvince,
     reachableList,
     pendingCoastChoice: directEditActive

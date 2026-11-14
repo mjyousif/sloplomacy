@@ -1,5 +1,6 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import type { TurnHistory } from '../hooks/useTurnHistory';
+import { useSidebarSelection } from '../hooks/useSidebarSelection';
 import type {
   GameState,
   MultiplayerGameSummary,
@@ -170,6 +171,8 @@ export function GameWorkspace({
 }: GameWorkspaceProps) {
   const viewingHistory = historyTurn !== null;
   const ignore = () => {};
+  const { selectFromSidebar, selectFromMap, suppressUnitMenu } =
+    useSidebarSelection(selectedUnitId, setSelectedUnitId);
   return (
     <main className={styles.warRoomWorkspace} data-testid="game-workspace">
       {/* LEFT SIDEBAR: Tools, Legend, Zoom, Standing, Sandbox & Admin */}
@@ -249,7 +252,8 @@ export function GameWorkspace({
         issues={viewingHistory ? NO_ISSUES : gameState.issues}
         simulationResult={historyTurn?.resolution ?? simulationResult}
         showSimulationOverlay={viewingHistory || showSimulationOverlay}
-        onSelectUnit={viewingHistory ? ignore : setSelectedUnitId}
+        onSelectUnit={viewingHistory ? ignore : selectFromMap}
+        suppressUnitMenu={suppressUnitMenu}
         onHoverUnit={viewingHistory ? ignore : setHoveredUnitId}
         onUpdateOrder={viewingHistory ? ignore : handleUpdateOrder}
         historyView={viewingHistory}
@@ -337,7 +341,7 @@ export function GameWorkspace({
         turnClockSettings={turnClockSettings}
         participants={activeGameSummary?.participants}
         lobbyStatus={activeGameSummary?.status}
-        onSelectUnit={setSelectedUnitId}
+        onSelectUnit={selectFromSidebar}
         onHoverUnit={setHoveredUnitId}
         onHighlightProvinces={setHighlightedProvinces}
         onUpdateOrder={handleUpdateOrder}

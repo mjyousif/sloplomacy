@@ -91,8 +91,6 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
       unit,
       newType,
       provinces,
-      units,
-      orders,
       retreats,
       unitOptions: unitOptions ? (unitOptions[unit.id] ?? null) : null,
     });

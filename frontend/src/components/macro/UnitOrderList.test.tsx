@@ -149,7 +149,7 @@ describe('UnitOrderList', () => {
   });
 
   describe('picking an order type', () => {
-    it("sends the default order for the type, from the unit's own move options", () => {
+    it('opens a MOVE with no destination, even when the unit has options', () => {
       const { onUpdateOrder } = list({
         unitOptions: {
           [A_BRE.id]: { ...OPTIONS_A_BRE, direct_moves: ['GAS'] },
@@ -160,7 +160,7 @@ describe('UnitOrderList', () => {
         bre.querySelector('[data-testid="btn-order-type-MOVE"]') as HTMLElement,
       );
       expect(onUpdateOrder).toHaveBeenCalledWith(
-        orderFor(A_BRE, 'MOVE', { target: 'GAS', via_convoy: false }),
+        orderFor(A_BRE, 'MOVE', { target: null, via_convoy: false }),
       );
     });
 

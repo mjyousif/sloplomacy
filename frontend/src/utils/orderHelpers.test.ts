@@ -254,6 +254,37 @@ describe('formatOrderSummary', () => {
     expect(summary.badgeColor).toBe('#64748b');
   });
 
+  it('says an unfinished MOVE, SUPPORT or CONVOY is waiting for a choice, not a real order', () => {
+    const base = {
+      unit_id: 'FRA_A_PAR',
+      power: 'FRANCE' as const,
+      unit_type: 'A' as const,
+      origin: 'PAR',
+      via_convoy: false,
+      is_explicit: true,
+    };
+    const move = formatOrderSummary(
+      { ...base, order_type: 'MOVE', target: null },
+      mockProvinces,
+      unitsByProv,
+    );
+    expect(move.targetText).toBe('Choose a destination');
+    // A SUPPORT with neither unit nor target used to read as a support-hold (null === null).
+    const support = formatOrderSummary(
+      { ...base, order_type: 'SUPPORT', aux_unit_origin: null, target: null },
+      mockProvinces,
+      unitsByProv,
+    );
+    expect(support.verb).toBe('SUPPORT');
+    expect(support.targetText).toBe('Choose a unit to support');
+    const convoy = formatOrderSummary(
+      { ...base, order_type: 'CONVOY', aux_unit_origin: null, target: null },
+      mockProvinces,
+      unitsByProv,
+    );
+    expect(convoy.targetText).toBe('Choose an army to convoy');
+  });
+
   it('formats MOVE order with coast and convoy flag', () => {
     const order: Order = {
       unit_id: 'FRA_A_PAR',

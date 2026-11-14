@@ -68,19 +68,49 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await moveTab.click();
       const targetSelect = parisCard.locator('[data-testid="select-order-target"]');
       await expect(targetSelect).toBeVisible();
-      await targetSelect.selectOption('BUR');
+      // Picking MOVE only opens the order: no destination is chosen for the player
+      await expect(targetSelect).toHaveText(/Move to…/);
+      await expect(orderArrow).toHaveCount(0);
+      await expect(parisCard.locator('[data-testid="unit-mini-pill"]')).toHaveText(/Incomplete/);
+      await recorder.recordStep(page, '04b_move_opened_with_no_destination');
+      // Hovering a destination in the menu previews it on the map before it is chosen
+      await targetSelect.click();
+      const burOption = parisCard.getByRole('option', { name: 'Burgundy' });
+      await burOption.hover();
+      const burPath = page.locator('[data-testid="province-path"][data-province-id="BUR"]');
+      await expect(burPath).toHaveAttribute('stroke-width', '3.5');
+      await recorder.recordStep(page, '04c_destination_hover_preview');
+      await burOption.click();
+      await expect(burPath).not.toHaveAttribute('stroke-width', '3.5');
       await expect(orderArrow).toBeVisible();
 
       // 6. Order French Army in Marseilles (FRA_A_MAR) to SUPPORT A PAR -> BUR and verify SUPPORT arrow
       const marCard = page.locator('[data-testid="unit-macro-card"][data-unit-id="FRA_A_MAR"]');
       await expect(marCard).toBeVisible();
+
+      // A unit picked on the sidebar gets no map menu (its card has the controls), but its
+      // destinations stay lit; the same unit picked on the map gets the menu and the card lights up
+      await marCard.locator('[data-testid="unit-card-header"]').click();
+      await expect(marCard).toHaveAttribute('data-selected', 'true');
+      await expect(page.locator('[data-testid="unit-floating-menu"]')).toHaveCount(0);
+      await expect(page.locator('[data-testid="reachable-reticle"]').first()).toBeVisible();
+      await recorder.recordStep(page, '04d_sidebar_pick_has_no_map_menu');
+      await page.locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"]').click();
+      await expect(page.locator('[data-testid="unit-floating-menu"]')).toBeVisible();
+      await expect(parisCard).toHaveAttribute('data-selected', 'true');
+      await expect(marCard).not.toHaveAttribute('data-selected', 'true');
       await marCard.locator('[data-testid="btn-order-type-SUPPORT"]').click();
+      // The support controls are custom dropdowns: a blank trigger until the player chooses
       const supportUnitSelect = marCard.locator('[data-testid="select-support-unit"]');
       await expect(supportUnitSelect).toBeVisible();
-      await supportUnitSelect.selectOption('PAR');
+      await expect(supportUnitSelect).toHaveText(/Unit…/);
+      await expect(page.locator('[data-testid="order-arrow"][data-order-unit="FRA_A_MAR"]')).toHaveCount(0);
+      await supportUnitSelect.click();
+      await marCard.getByRole('option', { name: 'A Paris' }).click();
       const supportTargetSelect = marCard.locator('[data-testid="select-support-target"]');
       await expect(supportTargetSelect).toBeVisible();
-      await supportTargetSelect.selectOption('BUR');
+      await supportTargetSelect.click();
+      await marCard.getByRole('option', { name: 'Burgundy' }).click();
 
       const supportArrow = page.locator(
         '[data-testid="order-arrow"][data-order-unit="FRA_A_MAR"][data-order-type="SUPPORT"][data-order-target="BUR"]'

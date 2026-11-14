@@ -147,4 +147,17 @@ describe('SupportControls', () => {
       is_explicit: true,
     });
   });
+
+  it('shows blank placeholders until a unit and a target are chosen', () => {
+    const blank: Order = {
+      ...supportOrder(A_BRE, 'PAR', 'PAR'),
+      aux_unit_origin: null,
+      target: null,
+    };
+    const { unitSelect, intoSelect } = controls({ order: blank });
+    expect(unitSelect.value).toBe('');
+    expect(unitSelect.selectedOptions[0].textContent).toMatch(/choose/i);
+    expect(intoSelect.value).toBe('');
+    expect(intoSelect.selectedOptions[0].textContent).toMatch(/choose/i);
+  });
 });

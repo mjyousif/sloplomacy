@@ -106,4 +106,32 @@ describe('OrderParameterControls with UnitMoveOptions', () => {
     expect(supUnitSelect.textContent).toContain('Paris');
     expect(supUnitSelect.textContent).not.toContain('Marseilles');
   });
+
+  it("previews a destination on the map while hovering it in the card's MOVE menu, as SUPPORT and CONVOY do", () => {
+    const onHoverProvince = vi.fn();
+    render(
+      <OrderParameterControls
+        unit={A_BRE}
+        order={{ ...moveOrder(A_BRE, 'GAS', null, false), target: null }}
+        provinces={FRANCE_PROVINCES}
+        units={[A_BRE, A_PAR]}
+        unitsByProv={{ BRE: A_BRE, PAR: A_PAR }}
+        orders={{}}
+        reachable={[
+          { province: 'GAS', coasts: [] },
+          { province: 'PAR', coasts: [] },
+        ]}
+        validRetreats={[]}
+        isRetreatPhase={false}
+        compact
+        onUpdateOrder={vi.fn()}
+        onHoverProvince={onHoverProvince}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('select-order-target'));
+    fireEvent.pointerEnter(screen.getByRole('option', { name: 'Gascony' }), {
+      pointerType: 'mouse',
+    });
+    expect(onHoverProvince).toHaveBeenLastCalledWith('GAS');
+  });
 });

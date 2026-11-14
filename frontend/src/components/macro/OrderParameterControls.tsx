@@ -6,6 +6,7 @@ import type {
   UnitMoveOptions,
 } from '../../types/diplomacy';
 import { ConvoyControls } from './controls/ConvoyControls';
+import { orderParamDropdownClassNames } from './controls/orderParamDropdown';
 import { MoveControls } from './controls/MoveControls';
 import { RetreatControls } from './controls/RetreatControls';
 import { SupportControls } from './controls/SupportControls';
@@ -68,7 +69,11 @@ export const OrderParameterControls: React.FC<OrderParameterControlsProps> = ({
         provinces={provinces}
         reachable={reachable}
         unitOptions={unitOptions}
+        compact={compact}
+        useNativeSelect={useNativeSelect}
+        dropdownClassNames={orderParamDropdownClassNames}
         onUpdateOrder={onUpdateOrder}
+        onHoverProvince={onHoverProvince}
       />
     );
   }

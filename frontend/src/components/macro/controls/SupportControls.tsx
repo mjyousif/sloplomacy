@@ -148,6 +148,7 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
       value={order.aux_unit_origin || ''}
       onChange={(e) => handleSupportUnitChange(e.target.value)}
     >
+      {!order.aux_unit_origin && <option value="">Choose a unit…</option>}
       {supportableUnits.map((u2) => (
         <option key={u2.id} value={u2.province}>
           {compact
@@ -170,6 +171,7 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
         })
       }
     >
+      {!order.target && <option value="">Choose a destination…</option>}
       {order.aux_unit_origin && canHoldSupport && (
         <option value={order.aux_unit_origin}>
           {compact

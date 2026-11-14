@@ -83,6 +83,8 @@ export interface EuropeMapProps {
   directEditActive?: boolean;
   directEdit?: DirectEditMapHandlers;
   selectedUnitId: string | null;
+  /** The selected unit was picked on the sidebar, whose card already has its controls: show no menu. */
+  suppressUnitMenu?: boolean;
   hoveredUnitId: string | null;
   highlightedProvinces: string[];
   issues: ValidationIssue[];
