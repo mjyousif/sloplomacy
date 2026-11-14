@@ -16,6 +16,7 @@ import type {
 } from '../types/diplomacy';
 import type { StagedChangeEntry } from '../utils/adminHelpers';
 import type { PieceStyle, UnitMark } from '../utils/displayPrefs';
+import styles from './EuropeMap.module.css';
 import { useEuropeMap } from './map/hooks/useEuropeMap';
 import { BuildMenu } from './map/hud/BuildMenu';
 import { CoastPicker } from './map/hud/CoastPicker';
@@ -196,7 +197,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
     return (
       <div
         ref={containerRef}
-        className="map-viewport-container"
+        className={styles.mapViewportContainer}
         data-testid="map-viewport-container"
       >
         {/* Live Hypothetical / Simulation Active Banner */}
@@ -292,7 +293,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         <svg
           ref={svgRef}
           viewBox={MAP_VIEWBOX}
-          className={`europe-svg-canvas${relocatingUnit ? ' relocating-unit' : ''}`}
+          className={styles.europeSvgCanvas}
+          data-map-relocating={relocatingUnit ? 'true' : undefined}
           {...gestures.pointerHandlers}
         >
           <defs>
@@ -303,7 +305,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
 
           <g
             ref={cameraGroupRef}
-            className="camera-scene-group"
+            className={styles.cameraSceneGroup}
             transform={`translate(${cameraRef.current.x}, ${cameraRef.current.y}) scale(${cameraRef.current.zoom})`}
             style={{ transformOrigin: '762px 678px' }}
           >

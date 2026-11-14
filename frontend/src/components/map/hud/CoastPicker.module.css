@@ -1,0 +1,70 @@
+@layer components {
+  .coast-picker-modal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 25;
+    background: #1e242d;
+    border: 2px solid #eab308;
+    border-radius: 10px;
+    padding: 16px 20px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+  }
+
+  .coast-picker-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+    color: #fef08a;
+  }
+
+  .coast-picker-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .coast-btn {
+    padding: 8px 14px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .coast-cancel-btn {
+    padding: 8px 12px;
+    background: #334155;
+    color: #e2e8f0;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .coast-picker-modal[data-docked="true"] {
+    border-width: 1.5px;
+  }
+
+  :global([data-layout="compact"])
+    .coast-picker-modal[data-docked="true"]
+    .coast-picker-title {
+    margin-bottom: 10px;
+  }
+
+  :global([data-layout="compact"])
+    .coast-picker-modal[data-docked="true"]
+    .coast-picker-buttons {
+    flex-wrap: wrap;
+  }
+
+  :global([data-layout="compact"])
+    .coast-picker-modal[data-docked="true"]
+    button {
+    flex: 1 1 120px;
+    min-height: 44px;
+  }
+}

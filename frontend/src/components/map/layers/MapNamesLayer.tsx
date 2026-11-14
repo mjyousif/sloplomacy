@@ -9,6 +9,7 @@ import {
 } from '../../../types/diplomacy';
 import type { PieceStyle } from '../../../utils/displayPrefs';
 import { SupplyStar } from '../../MapPiece';
+import styles from './MapNamesLayer.module.css';
 import { StaticNamesLayer } from './StaticLayers';
 
 // Room kept beside a name for its star in the Name as piece style
@@ -52,7 +53,7 @@ export const MapNamesLayer = memo<{
             transform={`translate(${placement.x}, ${placement.y}) rotate(${placement.angle})`}
           >
             <text
-              className="map-province-name"
+              className={styles.mapProvinceName}
               x={hasStar ? NAME_STAR_ROOM : 0}
               textAnchor="middle"
               dominantBaseline="central"

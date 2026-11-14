@@ -1,0 +1,24 @@
+@layer components {
+  .war-room-workspace {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+  }
+}
+
+@layer compact {
+  /* The game screen: the map fills the screen. Orders live in a pull-up sheet (BottomSheet with
+     MacroSidebar's sheet variant) and tools in a drawer opened from the top bar, so phones have no
+     sidebar rails. The sheet leaves a spacer as tall as its peek, so the map ends where the peek
+     begins. */
+  :global([data-layout="compact"]) .war-room-workspace {
+    flex-direction: column;
+    /* Without this the board's own height (723px on a phone held sideways) props the game area
+       open past the bottom of the screen. */
+    min-height: 0;
+    /* The lowered sheet runs off the bottom. 'clip', unlike 'hidden', can't be scrolled by focus
+       or script, so nothing can slide the game screen up to reach it. Older browsers keep 'hidden'. */
+    overflow: clip;
+  }
+}

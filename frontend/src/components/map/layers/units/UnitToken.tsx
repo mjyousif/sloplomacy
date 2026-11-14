@@ -9,6 +9,7 @@ import {
   PieceHoldOutline,
   PieceOutline,
 } from '../../../MapPiece';
+import styles from './UnitToken.module.css';
 import type { UnitLayerContext } from './unitLayerContext';
 
 /**
@@ -118,9 +119,10 @@ export function UnitToken({
   return (
     <g
       transform={`translate(${pt.x}, ${pt.y})`}
-      className={`map-unit-token ${isSelected ? 'selected' : ''} ${
-        isHovered ? 'hovered' : ''
-      } ${!isInteractive ? 'foreign-locked' : ''}`}
+      className={styles.mapUnitToken}
+      data-selected={isSelected ? 'true' : 'false'}
+      data-hovered={isHovered ? 'true' : 'false'}
+      data-locked={isInteractive ? 'false' : 'true'}
       data-testid="unit-token"
       data-unit-id={unit.id}
       data-unit-power={unit.power}

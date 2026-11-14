@@ -198,6 +198,12 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
               />
               {order?.order_type === 'MOVE' ? (
                 <MoveControls
+                  dropdownClassNames={{
+                    root: styles.unitCompactDropdown,
+                    trigger: styles.unitCompactTrigger,
+                    value: styles.unitCompactValue,
+                    menu: styles.unitCompactMenu,
+                  }}
                   unit={unit}
                   order={order}
                   provinces={provinces}

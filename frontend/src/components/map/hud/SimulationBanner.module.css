@@ -1,0 +1,81 @@
+@layer components {
+  .simulation-map-banner {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #065f46;
+    border: 1px solid #34d399;
+    color: #ecfdf5;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  }
+
+  .sim-close-btn {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #6ee7b7;
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    cursor: pointer;
+  }
+
+  .sim-advance-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f59e0b;
+    border: 1px solid #fef08a;
+    color: #111827;
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .sim-advance-btn:hover {
+    filter: brightness(1.08);
+  }
+}
+
+@layer compact {
+  /* Hypothetical Mode's banner, kept to a short strip at the top of the map. When the turn clock
+     is showing, the banner moves below it so the two never overlap. */
+  :global([data-layout="compact"]) .simulation-map-banner {
+    top: 10px;
+    /* Centred with auto margins, so it can use the map's full width instead of half of it. */
+    left: 10px;
+    right: 10px;
+    width: fit-content;
+    margin: 0 auto;
+    transform: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 8px;
+    padding: 6px 12px;
+    border-radius: 14px;
+    font-size: 0.75rem;
+    text-align: center;
+  }
+
+  :global([data-layout="compact"]) .simulation-map-banner button {
+    min-height: 36px;
+  }
+
+  :global([data-layout="compact"])
+    :global([data-testid="map-viewport-container"]):has(
+      [data-testid="phase-timer-pill"],
+      [data-testid="phase-timer-widget"]
+    )
+    .simulation-map-banner {
+    top: 58px;
+  }
+}

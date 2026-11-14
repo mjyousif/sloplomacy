@@ -207,7 +207,7 @@
   }
 
   :global([data-layout="compact"])
-    :global(.map-viewport-container):has(
+    :global([data-testid="map-viewport-container"]):has(
       :global(.phase-timer-pill),
       :global(.phase-timer-widget)
     )

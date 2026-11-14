@@ -1,13 +1,15 @@
 import { Anchor, GripHorizontal, PlusCircle, Swords, X } from 'lucide-react';
 import type { Order, Power, ProvinceInfo } from '../../../types/diplomacy';
+import { cx } from '../../../utils/cx';
 import { buildOrder, waiveOrder } from '../../../utils/orderBuilders';
 import type { UnitMenuPlacement } from '../hooks/useUnitMenuPlacement';
+import floatingStyles from './FloatingMenu.module.css';
 
 interface BuildMenuProps {
   compact: boolean;
   placement: Pick<
     UnitMenuPlacement,
-    'menuRef' | 'menuClassName' | 'floatingStyle' | 'dragHeaderProps'
+    'menuRef' | 'docked' | 'floatingStyle' | 'dragHeaderProps'
   >;
   provinces: Record<string, ProvinceInfo>;
   /** The build slot's id, `BUILD_<POWER>_<HOME>`. */
@@ -33,17 +35,16 @@ export function BuildMenu({
   onUpdateOrder,
   onClose,
 }: BuildMenuProps) {
-  const {
-    menuRef,
-    menuClassName: className,
-    floatingStyle,
-    dragHeaderProps,
-  } = placement;
+  const { menuRef, docked, floatingStyle, dragHeaderProps } = placement;
   return (
     <div
       ref={menuRef}
-      className={className}
-      data-testid={compact ? 'unit-docked-bar' : undefined}
+      className={cx(
+        floatingStyles.unitFloatingMenu,
+        docked && floatingStyles.dockedBar,
+      )}
+      data-docked={docked ? 'true' : undefined}
+      data-testid={compact ? 'unit-docked-bar' : 'unit-floating-menu'}
       style={{
         ...floatingStyle,
         borderColor: '#22c55e',
@@ -51,14 +52,22 @@ export function BuildMenu({
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="floating-menu-header" {...dragHeaderProps}>
-        <div className="floating-unit-title">
-          <GripHorizontal size={13} className="floating-drag-grip" />
+      <div
+        className={floatingStyles.floatingMenuHeader}
+        data-testid="floating-menu-header"
+        {...dragHeaderProps}
+      >
+        <div className={floatingStyles.floatingUnitTitle}>
+          <GripHorizontal
+            size={13}
+            className={floatingStyles.floatingDragGrip}
+          />
           <PlusCircle size={13} style={{ color: '#4ade80' }} />
           <strong>Build in {provinces[home]?.name}</strong>
         </div>
         <button
-          className="floating-close-btn"
+          className={floatingStyles.floatingCloseBtn}
+          data-testid="floating-close-btn"
           onClick={onClose}
           title="Close (Esc)"
         >
@@ -67,13 +76,14 @@ export function BuildMenu({
         </button>
       </div>
 
-      <div className="floating-menu-buttons">
+      <div className={floatingStyles.floatingMenuButtons}>
         <button
-          className={`tactical-mode-btn ${
+          className={floatingStyles.tacticalModeBtn}
+          data-state={
             order?.order_type === 'BUILD' && order?.unit_type === 'A'
-              ? 'active-hold'
-              : ''
-          }`}
+              ? 'hold'
+              : undefined
+          }
           onClick={() => {
             onUpdateOrder(buildOrder(slotId, power, home, 'A', null));
             onClose();
@@ -87,13 +97,14 @@ export function BuildMenu({
             provinces[home].coasts.map((cst) => (
               <button
                 key={cst}
-                className={`tactical-mode-btn ${
+                className={floatingStyles.tacticalModeBtn}
+                data-state={
                   order?.order_type === 'BUILD' &&
                   order?.unit_type === 'F' &&
                   order?.origin_coast === cst
-                    ? 'active-hold'
-                    : ''
-                }`}
+                    ? 'hold'
+                    : undefined
+                }
                 onClick={() => {
                   onUpdateOrder(buildOrder(slotId, power, home, 'F', cst));
                   onClose();
@@ -104,11 +115,12 @@ export function BuildMenu({
             ))
           ) : (
             <button
-              className={`tactical-mode-btn ${
+              className={floatingStyles.tacticalModeBtn}
+              data-state={
                 order?.order_type === 'BUILD' && order?.unit_type === 'F'
-                  ? 'active-hold'
-                  : ''
-              }`}
+                  ? 'hold'
+                  : undefined
+              }
               onClick={() => {
                 onUpdateOrder(buildOrder(slotId, power, home, 'F', null));
                 onClose();
@@ -119,9 +131,8 @@ export function BuildMenu({
           ))}
 
         <button
-          className={`tactical-mode-btn ${
-            order?.order_type === 'WAIVE' ? 'active' : ''
-          }`}
+          className={floatingStyles.tacticalModeBtn}
+          data-state={order?.order_type === 'WAIVE' ? 'active' : undefined}
           onClick={() => {
             onUpdateOrder(waiveOrder(slotId, power, home));
             onClose();
@@ -131,7 +142,10 @@ export function BuildMenu({
           Waive
         </button>
       </div>
-      <div className="floating-menu-hint">
+      <div
+        className={floatingStyles.floatingMenuHint}
+        data-testid="floating-menu-hint"
+      >
         Choose unit type to build in {provinces[home]?.name} or Waive
       </div>
     </div>

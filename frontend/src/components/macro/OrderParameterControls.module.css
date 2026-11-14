@@ -29,12 +29,12 @@
     border-color: #eab308;
   }
 
-  .orderParamInline :global(.icon-select-dropdown) {
+  .orderParamInline .orderParamDropdown {
     flex: 1 1 0;
     min-width: 0;
   }
 
-  .orderParamInline :global(.icon-select-dropdown-trigger) {
+  .orderParamInline .orderParamTrigger {
     height: 22px;
     padding: 0 6px;
     border-radius: 4px;
@@ -43,18 +43,18 @@
     gap: 4px;
   }
 
-  .orderParamInline :global(.icon-select-dropdown-value) {
+  .orderParamInline .orderParamValue {
     gap: 5px;
     overflow: hidden;
   }
 
-  .orderParamInline :global(.icon-select-dropdown-value) > span {
+  .orderParamInline .orderParamValue > span {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .orderParamInline :global(.icon-select-dropdown-menu) {
+  .orderParamInline .orderParamMenu {
     min-width: 148px;
   }
 

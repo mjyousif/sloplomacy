@@ -20,6 +20,7 @@ import {
   EuropeMap,
   type EuropeMapHandle,
 } from './EuropeMap';
+import styles from './GameWorkspace.module.css';
 import { MacroSidebar } from './MacroSidebar';
 import type { AdminTurnClockSettings } from './macro/AdminTurnClockSidebar';
 import { PhaseTimerWidget } from './PhaseTimerWidget';
@@ -170,7 +171,7 @@ export function GameWorkspace({
   const viewingHistory = historyTurn !== null;
   const ignore = () => {};
   return (
-    <main className="war-room-workspace">
+    <main className={styles.warRoomWorkspace} data-testid="game-workspace">
       {/* LEFT SIDEBAR: Tools, Legend, Zoom, Standing, Sandbox & Admin */}
       <ToolsSidebar
         collapsed={leftSidebarCollapsed}

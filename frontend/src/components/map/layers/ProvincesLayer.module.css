@@ -1,0 +1,5 @@
+@layer components {
+  :global([data-map-dragging="true"]) .interactive-provinces-layer {
+    pointer-events: none;
+  }
+}

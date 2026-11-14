@@ -177,7 +177,10 @@ beforeEach(() => {
 describe('GameWorkspace: the live turn', () => {
   it('lays out the tools, map and orders in the workspace', () => {
     const { container } = render(<GameWorkspace {...props()} />);
-    expect(container.firstElementChild).toHaveClass('war-room-workspace');
+    expect(container.firstElementChild).toHaveAttribute(
+      'data-testid',
+      'game-workspace',
+    );
     expect(container.firstElementChild?.tagName).toBe('MAIN');
     expect(seen.tools.variant).toBe('panel');
     expect(seen.macro.variant).toBe('panel');

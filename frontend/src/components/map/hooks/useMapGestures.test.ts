@@ -87,14 +87,14 @@ describe('useMapGestures', () => {
       });
       expect(result.current.gestures.dragMovedRef.current).toBe(false);
       expect(result.current.gestures.isPanningRef.current).toBe(true);
-      expect(svg.classList.contains('panning')).toBe(true);
-      expect(svg.classList.contains('actively-dragging')).toBe(false);
+      expect(svg.dataset.mapPanning).toBe('true');
+      expect(svg.dataset.mapDragging).toBeUndefined();
       expect(svg.setPointerCapture).not.toHaveBeenCalled();
       expect(camera()).toEqual(DEFAULT_CAMERA);
 
       run(() => h().onPointerUp(pointer({ pointerType })));
       expect(result.current.gestures.isPanningRef.current).toBe(false);
-      expect(svg.classList.contains('panning')).toBe(false);
+      expect(svg.dataset.mapPanning).toBeUndefined();
     },
   );
 
@@ -110,12 +110,12 @@ describe('useMapGestures', () => {
     expect(camera().x).toBeCloseTo(DEFAULT_CAMERA.x + 40 / SCALE);
     expect(camera().y).toBeCloseTo(DEFAULT_CAMERA.y - 20 / SCALE);
     expect(result.current.gestures.dragMovedRef.current).toBe(true);
-    expect(svg.classList.contains('actively-dragging')).toBe(true);
+    expect(svg.dataset.mapDragging).toBe('true');
     expect(svg.setPointerCapture).toHaveBeenCalledWith(1);
 
     run(() => h().onPointerUp(pointer({})));
     expect(svg.releasePointerCapture).toHaveBeenCalledWith(1);
-    expect(svg.classList.contains('actively-dragging')).toBe(false);
+    expect(svg.dataset.mapDragging).toBeUndefined();
     // The click that ends a drag must not select anything until the next press.
     expect(result.current.gestures.dragMovedRef.current).toBe(true);
     run(() => h().onPointerDown(pointer({ clientX: 5, clientY: 5 })));

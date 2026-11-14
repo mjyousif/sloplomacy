@@ -1,4 +1,5 @@
 import type { Unit } from '../../../types/diplomacy';
+import styles from './UnitsLayer.module.css';
 import { UnitToken } from './units/UnitToken';
 import type { UnitLayerContext } from './units/unitLayerContext';
 
@@ -11,7 +12,7 @@ export function UnitsLayer({
   ctx: UnitLayerContext;
 }) {
   return (
-    <g className="units-layer">
+    <g className={styles.unitsLayer}>
       {units.map((u) => (
         <UnitToken key={u.id} unit={u} ctx={ctx} />
       ))}

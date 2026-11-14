@@ -1,0 +1,13 @@
+@layer components {
+  .province-interactive-path[data-move="incompatible"] {
+    cursor: not-allowed !important;
+  }
+
+  .province-interactive-path[data-move="compatible"] {
+    cursor: pointer;
+  }
+
+  .reachable-target-reticle {
+    cursor: pointer;
+  }
+}

@@ -1,0 +1,9 @@
+@layer components {
+  :global([data-map-dragging="true"]) .units-layer {
+    pointer-events: none;
+  }
+
+  :global([data-map-relocating="true"]) .units-layer {
+    cursor: not-allowed !important;
+  }
+}

@@ -108,7 +108,7 @@ describe('useUnitMenuPlacement on a wide screen', () => {
     expect(style.top).toBeGreaterThanOrEqual(10);
     expect(style.top).toBeLessThanOrEqual(860 - 98 - 10);
     expect(result.current.showUnitMenu).toBe(true);
-    expect(result.current.menuClassName).toBe('unit-floating-menu');
+    expect(result.current.docked).toBe(false);
   });
 
   it('moves the menu off a province the unit can reach', () => {
@@ -147,12 +147,12 @@ describe('useUnitMenuPlacement on a wide screen', () => {
       drag.onPointerDown?.(pointerEvent(header, 200, 200));
       drag.onPointerMove?.(pointerEvent(header, 260, 230));
     });
-    expect(menu).toHaveClass('dragging');
+    expect(menu).toHaveAttribute('data-dragging', 'true');
     // jsdom keeps four decimals of a length.
     expect(parseFloat(menu.style.left)).toBeCloseTo(parisHome.left + 60, 3);
     expect(parseFloat(menu.style.top)).toBeCloseTo(parisHome.top + 30, 3);
     act(() => drag.onLostPointerCapture?.(pointerEvent(header, 260, 230)));
-    expect(menu).not.toHaveClass('dragging');
+    expect(menu).not.toHaveAttribute('data-dragging');
 
     rerender(select(A_MAR));
     expect(result.current.floatingStyle).toEqual(marseillesHome);
@@ -169,7 +169,7 @@ describe('useUnitMenuPlacement on a wide screen', () => {
         target: button,
       } as unknown as React.PointerEvent<HTMLDivElement>),
     );
-    expect(menu).not.toHaveClass('dragging');
+    expect(menu).not.toHaveAttribute('data-dragging');
   });
 
   it('follows the camera', () => {
@@ -194,9 +194,7 @@ describe('useUnitMenuPlacement on a phone', () => {
     const { result } = setup({ compact: true, ...select(A_PAR) });
     expect(result.current.floatingStyle).toBeUndefined();
     expect(result.current.menuRef).toBe(result.current.dockRef);
-    expect(result.current.menuClassName).toBe(
-      'unit-floating-menu unit-docked-bar',
-    );
+    expect(result.current.docked).toBe(true);
     expect(result.current.dragHeaderProps).toEqual({});
   });
 

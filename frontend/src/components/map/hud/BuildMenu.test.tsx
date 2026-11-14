@@ -28,7 +28,7 @@ function setup(home: string, order?: Order, compact = false) {
       compact={compact}
       placement={{
         menuRef: null,
-        menuClassName: 'unit-floating-menu',
+        docked: false,
         floatingStyle: { left: 40, top: 80 },
         dragHeaderProps: {},
       }}
@@ -89,14 +89,14 @@ describe('BuildMenu', () => {
 
   it("lights the slot's current choice", () => {
     setup('STP', buildOrder('BUILD_RUSSIA_STP', 'RUSSIA', 'STP', 'F', 'SC'));
-    expect(button('+ F (SC)')).toHaveClass('active-hold');
-    expect(button('+ F (NC)')).not.toHaveClass('active-hold');
-    expect(button('+ Army')).not.toHaveClass('active-hold');
+    expect(button('+ F (SC)')).toHaveAttribute('data-state', 'hold');
+    expect(button('+ F (NC)')).not.toHaveAttribute('data-state', 'hold');
+    expect(button('+ Army')).not.toHaveAttribute('data-state', 'hold');
   });
 
   it('lights Waive when the build is waived', () => {
     setup('PAR', waiveOrder('BUILD_FRANCE_PAR', 'FRANCE', 'PAR'));
-    expect(button('Waive')).toHaveClass('active');
+    expect(button('Waive')).toHaveAttribute('data-state', 'active');
   });
 
   it('closes without ordering, and says Cancel on a phone', async () => {

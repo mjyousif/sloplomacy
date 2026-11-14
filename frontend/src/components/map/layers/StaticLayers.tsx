@@ -5,10 +5,11 @@ import {
   AUTHENTIC_FOREGROUND_SVG,
   AUTHENTIC_NAMES_SVG,
 } from '../../../data/europeMapGeometry';
+import styles from './StaticLayers.module.css';
 
 export const StaticBackgroundLayer = memo(() => (
   <g
-    className="authentic-background-layer"
+    className={styles.authenticBackgroundLayer}
     pointerEvents="none"
     dangerouslySetInnerHTML={{ __html: AUTHENTIC_BACKGROUND_SVG }}
   />

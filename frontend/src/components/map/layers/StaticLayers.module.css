@@ -1,0 +1,8 @@
+@layer components {
+  .authentic-background-layer :global(#Shape) {
+    filter: none !important;
+    stroke: rgba(20, 14, 8, 0.26) !important;
+    stroke-width: 7px !important;
+    stroke-linejoin: round !important;
+  }
+}

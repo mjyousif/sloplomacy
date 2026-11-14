@@ -13,16 +13,18 @@ import {
   type ProvinceInfo,
   type Unit,
 } from '../../../types/diplomacy';
+import { cx } from '../../../utils/cx';
 import { disbandOrder, holdOrder } from '../../../utils/orderBuilders';
 import { getActiveOrderButton } from '../../../utils/orderHelpers';
 import type { MapInteraction } from '../hooks/useMapInteraction';
 import type { UnitMenuPlacement } from '../hooks/useUnitMenuPlacement';
+import floatingStyles from './FloatingMenu.module.css';
 
 interface UnitMenuProps {
   compact: boolean;
   placement: Pick<
     UnitMenuPlacement,
-    'menuRef' | 'menuClassName' | 'floatingStyle' | 'dragHeaderProps'
+    'menuRef' | 'docked' | 'floatingStyle' | 'dragHeaderProps'
   >;
   provinces: Record<string, ProvinceInfo>;
   unit: Unit;
@@ -60,12 +62,7 @@ export function UnitMenu({
   interaction,
   onUpdateOrder,
 }: UnitMenuProps) {
-  const {
-    menuRef,
-    menuClassName: className,
-    floatingStyle,
-    dragHeaderProps,
-  } = placement;
+  const { menuRef, docked, floatingStyle, dragHeaderProps } = placement;
   const { interactionMode, pendingAuxOrigin, clearSelection } = interaction;
   const activeOrderButton = getActiveOrderButton(
     interactionMode,
@@ -77,17 +74,28 @@ export function UnitMenu({
   return (
     <div
       ref={menuRef}
-      className={className}
-      data-testid={compact ? 'unit-docked-bar' : undefined}
+      className={cx(
+        floatingStyles.unitFloatingMenu,
+        docked && floatingStyles.dockedBar,
+      )}
+      data-docked={docked ? 'true' : undefined}
+      data-testid={compact ? 'unit-docked-bar' : 'unit-floating-menu'}
       style={floatingStyle}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="floating-menu-header" {...dragHeaderProps}>
-        <div className="floating-unit-title">
-          <GripHorizontal size={13} className="floating-drag-grip" />
+      <div
+        className={floatingStyles.floatingMenuHeader}
+        data-testid="floating-menu-header"
+        {...dragHeaderProps}
+      >
+        <div className={floatingStyles.floatingUnitTitle}>
+          <GripHorizontal
+            size={13}
+            className={floatingStyles.floatingDragGrip}
+          />
           <span
-            className="tactical-power-dot"
+            className={floatingStyles.tacticalPowerDot}
             style={{
               backgroundColor: POWER_METADATA[unit.power].color,
             }}
@@ -99,7 +107,8 @@ export function UnitMenu({
           </strong>
         </div>
         <button
-          className="floating-close-btn"
+          className={floatingStyles.floatingCloseBtn}
+          data-testid="floating-close-btn"
           onClick={clearSelection}
           title="Close (Esc)"
         >
@@ -111,22 +120,24 @@ export function UnitMenu({
       {isRetreatPhase ? (
         <>
           <div
-            className="floating-menu-buttons"
+            className={floatingStyles.floatingMenuButtons}
             style={{ gridTemplateColumns: '1fr 1fr' }}
           >
             <button
-              className={`tactical-mode-btn ${
-                order?.order_type === 'RETREAT' ? 'active' : ''
-              }`}
+              className={floatingStyles.tacticalModeBtn}
+              data-state={
+                order?.order_type === 'RETREAT' ? 'active' : undefined
+              }
               onClick={interaction.chooseRetreat}
             >
               <MoveRight size={13} />
               Retreat
             </button>
             <button
-              className={`tactical-mode-btn ${
-                order?.order_type === 'DISBAND' ? 'active' : ''
-              }`}
+              className={floatingStyles.tacticalModeBtn}
+              data-state={
+                order?.order_type === 'DISBAND' ? 'active' : undefined
+              }
               style={{ borderColor: '#ef4444', color: '#fca5a5' }}
               onClick={() => {
                 onUpdateOrder(disbandOrder(unit));
@@ -137,20 +148,22 @@ export function UnitMenu({
               Disband
             </button>
           </div>
-          <div className="floating-menu-hint">
+          <div
+            className={floatingStyles.floatingMenuHint}
+            data-testid="floating-menu-hint"
+          >
             {`${tap} a green province on the map to Retreat, or ${tapLower} Disband`}
           </div>
         </>
       ) : isAdjustmentPhase ? (
         <>
           <div
-            className="floating-menu-buttons"
+            className={floatingStyles.floatingMenuButtons}
             style={{ gridTemplateColumns: '1fr 1fr' }}
           >
             <button
-              className={`tactical-mode-btn ${
-                order?.order_type !== 'DISBAND' ? 'active-hold' : ''
-              }`}
+              className={floatingStyles.tacticalModeBtn}
+              data-state={order?.order_type !== 'DISBAND' ? 'hold' : undefined}
               onClick={() => {
                 onUpdateOrder(holdOrder(unit));
                 clearSelection();
@@ -160,9 +173,10 @@ export function UnitMenu({
               Keep Unit
             </button>
             <button
-              className={`tactical-mode-btn ${
-                order?.order_type === 'DISBAND' ? 'active' : ''
-              }`}
+              className={floatingStyles.tacticalModeBtn}
+              data-state={
+                order?.order_type === 'DISBAND' ? 'active' : undefined
+              }
               style={{ borderColor: '#ef4444', color: '#fca5a5' }}
               onClick={() => {
                 onUpdateOrder(disbandOrder(unit));
@@ -173,15 +187,19 @@ export function UnitMenu({
               Disband
             </button>
           </div>
-          <div className="floating-menu-hint">
+          <div
+            className={floatingStyles.floatingMenuHint}
+            data-testid="floating-menu-hint"
+          >
             Choose whether to Keep or Disband this unit for Winter Adjustments
           </div>
         </>
       ) : (
         <>
-          <div className="floating-menu-buttons">
+          <div className={floatingStyles.floatingMenuButtons}>
             <button
-              className={`tactical-mode-btn ${activeOrderButton === 'MOVE' ? 'active' : ''}`}
+              className={floatingStyles.tacticalModeBtn}
+              data-state={activeOrderButton === 'MOVE' ? 'active' : undefined}
               onClick={interaction.chooseMove}
             >
               <MoveRight size={13} />
@@ -189,9 +207,8 @@ export function UnitMenu({
             </button>
 
             <button
-              className={`tactical-mode-btn ${
-                activeOrderButton === 'HOLD' ? 'active-hold' : ''
-              }`}
+              className={floatingStyles.tacticalModeBtn}
+              data-state={activeOrderButton === 'HOLD' ? 'hold' : undefined}
               onClick={() => {
                 onUpdateOrder(holdOrder(unit));
                 clearSelection();
@@ -202,9 +219,10 @@ export function UnitMenu({
             </button>
 
             <button
-              className={`tactical-mode-btn ${
-                activeOrderButton === 'SUPPORT' ? 'active' : ''
-              }`}
+              className={floatingStyles.tacticalModeBtn}
+              data-state={
+                activeOrderButton === 'SUPPORT' ? 'active' : undefined
+              }
               onClick={interaction.chooseSupport}
             >
               <Crosshair size={13} />
@@ -214,9 +232,10 @@ export function UnitMenu({
             {unit.unit_type === 'F' &&
               provinces[unit.province]?.type === 'SEA' && (
                 <button
-                  className={`tactical-mode-btn ${
-                    activeOrderButton === 'CONVOY' ? 'active' : ''
-                  }`}
+                  className={floatingStyles.tacticalModeBtn}
+                  data-state={
+                    activeOrderButton === 'CONVOY' ? 'active' : undefined
+                  }
                   onClick={interaction.chooseConvoy}
                 >
                   <Anchor size={13} />
@@ -225,7 +244,10 @@ export function UnitMenu({
               )}
           </div>
 
-          <div className="floating-menu-hint">
+          <div
+            className={floatingStyles.floatingMenuHint}
+            data-testid="floating-menu-hint"
+          >
             {interactionMode === 'MOVE' &&
               (compact
                 ? 'Tap a green province to Move'

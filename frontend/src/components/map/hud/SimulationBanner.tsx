@@ -1,4 +1,5 @@
 import { Eye, Play } from 'lucide-react';
+import styles from './SimulationBanner.module.css';
 
 interface SimulationBannerProps {
   compact: boolean;
@@ -17,7 +18,7 @@ export function SimulationBanner({
   onClearSimulationOverlay,
 }: SimulationBannerProps) {
   return (
-    <div className="simulation-map-banner">
+    <div className={styles.simulationMapBanner}>
       <Eye size={16} />
       <span>
         {compact ? (
@@ -33,14 +34,17 @@ export function SimulationBanner({
         )}
       </span>
       <button
-        className="sim-advance-btn"
+        className={styles.simAdvanceBtn}
         onClick={onAdjudicateTurn}
         title="Step forward one phase in Sandbox to plan follow-up turns"
       >
         <Play size={12} /> Step Turn Forward
       </button>
       {showSimulationOverlay && !sandboxMode && (
-        <button className="sim-close-btn" onClick={onClearSimulationOverlay}>
+        <button
+          className={styles.simCloseBtn}
+          onClick={onClearSimulationOverlay}
+        >
           Hide Preview
         </button>
       )}

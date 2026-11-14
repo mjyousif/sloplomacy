@@ -191,12 +191,12 @@
     width: 104px;
   }
 
-  .unitCompactControls :global(.icon-select-dropdown) {
+  .unitCompactControls .unitCompactDropdown {
     flex: 0 0 104px;
     width: 104px;
   }
 
-  .unitCompactControls :global(.icon-select-dropdown-trigger) {
+  .unitCompactControls .unitCompactTrigger {
     height: 22px;
     padding: 0 6px;
     border-radius: 4px;
@@ -205,18 +205,18 @@
     gap: 4px;
   }
 
-  .unitCompactControls :global(.icon-select-dropdown-value) {
+  .unitCompactControls .unitCompactValue {
     gap: 5px;
     overflow: hidden;
   }
 
-  .unitCompactControls :global(.icon-select-dropdown-value) > span {
+  .unitCompactControls .unitCompactValue > span {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .unitCompactControls :global(.icon-select-dropdown-menu) {
+  .unitCompactControls .unitCompactMenu {
     left: auto;
     right: 0;
     min-width: 156px;

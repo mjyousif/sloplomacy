@@ -23,7 +23,9 @@ import {
   canPlaceUnitTypeInProvince,
   getAvailableCoasts,
 } from '../../../utils/adminHelpers';
+import { cx } from '../../../utils/cx';
 import styles from './AdminTileInspector.module.css';
+import floatingStyles from './FloatingMenu.module.css';
 import {
   IconSelectDropdown,
   type IconSelectOption,
@@ -186,10 +188,10 @@ export function AdminTileInspector({
       data-testid="admin-tile-inspector"
     >
       <div className={styles.adminInspectorCardHeader}>
-        <div className="floating-unit-title">
+        <div className={floatingStyles.floatingUnitTitle}>
           {owner && (
             <span
-              className="tactical-power-dot"
+              className={floatingStyles.tacticalPowerDot}
               data-testid="admin-inspector-owner-dot"
               style={{
                 backgroundColor: POWER_METADATA[owner].color,
@@ -200,7 +202,7 @@ export function AdminTileInspector({
         </div>
         <button
           type="button"
-          className="floating-close-btn"
+          className={floatingStyles.floatingCloseBtn}
           data-testid="admin-inspector-close"
           onClick={onClose}
           title="Deselect territory"
@@ -241,7 +243,7 @@ export function AdminTileInspector({
 
         {/* 2. Unit Controls (Edit existing unit OR Spawn new unit) */}
         {provInfo.type === 'IMPASSABLE' ? (
-          <div className="floating-menu-hint">
+          <div className={floatingStyles.floatingMenuHint}>
             Impassable terrain — units cannot be placed here.
           </div>
         ) : unit ? (
@@ -264,7 +266,11 @@ export function AdminTileInspector({
                   type="button"
                   data-testid="admin-inspector-relocate-btn"
                   data-active={isRelocating ? 'true' : undefined}
-                  className={`tactical-mode-btn ${isRelocating ? 'active' : ''}`}
+                  className={cx(
+                    floatingStyles.tacticalModeBtn,
+                    styles.adminInspectorActionBtn,
+                  )}
+                  data-state={isRelocating ? 'active' : undefined}
                   onClick={onToggleRelocate}
                   title="Click any compatible province on the map to relocate this unit"
                 >
@@ -289,7 +295,7 @@ export function AdminTileInspector({
             <div className={styles.adminInspectorControlsGrid}>
               <div className={styles.adminInspectorField}>
                 <span className={styles.adminInspectorSublabel}>Unit Type</span>
-                <div className="floating-menu-buttons">
+                <div className={floatingStyles.floatingMenuButtons}>
                   {unitTypeChoices.map((choice) => {
                     const isActive =
                       unit.unit_type === choice.unitType &&
@@ -301,7 +307,8 @@ export function AdminTileInspector({
                         key={choice.key}
                         type="button"
                         data-testid={choice.editTestId}
-                        className={`tactical-mode-btn ${isActive ? 'active-hold' : ''}`}
+                        className={floatingStyles.tacticalModeBtn}
+                        data-state={isActive ? 'hold' : undefined}
                         onClick={() =>
                           onStageSpawnOrUpdateUnit(
                             provinceId,
@@ -413,7 +420,7 @@ export function AdminTileInspector({
             <div className={styles.adminInspectorControlsGrid}>
               <div className={styles.adminInspectorField}>
                 <span className={styles.adminInspectorSublabel}>Unit Type</span>
-                <div className="floating-menu-buttons">
+                <div className={floatingStyles.floatingMenuButtons}>
                   {unitTypeChoices.map((choice) => {
                     const isSelected =
                       pendingSpawn?.unitType === choice.unitType &&
@@ -423,7 +430,8 @@ export function AdminTileInspector({
                         key={choice.key}
                         type="button"
                         data-testid={choice.spawnTestId}
-                        className={`tactical-mode-btn ${isSelected ? 'active-hold' : ''}`}
+                        className={floatingStyles.tacticalModeBtn}
+                        data-state={isSelected ? 'hold' : undefined}
                         onClick={() =>
                           setPendingSpawn((prev) =>
                             prev?.unitType === choice.unitType &&

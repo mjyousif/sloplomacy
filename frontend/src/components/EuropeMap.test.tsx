@@ -173,22 +173,24 @@ describe('EuropeMap unit menu', () => {
     render(<MapWithSelection orders={orders} />);
 
     fireEvent.click(unitToken(PAR.id));
-    expect(menuButton('Hold')).toHaveClass('active-hold');
+    expect(menuButton('Hold')).toHaveAttribute('data-state', 'hold');
     fireEvent.click(menuButton('Move'));
-    expect(menuButton('Move')).toHaveClass('active');
-    expect(menuButton('Hold')).not.toHaveClass('active-hold');
+    expect(menuButton('Move')).toHaveAttribute('data-state', 'active');
+    expect(menuButton('Hold')).not.toHaveAttribute('data-state', 'hold');
 
     // Pressing Move belonged to Paris. Marseilles' saved Hold shows as it is.
     fireEvent.click(unitToken(MAR.id));
     expect(screen.getByText('Army Marseilles')).toBeInTheDocument();
-    expect(menuButton('Hold')).toHaveClass('active-hold');
-    expect(menuButton('Move')).not.toHaveClass('active');
+    expect(menuButton('Hold')).toHaveAttribute('data-state', 'hold');
+    expect(menuButton('Move')).not.toHaveAttribute('data-state', 'active');
   });
 
   it("opens the next unit's menu where it belongs, not where the last one was dragged", () => {
     const { container } = render(<MapWithSelection />);
     const menu = () =>
-      container.querySelector<HTMLDivElement>('.unit-floating-menu')!;
+      container.querySelector<HTMLDivElement>(
+        '[data-testid="unit-floating-menu"]',
+      )!;
     const position = () => ({ left: menu().style.left, top: menu().style.top });
 
     // Where Marseilles' menu opens when nothing has been dragged.
@@ -199,7 +201,7 @@ describe('EuropeMap unit menu', () => {
     // Drag Paris' menu 120px right and 60px down by its header.
     fireEvent.click(unitToken(PAR.id));
     const header = menu().querySelector<HTMLDivElement>(
-      '.floating-menu-header',
+      '[data-testid="floating-menu-header"]',
     )!;
     header.setPointerCapture = vi.fn();
     header.hasPointerCapture = vi.fn(() => true);
@@ -364,7 +366,7 @@ describe('EuropeMap unit menu', () => {
     );
     const targetDropdown = screen.getByTestId('admin-inspector-order-target');
     expect(targetDropdown.tagName).toBe('BUTTON');
-    expect(targetDropdown).toHaveClass('icon-select-dropdown-trigger');
+    expect(targetDropdown).toHaveAttribute('aria-haspopup', 'listbox');
     expect(targetDropdown).toHaveTextContent('Target…');
     fireEvent.click(targetDropdown);
     fireEvent.click(
@@ -439,11 +441,11 @@ describe('EuropeMap unit menu', () => {
     const marPath = container.querySelector<SVGElement>(
       '[data-testid="province-path"][data-province-id="MAR"]',
     )!;
-    expect(engPath).toHaveClass('move-incompatible');
+    expect(engPath).toHaveAttribute('data-move', 'incompatible');
     expect(engPath.style.cursor).toBe('not-allowed');
-    expect(marPath).toHaveClass('move-incompatible');
+    expect(marPath).toHaveAttribute('data-move', 'incompatible');
     expect(marPath.style.cursor).toBe('not-allowed');
-    expect(burPath).toHaveClass('move-compatible');
+    expect(burPath).toHaveAttribute('data-move', 'compatible');
     expect(burPath.style.cursor).toBe('pointer');
 
     // Hovering incompatible ENG or MAR neither highlights it nor triggers hover ring
