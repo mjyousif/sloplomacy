@@ -9,6 +9,7 @@ import {
 } from '../types/diplomacy';
 import { defaultCampaignName } from '../utils/campaignName';
 import { isVisibleInMyActiveCampaigns } from '../utils/gameOverHelpers';
+import styles from './LobbyView.module.css';
 import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
 import { JoinWithCodeCard } from './lobby/JoinWithCodeCard';
 import { LobbyHero } from './lobby/LobbyHero';
@@ -235,16 +236,19 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   };
 
   return (
-    <div className="lobby-container">
+    <div className={styles.lobbyContainer}>
       <LobbyHero
         user={user}
         onEnterSandbox={onEnterSandbox}
         onOpenAuth={onOpenAuth}
       />
 
-      <div className="lobby-main-grid" data-testid="lobby-main-grid">
+      <div className={styles.lobbyMainGrid} data-testid="lobby-main-grid">
         {/* Left Column: My Games + Open Lobbies */}
-        <div className="lobby-games-column" data-testid="lobby-games-column">
+        <div
+          className={styles.lobbyGamesColumn}
+          data-testid="lobby-games-column"
+        >
           <MyGamesSection
             user={user}
             myGames={myGames}
@@ -267,10 +271,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         </div>
 
         {/* Right Column: Host New Multiplayer Campaign & Join with Code */}
-        <aside
-          className="lobby-create-column"
-          data-testid="lobby-create-column"
-        >
+        <aside data-testid="lobby-create-column">
           {/* 1. Host New Campaign Card */}
           <CreateCampaignPanel
             user={user}
@@ -304,8 +305,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       </div>
 
       {/* FOOTER BAR */}
-      <footer className="lobby-footer-bar" data-testid="lobby-footer">
-        <span className="lobby-footer-tagline">
+      <footer className={styles.lobbyFooterBar} data-testid="lobby-footer">
+        <span className={styles.lobbyFooterTagline}>
           Sloplomacy &bull; 1901 Tactical Engine
         </span>
         <VersionBadge />

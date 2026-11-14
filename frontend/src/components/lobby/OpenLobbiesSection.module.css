@@ -1,0 +1,36 @@
+@layer components {
+  .lobby-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 7px;
+    background: #252b37;
+    border: 1px solid #3c4454;
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .lobby-refresh-btn:hover {
+    background: #303847;
+  }
+
+  .lobby-cards-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .empty-globe-icon {
+    color: #64748b;
+    flex-shrink: 0;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .lobby-refresh-btn {
+    min-height: 44px;
+  }
+}

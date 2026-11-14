@@ -1,6 +1,7 @@
 import type React from 'react';
 import { ALL_POWERS, POWER_METADATA, type Power } from '../../types/diplomacy';
 import { PowerFlag } from '../PowerFlag';
+import styles from './PowerPicker.module.css';
 
 export interface PowerPickerProps {
   selected: Power;
@@ -13,7 +14,7 @@ export const PowerPicker: React.FC<PowerPickerProps> = ({
   onSelect,
 }) => {
   return (
-    <div className="create-power-picker">
+    <div className={styles.createPowerPicker}>
       {ALL_POWERS.map((pwr) => {
         const meta = POWER_METADATA[pwr];
         const selected = selectedPower === pwr;
@@ -23,7 +24,7 @@ export const PowerPicker: React.FC<PowerPickerProps> = ({
             type="button"
             onClick={() => onSelect(pwr)}
             data-selected={selected ? 'true' : undefined}
-            className={`create-power-option ${selected ? 'selected' : ''}`}
+            className={styles.createPowerOption}
             style={{
               borderColor: selected ? meta.color : undefined,
               backgroundColor: selected ? meta.lightBg : undefined,

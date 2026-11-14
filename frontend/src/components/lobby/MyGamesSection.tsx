@@ -8,6 +8,8 @@ import {
 } from '../../types/diplomacy';
 import { getCompletedCampaignStatus } from '../../utils/gameOverHelpers';
 import { PowerFlag } from '../PowerFlag';
+import sectionStyles from './LobbySection.module.css';
+import styles from './MyGamesSection.module.css';
 
 export interface MyGamesSectionProps {
   user: AuthUser | null;
@@ -33,21 +35,21 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
   onOpenSurrenderModal,
 }) => {
   return (
-    <section className="lobby-section">
-      <div className="lobby-section-header">
-        <div className="lobby-section-title">
+    <section className={sectionStyles.lobbySection}>
+      <div className={sectionStyles.lobbySectionHeader}>
+        <div className={sectionStyles.lobbySectionTitle}>
           <Shield size={18} />
           <h2>My Active Campaigns &amp; Saved Games</h2>
         </div>
         {user && (
-          <span className="lobby-count-badge" data-testid="my-games-count">
+          <span className={styles.lobbyCountBadge} data-testid="my-games-count">
             {myGames.length} {myGames.length === 1 ? 'Game' : 'Games'}
           </span>
         )}
       </div>
 
       {!user ? (
-        <div className="lobby-empty-box locked">
+        <div className={sectionStyles.lobbyEmptyBox} data-variant="locked">
           <Lock size={22} />
           <div>
             <strong>Account Required to Save &amp; Track Campaigns</strong>
@@ -58,21 +60,21 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
           </div>
           <button
             type="button"
-            className="lobby-inline-auth-btn"
+            className={styles.lobbyInlineAuthBtn}
             onClick={() => onOpenAuth(undefined, 'signin')}
           >
             Sign In
           </button>
         </div>
       ) : myGames.length === 0 ? (
-        <div className="lobby-empty-box">
+        <div className={sectionStyles.lobbyEmptyBox}>
           <p>
             You haven&apos;t joined any campaigns yet. Host a public or private
             campaign {hostFormPlace}, or join using a Game ID &amp; passcode!
           </p>
         </div>
       ) : (
-        <div className="my-games-list">
+        <div className={styles.myGamesList}>
           {myGames.map((game) => {
             const myEntry = Object.values(game.participants || {}).find(
               (p) => p.user_id === user.id,
@@ -87,29 +89,34 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
             return (
               <div
                 key={game.game_id}
-                className="my-game-row"
+                className={styles.myGameRow}
                 data-testid="my-game-row"
               >
-                <div className="my-game-info">
-                  <div className="my-game-top">
-                    <span className="my-game-name" data-testid="my-game-name">
+                <div>
+                  <div className={styles.myGameTop}>
+                    <span
+                      className={styles.myGameName}
+                      data-testid="my-game-name"
+                    >
                       {game.name}
                     </span>
-                    <span className="my-game-turn-pill">
+                    <span className={styles.myGameTurnPill}>
                       {game.season} {game.year} · {game.phase}
                     </span>
                     {game.is_private && (
-                      <span className="my-game-private-tag">
+                      <span className={styles.myGamePrivateTag}>
                         <Lock size={11} /> Private
                       </span>
                     )}
                     {game.is_sandbox && (
-                      <span className="my-game-sandbox-tag">Saved Sandbox</span>
+                      <span className={styles.myGameSandboxTag}>
+                        Saved Sandbox
+                      </span>
                     )}
                   </div>
-                  <div className="my-game-sub">
+                  <div className={styles.myGameSub}>
                     <span
-                      className="my-power-chip"
+                      className={styles.myPowerChip}
                       data-testid="my-power-chip"
                       style={{
                         backgroundColor: pMeta.lightBg,
@@ -135,15 +142,7 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
                             ? 'ready'
                             : 'pending'
                       }
-                      className={`my-finalize-status ${
-                        isConcluded
-                          ? completion.phase === 'unwitnessed'
-                            ? 'pending'
-                            : 'ready'
-                          : isFinalized
-                            ? 'ready'
-                            : 'pending'
-                      }`}
+                      className={styles.myFinalizeStatus}
                     >
                       {isConcluded
                         ? completion.phase === 'unwitnessed'
@@ -156,10 +155,10 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
                   </div>
                 </div>
 
-                <div className="my-game-action-group">
+                <div className={styles.myGameActionGroup}>
                   <button
                     type="button"
-                    className="enter-match-btn"
+                    className={styles.enterMatchBtn}
                     onClick={() => handlePowerSlotClick(game, myPower)}
                   >
                     <Play size={14} />
@@ -171,7 +170,7 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
                   </button>
                   <button
                     type="button"
-                    className="leave-campaign-btn"
+                    className={styles.leaveCampaignBtn}
                     data-testid="leave-campaign-btn"
                     title={
                       game.is_sandbox

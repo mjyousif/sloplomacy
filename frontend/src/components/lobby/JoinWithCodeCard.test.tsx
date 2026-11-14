@@ -30,7 +30,7 @@ describe('JoinWithCodeCard', () => {
   it('is the card with the 20px gap above it', () => {
     const { view } = setup();
     const card = view.container.firstElementChild as HTMLElement;
-    expect(card.className).toBe('lobby-create-card join-card');
+    expect(card).toHaveAttribute('data-variant', 'join');
     expect(card.style.marginTop).toBe('20px');
     expect(
       screen.getByRole('heading', { name: 'Join Private Campaign' }),

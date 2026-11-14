@@ -1,0 +1,75 @@
+@layer components {
+  .lobby-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 36px 48px;
+    background: radial-gradient(circle at 50% 0%, #222834 0%, #14171c 70%);
+  }
+
+  .lobby-main-grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .lobby-games-column {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .lobby-footer-bar {
+    max-width: 1280px;
+    margin: 32px auto 0;
+    padding-top: 16px;
+    border-top: 1px solid rgba(51, 65, 85, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.78rem;
+    color: #64748b;
+  }
+
+  .lobby-footer-tagline {
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .lobby-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 14px 12px 28px;
+  }
+
+  :global([data-layout="compact"]) .lobby-main-grid {
+    order: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  :global([data-layout="compact"]) .lobby-games-column {
+    gap: 16px;
+  }
+
+  :global([data-layout="compact"]) .lobby-footer-bar {
+    order: 3;
+    width: 100%;
+    margin: 0;
+    flex-wrap: wrap;
+  }
+
+  :global([data-layout="compact"]) .lobby-footer-tagline {
+    font-size: 0.75rem;
+  }
+}
