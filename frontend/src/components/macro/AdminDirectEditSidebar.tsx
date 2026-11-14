@@ -319,7 +319,10 @@ export function AdminDirectEditSidebar({
         style={{ borderLeft: '4px solid #b91c1c' }}
       >
         <div className="admin-sidebar-header-row">
-          <div className="admin-sidebar-title">
+          <div
+            className="admin-sidebar-title"
+            data-testid="admin-sidebar-title"
+          >
             <Pencil size={16} className="admin-sidebar-icon" />
             <div>
               <h2 className="admin-sidebar-heading">Edit Board</h2>

@@ -38,19 +38,37 @@ const ADMIN_ORDER_OPTIONS: IconSelectOption<OrderType>[] = [
   {
     value: 'HOLD',
     label: 'Hold',
-    icon: <Shield size={13} className="admin-order-icon" />,
+    icon: (
+      <Shield
+        size={13}
+        className="admin-order-icon"
+        data-testid="admin-order-icon"
+      />
+    ),
     testId: 'admin-inspector-order-type-option-hold',
   },
   {
     value: 'MOVE',
     label: 'Move',
-    icon: <MoveRight size={13} className="admin-order-icon" />,
+    icon: (
+      <MoveRight
+        size={13}
+        className="admin-order-icon"
+        data-testid="admin-order-icon"
+      />
+    ),
     testId: 'admin-inspector-order-type-option-move',
   },
   {
     value: 'DISBAND',
     label: 'Disband',
-    icon: <Trash2 size={13} className="admin-order-icon" />,
+    icon: (
+      <Trash2
+        size={13}
+        className="admin-order-icon"
+        data-testid="admin-order-icon"
+      />
+    ),
     testId: 'admin-inspector-order-type-option-disband',
   },
 ];
@@ -231,7 +249,10 @@ export function AdminTileInspector({
               className="admin-inspector-unit-header"
               data-testid="admin-inspector-unit-header"
             >
-              <span className="admin-inspector-label">
+              <span
+                className="admin-inspector-label"
+                data-testid="admin-unit-settings-label"
+              >
                 <Pencil size={12} /> Unit Settings
               </span>
               <div
@@ -241,6 +262,7 @@ export function AdminTileInspector({
                 <button
                   type="button"
                   data-testid="admin-inspector-relocate-btn"
+                  data-active={isRelocating ? 'true' : undefined}
                   className={`tactical-mode-btn ${isRelocating ? 'active' : ''}`}
                   onClick={onToggleRelocate}
                   title="Click any compatible province on the map to relocate this unit"
