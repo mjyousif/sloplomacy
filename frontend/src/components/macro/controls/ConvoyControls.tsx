@@ -10,6 +10,7 @@ import {
   type IconSelectOption,
 } from '../../map/hud/IconSelectDropdown';
 import styles from '../OrderParameterControls.module.css';
+import { orderParamDropdownClassNames } from './orderParamDropdown';
 
 interface ConvoyControlsProps {
   /** The fleet's CONVOY order. */
@@ -187,6 +188,7 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
     return (
       <div className={styles.orderParamInline}>
         <IconSelectDropdown
+          classNames={orderParamDropdownClassNames}
           value={order.aux_unit_origin || null}
           options={armyOpts}
           placeholder="Army…"
@@ -215,6 +217,7 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
           →
         </span>
         <IconSelectDropdown
+          classNames={orderParamDropdownClassNames}
           value={order.target || null}
           options={targetOpts}
           placeholder="To…"

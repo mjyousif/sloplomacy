@@ -1,0 +1,14 @@
+@layer components {
+  .map-unit-token {
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+
+  .map-unit-token[data-locked="true"] {
+    cursor: default;
+  }
+
+  :global([data-map-relocating="true"]) .map-unit-token {
+    cursor: not-allowed !important;
+  }
+}

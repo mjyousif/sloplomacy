@@ -66,7 +66,7 @@
     flex-shrink: 0;
   }
 
-  .admin-inspector-unit-actions-row :global(.tactical-mode-btn),
+  .admin-inspector-unit-actions-row .admin-inspector-action-btn,
   .admin-inspector-unit-actions-row .admin-inspector-destroy-btn {
     width: auto;
     flex: 0 0 auto;
@@ -120,7 +120,7 @@
     color: #94a3b8;
   }
 
-  :global(.icon-select-dropdown-option.selected) .admin-order-icon {
+  .admin-order-option[data-selected="true"] .admin-order-icon {
     color: #fecaca;
   }
 }

@@ -56,7 +56,7 @@ function setup({
       compact={compact}
       placement={{
         menuRef: null,
-        menuClassName: 'unit-floating-menu',
+        docked: false,
         floatingStyle: { left: 40, top: 80 },
         dragHeaderProps: {},
       }}
@@ -114,14 +114,14 @@ describe('UnitMenu in a movement phase', () => {
 
   it('lights a saved hold until Move is pressed', () => {
     setup({ order: orderFor(A_PAR, 'HOLD') });
-    expect(button('Hold')).toHaveClass('active-hold');
-    expect(button('Move')).not.toHaveClass('active');
+    expect(button('Hold')).toHaveAttribute('data-state', 'hold');
+    expect(button('Move')).not.toHaveAttribute('data-state', 'active');
   });
 
   it('lights Move once it is pressed, over a saved hold', () => {
     setup({ order: orderFor(A_PAR, 'HOLD'), moveModeChosen: true });
-    expect(button('Move')).toHaveClass('active');
-    expect(button('Hold')).not.toHaveClass('active-hold');
+    expect(button('Move')).toHaveAttribute('data-state', 'active');
+    expect(button('Hold')).not.toHaveAttribute('data-state', 'hold');
   });
 
   it.each([
@@ -193,8 +193,8 @@ describe('UnitMenu in a retreat phase', () => {
       phase: 'Retreats',
       order: orderFor(OUT, 'RETREAT', { target: 'GAS' }),
     });
-    expect(button('Retreat')).toHaveClass('active');
-    expect(button('Disband')).not.toHaveClass('active');
+    expect(button('Retreat')).toHaveAttribute('data-state', 'active');
+    expect(button('Disband')).not.toHaveAttribute('data-state', 'active');
   });
 });
 
@@ -209,7 +209,7 @@ describe('UnitMenu in a winter adjustment', () => {
 
   it('lights Keep unless the unit is being disbanded', () => {
     setup({ phase: 'Adjustments', order: orderFor(A_PAR, 'DISBAND') });
-    expect(button('Disband')).toHaveClass('active');
-    expect(button('Keep Unit')).not.toHaveClass('active-hold');
+    expect(button('Disband')).toHaveAttribute('data-state', 'active');
+    expect(button('Keep Unit')).not.toHaveAttribute('data-state', 'hold');
   });
 });

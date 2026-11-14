@@ -8,6 +8,7 @@ import type {
 import { splitProvinceCode } from '../../../utils/orderHelpers';
 import {
   IconSelectDropdown,
+  type IconSelectDropdownClassNames,
   type IconSelectOption,
 } from '../../map/hud/IconSelectDropdown';
 import styles from '../OrderParameterControls.module.css';
@@ -21,6 +22,8 @@ interface MoveControlsProps {
   unitOptions?: UnitMoveOptions | null;
   compact?: boolean;
   useNativeSelect?: boolean;
+  /** Styles the compact row's dropdown, which its card owns. */
+  dropdownClassNames?: IconSelectDropdownClassNames;
   onUpdateOrder: (order: Order) => void;
   onHoverProvince?: (province: string | null) => void;
 }
@@ -34,6 +37,7 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
   unitOptions = null,
   compact = false,
   useNativeSelect = false,
+  dropdownClassNames,
   onUpdateOrder,
   onHoverProvince,
 }) => {
@@ -161,6 +165,7 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
 
     return (
       <IconSelectDropdown
+        classNames={dropdownClassNames}
         testId="select-order-target"
         value={selectValue || null}
         options={compactOptions}

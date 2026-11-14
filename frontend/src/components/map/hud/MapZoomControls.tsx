@@ -1,4 +1,5 @@
 import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
+import styles from './MapZoomControls.module.css';
 
 interface MapZoomControlsProps {
   onZoomIn: () => void;
@@ -14,10 +15,10 @@ export function MapZoomControls({
   onReset,
 }: MapZoomControlsProps) {
   return (
-    <div className="map-zoom-controls" role="group" aria-label="Map zoom">
+    <div className={styles.mapZoomControls} role="group" aria-label="Map zoom">
       <button
         type="button"
-        className="map-zoom-btn"
+        className={styles.mapZoomBtn}
         aria-label="Zoom in"
         onClick={onZoomIn}
       >
@@ -25,7 +26,7 @@ export function MapZoomControls({
       </button>
       <button
         type="button"
-        className="map-zoom-btn"
+        className={styles.mapZoomBtn}
         aria-label="Zoom out"
         onClick={onZoomOut}
       >
@@ -33,7 +34,7 @@ export function MapZoomControls({
       </button>
       <button
         type="button"
-        className="map-zoom-btn"
+        className={styles.mapZoomBtn}
         aria-label="Back to my units"
         onClick={onReset}
       >

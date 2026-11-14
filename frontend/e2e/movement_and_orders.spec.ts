@@ -170,7 +170,7 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       const nthWaterPath = page.locator('[data-testid="province-path"][data-province-id="NTH"]');
 
       await fleetEng.click();
-      await page.locator('.unit-floating-menu').getByRole('button', { name: 'Convoy' }).click();
+      await page.locator('[data-testid="unit-floating-menu"]').getByRole('button', { name: 'Convoy' }).click();
       // Sea zones must NOT stay lit green once Convoy mode is entered (#142)
       await expect(maoWaterPath).not.toHaveAttribute('fill', '#4ade80');
       await expect(nthWaterPath).not.toHaveAttribute('fill', '#4ade80');
@@ -190,7 +190,7 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       // Since #193 a convoy target carries a reticle, which covers the middle of Wales, so the
       // pick goes through the reticle as a player's click would.
       await fleetEng.click();
-      await page.locator('.unit-floating-menu').getByRole('button', { name: 'Convoy' }).click();
+      await page.locator('[data-testid="unit-floating-menu"]').getByRole('button', { name: 'Convoy' }).click();
       await armyPic.click();
       await page.locator('[data-testid="reachable-reticle"][data-province-id="WAL"]').click();
       await expect(

@@ -15,13 +15,4 @@
     color: #fca5a5;
     font-size: 0.78rem;
   }
-
-  .adminTurnClockSidebarBody :global(.icon-select-dropdown-trigger) {
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-    padding: 7px 10px;
-    font-size: 0.78rem;
-    border-radius: 8px;
-  }
 }

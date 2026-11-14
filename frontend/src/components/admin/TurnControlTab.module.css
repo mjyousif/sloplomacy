@@ -205,6 +205,17 @@
     display: flex;
     justify-content: flex-end;
   }
+
+  /* The dropdowns' triggers in the Turn & Clock sidebar. The element name outranks the trigger's
+     own rule in IconSelectDropdown.module.css, so neither file's load order decides. */
+  button.admin-select-trigger {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    font-size: 0.78rem;
+    border-radius: 8px;
+  }
 }
 
 @layer compact {

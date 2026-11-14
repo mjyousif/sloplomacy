@@ -88,7 +88,7 @@ test.describe('Scenario 06: Phone game screen', () => {
       await expect(drawerLayer).toHaveAttribute('data-open', 'true');
       await expect(page.locator('[data-testid="tools-drawer"]')).toBeVisible();
       await expect(page.locator('[data-testid="tools-drawer"] [data-testid="tools-zoom-toolbar"]')).toHaveCount(0);
-      await expect(page.locator('.map-zoom-controls')).toHaveCount(1);
+      await expect(page.getByRole('group', { name: 'Map zoom' })).toHaveCount(1);
       await recorder.recordStep(page, '04_tools_drawer_open');
 
       // Tapping the backdrop beside it closes it and hands focus back to ≡.

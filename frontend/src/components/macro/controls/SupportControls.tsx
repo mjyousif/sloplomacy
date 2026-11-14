@@ -12,6 +12,7 @@ import {
 } from '../../map/hud/IconSelectDropdown';
 import { PowerFlag } from '../../PowerFlag';
 import styles from '../OrderParameterControls.module.css';
+import { orderParamDropdownClassNames } from './orderParamDropdown';
 
 interface SupportControlsProps {
   unit: Unit;
@@ -107,6 +108,7 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
     return (
       <div className={styles.orderParamInline}>
         <IconSelectDropdown
+          classNames={orderParamDropdownClassNames}
           testId="select-support-unit"
           value={order.aux_unit_origin || null}
           options={unitOptionsList}
@@ -120,6 +122,7 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
           →
         </span>
         <IconSelectDropdown
+          classNames={orderParamDropdownClassNames}
           testId="select-support-target"
           value={order.target || null}
           options={targetOptionsList}

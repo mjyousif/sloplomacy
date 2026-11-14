@@ -5,7 +5,7 @@ import type { Unit } from '../../../types/diplomacy';
 import type { CameraState } from '../../../utils/mapCameraHelpers';
 import type { PendingCoastChoice } from './useMapInteraction';
 
-/** How far the docked unit bar sits above the bottom of the map (`.unit-docked-bar` in compact.css). */
+/** How far the docked unit bar sits above the bottom of the map (`.docked-bar` in `FloatingMenu.module.css`). */
 const DOCKED_BAR_INSET = 8;
 
 export interface UseUnitMenuPlacementOptions {
@@ -30,7 +30,8 @@ export interface UnitMenuPlacement {
   dockRef: (el: HTMLDivElement | null) => void;
   /** The unit or build menu's ref: the dock on a phone, the floating menu otherwise. */
   menuRef: React.Ref<HTMLDivElement>;
-  menuClassName: string;
+  /** True while the menu is the phone's docked bar, and not a floating menu. */
+  docked: boolean;
   floatingStyle: { left: number; top: number } | undefined;
   /** Spread on the menu header. Only the floating menu can be dragged. */
   dragHeaderProps: React.HTMLAttributes<HTMLDivElement> & { title?: string };
@@ -64,7 +65,7 @@ export function useUnitMenuPlacement({
 
   // On a phone the unit menu, build menu and coast picker dock as one bar at the bottom of the
   // map instead of floating beside the unit. The space the bar takes (its height plus the 8px
-  // it sits above the map's edge, see compact.css) goes on the map as --docked-bar-h, so the
+  // it sits above the map's edge, see `FloatingMenu.module.css`) goes on the map as --docked-bar-h, so the
   // zoom buttons can sit above it.
   const dockObserverRef = useRef<ResizeObserver | null>(null);
   const dockRef = useCallback(
@@ -233,7 +234,8 @@ export function useUnitMenuPlacement({
       y: e.clientY - menuDragOffsetRef.current.y,
     };
     e.currentTarget.setPointerCapture(e.pointerId);
-    floatingMenuRef.current?.classList.add('dragging');
+    if (floatingMenuRef.current)
+      floatingMenuRef.current.dataset.dragging = 'true';
   };
 
   const handleMenuDragMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -246,7 +248,8 @@ export function useUnitMenuPlacement({
   };
 
   const handleMenuDragEnd = () => {
-    floatingMenuRef.current?.classList.remove('dragging');
+    if (floatingMenuRef.current)
+      delete floatingMenuRef.current.dataset.dragging;
   };
 
   // Phones dock the menus instead, so they skip the placement math.
@@ -255,9 +258,6 @@ export function useUnitMenuPlacement({
     ? { left: floatingPos.left, top: floatingPos.top }
     : undefined;
   const menuRef = compact ? dockRef : floatingMenuRef;
-  const menuClassName = compact
-    ? 'unit-floating-menu unit-docked-bar'
-    : 'unit-floating-menu';
   // Only the floating menu can be dragged. A docked bar stays put.
   const dragHeaderProps = compact
     ? {}
@@ -294,7 +294,7 @@ export function useUnitMenuPlacement({
   return {
     dockRef,
     menuRef,
-    menuClassName,
+    docked: compact,
     floatingStyle,
     dragHeaderProps,
     showBuildMenu,

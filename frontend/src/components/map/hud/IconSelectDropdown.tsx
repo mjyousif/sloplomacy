@@ -1,8 +1,10 @@
 import { ChevronDown } from 'lucide-react';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { cx } from '../../../utils/cx';
+import styles from './IconSelectDropdown.module.css';
 
 export interface IconSelectDropdownClassNames {
+  root?: string;
   trigger?: string;
   leading?: string;
   value?: string;
@@ -111,14 +113,16 @@ export function IconSelectDropdown<T extends string = string>({
 
   return (
     <div
-      className={`icon-select-dropdown${disabled ? ' disabled' : ''}${isMenuOpen ? ' open' : ''}`}
+      className={cx(styles.iconSelectDropdown, classNames?.root)}
+      data-disabled={disabled ? 'true' : undefined}
+      data-open={isMenuOpen ? 'true' : undefined}
       ref={containerRef}
     >
       <button
         type="button"
         id={id}
         data-testid={testId}
-        className={cx('icon-select-dropdown-trigger', classNames?.trigger)}
+        className={cx(styles.iconSelectDropdownTrigger, classNames?.trigger)}
         title={title}
         disabled={disabled}
         aria-haspopup="listbox"
@@ -130,14 +134,11 @@ export function IconSelectDropdown<T extends string = string>({
         }}
       >
         {leadingIcon && (
-          <span
-            className={cx('icon-select-dropdown-leading', classNames?.leading)}
-            aria-hidden="true"
-          >
+          <span className={classNames?.leading} aria-hidden="true">
             {leadingIcon}
           </span>
         )}
-        <span className={cx('icon-select-dropdown-value', classNames?.value)}>
+        <span className={cx(styles.iconSelectDropdownValue, classNames?.value)}>
           {selectedOption ? (
             <>
               {selectedOption.icon}
@@ -146,7 +147,7 @@ export function IconSelectDropdown<T extends string = string>({
           ) : emptyOption ? (
             <span>{emptyOption.label}</span>
           ) : (
-            <span className="icon-select-dropdown-placeholder">
+            <span className={styles.iconSelectDropdownPlaceholder}>
               {placeholder}
             </span>
           )}
@@ -154,14 +155,15 @@ export function IconSelectDropdown<T extends string = string>({
         {!hideChevron && (
           <ChevronDown
             size={13}
-            className={`icon-select-dropdown-chevron${isMenuOpen ? ' open' : ''}`}
+            className={styles.iconSelectDropdownChevron}
+            data-open={isMenuOpen ? 'true' : undefined}
           />
         )}
       </button>
 
       {isMenuOpen && (
         <div
-          className={cx('icon-select-dropdown-menu', classNames?.menu)}
+          className={cx(styles.iconSelectDropdownMenu, classNames?.menu)}
           role="listbox"
           aria-labelledby={id}
           onPointerLeave={(e) => {
@@ -176,9 +178,9 @@ export function IconSelectDropdown<T extends string = string>({
               role="option"
               aria-selected={value === null}
               data-testid={emptyOption.testId}
+              data-selected={value === null ? 'true' : undefined}
               className={cx(
-                'icon-select-dropdown-option',
-                value === null && 'selected',
+                styles.iconSelectDropdownOption,
                 classNames?.option,
               )}
               onPointerEnter={(e) => {
@@ -201,9 +203,9 @@ export function IconSelectDropdown<T extends string = string>({
               role="option"
               aria-selected={value === opt.value}
               data-testid={opt.testId}
+              data-selected={value === opt.value ? 'true' : undefined}
               className={cx(
-                'icon-select-dropdown-option',
-                value === opt.value && 'selected',
+                styles.iconSelectDropdownOption,
                 classNames?.option,
               )}
               onPointerEnter={(e) => {

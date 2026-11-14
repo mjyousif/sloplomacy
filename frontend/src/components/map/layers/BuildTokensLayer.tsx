@@ -13,6 +13,7 @@ import {
   PieceOutline,
 } from '../../MapPiece';
 import type { PieceGeometry } from '../hooks/usePieceGeometry';
+import tokenStyles from './units/UnitToken.module.css';
 
 interface BuildTokensLayerProps {
   /** Home centres with a build slot drawn this winter, with the power that builds there. */
@@ -69,7 +70,7 @@ export function BuildTokensLayer({
           <g
             key={bId}
             transform={`translate(${pt.x}, ${pt.y})`}
-            className="map-unit-token"
+            className={tokenStyles.mapUnitToken}
             data-testid="build-token"
             data-build-id={bId}
             data-home-province={homeProv}

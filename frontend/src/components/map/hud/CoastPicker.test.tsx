@@ -71,8 +71,8 @@ describe('CoastPicker', () => {
         onCancel={() => {}}
       />,
     );
-    const bar = container.querySelector('.coast-picker-modal');
-    expect(bar).toHaveClass('unit-docked-bar');
+    const bar = container.querySelector('[data-testid="coast-picker"]');
+    expect(bar).toHaveAttribute('data-docked', 'true');
     expect(dockRef).toHaveBeenCalledWith(bar);
   });
 });

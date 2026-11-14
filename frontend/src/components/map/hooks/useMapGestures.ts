@@ -51,13 +51,14 @@ export function useMapGestures(
 
   const endPanning = () => {
     isPanningRef.current = false;
-    svgRef.current?.classList.remove('panning', 'actively-dragging');
+    delete svgRef.current?.dataset.mapPanning;
+    delete svgRef.current?.dataset.mapDragging;
     reportZoom();
   };
 
   const markDragging = () => {
     dragMovedRef.current = true;
-    svgRef.current?.classList.add('actively-dragging');
+    if (svgRef.current) svgRef.current.dataset.mapDragging = 'true';
   };
 
   const capturePointer = (pointerId: number) => {
@@ -74,7 +75,7 @@ export function useMapGestures(
     const client = { x: e.clientX, y: e.clientY };
     if (pointers.size === 0) {
       isPanningRef.current = true;
-      svgRef.current?.classList.add('panning');
+      if (svgRef.current) svgRef.current.dataset.mapPanning = 'true';
       dragMovedRef.current = false;
       mouseDownClientRef.current = client;
     }

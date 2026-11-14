@@ -1,0 +1,9 @@
+@layer components {
+  .map-province-name {
+    fill: #000000;
+    paint-order: stroke;
+    stroke: rgba(246, 236, 208, 0.72);
+    stroke-width: 2.6px;
+    stroke-linejoin: round;
+  }
+}

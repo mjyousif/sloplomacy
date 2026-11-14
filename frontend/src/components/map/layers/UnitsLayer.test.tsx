@@ -80,23 +80,26 @@ describe('UnitsLayer', () => {
       province: 'PAR',
       controllable: 'true',
     });
-    expect(token(A_BUR_GER)).toHaveClass('foreign-locked');
+    expect(token(A_BUR_GER)).toHaveAttribute('data-locked', 'true');
     expect(token(A_BUR_GER).dataset.controllable).toBe('false');
   });
 
   it('lets the sandbox command a foreign unit', () => {
     const { token } = draw([A_BUR_GER], { canEditAnyPower: true });
     expect(token(A_BUR_GER).dataset.controllable).toBe('true');
-    expect(token(A_BUR_GER)).not.toHaveClass('foreign-locked');
+    expect(token(A_BUR_GER)).toHaveAttribute('data-locked', 'false');
   });
 
   it('marks the selected unit, and a hovered one only if it is controllable', () => {
     const selected = draw([A_PAR], { selectedUnit: A_PAR });
-    expect(selected.token(A_PAR)).toHaveClass('selected');
+    expect(selected.token(A_PAR)).toHaveAttribute('data-selected', 'true');
     const hoverOwn = draw([A_PAR], { hoveredUnitId: A_PAR.id });
-    expect(hoverOwn.token(A_PAR)).toHaveClass('hovered');
+    expect(hoverOwn.token(A_PAR)).toHaveAttribute('data-hovered', 'true');
     const hoverForeign = draw([A_BUR_GER], { hoveredUnitId: A_BUR_GER.id });
-    expect(hoverForeign.token(A_BUR_GER)).not.toHaveClass('hovered');
+    expect(hoverForeign.token(A_BUR_GER)).toHaveAttribute(
+      'data-hovered',
+      'false',
+    );
   });
 
   it('selects on click and hovers with a mouse, never with a finger', () => {

@@ -1,0 +1,35 @@
+@layer compact {
+  /* Zoom buttons sit on the map, since a phone has no wheel and the tools rail is out of reach.
+     EuropeMap only renders them in the compact layout. Blurring what sits behind the map overlays
+     repaints the board on every pan frame, which a phone can't afford, so they get a solid backing
+     instead (see `FloatingMenu.module.css`). */
+  :global([data-layout="compact"]) .map-zoom-controls {
+    position: absolute;
+    right: 10px;
+    /* EuropeMap sets --docked-bar-h while the docked unit bar is up, so the buttons ride above it. */
+    bottom: calc(10px + var(--docked-bar-h, 0px));
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  :global([data-layout="compact"]) .map-zoom-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(15, 23, 42, 0.92);
+    color: #e2e8f0;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    touch-action: manipulation;
+  }
+
+  :global([data-layout="compact"]) .map-zoom-btn:active {
+    background: rgba(51, 65, 85, 0.95);
+  }
+}

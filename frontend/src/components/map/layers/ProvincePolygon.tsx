@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import type { Point, ProvinceGeometry } from '../../../data/europeMapGeometry';
 import { POWER_METADATA, type Power } from '../../../types/diplomacy';
+import styles from './ProvincePolygon.module.css';
 
 export interface ProvincePolygonProps {
   geom: ProvinceGeometry;
@@ -111,7 +112,14 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
           stroke={strokeColor}
           strokeWidth={isHighlighted || isReachable || hasWarning ? 3.5 : 0}
           strokeDasharray={isBlueReachable ? '6 3' : undefined}
-          className={`province-interactive-path${isMoveIncompatible ? ' move-incompatible' : ''}${isMoveCompatible ? ' move-compatible' : ''}`}
+          className={styles.provinceInteractivePath}
+          data-move={
+            isMoveIncompatible
+              ? 'incompatible'
+              : isMoveCompatible
+                ? 'compatible'
+                : undefined
+          }
           style={
             isMoveIncompatible
               ? { cursor: 'not-allowed' }
@@ -160,7 +168,7 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
         {/* Reachable Target Reticle */}
         {showMoveReticle && (
           <g
-            className="reachable-target-reticle"
+            className={styles.reachableTargetReticle}
             data-testid="reachable-reticle"
             data-province-id={geom.id}
             onClick={(e) => {

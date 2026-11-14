@@ -48,13 +48,13 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
         '[data-testid="unit-token"][data-unit-id="FRA_F_BRE"]',
       );
       await fleetBre.click();
-      const unitMenu = page.locator('.unit-floating-menu');
+      const unitMenu = page.locator('[data-testid="unit-floating-menu"]');
       await expect(unitMenu).toBeVisible();
       await expect(unitMenu.getByRole('button', { name: 'Convoy' })).toHaveCount(
         0,
       );
       await recorder.recordStep(page, '01_fleet_in_port_convoy_disabled');
-      await page.locator('.floating-close-btn').click();
+      await page.locator('[data-testid="floating-close-btn"]').click();
 
       // 2. Spawn F ENG, A PIC, and F NTH: check CONVOY_PICK_ARMY & CONVOY_PICK_TARGET
       await spawnUnit('FRANCE', 'F', 'ENG');
@@ -70,10 +70,10 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
       );
       await fleetEng.click();
       await page
-        .locator('.unit-floating-menu')
+        .locator('[data-testid="unit-floating-menu"]')
         .getByRole('button', { name: 'Convoy' })
         .click();
-      await expect(page.locator('.floating-menu-hint')).toContainText(
+      await expect(page.locator('[data-testid="floating-menu-hint"]')).toContainText(
         'green = adjacent shore, blue = via fleet chain',
       );
       await expect(
@@ -86,7 +86,7 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
         '[data-testid="unit-token"][data-unit-id="FRA_A_PIC"]',
       );
       await armyPic.click();
-      await expect(page.locator('.floating-menu-hint')).toContainText(
+      await expect(page.locator('[data-testid="floating-menu-hint"]')).toContainText(
         'green = direct / ready, blue = multi-ship chain',
       );
       await expect(
@@ -99,7 +99,7 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
         page,
         '03_convoy_step2_pick_target_destinations',
       );
-      await page.locator('.floating-close-btn').click();
+      await page.locator('[data-testid="floating-close-btn"]').click();
 
       // 4. Select A PIC in Move mode: unconfirmed convoy coasts (WAL, LON, NWY) are ocean blue
       await armyPic.click();
@@ -152,7 +152,7 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
         .locator('[data-testid="unit-token"][data-unit-id="FRA_F_MAO"]')
         .click();
       await page
-        .locator('.unit-floating-menu')
+        .locator('[data-testid="unit-floating-menu"]')
         .getByRole('button', { name: 'Convoy' })
         .click();
       await page
@@ -208,7 +208,7 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
       await page
         .locator('[data-testid="province-path"][data-province-id="SPA"]')
         .click();
-      await expect(page.locator('.coast-choice-modal')).toHaveCount(0);
+      await expect(page.locator('[data-testid="coast-picker"]')).toHaveCount(0);
       await expect(
         page.locator(
           '[data-testid="order-arrow"][data-order-unit="FRA_A_PIC"][data-order-target="SPA"]',
@@ -348,7 +348,7 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
         .locator('[data-testid="unit-token"][data-unit-id="ENG_F_NTH"]')
         .click();
       await page
-        .locator('.unit-floating-menu')
+        .locator('[data-testid="unit-floating-menu"]')
         .getByRole('button', { name: 'Convoy' })
         .click();
       await expect(

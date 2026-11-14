@@ -11,6 +11,7 @@ import type {
 import { canPlaceUnitTypeInProvince } from '../../../utils/adminHelpers';
 import type { MapInteractionMode } from '../hooks/useMapInteraction';
 import { ProvincePolygon } from './ProvincePolygon';
+import styles from './ProvincesLayer.module.css';
 import { getModeTargetHighlights } from './targetHighlight';
 
 interface ProvincesLayerProps {
@@ -91,7 +92,7 @@ export function ProvincesLayer({
   const hasOwnershipData = Object.keys(ownership).length > 0;
 
   return (
-    <g className="interactive-provinces-layer">
+    <g className={styles.interactiveProvincesLayer}>
       {ALL_PROVINCE_GEOMETRIES.map((geom) => {
         const pInfo = provinces[geom.id];
         if (!pInfo || geom.id === 'SWI') return null;
