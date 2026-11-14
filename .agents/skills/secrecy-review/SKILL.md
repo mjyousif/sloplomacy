@@ -30,6 +30,7 @@ Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #
 - [ ] `persist_game` is called after every change.
 - [ ] Memory wins over the database for a loaded game, and a `SupabaseUnavailable` read is not "game missing".
 - [ ] Anything that changes turn outside `_execute_adjudication` calls `start_phase_clock`.
+- [ ] Never denormalize user display names or emails (`created_by`, UUID participant `display_name`) into persisted game blobs. Serialize **both** top-level `payload["summary"]` and `payload["game_state"]["summary"]` through `_serialize_summary_for_db`, and resolve display names from `PROFILE_NAMES[user_id]` (refreshed with a TTL cache, not on every lobby request).
 
 ## Tests
 

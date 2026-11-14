@@ -12,6 +12,7 @@ description: Use when committing, pushing, opening or updating a pull request fo
 1. Run the `verify-change` skill.
 2. `git fetch origin; git merge origin/main` (or rebase) so you test against current `main`. Other PRs land quickly.
 3. Branch names: `feat/<topic>`, `fix/<topic>`, `docs/<topic>`. Titles use Conventional Commits, like `fix(security): show hidden orders only to the seat that holds them`.
+4. Before pushing new work to an existing branch or running `gh pr edit`, check `gh pr list --head <branch> --state all --json number,state` (or `gh pr view <n> --json state`). If the PR is already `MERGED` or `CLOSED`, branch fresh from `origin/main` and open a new PR instead.
 
 ## Description (write to a file, never inline)
 
@@ -34,6 +35,7 @@ Body format that has worked well here:
 - **Screenshots inspected (Mandatory for visual/behavior changes)**: name the scenario, the steps you opened, and what each showed (for example, "step 2: modal lists the Burgundy self-bounce"). Opening and referencing the images is mandatory whenever user-facing UI, layout, map rendering, or diagnostics change.
 - **After Screenshots**: include or embed visual evidence of the new behavior in the PR description or task summary.
 - **Deploy notes**: new secrets, env vars, migrations, or "nothing needed". Reviewers act on this.
+  - If adding files under `supabase/migrations/`, note whether they must be applied manually to Supabase (they do not auto-run on merge) and include a backup/rollback note for destructive data migrations.
 - `Closes #<issue>` when there is one.
 
 ## Attaching screenshots
@@ -56,5 +58,6 @@ Squash merging rewrites history, so a branch that was cut from another open PR c
 ## Don't
 
 - Push to `main`, force-push over a reviewed branch without saying so, or disable checks.
+- Push new work onto a branch whose PR is already `MERGED` or `CLOSED`.
 - Leave docs out of the PR. The docs checklist in AGENTS.md section 5.1 is part of the change.
 - Bundle unrelated fixes. Small single-topic PRs were reviewed and merged fastest.
