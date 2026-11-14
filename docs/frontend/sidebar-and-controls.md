@@ -82,7 +82,7 @@ In the compact layout the game screen is the map, with everything else layered o
 
 ### Tools drawer (`ToolsSidebar variant="drawer"`)
 - ≡ in the top bar opens it over the game area, below the top bar, so ≡ can close it again. Tapping the backdrop or pressing Escape also closes it, and focus goes back to ≡.
-- It shows the same sections as the desktop sidebar except Map View & Camera, because the zoom buttons are on the map.
+- It shows the same sections as the desktop sidebar except Map View & Camera, because the zoom buttons are on the map. Press is among them, and while the drawer is closed ≡ carries the count of unread press.
 - It stays mounted while closed, and `inert`, so it can slide both ways.
 
 ### Docked unit bar and the map
@@ -111,7 +111,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 
 ## Left Sidebar: Chancellery Tools & Intel (`ToolsSidebar.tsx`)
 
-`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Everything else is in `components/tools/`: `CollapsedRail`, then one component per section below (`MapControlsSection`, `MapLegendSection`, `StandingsSection` with `useStandingsSort`, `SandboxToolsSection`). Each section takes only the props it reads, typed as a `Pick<>` of `ToolsSidebarProps` (`tools/toolsSidebarProps.ts`). The parent decides which sections show: the zoom section is left out of the drawer, while Administrator controls live in Display Settings (`DisplaySettingsMenu.tsx`).
+`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Everything else is in `components/tools/`: `CollapsedRail`, then one component per section below (`MapControlsSection`, `MapLegendSection`, `StandingsSection` with `useStandingsSort`, `PressSection` with its pieces in `tools/press/`, `SandboxToolsSection`). Each section takes only the props it reads, typed as a `Pick<>` of `ToolsSidebarProps` (`tools/toolsSidebarProps.ts`). The parent decides which sections show: the zoom section is left out of the drawer, while Administrator controls live in Display Settings (`DisplaySettingsMenu.tsx`).
 
 ### 1. Map View & Camera Controls
 - Rendered via a non-collapsible `CollapsibleSection` to retain uniform visual hierarchy with action controls.
@@ -142,9 +142,21 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 - **Historical WWI Flag SVGs (`PowerFlag.tsx`)**:
   - Replaces emojis with crisp vector SVGs representing 1901–1918 flags: Austro-Hungarian dual civil ensign with Austrian and Hungarian coats of arms, British Union Flag, French Tricolour, German Empire black-white-red tricolour, Kingdom of Italy tricolour with crowned Savoy shield, Russian Empire tricolour with the 1914 imperial eagle canton, and Ottoman Empire crescent and star.
 - **Sandbox Mode**: Clicking any power immediately switches active command to that nation for hypothetical experimentation.
-- **Multiplayer Mode**: Displays diplomatic status (Orders Finalized, Drafting, or Civil Disorder).
+- **Multiplayer Mode**: Displays diplomatic status (Orders Finalized or Civil Disorder). A power still drafting has no mark; the row's tooltip says so.
 
-### 4. War Room & Pre-Move Sandbox Tools
+### 4. Press (`tools/PressSection.tsx`)
+Shown under Diplomatic Standing to a seated player of a multiplayer match (never in a sandbox, and not to a spectator). Its pieces are in `tools/press/`.
+
+- **Conversations** (`PressChannelTabs`): a chip for the public box, one per private thread (the flags of the other powers in it) and one for anonymous notes, each with its unread count.
+- **Messages** (`PressMessageList`): the picked conversation, oldest first, with a divider wherever the turn changes. An anonymous message shows a mask and "Anonymous"; the player's own shows "You" with an "anonymously" tag.
+- **Province links**: a province named in a message, by its code in capitals (`BUR`) or its full name in any case (`Burgundy`), is a link. Hovering lights it on the map; clicking keeps it lit, and on a phone also closes the drawer.
+- **Recipients are picked on the standings**: in a match with press, every other country's Diplomatic Standing row has a letter button on its right (`PressPickButton` in `StandingsSection`). Clicking it lights it and adds that country to the next message's recipients; clicking again takes it off. Nothing lit is the public box, lit countries are the thread of exactly those powers, and lit countries with the mask button lit is a one-way note. A country with no player cannot be picked, the player's own row has no button, and the buttons go away once the game is over or the player has surrendered. Each button carries the unread count of the player's one-to-one thread with that country. The picked countries live in `pressStore`, which is how the two sections share them. Picking a country opens the Press section if it was folded.
+- **Composer** (`PressComposer`): the message field (Enter sends, Shift+Enter is a new line), a mask button that posts anonymously, and Send. While the mask is lit the field has a dashed purple border and reads "Write anonymously…". There is no help text: a line appears under the field only when something stops the message being sent (nobody picked for a note, game over, surrendered, too long). Where the message goes is still read to screen readers with the field.
+- **Unread**: a conversation is marked read only while its list is actually on screen (the section open, the drawer open, and the list scrolled into the sidebar's view). Read marks are kept per game and seat in `localStorage`.
+- **Game over**: every thread and every anonymous author is shown to all players. The letter buttons and the mask button go away and only the public box can still be written to.
+- A surrendered player can read but not write.
+
+### 5. War Room & Pre-Move Sandbox Tools
 - Rendered inside a collapsible `CollapsibleSection` (`defaultOpen={true}`). Displays the `ACTIVE` pill in the header when hypothetical mode is engaged, even when collapsed.
 - **"Enter Hypothetical Mode" / "Exit Mode"**: Toggles isolated hypothetical planning (with the Eye icon). In hypothetical mode, foreign moves can be freely drafted; exiting discards foreign guesses and restores the authoritative state. In a multiplayer match the sandbox is a private copy: other players cannot see it, it does not show their real orders, and Finalize, Resolve, Surrender and the Admin Console wait until you exit.
 - **Tactical General Staff AI**:
@@ -154,7 +166,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 - **Foreign Guesses Counter & Clear**: Displays count of drafted foreign guesses with a one-click "Clear" button.
 - **Scenario Management & Saving**: One-click "Reset 1901" scenario start and "Save Sandbox". Clicking "Save Sandbox" opens `SaveSandboxModal.tsx`, letting the commander specify a custom name (e.g., "Balkans 1901 Tactical Analysis") before promoting their personal draft sandbox in-place to a permanent saved sandbox.
 
-### 5. Interactive Direct-Edit Mode & Administrator Controls (Game Creator Only)
+### 6. Interactive Direct-Edit Mode & Administrator Controls (Game Creator Only)
 - **Top Bar Administrator Menu (`AdminSettingsMenu.tsx`)**: Room creators access `Edit Board` and `Turn and Clock Settings` from the `Wrench` button (`btn-admin-menu`) in the top bar (or ⋯ menu on phones).
 - **Turn and Clock Settings (`AdminTurnClockSidebar.tsx`)**: Repurposes the right sidebar (or phone bottom sheet) for turn and clock arbitration (`TurnControlTab`: Revert to Past Turn with snapshot dropdown, Adjust Game Clock & Season, and Unlock All Power Orders).
 - **Interactive Direct-Edit Mode (`useAdminDirectEdit.ts`, `AdminTileInspector.tsx`)**:
@@ -164,7 +176,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
   - Leaving Direct-Edit Mode or the live board with unapplied staged edits prompts `ConfirmModal`.
 - **Per-Participant Warning Modal (`AdminActionWarningModal.tsx`)**: Whenever an admin action modifies a match, participants receive `AdminActionWarningModal` (live via WebSocket or on first load) and acknowledge via `POST /api/admin/acknowledge`. Consecutive admin actions within the same turn are consolidated into a single `"Admin"` phase entry in `TurnHistorySelector`.
 
-### 6. Turn History (`TurnChronicle.tsx` on desktop, `TurnHistorySelector.tsx` on phones)
+### 7. Turn History (`TurnChronicle.tsx` on desktop, `TurnHistorySelector.tsx` on phones)
 - On desktop, turn history is unified with the top bar's turn chronicle pill (`TurnChronicle.tsx`): `‹`, the turn dropdown, `›`, and `Live` sit inline in the header, and hovering over the pill expands a tray below it with the **nation chips** (All, AUS … TUR). On phones, `TurnHistorySelector.tsx` remains pinned at the foot of the ≡ drawer (plus `TurnHistoryPill` on the map).
 - **‹ [turn] ›**: steps through, or picks from, the resolved phases (newest first in the menu, after the current turn). **Live** is a quiet tag while the current turn is on show and an amber button while a past one is.
 - A past turn shows on the map as it began, with every nation's orders coloured by how they resolved: green arrows succeeded, red dashed ones bounced with a "BOUNCED" label, and broken supports carry "CUT". Past winters show the builds that were ordered. Nothing can be selected or ordered on it.
@@ -236,9 +248,9 @@ Pieces must not be defined inside `MacroSidebar`: a component defined in a rende
 ## Collapsible Sidebar Rails
 
 Desktop only. When either sidebar is collapsed:
-- **Left Tools Rail (44px)**: Houses collapse toggle, mini Zoom In / Out / Fit buttons, Sandbox active glow indicator, and Admin icon.
+- **Left Tools Rail (44px)**: Houses collapse toggle, mini Zoom In / Out / Fit buttons, Sandbox active glow indicator, and Admin icon. In a match with press it also has a Press button with the unread count, which expands the sidebar.
 - **Right Tactical Rail (44px)**: Houses collapse toggle, active nation crest, unconfirmed orders counter pill (or green checkmark when complete), and warning badge.
-### 7. Version Revision Badge (`VersionBadge.tsx`)
+### 8. Version Revision Badge (`VersionBadge.tsx`)
 - Sits at the sticky footer bottom of the sidebar.
 - Displays the current build revision short SHA (`rev <sha>`) with one-click clipboard copy and direct link to the commit on GitHub.
 

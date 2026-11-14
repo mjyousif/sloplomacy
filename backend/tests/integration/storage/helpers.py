@@ -1,11 +1,13 @@
 """Helpers for the persistence tests: a fake Supabase table, players, and restarting the container."""
 
 from domain.game_state import GameState, MultiplayerGameSummary
+from domain.press import PressMessage
 from fastapi.testclient import TestClient
 from main import app
 from storage.store import (
     GAME_HISTORY,
     GAME_PASSCODES,
+    GAME_PRESS,
     GAME_SUMMARIES,
     GAMES,
 )
@@ -24,6 +26,7 @@ class FakeSupabase:
         self.reads_fail = False
         self.writes_fail = False
         self.saved_history = []  # Whether each save carried the rollback history
+        self.press = {}  # The press column, by game id
 
     def _require_reads(self):
         if self.reads_fail:
@@ -65,6 +68,18 @@ class FakeSupabase:
 
     async def delete(self, game_id, client=None):
         self.rows.pop(game_id, None)
+        self.press.pop(game_id, None)
+        return True
+
+    async def load_press(self, game_id, client=None):
+        self._require_reads()
+        return [PressMessage.model_validate(m) for m in self.press.get(game_id, [])]
+
+    async def save_press(self, game_id, messages, client=None):
+        # Like the real update, it changes nothing when the game has no row yet.
+        if self.writes_fail or game_id not in self.rows:
+            return False
+        self.press[game_id] = [m.model_dump(mode="json") for m in messages]
         return True
 
 
@@ -107,6 +122,7 @@ def _restart_container(game_id):
     GAME_SUMMARIES.pop(game_id, None)
     GAME_HISTORY.pop(game_id, None)
     GAME_PASSCODES.pop(game_id, None)
+    GAME_PRESS.pop(game_id, None)
 
 
 def _resolve_turn(game_id):

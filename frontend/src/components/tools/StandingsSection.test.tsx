@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { pressStore } from '../../lib/pressStore';
 import { unitAt } from '../../test/mapFixtures';
 import type {
   GameParticipant,
   Power,
+  PressMessage,
   ValidationIssue,
 } from '../../types/diplomacy';
 import {
@@ -57,7 +59,10 @@ const powersShown = () => cards().map((c) => c.getAttribute('data-power'));
 const card = (power: Power) =>
   cards().find((c) => c.getAttribute('data-power') === power) as HTMLElement;
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  pressStore.reset();
+});
 
 describe('StandingsSection: list', () => {
   it('ranks the seven powers by score and shows their counts', () => {
@@ -163,7 +168,7 @@ describe('StandingsSection: players and status', () => {
     expect(screen.queryByText(/\(Open\)/)).toBeNull();
   });
 
-  it('shows Civil Disorder over Finalized over issues over Draft', () => {
+  it('shows Civil Disorder over Finalized over issues, and nothing while drafting', () => {
     render(
       <StandingsSection
         {...base({
@@ -181,9 +186,9 @@ describe('StandingsSection: players and status', () => {
     const germanyIssueBadge = within(card('GERMANY')).getByTitle('1 issues');
     expect(germanyIssueBadge).toHaveTextContent('1');
     expect(germanyIssueBadge.querySelector('svg')).toBeInTheDocument();
-    expect(
-      within(card('ITALY')).getByTitle('Drafting Orders'),
-    ).toHaveTextContent('Draft');
+    // A power still drafting has no mark: the row's tooltip says so instead.
+    expect(within(card('ITALY')).queryByText('Draft')).toBeNull();
+    expect(card('ITALY').querySelector('[data-status]')).toBeNull();
   });
 
   it('counts errors and warnings but not info notes', () => {
@@ -204,9 +209,7 @@ describe('StandingsSection: players and status', () => {
   it("hides another power's issues unless sandbox or admin override is on", () => {
     const issues = [issue('ENGLAND', 'error')];
     const { rerender } = render(<StandingsSection {...base({ issues })} />);
-    expect(
-      within(card('ENGLAND')).getByTitle('Drafting Orders'),
-    ).toBeInTheDocument();
+    expect(card('ENGLAND').querySelector('[data-status]')).toBeNull();
     rerender(<StandingsSection {...base({ issues, sandboxMode: true })} />);
     expect(within(card('ENGLAND')).getByTitle('1 issues')).toBeInTheDocument();
     rerender(
@@ -217,5 +220,113 @@ describe('StandingsSection: players and status', () => {
       <StandingsSection {...base({ issues, activePower: 'ENGLAND' })} />,
     );
     expect(within(card('ENGLAND')).getByTitle('1 issues')).toBeInTheDocument();
+  });
+});
+
+describe('StandingsSection: press recipients', () => {
+  const seat = (power: Power): GameParticipant => ({
+    user_id: power,
+    email: 'e',
+    display_name: power,
+    power,
+    joined_at: '',
+  });
+  const match = (extra: Partial<StandingsSectionProps> = {}) =>
+    base({
+      isMultiplayer: true,
+      pressPower: 'FRANCE',
+      participants: {
+        FRANCE: seat('FRANCE'),
+        GERMANY: seat('GERMANY'),
+        ENGLAND: seat('ENGLAND'),
+      },
+      ...extra,
+    });
+  const pick = (power: Power) => screen.getByTestId(`press-recipient-${power}`);
+  const note = (
+    seq: number,
+    sender: Power,
+    recipients: Power[],
+  ): PressMessage => ({
+    id: `m${seq}`,
+    seq,
+    sender,
+    anonymous: false,
+    recipients,
+    body: 'x',
+    sent_at: '',
+    season: 'Spring',
+    year: 1901,
+    phase: 'Movement',
+  });
+  const openPress = () => act(() => pressStore.open('g1', 'FRANCE'));
+
+  it('has no letter buttons where there is no press', () => {
+    render(<StandingsSection {...base()} />);
+    expect(screen.queryByTestId('press-recipient-GERMANY')).toBeNull();
+    // Nor while the store holds another seat's press.
+    render(<StandingsSection {...match({ pressPower: 'GERMANY' })} />);
+    openPress();
+    expect(screen.queryByTestId('press-recipient-FRANCE')).toBeNull();
+  });
+
+  it("puts a letter button on every other country's row, on the right", () => {
+    render(<StandingsSection {...match()} />);
+    openPress();
+    expect(within(card('FRANCE')).queryByRole('button')).toBeNull();
+    const button = pick('GERMANY');
+    expect(card('GERMANY').lastElementChild).toContainElement(button);
+    expect(card('GERMANY').lastElementChild?.lastElementChild).toBe(button);
+    expect(button).toHaveAccessibleName('Send privately to Germany');
+  });
+
+  it('lights a country when clicked and adds it to the recipients', async () => {
+    const onSelectPower = vi.fn();
+    render(<StandingsSection {...match({ onSelectPower })} />);
+    openPress();
+    await userEvent.click(pick('GERMANY'));
+    await userEvent.click(pick('ENGLAND'));
+    expect(pressStore.getState().recipients).toEqual(['GERMANY', 'ENGLAND']);
+    expect(pick('GERMANY')).toHaveAttribute('aria-pressed', 'true');
+    expect(pick('GERMANY')).toHaveAttribute('data-active', 'true');
+
+    await userEvent.click(pick('GERMANY'));
+    expect(pressStore.getState().recipients).toEqual(['ENGLAND']);
+    expect(pick('GERMANY')).toHaveAttribute('aria-pressed', 'false');
+    expect(onSelectPower).not.toHaveBeenCalled();
+  });
+
+  it('cannot pick a country with no player', () => {
+    render(<StandingsSection {...match()} />);
+    openPress();
+    expect(pick('ITALY')).toBeDisabled();
+    expect(pick('ITALY')).toHaveAccessibleName(
+      'Italy has no player to write to',
+    );
+    expect(pick('GERMANY')).toBeEnabled();
+  });
+
+  it("shows the unread count of the player's one-to-one thread with a country", () => {
+    render(<StandingsSection {...match()} />);
+    openPress();
+    act(() =>
+      pressStore.addMessages('g1', 'FRANCE', [
+        note(1, 'GERMANY', ['FRANCE']),
+        note(2, 'GERMANY', ['FRANCE']),
+        // A group thread and the public box count for no single country.
+        note(3, 'ENGLAND', ['FRANCE', 'GERMANY']),
+        note(4, 'ENGLAND', []),
+      ]),
+    );
+    expect(
+      within(pick('GERMANY')).getByTestId('press-pick-unread'),
+    ).toHaveTextContent('2');
+    expect(
+      within(pick('ENGLAND')).queryByTestId('press-pick-unread'),
+    ).toBeNull();
+    act(() => pressStore.markRead('FRANCE+GERMANY', 2));
+    expect(
+      within(pick('GERMANY')).queryByTestId('press-pick-unread'),
+    ).toBeNull();
   });
 });

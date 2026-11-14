@@ -23,6 +23,7 @@ from api import (
     history,
     lobby,
     orders,
+    press,
     sandbox,
     seats,
     turns,
@@ -119,6 +120,7 @@ for http_router in (
     admin,
     admin_units,
     history,
+    press,
 ):
     app.include_router(http_router.router, dependencies=[Depends(saved_sandbox_guard)])
 app.include_router(websocket.router)

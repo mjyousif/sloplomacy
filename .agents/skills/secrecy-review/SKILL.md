@@ -16,6 +16,8 @@ Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #
 - [ ] Per-viewer broadcast: each socket gets its own masked copy, not one shared payload.
 - [ ] A lobby listing (`GET /api/games`, `/api/games/browse`, `/ws/lobby`) goes through `storage.lobby.public_summaries`, so it never names a private campaign or a sandbox. The lobby socket shares one payload, so anything per-player belongs in `GET /api/games/mine` instead. Browse rows carry no emails or user ids.
 
+- [ ] Press (chat) is per seat: every read and socket push goes through `security.press` (`can_read`, `view_of`), which hides private messages from other powers and an anonymous `sender` from everyone but the author. Never return or log a stored `PressMessage`, and never put press in `GameState`, where it would ride along with every board broadcast.
+
 ## Writes: who is allowed to change this?
 
 - [ ] The order's power comes from the seat or slot being edited, never trusted from the request body. Every unit in a batch must belong to the batch's power.

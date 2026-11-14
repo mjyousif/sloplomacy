@@ -427,9 +427,53 @@ export interface LobbyBrowsePage {
   page_size: number;
 }
 
+/**
+ * A press (chat) message as this player may see it. `recipients` is empty for the public box;
+ * with recipients it is a private thread message, or a one-way note when `anonymous`.
+ * `sender` is null while an anonymous author is hidden (it is the player's own power on their
+ * own anonymous messages, and everyone's once the game is over).
+ */
+export interface PressMessage {
+  id: string;
+  /** Counts up within a game. */
+  seq: number;
+  sender: Power | null;
+  anonymous: boolean;
+  recipients: Power[];
+  body: string;
+  sent_at: string;
+  season: string;
+  year: number;
+  phase: string;
+}
+
+/** `GET /api/press`: what the player's power may read, oldest first. */
+export interface PressFeed {
+  power: Power;
+  /** True once the game is over: every thread and anonymous author is shown. */
+  revealed: boolean;
+  messages: PressMessage[];
+}
+
+export interface PressPostRequest {
+  power: Power;
+  recipients: Power[];
+  anonymous: boolean;
+  body: string;
+}
+
+/** New press for the seat this socket connected as. */
+export interface WebSocketPressUpdate {
+  type: 'press';
+  game_id: string;
+  power: Power;
+  messages: PressMessage[];
+}
+
 export type WebSocketMessage =
   | WebSocketGameUpdate
   | WebSocketLobbyUpdate
+  | WebSocketPressUpdate
   | { type: 'pong' };
 
 export interface ScenarioRequest {

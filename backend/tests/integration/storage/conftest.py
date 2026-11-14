@@ -29,6 +29,8 @@ def supabase():
         patch("storage.supabase.load_game_from_db", side_effect=db.load),
         patch("storage.supabase.load_all_summaries_from_db", side_effect=db.load_all),
         patch("storage.supabase.delete_game_from_db", side_effect=db.delete),
+        patch("storage.press.load_press_from_db", side_effect=db.load_press),
+        patch("storage.press.save_press_to_db", side_effect=db.save_press),
     ):
         yield db
     UNSAVED_GAMES.clear()

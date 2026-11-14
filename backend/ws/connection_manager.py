@@ -2,7 +2,9 @@ from collections import defaultdict
 
 from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
+from domain.press import PressMessage
 from fastapi import WebSocket
+from security.press import can_read, view_of
 from security.secrecy import sanitize_game_state_for_viewer, sanitize_summary_for_viewer
 from storage.lobby import public_summaries
 from storage.store import GAME_SUMMARIES, GAMES, sync_summary
@@ -64,6 +66,31 @@ class ConnectionManager:
                 "summary": sanitize_summary_for_viewer(summary).model_dump(mode="json")
                 if summary
                 else None,
+            }
+            try:
+                await ws.send_json(payload)
+            except Exception:
+                dead.append(ws)
+
+        for ws in dead:
+            self.disconnect_game(game_id, ws)
+
+    async def broadcast_press(self, game_id: str, message: PressMessage, revealed: bool) -> None:
+        """Send a new press message to each seated player's socket that may read it, as that
+        player may see it. A socket with no seat (a spectator) is sent nothing."""
+        connections = self.game_connections.get(game_id)
+        if not connections:
+            return
+
+        dead: list[WebSocket] = []
+        for ws, ws_power in list(connections.items()):
+            if ws_power is None or not can_read(message, ws_power, revealed):
+                continue
+            payload = {
+                "type": "press",
+                "game_id": game_id,
+                "power": ws_power.value,
+                "messages": [view_of(message, ws_power, revealed).model_dump(mode="json")],
             }
             try:
                 await ws.send_json(payload)

@@ -7,6 +7,7 @@ import styles from './ToolsSidebar.module.css';
 import { CollapsedRail } from './tools/CollapsedRail';
 import { MapControlsSection } from './tools/MapControlsSection';
 import { MapLegendSection } from './tools/MapLegendSection';
+import { PressSection } from './tools/PressSection';
 import { SandboxToolsSection } from './tools/SandboxToolsSection';
 import { StandingsSection } from './tools/StandingsSection';
 import type { ToolsSidebarProps } from './tools/toolsSidebarProps';
@@ -42,6 +43,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   open = false,
   onClose,
   historyFooter,
+  press,
 }) => {
   const isDrawer = variant === 'drawer';
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -152,9 +154,17 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           participants={participants}
           sandboxMode={sandboxMode}
           adminOverrideActive={adminOverrideActive}
+          pressPower={
+            press && !press.gameOver && !press.surrendered
+              ? press.power
+              : undefined
+          }
         />
 
-        {/* 5. HYPOTHETICAL MODE & TACTICAL AI GENERAL STAFF */}
+        {/* 5. PRESS: PUBLIC BOX, PRIVATE THREADS & ANONYMOUS NOTES */}
+        {press && <PressSection {...press} visible={!isDrawer || open} />}
+
+        {/* 6. HYPOTHETICAL MODE & TACTICAL AI GENERAL STAFF */}
         <SandboxToolsSection
           sandboxMode={sandboxMode}
           onToggleSandboxMode={onToggleSandboxMode}
