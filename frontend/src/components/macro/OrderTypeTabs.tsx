@@ -6,6 +6,7 @@ import type {
   ProvinceInfo,
   Unit,
 } from '../../types/diplomacy';
+import { isChosenDisband } from '../../utils/orderHelpers';
 import styles from './OrderTypeTabs.module.css';
 
 interface OrderTypeTabsProps {
@@ -66,11 +67,11 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
         <button
           type="button"
           data-testid="btn-order-disband"
-          aria-pressed={order?.order_type === 'DISBAND'}
-          data-active={order?.order_type === 'DISBAND' ? 'true' : undefined}
+          aria-pressed={isChosenDisband(order)}
+          data-active={isChosenDisband(order) ? 'true' : undefined}
           className={styles.orderTabBtn}
           style={
-            order?.order_type === 'DISBAND'
+            isChosenDisband(order)
               ? {
                   backgroundColor: '#dc2626',
                   borderColor: '#fca5a5',

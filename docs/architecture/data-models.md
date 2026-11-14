@@ -129,7 +129,7 @@ Complete server snapshot of a game session.
 | `active_power` | `Power` | Selected power in a sandbox game. A multiplayer game is shared by all its players, so this does not identify any of them: each client uses its own claimed seat. |
 | `units` | `Unit[]` | All military units on the board. |
 | `orders` | `Record<string, Order>` | Map of `unit_id` to `Order`. |
-| `ownership` | `Record<string, Power>` | Map of province code to owning Power (supply centers). |
+| `ownership` | `Record<string, Power>` | Map of province code to owning Power: supply centers, plus land provinces that are not supply centers, claimed by the last power whose unit ended a movement or retreat phase there (map colour only, never counted as centers). |
 | `finalized_powers` | `Power[]` | Nations that have locked in their orders for the turn. |
 | `surrendered_powers`| `Power[]` | Nations operating under Civil Disorder due to concession. |
 | `issues` | `ValidationIssue[]` | Active diagnostic errors and warnings. |

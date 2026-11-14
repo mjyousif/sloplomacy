@@ -380,6 +380,14 @@ describe('formatOrderSummary', () => {
     expect(
       formatOrderSummary(disbandOrder, mockProvinces, unitsByProv).verb,
     ).toBe('DISBAND');
+    // The server's default for an unordered dislodged unit is not shown as a choice (#257).
+    expect(
+      formatOrderSummary(
+        { ...disbandOrder, is_explicit: false },
+        mockProvinces,
+        unitsByProv,
+      ).verb,
+    ).toBe('NO ORDER');
 
     const waiveOrder: Order = {
       unit_id: 'WAIVE_FRANCE_PAR',

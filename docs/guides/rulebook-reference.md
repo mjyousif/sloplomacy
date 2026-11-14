@@ -67,6 +67,11 @@ In 1901, seven Great Powers contest Europe with 22 initial units:
 - **Engine Behavior**:
   - `POST /api/adjudicate` checks `if CURRENT_GAME.season == "Fall":` and updates `CURRENT_GAME.ownership` for all occupied supply centers.
 
+### 7a. Territory That Is Not a Supply Center
+- Land provinces that are not supply centers have no rules effect, but the map colours them by who last held them.
+- A unit that ends a movement or retreat phase (Spring or Fall) in such a province claims it for its power. The province keeps that owner after the unit leaves, until another power's unit ends a phase there. A dislodged unit claims nothing.
+- **Engine Behavior**: `engine/adjudicator/territory.py` adds these entries to `ownership` after each movement and retreat phase. `supply_center_owners` strips them wherever `ownership` counts toward builds, standings, victory or who is still in the game.
+
 ---
 
 ### 8. Missed Orders

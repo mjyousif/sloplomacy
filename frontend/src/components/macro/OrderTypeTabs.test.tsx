@@ -110,6 +110,17 @@ describe('OrderTypeTabs in a retreat phase', () => {
         .borderColor,
     ).toBe('rgb(252, 165, 165)');
   });
+
+  it("leaves Disband unpressed for the server's default disband (#257)", () => {
+    retreat({
+      validRetreats: [{ province: 'BUR', coasts: [] }],
+      order: orderFor(dislodged, 'DISBAND', { is_explicit: false }),
+    });
+    expect(screen.getByTestId('btn-order-disband')).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
 });
 
 describe('OrderTypeTabs in winter', () => {

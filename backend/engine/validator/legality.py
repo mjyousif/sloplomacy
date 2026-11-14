@@ -241,9 +241,11 @@ def check_unit_orders(
                             unit.power,
                         )
 
-            # Check Friendly Fire: supporting an attack on a province occupied by your own unit
+            # Check Friendly Fire: supporting an attack on a province occupied by your own unit.
+            # A support to hold (aux_unit_origin == target) attacks nothing, so it never counts.
             occupant = unit_by_prov.get(order.target)
-            if occupant and occupant.power == unit.power:
+            is_attack_support = order.aux_unit_origin != order.target
+            if is_attack_support and occupant and occupant.power == unit.power:
                 occ_order = orders.get(occupant.id)
                 if not occ_order or occ_order.order_type != OrderType.MOVE:
                     add_issue(

@@ -14,6 +14,7 @@ from domain.requests import (
     TimerVoteRequest,
 )
 from engine.adjudicator.resolver import adjudicate_turn
+from engine.adjudicator.territory import supply_center_owners
 from engine.order_utils import (
     create_default_orders,
     everyone_is_ready,
@@ -60,7 +61,7 @@ def timer_players(game: GameState) -> list[Power]:
     summary = GAME_SUMMARIES.get(game.game_id)
     if not summary or summary.is_sandbox or summary.status != "active":
         return []
-    in_game = {u.power for u in game.units} | set(game.ownership.values())
+    in_game = {u.power for u in game.units} | set(supply_center_owners(game.ownership).values())
     return [
         part.power
         for part in summary.participants.values()

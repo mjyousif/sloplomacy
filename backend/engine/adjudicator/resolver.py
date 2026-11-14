@@ -10,6 +10,7 @@ from engine.adjudicator.adjustments import build_adjustment_orders, resolve_adju
 from engine.adjudicator.context import ResolutionContext
 from engine.adjudicator.movement import build_movement_orders, resolve_movement
 from engine.adjudicator.retreats import build_retreat_orders, resolve_retreats
+from engine.adjudicator.territory import claim_occupied_territory, supply_center_owners
 from engine.adjudicator.translator import parse_diplomacy_phase, to_diplomacy_phase_code
 from engine.topology.graph import split_province_code
 from engine.topology.provinces import PROVINCES
@@ -30,9 +31,10 @@ def create_diplomacy_game(
     phase_code = to_diplomacy_phase_code(season, year, phase)
     game.set_current_phase(phase_code)
 
-    # Set supply centers first so adjustment calculations have accurate ownership
+    # Set supply centers first so adjustment calculations have accurate ownership. Claimed land
+    # that is not a supply center only colours the map, so the engine never counts it.
     centers_by_pwr: dict[str, list[str]] = {}
-    for prov, pwr in ownership.items():
+    for prov, pwr in supply_center_owners(ownership).items():
         p_name = pwr.value if hasattr(pwr, "value") else str(pwr)
         centers_by_pwr.setdefault(p_name, []).append(prov)
 
@@ -181,6 +183,9 @@ def adjudicate_turn(
         pwr = Power(p_name)
         for c in c_list:
             new_ownership[c] = pwr
+    # Land that is not a supply center goes to whoever stands in it after movement or retreats.
+    if phase_code.endswith(("M", "R")):
+        claim_occupied_territory(new_ownership, ctx.new_units)
 
     # Extract builds and retreats status for the NEXT phase
     game_state_data = game.get_state()

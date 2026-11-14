@@ -17,6 +17,7 @@ export interface ToolsSidebarProps {
   // Powers & Sovereignty
   activePower: Power;
   onSelectPower: (power: Power) => void;
+  /** Supply centers only, for the standings (see `supplyCenterOwners`). */
   ownership: Record<string, Power>;
   units: Unit[];
   finalizedPowers: Power[];
