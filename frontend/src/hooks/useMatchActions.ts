@@ -101,11 +101,11 @@ export function useMatchActions({
     }
   };
 
-  const handleConfirmAllHolds = async () => {
+  const handleClearAllOrders = async () => {
     if (!gameState) return;
     try {
       const res = await authedFetch(
-        `${API_BASE}/orders/confirm-all?game_id=${encodeURIComponent(draftGameId)}`,
+        `${API_BASE}/orders/clear-all?game_id=${encodeURIComponent(draftGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -115,9 +115,13 @@ export function useMatchActions({
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
+        setSelectedUnitId(null);
         triggerToast(
-          `Confirmed all current orders for ${POWER_METADATA[playerPower].shortName}.`,
+          `Cleared all orders for ${POWER_METADATA[playerPower].shortName}.`,
         );
+      } else {
+        const err = await res.json().catch(() => ({}));
+        triggerToast(err.detail || 'Orders could not be cleared.');
       }
     } catch (e) {
       console.error(e);
@@ -253,7 +257,7 @@ export function useMatchActions({
     setSanityModalOpen,
     sanityModalIssues,
     handleUpdateOrder,
-    handleConfirmAllHolds,
+    handleClearAllOrders,
     handleFinalizeClick,
     handleUnfinalizeClick,
     postTimerAction,

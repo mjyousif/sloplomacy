@@ -300,7 +300,7 @@ describe('MacroSidebar', () => {
     onHoverUnit: vi.fn(),
     onHighlightProvinces: vi.fn(),
     onUpdateOrder: vi.fn(),
-    onConfirmAllHolds: vi.fn(),
+    onClearAllOrders: vi.fn(),
     onFinalizeClick: vi.fn(),
     onUnfinalizeClick: vi.fn(),
     onAdjudicateTurn: vi.fn(),
@@ -320,7 +320,7 @@ describe('MacroSidebar', () => {
         }),
       );
 
-    it('puts the power, its counts, Confirm All, Finalize and Resolve in the peek', () => {
+    it('puts the power, its counts, Clear All, Finalize and Resolve in the peek', () => {
       const html = sheet({});
       const peek = html.slice(
         html.indexOf('bottom-sheet-peek'),
@@ -332,7 +332,7 @@ describe('MacroSidebar', () => {
       expect(peek.replace(/<!-- -->/g, '')).toContain(
         '2 units · 2 SCs · 1 unconfirmed',
       );
-      expect(peek).toContain('data-testid="btn-confirm-all"');
+      expect(peek).toContain('data-testid="btn-clear-all"');
       expect(peek).toContain('data-testid="btn-finalize-orders"');
       expect(peek).toContain('data-testid="btn-adjudicate-phase"');
     });

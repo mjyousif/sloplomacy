@@ -33,6 +33,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/order` | Submit or update an order for a single military unit or build slot | `SingleOrderUpdateRequest` | `GameState` |
 | `POST` | `/api/orders/batch` | Update multiple orders simultaneously (atomic: invalid order rejects with `400`) | `OrderSubmissionRequest` | `GameState` |
 | `POST` | `/api/orders/confirm-all` | Mark all default orders of a given power as explicitly confirmed | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/orders/clear-all` | Reset every order of a given power to the phase default and withdraw its finalization | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/finalize` | Pre-flight sanity check and finalize power's orders; auto-adjudicates when all are ready | `FinalizeRequest` | `FinalizeResponse` |
 | `POST` | `/api/unfinalize` | Unlock finalized orders for subsequent editing | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/simulate` | Execute non-destructive tactical preview resolution using official DATC rules | *None* | `SimulationResult` |
@@ -722,7 +723,7 @@ Establishes a persistent, low-latency WebSocket connection scoped to a specific 
   - Send `{"type": "refresh"}` -> Server runs `tick_timer` (resolving a deadline that has passed), then resends the latest authoritative `game_update`. The client sends this when its countdown reaches zero; `ping` does not run the clock.
 - **Close codes**: `4004` (no such game) and `4403` (passcode refused) are permanent, and the client does not reconnect. `1013` means try again later (the database could not be read).
 - **Automatic Broadcast Triggers**:
-  - Whenever an order is submitted or changed (`/api/order`, `/api/orders/batch`, `/api/orders/confirm-all`).
+  - Whenever an order is submitted or changed (`/api/order`, `/api/orders/batch`, `/api/orders/confirm-all`, `/api/orders/clear-all`).
   - Whenever a power finalizes or unfinalizes (`/api/finalize`, `/api/unfinalize`).
   - Whenever a turn is adjudicated (`/api/adjudicate`, `/api/sandbox/ai-step`).
   - Whenever a scenario is reset (`/api/scenario`).

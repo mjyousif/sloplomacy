@@ -27,7 +27,7 @@ import {
 } from './macro/AdminTurnClockSidebar';
 import { CollapsedRail } from './macro/CollapsedRail';
 import {
-  ConfirmAllButton,
+  ClearAllButton,
   OrderFooter,
   SurrenderButton,
 } from './macro/OrderFooter';
@@ -66,7 +66,7 @@ export interface MacroSidebarProps {
   onHoverUnit: (unitId: string | null) => void;
   onHighlightProvinces: (provinces: string[]) => void;
   onUpdateOrder: (order: Order) => void;
-  onConfirmAllHolds: () => void;
+  onClearAllOrders: () => void;
   onClearForeignPreMoves?: () => void;
   onFinalizeClick: () => void;
   onUnfinalizeClick: () => void;
@@ -85,7 +85,7 @@ export interface MacroSidebarProps {
   onToggleCollapse?: () => void;
   /**
    * 'panel' is the desktop sidebar. 'sheet' is the phone's pull-up order sheet, which shows the
-   * power, Confirm All and Finalize at its peek and the unit cards when pulled up.
+   * power, Clear All and Finalize at its peek and the unit cards when pulled up.
    */
   variant?: 'panel' | 'sheet';
   sheetSnap?: SheetSnap;
@@ -129,7 +129,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   onHoverUnit,
   onHighlightProvinces,
   onUpdateOrder,
-  onConfirmAllHolds,
+  onClearAllOrders,
   onFinalizeClick,
   onUnfinalizeClick,
   onAdjudicateTurn,
@@ -213,12 +213,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     isAdjustmentPhase,
     isRetreatPhase,
   });
-  const {
-    myBlockingIssues,
-    unconfirmedCount,
-    confirmedCount,
-    totalActionableCount,
-  } = progress;
+  const { myBlockingIssues, unconfirmedCount } = progress;
 
   const isSheet = variant === 'sheet';
   const [compactOrders, setCompactOrders] = useState<boolean>(() => {
@@ -283,13 +278,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
   // The pieces of the expanded panel. The desktop panel and the phone sheet arrange the same
   // pieces differently, so neither copies the other.
-  const confirmAllButton = (
-    <ConfirmAllButton
-      confirmedCount={confirmedCount}
-      totalActionableCount={totalActionableCount}
-      onConfirmAllHolds={onConfirmAllHolds}
-    />
-  );
+  const clearAllButton = <ClearAllButton onClearAllOrders={onClearAllOrders} />;
 
   const surrenderButton =
     isMultiplayer && onSurrenderClick ? (
@@ -423,7 +412,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
               data-testid="macro-sheet-controls"
               inert={locked || undefined}
             >
-              {confirmAllButton}
+              {clearAllButton}
               {footerActions}
             </div>
           </div>
@@ -506,7 +495,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
         {/* Quick Command Bar */}
         <div className={styles.macroQuickActions}>
-          {confirmAllButton}
+          {clearAllButton}
           {surrenderButton}
         </div>
 

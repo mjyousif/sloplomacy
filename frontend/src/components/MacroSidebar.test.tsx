@@ -20,7 +20,7 @@ const fns = () => ({
   onHoverUnit: vi.fn(),
   onHighlightProvinces: vi.fn(),
   onUpdateOrder: vi.fn(),
-  onConfirmAllHolds: vi.fn(),
+  onClearAllOrders: vi.fn(),
   onFinalizeClick: vi.fn(),
   onUnfinalizeClick: vi.fn(),
   onAdjudicateTurn: vi.fn(),
@@ -83,12 +83,12 @@ describe('MacroSidebar panel', () => {
     expect(screen.getByTestId('btn-adjudicate-phase')).toBeInTheDocument();
   });
 
-  it('wires Confirm All, Finalize and Resolve to their handlers', () => {
+  it('wires Clear All, Finalize and Resolve to their handlers', () => {
     const { props } = sidebar();
-    fireEvent.click(screen.getByTestId('btn-confirm-all'));
+    fireEvent.click(screen.getByTestId('btn-clear-all'));
     fireEvent.click(screen.getByTestId('btn-finalize-orders'));
     fireEvent.click(screen.getByTestId('btn-adjudicate-phase'));
-    expect(props.onConfirmAllHolds).toHaveBeenCalledTimes(1);
+    expect(props.onClearAllOrders).toHaveBeenCalledTimes(1);
     expect(props.onFinalizeClick).toHaveBeenCalledTimes(1);
     expect(props.onAdjudicateTurn).toHaveBeenCalledTimes(1);
   });
@@ -338,7 +338,7 @@ describe('MacroSidebar sheet', () => {
   const sheet = (over: Partial<MacroSidebarProps> = {}) =>
     sidebar({ variant: 'sheet', ...over });
 
-  it('shows the power, Confirm All and the footer at the peek, the cards in the body', () => {
+  it('shows the power, Clear All and the footer at the peek, the cards in the body', () => {
     const { container } = sheet();
     const peek = container.querySelector(
       '[data-testid="macro-sheet-peek"]',
@@ -351,11 +351,7 @@ describe('MacroSidebar sheet', () => {
     ) as HTMLElement;
     expect(
       Array.from(controls.children).map((c) => c.getAttribute('data-testid')),
-    ).toEqual([
-      'btn-confirm-all',
-      'btn-finalize-orders',
-      'btn-adjudicate-phase',
-    ]);
+    ).toEqual(['btn-clear-all', 'btn-finalize-orders', 'btn-adjudicate-phase']);
     const body = container.querySelector(
       '[data-testid="macro-sheet-body"]',
     ) as HTMLElement;

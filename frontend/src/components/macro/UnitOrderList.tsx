@@ -15,6 +15,7 @@ import {
   formatOrderSummary,
   getReachableDestinations,
   getValidRetreatDestinations,
+  isOrderIncomplete,
 } from '../../utils/orderHelpers';
 import type { OrderProgress } from '../../utils/orderProgress';
 import { BuildSlotCard } from './BuildSlotCard';
@@ -172,10 +173,14 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
 
       {myUnits.map((unit) => {
         const order = orders[unit.id];
-        const unitIssues = issuesByUnit[unit.id] || [];
+        const isSelected = unit.id === selectedUnitId;
+        // An order still being filled in raises no warning until the player moves off the unit.
+        const unitIssues =
+          isSelected && isOrderIncomplete(order)
+            ? []
+            : issuesByUnit[unit.id] || [];
         const hasError = unitIssues.some((i) => i.severity === 'error');
         const hasWarn = unitIssues.some((i) => i.severity === 'warning');
-        const isSelected = unit.id === selectedUnitId;
         const isHovered = unit.id === hoveredUnitId;
         const uOpts = unitOptions ? (unitOptions[unit.id] ?? null) : null;
         const summary = formatOrderSummary(order, provinces, unitsByProv);

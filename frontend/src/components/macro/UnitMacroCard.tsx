@@ -89,8 +89,14 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
   onHoverUnit,
   onHighlightProvinces,
   onUpdateOrder,
-  handleOrderTypeChange,
+  handleOrderTypeChange: changeOrderType,
 }) => {
+  // Picking an order type on a card also picks the unit, never toggling it off.
+  const handleOrderTypeChange = (u: Unit, type: OrderType) => {
+    if (!isSelected) onSelectUnit(u.id);
+    changeOrderType(u, type);
+  };
+
   const isCompactRow = compact && !isAdjustmentPhase && !isRetreatPhase;
   const isCardHoveredRef = useRef(false);
 
