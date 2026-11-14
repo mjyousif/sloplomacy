@@ -12,7 +12,9 @@
  *   --branch <dir>     Path to candidate dist/ directory (default: frontend/dist)
  *   --api-port <port>  Backend API port for /api proxy (default: 8000)
  *   --suite <name>     Built-in suite: tools (default), lobby, core
- *   --scenes <file>    Custom ESM module exporting { forcedSelectors?: string[], run(ctx) }
+ *   --scenes <file>    Custom ESM module exporting { forcedSelectors?: string[], includeSvg?: boolean, run(ctx) }
+ *                      `includeSvg: true` also records every element inside an <svg> (the map's
+ *                      pieces, provinces, labels, arrows), which are skipped by default.
  *   --mobile-only      Run only 390x844 touch (fast sensitivity check)
  *   --desktop-only     Run only 1440x900 mouse
  *   --help             Show this help
@@ -107,8 +109,22 @@ function serveDist(distDir, apiHost, apiPort) {
   });
 }
 
-async function captureDOM(page) {
-  return page.evaluate(() => {
+// One parsed object per distinct computed style for the whole run, shared by every snapshot.
+function shareStyles(pool, cache) {
+  return pool.map((key) => {
+    let obj = cache.get(key);
+    if (!obj) {
+      obj = JSON.parse(key);
+      cache.set(key, obj);
+    }
+    return obj;
+  });
+}
+
+async function captureDOM(page, includeSvg, cache) {
+  // Identical computed styles are sent once and shared, so a map with thousands of SVG elements
+  // that mostly look alike does not hold thousands of copies of ~350 properties per snapshot.
+  const { pool, els } = await page.evaluate((withSvg) => {
     for (const anim of document.getAnimations()) {
       if (anim.effect?.getComputedTiming().iterations === Infinity) {
         anim.currentTime = 0;
@@ -118,39 +134,56 @@ async function captureDOM(page) {
       }
     }
     const round = (n) => Math.round(n * 100) / 100;
-    const styleObj = (cs) => {
+    const pool = [];
+    const ids = new Map();
+    const intern = (cs) => {
       const out = {};
       for (let i = 0; i < cs.length; i++) {
         const prop = cs[i];
         if (prop.startsWith('-webkit-')) continue;
         out[prop] = cs.getPropertyValue(prop);
       }
-      return out;
+      const key = JSON.stringify(out);
+      let id = ids.get(key);
+      if (id === undefined) {
+        id = pool.length;
+        ids.set(key, id);
+        pool.push(key);
+      }
+      return id;
     };
-    const pseudoObj = (el, pseudo) => {
+    const pseudoId = (el, pseudo) => {
       const cs = getComputedStyle(el, pseudo);
       const content = cs.getPropertyValue('content');
       if (content === 'none' || content === 'normal') return null;
-      return styleObj(cs);
+      return intern(cs);
     };
     const all = Array.from(document.querySelectorAll('*')).filter(
-      (el) => !el.closest('svg') || el.tagName.toLowerCase() === 'svg',
+      (el) => withSvg || !el.closest('svg') || el.tagName.toLowerCase() === 'svg',
     );
-    return all.map((el) => {
+    const els = all.map((el) => {
       const r = el.getBoundingClientRect();
       return {
         tag: el.tagName,
         box: [round(r.x), round(r.y), round(r.width), round(r.height)],
         scroll: [el.scrollWidth, el.scrollHeight],
-        style: styleObj(getComputedStyle(el)),
-        before: pseudoObj(el, '::before'),
-        after: pseudoObj(el, '::after'),
+        style: intern(getComputedStyle(el)),
+        before: pseudoId(el, '::before'),
+        after: pseudoId(el, '::after'),
       };
     });
-  });
+    return { pool, els };
+  }, Boolean(includeSvg));
+  const styles = shareStyles(pool, cache);
+  return els.map((e) => ({
+    ...e,
+    style: styles[e.style],
+    before: e.before === null ? null : styles[e.before],
+    after: e.after === null ? null : styles[e.after],
+  }));
 }
 
-async function captureForcedStates(page, cdp, selectors) {
+async function captureForcedStates(page, cdp, selectors, cache) {
   if (!selectors.length) return [];
   const doc = await cdp.send('DOM.getDocument', { depth: 0 });
   const combinedSel = selectors.join(', ');
@@ -168,14 +201,16 @@ async function captureForcedStates(page, cdp, selectors) {
         cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: [pseudo] }),
       ),
     );
-    const batch = await page.evaluate(
+    const raw = await page.evaluate(
       ({ sel, p }) => {
         for (const anim of document.getAnimations()) {
           if (anim.effect?.getComputedTiming().iterations !== Infinity) {
             anim.finish();
           }
         }
-        return Array.from(document.querySelectorAll(sel)).map((el) => {
+        const pool = [];
+        const ids = new Map();
+        const items = Array.from(document.querySelectorAll(sel)).map((el) => {
           const cs = getComputedStyle(el);
           const out = {};
           for (let i = 0; i < cs.length; i++) {
@@ -183,11 +218,21 @@ async function captureForcedStates(page, cdp, selectors) {
             if (k.startsWith('-webkit-')) continue;
             out[k] = cs.getPropertyValue(k);
           }
-          return { tag: el.tagName, pseudo: p, style: out };
+          const key = JSON.stringify(out);
+          let id = ids.get(key);
+          if (id === undefined) {
+            id = pool.length;
+            ids.set(key, id);
+            pool.push(key);
+          }
+          return { tag: el.tagName, pseudo: p, style: id };
         });
+        return { pool, items };
       },
       { sel: combinedSel, p: pseudo },
     );
+    const styles = shareStyles(raw.pool, cache);
+    const batch = raw.items.map((it) => ({ ...it, style: styles[it.style] }));
     samples.push(...batch);
   }
   await Promise.all(
@@ -282,6 +327,7 @@ async function runScenes(browser, baseUrl, viewport, hasTouch, suite) {
   await cdp.send('DOM.enable');
   await cdp.send('CSS.enable');
 
+  const styleCache = new Map();
   const states = [];
   const forcedStates = [];
   const snap = async (name) => {
@@ -291,10 +337,10 @@ async function runScenes(browser, baseUrl, viewport, hasTouch, suite) {
       ),
     );
     console.log(`  [${viewport.width}x${viewport.height} touch=${hasTouch}] ${name}`);
-    states.push({ name, dom: await captureDOM(page) });
+    states.push({ name, dom: await captureDOM(page, suite.includeSvg, styleCache) });
     forcedStates.push({
       name,
-      samples: await captureForcedStates(page, cdp, suite.forcedSelectors || []),
+      samples: await captureForcedStates(page, cdp, suite.forcedSelectors || [], styleCache),
     });
   };
 
