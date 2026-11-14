@@ -5,6 +5,7 @@ import type {
   Unit,
   ValidationIssue,
 } from '../../types/diplomacy';
+import type { PressSectionProps } from './PressSection';
 
 export interface ToolsSidebarProps {
   collapsed: boolean;
@@ -44,6 +45,13 @@ export interface ToolsSidebarProps {
   open?: boolean;
   /** Drawer only: closes it (backdrop tap, Escape or the close button). */
   onClose?: () => void;
+  /**
+   * Standings only: the seat the player may send private press from. Each other country's row
+   * then gets a letter button that picks it as a recipient.
+   */
+  pressPower?: Power;
+  /** Press (chat) for a seated player of a multiplayer match. Left out, there is no section. */
+  press?: Omit<PressSectionProps, 'visible'>;
   /** The turn selector, pinned below the scrolling sections (not shown on the collapsed rail). */
   historyFooter?: React.ReactNode;
 }

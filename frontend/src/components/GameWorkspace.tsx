@@ -1,4 +1,5 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react';
+import { usePressSync } from '../hooks/usePress';
 import { useSidebarSelection } from '../hooks/useSidebarSelection';
 import type { TurnHistory } from '../hooks/useTurnHistory';
 import type {
@@ -173,6 +174,14 @@ export function GameWorkspace({
   const ignore = () => {};
   const { selectFromSidebar, selectFromMap, suppressUnitMenu } =
     useSidebarSelection(selectedUnitId, setSelectedUnitId);
+  // Press is for a seated player of a multiplayer match. The summary names the match even
+  // while the board shows the player's private sandbox copy of it.
+  const pressGameId =
+    viewMode === 'multiplayer' && lockedPower && !activeGameSummary?.is_sandbox
+      ? (activeGameSummary?.game_id ?? null)
+      : null;
+  const gameOver = Boolean(gameState.winner);
+  usePressSync({ gameId: pressGameId, power: lockedPower, gameOver });
   return (
     <main className={styles.warRoomWorkspace} data-testid="game-workspace">
       {/* LEFT SIDEBAR: Tools, Legend, Zoom, Standing, Sandbox & Admin */}
@@ -226,6 +235,21 @@ export function GameWorkspace({
         onLoadScenario={handleLoadScenario}
         onSaveSandboxClick={handleOpenSaveSandboxModal}
         adminOverrideActive={directEditActive}
+        press={
+          pressGameId && lockedPower
+            ? {
+                gameId: pressGameId,
+                power: lockedPower,
+                gameOver,
+                surrendered: (gameState.surrendered_powers ?? []).includes(
+                  lockedPower,
+                ),
+                provinces,
+                onHighlightProvinces: setHighlightedProvinces,
+                onProvincePicked: isCompact ? closeToolsDrawer : undefined,
+              }
+            : undefined
+        }
       />
 
       {/* CENTER: Europe Map */}
@@ -335,7 +359,7 @@ export function GameWorkspace({
         unitOptions={gameState.unit_options}
         isMultiplayer={viewMode === 'multiplayer'}
         isGameCreator={isGameCreator}
-        gameOver={Boolean(gameState.winner)}
+        gameOver={gameOver}
         directEditActive={directEditActive}
         directEdit={directEdit}
         turnClockSettings={turnClockSettings}

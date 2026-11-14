@@ -179,6 +179,24 @@ The turn selector's data, from `GET /api/history` and `GET /api/history/{index}`
 | `retreats` | `Record<string, Any>?` | Retreat options, for a Retreats phase. |
 | `resolution` | `SimulationResult` | How each order resolved (succeeded, bounced, cut, dislodged). |
 
+### 8. Press: `PressMessage`, `PressFeed`, `PressPostRequest`
+The chat of a multiplayer match, in `backend/domain/press.py` and `frontend/src/types/diplomacy.ts`. The server stores `PressMessage` with the real author and never sends it. What a client receives is `PressMessageView` (named `PressMessage` in TypeScript), made for one viewer by `security.press.view_of`:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `string` | Unique id. |
+| `seq` | `number` | Counts up within a game, so a client can ask for what it has not seen (`?after=`). |
+| `sender` | `Power?` | The author. `null` while an anonymous author is hidden from this viewer. |
+| `anonymous` | `boolean` | Sent unsigned. Still `true` once the author is revealed. |
+| `recipients` | `Power[]` | Empty for the public box. Otherwise the powers it was sent to, never the sender. |
+| `body` | `string` | Up to 1000 characters. |
+| `sent_at` | `string` | ISO time. |
+| `season`, `year`, `phase` | | The turn it was sent in. |
+
+`PressFeed` (`GET /api/press`) is `{ power, revealed, messages }`: the seat it was read as, whether the game is over and all press is shown, and the messages oldest first. `PressPostRequest` is `{ power, recipients, anonymous, body }`. `WebSocketPressUpdate` is `{ type: 'press', game_id, power, messages }`.
+
+Press is not part of `GameState`. See [Press in the API reference](../backend/api-reference.md#detailed-specifications-press).
+
 ---
 
 ## Lobby & Multiplayer Schemas

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
+from domain.press import PressMessage
 from engine.reachability import compute_unit_options
 from fastapi import HTTPException, status
 from storage import supabase
@@ -27,6 +28,10 @@ SAVES_RUNNING: dict[str, bool] = {}
 HISTORY_UNSAVED: set[str] = set()
 PRIVATE_SANDBOXES: dict[str, tuple[str, Power]] = {}
 PROFILE_NAMES: dict[str, str] = {}
+# Press (chat) per game, oldest first. Kept outside GameState so it is never broadcast with the
+# board, copied into history snapshots or sandboxes, or undone by a rollback. See storage/press.py.
+GAME_PRESS: dict[str, list[PressMessage]] = {}
+PRESS_UNSAVED: set[str] = set()
 
 
 def hydrate_summary_profiles(summary: MultiplayerGameSummary) -> MultiplayerGameSummary:
@@ -66,6 +71,8 @@ def evict_game(game_id: str) -> None:
     UNSAVED_GAMES.discard(game_id)
     HISTORY_UNSAVED.discard(game_id)
     PRIVATE_SANDBOXES.pop(game_id, None)
+    GAME_PRESS.pop(game_id, None)
+    PRESS_UNSAVED.discard(game_id)
     for sandbox_id, (match_id, _) in list(PRIVATE_SANDBOXES.items()):
         if match_id == game_id:
             evict_game(sandbox_id)

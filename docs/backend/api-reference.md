@@ -44,6 +44,8 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | Method | Endpoint | Description | Request Body | Response Model |
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/history` | List the game's resolved phases, oldest first (up to the last 30) | *None* | `List[TurnHistoryEntry]` |
+| `GET` | `/api/press` | The press (chat) the caller's seat may read, oldest first; `?after=<seq>` for newer messages only | *None* | `PressFeed` |
+| `POST` | `/api/press` | Send press from the caller's seat: public, a private thread, or an anonymous note | `PressPostRequest` | `PressMessageView` |
 | `GET` | `/api/history/{index}` | One resolved phase as it began, with every power's orders and how each resolved | *None* | `TurnRecord` |
 
 ### Sandbox & AI Planning
@@ -86,7 +88,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 ### Real-Time WebSocket Synchronization
 | Protocol | Endpoint | Description | Client Messages | Server Broadcasts |
 | :--- | :--- | :--- | :--- | :--- |
-| `WS` | `/ws/games/{game_id}` | Live room state sync (orders, finalization, adjudication, participants) | `{"type": "ping"}` / `{"type": "refresh"}` | `WebSocketGameUpdate` |
+| `WS` | `/ws/games/{game_id}` | Live room state sync (orders, finalization, adjudication, participants), and new press for a seated player | `{"type": "ping"}` / `{"type": "refresh"}` | `WebSocketGameUpdate`, `WebSocketPressUpdate` |
 | `WS` | `/ws/lobby` | Live multiplayer game browser sync | `{"type": "ping"}` / `{"type": "refresh"}` | `WebSocketLobbyUpdate` |
 
 ---
@@ -701,6 +703,82 @@ Applies an atomic batch of staged Direct-Edit board mutations (`units`, `ownersh
 ### 18c. `POST /api/admin/acknowledge`
 Marks one or more `AdminActionLogEntry` items in `GameState.admin_log` as acknowledged by the calling participant (`user_id`, `email`, and/or `power`) and persists the updated `GameState` to Supabase so the player is not re-prompted after a page reload or cold start.
 
+
+---
+
+## Detailed Specifications: Press
+
+Press is the chat of a multiplayer match. A message is one of three kinds, told apart by `recipients` and `anonymous`:
+
+| Kind | `recipients` | `anonymous` | Who reads it |
+| :--- | :--- | :--- | :--- |
+| Public | empty | either | Every seated player. With `anonymous`, nobody is told who wrote it. |
+| Private thread | one or more powers | `false` | The sender and the recipients. A thread is the set of powers in it, so everyone in it can answer. |
+| Anonymous note | one or more powers | `true` | The same readers, but the author is hidden, so it cannot be answered. |
+
+Rules that hold on both endpoints and on the socket:
+
+- **Seated players only.** The caller's seat comes from their token (`viewer_power_for`). `power` only picks among the caller's own seats; naming another power's seat answers `403`. A spectator, or a host without a seat, gets `403`, because what is returned depends on which power is asking.
+- **An anonymous author is hidden from everyone but themself**, the host included: `sender` is `null` in every other player's copy.
+- **Game over reveals everything.** Once the game has a winner, `revealed` is `true`, every seated player may read every message, and every `sender` is filled in.
+- Sandboxes have no press: a solo or saved sandbox answers `409`, a private sandbox copy (`sbx_`) `404`. A failed Supabase read answers `503`, never an empty feed.
+- A player who takes over a seat reads that seat's earlier press.
+
+### `GET /api/press`
+
+| Query | Description |
+| :--- | :--- |
+| `game_id` | The match. |
+| `power` | The caller's seat to read as. Optional for a signed-in player with one seat. |
+| `after` | Only messages with a `seq` above this. |
+
+#### Response (`PressFeed`):
+```json
+{
+  "power": "FRANCE",
+  "revealed": false,
+  "messages": [
+    {
+      "id": "5f0c…",
+      "seq": 3,
+      "sender": null,
+      "anonymous": true,
+      "recipients": ["FRANCE"],
+      "body": "England means to take the Channel.",
+      "sent_at": "2026-11-13T22:42:10+00:00",
+      "season": "Spring",
+      "year": 1901,
+      "phase": "Movement"
+    }
+  ]
+}
+```
+
+### `POST /api/press`
+
+#### Request (`PressPostRequest`):
+```json
+{ "power": "FRANCE", "recipients": ["GERMANY"], "anonymous": false, "body": "Support me into BUR?" }
+```
+
+The sender is `power`, which must be the caller's own seat. The sender is dropped from `recipients`, and the rest are stored once each. The message is stamped with the turn it was sent in, sent to the sockets of the players who may read it, and saved. The response is the sender's own copy (`PressMessageView`).
+
+| Status | When |
+| :--- | :--- |
+| `403` | The caller does not hold `power`'s seat, or that power has surrendered. |
+| `409` | The game is over and the message is private or anonymous (only signed public messages remain), or the game is a sandbox. |
+| `422` | The body is empty or longer than 1000 characters, or the only recipient is the sender. |
+| `429` | The seat sent more than 8 messages within 10 seconds. |
+
+### Press on the game socket (`WebSocketPressUpdate`)
+
+A seated player's game socket receives each new message it may read, as that player may see it. A socket without a seat is sent no press.
+
+```json
+{ "type": "press", "game_id": "mp_ab12cd", "power": "GERMANY", "messages": [ { "id": "…", "seq": 4, "sender": "FRANCE", "anonymous": false, "recipients": ["GERMANY"], "body": "…", "sent_at": "…", "season": "Spring", "year": 1901, "phase": "Movement" } ] }
+```
+
+`power` is the seat the socket connected as, so a client can drop a message meant for a seat it has since left.
 
 ---
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { pressStore } from '../lib/pressStore';
 import { getAuthHeaders } from '../lib/supabase';
 import type {
   WebSocketGameUpdate,
@@ -141,6 +142,7 @@ export function useDiplomacyWebSocket({
             ws.send(JSON.stringify({ type: 'auth', token }));
           }
           setIsConnected(true);
+          if (needsHandshake) pressStore.setSocketOpen(true);
 
           // Heartbeat ping every 25 seconds to keep proxies & Cloud Run alive
           heartbeat = window.setInterval(() => {
@@ -157,6 +159,9 @@ export function useDiplomacyWebSocket({
               onGameUpdateRef.current(data);
             } else if (data.type === 'lobby_update') {
               onLobbyUpdateRef.current(data);
+            } else if (data.type === 'press') {
+              // The store ignores press for any match or seat but the one on screen.
+              pressStore.addMessages(data.game_id, data.power, data.messages);
             }
           } catch (err) {
             console.error('Failed to parse WebSocket message:', err);
@@ -172,6 +177,7 @@ export function useDiplomacyWebSocket({
           if (wsRef.current !== ws) return;
           wsRef.current = null;
           setIsConnected(false);
+          pressStore.setSocketOpen(false);
           // Only attempt reconnect if not intentionally closed by navigation/unmount,
           // not suspended by background idle timeout, and not refused for a reason a retry cannot fix.
           if (
@@ -262,6 +268,7 @@ export function useDiplomacyWebSocket({
         ws.close(1000);
       }
       setIsConnected(false);
+      pressStore.setSocketOpen(false);
     };
   }, [viewMode, activeGameId, power, passcode, authKey]);
 

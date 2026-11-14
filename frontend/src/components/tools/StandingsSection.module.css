@@ -165,8 +165,77 @@
   }
 
   .power-card-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
     flex-shrink: 0;
     margin-left: 6px;
+  }
+
+  .press-pick-btn,
+  .press-pick-spacer {
+    width: 28px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .press-pick-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid #3a475c;
+    border-radius: 5px;
+    background: #141820;
+    color: #8b99ad;
+    cursor: pointer;
+    transition:
+      background 0.12s ease,
+      border-color 0.12s ease,
+      color 0.12s ease;
+  }
+
+  .press-pick-btn:hover:not(:disabled) {
+    border-color: #60a5fa;
+    color: #e2e8f0;
+  }
+
+  .press-pick-btn[data-active="true"] {
+    border-color: #60a5fa;
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+  }
+
+  .press-pick-btn:focus-visible {
+    outline: 2px solid #93c5fd;
+    outline-offset: 1px;
+  }
+
+  .press-pick-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .press-pick-unread {
+    position: absolute;
+    /* Inside the row's padding: the row clips what leaves it. */
+    top: -4px;
+    right: -5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    border-radius: 7px;
+    background: #d97706;
+    color: #fff;
+    font-size: 0.55rem;
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
   }
 
   .mini-status-tag {
@@ -193,9 +262,13 @@
     background: rgba(239, 68, 68, 0.2);
     color: #f87171;
   }
+}
 
-  .mini-status-tag[data-status="pending"] {
-    background: #283241;
-    color: #94a3b8;
+@layer compact {
+  /* A finger needs a bigger target than a pointer. */
+  :global([data-layout="compact"]) .press-pick-btn,
+  :global([data-layout="compact"]) .press-pick-spacer {
+    width: 40px;
+    height: 34px;
   }
 }

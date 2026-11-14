@@ -19,10 +19,15 @@ import {
 import { useEffect, useId, useRef, useState } from 'react';
 import type { DisplayPrefsSaveState } from '../hooks/useDisplayPrefs';
 import { type AuthUser, POWER_METADATA, type Power } from '../types/diplomacy';
+import { cx } from '../utils/cx';
 import type { DisplayPrefs } from '../utils/displayPrefs';
 import { BrandEmblem } from './BrandEmblem';
 import styles from './CompactTopBar.module.css';
 import { DisplaySettingsOptions } from './DisplaySettingsMenu';
+import {
+  PressUnreadBadge,
+  pressBadgeAnchor,
+} from './tools/press/PressUnreadBadge';
 
 export interface CompactTopBarProps {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -172,13 +177,14 @@ export function CompactTopBar({
           ref={toolsToggleRef}
           type="button"
           data-testid="compact-tools-toggle"
-          className={styles.compactBarIconBtn}
+          className={cx(styles.compactBarIconBtn, pressBadgeAnchor)}
           data-open={toolsOpen}
           onClick={onToggleTools}
           aria-label={toolsOpen ? 'Close tools' : 'Tools'}
           aria-expanded={toolsOpen}
         >
           <Menu size={20} />
+          {!toolsOpen && <PressUnreadBadge />}
         </button>
       )}
 

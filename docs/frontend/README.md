@@ -19,7 +19,7 @@ frontend/
     ├── styles/                  # Cascade layers (index.css), tokens.css, base.css, and layerOrder.test.ts
     ├── components/              # Top-level views, modals, headers, sidebars (with co-located *.module.css & *.test.ts[x])
     │   ├── map/                 # Interactive SVG board: hooks/, hud/, layers/ (orders/), and curve geometry
-    │   ├── tools/               # Left ToolsSidebar sections, collapsed rail, and standings sort hook
+    │   ├── tools/               # Left ToolsSidebar sections (incl. PressSection and press/), collapsed rail, and standings sort hook
     │   ├── macro/               # Right MacroSidebar order sheet, controls/, admin sidebars, and build slots
     │   ├── lobby/               # Match browser, host/join cards, power picker, and lobby dialogs
     │   ├── admin/               # Turn & clock control tab
@@ -27,7 +27,7 @@ frontend/
     │   └── pieces/              # Map piece geometry, outlines, marks, and styles/ (classic, seated, compact, flag, nameplate)
     ├── data/                    # Static SVG map paths (europeMapGeometry), piece placements (mapLayouts), text metrics
     ├── hooks/                   # App state hooks (session, sync, sandbox, match/seat actions, auth, layout, history, display prefs)
-    ├── lib/                     # Supabase client singleton & auth helpers
+    ├── lib/                     # Supabase client singleton & auth helpers, and the press (chat) store
     ├── test/                    # Vitest setup (jest-dom + cleanup) and shared map/macro/DOM fixtures
     ├── types/                   # TypeScript contracts synchronized with backend/domain/*.py
     └── utils/                   # Pure helpers: order builders/reachability/progress, history, rankings, sheet math, cx()
