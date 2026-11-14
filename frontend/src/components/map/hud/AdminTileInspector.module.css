@@ -120,7 +120,7 @@
     color: #94a3b8;
   }
 
-  [data-selected="true"] .admin-order-icon {
+  .admin-order-option[data-selected="true"] .admin-order-icon {
     color: #fecaca;
   }
 }

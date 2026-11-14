@@ -199,6 +199,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         ref={containerRef}
         className={styles.mapViewportContainer}
         data-testid="map-viewport-container"
+        data-map-viewport=""
       >
         {/* Live Hypothetical / Simulation Active Banner */}
         {(showSimulationOverlay || sandboxMode) &&

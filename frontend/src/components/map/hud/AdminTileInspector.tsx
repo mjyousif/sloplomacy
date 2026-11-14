@@ -364,6 +364,7 @@ export function AdminTileInspector({
                 </label>
                 <IconSelectDropdown<OrderType>
                   id="admin-inspector-order-type"
+                  classNames={{ option: styles.adminOrderOption }}
                   testId="admin-inspector-order-type"
                   value={order?.order_type ?? 'HOLD'}
                   options={ADMIN_ORDER_OPTIONS}

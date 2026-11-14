@@ -193,6 +193,18 @@ npm run build
 
 ---
 
+## Comparing Rendered Styles Between Two Builds
+
+`scripts/compare_styles.mjs` compares every element's box, scroll size, computed style and active `::before`/`::after`, plus forced `:hover`, `:active`, `:focus` and `:focus-visible`, between two built `frontend/dist` folders (for example `main` and your branch) at 1440x900 (mouse) and 390x844 (touch and mouse). Use it to prove a stylesheet refactor shows no visible change.
+
+```bash
+# Build main's dist first and keep it outside your worktree, start the backend on :8000, then:
+node scripts/compare_styles.mjs --main <main-dist-dir> --api-port 8000 --suite core
+node scripts/compare_styles.mjs --main <main-dist-dir> --api-port 8000 --scenes <scenes.mjs> --mobile-only
+```
+
+`--suite` picks a built-in set (`tools`, `lobby`, `core`); `--scenes` takes a module exporting `{ forcedSelectors, includeSvg, run({ page, baseUrl, viewport, hasTouch, snap }) }`. `includeSvg: true` also records everything inside the map's `<svg>`, which is skipped by default. Selectors in a scenes file must work on both builds, so use attributes, roles and text, not module class names.
+
 ## LLM-Driven E2E Interactive Testing
 
 Sloplomacy includes an interactive end-to-end (E2E) testing framework designed for AI coding agents and human developers. Unlike rigid visual regression tests that break when styling changes, this framework executes realistic user journeys, captures viewport screenshots at each step, logs runtime console/page telemetry, and allows visual and semantic inspection.
