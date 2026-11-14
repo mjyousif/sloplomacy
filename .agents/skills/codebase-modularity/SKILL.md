@@ -9,9 +9,9 @@ This repository enforces strict modularity and separation of concerns to prevent
 
 ## 1. File Size Guardrails & Decomposition Thresholds
 
-- **Target Size**: 150 – 350 lines per file for most business logic, components, routers, and test suites.
-- **Ceiling / Hard Threshold**: **500 lines**.
-  - Any new file exceeding 500 lines is a code smell and must be decomposed before merging.
+- **Target Size**: 150 – 350 lines per file for source files (up to 500 lines for test suites).
+- **Ceiling / Hard Threshold**: **500 lines** for source files; **750 lines** for test files (`test_*.py`, `*.test.*`, `*.spec.*`).
+  - Any new file exceeding its ceiling is a code smell and must be decomposed before merging.
   - Large declarative data tables (e.g. `frontend/src/data/europeMapGeometry.ts` holding SVG coordinates or `backend/engine/topology/provinces.py` holding the 76-province adjacency map) are explicit exceptions, provided they contain pure static declarations with zero tangled logic.
 - **The Ratchet Rule for Existing Large Files**:
   - Existing files that exceed the ceiling (e.g., `EuropeMap.tsx`, `App.tsx`, `MacroSidebar.tsx`) must NOT receive new monolithic blocks of logic.
@@ -58,7 +58,7 @@ This repository enforces strict modularity and separation of concerns to prevent
 
 ## 4. Test Suite Partitioning
 
-- Avoid single 1,000+ line test suites.
+- Keep test suites under **750 lines** (target ≤ 500 lines); never allow single 1,000+ line test suites.
 - Unit tests mirror the package they cover (`tests/unit/engine/validator/test_legality.py` for `engine/validator/legality.py`); integration tests go under `tests/integration/`, grouped by router or feature (`tests/integration/api/turn_clock/`).
 - Shared fixtures go in the folder's `conftest.py`, plain helpers in a `helpers.py` beside the tests. Don't copy a helper into two test files.
 - Each test file must pass on its own. Seed what it needs (lobbies, a fresh board) in a fixture instead of relying on tests that run earlier.
@@ -67,7 +67,7 @@ This repository enforces strict modularity and separation of concerns to prevent
 ## 5. Review Checklist for Agents
 
 Before concluding any refactor or feature:
-1. Run `git diff --stat origin/main` to inspect changed files.
-2. Check if any modified file exceeded 500 lines or grew substantially without modular extraction.
+1. Run `python3 scripts/check_file_limits.py` (also included in `./scripts/lint.sh`, `.\scripts\lint.ps1`, and CI) to verify no file exceeds the 500-line ceiling or grows past its legacy baseline. If a legacy file shrank, ratchet down its entry in `LEGACY_BASELINES` inside `scripts/check_file_limits.py` in the same PR.
+2. Run `git diff --stat origin/main` to inspect changed files.
 3. Ensure no new API endpoints were added directly to `backend/main.py`.
 4. Ensure new UI elements are extracted to subcomponents rather than inlined as hundreds of JSX lines in `App.tsx` or `EuropeMap.tsx`.

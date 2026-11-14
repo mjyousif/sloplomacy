@@ -54,6 +54,9 @@ jobs:
           npm run typecheck
         working-directory: frontend
 
+      - name: Codebase Modularity & File Size Audit
+        run: python scripts/check_file_limits.py
+
   backend-tests:
     name: Backend Tests (Pytest)
     runs-on: ubuntu-latest

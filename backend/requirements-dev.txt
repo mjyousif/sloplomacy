@@ -2,3 +2,4 @@
 # Runtime dependencies and test runners are inherited from requirements.txt.
 -r requirements.txt
 ruff>=0.17.4
+pre-commit>=4.0.0
