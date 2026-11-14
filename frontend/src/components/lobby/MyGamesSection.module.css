@@ -1,0 +1,185 @@
+@layer components {
+  .lobby-count-badge {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(200, 150, 62, 0.18);
+    color: #fde68a;
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+
+  .lobby-inline-auth-btn {
+    padding: 8px 16px;
+    border-radius: 7px;
+    background: #c8963e;
+    border: none;
+    color: #14171c;
+    font-weight: 700;
+    font-size: 0.78rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .my-games-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .my-game-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: #222836;
+    border: 1px solid #384152;
+  }
+
+  .my-game-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .my-game-name {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #f8fafc;
+  }
+
+  .my-game-turn-pill {
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: #171b24;
+    border: 1px solid #353e4f;
+    color: #fde68a;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .my-game-private-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(217, 119, 6, 0.2);
+    border: 1px solid #d97706;
+    color: #fde68a;
+    font-weight: 600;
+  }
+
+  .my-game-sandbox-tag {
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(139, 92, 246, 0.18);
+    color: #ddd6fe;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  .my-game-sub {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .my-power-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .my-finalize-status {
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .my-finalize-status[data-status="ready"] {
+    color: #34d399;
+  }
+
+  .my-finalize-status[data-status="pending"] {
+    color: #fbbf24;
+  }
+
+  .my-game-action-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .enter-match-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 15px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+    border: 1px solid #e2b55f;
+    color: #14171c;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .leave-campaign-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 13px;
+    border-radius: 8px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .leave-campaign-btn:hover {
+    background: rgba(239, 68, 68, 0.24);
+    border-color: #ef4444;
+    color: #ffffff;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .my-game-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  :global([data-layout="compact"]) .my-game-action-group {
+    flex-wrap: wrap;
+  }
+
+  :global([data-layout="compact"]) .my-game-action-group > button {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+
+  :global([data-layout="compact"]) .lobby-inline-auth-btn,
+  :global([data-layout="compact"]) .enter-match-btn,
+  :global([data-layout="compact"]) .leave-campaign-btn {
+    min-height: 44px;
+  }
+
+  :global([data-layout="compact"]) .lobby-count-badge,
+  :global([data-layout="compact"]) .my-game-turn-pill {
+    font-size: 0.75rem;
+  }
+}

@@ -28,7 +28,7 @@ describe('LobbyView hosting', () => {
     await user.type(nameField(), '  Vienna ');
     await user.click(
       screen.getByText('Germany', {
-        selector: '.lobby-create-card:not(.join-card) span',
+        selector: '[data-testid="create-campaign-card"] span',
       }),
     );
     await user.click(
@@ -193,7 +193,9 @@ describe('LobbyView joining with a code', () => {
     await user.type(idField(), ' mp_77 ');
     await user.type(screen.getByLabelText('Lobby Passcode'), ' pw ');
     await user.click(
-      screen.getByText('Turkey', { selector: '.join-card span' }),
+      screen.getByText('Turkey', {
+        selector: '[data-testid="join-with-code-card"] span',
+      }),
     );
     await user.click(
       screen.getByRole('button', { name: /Unlock & Claim Turkey/ }),

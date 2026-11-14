@@ -1,0 +1,213 @@
+@layer components {
+  .lobby-game-card {
+    padding: 18px;
+    border-radius: 10px;
+    background: #212734;
+    border: 1px solid #374051;
+  }
+
+  .lobby-game-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .lobby-game-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .lobby-game-title {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f8fafc;
+  }
+
+  .lobby-game-meta {
+    font-size: 0.76rem;
+    color: #9ca3af;
+  }
+
+  .game-id-mono {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.75rem;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.1);
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid rgba(56, 189, 248, 0.25);
+  }
+
+  .lobby-game-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .players-count-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #171b24;
+    border: 1px solid #363f52;
+    color: #cbd5e1;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .game-status-pill {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .game-status-pill[data-status="active"] {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+  }
+
+  .game-status-pill[data-status="waiting"] {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fde68a;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+  }
+
+  .game-status-pill[data-status="private"] {
+    background: rgba(217, 119, 6, 0.18);
+    border: 1px solid #d97706;
+    color: #fbbf24;
+  }
+
+  .lobby-powers-instruction {
+    font-size: 0.78rem;
+    color: #cbd5e1;
+    margin-bottom: 12px;
+  }
+
+  .lobby-claim-alert-flex {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .lobby-claim-leave-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: 6px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .lobby-claim-leave-btn:hover {
+    background: rgba(239, 68, 68, 0.28);
+    border-color: #ef4444;
+    color: #ffffff;
+  }
+
+  .lobby-power-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+
+  .power-slot-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 10px;
+    border-radius: 8px;
+    background: #f5efe2;
+    border: 2px solid;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.14s ease;
+  }
+
+  .power-slot-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .power-slot-btn[data-state="taken"] {
+    background: #272d3a;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .power-slot-top {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .power-slot-name {
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .power-slot-status {
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+
+  .slot-yours-label {
+    color: #15803d;
+  }
+
+  .slot-taken-label {
+    color: #9ca3af;
+  }
+
+  .slot-claim-label {
+    color: #1e293b;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .lobby-game-card {
+    padding: 14px 12px;
+  }
+
+  :global([data-layout="compact"]) .lobby-game-card-header,
+  :global([data-layout="compact"]) .lobby-game-badges {
+    flex-wrap: wrap;
+  }
+
+  :global([data-layout="compact"]) .lobby-power-slots-grid {
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  }
+
+  :global([data-layout="compact"]) .power-slot-btn {
+    min-height: 56px;
+  }
+
+  :global([data-layout="compact"]) .lobby-claim-leave-btn {
+    min-height: 44px;
+  }
+
+  :global([data-layout="compact"]) .players-count-pill,
+  :global([data-layout="compact"]) .game-status-pill,
+  :global([data-layout="compact"]) .lobby-claim-leave-btn,
+  :global([data-layout="compact"]) .power-slot-status {
+    font-size: 0.75rem;
+  }
+}

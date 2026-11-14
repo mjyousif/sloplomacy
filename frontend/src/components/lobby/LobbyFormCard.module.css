@@ -1,0 +1,126 @@
+@layer components {
+  .lobby-create-card {
+    background: #1a1f29;
+    border: 1px solid #363f52;
+    border-radius: 12px;
+    padding: 20px 22px;
+  }
+
+  .lobby-create-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fde68a;
+    margin-bottom: 8px;
+  }
+
+  .lobby-create-header h3 {
+    font-family: "Cinzel", serif;
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  .lobby-create-desc {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    margin: 0 0 16px;
+  }
+
+  .lobby-create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .privacy-toggle-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .privacy-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 7px;
+    border: 1px solid #353e4f;
+    background: #131720;
+    color: #94a3b8;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .privacy-toggle-btn[data-active="true"] {
+    background: #1e293b;
+    border-color: #fde68a;
+    color: #fde68a;
+  }
+
+  .field-hint {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    line-height: 1.3;
+  }
+
+  .lobby-create-submit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 16px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+    border: 1px solid #e5b964;
+    color: #14171c;
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .lobby-join-submit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 16px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+    border: 1px solid #38bdf8;
+    color: #e0f2fe;
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .lobby-join-submit-btn:hover:not(:disabled) {
+    border-color: #7dd3fc;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+  }
+
+  .lobby-join-submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .lobby-create-card {
+    padding: 16px 14px;
+  }
+
+  :global([data-layout="compact"]) .lobby-create-card[data-variant="join"] {
+    margin-top: 16px !important; /* overrides the inline 20px gap between the two forms */
+  }
+
+  :global([data-layout="compact"]) .lobby-create-submit-btn,
+  :global([data-layout="compact"]) .lobby-join-submit-btn,
+  :global([data-layout="compact"]) .privacy-toggle-btn {
+    min-height: 44px;
+  }
+}

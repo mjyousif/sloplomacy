@@ -6,6 +6,7 @@ import {
   type Power,
 } from '../../types/diplomacy';
 import fieldStyles from '../FormField.module.css';
+import styles from './LobbyFormCard.module.css';
 import { PowerPicker } from './PowerPicker';
 
 export interface CreateCampaignPanelProps {
@@ -39,17 +40,17 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
   handleCreateMatch,
 }) => {
   return (
-    <div className="lobby-create-card">
-      <div className="lobby-create-header">
+    <div className={styles.lobbyCreateCard} data-testid="create-campaign-card">
+      <div className={styles.lobbyCreateHeader}>
         <PlusCircle size={18} />
         <h3>Host New Multiplayer Game</h3>
       </div>
-      <p className="lobby-create-desc">
+      <p className={styles.lobbyCreateDesc}>
         Create a new 1901 European theater as either a public match or a private
         campaign with a secret passcode.
       </p>
 
-      <form onSubmit={handleCreateMatch} className="lobby-create-form">
+      <form onSubmit={handleCreateMatch} className={styles.lobbyCreateForm}>
         <div className={fieldStyles.lobbyField}>
           <label htmlFor="new-game-name">Campaign Name</label>
           <input
@@ -64,10 +65,11 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
         {/* Public vs Private Campaign Toggle */}
         <div className={fieldStyles.lobbyField}>
           <label>Campaign Access</label>
-          <div className="privacy-toggle-row">
+          <div className={styles.privacyToggleRow}>
             <button
               type="button"
-              className={`privacy-toggle-btn ${!isPrivate ? 'active' : ''}`}
+              data-active={!isPrivate ? 'true' : undefined}
+              className={styles.privacyToggleBtn}
               onClick={() => {
                 setIsPrivate(false);
                 setPasscode('');
@@ -78,7 +80,8 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
             </button>
             <button
               type="button"
-              className={`privacy-toggle-btn ${isPrivate ? 'active' : ''}`}
+              data-active={isPrivate ? 'true' : undefined}
+              className={styles.privacyToggleBtn}
               onClick={() => setIsPrivate(true)}
             >
               <Lock size={13} />
@@ -98,7 +101,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
               onChange={(e) => setPasscode(e.target.value)}
               required={isPrivate}
             />
-            <span className="field-hint">
+            <span className={styles.fieldHint}>
               Players will need to enter this passcode to join your private
               campaign.
             </span>
@@ -125,7 +128,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
 
         <button
           type="submit"
-          className="lobby-create-submit-btn"
+          className={styles.lobbyCreateSubmitBtn}
           disabled={creating}
         >
           <PlusCircle size={16} />

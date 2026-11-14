@@ -8,6 +8,7 @@ import {
   type Power,
 } from '../../types/diplomacy';
 import { PowerFlag } from '../PowerFlag';
+import styles from './GameRoomCard.module.css';
 
 export interface GameRoomCardProps {
   game: MultiplayerGameSummary;
@@ -32,43 +33,47 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
     : undefined;
 
   return (
-    <div key={game.game_id} className="lobby-game-card">
-      <div className="lobby-game-card-header">
+    <div
+      key={game.game_id}
+      className={styles.lobbyGameCard}
+      data-testid="lobby-game-card"
+    >
+      <div className={styles.lobbyGameCardHeader}>
         <div>
-          <div className="lobby-game-title-row">
-            <h3 className="lobby-game-title">{game.name}</h3>
+          <div className={styles.lobbyGameTitleRow}>
+            <h3 className={styles.lobbyGameTitle}>{game.name}</h3>
             {game.is_private && (
               <span
-                className="game-status-pill private"
+                className={styles.gameStatusPill}
+                data-status="private"
                 title="Private lobby protected by passcode"
               >
                 <Lock size={11} /> Private
               </span>
             )}
           </div>
-          <span className="lobby-game-meta">
+          <span className={styles.lobbyGameMeta}>
             {game.season} {game.year} ({game.phase}) · Hosted by{' '}
             {game.created_by} ·{' '}
-            <span className="game-id-mono">ID: {game.game_id}</span>
+            <span className={styles.gameIdMono}>ID: {game.game_id}</span>
           </span>
         </div>
-        <div className="lobby-game-badges">
-          <span className="players-count-pill">
+        <div className={styles.lobbyGameBadges}>
+          <span className={styles.playersCountPill}>
             <Users size={13} /> {claimedCount} / 7 Powers Claimed
           </span>
           <span
-            className={`game-status-pill ${
-              game.status === 'active' ? 'active' : 'waiting'
-            }`}
+            className={styles.gameStatusPill}
+            data-status={game.status === 'active' ? 'active' : 'waiting'}
           >
             {game.status === 'active' ? 'Active Match' : 'Recruiting Envoys'}
           </span>
         </div>
       </div>
 
-      <div className="lobby-powers-instruction">
+      <div className={styles.lobbyPowersInstruction}>
         {myExistingClaim ? (
-          <div className="lobby-claim-alert-flex">
+          <div className={styles.lobbyClaimAlertFlex}>
             <span>
               You are commanding{' '}
               <strong>
@@ -85,7 +90,7 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
             </span>
             <button
               type="button"
-              className="lobby-claim-leave-btn"
+              className={styles.lobbyClaimLeaveBtn}
               title="Surrender command and leave this match"
               onClick={() => onOpenSurrenderModal(game, myExistingClaim.power)}
             >
@@ -104,7 +109,7 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
         )}
       </div>
 
-      <div className="lobby-power-slots-grid">
+      <div className={styles.lobbyPowerSlotsGrid}>
         {ALL_POWERS.map((pwr) => {
           const meta = POWER_METADATA[pwr];
           const occupant = participants[pwr];
@@ -118,13 +123,8 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
               type="button"
               disabled={isTakenByOther || isBusy}
               onClick={() => handlePowerSlotClick(game, pwr)}
-              className={`power-slot-btn ${
-                isMine
-                  ? 'slot-mine'
-                  : isTakenByOther
-                    ? 'slot-taken'
-                    : 'slot-open'
-              }`}
+              data-state={isMine ? 'mine' : isTakenByOther ? 'taken' : 'open'}
+              className={styles.powerSlotBtn}
               style={{
                 borderColor: isMine
                   ? meta.color
@@ -134,12 +134,12 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
                 backgroundColor: isMine ? meta.lightBg : undefined,
               }}
             >
-              <div className="power-slot-top">
-                <span className="power-slot-crest">
+              <div className={styles.powerSlotTop}>
+                <span>
                   <PowerFlag power={pwr} width={18} height={12} />
                 </span>
                 <span
-                  className="power-slot-name"
+                  className={styles.powerSlotName}
                   style={{
                     color: isTakenByOther ? '#7a756c' : meta.color,
                   }}
@@ -147,19 +147,19 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
                   {meta.shortName}
                 </span>
               </div>
-              <div className="power-slot-status">
+              <div className={styles.powerSlotStatus}>
                 {isBusy ? (
                   'Entering...'
                 ) : isMine ? (
-                  <span className="slot-yours-label">
+                  <span className={styles.slotYoursLabel}>
                     ★ Your Country (Enter)
                   </span>
                 ) : isTakenByOther ? (
-                  <span className="slot-taken-label">
+                  <span className={styles.slotTakenLabel}>
                     <Lock size={11} /> {occupant.display_name}
                   </span>
                 ) : (
-                  <span className="slot-claim-label">
+                  <span className={styles.slotClaimLabel}>
                     {game.has_passcode ? (
                       <Lock size={11} />
                     ) : (

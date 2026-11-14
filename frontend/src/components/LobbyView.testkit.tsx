@@ -59,4 +59,6 @@ export const SANDBOX = game({
   participants: { ITALY: seat('ITALY', 'me') },
 });
 export const card = (name: string) =>
-  screen.getByText(name).closest('.lobby-game-card') as HTMLElement;
+  screen
+    .getByText(name)
+    .closest('[data-testid="lobby-game-card"]') as HTMLElement;

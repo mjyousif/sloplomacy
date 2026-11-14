@@ -6,6 +6,8 @@ import type {
   Power,
 } from '../../types/diplomacy';
 import { GameRoomCard } from './GameRoomCard';
+import sectionStyles from './LobbySection.module.css';
+import styles from './OpenLobbiesSection.module.css';
 
 export interface OpenLobbiesSectionProps {
   user: AuthUser | null;
@@ -35,15 +37,15 @@ export const OpenLobbiesSection: React.FC<OpenLobbiesSectionProps> = ({
   onOpenSurrenderModal,
 }) => {
   return (
-    <section className="lobby-section">
-      <div className="lobby-section-header">
-        <div className="lobby-section-title">
+    <section className={sectionStyles.lobbySection}>
+      <div className={sectionStyles.lobbySectionHeader}>
+        <div className={sectionStyles.lobbySectionTitle}>
           <Globe size={18} />
           <h2>Multiplayer Lobbies — Pick Your Country</h2>
         </div>
         <button
           type="button"
-          className="lobby-refresh-btn"
+          className={styles.lobbyRefreshBtn}
           onClick={onRefreshGames}
           disabled={loadingGames}
         >
@@ -52,10 +54,13 @@ export const OpenLobbiesSection: React.FC<OpenLobbiesSectionProps> = ({
         </button>
       </div>
 
-      <div className="lobby-cards-stack">
+      <div className={styles.lobbyCardsStack}>
         {multiplayerLobbies.length === 0 ? (
-          <div className="lobby-empty-box no-lobbies">
-            <Globe size={28} className="empty-globe-icon" />
+          <div
+            className={sectionStyles.lobbyEmptyBox}
+            data-variant="no-lobbies"
+          >
+            <Globe size={28} className={styles.emptyGlobeIcon} />
             <div>
               <strong>No Active Campaigns Right Now</strong>
               <p>

@@ -30,7 +30,7 @@ describe('JoinWithCodeCard', () => {
   it('is the card with the 20px gap above it', () => {
     const { view } = setup();
     const card = view.container.firstElementChild as HTMLElement;
-    expect(card.className).toBe('lobby-create-card join-card');
+    expect(card).toHaveAttribute('data-variant', 'join');
     expect(card.style.marginTop).toBe('20px');
     expect(
       screen.getByRole('heading', { name: 'Join Private Campaign' }),
@@ -70,7 +70,7 @@ describe('JoinWithCodeCard', () => {
       'placeholder',
       'Enter lobby passcode',
     );
-    const marked = document.querySelectorAll('.create-power-option.selected');
+    const marked = document.querySelectorAll('[data-selected="true"]');
     expect(marked).toHaveLength(1);
     expect(marked[0]).toHaveTextContent('Italy');
   });

@@ -32,7 +32,10 @@ describe('CreateCampaignPanel', () => {
   it('is only the Host card, with no Join card beside it', () => {
     const { view } = setup();
     expect(view.container.children).toHaveLength(1);
-    expect(view.container.firstElementChild).toHaveClass('lobby-create-card');
+    expect(view.container.firstElementChild).toHaveAttribute(
+      'data-testid',
+      'create-campaign-card',
+    );
     expect(screen.queryByText('Join Private Campaign')).not.toBeInTheDocument();
   });
 
@@ -68,23 +71,23 @@ describe('CreateCampaignPanel', () => {
 
   it('marks the active access button and the chosen country', () => {
     const pub = setup({ isPrivate: false, selectedCreatePower: 'ITALY' });
-    expect(screen.getByRole('button', { name: /Public Lobby/ })).toHaveClass(
-      'active',
-    );
+    expect(
+      screen.getByRole('button', { name: /Public Lobby/ }),
+    ).toHaveAttribute('data-active', 'true');
     expect(
       screen.getByRole('button', { name: /Private \(Passcode\)/ }),
-    ).not.toHaveClass('active');
-    const marked = document.querySelectorAll('.create-power-option.selected');
+    ).not.toHaveAttribute('data-active');
+    const marked = document.querySelectorAll('[data-selected="true"]');
     expect(marked).toHaveLength(1);
     expect(marked[0]).toHaveTextContent('Italy');
     pub.view.unmount();
     setup({ isPrivate: true });
     expect(
       screen.getByRole('button', { name: /Private \(Passcode\)/ }),
-    ).toHaveClass('active');
+    ).toHaveAttribute('data-active', 'true');
     expect(
       screen.getByRole('button', { name: /Public Lobby/ }),
-    ).not.toHaveClass('active');
+    ).not.toHaveAttribute('data-active');
   });
 
   it('picks a country and names it on the submit button', async () => {

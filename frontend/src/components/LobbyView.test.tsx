@@ -20,26 +20,23 @@ describe('LobbyView layout', () => {
   it('stacks the hero, both sections, both cards and the footer in order', () => {
     const { view } = setup();
     const root = view.container.firstElementChild as HTMLElement;
-    expect([...root.children].map((c) => c.className)).toEqual([
-      'lobby-hero',
-      'lobby-main-grid',
-      'lobby-footer-bar',
-    ]);
-    const grid = root.querySelector('.lobby-main-grid') as HTMLElement;
-    expect([...grid.children].map((c) => c.className)).toEqual([
-      'lobby-games-column',
-      'lobby-create-column',
-    ]);
     expect(
-      [
-        ...(grid.querySelector('.lobby-games-column') as HTMLElement).children,
-      ].map((c) => c.tagName),
+      [...root.children].map((c) => c.getAttribute('data-testid')),
+    ).toEqual(['lobby-hero', 'lobby-main-grid', 'lobby-footer']);
+    const grid = screen.getByTestId('lobby-main-grid');
+    expect(
+      [...grid.children].map((c) => c.getAttribute('data-testid')),
+    ).toEqual(['lobby-games-column', 'lobby-create-column']);
+    expect(
+      [...screen.getByTestId('lobby-games-column').children].map(
+        (c) => c.tagName,
+      ),
     ).toEqual(['SECTION', 'SECTION']);
     expect(
-      [
-        ...(grid.querySelector('.lobby-create-column') as HTMLElement).children,
-      ].map((c) => c.className),
-    ).toEqual(['lobby-create-card', 'lobby-create-card join-card']);
+      [...screen.getByTestId('lobby-create-column').children].map((c) =>
+        c.getAttribute('data-testid'),
+      ),
+    ).toEqual(['create-campaign-card', 'join-with-code-card']);
   });
 
   it('says "on the right" on a desktop and "below" on a phone', () => {
@@ -56,14 +53,16 @@ describe('LobbyView layout', () => {
   it('sorts games: my list gets mine and saved sandboxes, the lobbies skip sandboxes', () => {
     setup({ games: [OPEN, MINE, SANDBOX] });
     expect(screen.getByText('2 Games')).toBeInTheDocument();
-    const mine = document.querySelectorAll('.my-game-row');
+    const mine = screen.getAllByTestId('my-game-row');
     expect(
-      [...mine].map((r) => r.querySelector('.my-game-name')?.textContent),
+      mine.map(
+        (r) => r.querySelector('[data-testid="my-game-name"]')?.textContent,
+      ),
     ).toEqual(['My Table', 'Saved Study']);
     expect(
-      [...document.querySelectorAll('.lobby-game-card h3')].map(
-        (h) => h.textContent,
-      ),
+      screen
+        .getAllByTestId('lobby-game-card')
+        .map((c) => c.querySelector('h3')?.textContent),
     ).toEqual(['Open Table', 'My Table']);
   });
 
@@ -72,7 +71,7 @@ describe('LobbyView layout', () => {
     expect(
       screen.getByText('Account Required to Save & Track Campaigns'),
     ).toBeInTheDocument();
-    expect(document.querySelector('.my-game-row')).toBeNull();
+    expect(screen.queryByTestId('my-game-row')).toBeNull();
   });
 });
 
@@ -261,9 +260,7 @@ describe('LobbyView claiming a seat', () => {
 
   it('sends a leave press to the surrender modal with its game', async () => {
     const { props, user } = setup({ games: [MINE] });
-    await user.click(
-      screen.getByText('Leave', { selector: '.leave-campaign-btn span' }),
-    );
+    await user.click(screen.getByTestId('leave-campaign-btn'));
     expect(props.onOpenSurrenderModal).toHaveBeenCalledExactlyOnceWith(
       MINE,
       'AUSTRIA',

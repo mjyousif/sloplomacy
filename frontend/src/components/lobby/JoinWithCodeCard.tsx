@@ -6,6 +6,7 @@ import {
   type Power,
 } from '../../types/diplomacy';
 import fieldStyles from '../FormField.module.css';
+import styles from './LobbyFormCard.module.css';
 import { PowerPicker } from './PowerPicker';
 
 export interface JoinWithCodeCardProps {
@@ -35,17 +36,22 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
   handleJoinCodeSubmit,
 }) => {
   return (
-    <div className="lobby-create-card join-card" style={{ marginTop: '20px' }}>
-      <div className="lobby-create-header">
+    <div
+      className={styles.lobbyCreateCard}
+      data-variant="join"
+      data-testid="join-with-code-card"
+      style={{ marginTop: '20px' }}
+    >
+      <div className={styles.lobbyCreateHeader}>
         <KeyRound size={18} />
         <h3>Join Private Campaign</h3>
       </div>
-      <p className="lobby-create-desc">
+      <p className={styles.lobbyCreateDesc}>
         Have a Game ID and passcode from a host? Enter them below to claim your
         nation and join the war room.
       </p>
 
-      <form onSubmit={handleJoinCodeSubmit} className="lobby-create-form">
+      <form onSubmit={handleJoinCodeSubmit} className={styles.lobbyCreateForm}>
         <div className={fieldStyles.lobbyField}>
           <label htmlFor="join-code-id">Game ID</label>
           <input
@@ -86,7 +92,7 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
 
         <button
           type="submit"
-          className="lobby-join-submit-btn"
+          className={styles.lobbyJoinSubmitBtn}
           disabled={joinCodeLoading || !joinCodeGameId.trim()}
         >
           <KeyRound size={15} />

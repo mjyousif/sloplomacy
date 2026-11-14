@@ -1,6 +1,7 @@
 import { Compass, Crown, FlaskConical, LogIn, Sparkles } from 'lucide-react';
 import type React from 'react';
 import type { AuthUser } from '../../types/diplomacy';
+import styles from './LobbyHero.module.css';
 
 export interface LobbyHeroProps {
   user: AuthUser | null;
@@ -15,18 +16,18 @@ export const LobbyHero: React.FC<LobbyHeroProps> = ({
   onOpenAuth,
 }) => {
   return (
-    <section className="lobby-hero">
-      <div className="lobby-hero-content">
-        <div className="lobby-badge-row">
-          <span className="lobby-era-pill">
+    <section className={styles.lobbyHero} data-testid="lobby-hero">
+      <div>
+        <div className={styles.lobbyBadgeRow}>
+          <span className={styles.lobbyEraPill}>
             <Compass size={13} /> STANDARD 1901 DIPLOMACY
           </span>
-          <span className="lobby-era-pill gold">
+          <span className={styles.lobbyEraPill} data-variant="gold">
             <Sparkles size={13} /> DATC ADJUDICATOR
           </span>
         </div>
-        <h1 className="lobby-hero-title">The Chancellery of Europe</h1>
-        <p className="lobby-hero-subtitle">
+        <h1 className={styles.lobbyHeroTitle}>The Chancellery of Europe</h1>
+        <p className={styles.lobbyHeroSubtitle}>
           {user ? (
             <>
               Welcome back, Envoy <strong>{user.displayName}</strong>. Command
@@ -44,11 +45,11 @@ export const LobbyHero: React.FC<LobbyHeroProps> = ({
           )}
         </p>
 
-        <div className="lobby-hero-actions">
+        <div className={styles.lobbyHeroActions}>
           <button
             type="button"
             data-testid="btn-enter-sandbox"
-            className="lobby-primary-cta"
+            className={styles.lobbyPrimaryCta}
             onClick={onEnterSandbox}
           >
             <FlaskConical size={18} />
@@ -60,7 +61,7 @@ export const LobbyHero: React.FC<LobbyHeroProps> = ({
           {!user && (
             <button
               type="button"
-              className="lobby-secondary-cta"
+              className={styles.lobbySecondaryCta}
               onClick={() => onOpenAuth(undefined, 'signin')}
             >
               <LogIn size={17} />
@@ -71,9 +72,9 @@ export const LobbyHero: React.FC<LobbyHeroProps> = ({
       </div>
 
       {/* Feature Comparison Card */}
-      <div className="lobby-mode-comparison">
-        <div className="mode-card sandbox-card">
-          <div className="mode-card-header">
+      <div className={styles.lobbyModeComparison}>
+        <div className={styles.modeCard}>
+          <div className={styles.modeCardHeader}>
             <FlaskConical size={16} />
             <span>Solo Sandbox (Guest or Practice)</span>
           </div>
@@ -83,8 +84,8 @@ export const LobbyHero: React.FC<LobbyHeroProps> = ({
             <li>Simulate bounces, supports &amp; convoy chains</li>
           </ul>
         </div>
-        <div className="mode-card mp-card">
-          <div className="mode-card-header">
+        <div className={styles.modeCard} data-variant="mp">
+          <div className={styles.modeCardHeader}>
             <Crown size={16} />
             <span>Multiplayer Campaigns (Public &amp; Private)</span>
           </div>

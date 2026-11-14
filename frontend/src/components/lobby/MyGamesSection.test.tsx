@@ -32,11 +32,11 @@ const MINE = game({
 
 describe('MyGamesSection', () => {
   it('locks a guest out and offers sign-in, with no count', async () => {
-    const { props, user, view } = setup({ user: null });
+    const { props, user } = setup({ user: null });
     expect(
       screen.getByText('Account Required to Save & Track Campaigns'),
     ).toBeInTheDocument();
-    expect(view.container.querySelector('.lobby-count-badge')).toBeNull();
+    expect(screen.queryByTestId('my-games-count')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Sign In' }));
     expect(props.onOpenAuth).toHaveBeenCalledWith(undefined, 'signin');
   });
@@ -61,12 +61,15 @@ describe('MyGamesSection', () => {
     expect(screen.getByText('1 Game')).toBeInTheDocument();
     const row = screen
       .getByText('Alpha')
-      .closest('.my-game-row') as HTMLElement;
+      .closest('[data-testid="my-game-row"]') as HTMLElement;
     expect(within(row).getByText('Fall 1903 · Retreats')).toBeInTheDocument();
     expect(
       within(row).getByText(/Playing as Germany \(Locked\)/),
     ).toBeInTheDocument();
-    expect(within(row).getByText('✓ Orders Finalized')).toHaveClass('ready');
+    expect(within(row).getByText('✓ Orders Finalized')).toHaveAttribute(
+      'data-status',
+      'ready',
+    );
     expect(within(row).queryByText('Private')).not.toBeInTheDocument();
     expect(within(row).queryByText('Saved Sandbox')).not.toBeInTheDocument();
   });
@@ -91,12 +94,15 @@ describe('MyGamesSection', () => {
     expect(screen.getByText('2 Games')).toBeInTheDocument();
     const beta = screen
       .getByText('Beta')
-      .closest('.my-game-row') as HTMLElement;
-    expect(within(beta).getByText('● Orders Pending')).toHaveClass('pending');
+      .closest('[data-testid="my-game-row"]') as HTMLElement;
+    expect(within(beta).getByText('● Orders Pending')).toHaveAttribute(
+      'data-status',
+      'pending',
+    );
     expect(within(beta).getByText('Private')).toBeInTheDocument();
     const gamma = screen
       .getByText('Gamma')
-      .closest('.my-game-row') as HTMLElement;
+      .closest('[data-testid="my-game-row"]') as HTMLElement;
     expect(within(gamma).getByText('Saved Sandbox')).toBeInTheDocument();
   });
 
@@ -104,7 +110,7 @@ describe('MyGamesSection', () => {
     setup({ myGames: [MINE] });
     const chip = screen
       .getByText(/Playing as Germany/)
-      .closest('.my-power-chip') as HTMLElement;
+      .closest('[data-testid="my-power-chip"]') as HTMLElement;
     expect(chip.style.backgroundColor).not.toBe('');
     expect(chip.style.borderColor).not.toBe('');
     expect(chip.style.backgroundColor).not.toBe(chip.style.borderColor);
@@ -135,9 +141,11 @@ describe('MyGamesSection', () => {
     });
     const { props, user } = setup({ myGames: [MINE, lobby, sandbox] });
     const leave = (name: string) =>
-      (
-        screen.getByText(name).closest('.my-game-row') as HTMLElement
-      ).querySelector('.leave-campaign-btn') as HTMLElement;
+      within(
+        screen
+          .getByText(name)
+          .closest('[data-testid="my-game-row"]') as HTMLElement,
+      ).getByTestId('leave-campaign-btn');
     expect(leave('Alpha')).toHaveAttribute('title', 'Surrender & leave Alpha');
     expect(leave('Alpha')).toHaveTextContent('Surrender & Leave');
     expect(leave('Waiting')).toHaveAttribute('title', 'Leave Waiting lobby');

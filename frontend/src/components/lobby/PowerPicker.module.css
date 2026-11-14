@@ -1,0 +1,33 @@
+@layer components {
+  .create-power-picker {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .create-power-option {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 10px;
+    border-radius: 7px;
+    border: 1px solid #353e4f;
+    background: #222836;
+    color: #e2e8f0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .create-power-option[data-selected="true"] {
+    background: #f5efe2;
+    color: #14171c;
+    border-width: 2px;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .create-power-option {
+    min-height: 44px;
+  }
+}
