@@ -34,6 +34,7 @@ from storage.store import (
     cache_loaded_game,
     check_game_capacity,
     evict_game,
+    hydrate_summary_profiles,
     load_saved_game,
     persist_game,
     resolve_game,
@@ -55,6 +56,13 @@ async def sync_lobby_with_db() -> None:
     except SupabaseUnavailable:
         return
 
+    try:
+        profile_names = await supabase.load_profile_names_from_db()
+        if isinstance(profile_names, dict) and profile_names:
+            PROFILE_NAMES.update(profile_names)
+    except Exception as ex:
+        supabase.logger.debug("Profile refresh skipped during lobby sync: %s", ex)
+
     evicted = False
     for gid in list(GAME_SUMMARIES.keys()):
         if gid not in db_summaries and gid not in unsaved_at_read and gid not in UNSAVED_GAMES:
@@ -63,7 +71,7 @@ async def sync_lobby_with_db() -> None:
 
     for gid, summary in db_summaries.items():
         if gid not in GAMES:
-            GAME_SUMMARIES[gid] = summary
+            GAME_SUMMARIES[gid] = hydrate_summary_profiles(summary)
 
     if evicted:
         await manager.broadcast_lobby()

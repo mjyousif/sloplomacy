@@ -12,6 +12,7 @@ from storage.store import (
     GAME_PASSCODES,
     GAME_SUMMARIES,
     GAMES,
+    PROFILE_NAMES,
     is_multiplayer_match,
     resolve_game,
 )
@@ -184,6 +185,8 @@ def _strip_email_domain(value: str) -> str:
 
 def public_host_name(summary: MultiplayerGameSummary) -> str:
     """Return the host's public display name, never an email address."""
+    if summary.creator_id and summary.creator_id in PROFILE_NAMES:
+        return _strip_email_domain(PROFILE_NAMES[summary.creator_id]) or "Envoy"
     for p in summary.participants.values():
         if summary.creator_id and p.user_id == summary.creator_id and p.display_name:
             return _strip_email_domain(p.display_name)
@@ -205,7 +208,10 @@ def sanitize_summary_for_viewer(summary: MultiplayerGameSummary) -> MultiplayerG
         key: part.model_copy(
             update={
                 "email": "",
-                "display_name": _strip_email_domain(part.display_name) or "Envoy",
+                "display_name": _strip_email_domain(
+                    PROFILE_NAMES.get(part.user_id) or part.display_name
+                )
+                or "Envoy",
             }
         )
         for key, part in summary.participants.items()

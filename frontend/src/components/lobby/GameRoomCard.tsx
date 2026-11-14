@@ -35,8 +35,18 @@ export const GameRoomCard: React.FC<GameRoomCardProps> = ({
   const hostParticipant = game.creator_id
     ? Object.values(participants).find((p) => p.user_id === game.creator_id)
     : undefined;
+  const selfHostFallback =
+    user &&
+    game.creator_id === user.id &&
+    user.displayName &&
+    user.displayName !== 'Envoy'
+      ? user.displayName
+      : undefined;
   const rawHostName =
-    hostParticipant?.display_name || game.created_by || 'Host';
+    selfHostFallback ||
+    hostParticipant?.display_name ||
+    game.created_by ||
+    'Host';
   const hostDisplayName = rawHostName.includes('@')
     ? rawHostName.split('@')[0]
     : rawHostName;
