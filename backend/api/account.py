@@ -52,9 +52,6 @@ async def update_account_profile(
 
     for gid, summary in list(GAME_SUMMARIES.items()):
         changed = False
-        if summary.creator_id == current_user.user_id and summary.created_by != clean_name:
-            summary.created_by = clean_name
-            changed = True
         for part in summary.participants.values():
             if part.user_id == current_user.user_id and part.display_name != clean_name:
                 part.display_name = clean_name
