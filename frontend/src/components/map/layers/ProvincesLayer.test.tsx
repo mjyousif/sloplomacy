@@ -305,6 +305,43 @@ describe('ProvincesLayer', () => {
     expect(fillOf(step2Fleet.container, 'MAO')).toBe('#4ade80');
   });
 
+  it("draws a convoy that needs another power's fleet as an outline only, and none on a Hold", () => {
+    const army = unitAt('FRANCE', 'A', 'BRE');
+    const options = {
+      direct_moves: [],
+      active_convoys: [],
+      potential_convoys: ['GAS', 'MAR'],
+      own_fleet_convoys: ['GAS'],
+      convoy_targets: {},
+      valid_supports: [],
+    };
+    const view = draw({
+      selectedUnit: army,
+      selectedUnitOptions: options,
+      interactionMode: 'MOVE',
+    });
+    const path = (id: string) =>
+      view.container.querySelector(
+        `[data-testid="province-path"][data-province-id="${id}"]`,
+      );
+    expect(path('GAS')?.getAttribute('data-reachable-color')).toBe('blue');
+    expect(path('GAS')?.getAttribute('fill')).toBe('#38bdf8');
+    expect(path('MAR')?.getAttribute('data-reachable-color')).toBe('outline');
+    expect(path('MAR')?.getAttribute('stroke')).toBe('#0284c7');
+    expect(path('MAR')?.getAttribute('stroke-dasharray')).toBe('6 3');
+    expect(path('MAR')?.getAttribute('fill')).not.toBe('#38bdf8');
+
+    const hold = draw({
+      selectedUnit: army,
+      selectedUnitOptions: { ...options, active_convoys: ['PAR'] },
+      interactionMode: 'MOVE',
+      holdActive: true,
+    });
+    expect(
+      hold.container.querySelectorAll('[data-reachable-color]').length,
+    ).toBe(0);
+  });
+
   it('lights active convoys in solid green with reticles, potential/chained convoys in ocean blue, and support options in green', () => {
     const army = unitAt('FRANCE', 'A', 'BRE');
     const moveView = draw({
@@ -314,6 +351,7 @@ describe('ProvincesLayer', () => {
         direct_moves: ['PAR'],
         active_convoys: ['MAR'],
         potential_convoys: ['GAS', 'PAR'],
+        own_fleet_convoys: ['GAS', 'PAR'],
         convoy_targets: {},
         valid_supports: [],
       },

@@ -11,7 +11,11 @@ from typing import Any
 from domain.board import Unit, UnitType
 from domain.game_state import UnitMoveOptions
 from domain.orders import Order
-from engine.reachability.convoys import army_convoy_destinations, fleet_convoy_options
+from engine.reachability.convoys import (
+    army_convoy_destinations,
+    fleet_convoy_options,
+    own_fleet_convoy_destinations,
+)
 from engine.reachability.moves import direct_move_codes, retreat_codes
 from engine.reachability.sea_graph import stationed_sea_fleets
 from engine.reachability.supports import supportable_provinces, valid_supports
@@ -57,6 +61,9 @@ def compute_unit_options(
             active, potential = army_convoy_destinations(unit, units, orders, sea_fleets)
             opt.active_convoys = active
             opt.potential_convoys = potential
+            opt.own_fleet_convoys = [
+                c for c in own_fleet_convoy_destinations(unit, units, sea_fleets) if c in potential
+            ]
             reach_by_unit[unit.id] = direct_bases | set(active) | set(potential)
         else:
             armies, targets = fleet_convoy_options(unit, units, orders, sea_fleets)

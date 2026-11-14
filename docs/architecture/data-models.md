@@ -139,7 +139,7 @@ Complete server snapshot of a game session.
 | `retreats` | `Record<string, Any>?`| Valid retreat provinces per dislodged unit during Retreats. |
 | `timer` | `PhaseTimer?` | The match clock. `null` until the host starts it, in sandboxes, and once a power has won. |
 | `winner` | `Power?` | Set once a power has won. The clock stays on the deciding phase and no further turns resolve. |
-| `unit_options` | `Record<string, UnitMoveOptions>` | Server-computed move, convoy and support options per unit ID (`direct_moves`, `active_convoys`, `potential_convoys`, `convoyable_armies`, `convoy_targets`, `valid_supports`). Rebuilt on every refresh, on load, and from masked orders in `sanitize_game_state_for_viewer`; excluded from Supabase persistence (`DERIVED_STATE_FIELDS`). |
+| `unit_options` | `Record<string, UnitMoveOptions>` | Server-computed move, convoy and support options per unit ID (`direct_moves`, `active_convoys`, `potential_convoys`, `own_fleet_convoys`, `convoyable_armies`, `convoy_targets`, `valid_supports`). Rebuilt on every refresh, on load, and from masked orders in `sanitize_game_state_for_viewer`; excluded from Supabase persistence (`DERIVED_STATE_FIELDS`). |
 
 ### 6. `PhaseTimer`
 The clock of a live multiplayer match. Times are absolute, so it survives a restart. The rules are in `backend/engine/phase_timer.py`.

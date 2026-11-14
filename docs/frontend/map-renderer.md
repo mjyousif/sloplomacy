@@ -62,6 +62,8 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   │      - Semi-transparent fills colored by owning Great Power
   │      - Solid green fill + target reticle for direct moves, active convoy chains, and legal support targets
   │      - Dashed ocean-blue fill/stroke for potential convoy destinations and multi-ship convoy chains
+  │      - Convoys that need another power's fleet (not in `own_fleet_convoys`): dashed outline only, no fill
+  │      - No convoy destinations are lit while a Hold is the unit's chosen order
   │      - Amber/gold highlights for sidebar hover, validation warnings, and vacant Winter home SCs
   │
   ├── 4. Province Names Layer (MapNamesLayer.tsx: MapNamesLayer):

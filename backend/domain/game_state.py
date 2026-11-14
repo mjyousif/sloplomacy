@@ -75,13 +75,15 @@ class UnitMoveOptions(BaseModel):
     Everything one unit may be ordered to do this phase, computed by the engine.
 
     The client only displays it: green for `direct_moves` and `active_convoys`, ocean blue for
-    `potential_convoys`. In a live match it is rebuilt from the orders the viewer may see, so a
+    `potential_convoys`, and an outline only for the `potential_convoys` missing from
+    `own_fleet_convoys` (they need another power's fleet to agree). In a live match it is rebuilt from the orders the viewer may see, so a
     foreign fleet's hidden convoy order never turns a destination green.
     """
 
     direct_moves: list[str] = Field(default_factory=list)
     active_convoys: list[str] = Field(default_factory=list)
     potential_convoys: list[str] = Field(default_factory=list)
+    own_fleet_convoys: list[str] = Field(default_factory=list)
     convoyable_armies: ConvoyReach | None = None
     convoy_targets: dict[str, ConvoyReach] = Field(default_factory=dict)
     valid_supports: list[SupportOption] = Field(default_factory=list)
