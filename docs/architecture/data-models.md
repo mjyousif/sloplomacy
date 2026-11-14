@@ -194,7 +194,7 @@ interface MultiplayerGameSummary {
   season: string;
   year: number;
   phase: string;
-  created_by: string;
+  created_by?: string;
   creator_id?: string | null;
   created_at: string;
   last_moved_at?: string | null; // when a phase last resolved; null until one does
@@ -211,6 +211,8 @@ interface MultiplayerGameSummary {
 *Note on `is_draft`*: Ephemeral personal solo sandbox sessions created via `POST /api/games/solo-sandbox` set `is_draft: true`. Draft sandboxes are hidden from public lobby listings and `/ws/lobby` WebSocket feeds to preserve player isolation, and can be promoted to permanent saved sandboxes (`is_draft: false`) via `POST /api/games/save-sandbox`.
 
 *Note on `last_moved_at`*: `_execute_adjudication` sets it each time a phase resolves. It is saved inside the summary in `game_state`, so it needs no column.
+
+*Note on `created_by` and `PROFILE_NAMES`*: `created_by` defaults to `""` and is stripped for UUID creators when persisting to Supabase so creator emails are never stored in `summary` or `game_state.summary`. On read and viewer sanitization, `PROFILE_NAMES[creator_id]` (from `public.profiles`) is authoritative; if `PROFILE_NAMES` is unavailable, `public_host_name` falls back to non-email `created_by` or `"Unknown host"`, and participant `display_name` falls back to `"Envoy"`.
 
 ### `LobbyGameRow` and `LobbyBrowsePage`
 One public match in `GET /api/games/browse`, and a page of them. A row names players by display name only, never by email or user id.

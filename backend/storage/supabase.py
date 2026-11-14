@@ -388,7 +388,7 @@ async def save_game_to_db(
         "phase": state.phase,
         "season": state.season,
         "year": state.year,
-        "summary": summary.model_dump(mode="json") if summary else None,
+        "summary": _serialize_summary_for_db(summary) if summary else None,
         "game_state": {
             "state": state.model_dump(mode="json", exclude=DERIVED_STATE_FIELDS),
             "summary": _serialize_summary_for_db(summary) if summary else None,

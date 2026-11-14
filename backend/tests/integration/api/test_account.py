@@ -161,3 +161,77 @@ def test_serialize_summary_for_db_strips_uuid_display_name(clean_profiles):
     hydrate_summary_profiles(reloaded)
     assert reloaded.participants["FRANCE"].display_name == "Talleyrand"
     assert reloaded.participants["ITALY"].display_name == "GuestPlayer"
+
+
+def test_sync_lobby_with_db_uses_profile_ttl_cache():
+    import asyncio
+    from unittest.mock import AsyncMock, patch
+
+    from api import games as games_api
+
+    uid = "33333333-3333-3333-3333-333333333333"
+    load_summaries = AsyncMock(return_value={})
+    load_profiles = AsyncMock(return_value={uid: "CachedEnvoy"})
+
+    async def run_test():
+        games_api._PROFILES_REFRESHED_AT = 0.0
+        with (
+            patch.object(games_api.supabase, "load_all_summaries_from_db", load_summaries),
+            patch.object(games_api.supabase, "load_profile_names_from_db", load_profiles),
+        ):
+            await games_api.sync_lobby_with_db()
+            await games_api.sync_lobby_with_db()
+            assert load_profiles.await_count == 1
+            assert PROFILE_NAMES[uid] == "CachedEnvoy"
+
+            games_api._PROFILES_REFRESHED_AT -= games_api._PROFILES_TTL_SECONDS + 1.0
+            await games_api.sync_lobby_with_db()
+            assert load_profiles.await_count == 2
+
+    try:
+        asyncio.run(run_test())
+    finally:
+        PROFILE_NAMES.pop(uid, None)
+        games_api._PROFILES_REFRESHED_AT = 0.0
+
+
+def test_update_account_profile_does_not_overwrite_summary_created_by(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    from security.auth import AuthUser, get_current_user
+
+    uid = "44444444-4444-4444-4444-444444444444"
+    summary = MultiplayerGameSummary(
+        game_id="g_keep_created_by",
+        name="Keep Created By",
+        created_by="",
+        creator_id=uid,
+        created_at="2026-01-01T00:00:00Z",
+        participants={
+            "FRANCE": GameParticipant(
+                user_id=uid,
+                email="u@test.com",
+                display_name="OldName",
+                power=Power.FRANCE,
+                joined_at="2026-01-01T00:00:00Z",
+            )
+        },
+    )
+    GAME_SUMMARIES["g_keep_created_by"] = summary
+
+    monkeypatch.setattr("storage.supabase.upsert_profile_display_name", AsyncMock())
+    monkeypatch.setattr("storage.supabase.save_game_to_db", AsyncMock())
+    app.dependency_overrides[get_current_user] = lambda: AuthUser(
+        user_id=uid, email="u@test.com", display_name="OldName"
+    )
+    try:
+        client = TestClient(app)
+        resp = client.patch("/api/account/profile", json={"display_name": "NewName"})
+        assert resp.status_code == 200
+        assert summary.created_by == ""
+        assert summary.participants["FRANCE"].display_name == "NewName"
+        assert PROFILE_NAMES[uid] == "NewName"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        GAME_SUMMARIES.pop("g_keep_created_by", None)
+        PROFILE_NAMES.pop(uid, None)

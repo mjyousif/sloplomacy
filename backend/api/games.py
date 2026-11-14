@@ -1,5 +1,6 @@
 """Matches as a whole: the lobby list, creating, loading, deleting, and saving sandboxes."""
 
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -49,19 +50,27 @@ from ws.connection_manager import (
 router = APIRouter(tags=["Lobby & Match Management"])
 
 
+_PROFILES_TTL_SECONDS = 60.0
+_PROFILES_REFRESHED_AT: float = 0.0
+
+
 async def sync_lobby_with_db() -> None:
+    global _PROFILES_REFRESHED_AT
     unsaved_at_read = set(UNSAVED_GAMES)
     try:
         db_summaries = await supabase.load_all_summaries_from_db()
     except SupabaseUnavailable:
         return
 
-    try:
-        profile_names = await supabase.load_profile_names_from_db()
-        if isinstance(profile_names, dict) and profile_names:
-            PROFILE_NAMES.update(profile_names)
-    except Exception as ex:
-        supabase.logger.debug("Profile refresh skipped during lobby sync: %s", ex)
+    now = time.monotonic()
+    if _PROFILES_REFRESHED_AT == 0.0 or (now - _PROFILES_REFRESHED_AT) >= _PROFILES_TTL_SECONDS:
+        try:
+            profile_names = await supabase.load_profile_names_from_db()
+            if isinstance(profile_names, dict) and profile_names:
+                PROFILE_NAMES.update(profile_names)
+            _PROFILES_REFRESHED_AT = now
+        except Exception as ex:
+            supabase.logger.debug("Profile refresh skipped during lobby sync: %s", ex)
 
     evicted = False
     for gid in list(GAME_SUMMARIES.keys()):

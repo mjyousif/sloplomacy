@@ -148,3 +148,41 @@ def test_lobby_outage_is_not_retried_as_a_refused_query():
         assert mock_client.get.call_count == 1
 
     asyncio.run(run_test())
+
+
+def test_save_game_to_db_strips_creator_email_and_uuid_display_name_from_both_summaries():
+    from storage.supabase import save_game_to_db
+
+    uid = "11111111-1111-1111-1111-111111111111"
+    state = build_scenario("standard_1901", Power.FRANCE, "save_strip")
+    summary = MultiplayerGameSummary(
+        game_id="save_strip",
+        name="Strip Test",
+        status="waiting",
+        created_by="secret@example.com",
+        creator_id=uid,
+        created_at="2026-11-05T00:00:00Z",
+        participants={
+            "FRANCE": GameParticipant(
+                user_id=uid,
+                email="secret@example.com",
+                display_name="Freetvs",
+                power=Power.FRANCE,
+                joined_at="2026-11-05T00:00:00Z",
+            )
+        },
+    )
+
+    async def run_test():
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.post.return_value = httpx.Response(status_code=201, json=[])
+        env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+        with patch.dict(os.environ, env):
+            await save_game_to_db("save_strip", state, summary, client=mock_client)
+
+        payload = mock_client.post.call_args.kwargs["json"]
+        for saved_summary in (payload["summary"], payload["game_state"]["summary"]):
+            assert "created_by" not in saved_summary
+            assert "display_name" not in saved_summary["participants"]["FRANCE"]
+
+    asyncio.run(run_test())

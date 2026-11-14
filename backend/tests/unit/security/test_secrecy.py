@@ -256,3 +256,42 @@ def test_sanitize_game_state_strips_email_from_admin_log_actor(game):
     seen = sanitize_game_state_for_viewer(game, Power.GERMANY)
     assert seen.admin_log[0].actor == "alice"
     assert "@" not in seen.admin_log[0].actor
+
+
+def test_public_host_name_and_sanitize_summary_prefer_profile_names_and_fallback():
+    from domain.game_state import GameParticipant, MultiplayerGameSummary
+    from security.secrecy import public_host_name
+    from storage.store import PROFILE_NAMES
+
+    uid = "22222222-2222-2222-2222-222222222222"
+    summary = MultiplayerGameSummary(
+        game_id="g_profile_pref",
+        name="Profile Prefs",
+        created_by="",
+        creator_id=uid,
+        created_at="2026-11-13T00:00:00Z",
+        participants={
+            Power.FRANCE.value: GameParticipant(
+                user_id=uid,
+                email="secret@example.com",
+                display_name="",
+                power=Power.FRANCE,
+                joined_at="2026-11-13T00:00:00Z",
+            )
+        },
+    )
+
+    try:
+        PROFILE_NAMES.pop(uid, None)
+        assert public_host_name(summary) == "Unknown host"
+        no_profile = sanitize_summary_for_viewer(summary)
+        assert no_profile.created_by == "Unknown host"
+        assert no_profile.participants[Power.FRANCE.value].display_name == "Envoy"
+
+        PROFILE_NAMES[uid] = "Freetvs"
+        assert public_host_name(summary) == "Freetvs"
+        with_profile = sanitize_summary_for_viewer(summary)
+        assert with_profile.created_by == "Freetvs"
+        assert with_profile.participants[Power.FRANCE.value].display_name == "Freetvs"
+    finally:
+        PROFILE_NAMES.pop(uid, None)
