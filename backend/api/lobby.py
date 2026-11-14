@@ -8,6 +8,7 @@ from domain.game_state import MultiplayerGameSummary
 from domain.requests import LobbyBrowsePage
 from fastapi import APIRouter, Depends, HTTPException, Query
 from security.auth import AuthUser, get_current_user
+from security.secrecy import sanitize_summary_for_viewer
 from storage.lobby import browse, public_summaries, summaries_for_user
 
 router = APIRouter(tags=["Lobby & Match Management"])
@@ -62,4 +63,4 @@ async def list_my_games(current_user: AuthUser | None = Depends(get_current_user
     if not current_user:
         raise HTTPException(status_code=401, detail="Sign in to list your games.")
     await refresh_lobby_summaries()
-    return summaries_for_user(current_user.user_id)
+    return [sanitize_summary_for_viewer(s) for s in summaries_for_user(current_user.user_id)]

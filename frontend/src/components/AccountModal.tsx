@@ -102,7 +102,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         </div>
       )}
 
-      <form className={authStyles.authForm} onSubmit={handleSubmit}>
+      <form
+        className={authStyles.authForm}
+        onSubmit={handleSubmit}
+        autoComplete="off"
+      >
         <div className={authStyles.authField}>
           <span className={styles.accountFieldLabel}>
             Signed-in Email (Private)
@@ -117,10 +121,16 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         </div>
 
         <div className={authStyles.authField}>
-          <label htmlFor="account-username">Public Username</label>
+          <label htmlFor="account-handle">Public Username</label>
           <input
-            id="account-username"
+            id="account-handle"
+            name="public_handle"
             type="text"
+            autoComplete="off"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-bwignore="true"
+            data-form-type="other"
             placeholder="e.g. Metternich, IronChancellor"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}

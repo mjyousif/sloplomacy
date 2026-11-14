@@ -29,7 +29,7 @@ def resolve_admin_actor(
     x_user_id: str | None = None,
     x_user_email: str | None = None,
 ) -> tuple[str, str | None]:
-    """Return (actor_display, actor_id) for an admin action."""
+    """Return (actor_display, actor_id) for an admin action, never an email address."""
     summary = GAME_SUMMARIES.get(game_id)
     user_id = (
         (current_user.user_id if current_user else None)
@@ -37,14 +37,24 @@ def resolve_admin_actor(
         or x_user_id
         or (summary.creator_id if summary else None)
     )
-    email = (
+    raw_email = (
         (current_user.email if current_user else None)
         or req_email
         or x_user_email
         or (summary.created_by if summary else None)
-        or "commander@diplomacy.local"
     )
-    return email, user_id
+    actor_display = None
+    if summary:
+        for part in summary.participants.values():
+            if (user_id and part.user_id == user_id) or (
+                raw_email and part.email and part.email.lower() == raw_email.lower()
+            ):
+                if part.display_name:
+                    actor_display = part.display_name.split("@", 1)[0]
+                    break
+    if not actor_display:
+        actor_display = raw_email.split("@", 1)[0] if raw_email else "Commander"
+    return actor_display, user_id
 
 
 def compute_admin_orders(

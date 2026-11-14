@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
     sanitize_game_state_for_viewer,
+    sanitize_summary_for_viewer,
     viewer_power_for,
 )
 from storage import supabase
@@ -128,7 +129,7 @@ async def join_multiplayer_game(
             req.power,
         ),
         provinces=PROVINCES,
-        summary=summary,
+        summary=sanitize_summary_for_viewer(summary),
     )
 
 
@@ -237,7 +238,7 @@ async def leave_game(
     return GameBootstrapResponse(
         state=sanitize_game_state_for_viewer(game_state),
         provinces=PROVINCES,
-        summary=summary,
+        summary=sanitize_summary_for_viewer(summary),
     )
 
 
@@ -315,7 +316,7 @@ async def surrender_power(
     return GameBootstrapResponse(
         state=sanitize_game_state_for_viewer(game_state),
         provinces=PROVINCES,
-        summary=summary,
+        summary=sanitize_summary_for_viewer(summary),
     )
 
 

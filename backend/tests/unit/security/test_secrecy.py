@@ -12,7 +12,12 @@ from domain.requests import AuthUser
 from engine.adjudicator.resolver import adjudicate_turn
 from engine.order_utils import create_default_orders
 from engine.topology.provinces import get_initial_1901_units, get_initial_ownership
-from security.secrecy import caller_holds_seat, sanitize_game_state_for_viewer, viewer_power_for
+from security.secrecy import (
+    caller_holds_seat,
+    sanitize_game_state_for_viewer,
+    sanitize_summary_for_viewer,
+    viewer_power_for,
+)
 from storage.store import GAME_SUMMARIES
 
 GID = "mp_secrecy_unit"
@@ -215,3 +220,39 @@ def test_secret_foreign_convoy_in_single_or_mixed_chain_never_turns_active(game)
     assert "SPA" in seen_fra.unit_options["FRA_A_PIC"].potential_convoys
     assert "SPA" in seen_fra.unit_options["FRA_F_MAO"].convoy_targets["PIC"].chained
     assert seen_fra.unit_options["FRA_F_MAO"].convoy_targets["PIC"].direct == []
+
+
+def test_sanitize_summary_strips_all_emails_without_mutating_store(game):
+    raw = GAME_SUMMARIES[GID]
+    raw.creator_id = ALICE.user_id
+    raw.participants[Power.FRANCE.value].display_name = "AliceDisplay"
+
+    sanitized = sanitize_summary_for_viewer(raw)
+    assert sanitized.created_by == "AliceDisplay"
+    assert "@" not in sanitized.model_dump_json()
+    for part in sanitized.participants.values():
+        assert part.email == ""
+
+    # Original in-memory summary retains internal fields for legacy auth checks
+    assert raw.created_by == "alice@test.com"
+    assert raw.participants[Power.FRANCE.value].email == "alice@test.com"
+
+
+def test_sanitize_game_state_strips_email_from_admin_log_actor(game):
+    from domain.game_state import AdminActionLogEntry
+
+    game.admin_log = [
+        AdminActionLogEntry(
+            id="log1",
+            timestamp="2026-11-13T00:00:00Z",
+            actor="alice@test.com",
+            season="Spring",
+            year=1901,
+            phase="Movement",
+            summary_lines=["[ADMIN OVERRIDE] Test"],
+            acknowledged_by=[],
+        )
+    ]
+    seen = sanitize_game_state_for_viewer(game, Power.GERMANY)
+    assert seen.admin_log[0].actor == "alice"
+    assert "@" not in seen.admin_log[0].actor

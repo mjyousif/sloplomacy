@@ -110,12 +110,7 @@ export function TopHeader({
           title="Return to Main Lobby"
         >
           <BrandEmblem />
-          <div>
-            <h1 className={styles.brandTitle}>SLOPLOMACY 1901</h1>
-            <span className={styles.brandSubtitle}>
-              TACTICAL ENGINE &amp; MULTIPLAYER CHANCELLERY
-            </span>
-          </div>
+          <h1 className={styles.brandTitle}>SLOPLOMACY 1901</h1>
         </div>
 
         {/* Primary Navigation Switcher */}

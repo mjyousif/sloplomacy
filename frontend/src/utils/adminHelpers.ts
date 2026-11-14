@@ -51,7 +51,11 @@ export function checkIsGameCreator(
       return true;
     }
   } else {
-    if (gameSummary.created_by && gameSummary.created_by.includes('guest')) {
+    if (
+      gameSummary.creator_id === 'guest' ||
+      (gameSummary.created_by &&
+        gameSummary.created_by.toLowerCase().includes('guest'))
+    ) {
       return true;
     }
   }

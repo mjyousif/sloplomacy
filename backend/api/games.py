@@ -17,6 +17,7 @@ from security.secrecy import (
     caller_owns_saved_sandbox,
     require_view_access,
     sanitize_game_state_for_viewer,
+    sanitize_summary_for_viewer,
     viewer_power_for,
 )
 from storage import supabase
@@ -77,7 +78,7 @@ async def list_games():
     """Public matches only. Private campaigns and sandboxes are listed to their players by
     `GET /api/games/mine`."""
     await refresh_lobby_summaries()
-    return public_summaries()
+    return [sanitize_summary_for_viewer(s) for s in public_summaries()]
 
 
 async def refresh_lobby_summaries() -> None:
@@ -118,7 +119,7 @@ async def get_game_details(game_id: str):
     summary = GAME_SUMMARIES.get(game_id)
     if not summary:
         raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
-    return summary
+    return sanitize_summary_for_viewer(summary)
 
 
 @router.delete(
@@ -212,7 +213,7 @@ async def create_multiplayer_game(
     GAME_SUMMARIES[gid] = summary
     await persist_game(gid)
     await broadcast_lobby_update()
-    return summary
+    return sanitize_summary_for_viewer(summary)
 
 
 async def _try_load_draft_sandbox(
@@ -257,7 +258,7 @@ async def create_solo_sandbox(
             return GameBootstrapResponse(
                 state=game_state,
                 provinces=PROVINCES,
-                summary=summary,
+                summary=sanitize_summary_for_viewer(summary),
             )
 
     if current_user and current_user.user_id and current_user.user_id != "guest":
@@ -286,7 +287,7 @@ async def create_solo_sandbox(
                 return GameBootstrapResponse(
                     state=game_state,
                     provinces=PROVINCES,
-                    summary=summary,
+                    summary=sanitize_summary_for_viewer(summary),
                 )
 
     check_game_capacity()
@@ -330,7 +331,7 @@ async def create_solo_sandbox(
     return GameBootstrapResponse(
         state=game_state,
         provinces=PROVINCES,
-        summary=summary,
+        summary=sanitize_summary_for_viewer(summary),
     )
 
 
@@ -376,7 +377,7 @@ async def save_sandbox_to_account(
         sync_summary(gid)
         await persist_game(gid)
         await broadcast_lobby_update()
-        return existing_summary
+        return sanitize_summary_for_viewer(existing_summary)
 
     new_gid = f"saved_{uuid.uuid4().hex[:8]}"
     visible = sanitize_game_state_for_viewer(
@@ -416,7 +417,7 @@ async def save_sandbox_to_account(
     GAME_SUMMARIES[new_gid] = summary
     await persist_game(new_gid)
     await broadcast_lobby_update()
-    return summary
+    return sanitize_summary_for_viewer(summary)
 
 
 @router.get(
@@ -447,5 +448,5 @@ async def get_game(
     return GameBootstrapResponse(
         state=sanitize_game_state_for_viewer(game, viewer_power),
         provinces=PROVINCES,
-        summary=summary,
+        summary=sanitize_summary_for_viewer(summary) if summary else None,
     )

@@ -3,7 +3,7 @@ from collections import defaultdict
 from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
 from fastapi import WebSocket
-from security.secrecy import sanitize_game_state_for_viewer
+from security.secrecy import sanitize_game_state_for_viewer, sanitize_summary_for_viewer
 from storage.lobby import public_summaries
 from storage.store import GAME_SUMMARIES, GAMES, sync_summary
 
@@ -61,7 +61,9 @@ class ConnectionManager:
                 "type": "game_update",
                 "game_id": game_id,
                 "state": ws_state.model_dump(mode="json"),
-                "summary": summary.model_dump(mode="json") if summary else None,
+                "summary": sanitize_summary_for_viewer(summary).model_dump(mode="json")
+                if summary
+                else None,
             }
             try:
                 await ws.send_json(payload)
@@ -81,7 +83,9 @@ class ConnectionManager:
         payload = {
             "type": "lobby_update",
             # One payload goes to every socket, so it holds public matches only.
-            "games": [s.model_dump(mode="json") for s in public_summaries()],
+            "games": [
+                sanitize_summary_for_viewer(s).model_dump(mode="json") for s in public_summaries()
+            ],
         }
         dead: list[WebSocket] = []
         for ws in list(self.lobby_connections):

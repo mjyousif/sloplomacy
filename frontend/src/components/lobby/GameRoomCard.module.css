@@ -135,20 +135,28 @@
     gap: 6px;
     padding: 10px;
     border-radius: 8px;
-    background: #f5efe2;
-    border: 2px solid;
+    background: #222836;
+    border: 1px solid #353e4f;
+    color: #e2e8f0;
     text-align: left;
     cursor: pointer;
     transition: all 0.14s ease;
   }
 
   .power-slot-btn:hover:not(:disabled) {
+    background: #283041;
+    border-color: color-mix(in srgb, var(--power-accent, #64748b) 60%, #cbd5e1);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 
+  .power-slot-btn[data-state="mine"] {
+    border-width: 2px;
+  }
+
   .power-slot-btn[data-state="taken"] {
-    background: #272d3a;
+    background: #1b202b;
+    border-color: rgba(255, 255, 255, 0.08);
     cursor: not-allowed;
     opacity: 0.7;
   }
@@ -162,6 +170,15 @@
   .power-slot-name {
     font-size: 0.78rem;
     font-weight: 800;
+    color: #e2e8f0;
+  }
+
+  .power-slot-btn[data-state="mine"] .power-slot-name {
+    color: #f8fafc;
+  }
+
+  .power-slot-btn[data-state="taken"] .power-slot-name {
+    color: #7a756c;
   }
 
   .power-slot-status {
@@ -170,7 +187,7 @@
   }
 
   .slot-yours-label {
-    color: #15803d;
+    color: #4ade80;
   }
 
   .slot-taken-label {
@@ -178,7 +195,12 @@
   }
 
   .slot-claim-label {
-    color: #1e293b;
+    color: #94a3b8;
+    transition: color 0.14s ease;
+  }
+
+  .power-slot-btn:hover:not(:disabled) .slot-claim-label {
+    color: #cbd5e1;
   }
 }
 

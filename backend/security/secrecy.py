@@ -73,7 +73,7 @@ def verify_admin_access(
     if not is_creator:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Administrator access denied: Only the game creator ({summary.created_by}) can modify game state.",
+            detail="Administrator access denied: Only the game creator can modify game state.",
         )
 
 
@@ -178,17 +178,73 @@ def require_own_seat(game_id: str, power: Power, current_user: AuthUser | None) 
         )
 
 
+def _strip_email_domain(value: str) -> str:
+    return value.split("@", 1)[0] if "@" in value else value
+
+
+def public_host_name(summary: MultiplayerGameSummary) -> str:
+    """Return the host's public display name, never an email address."""
+    for p in summary.participants.values():
+        if summary.creator_id and p.user_id == summary.creator_id and p.display_name:
+            return _strip_email_domain(p.display_name)
+        if (
+            summary.created_by
+            and p.email
+            and p.email.lower() == summary.created_by.lower()
+            and p.display_name
+        ):
+            return _strip_email_domain(p.display_name)
+    if summary.created_by:
+        return _strip_email_domain(summary.created_by)
+    return "Unknown host"
+
+
+def sanitize_summary_for_viewer(summary: MultiplayerGameSummary) -> MultiplayerGameSummary:
+    """Return a copy of `summary` with all user email addresses stripped."""
+    sanitized_participants = {
+        key: part.model_copy(
+            update={
+                "email": "",
+                "display_name": _strip_email_domain(part.display_name) or "Envoy",
+            }
+        )
+        for key, part in summary.participants.items()
+    }
+    return summary.model_copy(
+        update={
+            "created_by": public_host_name(summary),
+            "participants": sanitized_participants,
+        }
+    )
+
+
+def _sanitize_admin_log(game: GameState) -> list:
+    if not game.admin_log:
+        return game.admin_log
+    return [
+        entry.model_copy(update={"actor": _strip_email_domain(entry.actor)})
+        if "@" in entry.actor
+        else entry
+        for entry in game.admin_log
+    ]
+
+
 def sanitize_game_state_for_viewer(
     game: GameState,
     viewer_power: Power | None = None,
 ) -> GameState:
     """Preserve simultaneous move secrecy (Fog of War) in active multiplayer matches."""
+    sanitized_log = _sanitize_admin_log(game)
     if not is_multiplayer_match(game.game_id) or game.winner:
+        if sanitized_log is not game.admin_log and any(
+            a is not b for a, b in zip(sanitized_log, game.admin_log, strict=False)
+        ):
+            return game.model_copy(update={"admin_log": sanitized_log})
         return game
 
     # A lobby nobody has joined yet, or a match that dropped back to one player, is "waiting"
     # but still has a player whose orders are theirs alone.
-    masked_game = game.model_copy()
+    masked_game = game.model_copy(update={"admin_log": sanitized_log})
     defaults = create_default_orders(game.units, game.phase, game.builds)
 
     if viewer_power:
