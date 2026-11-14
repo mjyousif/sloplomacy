@@ -36,7 +36,7 @@ test.describe('Scenario 06: Phone game screen', () => {
       await page.goto('/?view=sandbox');
       await page.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
 
-      await expect(page.locator('.diplomacy-app-shell')).toHaveAttribute('data-layout', 'compact');
+      await expect(page.locator('[data-layout]')).toHaveAttribute('data-layout', 'compact');
       await expect(page.locator('[data-testid="compact-top-bar"]')).toBeVisible();
       // Two lines on screen, but it still reads as one label.
       await expect(page.locator('[data-testid="compact-turn-text"]')).toContainText('Spring 1901 · Movement');

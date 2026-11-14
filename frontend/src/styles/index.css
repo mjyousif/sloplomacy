@@ -7,5 +7,3 @@
 
 @import "./tokens.css" layer(base);
 @import "./base.css" layer(base);
-@import "../App.css" layer(components);
-@import "../compact.css" layer(compact);

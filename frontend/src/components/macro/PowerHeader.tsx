@@ -13,6 +13,7 @@ import {
 } from '../../types/diplomacy';
 import type { OrderProgress } from '../../utils/orderProgress';
 import { PowerFlag } from '../PowerFlag';
+import chromeStyles from '../SidebarChrome.module.css';
 import styles from './PowerHeader.module.css';
 
 /** Civil Disorder, Finalized, the issue count or Drafting. */
@@ -227,7 +228,7 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
           <button
             type="button"
             data-testid="macro-sidebar-collapse-btn"
-            className="sidebar-collapse-toggle-btn"
+            className={chromeStyles.sidebarCollapseToggleBtn}
             onClick={onToggleCollapse}
             title="Collapse Tactical Orders"
           >

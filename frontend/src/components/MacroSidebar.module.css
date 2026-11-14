@@ -1,4 +1,13 @@
 @layer components {
+  .sidebar-footer-actions {
+    padding: 12px 14px;
+    background: #161920;
+    border-top: 1px solid #2e3543;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
   .macro-sidebar {
     height: 100%;
     background: #171b22;

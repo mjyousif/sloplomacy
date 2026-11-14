@@ -2,6 +2,7 @@ import { PanelLeftClose, Sliders, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef } from 'react';
 import { cx } from '../utils/cx';
+import chromeStyles from './SidebarChrome.module.css';
 import styles from './ToolsSidebar.module.css';
 import { CollapsedRail } from './tools/CollapsedRail';
 import { MapControlsSection } from './tools/MapControlsSection';
@@ -102,7 +103,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
             type="button"
             data-testid="tools-drawer-close-btn"
             className={cx(
-              'sidebar-collapse-toggle-btn',
+              chromeStyles.sidebarCollapseToggleBtn,
               styles.toolsDrawerCloseBtn,
             )}
             onClick={onClose}
@@ -114,7 +115,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           <button
             type="button"
             data-testid="tools-sidebar-collapse-btn"
-            className="sidebar-collapse-toggle-btn"
+            className={chromeStyles.sidebarCollapseToggleBtn}
             onClick={onToggleCollapse}
             title="Collapse Tools Sidebar"
           >

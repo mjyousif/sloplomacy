@@ -168,7 +168,7 @@ describe('ToolsSidebar', () => {
     // Admin collapsible section is no longer in ToolsSidebar
     expect(html).not.toContain('CREATOR ADMIN TOOLS');
 
-    const buttons = html.match(/sidebar-section-toggle-btn/g);
+    const buttons = html.match(/data-testid="sidebar-section-toggle"/g);
     // Legend, Powers, Sandbox -> 3 collapsible sections
     expect(buttons?.length).toBe(3);
   });

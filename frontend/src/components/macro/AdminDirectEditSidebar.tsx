@@ -16,6 +16,7 @@ import { BottomSheet } from '../BottomSheet';
 import type { DirectEditMapHandlers } from '../EuropeMap';
 import macroStyles from '../MacroSidebar.module.css';
 import { AdminTileInspector } from '../map/hud/AdminTileInspector';
+import chromeStyles from '../SidebarChrome.module.css';
 import { VersionBadge } from '../VersionBadge';
 import styles from './AdminDirectEditSidebar.module.css';
 import adminSidebarStyles from './AdminSidebar.module.css';
@@ -289,7 +290,7 @@ export function AdminDirectEditSidebar({
           <div className={macroStyles.macroUnitsScrollArea}>
             {inspectorContent}
           </div>
-          <div className="sidebar-version-footer">
+          <div className={chromeStyles.sidebarVersionFooter}>
             <VersionBadge />
           </div>
         </div>
@@ -347,7 +348,7 @@ export function AdminDirectEditSidebar({
           {onToggleCollapse && (
             <button
               type="button"
-              className="sidebar-collapse-toggle-btn"
+              className={chromeStyles.sidebarCollapseToggleBtn}
               onClick={onToggleCollapse}
               title="Collapse Right Sidebar"
               aria-label="Collapse Right Sidebar"
@@ -362,7 +363,7 @@ export function AdminDirectEditSidebar({
 
       <div className={macroStyles.macroUnitsScrollArea}>{inspectorContent}</div>
 
-      <div className="sidebar-version-footer">
+      <div className={chromeStyles.sidebarVersionFooter}>
         <VersionBadge />
       </div>
     </aside>

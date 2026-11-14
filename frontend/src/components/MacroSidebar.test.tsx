@@ -494,7 +494,7 @@ describe('MacroSidebar sheet', () => {
     expect(screen.queryByTestId('btn-admin-close')).toBeNull();
     expect(
       screen.getByRole('button', { name: 'Collapse Right Sidebar' }),
-    ).toHaveClass('sidebar-collapse-toggle-btn');
+    ).toBeInTheDocument();
 
     const yearInput = screen.getByTestId('input-admin-year');
     const yearUpBtn = screen.getByTestId('btn-admin-year-up');

@@ -1,0 +1,80 @@
+@layer components {
+  .sidebar-collapse-toggle-btn {
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid #364152;
+    border-radius: 6px;
+    color: #94a3b8;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+
+  .sidebar-collapse-toggle-btn:hover {
+    background: #2b3544;
+    color: #f1f5f9;
+    border-color: #64748b;
+  }
+
+  .sidebar-rail-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #8b99ad;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+
+  .sidebar-rail-btn:hover {
+    background: #232b38;
+    color: #f1f5f9;
+    border-color: #3b4759;
+  }
+
+  .sidebar-rail-btn.rail-toggle-btn {
+    background: #1c222c;
+    border-color: #2e3848;
+    color: #cbd5e1;
+  }
+
+  .sidebar-rail-btn.rail-toggle-btn:hover {
+    background: #2b3544;
+    border-color: #4b586e;
+  }
+
+  .rail-divider {
+    width: 22px;
+    height: 1px;
+    background: #262e3c;
+    margin: 6px 0;
+  }
+
+  .rail-spacer {
+    flex: 1;
+  }
+
+  .rail-expand-chevron {
+    opacity: 0.6;
+  }
+
+  .rail-expand-chevron:hover {
+    opacity: 1;
+  }
+
+  .sidebar-version-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 6px;
+    padding-top: 4px;
+  }
+}

@@ -24,10 +24,9 @@ describe('CollapsibleSection', () => {
     expect(html).toContain('badge');
     expect(html).toContain('4 items');
     expect(html).toContain('Legend Content');
-    expect(html).toContain('is-collapsible');
-    expect(html).toContain('is-open');
+    expect(html).toContain('data-open="true"');
     expect(html).toContain('aria-expanded="true"');
-    expect(html).toContain('sidebar-section-toggle-btn');
+    expect(html).toContain('data-testid="sidebar-section-toggle"');
   });
 
   it('renders collapsed when defaultOpen is false', () => {
@@ -47,7 +46,7 @@ describe('CollapsibleSection', () => {
     );
 
     expect(html).toContain('Closed Section');
-    expect(html).toContain('is-collapsed');
+    expect(html).toContain('data-open="false"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('Hidden Content');
   });
@@ -72,9 +71,8 @@ describe('CollapsibleSection', () => {
     expect(html).toContain('Actions &amp; Camera');
     expect(html).toContain('105%');
     expect(html).toContain('Action Controls');
-    expect(html).toContain('is-static');
-    expect(html).not.toContain('sidebar-section-toggle-btn');
-    expect(html).toContain('sidebar-section-static-header');
+    expect(html).not.toContain('data-testid="sidebar-section-toggle"');
+    expect(html).toContain('data-testid="sidebar-section-static-header"');
   });
 
   it('renders with custom icon and extra class names', () => {
