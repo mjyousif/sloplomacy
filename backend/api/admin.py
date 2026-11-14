@@ -16,6 +16,7 @@ from domain.game_state import (
 )
 from domain.requests import (
     AdminAcknowledgeRequest,
+    AdminAcknowledgeResponse,
     AdminRollbackRequest,
     AdminSetTurnRequest,
     AdminStatusResponse,
@@ -326,6 +327,7 @@ async def admin_set_turn(
     description="Unlock and unfinalize orders for all Great Powers simultaneously (creator only).",
 )
 async def admin_unfinalize_all(
+    req: AdminAcknowledgeRequest | None = None,
     game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
     x_user_id: str | None = Header(default=None),
@@ -343,7 +345,12 @@ async def admin_unfinalize_all(
     refresh_diagnostics_and_simulation(game)
 
     actor_email, actor_id = resolve_admin_actor(
-        gid, current_user, None, None, x_user_id, x_user_email
+        gid,
+        current_user,
+        req.user_id if req else None,
+        req.email if req else None,
+        x_user_id,
+        x_user_email,
     )
     await record_admin_history_and_log(
         gid,
@@ -358,6 +365,7 @@ async def admin_unfinalize_all(
 
 @router.post(
     "/api/admin/acknowledge",
+    response_model=AdminAcknowledgeResponse,
     summary="Acknowledge Admin Actions",
     description="Mark admin action log entries as acknowledged for the current player.",
 )

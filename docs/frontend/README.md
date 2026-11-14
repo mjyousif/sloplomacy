@@ -17,6 +17,7 @@ frontend/
     ├── App.tsx                  # Root state coordinator and viewMode router ('lobby' | 'multiplayer' | 'sandbox')
     ├── App.module.css           # The app shell, loading and error screens (components / compact layers)
     ├── styles/                  # Cascade layers (index.css), tokens.css, base.css, and layerOrder.test.ts
+    ├── api/                     # Auth-aware transport (client.ts) + generated OpenAPI/WS types & SDK (schema.gen.ts, sdk.gen.ts)
     ├── components/              # Top-level views, modals, headers, sidebars (with co-located *.module.css & *.test.ts[x])
     │   ├── map/                 # Interactive SVG board: hooks/, hud/, layers/ (orders/), and curve geometry
     │   ├── tools/               # Left ToolsSidebar sections, collapsed rail, and standings sort hook
@@ -29,7 +30,7 @@ frontend/
     ├── hooks/                   # App state hooks (session, sync, sandbox, match/seat actions, auth, layout, history, display prefs)
     ├── lib/                     # Supabase client singleton & auth helpers
     ├── test/                    # Vitest setup (jest-dom + cleanup) and shared map/macro/DOM fixtures
-    ├── types/                   # TypeScript contracts synchronized with backend/domain/*.py
+    ├── types/                   # Re-exports backend DTOs from api/schema.gen.ts plus frontend POWER_METADATA & AuthUser
     └── utils/                   # Pure helpers: order builders/reachability/progress, history, rankings, sheet math, cx()
 ```
 

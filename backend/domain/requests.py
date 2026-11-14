@@ -1,5 +1,7 @@
 """Request and response bodies for the HTTP API and WebSocket messages."""
 
+from typing import Literal
+
 from domain.board import Power, ProvinceInfo, Unit, UnitType
 from domain.game_state import GameState, MultiplayerGameSummary, TimerChoice, TurnHistoryEntry
 from domain.issues import ValidationIssue
@@ -183,15 +185,48 @@ class AdminStatusResponse(BaseModel):
 
 
 class WebSocketGameUpdate(BaseModel):
-    type: str = "game_update"
+    type: Literal["game_update"] = "game_update"
     game_id: str
     state: GameState
     summary: MultiplayerGameSummary | None = None
 
 
 class WebSocketLobbyUpdate(BaseModel):
-    type: str = "lobby_update"
+    type: Literal["lobby_update"] = "lobby_update"
     games: list[MultiplayerGameSummary]
+
+
+class WebSocketPong(BaseModel):
+    type: Literal["pong"] = "pong"
+
+
+class WebSocketAuthMessage(BaseModel):
+    type: Literal["auth"] = "auth"
+    token: str | None = None
+
+
+class WebSocketPingMessage(BaseModel):
+    type: Literal["ping"] = "ping"
+
+
+class WebSocketRefreshMessage(BaseModel):
+    type: Literal["refresh"] = "refresh"
+
+
+class DeleteGameResponse(BaseModel):
+    status: str
+    game_id: str
+
+
+class AdminAcknowledgeResponse(BaseModel):
+    ok: bool
+    acknowledged_by: str
+
+
+class AcknowledgeGameOverResponse(BaseModel):
+    ok: bool
+    game_over_seen_at: str | None = None
+    summary: MultiplayerGameSummary | None = None
 
 
 class GameBootstrapResponse(BaseModel):

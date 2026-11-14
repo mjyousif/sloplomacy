@@ -24,9 +24,11 @@ if (-not $FrontendOnly) {
     Write-Host "`n[1/2] Linting Python backend (Ruff)..." -ForegroundColor Cyan
     Push-Location $RepoRoot
     try {
-        & $PythonCmd -m ruff check backend/
+        & $PythonCmd -m ruff check backend/ scripts/generate_api.py
         if ($LASTEXITCODE -ne 0) { throw "Ruff check failed with code $LASTEXITCODE" }
-        Write-Host "[OK] Backend lint checks passed!" -ForegroundColor Green
+        & $PythonCmd scripts/generate_api.py --check
+        if ($LASTEXITCODE -ne 0) { throw "API codegen drift check failed with code $LASTEXITCODE" }
+        Write-Host "[OK] Backend lint and API codegen checks passed!" -ForegroundColor Green
     } finally {
         Pop-Location
     }

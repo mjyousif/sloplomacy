@@ -5,6 +5,7 @@ import hmac
 
 from api.turns import tick_timer
 from domain.board import Power
+from domain.requests import WebSocketGameUpdate, WebSocketLobbyUpdate, WebSocketPong
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials
@@ -106,19 +107,18 @@ async def ws_game_endpoint(
         summary = GAME_SUMMARIES.get(game_id)
         sanitized = sanitize_game_state_for_viewer(game, power_enum)
         await websocket.send_json(
-            {
-                "type": "game_update",
-                "game_id": game_id,
-                "state": sanitized.model_dump(mode="json"),
-                "summary": summary.model_dump(mode="json") if summary else None,
-            }
+            WebSocketGameUpdate(
+                game_id=game_id,
+                state=sanitized,
+                summary=summary,
+            ).model_dump(mode="json")
         )
         while True:
             data = await websocket.receive_json()
             if isinstance(data, dict):
                 msg_type = data.get("type")
                 if msg_type == "ping":
-                    await websocket.send_json({"type": "pong"})
+                    await websocket.send_json(WebSocketPong().model_dump(mode="json"))
                 elif msg_type == "refresh":
                     g = GAMES.get(game_id)
                     s = GAME_SUMMARIES.get(game_id)
@@ -126,12 +126,11 @@ async def ws_game_endpoint(
                         await tick_timer(g)
                         g_sanitized = sanitize_game_state_for_viewer(g, power_enum)
                         await websocket.send_json(
-                            {
-                                "type": "game_update",
-                                "game_id": game_id,
-                                "state": g_sanitized.model_dump(mode="json"),
-                                "summary": s.model_dump(mode="json") if s else None,
-                            }
+                            WebSocketGameUpdate(
+                                game_id=game_id,
+                                state=g_sanitized,
+                                summary=s,
+                            ).model_dump(mode="json")
                         )
     except WebSocketDisconnect:
         manager.disconnect_game(game_id, websocket)
@@ -146,25 +145,19 @@ async def ws_lobby_endpoint(websocket: WebSocket):
         for gid in list(GAME_SUMMARIES.keys()):
             sync_summary(gid)
         await websocket.send_json(
-            {
-                "type": "lobby_update",
-                "games": [s.model_dump(mode="json") for s in public_summaries()],
-            }
+            WebSocketLobbyUpdate(games=public_summaries()).model_dump(mode="json")
         )
         while True:
             data = await websocket.receive_json()
             if isinstance(data, dict):
                 msg_type = data.get("type")
                 if msg_type == "ping":
-                    await websocket.send_json({"type": "pong"})
+                    await websocket.send_json(WebSocketPong().model_dump(mode="json"))
                 elif msg_type == "refresh":
                     for gid in list(GAME_SUMMARIES.keys()):
                         sync_summary(gid)
                     await websocket.send_json(
-                        {
-                            "type": "lobby_update",
-                            "games": [s.model_dump(mode="json") for s in public_summaries()],
-                        }
+                        WebSocketLobbyUpdate(games=public_summaries()).model_dump(mode="json")
                     )
     except WebSocketDisconnect:
         manager.disconnect_lobby(websocket)

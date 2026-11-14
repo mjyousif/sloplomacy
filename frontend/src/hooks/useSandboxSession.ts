@@ -1,5 +1,14 @@
 import { type Dispatch, type SetStateAction, useState } from 'react';
-import { authedFetch } from '../lib/supabase';
+import {
+  clearForeignPreMoves,
+  enterSandboxMode,
+  exitSandboxMode,
+  generateSandboxAiOrders,
+  loadScenario,
+  readErrorDetail,
+  saveSandboxToAccount,
+  stepTurnWithAi,
+} from '../api';
 import {
   type AuthUser,
   type GameState,
@@ -13,8 +22,6 @@ import {
   writeStoredSoloSandboxId,
 } from '../utils/soloSandboxStorage';
 import type { AuthModalTab } from './useAuthSession';
-
-const API_BASE = '/api';
 
 export interface SandboxSessionOptions {
   activeGameId: string;
@@ -92,20 +99,17 @@ export function useSandboxSession({
     );
     try {
       setLoading(true);
-      const res = await authedFetch(
-        `${API_BASE}/sandbox/ai-orders?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            powers: powers || (includeActive ? null : foreignPowers),
-            include_active: includeActive,
-          }),
+      const res = await generateSandboxAiOrders({
+        query: { game_id: draftGameId },
+        body: {
+          powers: powers || (includeActive ? null : foreignPowers),
+          include_active: includeActive,
         },
-      );
+      });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Failed to generate AI orders.');
+        triggerToast(
+          await readErrorDetail(res, 'Failed to generate AI orders.'),
+        );
         return;
       }
       const updatedState = await res.json();
@@ -128,16 +132,13 @@ export function useSandboxSession({
   const handleAIStepTurn = async () => {
     try {
       setLoading(true);
-      const res = await authedFetch(
-        `${API_BASE}/sandbox/ai-step?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        },
-      );
+      const res = await stepTurnWithAi({
+        query: { game_id: draftGameId },
+      });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Failed to step turn with AI.');
+        triggerToast(
+          await readErrorDetail(res, 'Failed to step turn with AI.'),
+        );
         return;
       }
       const updatedState = await res.json();
@@ -170,22 +171,17 @@ export function useSandboxSession({
     if (!authUser) return;
     try {
       setSavingSandbox(true);
-      const res = await authedFetch(
-        `${API_BASE}/games/save-sandbox?game_id=${encodeURIComponent(activeGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: customName,
-            user_id: authUser.id,
-            email: authUser.email,
-            display_name: authUser.displayName,
-          }),
+      const res = await saveSandboxToAccount({
+        query: { game_id: activeGameId },
+        body: {
+          name: customName,
+          user_id: authUser.id,
+          email: authUser.email,
+          display_name: authUser.displayName,
         },
-      );
+      });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Could not save sandbox.');
+        triggerToast(await readErrorDetail(res, 'Could not save sandbox.'));
         return;
       }
       const saved: MultiplayerGameSummary = await res.json();
@@ -208,14 +204,10 @@ export function useSandboxSession({
   const handleClearForeignPreMoves = async () => {
     if (!gameState) return;
     try {
-      const res = await authedFetch(
-        `${API_BASE}/sandbox/clear-foreign?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: playerPower }),
-        },
-      );
+      const res = await clearForeignPreMoves({
+        query: { game_id: draftGameId },
+        body: { power: playerPower },
+      });
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
@@ -232,17 +224,14 @@ export function useSandboxSession({
     if (entering) goLive();
     try {
       if (entering) {
-        const res = await authedFetch(
-          `${API_BASE}/sandbox/enter?game_id=${encodeURIComponent(activeGameId)}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ power: playerPower }),
-          },
-        );
+        const res = await enterSandboxMode({
+          query: { game_id: activeGameId },
+          body: { power: playerPower },
+        });
         if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          triggerToast(err.detail || 'Could not open the sandbox.');
+          triggerToast(
+            await readErrorDetail(res, 'Could not open the sandbox.'),
+          );
           return;
         }
         const st: GameState = await res.json();
@@ -255,14 +244,10 @@ export function useSandboxSession({
           'Entered Hypothetical Mode: Plot hypothetical foreign moves to test outcomes. Exiting will discard foreign guesses!',
         );
       } else {
-        const res = await authedFetch(
-          `${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(draftGameId)}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ power: playerPower }),
-          },
-        );
+        const res = await exitSandboxMode({
+          query: { game_id: draftGameId },
+          body: { power: playerPower },
+        });
         let turnMovedOn = false;
         if (res.ok) {
           const st: GameState = await res.json();
@@ -294,17 +279,13 @@ export function useSandboxSession({
 
   const handleLoadScenario = async (scenarioId: string) => {
     try {
-      const res = await authedFetch(
-        `${API_BASE}/scenario?game_id=${encodeURIComponent(activeGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            scenario_id: scenarioId,
-            active_power: playerPower,
-          }),
+      const res = await loadScenario({
+        query: { game_id: activeGameId },
+        body: {
+          scenario_id: scenarioId,
+          active_power: playerPower,
         },
-      );
+      });
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
@@ -314,8 +295,9 @@ export function useSandboxSession({
         setSelectedUnitId(null);
         triggerToast('Reset to Standard Spring 1901.');
       } else {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Could not reset the scenario.');
+        triggerToast(
+          await readErrorDetail(res, 'Could not reset the scenario.'),
+        );
       }
     } catch (e) {
       console.error(e);

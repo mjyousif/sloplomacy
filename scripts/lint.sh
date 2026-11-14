@@ -44,14 +44,15 @@ if [ "$FRONTEND_ONLY" = false ]; then
     echo -e "\n[1/2] Linting Python backend (Ruff)..."
     cd "$REPO_ROOT"
     if $PYTHON_CMD -m ruff --version &>/dev/null; then
-        $PYTHON_CMD -m ruff check backend/
+        $PYTHON_CMD -m ruff check backend/ scripts/generate_api.py
     elif command -v ruff &>/dev/null; then
-        ruff check backend/
+        ruff check backend/ scripts/generate_api.py
     else
         echo "[!] Ruff not found. Run pip install -r backend/requirements-dev.txt."
         exit 1
     fi
-    echo "[✓] Backend lint checks passed!"
+    $PYTHON_CMD scripts/generate_api.py --check
+    echo "[✓] Backend lint and API codegen checks passed!"
 fi
 
 # 2. Frontend Linting & Typecheck (Biome & tsc)

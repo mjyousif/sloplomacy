@@ -13,7 +13,9 @@
     "lint": "biome check --no-errors-on-unmatched src/",
     "format": "biome format --write src/",
     "format:check": "biome format --no-errors-on-unmatched src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:api": "python ../scripts/generate_api.py",
+    "generate:api:check": "python ../scripts/generate_api.py --check"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.6",

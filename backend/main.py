@@ -33,6 +33,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
+from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from security.secrecy import saved_sandbox_guard
 from storage import supabase
@@ -59,11 +60,16 @@ async def lifespan(app: FastAPI):
     yield
 
 
+def _clean_operation_id(route: APIRoute) -> str:
+    return route.name
+
+
 app = FastAPI(
     title="Sloplomacy Adjudication & Game Server",
     description="Full DATC diplomacy adjudication engine, sandbox war room, and multiplayer game server.",
     version="1.0.0",
     lifespan=lifespan,
+    generate_unique_id_function=_clean_operation_id,
 )
 
 # CORS Middleware

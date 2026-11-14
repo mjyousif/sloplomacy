@@ -31,10 +31,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements-dev.txt
 
-      - name: Backend Lint & Format Check (Ruff)
+      - name: Backend Lint, Format & API Codegen Check
         run: |
-          ruff check backend/
-          ruff format --check backend/
+          ruff check backend/ scripts/generate_api.py
+          ruff format --check backend/ scripts/generate_api.py
+          python scripts/generate_api.py --check
 
       - name: Set up Node.js
         uses: actions/setup-node@v7

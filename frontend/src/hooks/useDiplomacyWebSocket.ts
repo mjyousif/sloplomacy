@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { wsGameEndpointPath, wsLobbyEndpointPath } from '../api';
 import { getAuthHeaders } from '../lib/supabase';
 import type {
+  WebSocketClientMessage,
   WebSocketGameUpdate,
   WebSocketLobbyUpdate,
-  WebSocketMessage,
+  WebSocketServerMessage,
 } from '../types/diplomacy';
+
+function sendSocketMessage(ws: WebSocket, message: WebSocketClientMessage) {
+  ws.send(JSON.stringify(message));
+}
 
 export function getWebSocketUrl(path: string): string {
   const protocol =
@@ -23,18 +29,16 @@ export function resolveWebSocketPath(
   passcode?: string | null,
 ): string | null {
   if (viewMode === 'lobby') {
-    return '/ws/lobby';
+    return wsLobbyEndpointPath();
   }
   if (activeGameId) {
-    const params = new URLSearchParams();
-    // The server waits for an `auth` message first, which says who is connecting. A browser
+    // The server waits for an `auth` message first (with handshake=1), because a browser
     // cannot put an Authorization header on a socket, and a token in the URL would be logged.
-    params.set('handshake', '1');
-    // Only picks among the player's own seats; the server never shows another power's orders.
-    if (power) params.set('power', power);
-    if (passcode) params.set('passcode', passcode);
-    const qs = params.toString();
-    return `/ws/games/${encodeURIComponent(activeGameId)}${qs ? `?${qs}` : ''}`;
+    // `power` only picks among the player's own seats; the server never shows foreign orders.
+    return wsGameEndpointPath(
+      { game_id: activeGameId },
+      { handshake: '1', power, passcode },
+    );
   }
   return null;
 }
@@ -138,21 +142,21 @@ export function useDiplomacyWebSocket({
           }
           wasBackgroundDisconnectedRef.current = false;
           if (needsHandshake) {
-            ws.send(JSON.stringify({ type: 'auth', token }));
+            sendSocketMessage(ws, { type: 'auth', token });
           }
           setIsConnected(true);
 
           // Heartbeat ping every 25 seconds to keep proxies & Cloud Run alive
           heartbeat = window.setInterval(() => {
             if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'ping' }));
+              sendSocketMessage(ws, { type: 'ping' });
             }
           }, 25000);
         };
 
         ws.onmessage = (event) => {
           try {
-            const data: WebSocketMessage = JSON.parse(event.data);
+            const data: WebSocketServerMessage = JSON.parse(event.data);
             if (data.type === 'game_update') {
               onGameUpdateRef.current(data);
             } else if (data.type === 'lobby_update') {
@@ -230,7 +234,7 @@ export function useDiplomacyWebSocket({
           wsRef.current &&
           wsRef.current.readyState === WebSocket.OPEN
         ) {
-          wsRef.current.send(JSON.stringify({ type: 'refresh' }));
+          sendSocketMessage(wsRef.current, { type: 'refresh' });
         }
       }
     };
@@ -267,14 +271,14 @@ export function useDiplomacyWebSocket({
 
   const sendPing = useCallback(() => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'ping' }));
+      sendSocketMessage(wsRef.current, { type: 'ping' });
     }
   }, []);
 
   /** Asks the server to run the turn clock and send the current state back. */
   const sendRefresh = useCallback((): boolean => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'refresh' }));
+      sendSocketMessage(wsRef.current, { type: 'refresh' });
       return true;
     }
     return false;

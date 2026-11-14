@@ -5,7 +5,12 @@ from datetime import datetime, timezone
 
 from domain.board import Power
 from domain.game_state import GameParticipant, GameState, MultiplayerGameSummary
-from domain.requests import CreateGameRequest, GameBootstrapResponse, SaveSandboxRequest
+from domain.requests import (
+    CreateGameRequest,
+    DeleteGameResponse,
+    GameBootstrapResponse,
+    SaveSandboxRequest,
+)
 from engine.order_utils import (
     refresh_diagnostics_and_simulation,
 )
@@ -123,6 +128,7 @@ async def get_game_details(game_id: str):
 
 @router.delete(
     "/api/games/{game_id}",
+    response_model=DeleteGameResponse,
     summary="Delete Game",
 )
 async def delete_game(

@@ -1,6 +1,6 @@
 # Data Models & Schemas
 
-The Diplomacy 1901 Tactical Engine maintains synchronized data contracts between the Python FastAPI backend (using Pydantic v2 in `backend/domain/`: `board.py`, `orders.py`, `issues.py`, `game_state.py` and `requests.py`) and the TypeScript frontend (defined in `frontend/src/types/diplomacy.ts`).
+The Diplomacy 1901 Tactical Engine maintains synchronized data contracts between the Python FastAPI backend (using Pydantic v2 in `backend/domain/`: `board.py`, `orders.py`, `issues.py`, `game_state.py` and `requests.py`) and the TypeScript frontend via automated OpenAPI/WebSocket codegen (`scripts/generate_api.py` -> `frontend/src/api/schema.gen.ts` & `frontend/src/api/sdk.gen.ts`, re-exported with frontend UI constants in `frontend/src/types/diplomacy.ts`). Run `python scripts/generate_api.py` whenever backend DTOs, routes, or WebSocket frames change (`--check` fails on drift in tests, lint scripts, and CI).
 
 ---
 
@@ -331,7 +331,7 @@ interface WebSocketGameUpdate {
   type: 'game_update';
   game_id: string;
   state: GameState;
-  summary: MultiplayerGameSummary | null;
+  summary?: MultiplayerGameSummary | null;
 }
 ```
 
@@ -344,3 +344,8 @@ interface WebSocketLobbyUpdate {
   games: MultiplayerGameSummary[];
 }
 ```
+
+### Client & Server Frame Unions
+Generated from `backend/domain/requests.py` into `frontend/src/api/schema.gen.ts`:
+- `WebSocketServerMessage` (alias `WebSocketMessage`): `WebSocketGameUpdate | WebSocketLobbyUpdate | WebSocketPong` (`{ type: 'pong' }`)
+- `WebSocketClientMessage`: `WebSocketAuthMessage` (`{ type: 'auth'; token?: string | null }`) | `WebSocketPingMessage` (`{ type: 'ping' }`) | `WebSocketRefreshMessage` (`{ type: 'refresh' }`)

@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
+from domain.requests import WebSocketGameUpdate, WebSocketLobbyUpdate
 from fastapi import WebSocket
 from security.secrecy import sanitize_game_state_for_viewer
 from storage.lobby import public_summaries
@@ -57,12 +58,11 @@ class ConnectionManager:
         dead: list[WebSocket] = []
         for ws, ws_power in list(connections.items()):
             ws_state = sanitize_game_state_for_viewer(state, ws_power)
-            payload = {
-                "type": "game_update",
-                "game_id": game_id,
-                "state": ws_state.model_dump(mode="json"),
-                "summary": summary.model_dump(mode="json") if summary else None,
-            }
+            payload = WebSocketGameUpdate(
+                game_id=game_id,
+                state=ws_state,
+                summary=summary,
+            ).model_dump(mode="json")
             try:
                 await ws.send_json(payload)
             except Exception:
@@ -78,11 +78,8 @@ class ConnectionManager:
         for gid in list(GAME_SUMMARIES.keys()):
             sync_summary(gid)
 
-        payload = {
-            "type": "lobby_update",
-            # One payload goes to every socket, so it holds public matches only.
-            "games": [s.model_dump(mode="json") for s in public_summaries()],
-        }
+        # One payload goes to every socket, so it holds public matches only.
+        payload = WebSocketLobbyUpdate(games=public_summaries()).model_dump(mode="json")
         dead: list[WebSocket] = []
         for ws in list(self.lobby_connections):
             try:

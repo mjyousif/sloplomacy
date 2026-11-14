@@ -1,5 +1,18 @@
 import { type Dispatch, type SetStateAction, useRef, useState } from 'react';
-import { authedFetch } from '../lib/supabase';
+import {
+  adjudicateAndAdvance,
+  confirmAllPowerOrders,
+  finalizePowerOrders,
+  readErrorDetail,
+  readyUpTimer,
+  requestTimerExtension,
+  startTimer,
+  type TimerToggleRequest,
+  type TimerVoteRequest,
+  unfinalizePowerOrders,
+  updateSingleOrder,
+  voteOnTimer,
+} from '../api';
 import {
   type FinalizeResponse,
   type GameState,
@@ -10,8 +23,6 @@ import {
   type ValidationIssue,
 } from '../types/diplomacy';
 import { turnLabel } from '../utils/timerHelpers';
-
-const API_BASE = '/api';
 
 export interface MatchActionsOptions {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -78,23 +89,20 @@ export function useMatchActions({
       return;
     }
     try {
-      const res = await authedFetch(
-        `${API_BASE}/order?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            order,
-            turn: gameState ? turnLabel(gameState) : undefined,
-          }),
+      const res = await updateSingleOrder({
+        query: { game_id: draftGameId },
+        body: {
+          order,
+          turn: gameState ? turnLabel(gameState) : undefined,
         },
-      );
+      });
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
       } else {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'That order was not accepted.');
+        triggerToast(
+          await readErrorDetail(res, 'That order was not accepted.'),
+        );
       }
     } catch (e) {
       console.error(e);
@@ -104,14 +112,10 @@ export function useMatchActions({
   const handleConfirmAllHolds = async () => {
     if (!gameState) return;
     try {
-      const res = await authedFetch(
-        `${API_BASE}/orders/confirm-all?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: playerPower }),
-        },
-      );
+      const res = await confirmAllPowerOrders({
+        query: { game_id: draftGameId },
+        body: { power: playerPower },
+      });
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
@@ -127,18 +131,14 @@ export function useMatchActions({
   const handleFinalizeClick = async (force = false) => {
     if (!gameState || !requireRealBoard('finalize your real orders')) return;
     try {
-      const res = await authedFetch(
-        `${API_BASE}/finalize?game_id=${encodeURIComponent(activeGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            power: playerPower,
-            force,
-            turn: turnLabel(gameState),
-          }),
+      const res = await finalizePowerOrders({
+        query: { game_id: activeGameId },
+        body: {
+          power: playerPower,
+          force,
+          turn: turnLabel(gameState),
         },
-      );
+      });
       if (res.ok) {
         const data: FinalizeResponse = await res.json();
         applyServerState(data.state);
@@ -154,9 +154,10 @@ export function useMatchActions({
         }
       } else {
         // The clock can resolve the phase while the request is on its way.
-        const err = await res.json().catch(() => ({}));
         setSanityModalOpen(false);
-        triggerToast(err.detail || 'Could not finalize your orders.');
+        triggerToast(
+          await readErrorDetail(res, 'Could not finalize your orders.'),
+        );
       }
     } catch (e) {
       console.error(e);
@@ -166,14 +167,10 @@ export function useMatchActions({
   const handleUnfinalizeClick = async () => {
     if (!gameState || !requireRealBoard('unlock your real orders')) return;
     try {
-      const res = await authedFetch(
-        `${API_BASE}/unfinalize?game_id=${encodeURIComponent(activeGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ power: playerPower }),
-        },
-      );
+      const res = await unfinalizePowerOrders({
+        query: { game_id: activeGameId },
+        body: { power: playerPower },
+      });
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
@@ -190,17 +187,30 @@ export function useMatchActions({
     body: Record<string, unknown> = {},
   ) => {
     try {
-      const res = await authedFetch(
-        `${API_BASE}/games/${encodeURIComponent(activeGameId)}/timer/${action}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-      );
+      const path = { game_id: activeGameId };
+      let res: Response;
+      if (action === 'start') {
+        res = await startTimer({ path, body });
+      } else if (action === 'vote') {
+        res = await voteOnTimer({
+          path,
+          body: body as unknown as TimerVoteRequest,
+        });
+      } else if (action === 'extend') {
+        res = await requestTimerExtension({
+          path,
+          body: body as unknown as TimerToggleRequest,
+        });
+      } else {
+        res = await readyUpTimer({
+          path,
+          body: body as unknown as TimerToggleRequest,
+        });
+      }
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'The clock did not accept that.');
+        triggerToast(
+          await readErrorDetail(res, 'The clock did not accept that.'),
+        );
         return;
       }
       const st: GameState = await res.json();
@@ -222,11 +232,9 @@ export function useMatchActions({
     if (!requireRealBoard('resolve the real turn')) return;
     adjudicatingRef.current = true;
     try {
-      const turn = encodeURIComponent(turnLabel(gameState));
-      const res = await authedFetch(
-        `${API_BASE}/adjudicate?game_id=${encodeURIComponent(activeGameId)}&turn=${turn}`,
-        { method: 'POST' },
-      );
+      const res = await adjudicateAndAdvance({
+        query: { game_id: activeGameId, turn: turnLabel(gameState) },
+      });
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
@@ -238,8 +246,7 @@ export function useMatchActions({
         );
         fetchGamesList();
       } else {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Could not resolve the turn.');
+        triggerToast(await readErrorDetail(res, 'Could not resolve the turn.'));
       }
     } catch (e) {
       console.error(e);

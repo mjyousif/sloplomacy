@@ -5,7 +5,7 @@ import {
   useEffect,
   useRef,
 } from 'react';
-import { getAuthHeaders } from '../lib/supabase';
+import { getGame } from '../api';
 import type {
   GameState,
   MultiplayerGameSummary,
@@ -17,8 +17,6 @@ import type {
 } from '../types/diplomacy';
 import { readStoredSoloSandboxId } from '../utils/soloSandboxStorage';
 import { useDiplomacyWebSocket } from './useDiplomacyWebSocket';
-
-const API_BASE = '/api';
 
 export interface GameSyncOptions {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -160,13 +158,12 @@ export function useGameSync({
 
       try {
         const effectivePower = playerPower;
-        const params = new URLSearchParams({ game_id: activeGameId });
-        if (effectivePower) {
-          params.set('power', effectivePower);
-        }
-        const authHeaders = await getAuthHeaders();
-        const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
-          headers: { ...authHeaders },
+        const res = await getGame({
+          query: {
+            game_id: activeGameId,
+            ...(effectivePower ? { power: effectivePower } : {}),
+          },
+          auth: 'headers',
         });
         if (!res.ok) return;
         const data = await res.json();

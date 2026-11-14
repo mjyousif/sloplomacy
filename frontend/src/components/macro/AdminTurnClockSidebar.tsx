@@ -1,6 +1,13 @@
 import { AlertTriangle, PanelRightClose, Wrench } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
+import {
+  adminRollbackTurn,
+  adminSetTurn,
+  adminUnfinalizeAll,
+  getAdminStatus,
+  readErrorDetail,
+} from '../../api';
 import { getAuthHeaders } from '../../lib/supabase';
 import type {
   AdminStatusResponse,
@@ -21,8 +28,6 @@ import { VersionBadge } from '../VersionBadge';
 import adminSidebarStyles from './AdminSidebar.module.css';
 import styles from './AdminTurnClockSidebar.module.css';
 import { CollapsedRail } from './CollapsedRail';
-
-const API_BASE = '/api';
 
 export interface AdminTurnClockSettings {
   isOpen: boolean;
@@ -88,10 +93,11 @@ export function AdminTurnClockSidebar({
 
   const fetchAdminStatus = useCallback(async () => {
     try {
-      const res = await fetch(
-        `${API_BASE}/admin/status?game_id=${encodeURIComponent(gameId)}`,
-        { headers: await getHeaders() },
-      );
+      const res = await getAdminStatus({
+        query: { game_id: gameId },
+        headers: await getHeaders(),
+        auth: false,
+      });
       if (res.ok) {
         const data: AdminStatusResponse = await res.json();
         const entries = data.history_entries ?? [];
@@ -146,23 +152,20 @@ export function AdminTurnClockSidebar({
     setLoading(true);
     setActionError(null);
     try {
-      const res = await fetch(
-        `${API_BASE}/admin/rollback?game_id=${encodeURIComponent(gameId)}`,
-        {
-          method: 'POST',
-          headers: await getHeaders(),
-          body: JSON.stringify({
-            ...(selectedSnapshotIndex !== null
-              ? { snapshot_index: selectedSnapshotIndex }
-              : {}),
-            user_id: user?.id || 'guest',
-            email: user?.email || 'commander@diplomacy.local',
-          }),
+      const res = await adminRollbackTurn({
+        query: { game_id: gameId },
+        headers: await getHeaders(),
+        auth: false,
+        body: {
+          ...(selectedSnapshotIndex !== null
+            ? { snapshot_index: selectedSnapshotIndex }
+            : {}),
+          user_id: user?.id || 'guest',
+          email: user?.email || 'commander@diplomacy.local',
         },
-      );
+      });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setActionError(err.detail || 'Rollback failed.');
+        setActionError(await readErrorDetail(res, 'Rollback failed.'));
         return;
       }
       const st: GameState = await res.json();
@@ -182,23 +185,22 @@ export function AdminTurnClockSidebar({
     setLoading(true);
     setActionError(null);
     try {
-      const res = await fetch(
-        `${API_BASE}/admin/set-turn?game_id=${encodeURIComponent(gameId)}`,
-        {
-          method: 'POST',
-          headers: await getHeaders(),
-          body: JSON.stringify({
-            season: selectedSeason,
-            year: selectedYear,
-            phase: selectedPhase,
-            user_id: user?.id || 'guest',
-            email: user?.email || 'commander@diplomacy.local',
-          }),
+      const res = await adminSetTurn({
+        query: { game_id: gameId },
+        headers: await getHeaders(),
+        auth: false,
+        body: {
+          season: selectedSeason,
+          year: selectedYear,
+          phase: selectedPhase,
+          user_id: user?.id || 'guest',
+          email: user?.email || 'commander@diplomacy.local',
         },
-      );
+      });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setActionError(err.detail || 'Failed to adjust turn clock.');
+        setActionError(
+          await readErrorDetail(res, 'Failed to adjust turn clock.'),
+        );
         return;
       }
       const st: GameState = await res.json();
@@ -217,20 +219,19 @@ export function AdminTurnClockSidebar({
     setLoading(true);
     setActionError(null);
     try {
-      const res = await fetch(
-        `${API_BASE}/admin/unfinalize-all?game_id=${encodeURIComponent(gameId)}`,
-        {
-          method: 'POST',
-          headers: await getHeaders(),
-          body: JSON.stringify({
-            user_id: user?.id || 'guest',
-            email: user?.email || 'commander@diplomacy.local',
-          }),
+      const res = await adminUnfinalizeAll({
+        query: { game_id: gameId },
+        headers: await getHeaders(),
+        auth: false,
+        body: {
+          user_id: user?.id || 'guest',
+          email: user?.email || 'commander@diplomacy.local',
         },
-      );
+      });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setActionError(err.detail || 'Failed to unfinalize powers.');
+        setActionError(
+          await readErrorDetail(res, 'Failed to unfinalize powers.'),
+        );
         return;
       }
       const st: GameState = await res.json();

@@ -1,4 +1,9 @@
-import { authedFetch } from '../lib/supabase';
+import {
+  type AdminAcknowledgeResponse,
+  type AdminBatchBoardEditRequest,
+  acknowledgeAdminActions,
+  adminBatchBoardEdit,
+} from '../api';
 import type {
   AdminActionLogEntry,
   AuthUser,
@@ -178,10 +183,7 @@ export function getUnacknowledgedAdminEntries(
   );
 }
 
-export interface AdminAcknowledgeResponse {
-  ok: boolean;
-  acknowledged_by: string;
-}
+export type { AdminAcknowledgeResponse };
 
 export async function acknowledgeAdminEntriesRequest(
   activeGameId: string,
@@ -189,35 +191,27 @@ export async function acknowledgeAdminEntriesRequest(
   authUser: AuthUser | null,
   lockedPower: Power | null,
 ): Promise<AdminAcknowledgeResponse | null> {
-  const res = await authedFetch(
-    `/api/admin/acknowledge?game_id=${encodeURIComponent(activeGameId)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        entry_ids: entryIds,
-        user_id: authUser?.id || (!lockedPower ? 'guest' : undefined),
-        email: authUser?.email,
-        power: lockedPower,
-      }),
+  const res = await acknowledgeAdminActions({
+    query: { game_id: activeGameId },
+    body: {
+      entry_ids: entryIds,
+      user_id: authUser?.id || (!lockedPower ? 'guest' : undefined),
+      email: authUser?.email,
+      power: lockedPower,
     },
-  );
+  });
   if (!res.ok) return null;
   return res.json();
 }
 
 export async function postAdminBoardEditRequest(
   activeGameId: string,
-  payload: Record<string, unknown>,
+  payload: AdminBatchBoardEditRequest,
 ): Promise<Response> {
-  return authedFetch(
-    `/api/admin/board-edit?game_id=${encodeURIComponent(activeGameId)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    },
-  );
+  return adminBatchBoardEdit({
+    query: { game_id: activeGameId },
+    body: payload,
+  });
 }
 
 export {

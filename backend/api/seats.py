@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from domain.board import Power
 from domain.game_state import GameParticipant, GameState
 from domain.requests import (
+    AcknowledgeGameOverResponse,
     GameBootstrapResponse,
     JoinGameRequest,
     LeaveGameRequest,
@@ -343,6 +344,7 @@ async def set_active_power(
 
 @router.post(
     "/api/games/{game_id}/acknowledge-game-over",
+    response_model=AcknowledgeGameOverResponse,
     summary="Acknowledge Game Over Modal",
     description="Stamp game_over_seen_at for the caller's seat when they witness the Game Over modal.",
 )
