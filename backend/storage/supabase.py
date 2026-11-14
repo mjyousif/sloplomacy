@@ -207,7 +207,7 @@ def build_summary_from_row(row: dict[str, Any]) -> MultiplayerGameSummary:
         season=row.get("season", "Spring"),
         year=int(row.get("year", 1901)),
         phase=row.get("phase", "Movement"),
-        created_by="commander@diplomacy.eu",
+        created_by="",
         creator_id=str(row.get("host_user_id")) if row.get("host_user_id") else None,
         created_at=created_at,
         participants={},
@@ -340,8 +340,10 @@ async def load_all_summaries_from_db(
 
 
 def _serialize_summary_for_db(summary: MultiplayerGameSummary) -> dict[str, Any]:
-    """Strip display_name from registered (UUID) participants; public.profiles is authoritative."""
+    """Strip denormalized names from registered (UUID) users; public.profiles is authoritative."""
     data = summary.model_dump(mode="json")
+    if is_valid_uuid(data.get("creator_id")):
+        data.pop("created_by", None)
     participants = data.get("participants")
     if isinstance(participants, dict):
         for part in participants.values():

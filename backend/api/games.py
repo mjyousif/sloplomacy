@@ -56,6 +56,13 @@ async def sync_lobby_with_db() -> None:
     except SupabaseUnavailable:
         return
 
+    try:
+        profile_names = await supabase.load_profile_names_from_db()
+        if isinstance(profile_names, dict) and profile_names:
+            PROFILE_NAMES.update(profile_names)
+    except Exception as ex:
+        supabase.logger.debug("Profile refresh skipped during lobby sync: %s", ex)
+
     evicted = False
     for gid in list(GAME_SUMMARIES.keys()):
         if gid not in db_summaries and gid not in unsaved_at_read and gid not in UNSAVED_GAMES:
