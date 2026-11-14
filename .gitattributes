@@ -8,3 +8,6 @@
 *.gif binary
 *.ico binary
 *.svg text eol=lf
+
+# Generated TypeScript API contracts and SDK
+frontend/src/api/*.gen.ts linguist-generated=true

@@ -35,6 +35,7 @@ from domain.requests import (  # noqa: E402
     WebSocketPong,
     WebSocketRefreshMessage,
 )
+from fastapi.routing import APIWebSocketRoute  # noqa: E402
 from main import app  # noqa: E402
 from starlette.routing import WebSocketRoute  # noqa: E402
 
@@ -188,16 +189,6 @@ def is_property_optional(
     return prop_name not in required_set and _has_null(ts_type)
 
 
-def format_type_alias(name: str, rhs: str) -> list[str]:
-    one_line = f"export type {name} = {rhs};"
-    if len(one_line) <= 80:
-        return [one_line]
-    parts = [p.strip() for p in rhs.split("|")]
-    if len(parts) > 1:
-        return [f"export type {name} =", *[f"  | {p}" for p in parts[:-1]], f"  | {parts[-1]};"]
-    return [one_line]
-
-
 def collect_refs_in_ts(ts_type: str, known_schemas: set[str]) -> set[str]:
     tokens = set(re.findall(r"\b[A-Za-z_][A-Za-z0-9_]*\b", ts_type))
     return tokens & known_schemas
@@ -263,7 +254,7 @@ def extract_operations() -> list[dict[str, Any]]:
 def extract_ws_routes() -> list[dict[str, Any]]:
     ws_routes: list[dict[str, Any]] = []
     for route in app.routes:
-        if isinstance(route, WebSocketRoute):
+        if isinstance(route, APIWebSocketRoute | WebSocketRoute):
             ws_routes.append(
                 {
                     "path": route.path,
@@ -276,22 +267,6 @@ def extract_ws_routes() -> list[dict[str, Any]]:
     return ws_routes
 
 
-def _render_field_lines(fields: list[tuple[str, str, bool]]) -> list[str]:
-    lines: list[str] = []
-    for name, ts_type, optional in fields:
-        sep = "?:" if optional else ":"
-        single = f"  {name}{sep} {ts_type};"
-        if len(single) <= 80 or " | " not in ts_type or "Record<" in ts_type or "{" in ts_type:
-            lines.append(single)
-        else:
-            parts = [p.strip() for p in ts_type.split("|")]
-            lines.append(f"  {name}{sep}")
-            for part in parts[:-1]:
-                lines.append(f"    | {part}")
-            lines.append(f"    | {parts[-1]};")
-    return lines
-
-
 def render_schema_ts() -> str:
     schemas = collect_schemas()
     lines: list[str] = [HEADER, ""]
@@ -301,7 +276,7 @@ def render_schema_ts() -> str:
 
     for name in enum_names:
         rhs = schema_to_ts(schemas[name])
-        lines.extend(format_type_alias(name, rhs))
+        lines.append(f"export type {name} = {rhs};")
         lines.append("")
 
     lines.extend(
@@ -319,44 +294,24 @@ def render_schema_ts() -> str:
         props = schema.get("properties", {})
         required_set = set(schema.get("required", []))
         lines.append(f"export interface {name} {{")
-        rendered_fields: list[tuple[str, str, bool]] = []
         for prop_name, prop_schema in props.items():
             ts_type = FIELD_TYPE_OVERRIDES.get((name, prop_name)) or schema_to_ts(prop_schema)
             optional = is_property_optional(name, prop_name, prop_schema, ts_type, required_set)
-            rendered_fields.append((prop_name, ts_type, optional))
-        lines.extend(_render_field_lines(rendered_fields))
+            sep = "?:" if optional else ":"
+            lines.append(f"  {prop_name}{sep} {ts_type};")
         lines.append("}")
         lines.append("")
 
     lines.extend(
         [
-            "export type WebSocketServerMessage =",
-            "  | WebSocketGameUpdate",
-            "  | WebSocketLobbyUpdate",
-            "  | WebSocketPong;",
-            "",
+            "export type WebSocketServerMessage = WebSocketGameUpdate | WebSocketLobbyUpdate | WebSocketPong;",
             "export type WebSocketMessage = WebSocketServerMessage;",
-            "",
-            "export type WebSocketClientMessage =",
-            "  | WebSocketAuthMessage",
-            "  | WebSocketPingMessage",
-            "  | WebSocketRefreshMessage;",
+            "export type WebSocketClientMessage = WebSocketAuthMessage | WebSocketPingMessage | WebSocketRefreshMessage;",
             "",
         ]
     )
 
     return "\n".join(lines)
-
-
-def _format_fn_sig(prefix: str, params: list[str], ret_type: str) -> list[str]:
-    one_line = f"{prefix}({', '.join(params)}): {ret_type} {{"
-    if len(one_line) <= 80:
-        return [one_line]
-    return [
-        f"{prefix}(",
-        *[f"  {p}," for p in params],
-        f"): {ret_type} {{",
-    ]
 
 
 def _format_client_path_expr(client_path: str) -> str:
@@ -402,22 +357,12 @@ def render_sdk_ts() -> str:
     ]
     if referenced_types:
         sorted_refs = sorted(referenced_types, key=str.casefold)
-        single_import = f"import type {{ {', '.join(sorted_refs)} }} from './schema.gen';"
-        if len(single_import) <= 80:
-            lines.append(single_import)
-        else:
-            lines.append("import type {")
-            for item in sorted_refs:
-                lines.append(f"  {item},")
-            lines.append("} from './schema.gen';")
+        lines.append(f"import type {{ {', '.join(sorted_refs)} }} from './schema.gen';")
     lines.append("")
 
-    def render_inline_object(field_name: str, items: list[dict[str, Any]]) -> list[str]:
+    def format_inline_object(items: list[dict[str, Any]]) -> str:
         parts = [f"{it['name']}{'' if it['required'] else '?'}: {it['ts']}" for it in items]
-        one_line = f"  {field_name}: {{ {'; '.join(parts)} }};"
-        if len(parts) == 1 and len(one_line) <= 80:
-            return [one_line]
-        return [f"  {field_name}: {{", *[f"    {p};" for p in parts], "  };"]
+        return "{ " + "; ".join(parts) + " }"
 
     for op in ops:
         has_path = bool(op["path_params"])
@@ -428,166 +373,76 @@ def render_sdk_ts() -> str:
         opts_name = f"{pascal}Options" if needs_custom_options else "ClientRequestInit"
 
         if needs_custom_options:
-            omit_keys: list[str] = []
-            if has_body:
-                omit_keys.append("'body'")
-            if has_query:
-                omit_keys.append("'query'")
-            if omit_keys:
-                omit_union = " | ".join(omit_keys)
-                single_opt_line = (
-                    f"export type {opts_name} = Omit<ClientRequestInit, {omit_union}> & {{"
-                )
-                if len(single_opt_line) <= 80:
-                    lines.append(single_opt_line)
-                else:
-                    lines.extend(
-                        [
-                            f"export type {opts_name} = Omit<",
-                            "  ClientRequestInit,",
-                            f"  {omit_union}",
-                            "> & {",
-                        ]
-                    )
-            else:
-                lines.append(f"export type {opts_name} = ClientRequestInit & {{")
+            omit_keys = [k for cond, k in ((has_body, "'body'"), (has_query, "'query'")) if cond]
+            base_type = (
+                f"Omit<ClientRequestInit, {' | '.join(omit_keys)}>"
+                if omit_keys
+                else "ClientRequestInit"
+            )
+            fields: list[str] = []
             if has_path:
-                lines.extend(render_inline_object("path", op["path_params"]))
+                fields.append(f"path: {format_inline_object(op['path_params'])}")
             if has_query:
-                lines.extend(render_inline_object("query?", op["query_params"]))
+                fields.append(f"query?: {format_inline_object(op['query_params'])}")
             if has_body:
                 opt_mark = "" if op["body_required"] else "?"
-                lines.append(f"  body{opt_mark}: {op['body_ts']};")
-            lines.append("};")
-            lines.append("")
+                fields.append(f"body{opt_mark}: {op['body_ts']}")
+            lines.append(f"export type {opts_name} = {base_type} & {{ {'; '.join(fields)} }};")
 
         is_opts_required = has_path or (has_body and op["body_required"])
         param_sig = f"options: {opts_name}" if is_opts_required else f"options: {opts_name} = {{}}"
         path_expr = _format_client_path_expr(op["client_path"])
 
-        destructured: list[str] = []
-        if has_path:
-            destructured.append("path")
-        if has_query:
-            destructured.append("query")
-        if has_body:
-            destructured.append("body")
-
-        lines.extend(
-            _format_fn_sig(
-                f"export function {op['fn_name']}",
-                [param_sig],
-                "Promise<Response>",
-            )
-        )
-        if destructured:
-            lines.append(f"  const {{ {', '.join(destructured)}, ...rest }} = options;")
-            rest_expr = "...rest"
-        else:
-            rest_expr = "...options"
-
+        destructured = [
+            name
+            for cond, name in ((has_path, "path"), (has_query, "query"), (has_body, "body"))
+            if cond
+        ]
+        rest_expr = "...rest" if destructured else "...options"
         call_args = [rest_expr, f"method: '{op['method']}'"]
         if has_query:
             call_args.append("query")
         if has_body:
             call_args.append("body")
+        call_obj = f"{{ {', '.join(call_args)} }}"
 
-        call_line = f"  return apiFetch({path_expr}, {{ {', '.join(call_args)} }});"
-        hug_line = f"  return apiFetch({path_expr}, {{"
-        if len(call_line) <= 80:
-            lines.append(call_line)
-        elif len(hug_line) <= 80:
-            lines.extend(
-                [
-                    hug_line,
-                    *[f"    {arg}," for arg in call_args],
-                    "  });",
-                ]
-            )
-        else:
-            lines.extend(
-                [
-                    "  return apiFetch(",
-                    f"    {path_expr},",
-                    "    {",
-                    *[f"      {arg}," for arg in call_args],
-                    "    },",
-                    "  );",
-                ]
-            )
+        lines.append(f"export function {op['fn_name']}({param_sig}): Promise<Response> {{")
+        if destructured:
+            lines.append(f"  const {{ {', '.join(destructured)}, ...rest }} = options;")
+        lines.append(f"  return apiFetch({path_expr}, {call_obj});")
         lines.append("}")
         lines.append("")
 
         if op["use_json"]:
             json_fn = f"{op['fn_name']}Json"
-            lines.extend(
-                _format_fn_sig(
-                    f"export function {json_fn}",
-                    [param_sig, "fallbackError?: string"],
-                    f"Promise<{op['resp_ts']}>",
-                )
+            lines.append(
+                f"export function {json_fn}({param_sig}, fallbackError?: string): Promise<{op['resp_ts']}> {{"
             )
             if destructured:
                 lines.append(f"  const {{ {', '.join(destructured)}, ...rest }} = options;")
-            single_args = f"{{ {', '.join(call_args)} }}"
-            json_single_line = (
-                f"  return apiJson<{op['resp_ts']}>({path_expr}, {single_args}, fallbackError);"
+            lines.append(
+                f"  return apiJson<{op['resp_ts']}>({path_expr}, {call_obj}, fallbackError);"
             )
-            if len(json_single_line) <= 80:
-                lines.append(json_single_line)
-            else:
-                args_line = f"    {single_args},"
-                lines.append(f"  return apiJson<{op['resp_ts']}>(")
-                lines.append(f"    {path_expr},")
-                if len(args_line) <= 80:
-                    lines.append(args_line)
-                else:
-                    lines.extend(["    {", *[f"      {arg}," for arg in call_args], "    },"])
-                lines.extend(["    fallbackError,", "  );"])
             lines.append("}")
             lines.append("")
 
-    # Typed WebSocket endpoint path builders generated from APIWebSocketRoute definitions
+    # Typed WebSocket endpoint path builders generated from WebSocket route definitions
     for ws in ws_routes:
         if ws["path"] == "/ws/games/{game_id}":
             lines.extend(
                 [
-                    "export interface WsGameEndpointPath {",
-                    "  game_id: string;",
-                    "}",
-                    "",
-                    "export interface WsGameEndpointQuery {",
-                    "  power?: string | null;",
-                    "  passcode?: string | null;",
-                    "  handshake?: boolean | '1' | '0' | number | null;",
-                    "}",
-                    "",
-                    "export function wsGameEndpointPath(",
-                    "  path: WsGameEndpointPath,",
-                    "  query?: WsGameEndpointQuery,",
-                    "): string {",
+                    "export interface WsGameEndpointPath { game_id: string; }",
+                    "export interface WsGameEndpointQuery { power?: string | null; passcode?: string | null; handshake?: boolean | '1' | '0' | number | null; }",
+                    "export function wsGameEndpointPath(path: WsGameEndpointPath, query?: WsGameEndpointQuery): string {",
                     "  const base = `/ws/games/${encodeURIComponent(path.game_id)}`;",
                     "  if (!query) return base;",
                     "  const params = new URLSearchParams();",
                     "  if (query.handshake !== undefined && query.handshake !== null) {",
-                    "    const hs =",
-                    "      query.handshake === true ||",
-                    "      query.handshake === '1' ||",
-                    "      query.handshake === 1",
-                    "        ? '1'",
-                    "        : String(query.handshake);",
+                    "    const hs = query.handshake === true || query.handshake === '1' || query.handshake === 1 ? '1' : String(query.handshake);",
                     "    params.set('handshake', hs);",
                     "  }",
-                    "  if (query.power !== undefined && query.power !== null && query.power !== '') {",
-                    "    params.set('power', query.power);",
-                    "  }",
-                    "  if (",
-                    "    query.passcode !== undefined &&",
-                    "    query.passcode !== null &&",
-                    "    query.passcode !== ''",
-                    "  ) {",
-                    "    params.set('passcode', query.passcode);",
-                    "  }",
+                    "  if (query.power !== undefined && query.power !== null && query.power !== '') params.set('power', query.power);",
+                    "  if (query.passcode !== undefined && query.passcode !== null && query.passcode !== '') params.set('passcode', query.passcode);",
                     "  const qs = params.toString();",
                     "  return qs ? `${base}?${qs}` : base;",
                     "}",
