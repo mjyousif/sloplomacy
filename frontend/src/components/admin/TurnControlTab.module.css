@@ -1,0 +1,227 @@
+@layer components {
+  .admin-tab-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .admin-card-section {
+    background: #1c222c;
+    border: 1px solid #2d3546;
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .admin-card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .admin-card-title-row h4 {
+    margin: 0;
+    font-family: "Cinzel", serif;
+    font-size: 0.84rem;
+    font-weight: 800;
+    line-height: 1.3;
+    color: #f1f5f9;
+  }
+
+  .section-icon-gold {
+    color: #dc2626;
+  }
+
+  .admin-section-desc {
+    margin: 5px 0 10px;
+    font-size: 0.74rem;
+    color: #94a3b8;
+    line-height: 1.4;
+  }
+
+  .admin-rollback-action-box {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .admin-rollback-select-group {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .rollback {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .admin-secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: 7px;
+    padding: 8px 16px;
+    background: #232a38;
+    border: 1px solid #434e63;
+    border-radius: 8px;
+    color: #f1f5f9;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .admin-secondary-btn:hover:not(:disabled) {
+    background: #2e3748;
+    border-color: #64748b;
+  }
+
+  .admin-secondary-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .admin-form-grid-3 {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 10px;
+  }
+
+  .admin-form-grid-3 > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .admin-form-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 5px;
+  }
+
+  .admin-form-group label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+  }
+
+  .admin-form-group select,
+  .admin-form-group input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: #12151d;
+    border: 1px solid #323b4b;
+    color: #f8fafc;
+    font-size: 0.78rem;
+    outline: none;
+  }
+
+  .admin-form-group select:focus,
+  .admin-form-group input:focus {
+    border-color: #f87171;
+  }
+
+  .admin-year-stepper {
+    display: flex;
+    align-items: stretch;
+    border-radius: 8px;
+    background: #12151d;
+    border: 1px solid #323b4b;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .admin-year-stepper:focus-within {
+    border-color: #f87171;
+  }
+
+  .admin-form-group .admin-year-stepper input.admin-year-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding-right: 4px;
+    -moz-appearance: textfield;
+  }
+
+  .admin-form-group
+    .admin-year-stepper
+    input.admin-year-input::-webkit-inner-spin-button,
+  .admin-form-group
+    .admin-year-stepper
+    input.admin-year-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .admin-year-stepper-btns {
+    display: flex;
+    flex-direction: column;
+    width: 22px;
+    flex-shrink: 0;
+    border-left: 1px solid #323b4b;
+    background: #181d28;
+  }
+
+  .admin-year-step-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    transition:
+      background-color 0.12s ease,
+      color 0.12s ease;
+  }
+
+  .admin-year-step-btn + .admin-year-step-btn {
+    border-top: 1px solid #323b4b;
+  }
+
+  .admin-year-step-btn:hover:not(:disabled) {
+    background: #232a3a;
+    color: #f8fafc;
+  }
+
+  .admin-year-step-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .admin-form-actions-row {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .admin-form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  :global([data-layout="compact"]) .admin-form-actions-row {
+    flex-wrap: wrap;
+  }
+
+  /* The Turn & Clock sidebar's fields are 0.78rem on a phone, because wide's
+     `.admin-turn-clock-sidebar-body .admin-form-group input` used to beat the 16px rule on
+     specificity. Cascade layers would make them 16px, so this keeps them as they were.
+     That leaves the iOS zoom-on-focus problem for these fields, which should be fixed on its own. */
+  :global([data-layout="compact"]) .admin-form-group input,
+  :global([data-layout="compact"]) .admin-form-group select {
+    font-size: 0.78rem;
+  }
+}

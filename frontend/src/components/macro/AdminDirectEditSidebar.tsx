@@ -17,6 +17,8 @@ import type { DirectEditMapHandlers } from '../EuropeMap';
 import macroStyles from '../MacroSidebar.module.css';
 import { AdminTileInspector } from '../map/hud/AdminTileInspector';
 import { VersionBadge } from '../VersionBadge';
+import styles from './AdminDirectEditSidebar.module.css';
+import adminSidebarStyles from './AdminSidebar.module.css';
 import { CollapsedRail } from './CollapsedRail';
 
 export interface AdminDirectEditSidebarProps {
@@ -86,16 +88,17 @@ export function AdminDirectEditSidebar({
 
   const stagedActionsRow = (
     <div
-      className="admin-sidebar-actions-row"
+      className={styles.adminSidebarActionsRow}
       data-testid="admin-sidebar-actions-row"
     >
       <span
-        className="admin-staged-pill-wrap"
+        className={styles.adminStagedPillWrap}
         data-testid="admin-staged-pill-wrap"
       >
         <button
           type="button"
-          className={`admin-staged-count${stagedDrawerOpen ? ' expanded' : ''}`}
+          data-expanded={stagedDrawerOpen ? 'true' : undefined}
+          className={styles.adminStagedCount}
           data-testid="admin-staged-count"
           aria-expanded={stagedDrawerOpen}
           disabled={stagedChanges.length === 0}
@@ -123,7 +126,7 @@ export function AdminDirectEditSidebar({
       </span>
       <button
         type="button"
-        className="admin-apply-btn"
+        className={styles.adminApplyBtn}
         data-testid="btn-admin-apply-edits"
         onClick={(e) => {
           e.stopPropagation();
@@ -135,7 +138,7 @@ export function AdminDirectEditSidebar({
       </button>
       <button
         type="button"
-        className="admin-exit-btn admin-clear-btn"
+        className={styles.adminExitBtn}
         data-testid="btn-admin-clear-edits"
         title="Discard all staged (unapplied) board edits"
         onClick={(e) => {
@@ -152,22 +155,24 @@ export function AdminDirectEditSidebar({
   const stagedChangesDrawer =
     stagedDrawerOpen && stagedChanges.length > 0 ? (
       <div
-        className="admin-staged-drawer"
+        className={styles.adminStagedDrawer}
         data-testid="admin-staged-drawer"
         role="region"
         aria-label="Staged changes list"
       >
-        <ul className="admin-staged-drawer-list">
+        <ul className={styles.adminStagedDrawerList}>
           {stagedChanges.map((change, idx) => (
             <li
               key={change.id}
-              className="admin-staged-drawer-item"
+              className={styles.adminStagedDrawerItem}
               data-testid={`admin-staged-item-${idx}`}
             >
-              <span className="admin-staged-drawer-label">{change.label}</span>
+              <span className={styles.adminStagedDrawerLabel}>
+                {change.label}
+              </span>
               <button
                 type="button"
-                className="admin-staged-undo-btn"
+                className={styles.adminStagedUndoBtn}
                 data-testid={`btn-admin-undo-change-${idx}`}
                 aria-label={`Undo ${change.label}`}
                 title={`Undo: ${change.label}`}
@@ -240,10 +245,10 @@ export function AdminDirectEditSidebar({
     />
   ) : (
     <div
-      className="admin-inspector-empty-state"
+      className={styles.adminInspectorEmptyState}
       data-testid="admin-inspector-empty"
     >
-      <ShieldAlert size={22} className="admin-inspector-empty-icon" />
+      <ShieldAlert size={22} className={styles.adminInspectorEmptyIcon} />
       <strong>No Territory or Unit Selected</strong>
       <p>
         Click any territory or piece on the map to assign ownership, spawn or
@@ -264,9 +269,12 @@ export function AdminDirectEditSidebar({
             className={cx(macroStyles.macroSheetPeek, 'admin-sheet-peek')}
             style={{ borderLeftColor: '#b91c1c' }}
           >
-            <div className="admin-sidebar-header-row">
-              <div className="admin-sidebar-title">
-                <Pencil size={15} className="admin-sidebar-icon" />
+            <div className={adminSidebarStyles.adminSidebarHeaderRow}>
+              <div className={adminSidebarStyles.adminSidebarTitle}>
+                <Pencil
+                  size={15}
+                  className={adminSidebarStyles.adminSidebarIcon}
+                />
                 <strong>
                   {inspectedProvInfo ? inspectedProvInfo.name : 'Edit Board'}
                 </strong>
@@ -315,18 +323,23 @@ export function AdminDirectEditSidebar({
       aria-label="Edit Board"
     >
       <div
-        className={cx(macroStyles.activePowerBanner, 'admin-sidebar-banner')}
+        className={cx(
+          macroStyles.activePowerBanner,
+          adminSidebarStyles.adminSidebarBanner,
+        )}
         style={{ borderLeft: '4px solid #b91c1c' }}
       >
-        <div className="admin-sidebar-header-row">
+        <div className={adminSidebarStyles.adminSidebarHeaderRow}>
           <div
-            className="admin-sidebar-title"
+            className={adminSidebarStyles.adminSidebarTitle}
             data-testid="admin-sidebar-title"
           >
-            <Pencil size={16} className="admin-sidebar-icon" />
+            <Pencil size={16} className={adminSidebarStyles.adminSidebarIcon} />
             <div>
-              <h2 className="admin-sidebar-heading">Edit Board</h2>
-              <span className="admin-sidebar-subtitle">
+              <h2 className={adminSidebarStyles.adminSidebarHeading}>
+                Edit Board
+              </h2>
+              <span className={adminSidebarStyles.adminSidebarSubtitle}>
                 Click any map territory or unit to edit
               </span>
             </div>

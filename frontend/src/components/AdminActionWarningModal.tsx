@@ -1,6 +1,7 @@
 import { ShieldAlert } from 'lucide-react';
 import type React from 'react';
 import type { AdminActionLogEntry } from '../types/diplomacy';
+import styles from './AdminActionWarningModal.module.css';
 import { Modal, ModalFooter } from './modal/Modal';
 import sanityStyles from './SanityCheckModal.module.css';
 
@@ -100,7 +101,7 @@ export const AdminActionWarningModal: React.FC<
       <ModalFooter className={sanityStyles.sanityModalFooter}>
         <button
           type="button"
-          className="admin-primary-btn"
+          className={styles.adminPrimaryBtn}
           data-testid="admin-warning-acknowledge-btn"
           onClick={onAcknowledge}
           disabled={loading}

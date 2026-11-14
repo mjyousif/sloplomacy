@@ -23,6 +23,7 @@ import {
   canPlaceUnitTypeInProvince,
   getAvailableCoasts,
 } from '../../../utils/adminHelpers';
+import styles from './AdminTileInspector.module.css';
 import {
   IconSelectDropdown,
   type IconSelectOption,
@@ -41,7 +42,7 @@ const ADMIN_ORDER_OPTIONS: IconSelectOption<OrderType>[] = [
     icon: (
       <Shield
         size={13}
-        className="admin-order-icon"
+        className={styles.adminOrderIcon}
         data-testid="admin-order-icon"
       />
     ),
@@ -53,7 +54,7 @@ const ADMIN_ORDER_OPTIONS: IconSelectOption<OrderType>[] = [
     icon: (
       <MoveRight
         size={13}
-        className="admin-order-icon"
+        className={styles.adminOrderIcon}
         data-testid="admin-order-icon"
       />
     ),
@@ -65,7 +66,7 @@ const ADMIN_ORDER_OPTIONS: IconSelectOption<OrderType>[] = [
     icon: (
       <Trash2
         size={13}
-        className="admin-order-icon"
+        className={styles.adminOrderIcon}
         data-testid="admin-order-icon"
       />
     ),
@@ -181,10 +182,10 @@ export function AdminTileInspector({
 
   return (
     <div
-      className="admin-tile-inspector admin-sidebar-inspector"
+      className={styles.adminTileInspector}
       data-testid="admin-tile-inspector"
     >
-      <div className="admin-inspector-card-header">
+      <div className={styles.adminInspectorCardHeader}>
         <div className="floating-unit-title">
           {owner && (
             <span
@@ -209,13 +210,13 @@ export function AdminTileInspector({
         </button>
       </div>
 
-      <div className="admin-inspector-body">
+      <div className={styles.adminInspectorBody}>
         {/* 1. Territory / Supply Center Ownership (All non-sea, non-impassable territories) */}
         {provInfo.type !== 'SEA' && provInfo.type !== 'IMPASSABLE' && (
           <>
-            <div className="admin-inspector-section">
+            <div className={styles.adminInspectorSection}>
               <label
-                className="admin-inspector-label"
+                className={styles.adminInspectorLabel}
                 htmlFor="admin-inspector-ownership-select"
               >
                 <Crown size={12} /> Province Owner
@@ -232,7 +233,7 @@ export function AdminTileInspector({
               />
             </div>
             <hr
-              className="admin-inspector-divider"
+              className={styles.adminInspectorDivider}
               data-testid="admin-inspector-divider"
             />
           </>
@@ -244,19 +245,19 @@ export function AdminTileInspector({
             Impassable terrain — units cannot be placed here.
           </div>
         ) : unit ? (
-          <div className="admin-inspector-section">
+          <div className={styles.adminInspectorSection}>
             <div
-              className="admin-inspector-unit-header"
+              className={styles.adminInspectorUnitHeader}
               data-testid="admin-inspector-unit-header"
             >
               <span
-                className="admin-inspector-label"
+                className={styles.adminInspectorLabel}
                 data-testid="admin-unit-settings-label"
               >
                 <Pencil size={12} /> Unit Settings
               </span>
               <div
-                className="admin-inspector-unit-actions-row"
+                className={styles.adminInspectorUnitActionsRow}
                 data-testid="admin-inspector-unit-actions-row"
               >
                 <button
@@ -272,7 +273,7 @@ export function AdminTileInspector({
                 </button>
                 <button
                   type="button"
-                  className="admin-inspector-destroy-btn"
+                  className={styles.adminInspectorDestroyBtn}
                   data-testid="admin-inspector-destroy-btn"
                   onClick={() => {
                     setPendingSpawn(null);
@@ -285,9 +286,9 @@ export function AdminTileInspector({
               </div>
             </div>
 
-            <div className="admin-inspector-controls-grid">
-              <div className="admin-inspector-field">
-                <span className="admin-inspector-sublabel">Unit Type</span>
+            <div className={styles.adminInspectorControlsGrid}>
+              <div className={styles.adminInspectorField}>
+                <span className={styles.adminInspectorSublabel}>Unit Type</span>
                 <div className="floating-menu-buttons">
                   {unitTypeChoices.map((choice) => {
                     const isActive =
@@ -322,9 +323,9 @@ export function AdminTileInspector({
                 </div>
               </div>
 
-              <div className="admin-inspector-field">
+              <div className={styles.adminInspectorField}>
                 <label
-                  className="admin-inspector-sublabel"
+                  className={styles.adminInspectorSublabel}
                   htmlFor="admin-inspector-unit-power"
                 >
                   Owner
@@ -347,9 +348,9 @@ export function AdminTileInspector({
               </div>
 
               {/* Phase Order Override */}
-              <div className="admin-inspector-field">
+              <div className={styles.adminInspectorField}>
                 <label
-                  className="admin-inspector-sublabel"
+                  className={styles.adminInspectorSublabel}
                   htmlFor="admin-inspector-order-type"
                 >
                   Order
@@ -402,16 +403,16 @@ export function AdminTileInspector({
             </div>
           </div>
         ) : (
-          <div className="admin-inspector-section">
-            <div className="admin-inspector-row">
-              <span className="admin-inspector-label">
+          <div className={styles.adminInspectorSection}>
+            <div className={styles.adminInspectorRow}>
+              <span className={styles.adminInspectorLabel}>
                 <PlusCircle size={12} /> Spawn Unit
               </span>
             </div>
 
-            <div className="admin-inspector-controls-grid">
-              <div className="admin-inspector-field">
-                <span className="admin-inspector-sublabel">Unit Type</span>
+            <div className={styles.adminInspectorControlsGrid}>
+              <div className={styles.adminInspectorField}>
+                <span className={styles.adminInspectorSublabel}>Unit Type</span>
                 <div className="floating-menu-buttons">
                   {unitTypeChoices.map((choice) => {
                     const isSelected =
@@ -447,9 +448,9 @@ export function AdminTileInspector({
                 </div>
               </div>
 
-              <div className="admin-inspector-field">
+              <div className={styles.adminInspectorField}>
                 <label
-                  className="admin-inspector-sublabel"
+                  className={styles.adminInspectorSublabel}
                   htmlFor="admin-inspector-spawn-power"
                 >
                   Owner

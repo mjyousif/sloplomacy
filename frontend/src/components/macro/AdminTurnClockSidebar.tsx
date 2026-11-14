@@ -17,6 +17,7 @@ import { BottomSheet } from '../BottomSheet';
 import { useConfirm } from '../ConfirmModal';
 import macroStyles from '../MacroSidebar.module.css';
 import { VersionBadge } from '../VersionBadge';
+import adminSidebarStyles from './AdminSidebar.module.css';
 import styles from './AdminTurnClockSidebar.module.css';
 import { CollapsedRail } from './CollapsedRail';
 
@@ -249,7 +250,7 @@ export function AdminTurnClockSidebar({
       data-testid="admin-tools-modal"
     >
       {actionError && (
-        <div className="admin-error-banner">
+        <div className={styles.adminErrorBanner}>
           <AlertTriangle size={15} />
           <span>{actionError}</span>
         </div>
@@ -286,9 +287,12 @@ export function AdminTurnClockSidebar({
             className={cx(macroStyles.macroSheetPeek, 'admin-sheet-peek')}
             style={{ borderLeftColor: '#b91c1c' }}
           >
-            <div className="admin-sidebar-header-row">
-              <div className="admin-sidebar-title">
-                <Wrench size={15} className="admin-sidebar-icon" />
+            <div className={adminSidebarStyles.adminSidebarHeaderRow}>
+              <div className={adminSidebarStyles.adminSidebarTitle}>
+                <Wrench
+                  size={15}
+                  className={adminSidebarStyles.adminSidebarIcon}
+                />
                 <strong>Turn and Clock Settings</strong>
               </div>
             </div>
@@ -334,13 +338,18 @@ export function AdminTurnClockSidebar({
       aria-label="Turn and Clock Settings"
     >
       <div
-        className={cx(macroStyles.activePowerBanner, 'admin-sidebar-banner')}
+        className={cx(
+          macroStyles.activePowerBanner,
+          adminSidebarStyles.adminSidebarBanner,
+        )}
         style={{ borderLeft: '4px solid #b91c1c' }}
       >
-        <div className="admin-sidebar-header-row">
-          <div className="admin-sidebar-title">
-            <Wrench size={16} className="admin-sidebar-icon" />
-            <h2 className="admin-sidebar-heading">Turn and Clock Settings</h2>
+        <div className={adminSidebarStyles.adminSidebarHeaderRow}>
+          <div className={adminSidebarStyles.adminSidebarTitle}>
+            <Wrench size={16} className={adminSidebarStyles.adminSidebarIcon} />
+            <h2 className={adminSidebarStyles.adminSidebarHeading}>
+              Turn and Clock Settings
+            </h2>
           </div>
           {onToggleCollapse && (
             <button

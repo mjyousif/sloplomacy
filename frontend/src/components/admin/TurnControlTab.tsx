@@ -9,10 +9,12 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import type { TurnHistoryEntry } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import {
   IconSelectDropdown,
   type IconSelectOption,
 } from '../map/hud/IconSelectDropdown';
+import styles from './TurnControlTab.module.css';
 
 const SEASON_OPTIONS: IconSelectOption[] = [
   {
@@ -88,18 +90,18 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
     }));
 
   return (
-    <div className="admin-tab-panel">
-      <div className="admin-card-section">
-        <div className="admin-card-title-row">
-          <Undo2 size={16} className="section-icon-gold" />
+    <div className={styles.adminTabPanel}>
+      <div className={styles.adminCardSection}>
+        <div className={styles.adminCardTitleRow}>
+          <Undo2 size={16} className={styles.sectionIconGold} />
           <h4>Revert to Past Turn</h4>
         </div>
-        <p className="admin-section-desc">
+        <p className={styles.adminSectionDesc}>
           Revert the game to a previously played turn snapshot.
         </p>
 
-        <div className="admin-rollback-action-box">
-          <div className="admin-rollback-select-group">
+        <div className={styles.adminRollbackActionBox}>
+          <div className={styles.adminRollbackSelectGroup}>
             <IconSelectDropdown
               id="admin-rollback-snapshot-select"
               testId="select-admin-rollback-snapshot"
@@ -121,7 +123,7 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
           <button
             type="button"
             data-testid="btn-admin-rollback"
-            className="admin-secondary-btn rollback"
+            className={cx(styles.adminSecondaryBtn, styles.rollback)}
             disabled={
               !canRollback ||
               loading ||
@@ -135,18 +137,18 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
         </div>
       </div>
 
-      <div className="admin-card-section">
-        <div className="admin-card-title-row">
-          <Calendar size={16} className="section-icon-gold" />
+      <div className={styles.adminCardSection}>
+        <div className={styles.adminCardTitleRow}>
+          <Calendar size={16} className={styles.sectionIconGold} />
           <h4>Adjust Game Clock &amp; Season</h4>
         </div>
-        <p className="admin-section-desc">
+        <p className={styles.adminSectionDesc}>
           Directly adjust the current season, year, or phase to fix scheduling
           or timeline mistakes.
         </p>
 
-        <div className="admin-form-grid-3">
-          <div className="admin-form-group">
+        <div className={styles.adminFormGrid3}>
+          <div className={styles.adminFormGroup}>
             <label htmlFor="admin-clock-season-select">Season</label>
             <IconSelectDropdown
               id="admin-clock-season-select"
@@ -158,14 +160,14 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
               }}
             />
           </div>
-          <div className="admin-form-group">
+          <div className={styles.adminFormGroup}>
             <label htmlFor="admin-clock-year-input">Year</label>
-            <div className="admin-year-stepper">
+            <div className={styles.adminYearStepper}>
               <input
                 id="admin-clock-year-input"
                 type="number"
                 data-testid="input-admin-year"
-                className="admin-year-input"
+                className={styles.adminYearInput}
                 min={1901}
                 max={1950}
                 value={selectedYear}
@@ -173,11 +175,11 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
                   setSelectedYear(parseInt(e.target.value, 10) || 1901)
                 }
               />
-              <div className="admin-year-stepper-btns">
+              <div className={styles.adminYearStepperBtns}>
                 <button
                   type="button"
                   data-testid="btn-admin-year-up"
-                  className="admin-year-step-btn"
+                  className={styles.adminYearStepBtn}
                   aria-label="Increase year"
                   disabled={selectedYear >= 1950}
                   onClick={() =>
@@ -189,7 +191,7 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
                 <button
                   type="button"
                   data-testid="btn-admin-year-down"
-                  className="admin-year-step-btn"
+                  className={styles.adminYearStepBtn}
                   aria-label="Decrease year"
                   disabled={selectedYear <= 1901}
                   onClick={() =>
@@ -201,7 +203,7 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
               </div>
             </div>
           </div>
-          <div className="admin-form-group">
+          <div className={styles.adminFormGroup}>
             <label htmlFor="admin-clock-phase-select">Phase</label>
             <IconSelectDropdown
               id="admin-clock-phase-select"
@@ -215,10 +217,10 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
           </div>
         </div>
 
-        <div className="admin-form-actions-row">
+        <div className={styles.adminFormActionsRow}>
           <button
             type="button"
-            className="admin-secondary-btn"
+            className={styles.adminSecondaryBtn}
             disabled={loading}
             onClick={handleSetTurn}
           >
@@ -228,18 +230,18 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
         </div>
       </div>
 
-      <div className="admin-card-section">
-        <div className="admin-card-title-row">
-          <Unlock size={16} className="section-icon-gold" />
+      <div className={styles.adminCardSection}>
+        <div className={styles.adminCardTitleRow}>
+          <Unlock size={16} className={styles.sectionIconGold} />
           <h4>Unlock All Power Orders</h4>
         </div>
-        <p className="admin-section-desc">
+        <p className={styles.adminSectionDesc}>
           If powers have locked / finalized their turns, unlock them all so
           players can freely edit and re-confirm their orders.
         </p>
         <button
           type="button"
-          className="admin-secondary-btn"
+          className={styles.adminSecondaryBtn}
           disabled={loading}
           onClick={handleUnfinalizeAll}
         >
