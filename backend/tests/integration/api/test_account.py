@@ -129,6 +129,7 @@ def test_serialize_summary_for_db_strips_uuid_display_name(clean_profiles):
         game_id="g_norm",
         name="Norm Test",
         created_by="a@test.com",
+        creator_id=uid,
         created_at="2026-01-01T00:00:00Z",
         participants={
             "FRANCE": GameParticipant(
@@ -149,6 +150,7 @@ def test_serialize_summary_for_db_strips_uuid_display_name(clean_profiles):
     )
 
     serialized = _serialize_summary_for_db(summary)
+    assert "created_by" not in serialized
     assert "display_name" not in serialized["participants"]["FRANCE"]
     assert serialized["participants"]["ITALY"]["display_name"] == "GuestPlayer"
 
