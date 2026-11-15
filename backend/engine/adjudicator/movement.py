@@ -232,3 +232,18 @@ def resolve_movement(ctx: ResolutionContext) -> None:
                 )
             )
             used_unit_ids.add(u.id)
+
+    _record_dislodgers(resolutions)
+
+
+def _record_dislodgers(resolutions: dict[str, OrderResolution]) -> None:
+    """Name the origin of the move that dislodged each dislodged unit: the one move into its
+    province that succeeded. A retreat may never go back there."""
+    arrivals = {
+        r.target: r.origin
+        for r in resolutions.values()
+        if r.order_type == OrderType.MOVE and r.succeeded and r.target
+    }
+    for r in resolutions.values():
+        if r.dislodged:
+            r.dislodged_by = arrivals.get(r.origin)
