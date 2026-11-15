@@ -5,7 +5,7 @@ import time
 from enum import Enum
 from typing import Any
 
-from domain.board import Power, Unit
+from domain.board import Power, Unit, UnitType
 from domain.issues import ValidationIssue
 from domain.orders import Order, SimulationResult
 from pydantic import BaseModel, Field, computed_field, model_validator
@@ -179,6 +179,23 @@ class GameParticipant(BaseModel):
     game_over_seen_at: str | None = None
 
 
+class PreviewUnit(BaseModel):
+    power: Power
+    unit_type: UnitType
+    province: str
+    coast: str | None = None
+
+
+class BoardPreview(BaseModel):
+    """What the homepage draws a small map from: who owns what and where the units stand.
+
+    It holds no orders, retreats or builds, so it shows nothing a player in the game cannot see.
+    """
+
+    ownership: dict[str, Power] = Field(default_factory=dict)
+    units: list[PreviewUnit] = Field(default_factory=list)
+
+
 class MultiplayerGameSummary(BaseModel):
     game_id: str
     name: str
@@ -200,6 +217,11 @@ class MultiplayerGameSummary(BaseModel):
     is_draft: bool = False
     is_private: bool = False
     has_passcode: bool = False
+    # The board as of the last sync, for the map on a player's own games. Only
+    # `GET /api/games/mine` serves it; `sanitize_summary_for_viewer` drops it everywhere else.
+    board: BoardPreview | None = None
+    # Unix time the running phase clock ends. None when the match is untimed, voting or paused.
+    deadline: float | None = None
 
 
 FIRST_YEAR = 1901

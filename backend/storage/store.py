@@ -2,7 +2,13 @@ import logging
 from datetime import datetime, timezone
 
 from domain.board import Power
-from domain.game_state import GameState, MultiplayerGameSummary
+from domain.game_state import (
+    BoardPreview,
+    GameState,
+    MultiplayerGameSummary,
+    PreviewUnit,
+    TimerStage,
+)
 from domain.press import PressMessage
 from engine.reachability import compute_unit_options
 from fastapi import HTTPException, status
@@ -87,6 +93,19 @@ def sync_summary(game_id: str) -> None:
         summary.phase = st.phase
         summary.finalized_powers = list(st.finalized_powers)
         summary.surrendered_powers = list(st.surrendered_powers)
+        summary.board = BoardPreview(
+            ownership=dict(st.ownership),
+            units=[
+                PreviewUnit(
+                    power=u.power, unit_type=u.unit_type, province=u.province, coast=u.coast
+                )
+                for u in st.units
+                if not u.is_dislodged
+            ],
+        )
+        clock = st.timer
+        running = clock is not None and clock.stage == TimerStage.RUNNING
+        summary.deadline = clock.deadline if running else None
         if st.winner:
             summary.status = "completed"
             summary.winner = st.winner
