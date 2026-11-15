@@ -222,3 +222,37 @@ def test_leave_saved_sandbox_deletes_it():
     # Ensure it no longer exists
     get_res = client.get(f"/api/game?game_id={saved_gid}")
     assert get_res.status_code == 404
+
+
+def test_surrendered_power_cannot_submit_orders():
+    """A surrendered power is in Civil Disorder: its orders are refused until a player reclaims the seat."""
+    client = TestClient(app)
+    gid = "mp_concert_104"
+    client.post(
+        f"/api/games/{gid}/surrender",
+        json={"power": "GERMANY", "user_id": "bot_bismarck", "leave": False},
+    )
+    unit = next(u for u in GAMES[gid].units if u.power == Power.GERMANY)
+    order = {
+        "unit_id": unit.id,
+        "power": "GERMANY",
+        "unit_type": unit.unit_type.value,
+        "origin": unit.province,
+        "order_type": "HOLD",
+        "is_explicit": True,
+    }
+    single = client.post("/api/order", params={"game_id": gid}, json={"order": order})
+    assert single.status_code == 403
+    batch = client.post(
+        "/api/orders/batch",
+        params={"game_id": gid},
+        json={"power": "GERMANY", "orders": [order]},
+    )
+    assert batch.status_code == 403
+    for path in ("/api/orders/clear-all", "/api/orders/confirm-all", "/api/unfinalize"):
+        res = client.post(path, params={"game_id": gid}, json={"power": "GERMANY"})
+        assert res.status_code == 403, path
+    fin = client.post(
+        "/api/finalize", params={"game_id": gid}, json={"power": "GERMANY", "force": True}
+    )
+    assert fin.status_code == 403

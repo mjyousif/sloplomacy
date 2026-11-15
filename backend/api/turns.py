@@ -3,6 +3,7 @@ import time
 from datetime import datetime, timezone
 
 from api.admin_utils import create_admin_log_entry, resolve_admin_actor
+from api.orders import reject_if_surrendered
 from domain.board import Power
 from domain.game_state import AdminActionLogEntry, GameState, TimerStage
 from domain.issues import IssueSeverity
@@ -241,6 +242,7 @@ async def finalize_power_orders(
     reject_if_game_over(game)
     reject_stale_turn(game, req.turn)
     verify_power_authorization(game.game_id, req.power, current_user)
+    reject_if_surrendered(game, req.power)
     power_issues = validate_orders(
         game.units,
         game.orders,
@@ -300,6 +302,7 @@ async def unfinalize_power_orders(
     game = await resolve_game(game_id)
     reject_if_game_over(game)
     verify_power_authorization(game.game_id, req.power, current_user)
+    reject_if_surrendered(game, req.power)
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)
     game.state_revision += 1
