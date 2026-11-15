@@ -148,7 +148,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   const powerMeta = POWER_METADATA[activePower];
   const isFinalized = finalizedPowers.includes(activePower);
   const isSurrendered = surrenderedPowers.includes(activePower);
-
   const isAdjustmentPhase = phase === 'Adjustments' || season === 'Winter';
   const isRetreatPhase = phase === 'Retreats';
 
@@ -212,7 +211,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     isRetreatPhase,
   });
   const { myBlockingIssues, unconfirmedCount } = progress;
-
   const isSheet = variant === 'sheet';
   const [compactOrders, setCompactOrders] = useState<boolean>(() => {
     try {
@@ -276,7 +274,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
   // The pieces of the expanded panel. The desktop panel and the phone sheet arrange the same
   // pieces differently, so neither copies the other.
-  const clearAllButton = <ClearAllButton onClearAllOrders={onClearAllOrders} />;
+  const clearAllButton = (
+    <ClearAllButton key={season + phase} onClearAllOrders={onClearAllOrders} />
+  );
 
   const surrenderButton =
     isMultiplayer && onSurrenderClick ? (

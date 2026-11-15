@@ -36,13 +36,22 @@ const footer = (over: Partial<Parameters<typeof OrderFooter>[0]> = {}) => {
 };
 
 describe('ClearAllButton', () => {
-  it('clears all orders on click', () => {
+  it('asks first, then clears all orders on Yes', () => {
     const onClearAllOrders = vi.fn();
     render(<ClearAllButton onClearAllOrders={onClearAllOrders} />);
     const btn = screen.getByTestId('btn-clear-all');
     expect(btn).toHaveTextContent('Clear All Orders');
     fireEvent.click(btn);
+    expect(onClearAllOrders).not.toHaveBeenCalled();
+    expect(screen.getByTestId('btn-clear-all-confirm')).toHaveTextContent(
+      'Yes',
+    );
+    expect(screen.getByTestId('btn-clear-all-cancel')).toHaveTextContent(
+      'Cancel',
+    );
+    fireEvent.click(screen.getByTestId('btn-clear-all-confirm'));
     expect(onClearAllOrders).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('btn-clear-all')).toBeInTheDocument();
   });
 });
 

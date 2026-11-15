@@ -34,6 +34,32 @@
     color: #ffffff;
   }
 
+  /* Clear All's question: Yes and Cancel split the button's own spot in half. An invisible copy
+     of the button sits in the same cell, so the question is as wide as the button wherever
+     the row sizes it by its content (the phone sheet). */
+  .clear-all-confirm {
+    flex: 1;
+    display: grid;
+  }
+
+  .clear-all-confirm > * {
+    grid-area: 1 / 1;
+  }
+
+  .clear-all-ghost {
+    visibility: hidden;
+  }
+
+  .clear-all-choices {
+    display: flex;
+    gap: 4px;
+  }
+
+  .clear-all-choices > .quick-action-btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
   /* Multiplayer Resolution & Consensus Controls */
   .mp-resolution-controls {
     display: flex;
@@ -144,5 +170,14 @@
     background: #28303e;
     opacity: 0.55;
     cursor: not-allowed;
+  }
+}
+
+@layer compact {
+  /* In the phone sheet the question takes the button's place in its controls row, whose
+     direct children are buttons, so its two buttons get the same touch height. */
+  :global([data-layout="compact"]) .clear-all-confirm button {
+    min-height: 44px;
+    margin: 0;
   }
 }
