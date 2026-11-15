@@ -1,9 +1,9 @@
 import { ShieldAlert } from 'lucide-react';
 import type React from 'react';
-import type { AdminActionLogEntry } from '../types/diplomacy';
+import type { AdminActionLogEntry } from '../../types/diplomacy';
+import sanityStyles from '../game/SanityCheckModal.module.css';
+import { Modal, ModalFooter } from '../modal/Modal';
 import styles from './AdminActionWarningModal.module.css';
-import { Modal, ModalFooter } from './modal/Modal';
-import sanityStyles from './SanityCheckModal.module.css';
 
 export interface AdminActionWarningModalProps {
   isOpen: boolean;

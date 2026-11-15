@@ -94,12 +94,13 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │
 ├── Modals & Overlays (AppModals.tsx renders the dialogues, on every view)
 │   ├── DisplaySettingsMenu.tsx (Top bar popover for piece style and marks)
-│   ├── AuthModal.tsx (Supabase login/signup & local dev auth toggle)
 │   ├── AdminSettingsMenu.tsx (Top bar Wrench popover: Edit Board & Turn and Clock Settings)
-│   ├── AdminActionWarningModal.tsx (Creator action notice & acknowledgment prompt)
-│   ├── SurrenderModal.tsx (Civil Disorder concession dialogue)
-│   ├── SanityCheckModal.tsx (Tactical Blunder Gatekeeper before order finalization)
-│   └── PhaseTimerWidget.tsx (Turn clock over the bottom left of the map, via EuropeMap's overlay prop)
+│   ├── PhaseTimerWidget.tsx (Turn clock over the bottom left of the map, via EuropeMap's overlay prop)
+│   ├── modal/ConfirmModal.tsx (Generic in-app confirmation modal & useConfirm hook)
+│   ├── auth/AuthModal.tsx & AccountModal.tsx (Supabase login/signup, local dev auth & account settings)
+│   ├── admin/AdminActionWarningModal.tsx (Creator action notice & acknowledgment prompt)
+│   ├── game/SurrenderModal.tsx, GameOverModal.tsx & SanityCheckModal.tsx (Match-lifecycle & blunder modals)
+│   └── tools/SaveSandboxModal.tsx (Sandbox promotion dialogue)
 ```
 
 ---

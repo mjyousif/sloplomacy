@@ -7,14 +7,14 @@ import {
   POWER_METADATA,
   type Power,
   type ProvinceInfo,
-} from '../types/diplomacy';
+} from '../../types/diplomacy';
 import {
   getMyParticipant,
   getSupplyCenterCounts,
-} from '../utils/gameOverHelpers';
+} from '../../utils/gameOverHelpers';
+import { Modal } from '../modal/Modal';
+import { PowerFlag } from '../PowerFlag';
 import styles from './GameOverModal.module.css';
-import { Modal } from './modal/Modal';
-import { PowerFlag } from './PowerFlag';
 
 export interface GameOverModalProps {
   isOpen: boolean;

@@ -2,11 +2,11 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { updateAccountDisplayName } from '../lib/supabase';
-import type { AuthUser } from '../types/diplomacy';
+import { updateAccountDisplayName } from '../../lib/supabase';
+import type { AuthUser } from '../../types/diplomacy';
 import { AccountModal } from './AccountModal';
 
-vi.mock('../lib/supabase', () => ({
+vi.mock('../../lib/supabase', () => ({
   updateAccountDisplayName: vi.fn(),
 }));
 

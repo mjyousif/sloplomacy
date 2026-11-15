@@ -16,10 +16,10 @@ import {
   signInWithEmailPassword,
   signInWithOAuthProvider,
   signUpWithEmailPassword,
-} from '../lib/supabase';
-import type { AuthUser } from '../types/diplomacy';
+} from '../../lib/supabase';
+import type { AuthUser } from '../../types/diplomacy';
+import { Modal, ModalCloseButton } from '../modal/Modal';
 import styles from './AuthModal.module.css';
-import { Modal, ModalCloseButton } from './modal/Modal';
 
 interface AuthModalProps {
   isOpen: boolean;

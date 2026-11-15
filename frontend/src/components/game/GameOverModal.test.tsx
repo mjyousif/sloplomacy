@@ -7,7 +7,7 @@ import type {
   GameState,
   MultiplayerGameSummary,
   ProvinceInfo,
-} from '../types/diplomacy';
+} from '../../types/diplomacy';
 import { GameOverModal } from './GameOverModal';
 
 const PROVINCES = {

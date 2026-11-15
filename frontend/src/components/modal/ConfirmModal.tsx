@@ -2,7 +2,7 @@ import { AlertTriangle, X } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './ConfirmModal.module.css';
-import { Modal, ModalCloseButton, ModalFooter } from './modal/Modal';
+import { Modal, ModalCloseButton, ModalFooter } from './Modal';
 
 /**
  * In-app confirmation for destructive actions.

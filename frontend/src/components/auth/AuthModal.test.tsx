@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthModal } from './AuthModal';
 
-vi.mock('../lib/supabase', () => ({
+vi.mock('../../lib/supabase', () => ({
   isSupabaseConfigured: false,
   sendMagicLink: vi.fn(),
   signInWithEmailPassword: vi.fn(async () => ({

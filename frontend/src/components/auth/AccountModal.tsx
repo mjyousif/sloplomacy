@@ -1,11 +1,11 @@
 import { Lock, LogOut, ShieldCheck, User as UserIcon, X } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
-import { updateAccountDisplayName } from '../lib/supabase';
-import type { AuthUser } from '../types/diplomacy';
+import { updateAccountDisplayName } from '../../lib/supabase';
+import type { AuthUser } from '../../types/diplomacy';
+import { Modal, ModalCloseButton } from '../modal/Modal';
 import styles from './AccountModal.module.css';
 import authStyles from './AuthModal.module.css';
-import { Modal, ModalCloseButton } from './modal/Modal';
 
 interface AccountModalProps {
   isOpen: boolean;

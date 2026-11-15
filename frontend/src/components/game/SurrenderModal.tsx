@@ -5,10 +5,10 @@ import {
   type MultiplayerGameSummary,
   POWER_METADATA,
   type Power,
-} from '../types/diplomacy';
-import { cx } from '../utils/cx';
-import { Modal, ModalCloseButton, ModalFooter } from './modal/Modal';
-import { PowerFlag } from './PowerFlag';
+} from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
+import { Modal, ModalCloseButton, ModalFooter } from '../modal/Modal';
+import { PowerFlag } from '../PowerFlag';
 import styles from './SurrenderModal.module.css';
 
 interface SurrenderModalProps {

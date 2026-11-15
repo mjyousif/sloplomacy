@@ -12,8 +12,8 @@ import {
   POWER_METADATA,
   type Power,
   type ValidationIssue,
-} from '../types/diplomacy';
-import { Modal, ModalCloseButton, ModalFooter } from './modal/Modal';
+} from '../../types/diplomacy';
+import { Modal, ModalCloseButton, ModalFooter } from '../modal/Modal';
 import sanityStyles from './SanityCheckModal.module.css';
 
 interface SanityCheckModalProps {

@@ -11,7 +11,7 @@ import {
   type CompactTopBarProps,
   describeIssueCount,
 } from './CompactTopBar';
-import { SurrenderModal } from './SurrenderModal';
+import { SurrenderModal } from './game/SurrenderModal';
 
 const noop = () => {};
 

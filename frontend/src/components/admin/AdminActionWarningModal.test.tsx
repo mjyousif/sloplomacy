@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { AdminActionLogEntry } from '../types/diplomacy';
+import type { AdminActionLogEntry } from '../../types/diplomacy';
 import { AdminActionWarningModal } from './AdminActionWarningModal';
 
 const ENTRIES: AdminActionLogEntry[] = [
