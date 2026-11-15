@@ -40,7 +40,6 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
       className={styles.lobbyCreateCard}
       data-variant="join"
       data-testid="join-with-code-card"
-      style={{ marginTop: '20px' }}
     >
       <div className={styles.lobbyCreateHeader}>
         <KeyRound size={18} />

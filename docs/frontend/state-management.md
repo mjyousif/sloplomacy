@@ -124,6 +124,7 @@ App.applyServerState(st)
    - `LobbyView.tsx` loads the list of open lobbies, ongoing matches, and saved sandboxes.
 2. **Creating a Match (`POST /api/games`)**:
    - Users create custom rooms or isolated sandboxes.
+   - The lobby's **Host game** and **Join with code** buttons (`lobby/LobbyActionRow.tsx`) each open their form in a dialog (`lobby/LobbyFormDialog.tsx`: closes on Escape, the ✕ or a click outside). `LobbyView` holds only which dialog is open. The fields and submit handlers live in `lobby/hooks/useHostGameForm.ts` and `useJoinWithCodeForm.ts`, so what was typed survives closing the dialog, and an old error is cleared when it opens again. A dialog closes itself once the game is created or the seat claimed, or when a guest is sent to sign in.
 3. **Joining & Claiming Seats (`POST /api/games/{id}/join`)**:
    - Claims an available Great Power for the user, setting `lockedPower` so moves cannot be submitted for rival nations.
    - Joining never changes what other players see: the server leaves the shared game's `active_power` alone in multiplayer.

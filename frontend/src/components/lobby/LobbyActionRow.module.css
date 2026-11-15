@@ -1,0 +1,47 @@
+@layer components {
+  .row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .action[data-variant="host"] {
+    background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+    border: 1px solid #e5b964;
+    color: #14171c;
+  }
+
+  .action[data-variant="host"]:hover {
+    border-color: #fde68a;
+    box-shadow: 0 0 12px rgba(229, 185, 100, 0.25);
+  }
+
+  .action[data-variant="join"] {
+    background: #252b37;
+    border: 1px solid #3c4454;
+    color: #cbd5e1;
+  }
+
+  .action[data-variant="join"]:hover {
+    background: #303847;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .action {
+    flex: 1;
+    min-height: 44px;
+  }
+}

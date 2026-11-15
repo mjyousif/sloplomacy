@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { LobbyView } from './LobbyView';
@@ -38,6 +38,15 @@ export function setup(over: Partial<Props> = {}) {
   const view = render(<LobbyView {...props} />);
   return { props, user, view };
 }
+
+/** Opens the Host dialog from the action row. */
+export const openHost = () =>
+  fireEvent.click(screen.getByRole('button', { name: 'Host game' }));
+/** Opens the Join with code dialog from the action row. */
+export const openJoin = () =>
+  fireEvent.click(screen.getByRole('button', { name: 'Join with code' }));
+export const hostDialog = () => screen.queryByTestId('host-game-dialog');
+export const joinDialog = () => screen.queryByTestId('join-with-code-dialog');
 
 export const OPEN = game({ game_id: 'mp_open', name: 'Open Table' });
 export const SECRET = game({

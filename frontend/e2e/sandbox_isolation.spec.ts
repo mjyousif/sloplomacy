@@ -18,8 +18,24 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
       await page.waitForSelector('[data-testid="btn-enter-sandbox"]', { timeout: 15000 });
       await recorder.recordStep(page, '01_lobby_screen');
 
+      // 2a. Host and Join with code open as dialogs from the lobby's action row
+      await page.getByRole('button', { name: 'Join with code' }).click();
+      const joinDialog = page.getByRole('dialog', { name: 'Join with code' });
+      await expect(joinDialog).toBeVisible();
+      await recorder.recordStep(page, '01a_join_with_code_dialog');
+      await page.keyboard.press('Escape');
+      await expect(joinDialog).toHaveCount(0);
+
+      await page.getByRole('button', { name: 'Host game' }).click();
+      const hostDialog = page.getByRole('dialog', { name: 'Host game' });
+      await expect(hostDialog).toBeVisible();
+      await hostDialog.getByRole('button', { name: 'Germany' }).click();
+      await expect(hostDialog.getByRole('button', { name: 'Germany' })).toHaveAttribute('aria-pressed', 'true');
+      await recorder.recordStep(page, '01a_host_game_dialog');
+
       // 2b. Hosting while signed out asks for an account: the modal opens on Create Account
       await page.getByRole('button', { name: 'Sign In to Host Campaign' }).click();
+      await expect(hostDialog).toHaveCount(0);
       const hostAuthModal = page.getByRole('dialog', { name: 'Diplomatic Credentials' });
       await expect(hostAuthModal).toBeVisible();
       await expect(hostAuthModal).toContainText('create an account to host a new multiplayer');

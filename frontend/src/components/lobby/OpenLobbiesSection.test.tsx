@@ -14,7 +14,6 @@ function setup(over: Partial<OpenLobbiesSectionProps> = {}) {
     multiplayerLobbies: [],
     loadingGames: false,
     onRefreshGames: vi.fn(),
-    hostFormPlace: 'on the right',
     joiningKey: null,
     handlePowerSlotClick: vi.fn(async () => {}),
     onOpenSurrenderModal: vi.fn(),
@@ -25,20 +24,15 @@ function setup(over: Partial<OpenLobbiesSectionProps> = {}) {
 }
 
 describe('OpenLobbiesSection', () => {
-  it('says there are no lobbies, and where the Host form is', () => {
-    const a = setup();
+  it('says there are no lobbies, and points at the Host game button', () => {
+    setup();
     expect(
       screen.getByText('No Active Campaigns Right Now'),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Host a new public or private match on the right, or join/,
+        /Host a new public or private match with Host game, or join/,
       ),
-    ).toBeInTheDocument();
-    a.view.unmount();
-    setup({ hostFormPlace: 'below' });
-    expect(
-      screen.getByText(/private match below, or join/),
     ).toBeInTheDocument();
   });
 

@@ -27,11 +27,11 @@ function setup(over: Partial<JoinWithCodeCardProps> = {}) {
 }
 
 describe('JoinWithCodeCard', () => {
-  it('is the card with the 20px gap above it', () => {
+  it('is the join card, with no gap of its own now that it sits alone in a dialog', () => {
     const { view } = setup();
     const card = view.container.firstElementChild as HTMLElement;
     expect(card).toHaveAttribute('data-variant', 'join');
-    expect(card.style.marginTop).toBe('20px');
+    expect(card.style.marginTop).toBe('');
     expect(
       screen.getByRole('heading', { name: 'Join Private Campaign' }),
     ).toBeInTheDocument();

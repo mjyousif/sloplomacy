@@ -9,10 +9,6 @@
   .lobby-main-grid {
     max-width: 1280px;
     margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1fr 360px;
-    gap: 24px;
-    align-items: start;
   }
 
   .lobby-games-column {
