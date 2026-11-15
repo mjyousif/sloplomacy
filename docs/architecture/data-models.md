@@ -189,7 +189,7 @@ The chat of a multiplayer match, in `backend/domain/press.py` and `frontend/src/
 | `seq` | `number` | The message's place among the messages this player may read (1, 2, 3…), so a client can ask for what it has not seen (`?after=`). Once the press is revealed, the game-wide count. The server keeps the game-wide `seq` and each reader's number (`PressMessage.numbers`) to itself. |
 | `sender` | `Power?` | The author. `null` while an anonymous author is hidden from this viewer. |
 | `anonymous` | `boolean` | Sent unsigned. Still `true` once the author is revealed. |
-| `recipients` | `Power[]` | Empty for the public box. Otherwise the powers it was sent to, never the sender. |
+| `recipients` | `Power[]` | Empty for the public box. Otherwise the powers it was sent to, never the sender. While an anonymous author is hidden from this viewer, the whole thread instead, author included, since the real list leaves out exactly the author. |
 | `body` | `string` | Up to 1000 characters. |
 | `sent_at` | `string` | ISO time. |
 | `season`, `year`, `phase` | | The turn it was sent in. |

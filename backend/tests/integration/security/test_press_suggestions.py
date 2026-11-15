@@ -165,9 +165,14 @@ def test_a_suggestion_only_covers_units_of_the_thread(match):
 
 def test_suggestion_rules(match):
     plan = [order("GER_A_MUN", target="BUR")]
-    # Not in the public box, and not as an anonymous note.
+    # Not in the public box, and not in an anonymous message.
     assert suggest(match, alice_headers(), "FRANCE", plan, recipients=()).status_code == 422
-    assert suggest(match, alice_headers(), "FRANCE", plan, anonymous=True).status_code == 422
+    assert (
+        suggest(
+            match, alice_headers(), "FRANCE", plan, ["GERMANY", "ENGLAND"], anonymous=True
+        ).status_code
+        == 422
+    )
     # One order for each unit.
     assert suggest(match, alice_headers(), "FRANCE", plan + plan).status_code == 422
     # Only the orders of a Movement phase, and only provinces that exist.

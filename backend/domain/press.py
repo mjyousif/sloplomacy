@@ -1,4 +1,4 @@
-"""Press: the messages players send each other in a match (public, private threads, anonymous notes)."""
+"""Press: the messages players send each other in a match (the public box and private threads, signed or anonymous)."""
 
 from domain.board import Power
 from domain.orders import Order
@@ -60,6 +60,9 @@ class PressMessageView(BaseModel):
     seq: int
     sender: Power | None
     anonymous: bool
+    # Who it was sent to. While an anonymous author is hidden, a private message lists every
+    # power in its thread instead, the author included: the real list leaves out exactly the
+    # author, which would name them.
     recipients: list[Power]
     body: str
     sent_at: str

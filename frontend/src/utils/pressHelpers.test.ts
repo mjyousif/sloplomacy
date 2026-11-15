@@ -7,7 +7,6 @@ import {
   destinationOf,
   loadReadMarks,
   mergeMessages,
-  NOTES_CHANNEL,
   PUBLIC_CHANNEL,
   readUpToNow,
   saveReadMarks,
@@ -70,25 +69,28 @@ describe('channels', () => {
     expect(channelOf(msg(2, null))).toBe(PUBLIC_CHANNEL);
   });
 
-  it('puts every anonymous private message in the notes, even once revealed', () => {
-    expect(channelOf(msg(1, null, ['FRANCE']))).toBe(NOTES_CHANNEL);
-    expect(channelOf(msg(2, 'GERMANY', ['FRANCE'], { anonymous: true }))).toBe(
-      NOTES_CHANNEL,
+  it('puts an anonymous private message in its thread, hidden or revealed', () => {
+    const thread = threadKey(['FRANCE', 'GERMANY', 'ITALY']);
+    // While the author is hidden the server lists the whole thread as the recipients.
+    expect(channelOf(msg(1, null, ['FRANCE', 'GERMANY', 'ITALY']))).toBe(
+      thread,
     );
+    expect(
+      channelOf(msg(2, 'GERMANY', ['FRANCE', 'ITALY'], { anonymous: true })),
+    ).toBe(thread);
   });
 
   it('says where a message being written will land', () => {
-    expect(destinationOf([], true, 'FRANCE')).toBe(PUBLIC_CHANNEL);
-    expect(destinationOf(['GERMANY'], true, 'FRANCE')).toBe(NOTES_CHANNEL);
-    expect(destinationOf(['GERMANY'], false, 'FRANCE')).toBe(
+    expect(destinationOf([], 'FRANCE')).toBe(PUBLIC_CHANNEL);
+    expect(destinationOf(['GERMANY'], 'FRANCE')).toBe(
       threadKey(['FRANCE', 'GERMANY']),
     );
   });
 
-  it('lists the public box first, busiest threads next and the notes last', () => {
+  it('lists the public box first and the busiest threads next', () => {
     const channels = buildChannels(
       [
-        msg(1, null, ['FRANCE']),
+        msg(1, null, ['FRANCE', 'GERMANY', 'ITALY']),
         msg(2, 'ITALY', ['FRANCE']),
         msg(3, 'GERMANY', ['FRANCE']),
       ],
@@ -99,7 +101,7 @@ describe('channels', () => {
       PUBLIC_CHANNEL,
       'FRANCE+GERMANY',
       'FRANCE+ITALY',
-      NOTES_CHANNEL,
+      'FRANCE+GERMANY+ITALY',
     ]);
     expect(channels[1].members).toEqual(['FRANCE', 'GERMANY']);
   });

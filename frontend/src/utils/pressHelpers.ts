@@ -7,15 +7,12 @@ import {
 
 /** The box every seated player reads. */
 export const PUBLIC_CHANNEL = 'public';
-/** Anonymous private messages: one-way notes that cannot be answered. */
-export const NOTES_CHANNEL = 'notes';
-
-export type PressChannelKind = 'public' | 'notes' | 'thread';
+export type PressChannelKind = 'public' | 'thread';
 
 export interface PressChannel {
   key: string;
   kind: PressChannelKind;
-  /** A thread's powers, the player's own included. Empty for the public box and the notes. */
+  /** A thread's powers, the player's own included. Empty for the public box. */
   members: Power[];
   messages: PressMessage[];
   /** Messages from others the player has not read yet. */
@@ -35,31 +32,29 @@ export function threadMembers(key: string): Power[] {
     .filter((p): p is Power => ALL_POWERS.includes(p as Power));
 }
 
-/** Which channel a message is shown in. */
+/**
+ * Which channel a message is shown in, signed or anonymous. While an anonymous author is hidden
+ * (`sender` null) the server lists the whole thread as its recipients.
+ */
 export function channelOf(message: PressMessage): string {
   if (message.recipients.length === 0) return PUBLIC_CHANNEL;
-  if (message.anonymous || message.sender === null) return NOTES_CHANNEL;
-  return threadKey([message.sender, ...message.recipients]);
+  const sender = message.sender ? [message.sender] : [];
+  return threadKey([...sender, ...message.recipients]);
 }
 
-/** Where a message with these recipients will land. */
-export function destinationOf(
-  recipients: Power[],
-  anonymous: boolean,
-  viewer: Power,
-): string {
+/** Where a message with these recipients will land, signed or anonymous. */
+export function destinationOf(recipients: Power[], viewer: Power): string {
   if (recipients.length === 0) return PUBLIC_CHANNEL;
-  return anonymous ? NOTES_CHANNEL : threadKey([viewer, ...recipients]);
+  return threadKey([viewer, ...recipients]);
 }
 
 function kindOf(key: string): PressChannelKind {
-  if (key === PUBLIC_CHANNEL) return 'public';
-  return key === NOTES_CHANNEL ? 'notes' : 'thread';
+  return key === PUBLIC_CHANNEL ? 'public' : 'thread';
 }
 
 /**
  * Sorts messages into channels: the public box first, then threads with the latest activity
- * first, then the notes. The public box is always there; `keep` names a channel to list even
+ * first. The public box is always there; `keep` names a channel to list even
  * while it is empty (the thread the player has just ticked open).
  */
 export function buildChannels(
@@ -87,8 +82,7 @@ export function buildChannels(
       lastSeq: list.length ? list[list.length - 1].seq : 0,
     };
   });
-  const rank = (c: PressChannel) =>
-    c.kind === 'public' ? 0 : c.kind === 'thread' ? 1 : 2;
+  const rank = (c: PressChannel) => (c.kind === 'public' ? 0 : 1);
   return channels.sort(
     (a, b) =>
       rank(a) - rank(b) || b.lastSeq - a.lastSeq || a.key.localeCompare(b.key),

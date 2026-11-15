@@ -1,4 +1,4 @@
-"""FastAPI router for press: the public box, private threads and anonymous notes of a match."""
+"""FastAPI router for press: the public box and private threads of a match, signed or anonymous."""
 
 import time
 import uuid
@@ -164,8 +164,9 @@ async def read_press(
     response_model=PressMessageView,
     summary="Send Press",
     description=(
-        "Post to the public box (no recipients), to a private thread (recipients), or send an "
-        "anonymous note (recipients and `anonymous`). The sender is the caller's own seat. A "
+        "Post to the public box (no recipients) or to a private thread (recipients). With "
+        "`anonymous` the author is hidden, which a one-to-one thread cannot do, so it needs no "
+        "recipients or at least two. The sender is the caller's own seat. A "
         "signed private message may carry `orders`: moves suggested for the units of the "
         "sender and the recipients, which change nobody's real orders."
     ),
@@ -189,10 +190,10 @@ async def send_press(
     recipients = sorted({p for p in req.recipients if p != seat}, key=lambda p: p.value)
     if req.recipients and not recipients:
         raise HTTPException(status_code=422, detail="You cannot send a message to yourself.")
-    if req.anonymous and not recipients:
+    if req.anonymous and len(recipients) == 1:
         raise HTTPException(
             status_code=422,
-            detail="An anonymous note goes to chosen countries; public press is always signed.",
+            detail="In a one-to-one thread the other player would know it was you, so it cannot be anonymous.",
         )
     summary = GAME_SUMMARIES.get(gid)
     seated = set(summary.participants) if summary else set()

@@ -32,18 +32,36 @@ def test_private_message_is_read_only_by_its_sender_and_recipients():
 
 
 def test_anonymous_author_is_hidden_from_everyone_but_themself():
-    note = message(recipients=[Power.GERMANY], anonymous=True)
+    note = message(recipients=[Power.GERMANY, Power.ITALY], anonymous=True)
     assert view_of(note, Power.GERMANY, revealed=False).sender is None
     assert view_of(note, Power.FRANCE, revealed=False).sender == Power.FRANCE
 
 
-def test_a_hidden_author_appears_nowhere_in_the_view():
-    note = message(recipients=[Power.GERMANY], anonymous=True)
-    assert "FRANCE" not in view_of(note, Power.GERMANY, revealed=False).model_dump_json()
+def test_anonymous_public_press_hides_its_author():
+    post = message(anonymous=True)
+    view = view_of(post, Power.ENGLAND, revealed=False)
+    assert view.sender is None and view.recipients == []
+    assert "FRANCE" not in view.model_dump_json()
+
+
+def test_a_hidden_author_cannot_be_told_from_the_other_thread_members():
+    # France and Italy writing anonymously in the France-Germany-Italy thread look the same to
+    # Germany: both list the whole thread, so the power missing from the list names nobody.
+    by_france = message(recipients=[Power.GERMANY, Power.ITALY], anonymous=True)
+    by_italy = message(sender=Power.ITALY, recipients=[Power.FRANCE, Power.GERMANY], anonymous=True)
+    seen = [view_of(m, Power.GERMANY, revealed=False).model_dump() for m in (by_france, by_italy)]
+    assert seen[0] == seen[1]
+    assert seen[0]["recipients"] == [Power.FRANCE, Power.GERMANY, Power.ITALY]
+
+
+def test_the_author_and_the_reveal_see_the_real_recipients():
+    note = message(recipients=[Power.GERMANY, Power.ITALY], anonymous=True)
+    assert view_of(note, Power.FRANCE, revealed=False).recipients == [Power.GERMANY, Power.ITALY]
+    assert view_of(note, Power.GERMANY, revealed=True).recipients == [Power.GERMANY, Power.ITALY]
 
 
 def test_game_over_reveals_every_message_and_author():
-    note = message(recipients=[Power.GERMANY], anonymous=True)
+    note = message(recipients=[Power.GERMANY, Power.ITALY], anonymous=True)
     assert can_read(note, Power.TURKEY, revealed=True)
     assert view_of(note, Power.TURKEY, revealed=True).sender == Power.FRANCE
 

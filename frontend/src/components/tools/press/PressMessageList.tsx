@@ -14,7 +14,7 @@ import {
   PressSuggestionCard,
   type PressSuggestionContext,
 } from './PressSuggestionCard';
-import { listPowers, powerName } from './pressLabels';
+import { powerName } from './pressLabels';
 
 export interface PressMessageListProps {
   messages: PressMessage[];
@@ -22,8 +22,6 @@ export interface PressMessageListProps {
   provinces: Record<string, ProvinceInfo>;
   /** Shown when the channel has no messages. */
   emptyText: string;
-  /** Names each message's recipients: the notes list mixes notes to different powers. */
-  showRecipients: boolean;
   onHighlightProvinces: (ids: string[]) => void;
   /** A province link was tapped or clicked (the phone closes its drawer to show the map). */
   onProvincePicked?: () => void;
@@ -91,7 +89,6 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
   viewer,
   provinces,
   emptyText,
-  showRecipients,
   onHighlightProvinces,
   onProvincePicked,
   listRef,
@@ -175,17 +172,6 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
                   {timeOf(message.sent_at)}
                 </time>
               </header>
-              {showRecipients && message.recipients.length > 0 && (
-                <div className={styles.messageRecipients}>
-                  to{' '}
-                  {listPowers(message.recipients.filter((p) => p !== viewer))}
-                  {message.recipients.includes(viewer)
-                    ? message.recipients.length > 1
-                      ? ' and you'
-                      : 'you'
-                    : ''}
-                </div>
-              )}
               {message.body && (
                 <PressBody
                   body={message.body}

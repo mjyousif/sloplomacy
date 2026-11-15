@@ -167,57 +167,81 @@ describe('PressSection', () => {
     expect(picked()).toEqual([]);
   });
 
-  it('sends an anonymous private message as a one-way note', async () => {
+  it('posts anonymously in the group thread that is open', async () => {
+    const group = threadKey(['ENGLAND', 'FRANCE', 'GERMANY']);
     render(<PressSection {...base()} />);
-    fill([msg(1, null, 'Watch the Channel', ['FRANCE'])]);
+    // The server lists the whole thread while an anonymous author is hidden.
+    fill([msg(1, null, 'Watch the Channel', ['ENGLAND', 'FRANCE', 'GERMANY'])]);
     await tick('GERMANY');
+    await tick('ENGLAND');
+    expect(tab(group)).toHaveAttribute('data-active', 'true');
     await userEvent.click(screen.getByTestId('press-anonymous'));
-    expect(tab('notes')).toHaveAttribute('data-active', 'true');
-    expect(destination()).toBe('Anonymous note to Germany. They cannot reply.');
+    // Still the same thread, now unsigned.
+    expect(tab(group)).toHaveAttribute('data-active', 'true');
+    expect(destination()).toBe(
+      'Unsigned, to the thread with Germany, England.',
+    );
     expect(bodies()).toEqual(['Watch the Channel']);
 
     await userEvent.type(screen.getByTestId('press-input'), 'Beware{Enter}');
     expect(lastPost().body).toMatchObject({
-      recipients: ['GERMANY'],
+      recipients: ['GERMANY', 'ENGLAND'],
       anonymous: true,
     });
     await waitFor(() =>
       expect(bodies()).toEqual(['Watch the Channel', 'Beware']),
     );
-    // The player's own note is signed for them only, and names who received it.
+    // The player's own message is signed for them only.
     expect(authors()).toEqual(['Anonymous', 'You']);
     const own = screen.getAllByTestId('press-message')[1];
     expect(within(own).getByText('anonymously')).toBeInTheDocument();
-    expect(own).toHaveTextContent('to Germany');
+    expect(screen.queryByTestId('press-channel-notes')).toBeNull();
   });
 
-  it('asks who receives a note before one can be sent from the notes', async () => {
+  it('turns the mask off in a one-to-one thread, where the other player would know', async () => {
     render(<PressSection {...base()} />);
-    fill([msg(1, null, 'Watch the Channel', ['FRANCE'])]);
-    await userEvent.click(tab('notes'));
+    fill([]);
+    await userEvent.click(screen.getByTestId('press-anonymous'));
+    await tick('GERMANY');
+    const mask = screen.getByTestId('press-anonymous');
+    expect(mask).toBeDisabled();
+    expect(mask).toHaveAttribute('aria-pressed', 'false');
+    expect(mask).toHaveAttribute(
+      'title',
+      expect.stringContaining('the other player would know'),
+    );
+    expect(destination()).toBe('Private to Germany.');
+    await userEvent.type(screen.getByTestId('press-input'), 'Hi{Enter}');
+    expect(lastPost().body).toMatchObject({
+      recipients: ['GERMANY'],
+      anonymous: false,
+    });
+    // A third country brings the choice back.
+    await tick('ENGLAND');
+    expect(screen.getByTestId('press-anonymous')).toBeEnabled();
     expect(screen.getByTestId('press-anonymous')).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    expect(destination()).toBe(
-      'Pick who receives the anonymous note on the standings above.',
-    );
-    expect(screen.getByTestId('press-input')).toBeDisabled();
-    await tick('ENGLAND');
-    expect(screen.getByTestId('press-input')).toBeEnabled();
   });
 
   it('says where a message goes only when something stops it being sent', async () => {
     render(<PressSection {...base()} />);
-    fill([msg(1, null, 'Watch the Channel', ['FRANCE'])]);
+    fill([]);
     const line = screen.getByTestId('press-destination');
     // Read out with the field, but not drawn.
     expect(line).toHaveAttribute('data-quiet', 'true');
     expect(screen.getByTestId('press-input')).toHaveAccessibleDescription(
       'To everyone, in the public box.',
     );
-    await userEvent.click(tab('notes'));
+    await userEvent.type(screen.getByTestId('press-input'), 'x'.repeat(1001));
     expect(line).not.toHaveAttribute('data-quiet');
+  });
+
+  it('marks the field while writing anonymously', async () => {
+    render(<PressSection {...base()} />);
+    fill([]);
+    await userEvent.click(screen.getByTestId('press-anonymous'));
     expect(screen.getByTestId('press-input')).toHaveAttribute(
       'placeholder',
       'Write anonymously…',
@@ -309,7 +333,9 @@ describe('PressSection', () => {
     fill(
       [
         msg(1, 'GERMANY', 'Stab France in the fall', ['ENGLAND']),
-        msg(2, 'ENGLAND', 'It was me', ['FRANCE'], { anonymous: true }),
+        msg(2, 'ENGLAND', 'It was me', ['FRANCE', 'GERMANY'], {
+          anonymous: true,
+        }),
       ],
       true,
     );
@@ -324,7 +350,7 @@ describe('PressSection', () => {
     );
     expect(screen.getByTestId('press-input')).toBeDisabled();
 
-    await userEvent.click(tab('notes'));
+    await userEvent.click(tab(threadKey(['ENGLAND', 'FRANCE', 'GERMANY'])));
     expect(authors()).toEqual(['England']);
   });
 
@@ -355,6 +381,7 @@ describe('PressSection: move suggestions', () => {
     fill([]);
     expect(lamp()).toBeNull();
     await tick('GERMANY');
+    await tick('ENGLAND');
     expect(lamp()).not.toBeNull();
     await userEvent.click(screen.getByTestId('press-anonymous'));
     expect(lamp()).toBeNull();
