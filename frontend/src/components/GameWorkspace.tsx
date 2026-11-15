@@ -196,7 +196,12 @@ export function GameWorkspace({
   const suggestionView = suggestion?.mode === 'view';
   const readOnly = viewingHistory || suggestionView;
   return (
-    <main className={styles.warRoomWorkspace} data-testid="game-workspace">
+    <main
+      className={styles.warRoomWorkspace}
+      data-testid="game-workspace"
+      data-left-collapsed={leftSidebarCollapsed ? 'true' : undefined}
+      data-right-collapsed={rightSidebarCollapsed ? 'true' : undefined}
+    >
       {/* LEFT SIDEBAR: Tools, Legend, Zoom, Standing, Sandbox & Admin */}
       <ToolsSidebar
         collapsed={leftSidebarCollapsed}

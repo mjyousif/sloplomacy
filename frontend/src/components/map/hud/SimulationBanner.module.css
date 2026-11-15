@@ -2,7 +2,12 @@
   .simulation-map-banner {
     position: absolute;
     top: 14px;
-    left: 50%;
+    /* The middle of the map between the sidebars. */
+    left: calc(
+      50% +
+      (var(--map-inset-left, 0px) - var(--map-inset-right, 0px)) /
+      2
+    );
     transform: translateX(-50%);
     z-index: 20;
     display: flex;

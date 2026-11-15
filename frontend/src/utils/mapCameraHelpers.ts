@@ -229,6 +229,44 @@ export function getPhoneDefaultCamera(
   );
 }
 
+/**
+ * The wide layout's camera limits. The sidebars float over the map, so the board can be zoomed
+ * out further and panned further sideways than the whole element needs, to bring an edge out
+ * from under a sidebar.
+ */
+export const WIDE_CAMERA_OPTIONS: CameraBoundsOptions = {
+  minZoom: 0.5,
+  marginX: DEFAULT_MARGIN_X + 600,
+};
+
+/**
+ * The starting view on a wide screen. The map element runs under both sidebars, so this frames
+ * the board in the strip between them exactly as DEFAULT_CAMERA frames it in an element that
+ * narrow: same size on screen, same place. With no insets it is DEFAULT_CAMERA.
+ */
+export function getWideHomeCamera(
+  width: number,
+  height: number,
+  insetLeft: number,
+  insetRight: number,
+  options?: CameraBoundsOptions,
+): CameraState {
+  const stripWidth = width - insetLeft - insetRight;
+  if (!(width > 0) || !(height > 0) || !(stripWidth > 0))
+    return clampCamera({ ...DEFAULT_CAMERA }, options);
+  const scale = getViewportFit(width, height).scale;
+  const stripScale = getViewportFit(stripWidth, height).scale;
+  const ratio = stripScale / scale;
+  return clampCamera(
+    {
+      x: (DEFAULT_CAMERA.x * stripScale + (insetLeft - insetRight) / 2) / scale,
+      y: DEFAULT_CAMERA.y * ratio,
+      zoom: Number((DEFAULT_CAMERA.zoom * ratio).toFixed(3)),
+    },
+    options,
+  );
+}
+
 /** The part of the map element that isn't covered, in element pixels. */
 export interface VisibleArea {
   top: number;
