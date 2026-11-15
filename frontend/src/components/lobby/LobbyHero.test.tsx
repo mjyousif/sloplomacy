@@ -69,7 +69,7 @@ describe('LobbyHero', () => {
     expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(
       [
         'Switch freely between all 7 Great Powers',
-        'Tactical AI auto-plans opponent moves & steps turns',
+        'Plot moves for any power & step turns forward',
         'Simulate bounces, supports & convoy chains',
         'Host public or passcode-protected private campaigns',
         'Invite players via Game ID & secret passcode',

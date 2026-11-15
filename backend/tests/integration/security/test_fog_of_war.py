@@ -138,7 +138,7 @@ def test_private_sandbox_opens_only_for_your_own_seat():
     assert own.json()["orders"]["FRA_A_PAR"]["order_type"] == "HOLD"
 
 
-def test_only_the_seat_holder_carries_sandbox_orders_into_the_match():
+def test_private_sandbox_only_responds_to_seat_holder_and_never_mutates_match():
     gid = secret_plan_match()
     sandbox_id = client.post(
         f"/api/sandbox/enter?game_id={gid}", json={"power": "GERMANY"}, headers=bob_headers()
@@ -149,9 +149,29 @@ def test_only_the_seat_holder_carries_sandbox_orders_into_the_match():
         .model_copy(update={"order_type": OrderType.MOVE, "target": "SIL", "is_explicit": True})
     )
 
-    res = client.post(f"/api/sandbox/exit?game_id={sandbox_id}", json={"power": "GERMANY"})
-    assert res.status_code == 200
-    assert sandbox_id not in GAMES
+    # An unauthenticated caller or another player cannot inspect or mutate Bob's private sandbox.
+    for headers in ({}, alice_headers()):
+        assert client.get(f"/api/game?game_id={sandbox_id}", headers=headers).status_code == 403
+        assert (
+            client.post(f"/api/adjudicate?game_id={sandbox_id}", headers=headers).status_code == 403
+        )
+
+    # Exiting (even from an unauthenticated caller or by Bob) never carries sandbox edits into the match.
+    assert (
+        client.post(
+            f"/api/sandbox/exit?game_id={sandbox_id}", json={"power": "GERMANY"}
+        ).status_code
+        == 200
+    )
+    assert sandbox_id in GAMES
+    assert (
+        client.post(
+            f"/api/sandbox/exit?game_id={sandbox_id}",
+            json={"power": "GERMANY"},
+            headers=bob_headers(),
+        ).status_code
+        == 200
+    )
     assert GAMES[gid].orders["GER_A_BER"].order_type == OrderType.HOLD
 
 

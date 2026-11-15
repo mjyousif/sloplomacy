@@ -223,12 +223,13 @@ export function useMatchActions({
   const adjudicatingRef = useRef(false);
   const handleAdjudicateTurn = async () => {
     if (!gameState || adjudicatingRef.current) return;
-    if (!requireRealBoard('resolve the real turn')) return;
+    if (!sandboxMode && !requireRealBoard('resolve the real turn')) return;
     adjudicatingRef.current = true;
     try {
       const turn = encodeURIComponent(turnLabel(gameState));
+      const targetGameId = sandboxMode ? draftGameId : activeGameId;
       const res = await authedFetch(
-        `${API_BASE}/adjudicate?game_id=${encodeURIComponent(activeGameId)}&turn=${turn}`,
+        `${API_BASE}/adjudicate?game_id=${encodeURIComponent(targetGameId)}&turn=${turn}`,
         { method: 'POST' },
       );
       if (res.ok) {
@@ -238,9 +239,13 @@ export function useMatchActions({
         triggerToast(
           st.winner
             ? `${POWER_METADATA[st.winner].name} has won the game!`
-            : `Turn resolved! Now in ${st.season} ${st.year} (${st.phase} Phase).`,
+            : sandboxGameId
+              ? `Hypothetical turn stepped to ${st.season} ${st.year} (${st.phase} Phase).`
+              : `Turn resolved! Now in ${st.season} ${st.year} (${st.phase} Phase).`,
         );
-        fetchGamesList();
+        if (!sandboxGameId) {
+          fetchGamesList();
+        }
       } else {
         const err = await res.json().catch(() => ({}));
         triggerToast(err.detail || 'Could not resolve the turn.');

@@ -27,6 +27,9 @@ UNSAVED_GAMES: set[str] = set()
 SAVES_RUNNING: dict[str, bool] = {}
 HISTORY_UNSAVED: set[str] = set()
 PRIVATE_SANDBOXES: dict[str, tuple[str, Power]] = {}
+PRIVATE_SANDBOX_TURNS: dict[str, tuple[str, int, str]] = {}
+# Preserves a solo/saved sandbox's hypothetical branch for the current real turn across exit/re-enter.
+SANDBOX_BRANCHES: dict[str, tuple[tuple[str, int, str], GameState, list[GameState]]] = {}
 PROFILE_NAMES: dict[str, str] = {}
 # Press (chat) per game, oldest first. Kept outside GameState so it is never broadcast with the
 # board, copied into history snapshots or sandboxes, or undone by a rollback. See storage/press.py.
@@ -68,14 +71,26 @@ def evict_game(game_id: str) -> None:
     GAME_PASSCODES.pop(game_id, None)
     SANDBOX_CHECKPOINTS.pop(game_id, None)
     SANDBOX_HISTORY_CHECKPOINTS.pop(game_id, None)
+    SANDBOX_BRANCHES.pop(game_id, None)
     UNSAVED_GAMES.discard(game_id)
     HISTORY_UNSAVED.discard(game_id)
     PRIVATE_SANDBOXES.pop(game_id, None)
+    PRIVATE_SANDBOX_TURNS.pop(game_id, None)
     GAME_PRESS.pop(game_id, None)
     PRESS_UNSAVED.discard(game_id)
     for sandbox_id, (match_id, _) in list(PRIVATE_SANDBOXES.items()):
         if match_id == game_id:
             evict_game(sandbox_id)
+
+
+def clear_ephemeral_sandboxes_for(game_id: str) -> None:
+    """Erase all ephemeral hypothetical branches attached to `game_id`."""
+    for sandbox_id, (match_id, _) in list(PRIVATE_SANDBOXES.items()):
+        if match_id == game_id:
+            evict_game(sandbox_id)
+    SANDBOX_CHECKPOINTS[game_id] = None
+    SANDBOX_HISTORY_CHECKPOINTS.pop(game_id, None)
+    SANDBOX_BRANCHES.pop(game_id, None)
 
 
 def sync_summary(game_id: str) -> None:

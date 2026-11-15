@@ -348,3 +348,191 @@ def test_solo_sandbox_resumes_draft_via_query_or_account():
     assert r6.status_code == 200
     assert r6.json()["state"]["game_id"] != gid1
     assert r6.json()["summary"]["is_draft"] is True
+
+
+def test_solo_sandbox_exports_board_and_overrides_previous_draft():
+    """Exporting from an active board creates a new draft copy and removes the caller's old draft."""
+    from tests.integration.security.helpers import ALICE_ID, alice_headers
+
+    old_res = client.post("/api/games/solo-sandbox", headers=alice_headers())
+    assert old_res.status_code == 200
+    old_id = old_res.json()["state"]["game_id"]
+
+    # Create a separate board state with a France move and advance it to Fall 1901.
+    src_res = client.post("/api/games/solo-sandbox")
+    src_id = src_res.json()["state"]["game_id"]
+    client.post(
+        f"/api/order?game_id={src_id}",
+        json={
+            "order": {
+                "unit_id": "FRA_A_PAR",
+                "power": "FRANCE",
+                "unit_type": "A",
+                "origin": "PAR",
+                "order_type": "MOVE",
+                "target": "BUR",
+                "is_explicit": True,
+            }
+        },
+    )
+    client.post(f"/api/adjudicate?game_id={src_id}")
+
+    export_res = client.post(
+        f"/api/games/solo-sandbox?source_game_id={src_id}&resume_game_id={old_id}",
+        headers=alice_headers(),
+    )
+    assert export_res.status_code == 200
+    exported = export_res.json()
+    new_id = exported["state"]["game_id"]
+    assert new_id != old_id
+    assert new_id != src_id
+    assert old_id not in GAMES
+    assert exported["summary"]["is_draft"] is True
+    assert exported["summary"]["creator_id"] == ALICE_ID
+    assert exported["state"]["season"] == "Fall"
+    assert any(u["province"] == "BUR" for u in exported["state"]["units"])
+
+
+def test_solo_sandbox_export_from_multiplayer_sanitizes_foreign_orders_and_checks_passcode():
+    """Exporting a multiplayer match checks passcode access and strips foreign secret orders."""
+    from tests.integration.security.helpers import ALICE_ID, BOB_ID, alice_headers, bob_headers
+
+    create_res = client.post(
+        "/api/games",
+        json={
+            "name": "Secret Front",
+            "creator_power": "FRANCE",
+            "user_id": ALICE_ID,
+            "email": "alice@test.com",
+            "display_name": "Alice",
+            "is_private": True,
+            "passcode": "Enigma1901",
+        },
+        headers=alice_headers(),
+    )
+    assert create_res.status_code == 200
+    mp_id = create_res.json()["game_id"]
+
+    client.post(
+        f"/api/games/{mp_id}/join",
+        json={
+            "power": "GERMANY",
+            "user_id": BOB_ID,
+            "email": "bob@test.com",
+            "display_name": "Bob",
+            "passcode": "Enigma1901",
+        },
+        headers=bob_headers(),
+    )
+
+    # Both sides plot orders on the real match.
+    client.post(
+        f"/api/order?game_id={mp_id}",
+        json={
+            "order": {
+                "unit_id": "FRA_A_PAR",
+                "power": "FRANCE",
+                "unit_type": "A",
+                "origin": "PAR",
+                "order_type": "MOVE",
+                "target": "BUR",
+                "is_explicit": True,
+            }
+        },
+        headers=alice_headers(),
+    )
+    client.post(
+        f"/api/order?game_id={mp_id}",
+        json={
+            "order": {
+                "unit_id": "GER_A_BER",
+                "power": "GERMANY",
+                "unit_type": "A",
+                "origin": "BER",
+                "order_type": "MOVE",
+                "target": "SIL",
+                "is_explicit": True,
+            }
+        },
+        headers=bob_headers(),
+    )
+
+    # Unauthenticated visitor without passcode is blocked.
+    denied = client.post(f"/api/games/solo-sandbox?source_game_id={mp_id}")
+    assert denied.status_code == 403
+
+    # Bob exports his view of the match: Germany's move stays, France's secret order is hidden.
+    bob_old = client.post("/api/games/solo-sandbox", headers=bob_headers()).json()["state"][
+        "game_id"
+    ]
+    exported_res = client.post(
+        f"/api/games/solo-sandbox?source_game_id={mp_id}&resume_game_id={bob_old}",
+        headers=bob_headers(),
+    )
+    assert exported_res.status_code == 200
+    st = exported_res.json()["state"]
+    assert st["game_id"] != mp_id
+    assert bob_old not in GAMES
+    assert st["orders"]["GER_A_BER"]["target"] == "SIL"
+    assert st["orders"]["FRA_A_PAR"]["order_type"] == "HOLD"
+    assert st["orders"]["FRA_A_PAR"]["is_explicit"] is False
+
+
+def test_solo_sandbox_resumes_hypothetical_branch_same_turn_and_clears_on_turn_advance():
+    """Solo Hypothetical Mode restores real state on exit, resumes on same turn, and clears after adjudication."""
+    from storage.store import SANDBOX_BRANCHES
+
+    gid = client.post("/api/games/solo-sandbox").json()["state"]["game_id"]
+    client.post(
+        f"/api/order?game_id={gid}",
+        json={
+            "order": {
+                "unit_id": "FRA_A_PAR",
+                "power": "FRANCE",
+                "unit_type": "A",
+                "origin": "PAR",
+                "order_type": "MOVE",
+                "target": "MAR",
+                "is_explicit": True,
+            }
+        },
+    )
+
+    assert (
+        client.post(f"/api/sandbox/enter?game_id={gid}", json={"power": "FRANCE"}).status_code
+        == 200
+    )
+    client.post(
+        f"/api/order?game_id={gid}",
+        json={
+            "order": {
+                "unit_id": "FRA_A_PAR",
+                "power": "FRANCE",
+                "unit_type": "A",
+                "origin": "PAR",
+                "order_type": "MOVE",
+                "target": "BUR",
+                "is_explicit": True,
+            }
+        },
+    )
+    assert client.post(f"/api/adjudicate?game_id={gid}").status_code == 200
+    assert GAMES[gid].season == "Fall"
+
+    # Exiting restores the real Spring board and France's real order (MAR).
+    exited = client.post(f"/api/sandbox/exit?game_id={gid}", json={"power": "FRANCE"}).json()
+    assert exited["season"] == "Spring"
+    assert exited["orders"]["FRA_A_PAR"]["target"] == "MAR"
+    assert gid in SANDBOX_BRANCHES
+
+    # Re-entering on the same real Spring turn resumes the Fall hypothetical branch.
+    reentered = client.post(f"/api/sandbox/enter?game_id={gid}", json={"power": "FRANCE"}).json()
+    assert reentered["season"] == "Fall"
+    assert any(u["province"] == "BUR" for u in reentered["units"])
+
+    # Exit back to real board and resolve the real turn -> clears the saved hypothetical branch.
+    assert (
+        client.post(f"/api/sandbox/exit?game_id={gid}", json={"power": "FRANCE"}).status_code == 200
+    )
+    assert client.post(f"/api/adjudicate?game_id={gid}").status_code == 200
+    assert gid not in SANDBOX_BRANCHES

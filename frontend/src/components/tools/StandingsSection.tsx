@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   ArrowUpDown,
   CheckCircle2,
+  Eye,
   Flag,
   Mail,
 } from 'lucide-react';
@@ -10,6 +11,7 @@ import { useMemo } from 'react';
 import { usePressState } from '../../hooks/usePress';
 import { pressStore } from '../../lib/pressStore';
 import { POWER_METADATA, type Power } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import { buildChannels, threadKey } from '../../utils/pressHelpers';
 import { CollapsibleSection } from '../CollapsibleSection';
 import { PowerFlag } from '../PowerFlag';
@@ -28,6 +30,8 @@ export type StandingsSectionProps = Pick<
   | 'issues'
   | 'isMultiplayer'
   | 'participants'
+  | 'showAllMoves'
+  | 'onChangeShowAllMoves'
   | 'sandboxMode'
   | 'adminOverrideActive'
   | 'pressPower'
@@ -43,6 +47,8 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
   issues,
   isMultiplayer = false,
   participants,
+  showAllMoves,
+  onChangeShowAllMoves,
   sandboxMode,
   adminOverrideActive = false,
   pressPower,
@@ -51,6 +57,7 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
     ownership,
     units,
   );
+  const canSwitchPower = !isMultiplayer || Boolean(sandboxMode);
 
   // Press: each other country's row has a letter button that picks it as a recipient, with
   // the unread count of the player's one-to-one thread with that country.
@@ -104,6 +111,45 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
         </button>
       </div>
 
+      {/* Sandbox / Hypothetical move visibility toggle */}
+      {(!isMultiplayer || sandboxMode) &&
+        showAllMoves !== undefined &&
+        onChangeShowAllMoves && (
+          <div className={styles.powersFilterRow}>
+            <span className={styles.powersSortLabel}>Map Moves</span>
+            <div
+              className={cx(
+                styles.powersSortSegmented,
+                styles.powersFilterSegmented,
+              )}
+              role="group"
+              aria-label="Map move visibility"
+            >
+              <button
+                type="button"
+                className={styles.powersSortPill}
+                data-testid="standings-moves-all"
+                data-active={showAllMoves ? 'true' : undefined}
+                onClick={() => onChangeShowAllMoves(true)}
+                title="Show planned orders for all 7 powers on the map"
+              >
+                <Eye size={10} />
+                <span>All Moves</span>
+              </button>
+              <button
+                type="button"
+                className={styles.powersSortPill}
+                data-testid="standings-moves-selected"
+                data-active={!showAllMoves ? 'true' : undefined}
+                onClick={() => onChangeShowAllMoves(false)}
+                title="Show only the selected nation's orders on the map"
+              >
+                <span>Selected Nation</span>
+              </button>
+            </div>
+          </div>
+        )}
+
       <div className={styles.powersStandingList}>
         {displayedPowers.map(
           ({ power: pwr, rank, scCount: scs, unitCount: un }) => {
@@ -127,13 +173,13 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                 data-testid="power-standing-card"
                 data-power={pwr}
                 data-selected={isSelected ? 'true' : undefined}
-                data-clickable={!isMultiplayer ? 'true' : undefined}
+                data-clickable={canSwitchPower ? 'true' : undefined}
                 className={styles.powerStandingCard}
                 onClick={() => {
-                  if (!isMultiplayer) onSelectPower(pwr);
+                  if (canSwitchPower) onSelectPower(pwr);
                 }}
                 title={
-                  !isMultiplayer
+                  canSwitchPower
                     ? `Click to command ${meta.name}`
                     : `${meta.name}${playerName ? ` (${playerName})` : ''}: ${isFinal ? 'Orders Finalized' : 'Drafting'}`
                 }

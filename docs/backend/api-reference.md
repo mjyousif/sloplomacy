@@ -22,7 +22,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/games/{game_id}/leave` | Vacate claimed power in lobby or match, or delete sandbox | `LeaveGameRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/surrender` | Concede sovereign command into Civil Disorder | `SurrenderRequest` | `GameBootstrapResponse` |
 | `POST` | `/api/games/{game_id}/acknowledge-game-over` | Stamp `game_over_seen_at` for the calling seated participant | *None* | `{ ok, game_over_seen_at, summary }` |
-| `POST` | `/api/games/solo-sandbox` | Mint a personal, isolated draft sandbox session (`solo_<uuid>`) | *None* | `MultiplayerGameSummary` |
+| `POST` | `/api/games/solo-sandbox` | Mint or resume an isolated draft sandbox (`solo_<uuid>`), or export `?source_game_id=` into a fresh draft | *None* | `MultiplayerGameSummary` |
 | `PATCH` | `/api/account/profile` | Update the signed-in caller's public username across `profiles` and all active games (`401` without a token) | `UpdateProfileRequest` | `UpdateProfileResponse` |
 
 ### Match & Tactical Operations
@@ -51,8 +51,8 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 ### Sandbox & AI Planning
 | Method | Endpoint | Description | Request Body | Response Model |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/sandbox/enter` | Activate Sandbox Mode: private copy for multiplayer, or solo checkpoint | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/sandbox/exit` | Leave Sandbox Mode and return real match (carrying player's modified orders) | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/sandbox/enter` | Enter/resume Hypothetical Mode: ephemeral `sbx_` branch for multiplayer, or solo checkpoint | `SetPowerRequest` | `GameState` |
+| `POST` | `/api/sandbox/exit` | Exit Hypothetical Mode and return real board & orders unchanged without mutating live match | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/sandbox/clear-foreign` | Reset all foreign hypothetical orders to default HOLD (`409` on live match) | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/sandbox/ai-orders` | Generate DATC-compliant heuristic tactical AI orders for specified powers | `GenerateAIOrdersRequest` | `GameState` |
 | `POST` | `/api/sandbox/ai-step` | Auto-plan unassigned foreign powers with tactical AI and advance turn | *None* | `GameState` |
@@ -275,9 +275,10 @@ Stamps `participants[power].game_over_seen_at` (ISO-8601 UTC) for the calling se
 ---
 
 ### 8. `POST /api/games/solo-sandbox`
-Mints an isolated, ephemeral draft sandbox session with a unique UUID (`solo_<uuid>`), or resumes an existing draft sandbox when `?resume_game_id=<id>` is passed (or when an authenticated user already owns an unpromoted draft).
+Mints an isolated, ephemeral draft sandbox session with a unique UUID (`solo_<uuid>`), resumes an existing draft sandbox when `?resume_game_id=<id>` is passed (or when an authenticated user already owns an unpromoted draft), or exports a snapshot of an active game when `?source_game_id=<id>` is passed.
 
-- **Draft Isolation & Resumption**: Sets `is_sandbox=True` and `is_draft=True`. Draft sandboxes are completely isolated per visitor/player. Leaving a Solo Sandbox and returning resumes the same draft (via `resume_game_id` stored in `localStorage` or account lookup) until the user resets the board or promotes it via Save Sandbox.
+- **Board-State Export (`?source_game_id=`)**: When called with `source_game_id`, validates view access (checking `passcode` / `X-Passcode` for private campaigns), sanitizes multiplayer state via `sanitize_game_state_for_viewer` so rival orders remain masked to `HOLD`, deletes/overrides any prior draft sandbox held via `resume_game_id` or account lookup, and initializes a new draft sandbox from that snapshot (`is_sandbox=True`, `is_draft=True`, no clock).
+- **Draft Isolation & Resumption**: Sets `is_sandbox=True` and `is_draft=True`. Draft sandboxes are completely isolated per visitor/player. Leaving a Solo Sandbox and returning from the lobby resumes the same draft (via `resume_game_id` stored in `localStorage` or account lookup) until the user exports another board, resets the board, or promotes it via Save Sandbox.
 - **Lobby & WebSocket Exclusion**: Sandboxes, drafts or saved, are filtered out of public `/api/games` listings, `/api/games/browse` and `/ws/lobby` broadcasts, ensuring that no sandbox is discoverable or shared by other players. A saved one appears to its owner in `GET /api/games/mine`.
 - **Capacity & Eviction**: When total active games approach `MAX_CONCURRENT_GAMES`, unpromoted draft sandboxes are prioritized for memory eviction before rejecting new rooms.
 - **Promotion Flow**: Once the user chooses to keep the sandbox, `POST /api/games/save-sandbox` promotes the draft session in-place (`is_draft=False`) without creating duplicate games.
@@ -409,13 +410,16 @@ Bootstraps the client by returning the current `GameState` along with the comple
 ---
 
 ### `POST /api/sandbox/enter`
-Starts a what-if session for `power`.
+Starts or resumes an ephemeral Hypothetical Mode branch for `power`.
 
-- **Multiplayer match**: only the player in `power`'s seat may open one (otherwise `403`), because the copy keeps that power's real orders. The match is not touched. The response is a private copy with its own `sbx_` `game_id`, in which every other power is on default orders. Use that id for all later calls in the session. Entering again replaces the same player's previous copy. The copy is held only in memory, so it is lost if the server restarts, and calls using its id then answer `404`.
-- **Solo or saved sandbox**: the response keeps the game's own `game_id`, and a checkpoint of the real state and of its turn history is stored.
+- **Multiplayer match**: only the player in `power`'s seat may open one (`403` otherwise), because the copy starts with that power's real orders and `HOLD` defaults for opponents. The response is an ephemeral `sbx_` `game_id` stored in `PRIVATE_SANDBOXES` and keyed to the real match's current `(season, year, phase)` turn (`PRIVATE_SANDBOX_TURNS`). Re-entering while the live match is still on the same turn resumes that same `sbx_` branch (including stepped hypothetical turns via `POST /api/adjudicate`), unless the live turn ended. Other users attempting to access an `sbx_` id receive `403` from `saved_sandbox_guard` (except `/api/history*`, which returns `404` for everyone), and `/ws/games/{sbx_id}` closes with `4403`.
+- **Solo or saved sandbox**: keeps the game's own `game_id`, checkpoints the real state and turn history in `SANDBOX_CHECKPOINTS[game_id]` / `SANDBOX_HISTORY_CHECKPOINTS[game_id]`, and resumes any saved hypothetical branch in `SANDBOX_BRANCHES[game_id]` if still on the same real turn.
 
 ### `POST /api/sandbox/exit`
-Ends the session. On a private copy, pass its `sbx_` id: the copy is discarded and the real match is returned, masked for that seat. The player's own orders carry over only if the caller is the player in that seat, the match is still on the same turn and they still hold it. Anyone else's exit only discards the copy, and changing them drops that player's finalization, as any other edit does. Calling this on a live match itself answers `409`. On a solo or saved sandbox the checkpoint is restored, including the turn history, so phases stepped through hypothetically never show up in `/api/history` or become a rollback target.
+Leaves Hypothetical Mode cleanly without mutating the real game.
+
+- **Multiplayer match (`sbx_` id)**: keeps the `sbx_` branch in memory for the duration of the current live turn (unless the caller's seat was vacated, in which case it is evicted) and returns the untouched real match state masked for the caller's seat. Hypothetical moves and stepped turns never carry over to the real match, and `clear_ephemeral_sandboxes_for` erases all `sbx_` branches once the live turn resolves, resets, rolls back, sets turn, or receives admin board edits.
+- **Solo or saved sandbox**: saves the hypothetical board and turn history into `SANDBOX_BRANCHES[game_id]` (while on the same real turn) and restores the real checkpoint (`SANDBOX_CHECKPOINTS` and `SANDBOX_HISTORY_CHECKPOINTS`) unchanged, so hypothetical orders and stepped turns never overwrite real orders or appear in `/api/history` or rollback checkpoints.
 
 ### 8. `POST /api/sandbox/ai-orders`
 Generates DATC-compliant, intelligent tactical orders for specified Great Powers (or foreign powers by default) using the Chancellery Tactical AI engine. Answers `409` on a live multiplayer match, where it must be called on a private sandbox id. Avoids friendly self-bounces, coordinates multi-power attacks and supports, and prioritizes strategic supply centers.
@@ -518,7 +522,7 @@ Permanently commits all submitted moves, resolves conflicts using the DATC `dipl
 
 In a live match, a retreat or adjustment phase that no player is involved in then plays out at once, so the response may be one or two phases further on. Movement phases always wait for the players. The same happens when `/api/finalize`, `/leave` or `/surrender` completes the set of players being waited for, so a match never stalls on a player who has gone.
 
-- **Multiplayer Security**: In multiplayer campaigns (`!is_sandbox`), manual adjudication requires authentic game creator authorization via a cryptographically signed Supabase JSON Web Token (`Authorization: Bearer <token>`). Missing, invalid, or expired tokens receive `401 Unauthorized`. Authenticated users who are not the game creator receive `403 Forbidden`. In normal multiplayer play, turns advance automatically upon consensus finalization; this endpoint acts as an administrative host override. Solo sandbox mode (`proto_1901`) keeps anonymous access, and a saved sandbox is open to its owner only (see `POST /api/games/save-sandbox`).
+- **Multiplayer Security**: In multiplayer campaigns (`!is_sandbox`), manual adjudication requires authentic game creator authorization via a cryptographically signed Supabase JSON Web Token (`Authorization: Bearer <token>`). Missing, invalid, or expired tokens receive `401 Unauthorized`. Authenticated users who are not the game creator receive `403 Forbidden`. On an ephemeral multiplayer hypothetical branch (`sbx_` id in `PRIVATE_SANDBOXES`), the seat holder uses `POST /api/adjudicate` (`Step Turn Forward`) to advance only the private copy while `saved_sandbox_guard` blocks other users (`403`); the live match is untouched and real turn resolution clears ephemeral branches (`clear_ephemeral_sandboxes_for`). In normal multiplayer play, turns advance automatically upon consensus finalization; on the live match this endpoint acts as an administrative host override. Solo sandbox mode (`proto_1901` and `solo_<uuid>`) keeps anonymous access, and a saved sandbox is open to its owner only (see `POST /api/games/save-sandbox`).
 - **Query Parameters**:
   - `game_id` *(optional, string)*: Scoped match identifier (defaults to `proto_1901`).
   - `turn` *(optional, string)*: The turn the caller means to resolve, e.g. `Spring 1901 Movement`. If the game has already moved past it the call answers `409` and changes nothing, so a double-click or a second tab never resolves two phases. The app always sends it.

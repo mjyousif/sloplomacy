@@ -375,6 +375,36 @@ describe('useMatchActions: resolve', () => {
     expect(o.fetchGamesList).toHaveBeenCalledTimes(1);
   });
 
+  it('steps the hypothetical branch forward in sandboxMode without reloading games list', async () => {
+    const next = state({
+      game_id: 'sbx_9',
+      season: 'Fall',
+      phase: 'Movement',
+    });
+    supabase.authedFetch.mockResolvedValue(reply(200, next));
+    const requireRealBoard = vi.fn(() => false);
+    const o = makeOptions({
+      sandboxMode: true,
+      sandboxGameId: 'sbx_9',
+      draftGameId: 'sbx_9',
+      requireRealBoard,
+    });
+    const { result } = renderActions(o);
+    await act(() => result.current.handleAdjudicateTurn());
+    expect(requireRealBoard).not.toHaveBeenCalled();
+    expect(sent()).toEqual({
+      url: '/api/adjudicate?game_id=sbx_9&turn=Spring%201901%20Movement',
+      method: 'POST',
+      body: undefined,
+    });
+    expect(o.applyServerState).toHaveBeenCalledWith(next);
+    expect(o.setSelectedUnitId).toHaveBeenCalledWith(null);
+    expect(o.triggerToast).toHaveBeenCalledWith(
+      'Hypothetical turn stepped to Fall 1901 (Movement Phase).',
+    );
+    expect(o.fetchGamesList).not.toHaveBeenCalled();
+  });
+
   it('names the winner, and says why a resolve was refused', async () => {
     supabase.authedFetch.mockResolvedValueOnce(
       reply(200, state({ winner: 'GERMANY' } as Partial<GameState>)),

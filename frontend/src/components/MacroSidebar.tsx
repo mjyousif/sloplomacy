@@ -76,8 +76,6 @@ export interface MacroSidebarProps {
   onSaveSandboxClick?: () => void;
   onSurrenderClick?: () => void;
   surrenderedPowers?: Power[];
-  onGenerateAIMoves?: (powers?: Power[], includeActive?: boolean) => void;
-  onAIStepTurn?: () => void;
   participants?: Record<string, GameParticipant>;
   lobbyStatus?: string;
   // Collapsible Props

@@ -110,21 +110,18 @@ App.applyServerState(st)
 
 ## Sandbox Checkpointing Workflow
 
-Sandbox Pre-Move Mode lets commanders play out "what-if" scenarios. A multiplayer match is shared, so its players each work on a private copy:
+Hypothetical Mode lets commanders play out multi-power and multi-turn "what-if" branches without affecting real game state. A multiplayer match is shared, so each player works on an ephemeral private branch:
 
-1. **Enter**: `POST /api/sandbox/enter?game_id={match}` returns a copy under its own `sbx_` game id, with every other power on default orders so it cannot reveal their plans. The match is not touched.
-2. **Explore**: Drafts, AI plans and previews use the `sbx_` id. The copy is never saved, listed or shown to other players, and the real match carries on without it.
-3. **Exit**: `POST /api/sandbox/exit?game_id={sbx id}` discards the copy and returns the real match. The player's own changed orders carry over if the match is still on the same turn and they still hold the seat.
+1. **Enter**: `POST /api/sandbox/enter?game_id={match}` creates (or resumes, if still on the same live turn) a private copy under its own `sbx_` game id in `PRIVATE_SANDBOXES` (`PRIVATE_SANDBOX_TURNS`), with every other power on default orders so it cannot reveal their plans. The live match is not touched.
+2. **Explore & Step Turns Forward**: Order drafts, power switching, simulations, and `POST /api/adjudicate` turn steps use the `sbx_` id. The branch is private to that seat (`saved_sandbox_guard` rejects other callers with `403`), never saved or listed, and the real match carries on independently.
+3. **Exit & Turn-End Cleanup**: `POST /api/sandbox/exit?game_id={sbx id}` returns the real match with the player's real orders untouched (never carrying hypothetical orders back to the real match). The `sbx_` branch stays available to re-enter during the same live turn (unless the seat is vacated) and is erased by `clear_ephemeral_sandboxes_for` once the live turn resolves or is reset by an admin.
 
-A solo or saved sandbox has one player, so it stays on its own game:
+A solo or saved sandbox has one player, so it stays on its own game id:
 
 1. **Enter Sandbox (`POST /api/sandbox/enter?game_id={id}`)**:
-   - The backend deep-copies `GAMES[game_id]` to `SANDBOX_CHECKPOINTS[game_id]`.
+   - The backend checkpoints `GAMES[game_id]` and `GAME_HISTORY[game_id]` in `SANDBOX_CHECKPOINTS[game_id]` / `SANDBOX_HISTORY_CHECKPOINTS[game_id]`, and restores `SANDBOX_BRANCHES[game_id]` if the real board is still on the same turn.
 2. **Hypothetical Exploration**:
-   - The commander can switch perspectives to any Great Power and draft enemy movements.
-   - Non-destructive simulation projects outcomes immediately onto the board.
+   - The commander can switch perspectives to any Great Power, plot hypothetical moves, toggle between `All Moves` and `Selected Nation`, and step hypothetical turns forward via `POST /api/adjudicate`.
 3. **Exit Sandbox (`POST /api/sandbox/exit?game_id={id}`)**:
-   - The checkpoint is restored.
-   - The commander's active-nation orders are preserved and merged back.
-   - All foreign hypothetical orders are purged so they never contaminate the match state.
-   - The cleaned state is persisted back to Supabase PostgreSQL.
+   - The hypothetical branch is stashed in `SANDBOX_BRANCHES[game_id]` and the pre-sandbox checkpoint and real turn history are restored unchanged.
+   - The cleaned real state is persisted back to Supabase PostgreSQL, and `SANDBOX_BRANCHES[game_id]` clears whenever a real turn resolves or a scenario resets.

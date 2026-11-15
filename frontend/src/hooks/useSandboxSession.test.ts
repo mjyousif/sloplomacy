@@ -34,8 +34,6 @@ const ALICE: AuthUser = {
   email: 'alice@example.test',
   displayName: 'alice',
 } as AuthUser;
-// POWER_METADATA's order, without France.
-const FOREIGN = ['ENGLAND', 'GERMANY', 'ITALY', 'AUSTRIA', 'RUSSIA', 'TURKEY'];
 
 function reply(status: number, body: unknown) {
   return { ok: status < 400, status, json: async () => body } as Response;
@@ -126,12 +124,33 @@ describe('useSandboxSession: Hypothetical Mode in a match', () => {
     expect(result.current).toMatchObject({
       sandboxMode: true,
       sandboxGameId: 'sbx_9',
+      sandboxOriginTurn: 'Spring 1901 Movement',
       showSimulationOverlay: true,
       draftGameId: 'sbx_9',
     });
     expect(o.triggerToast).toHaveBeenCalledWith(
-      'Entered Hypothetical Mode: Plot hypothetical foreign moves to test outcomes. Exiting will discard foreign guesses!',
+      'Entered Hypothetical Mode: Plot hypothetical moves and step turns without changing the live game.',
     );
+  });
+
+  it('captures sandboxOriginTurn from live gameState even if server returns a stepped branch', async () => {
+    const o = makeOptions({
+      gameState: state({ season: 'Spring', year: 1901, phase: 'Movement' }),
+    });
+    const view = renderSandbox(o);
+    supabase.authedFetch.mockResolvedValueOnce(
+      reply(
+        200,
+        state({
+          game_id: 'sbx_9',
+          season: 'Fall',
+          year: 1901,
+          phase: 'Movement',
+        }),
+      ),
+    );
+    await act(() => view.result.current.handleToggleSandboxMode());
+    expect(view.result.current.sandboxOriginTurn).toBe('Spring 1901 Movement');
   });
 
   it('the clock shown is the real match’s, which only setHypotheticalMatchTimer moves', async () => {
@@ -217,11 +236,12 @@ describe('useSandboxSession: Hypothetical Mode in a match', () => {
     expect(result.current).toMatchObject({
       sandboxMode: false,
       sandboxGameId: null,
+      sandboxOriginTurn: null,
       showSimulationOverlay: false,
       draftGameId: 'mp_1',
     });
     expect(o.triggerToast).toHaveBeenLastCalledWith(
-      "Exited Hypothetical Mode — foreign guesses discarded. Showing only France's real orders.",
+      'Exited Hypothetical Mode — restored real board and orders.',
     );
   });
 
@@ -239,7 +259,7 @@ describe('useSandboxSession: Hypothetical Mode in a match', () => {
       );
       await act(() => result.current.handleToggleSandboxMode());
       expect(o.triggerToast).toHaveBeenLastCalledWith(
-        'The match moved on while in Hypothetical Mode, so hypothetical orders were not kept.',
+        'The match moved on while in Hypothetical Mode, so the hypothetical branch was cleared.',
       );
     },
   );
@@ -288,7 +308,7 @@ describe('useSandboxSession: Hypothetical Mode in a solo sandbox', () => {
     await act(() => result.current.handleToggleSandboxMode());
     expect(sent(1).url).toBe('/api/sandbox/exit?game_id=solo_1');
     expect(o.triggerToast).toHaveBeenLastCalledWith(
-      "Exited Hypothetical Mode — foreign guesses discarded. Showing only France's real orders.",
+      'Exited Hypothetical Mode — restored real board and orders.',
     );
     await act(() => result.current.handleToggleSandboxMode());
     await act(() => result.current.handleToggleSandboxMode());
@@ -309,7 +329,7 @@ describe('useSandboxSession: Hypothetical Mode in a solo sandbox', () => {
     });
     expect(o.applyServerState).toHaveBeenLastCalledWith(cleared);
     expect(o.triggerToast).toHaveBeenLastCalledWith(
-      'Cleared all hypothetical foreign pre-moves.',
+      'Cleared all hypothetical foreign moves.',
     );
   });
 
@@ -336,122 +356,6 @@ describe('useSandboxSession: Hypothetical Mode in a solo sandbox', () => {
   });
 });
 
-describe('useSandboxSession: the tactical AI', () => {
-  it('plans the foreign powers by default, on the draft game, while loading', async () => {
-    const o = makeOptions();
-    const { result } = await enterPrivateCopy(o);
-    const planned = state({ game_id: 'sbx_9', year: 1902 });
-    supabase.authedFetch.mockResolvedValueOnce(reply(200, planned));
-    await act(() => result.current.handleGenerateAIMoves());
-    expect(sent(1)).toEqual({
-      url: '/api/sandbox/ai-orders?game_id=sbx_9',
-      method: 'POST',
-      body: { powers: FOREIGN, include_active: false },
-    });
-    expect(o.setLoading).toHaveBeenNthCalledWith(1, true);
-    expect(o.setLoading).toHaveBeenLastCalledWith(false);
-    expect(o.applyServerState).toHaveBeenLastCalledWith(planned);
-    expect(o.triggerToast).toHaveBeenLastCalledWith(
-      'Tactical AI planned orders for foreign powers!',
-    );
-  });
-
-  it('plans every power, or the ones asked for', async () => {
-    const o = makeOptions();
-    const { result } = renderSandbox(o);
-    await act(() => result.current.handleGenerateAIMoves(undefined, true));
-    expect(sent(0).body).toEqual({ powers: null, include_active: true });
-    expect(o.triggerToast).toHaveBeenLastCalledWith(
-      'Tactical AI planned orders for all 7 Great Powers!',
-    );
-    await act(() => result.current.handleGenerateAIMoves(['ITALY']));
-    expect(sent(1).body).toEqual({ powers: ['ITALY'], include_active: false });
-    expect(o.triggerToast).toHaveBeenLastCalledWith(
-      'Tactical AI planned orders for Italy!',
-    );
-    await act(() => result.current.handleGenerateAIMoves(['ITALY', 'TURKEY']));
-    expect(o.triggerToast).toHaveBeenLastCalledWith(
-      'Tactical AI planned orders for foreign powers!',
-    );
-  });
-
-  it('says why planning failed, and always stops loading', async () => {
-    supabase.authedFetch.mockResolvedValueOnce(
-      reply(429, { detail: 'Slow down.' }),
-    );
-    supabase.authedFetch.mockResolvedValueOnce(reply(500, {}));
-    supabase.authedFetch.mockRejectedValueOnce(new Error('offline'));
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const o = makeOptions();
-    const { result } = renderSandbox(o);
-    await act(() => result.current.handleGenerateAIMoves());
-    await act(() => result.current.handleGenerateAIMoves());
-    await act(() => result.current.handleGenerateAIMoves());
-    expect(vi.mocked(o.triggerToast).mock.calls).toEqual([
-      ['Slow down.'],
-      ['Failed to generate AI orders.'],
-      ['Error generating AI orders.'],
-    ]);
-    expect(vi.mocked(o.setLoading).mock.calls).toEqual([
-      [true],
-      [false],
-      [true],
-      [false],
-      [true],
-      [false],
-    ]);
-    expect(o.applyServerState).not.toHaveBeenCalled();
-    spy.mockRestore();
-  });
-
-  it('steps the turn with the AI on the draft game', async () => {
-    const o = makeOptions();
-    const { result } = await enterPrivateCopy(o);
-    const stepped = state({
-      game_id: 'sbx_9',
-      season: 'Fall',
-      phase: 'Retreats',
-    });
-    supabase.authedFetch.mockResolvedValueOnce(reply(200, stepped));
-    await act(() => result.current.handleAIStepTurn());
-    expect(sent(1)).toEqual({
-      url: '/api/sandbox/ai-step?game_id=sbx_9',
-      method: 'POST',
-      body: undefined,
-    });
-    expect(o.applyServerState).toHaveBeenLastCalledWith(stepped);
-    expect(o.setSelectedUnitId).toHaveBeenCalledWith(null);
-    expect(result.current.showSimulationOverlay).toBe(false);
-    expect(vi.mocked(o.setLoading).mock.calls).toEqual([[true], [false]]);
-    expect(o.triggerToast).toHaveBeenLastCalledWith(
-      'AI advanced game clock to Fall 1901 Retreats!',
-    );
-  });
-
-  it('says why a step failed, and always stops loading', async () => {
-    supabase.authedFetch.mockResolvedValueOnce(
-      reply(409, { detail: 'Game over.' }),
-    );
-    supabase.authedFetch.mockResolvedValueOnce(reply(500, {}));
-    supabase.authedFetch.mockRejectedValueOnce(new Error('offline'));
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const o = makeOptions();
-    const { result } = renderSandbox(o);
-    await act(() => result.current.handleAIStepTurn());
-    await act(() => result.current.handleAIStepTurn());
-    await act(() => result.current.handleAIStepTurn());
-    expect(vi.mocked(o.triggerToast).mock.calls).toEqual([
-      ['Game over.'],
-      ['Failed to step turn with AI.'],
-      ['Error stepping turn with AI.'],
-    ]);
-    expect(o.setLoading).toHaveBeenLastCalledWith(false);
-    expect(o.setLoading).toHaveBeenCalledTimes(6);
-    expect(o.setSelectedUnitId).not.toHaveBeenCalled();
-    spy.mockRestore();
-  });
-});
-
 describe('useSandboxSession: scenario reset', () => {
   it('resets the real game and leaves Hypothetical Mode', async () => {
     const o = makeOptions();
@@ -469,6 +373,7 @@ describe('useSandboxSession: scenario reset', () => {
     expect(result.current).toMatchObject({
       sandboxMode: false,
       sandboxGameId: null,
+      sandboxOriginTurn: null,
       showSimulationOverlay: false,
     });
     expect(o.triggerToast).toHaveBeenLastCalledWith(

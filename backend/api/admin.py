@@ -37,9 +37,9 @@ from storage.store import (
     GAME_SUMMARIES,
     GAMES,
     HISTORY_UNSAVED,
-    SANDBOX_CHECKPOINTS,
     cache_loaded_game,
     check_game_capacity,
+    clear_ephemeral_sandboxes_for,
     is_multiplayer_match,
     load_saved_game,
     persist_game,
@@ -93,7 +93,7 @@ async def seed_test_scenario(req: SeedScenarioRequest):
         )
     if gid not in GAMES:
         check_game_capacity()
-    SANDBOX_CHECKPOINTS[gid] = None
+    clear_ephemeral_sandboxes_for(gid)
     GAME_HISTORY[gid] = []
     HISTORY_UNSAVED.add(gid)
     GAMES[gid] = build_scenario(req.scenario_id, req.active_power, gid)
@@ -250,6 +250,7 @@ async def admin_rollback_turn(
         max(prev_state.state_revision, current.state_revision if current else 1) + 1
     )
 
+    clear_ephemeral_sandboxes_for(gid)
     GAMES[gid] = prev_state
     refresh_diagnostics_and_simulation(prev_state)
     sync_summary(gid)
@@ -297,6 +298,7 @@ async def admin_set_turn(
     game.season = req.season
     game.year = req.year
     game.phase = req.phase
+    clear_ephemeral_sandboxes_for(gid)
     if game.timer:
         start_phase_clock(game, timer_players(game), time.time())
     summary_line = (

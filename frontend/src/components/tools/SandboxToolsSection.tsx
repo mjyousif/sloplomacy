@@ -1,14 +1,5 @@
-import {
-  Bot,
-  Eye,
-  Play,
-  RotateCcw,
-  Save,
-  Sparkles,
-  Trash2,
-} from 'lucide-react';
+import { Eye, RotateCcw, Save, Trash2 } from 'lucide-react';
 import type React from 'react';
-import { cx } from '../../utils/cx';
 import { CollapsibleSection } from '../CollapsibleSection';
 import styles from './SandboxToolsSection.module.css';
 import buttonStyles from './ToolsButton.module.css';
@@ -20,8 +11,6 @@ export type SandboxToolsSectionProps = Pick<
   | 'onToggleSandboxMode'
   | 'onClearForeignPreMoves'
   | 'foreignModifiedOrdersCount'
-  | 'onGenerateAIMoves'
-  | 'onAIStepTurn'
   | 'onLoadScenario'
   | 'onSaveSandboxClick'
   | 'isMultiplayer'
@@ -32,8 +21,6 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
   onToggleSandboxMode,
   onClearForeignPreMoves,
   foreignModifiedOrdersCount,
-  onGenerateAIMoves,
-  onAIStepTurn,
   onLoadScenario,
   onSaveSandboxClick,
   isMultiplayer = false,
@@ -71,51 +58,9 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
 
       <p className={styles.toolsMicroDesc}>
         {sandboxMode
-          ? 'Hypothetical Mode active: Test moves for foreign units on the board. Exiting discards foreign guesses.'
-          : 'Enter Hypothetical Mode to guess enemy moves and test what-if scenarios with the General Staff AI.'}
+          ? 'Hypothetical Mode active: Plot moves for any nation and step forward on this temporary branch. Exiting restores the real game.'
+          : 'Enter Hypothetical Mode to test foreign moves and step turns forward on a temporary branch without affecting the real match.'}
       </p>
-
-      {/* AI General Staff Quick Tools */}
-      {(!isMultiplayer || sandboxMode) && onGenerateAIMoves && (
-        <div className={styles.toolsAiBlock}>
-          <div className={styles.toolsAiHeader}>
-            <Bot size={13} />
-            <span>Tactical General Staff AI</span>
-          </div>
-          <div className={styles.toolsAiGrid}>
-            <button
-              type="button"
-              className={cx(buttonStyles.toolsBtn, styles.toolsAiBtn)}
-              onClick={() => onGenerateAIMoves(undefined, false)}
-              title="Generate DATC-compliant moves for all foreign powers"
-            >
-              <Bot size={12} />
-              <span>Plan Opponents</span>
-            </button>
-            <button
-              type="button"
-              className={cx(buttonStyles.toolsBtn, styles.toolsAiBtn)}
-              onClick={() => onGenerateAIMoves(undefined, true)}
-              title="Generate orders for all 7 powers"
-            >
-              <Sparkles size={12} />
-              <span>Plan All 7</span>
-            </button>
-            {onAIStepTurn && !isMultiplayer && (
-              <button
-                type="button"
-                className={cx(buttonStyles.toolsBtn, styles.toolsAiBtn)}
-                data-step="true"
-                onClick={onAIStepTurn}
-                title="Auto-plan foreign powers and step to the next phase"
-              >
-                <Play size={12} />
-                <span>AI Step Turn</span>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Foreign Pre-Moves Count / Clear */}
       {sandboxMode && foreignModifiedOrdersCount > 0 && (

@@ -21,6 +21,8 @@ export interface UseOrderOverlayOptions {
   unitsByProv: Record<string, Unit>;
   activePower: Power;
   canEditAnyPower: boolean;
+  /** Optional override for live order visibility: true draws every power, false draws only activePower. */
+  showAllMoves?: boolean;
   historyView: boolean;
   historyPower: Power | null;
   isRetreatPhase: boolean;
@@ -51,6 +53,7 @@ export function useOrderOverlay({
   unitsByProv,
   activePower,
   canEditAnyPower,
+  showAllMoves,
   historyView,
   historyPower,
   isRetreatPhase,
@@ -87,8 +90,10 @@ export function useOrderOverlay({
     (u: Unit) =>
       historyView
         ? historyPower === null || u.power === historyPower
-        : canEditAnyPower || u.power === activePower,
-    [historyView, historyPower, canEditAnyPower, activePower],
+        : showAllMoves !== undefined
+          ? showAllMoves || u.power === activePower
+          : canEditAnyPower || u.power === activePower,
+    [historyView, historyPower, showAllMoves, canEditAnyPower, activePower],
   );
 
   // Count how many valid supports each moving/holding unit receives among visible orders

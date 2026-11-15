@@ -24,7 +24,7 @@ import { useTurnNotifications } from './hooks/useTurnNotifications';
 import { useWorkspaceLayout } from './hooks/useWorkspaceLayout';
 import { signOutUser } from './lib/supabase';
 import type { SimulationResult } from './types/diplomacy';
-import { checkIsGameCreator } from './utils/adminHelpers';
+import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
 import { turnLabel } from './utils/timerHelpers';
 
 export function App() {
@@ -127,12 +127,14 @@ export function App() {
     showToast: triggerToast,
     confirm,
   });
-  // Hypothetical Mode, the AI, the scenario reset and saving a sandbox.
+  // Hypothetical Mode, the scenario reset and saving a sandbox.
   const {
     sandboxMode,
     setSandboxMode,
     sandboxGameId,
     setSandboxGameId,
+    sandboxOriginTurn,
+    setSandboxOriginTurn,
     setHypotheticalMatchTimer,
     showSimulationOverlay,
     setShowSimulationOverlay,
@@ -142,8 +144,6 @@ export function App() {
     draftGameId,
     matchTimer,
     requireRealBoard,
-    handleGenerateAIMoves,
-    handleAIStepTurn,
     handleOpenSaveSandboxModal,
     handleSaveSandboxToAccount,
     handleClearForeignPreMoves,
@@ -166,12 +166,26 @@ export function App() {
     fetchGamesList,
   });
 
+  // In multiplayer Hypothetical Mode, Standings and unit selection can switch the commanded power on the ephemeral branch.
+  const activePower = resolvePlayerPower(
+    viewMode,
+    lockedPower,
+    gameState?.active_power,
+    sandboxMode,
+  );
+
   // The live socket, the first load and the fallback poll.
   const { wsConnected, handleTimerExpired } = useGameSync({
     viewMode,
     activeGameId,
     playerPower,
     sandboxGameId,
+    sandboxOriginTurn,
+    setSandboxOriginTurn,
+    setSandboxGameId,
+    setSandboxMode,
+    setShowSimulationOverlay,
+    setSelectedUnitId,
     matchPasscodes,
     authKey: authUser?.id ?? null,
     triggerToast,
@@ -235,7 +249,7 @@ export function App() {
     activeGameId,
     lockedPower,
     gameState,
-    playerPower,
+    playerPower: activePower,
     directEditActive,
     sandboxMode,
     sandboxGameId,
@@ -264,9 +278,13 @@ export function App() {
     fetchGamesList,
     authUser,
     openAuthPrompt,
+    sandboxMode,
+    draftGameId,
+    setSandboxGameId,
     setSandboxMode,
     setShowSimulationOverlay,
     requireRealBoard,
+    matchPasscodes,
     setMatchPasscodes,
     confirm,
     triggerToast,
@@ -368,7 +386,7 @@ export function App() {
         gameState={boardState}
         activeGameId={activeGameId}
         activeGameSummary={activeGameSummary}
-        playerPower={playerPower}
+        playerPower={activePower}
         wsConnected={wsConnected}
         displayPrefs={displayPrefs}
         displayPrefsSaveState={displayPrefsSaveState}
@@ -420,7 +438,7 @@ export function App() {
           gameState={boardState}
           provinces={provinces}
           activeGameSummary={activeGameSummary}
-          playerPower={playerPower}
+          playerPower={activePower}
           lockedPower={lockedPower}
           leftSidebarCollapsed={layout.leftSidebarCollapsed}
           setLeftSidebarCollapsed={layout.setLeftSidebarCollapsed}
@@ -454,8 +472,6 @@ export function App() {
           matchTimer={matchTimer}
           handleToggleSandboxMode={handleToggleSandboxMode}
           handleClearForeignPreMoves={handleClearForeignPreMoves}
-          handleGenerateAIMoves={handleGenerateAIMoves}
-          handleAIStepTurn={handleAIStepTurn}
           handleLoadScenario={handleLoadScenario}
           handleOpenSaveSandboxModal={handleOpenSaveSandboxModal}
           handleUpdateOrder={
@@ -491,7 +507,7 @@ export function App() {
 
       <AppModals
         gameState={gameState}
-        playerPower={playerPower}
+        playerPower={activePower}
         sanityModalOpen={sanityModalOpen}
         setSanityModalOpen={setSanityModalOpen}
         sanityModalIssues={sanityModalIssues}

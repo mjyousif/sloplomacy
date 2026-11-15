@@ -32,15 +32,13 @@ export const LobbyHero: React.FC<LobbyHeroProps> = ({
             <>
               Welcome back, Envoy <strong>{user.displayName}</strong>. Command
               your nation in power-locked multiplayer campaigns, or open the
-              solo sandbox with automated General Staff AI to test multi-power
-              maneuvers.
+              solo sandbox to test multi-power maneuvers.
             </>
           ) : (
             <>
               Experiment freely with the full 7-power tactical engine in{' '}
-              <strong>Guest Solo Sandbox</strong>—now powered with intelligent
-              tactical AI—or sign in to claim your own nation, save scenarios,
-              and wage multiplayer campaigns.
+              <strong>Guest Solo Sandbox</strong>—or sign in to claim your own
+              nation, save scenarios, and wage multiplayer campaigns.
             </>
           )}
         </p>
@@ -80,7 +78,7 @@ export const LobbyHero: React.FC<LobbyHeroProps> = ({
           </div>
           <ul>
             <li>Switch freely between all 7 Great Powers</li>
-            <li>Tactical AI auto-plans opponent moves &amp; steps turns</li>
+            <li>Plot moves for any power &amp; step turns forward</li>
             <li>Simulate bounces, supports &amp; convoy chains</li>
           </ul>
         </div>

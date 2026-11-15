@@ -1,17 +1,17 @@
 import { type Dispatch, type SetStateAction, useState } from 'react';
 import { authedFetch } from '../lib/supabase';
-import {
-  type AuthUser,
-  type GameState,
-  type MultiplayerGameSummary,
-  type PhaseTimer,
-  POWER_METADATA,
-  type Power,
+import type {
+  AuthUser,
+  GameState,
+  MultiplayerGameSummary,
+  PhaseTimer,
+  Power,
 } from '../types/diplomacy';
 import {
   readStoredSoloSandboxId,
   writeStoredSoloSandboxId,
 } from '../utils/soloSandboxStorage';
+import { turnLabel } from '../utils/timerHelpers';
 import type { AuthModalTab } from './useAuthSession';
 
 const API_BASE = '/api';
@@ -27,7 +27,7 @@ export interface SandboxSessionOptions {
   triggerToast: (msg: string) => void;
   /** From `useTurnHistory`: back to the live turn. */
   goLive: () => void;
-  setLoading: Dispatch<SetStateAction<boolean>>;
+  setLoading?: Dispatch<SetStateAction<boolean>>;
   setSelectedUnitId: Dispatch<SetStateAction<string | null>>;
   /** From `useGameSession`. */
   applyServerState: (st: GameState) => void;
@@ -36,8 +36,8 @@ export interface SandboxSessionOptions {
 }
 
 /**
- * The sandbox tools: Hypothetical Mode (on a private server-side copy of a multiplayer match,
- * or on the board itself in a solo or saved sandbox), the tactical AI, the scenario reset and
+ * The sandbox tools: Hypothetical Mode (on an ephemeral server-side branch of a multiplayer match,
+ * or on the board itself in a solo or saved sandbox), the scenario reset and
  * saving a sandbox to the player's account. It runs no effects: closing the private copy when
  * the player leaves the match board is `useSandboxExit`, which App calls later so it keeps its
  * place after `useGameSync`'s effects.
@@ -52,15 +52,18 @@ export function useSandboxSession({
   openAuthPrompt,
   triggerToast,
   goLive,
-  setLoading,
   setSelectedUnitId,
   applyServerState,
   fetchGame,
   fetchGamesList,
 }: SandboxSessionOptions) {
   const [sandboxMode, setSandboxMode] = useState<boolean>(false);
-  // A multiplayer sandbox runs on a private server-side copy of the match under its own game id.
+  // A multiplayer sandbox runs on a private server-side branch of the match under its own game id.
   const [sandboxGameId, setSandboxGameId] = useState<string | null>(null);
+  // Live turn label captured before entering Hypothetical Mode so turn-end detection compares against the real match turn.
+  const [sandboxOriginTurn, setSandboxOriginTurn] = useState<string | null>(
+    null,
+  );
   // The private copy has no clock, so this follows the real match while the player is in it.
   const [hypotheticalMatchTimer, setHypotheticalMatchTimer] =
     useState<PhaseTimer | null>(null);
@@ -70,7 +73,7 @@ export function useSandboxSession({
     useState<boolean>(false);
   const [savingSandbox, setSavingSandbox] = useState<boolean>(false);
 
-  // Drafts, AI plans and previews go to the private copy while there is one.
+  // Drafts and previews go to the private copy while there is one.
   const draftGameId = sandboxGameId ?? activeGameId;
   const matchTimer = sandboxGameId
     ? hypotheticalMatchTimer
@@ -81,78 +84,6 @@ export function useSandboxSession({
     if (!sandboxGameId) return true;
     triggerToast(`Exit Hypothetical Mode to ${action}.`);
     return false;
-  };
-
-  const handleGenerateAIMoves = async (
-    powers?: Power[],
-    includeActive: boolean = false,
-  ) => {
-    const foreignPowers = (Object.keys(POWER_METADATA) as Power[]).filter(
-      (p) => p !== playerPower,
-    );
-    try {
-      setLoading(true);
-      const res = await authedFetch(
-        `${API_BASE}/sandbox/ai-orders?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            powers: powers || (includeActive ? null : foreignPowers),
-            include_active: includeActive,
-          }),
-        },
-      );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Failed to generate AI orders.');
-        return;
-      }
-      const updatedState = await res.json();
-      applyServerState(updatedState);
-      triggerToast(
-        includeActive
-          ? 'Tactical AI planned orders for all 7 Great Powers!'
-          : powers && powers.length === 1
-            ? `Tactical AI planned orders for ${POWER_METADATA[powers[0]].shortName}!`
-            : 'Tactical AI planned orders for foreign powers!',
-      );
-    } catch (e: any) {
-      console.error(e);
-      triggerToast('Error generating AI orders.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAIStepTurn = async () => {
-    try {
-      setLoading(true);
-      const res = await authedFetch(
-        `${API_BASE}/sandbox/ai-step?game_id=${encodeURIComponent(draftGameId)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        },
-      );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        triggerToast(err.detail || 'Failed to step turn with AI.');
-        return;
-      }
-      const updatedState = await res.json();
-      applyServerState(updatedState);
-      setSelectedUnitId(null);
-      setShowSimulationOverlay(false);
-      triggerToast(
-        `AI advanced game clock to ${updatedState.season} ${updatedState.year} ${updatedState.phase}!`,
-      );
-    } catch (e: any) {
-      console.error(e);
-      triggerToast('Error stepping turn with AI.');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleOpenSaveSandboxModal = () => {
@@ -219,7 +150,7 @@ export function useSandboxSession({
       if (res.ok) {
         const st: GameState = await res.json();
         applyServerState(st);
-        triggerToast('Cleared all hypothetical foreign pre-moves.');
+        triggerToast('Cleared all hypothetical foreign moves.');
       }
     } catch (e) {
       console.error(e);
@@ -246,13 +177,14 @@ export function useSandboxSession({
           return;
         }
         const st: GameState = await res.json();
+        setSandboxOriginTurn(turnLabel(gameState));
         setHypotheticalMatchTimer(gameState.timer ?? null);
         applyServerState(st);
         setSandboxGameId(st.game_id === activeGameId ? null : st.game_id);
         setSandboxMode(true);
         setShowSimulationOverlay(true);
         triggerToast(
-          'Entered Hypothetical Mode: Plot hypothetical foreign moves to test outcomes. Exiting will discard foreign guesses!',
+          'Entered Hypothetical Mode: Plot hypothetical moves and step turns without changing the live game.',
         );
       } else {
         const res = await authedFetch(
@@ -266,10 +198,9 @@ export function useSandboxSession({
         let turnMovedOn = false;
         if (res.ok) {
           const st: GameState = await res.json();
-          turnMovedOn =
-            st.season !== gameState.season ||
-            st.year !== gameState.year ||
-            st.phase !== gameState.phase;
+          turnMovedOn = sandboxOriginTurn
+            ? turnLabel(st) !== sandboxOriginTurn
+            : false;
           applyServerState(st);
         } else if (sandboxGameId) {
           // The private copy is gone, for example after a server restart: show the real match.
@@ -277,14 +208,13 @@ export function useSandboxSession({
         }
         setSandboxGameId(null);
         setSandboxMode(false);
+        setSandboxOriginTurn(null);
         setShowSimulationOverlay(false);
         setSelectedUnitId(null);
         triggerToast(
           sandboxGameId && turnMovedOn
-            ? 'The match moved on while in Hypothetical Mode, so hypothetical orders were not kept.'
-            : `Exited Hypothetical Mode — foreign guesses discarded. Showing only ${
-                POWER_METADATA[playerPower].shortName
-              }'s real orders.`,
+            ? 'The match moved on while in Hypothetical Mode, so the hypothetical branch was cleared.'
+            : 'Exited Hypothetical Mode — restored real board and orders.',
         );
       }
     } catch (e) {
@@ -310,6 +240,7 @@ export function useSandboxSession({
         applyServerState(st);
         setSandboxGameId(null);
         setSandboxMode(false);
+        setSandboxOriginTurn(null);
         setShowSimulationOverlay(false);
         setSelectedUnitId(null);
         triggerToast('Reset to Standard Spring 1901.');
@@ -327,6 +258,8 @@ export function useSandboxSession({
     setSandboxMode,
     sandboxGameId,
     setSandboxGameId,
+    sandboxOriginTurn,
+    setSandboxOriginTurn,
     setHypotheticalMatchTimer,
     showSimulationOverlay,
     setShowSimulationOverlay,
@@ -336,8 +269,6 @@ export function useSandboxSession({
     draftGameId,
     matchTimer,
     requireRealBoard,
-    handleGenerateAIMoves,
-    handleAIStepTurn,
     handleOpenSaveSandboxModal,
     handleSaveSandboxToAccount,
     handleClearForeignPreMoves,

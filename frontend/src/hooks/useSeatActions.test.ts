@@ -83,15 +83,53 @@ describe('useSeatActions: the Solo Sandbox', () => {
     await act(() => result.current.handleEnterSoloSandbox(click));
     expect(o.confirm).toHaveBeenCalledWith(
       {
-        title: 'Switch to the Solo Sandbox?',
+        title: 'Export to Solo Sandbox?',
         message:
-          'You leave match "Friday Night" for the Solo Sandbox board. Your submitted orders remain safe on the server.',
-        confirmLabel: 'Switch',
+          'Export the current state of "Friday Night" into your Solo Sandbox (overriding your previous draft sandbox). Your submitted match orders stay safe on the server.',
+        confirmLabel: 'Export & Switch',
       },
       click,
     );
     expect(supabase.authedFetch).not.toHaveBeenCalled();
     expect(o.setLoading).not.toHaveBeenCalled();
+  });
+
+  it('exports the active board (including hypothetical branch & passcode) when leaving a board', async () => {
+    localStorage.setItem(SOLO_SANDBOX_STORAGE_KEY, 'solo_old');
+    supabase.authedFetch.mockResolvedValue(
+      reply(200, { ...solo, summary: { is_draft: true } }),
+    );
+    const setSandboxGameId = vi.fn();
+    const o = makeOptions({
+      viewMode: 'multiplayer',
+      activeGameId: 'mp_1',
+      draftGameId: 'sbx_9',
+      matchPasscodes: { mp_1: 'secret123' },
+      setSandboxGameId,
+    });
+    const { result } = renderSeats(o);
+    await act(() => result.current.handleEnterSoloSandbox());
+    const [url, init] = supabase.authedFetch.mock.calls[0];
+    expect(url).toBe(
+      '/api/games/solo-sandbox?resume_game_id=solo_old&source_game_id=sbx_9',
+    );
+    expect(init?.method).toBe('POST');
+    expect(init?.headers).toEqual({ 'X-Passcode': 'secret123' });
+    expect(setSandboxGameId).toHaveBeenCalledWith(null);
+    expect(o.triggerToast).toHaveBeenCalledWith(
+      'Current game state exported to a new Solo Sandbox.',
+    );
+  });
+
+  it('does not pass source_game_id when launched from the lobby', async () => {
+    supabase.authedFetch.mockResolvedValue(
+      reply(200, { ...solo, summary: { is_draft: true } }),
+    );
+    const o = makeOptions({ viewMode: 'lobby', activeGameId: 'mp_1' });
+    const { result } = renderSeats(o);
+    await act(() => result.current.handleEnterSoloSandbox());
+    expect(sent().url).toBe('/api/games/solo-sandbox');
+    expect(o.triggerToast).not.toHaveBeenCalled();
   });
 
   it('says so when the board cannot be opened', async () => {

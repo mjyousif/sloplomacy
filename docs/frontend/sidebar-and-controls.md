@@ -135,14 +135,17 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
     - **By Score**: Dynamically sorted by victory points (Supply Centers descending, tiebreak by active unit count descending, then canonical order), with numeric ranks `1`–`7` on the left of each flag.
     - **Default**: Standard canonical order (`ALL_POWERS`: France, England, Germany, Italy, Austria, Russia, Turkey) with flush flags.
   - The commander's preference is preserved in browser storage.
+- **Toggleable Map Move Visibility (Sandbox / Hypothetical Mode)**:
+  - Shown when on a sandbox board (`!isMultiplayer`) or in Multiplayer Hypothetical Mode (`sandboxMode === true`).
+  - Segmented **`Map Moves`** control lets commanders toggle between **`All Moves`** (renders planned orders for all 7 Great Powers) and **`Selected Nation`** (renders only the currently active/commanded power's orders).
 - **Compact Layout & Overflow Prevention**:
   - The `Active` badge is positioned on the metrics row (`SC • Units`) rather than the country name row, preventing long commander names from crowding or pushing the `Draft` / `Finalized` / `CD` status tags outside the card.
 - **Player Names**:
   - In multiplayer campaigns, each standing entry displays the claimed commander's player name (e.g. `(AdmiralNelson)`) or indicates `(Open)` if unclaimed.
 - **Historical WWI Flag SVGs (`PowerFlag.tsx`)**:
   - Replaces emojis with crisp vector SVGs representing 1901–1918 flags: Austro-Hungarian dual civil ensign with Austrian and Hungarian coats of arms, British Union Flag, French Tricolour, German Empire black-white-red tricolour, Kingdom of Italy tricolour with crowned Savoy shield, Russian Empire tricolour with the 1914 imperial eagle canton, and Ottoman Empire crescent and star.
-- **Sandbox Mode**: Clicking any power immediately switches active command to that nation for hypothetical experimentation.
-- **Multiplayer Mode**: Displays diplomatic status (Orders Finalized or Civil Disorder). A power still drafting has no mark; the row's tooltip says so.
+- **Sandbox Mode & Multiplayer Hypothetical Mode**: Clicking any power switches active command to that nation for hypothetical experimentation (in Multiplayer Hypothetical Mode, changes go to the ephemeral `sbx_` branch and never touch your real seat).
+- **Multiplayer Mode (Outside Hypothetical Mode)**: Displays diplomatic status (Orders Finalized or Civil Disorder). A power still drafting has no mark; the row's tooltip says so.
 
 ### 4. Press (`tools/PressSection.tsx`)
 Shown under Diplomatic Standing to a seated player of a multiplayer match (never in a sandbox, and not to a spectator). Its pieces are in `tools/press/`.
@@ -158,13 +161,9 @@ Shown under Diplomatic Standing to a seated player of a multiplayer match (never
 
 ### 5. War Room & Pre-Move Sandbox Tools
 - Rendered inside a collapsible `CollapsibleSection` (`defaultOpen={true}`). Displays the `ACTIVE` pill in the header when hypothetical mode is engaged, even when collapsed.
-- **"Enter Hypothetical Mode" / "Exit Mode"**: Toggles isolated hypothetical planning (with the Eye icon). In hypothetical mode, foreign moves can be freely drafted; exiting discards foreign guesses and restores the authoritative state. In a multiplayer match the sandbox is a private copy: other players cannot see it, it does not show their real orders, and Finalize, Resolve, Surrender and the Admin Console wait until you exit.
-- **Tactical General Staff AI**:
-  - **"Plan Opponents"**: Generates DATC-compliant, heuristic moves for all 6 other nations.
-  - **"Plan All 7 Powers"**: Auto-generates orders for every nation across Europe.
-  - **"AI Step Turn"**: Auto-plans foreign powers and steps the game clock directly to the next phase with full adjudication.
+- **"Enter Hypothetical Mode" / "Exit Mode"**: Toggles isolated ephemeral hypothetical planning (with the Eye icon). In hypothetical mode, you can switch nations, draft moves for any power, and step turns forward (`Step Turn Forward`) to preview outcomes without touching real game state; exiting restores the real board and orders. Re-entering on the same live turn resumes your ephemeral branch, which is automatically cleared when the real turn ends. In a multiplayer match the branch is a private copy: other players cannot see it, it does not show their real orders, and Finalize, Unlock, Surrender and the Admin Console wait until you exit.
 - **Foreign Guesses Counter & Clear**: Displays count of drafted foreign guesses with a one-click "Clear" button.
-- **Scenario Management & Saving**: One-click "Reset 1901" scenario start and "Save Sandbox". Clicking "Save Sandbox" opens `SaveSandboxModal.tsx`, letting the commander specify a custom name (e.g., "Balkans 1901 Tactical Analysis") before promoting their personal draft sandbox in-place to a permanent saved sandbox.
+- **Scenario Management & Saving**: One-click "Reset 1901" scenario start and "Save Sandbox". Clicking "Save Sandbox" opens `SaveSandboxModal.tsx`, letting the commander specify a custom name (e.g., "Balkans 1901 Tactical Analysis") before promoting their personal draft sandbox in-place to a permanent saved sandbox. Clicking "Solo Sandbox" in the top bar while viewing any game board exports that board's visible state into a new personal draft sandbox (overriding any previous draft sandbox).
 
 ### 6. Interactive Direct-Edit Mode & Administrator Controls (Game Creator Only)
 - **Top Bar Administrator Menu (`AdminSettingsMenu.tsx`)**: Room creators access `Edit Board` and `Turn and Clock Settings` from the `Wrench` button (`btn-admin-menu`) in the top bar (or ⋯ menu on phones).
@@ -239,9 +238,10 @@ Pieces must not be defined inside `MacroSidebar`: a component defined in a rende
 - **Consensus Auto-Adjudication (Multiplayer)**: In multiplayer matches, turns advance automatically once all required active powers finalize their orders. A power with no decision to make, such as one owed builds with every home center occupied, is not waited for, and a retreat or adjustment phase no player is involved in passes by itself. Non-creator players see a real-time consensus status card rather than a manual button. Connected clients poll state in the background to seamlessly receive phase transitions:
   - **Waiting Lobby Mode (< 2 Players)**: Multiplayer matches require a minimum of 2 players to auto-resolve turns. When a single player prepares and finalizes their orders, the status card clearly indicates `"Orders Locked • Waiting for Players (1/2 min)"` and explains that automatic resolution begins once opponents join.
   - **Active Match Mode (>= 2 Players)**: Displays `"Resolution Progress: X/Y Ready"` and `"Waiting on: [Powers]"`, transitioning to `"Consensus Reached (Y/Y)"` when all required powers finalize.
-- **"Adjudicate Turn & Advance" (`POST /api/adjudicate`)**:
+- **"Adjudicate Turn & Advance" / "Step Turn Forward" (`POST /api/adjudicate`)**:
   - In Solo / Sandbox Mode: Commits moves and advances the season/phase.
-  - In Multiplayer Mode: Restricted to the **Game Creator**. When testing solo in a waiting lobby (< 2 players), the host button explicitly displays `"Advance Phase Solo (Host Override)"` to advance turns without waiting for opponents. In active matches, it acts as `"Force Adjudicate Phase (Host Override)"` to bypass stalled or AFK players. Unauthorized non-creator calls return `403 Forbidden`. Once a power has won, the button is disabled and reads "Game Over".
+  - In Hypothetical Mode (Solo or Multiplayer): Steps the ephemeral hypothetical branch forward (`draftGameId`) so players can inspect multi-turn outcomes without mutating the real game.
+  - In Multiplayer Mode (Outside Hypothetical Mode): Restricted to the **Game Creator**. When testing solo in a waiting lobby (< 2 players), the host button explicitly displays `"Advance Phase Solo (Host Override)"` to advance turns without waiting for opponents. In active matches, it acts as `"Force Adjudicate Phase (Host Override)"` to bypass stalled or AFK players. Unauthorized non-creator calls return `403 Forbidden`. Once a power has won, the button is disabled and reads "Game Over".
 
 ---
 

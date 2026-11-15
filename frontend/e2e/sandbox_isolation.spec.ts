@@ -33,15 +33,7 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
       await page.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
       await recorder.recordStep(page, '02_solo_sandbox_board');
 
-      // 4. Enter Hypothetical Mode via ToolsSidebar toggle
-      const toggleSandboxBtn = page.locator('[data-testid="btn-toggle-sandbox"]');
-      await expect(toggleSandboxBtn).toBeVisible();
-      await expect(toggleSandboxBtn).toContainText(/Enter Hypothetical Mode/i);
-      await toggleSandboxBtn.click();
-      await expect(toggleSandboxBtn).toContainText(/Exit Mode/i);
-      await recorder.recordStep(page, '03_hypothetical_mode_entered');
-
-      // 5. Order active power (FRANCE) Army in Paris -> Burgundy (BUR)
+      // 4. Order active power (FRANCE) Army in Paris -> Burgundy (BUR) BEFORE entering Hypothetical Mode
       const parisCard = page.locator('[data-testid="unit-macro-card"][data-unit-id="FRA_A_PAR"]');
       await expect(parisCard).toBeVisible();
       await parisCard.locator('[data-testid="btn-order-type-MOVE"]').click();
@@ -54,7 +46,15 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
         '[data-testid="order-arrow"][data-order-unit="FRA_A_PAR"][data-order-target="BUR"]'
       );
       await expect(parisArrow).toBeVisible();
-      await recorder.recordStep(page, '04_france_paris_ordered_bur');
+      await recorder.recordStep(page, '03_france_paris_ordered_bur');
+
+      // 5. Enter Hypothetical Mode via ToolsSidebar toggle
+      const toggleSandboxBtn = page.locator('[data-testid="btn-toggle-sandbox"]');
+      await expect(toggleSandboxBtn).toBeVisible();
+      await expect(toggleSandboxBtn).toContainText(/Enter Hypothetical Mode/i);
+      await toggleSandboxBtn.click();
+      await expect(toggleSandboxBtn).toContainText(/Exit Mode/i);
+      await recorder.recordStep(page, '04_hypothetical_mode_entered');
 
       // 6. Switch to foreign power (ENGLAND) in ToolsSidebar and plot hypothetical move F LON -> NTH
       const englandCard = page.locator('[data-testid="power-standing-card"][data-power="ENGLAND"]');
@@ -75,12 +75,23 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
       await expect(londonArrow).toBeVisible();
       await recorder.recordStep(page, '05_england_hypothetical_move_plotted');
 
-      // 7. Switch back to FRANCE before exiting Hypothetical Mode so FRANCE is the retained active power
+      // 7. Switch back to FRANCE, test Diplomatic Standings move visibility toggle (Selected Nation vs All Moves)
       const franceCard = page.locator('[data-testid="power-standing-card"][data-power="FRANCE"]');
       await expect(franceCard).toBeVisible();
       await franceCard.click();
 
-      // 8. Exit Hypothetical Mode and verify foreign guesses (ENG_F_LON -> NTH) are discarded while own move (FRA_A_PAR -> BUR) remains
+      const selectedMovesBtn = page.locator('[data-testid="standings-moves-selected"]');
+      const allMovesBtn = page.locator('[data-testid="standings-moves-all"]');
+      await expect(selectedMovesBtn).toBeVisible();
+      await selectedMovesBtn.click();
+      await expect(parisArrow).toBeVisible();
+      await expect(londonArrow).toHaveCount(0);
+
+      await allMovesBtn.click();
+      await expect(parisArrow).toBeVisible();
+      await expect(londonArrow).toBeVisible();
+
+      // 8. Exit Hypothetical Mode and verify hypothetical move (ENG_F_LON -> NTH) is discarded while real move (FRA_A_PAR -> BUR) is restored
       await toggleSandboxBtn.click();
       await expect(toggleSandboxBtn).toContainText(/Enter Hypothetical Mode/i);
       await expect(londonArrow).toHaveCount(0);
@@ -110,6 +121,16 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
       await page.fill('#auth-password', 'password123');
       await page.getByRole('button', { name: 'Sign In to Chancellery' }).click();
       await expect(authModal).toHaveCount(0);
+
+      // Dismiss onboarding public-username prompt if shown after sign-in
+      const closeAccountModal = page.getByRole('button', { name: 'Close account modal' });
+      try {
+        await closeAccountModal.waitFor({ state: 'visible', timeout: 2000 });
+        await closeAccountModal.click();
+        await expect(closeAccountModal).toHaveCount(0);
+      } catch {
+        // Onboarding username modal only opens when username setup is pending.
+      }
 
       // 11. Click Save Sandbox again as authenticated user -> opens SaveSandboxModal
       await saveSandboxBtn.click();

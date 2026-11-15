@@ -19,11 +19,12 @@ export function resolvePlayerPower(
   viewMode: 'lobby' | 'sandbox' | 'multiplayer',
   lockedPower: Power | null,
   serverActivePower: Power | undefined,
+  sandboxMode: boolean = false,
 ): Power {
-  if (viewMode === 'multiplayer' && lockedPower) {
+  if (viewMode === 'multiplayer' && lockedPower && !sandboxMode) {
     return lockedPower;
   }
-  return serverActivePower ?? 'FRANCE';
+  return serverActivePower ?? lockedPower ?? 'FRANCE';
 }
 
 export function checkIsGameCreator(

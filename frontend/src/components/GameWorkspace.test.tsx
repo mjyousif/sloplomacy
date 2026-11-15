@@ -146,8 +146,6 @@ function props(over: Partial<GameWorkspaceProps> = {}): GameWorkspaceProps {
     matchTimer: null,
     handleToggleSandboxMode: vi.fn(),
     handleClearForeignPreMoves: vi.fn(),
-    handleGenerateAIMoves: vi.fn(),
-    handleAIStepTurn: vi.fn(),
     handleLoadScenario: vi.fn(),
     handleOpenSaveSandboxModal: vi.fn(),
     handleUpdateOrder: vi.fn(),
@@ -259,6 +257,15 @@ describe('GameWorkspace: the live turn', () => {
     expect(applied(p.setRightSidebarCollapsed, true)).toBe(false);
     expect(seen.tools.adminOverrideActive).toBe(true);
     expect(seen.map.directEditActive).toBe(true);
+  });
+
+  it('toggles sandbox map move visibility from ToolsSidebar down to EuropeMap', () => {
+    render(<GameWorkspace {...props({ viewMode: 'sandbox' })} />);
+    expect(seen.tools.showAllMoves).toBe(true);
+    expect(seen.map.showAllMoves).toBe(true);
+    act(() => seen.tools.onChangeShowAllMoves(false));
+    expect(seen.tools.showAllMoves).toBe(false);
+    expect(seen.map.showAllMoves).toBe(false);
   });
 
   it('finalizes without forcing, and surrenders only a held seat', () => {

@@ -81,6 +81,8 @@ export interface EuropeMapProps {
   ownership: Record<string, Power>;
   activePower: Power;
   sandboxMode: boolean;
+  /** Optional override for live order visibility: true draws all powers, false draws only activePower. */
+  showAllMoves?: boolean;
   directEditActive?: boolean;
   directEdit?: DirectEditMapHandlers;
   selectedUnitId: string | null;

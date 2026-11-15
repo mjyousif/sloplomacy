@@ -130,6 +130,62 @@ describe('StandingsSection: choosing a power', () => {
     await userEvent.click(card('GERMANY'));
     expect(onSelectPower).not.toHaveBeenCalled();
   });
+
+  it('lets a player switch powers in multiplayer Hypothetical Mode', async () => {
+    const onSelectPower = vi.fn();
+    render(
+      <StandingsSection
+        {...base({ onSelectPower, isMultiplayer: true, sandboxMode: true })}
+      />,
+    );
+    expect(card('GERMANY')).toHaveAttribute('data-clickable', 'true');
+    await userEvent.click(card('GERMANY'));
+    expect(onSelectPower).toHaveBeenCalledExactlyOnceWith('GERMANY');
+  });
+
+  it('shows the Map Moves toggle in sandbox or hypothetical mode and hides it in live multiplayer', async () => {
+    const onChangeShowAllMoves = vi.fn();
+    const { rerender } = render(
+      <StandingsSection
+        {...base({ showAllMoves: true, onChangeShowAllMoves })}
+      />,
+    );
+    const allBtn = screen.getByTestId('standings-moves-all');
+    const selectedBtn = screen.getByTestId('standings-moves-selected');
+    expect(allBtn).toHaveAttribute('data-active', 'true');
+    expect(selectedBtn).not.toHaveAttribute('data-active', 'true');
+    await userEvent.click(selectedBtn);
+    expect(onChangeShowAllMoves).toHaveBeenCalledWith(false);
+
+    rerender(
+      <StandingsSection
+        {...base({
+          isMultiplayer: true,
+          sandboxMode: false,
+          showAllMoves: true,
+          onChangeShowAllMoves,
+        })}
+      />,
+    );
+    expect(screen.queryByTestId('standings-moves-all')).toBeNull();
+
+    rerender(
+      <StandingsSection
+        {...base({
+          isMultiplayer: true,
+          sandboxMode: true,
+          showAllMoves: false,
+          onChangeShowAllMoves,
+        })}
+      />,
+    );
+    expect(screen.getByTestId('standings-moves-selected')).toHaveAttribute(
+      'data-active',
+      'true',
+    );
+    await userEvent.click(screen.getByTestId('standings-moves-all'));
+    expect(onChangeShowAllMoves).toHaveBeenCalledWith(true);
+  });
 });
 
 describe('StandingsSection: players and status', () => {

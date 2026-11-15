@@ -58,50 +58,78 @@ def test_sandbox_runs_on_a_private_copy_that_hides_opponents_orders():
 
 def test_hypothetical_orders_never_reach_the_real_match():
     game_id = _seated_game()
+    real_france_order = GAMES[game_id].orders["FRA_A_PAR"].model_copy()
     real_germany_order = GAMES[game_id].orders["GER_A_BER"].model_copy()
     sandbox_id = _enter_sandbox(game_id)["game_id"]
 
+    client.post(f"/api/order?game_id={sandbox_id}", json={"order": _order_payload(target="BUR")})
     _germany_moves_to_silesia(sandbox_id)
-    res = client.post(f"/api/sandbox/ai-orders?game_id={sandbox_id}", json={"include_active": True})
-    assert res.status_code == 200
+    assert GAMES[game_id].orders["FRA_A_PAR"] == real_france_order
     assert GAMES[game_id].orders["GER_A_BER"] == real_germany_order
 
-    _exit_sandbox(sandbox_id)
+    restored = _exit_sandbox(sandbox_id)
+    assert restored["game_id"] == game_id
+    assert GAMES[game_id].orders["FRA_A_PAR"] == real_france_order
     assert GAMES[game_id].orders["GER_A_BER"] == real_germany_order
-    assert sandbox_id not in GAMES
 
 
 def test_stepping_turns_in_a_sandbox_leaves_the_real_match_on_its_turn():
     game_id = _seated_game()
     sandbox_id = _enter_sandbox(game_id)["game_id"]
 
-    assert client.post(f"/api/sandbox/ai-step?game_id={sandbox_id}").status_code == 200
-
+    res = client.post(f"/api/adjudicate?game_id={sandbox_id}")
+    assert res.status_code == 200
+    assert res.json()["season"] == "Fall"
     assert GAMES[sandbox_id].season == "Fall"
     assert GAMES[game_id].season == "Spring"
 
 
-def test_own_sandbox_orders_carry_over_to_the_real_match():
+def test_hypothetical_orders_for_own_and_foreign_units_restore_real_match_on_exit():
     game_id = _seated_game()
+    client.post(f"/api/order?game_id={game_id}", json={"order": _order_payload(target="MAR")})
+    client.post(f"/api/finalize?game_id={game_id}", json={"power": "FRANCE", "force": True})
+
     sandbox_id = _enter_sandbox(game_id)["game_id"]
     client.post(f"/api/order?game_id={sandbox_id}", json={"order": _order_payload(target="BUR")})
+    _germany_moves_to_silesia(sandbox_id)
 
     state = _exit_sandbox(sandbox_id)
 
     assert state["game_id"] == game_id
-    assert state["orders"]["FRA_A_PAR"]["target"] == "BUR"
-    assert GAMES[game_id].orders["FRA_A_PAR"].target == "BUR"
+    assert state["orders"]["FRA_A_PAR"]["target"] == "MAR"
+    assert state["orders"]["GER_A_BER"]["order_type"] == "HOLD"
+    assert GAMES[game_id].orders["FRA_A_PAR"].target == "MAR"
+    assert GAMES[game_id].finalized_powers == [Power.FRANCE]
 
 
-def test_changing_own_orders_in_a_sandbox_drops_finalization_like_a_real_edit():
+def test_reentering_hypothetical_mode_same_turn_resumes_branch_until_turn_ends():
+    from storage.store import PRIVATE_SANDBOXES
+
     game_id = _seated_game()
-    client.post(f"/api/finalize?game_id={game_id}", json={"power": "FRANCE", "force": True})
-    sandbox_id = _enter_sandbox(game_id)["game_id"]
-    client.post(f"/api/order?game_id={sandbox_id}", json={"order": _order_payload(target="BUR")})
+    sbx_1 = _enter_sandbox(game_id)["game_id"]
+    client.post(f"/api/order?game_id={sbx_1}", json={"order": _order_payload(target="BUR")})
+    assert client.post(f"/api/adjudicate?game_id={sbx_1}").status_code == 200
+    assert GAMES[sbx_1].season == "Fall"
 
-    _exit_sandbox(sandbox_id)
+    restored = _exit_sandbox(sbx_1)
+    assert restored["season"] == "Spring"
 
-    assert GAMES[game_id].finalized_powers == []
+    # Re-entering on the same live turn resumes the existing stepped hypothetical branch.
+    resumed = _enter_sandbox(game_id)
+    assert resumed["game_id"] == sbx_1
+    assert resumed["season"] == "Fall"
+    assert any(u["province"] == "BUR" for u in resumed["units"])
+
+    # Advancing the real match erases the ephemeral branch for the ended turn.
+    for power in ("FRANCE", "GERMANY"):
+        client.post(f"/api/finalize?game_id={game_id}", json={"power": power, "force": True})
+    assert GAMES[game_id].season == "Fall"
+    assert sbx_1 not in GAMES
+    assert (game_id, "FRANCE") not in PRIVATE_SANDBOXES
+
+    fresh = _enter_sandbox(game_id)
+    assert fresh["game_id"] != sbx_1
+    assert fresh["season"] == "Fall"
 
 
 def test_browsing_a_sandbox_without_changes_keeps_own_finalization():
@@ -113,19 +141,21 @@ def test_browsing_a_sandbox_without_changes_keeps_own_finalization():
     assert GAMES[game_id].finalized_powers == [Power.FRANCE]
 
 
-def test_own_sandbox_orders_are_dropped_if_the_match_moved_on():
+def test_exiting_after_match_moved_on_returns_new_live_turn():
     game_id = _seated_game()
     sandbox_id = _enter_sandbox(game_id)["game_id"]
-    client.post(f"/api/order?game_id={sandbox_id}", json={"order": _order_payload(target="BUR")})
 
     for power in ("FRANCE", "GERMANY"):
         client.post(f"/api/finalize?game_id={game_id}", json={"power": power, "force": True})
     assert GAMES[game_id].season == "Fall"
 
-    state = _exit_sandbox(sandbox_id)
-
-    assert state["season"] == "Fall"
-    assert state["orders"]["FRA_A_PAR"]["order_type"] == "HOLD"
+    # Branch was erased when the match moved on; re-entering starts a fresh branch on Fall.
+    assert (
+        client.post(f"/api/sandbox/exit?game_id={sandbox_id}", json={"power": "FRANCE"}).status_code
+        == 404
+    )
+    fresh = _enter_sandbox(game_id)
+    assert fresh["season"] == "Fall"
 
 
 def test_sandbox_orders_do_not_return_after_the_player_left_the_seat():
@@ -147,8 +177,8 @@ def test_one_player_keeps_one_sandbox_per_match():
     first = _enter_sandbox(game_id)["game_id"]
     second = _enter_sandbox(game_id)["game_id"]
 
-    assert first not in GAMES
-    assert second in GAMES
+    assert first == second
+    assert first in GAMES
 
 
 def test_each_player_has_their_own_sandbox():

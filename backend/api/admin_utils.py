@@ -12,6 +12,7 @@ from storage.store import (
     GAME_HISTORY,
     GAME_SUMMARIES,
     HISTORY_UNSAVED,
+    clear_ephemeral_sandboxes_for,
     persist_game,
     sync_summary,
 )
@@ -310,6 +311,13 @@ async def record_admin_history_and_log(
             history.pop(0)
 
     # 3. Persistence and broadcast
+    if (
+        before_state.units != after_state.units
+        or before_state.ownership != after_state.ownership
+        or (before_state.season, before_state.year, before_state.phase)
+        != (after_state.season, after_state.year, after_state.phase)
+    ):
+        clear_ephemeral_sandboxes_for(game_id)
     HISTORY_UNSAVED.add(game_id)
     sync_summary(game_id)
     await persist_game(game_id)

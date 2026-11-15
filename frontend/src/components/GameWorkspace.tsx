@@ -1,4 +1,9 @@
-import type { Dispatch, RefObject, SetStateAction } from 'react';
+import {
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+  useState,
+} from 'react';
 import { usePressSync } from '../hooks/usePress';
 import { useSidebarSelection } from '../hooks/useSidebarSelection';
 import type { TurnHistory } from '../hooks/useTurnHistory';
@@ -78,8 +83,6 @@ export interface GameWorkspaceProps {
   matchTimer: PhaseTimer | null;
   handleToggleSandboxMode: () => void;
   handleClearForeignPreMoves: () => void;
-  handleGenerateAIMoves: (powers?: Power[], includeActive?: boolean) => void;
-  handleAIStepTurn: () => void;
   handleLoadScenario: (scenarioId: string) => void;
   handleOpenSaveSandboxModal: () => void;
   /** From `useMatchActions` and `useGameSync`. */
@@ -152,8 +155,6 @@ export function GameWorkspace({
   matchTimer,
   handleToggleSandboxMode,
   handleClearForeignPreMoves,
-  handleGenerateAIMoves,
-  handleAIStepTurn,
   handleLoadScenario,
   handleOpenSaveSandboxModal,
   handleUpdateOrder,
@@ -173,6 +174,9 @@ export function GameWorkspace({
 }: GameWorkspaceProps) {
   const viewingHistory = historyTurn !== null;
   const ignore = () => {};
+  const [showAllSandboxMoves, setShowAllSandboxMoves] = useState<boolean>(true);
+  const isMultiplayer = viewMode === 'multiplayer';
+  const ownPower = lockedPower ?? playerPower;
   const { selectFromSidebar, selectFromMap, suppressUnitMenu } =
     useSidebarSelection(selectedUnitId, setSelectedUnitId);
   // Press is for a seated player of a multiplayer match. The summary names the match even
@@ -218,21 +222,21 @@ export function GameWorkspace({
         finalizedPowers={gameState.finalized_powers}
         surrenderedPowers={gameState.surrendered_powers}
         issues={gameState.issues}
-        isMultiplayer={viewMode === 'multiplayer'}
+        isMultiplayer={isMultiplayer}
         participants={activeGameSummary?.participants}
+        showAllMoves={showAllSandboxMoves}
+        onChangeShowAllMoves={setShowAllSandboxMoves}
         sandboxMode={sandboxMode}
         onToggleSandboxMode={handleToggleSandboxMode}
         onClearForeignPreMoves={handleClearForeignPreMoves}
         foreignModifiedOrdersCount={
           gameState.units
-            .filter((u) => u.power !== playerPower)
+            .filter((u) => u.power !== ownPower)
             .filter((u) => {
               const o = gameState.orders[u.id];
               return o && (o.order_type !== 'HOLD' || o.is_explicit);
             }).length
         }
-        onGenerateAIMoves={handleGenerateAIMoves}
-        onAIStepTurn={handleAIStepTurn}
         onLoadScenario={handleLoadScenario}
         onSaveSandboxClick={handleOpenSaveSandboxModal}
         adminOverrideActive={directEditActive}
@@ -267,6 +271,10 @@ export function GameWorkspace({
         ownership={historyTurn?.ownership ?? gameState.ownership}
         activePower={playerPower}
         sandboxMode={sandboxMode}
+        showAllMoves={
+          directEditActive ||
+          ((!isMultiplayer || sandboxMode) && showAllSandboxMoves)
+        }
         directEditActive={directEditActive}
         directEdit={directEdit}
         selectedUnitId={viewingHistory ? null : selectedUnitId}
