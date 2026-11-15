@@ -126,7 +126,9 @@ def test_a_player_cannot_send_as_another_power(match):
 
 
 def test_an_anonymous_author_is_hidden_from_other_players_and_the_host(match):
-    sent = send(match, bob_headers(), "GERMANY", "Someone will stab France", anonymous=True)
+    sent = send(
+        match, bob_headers(), "GERMANY", "Someone will stab France", ["FRANCE", "ENGLAND"], anonymous=True
+    )
     assert sent.status_code == 200
     assert sent.json()["sender"] == "GERMANY"
     for headers, power in ((alice_headers(), "FRANCE"), (carol_headers(), "ENGLAND")):
@@ -176,6 +178,9 @@ def test_the_socket_delivers_press_only_to_players_who_may_read_it(match):
         first = receive_json(carol)
         assert first["type"] == "press"
         assert [m["body"] for m in first["messages"]] == ["For everyone"]
+        # Each socket is sent the reader's own number, so Carol's shows no gap either.
+        assert first["messages"][0]["seq"] == 1
+        assert receive_json(bob)["messages"][0]["seq"] == 2
 
         # A socket without a seat is sent no press at all.
         spectator.send_json({"type": "ping"})
@@ -187,7 +192,7 @@ def test_the_socket_delivers_press_only_to_players_who_may_read_it(match):
 
 def test_game_over_reveals_all_press_and_closes_private_press(match):
     send(match, alice_headers(), "FRANCE", "Split Belgium?", ["GERMANY"])
-    send(match, bob_headers(), "GERMANY", "Trust nobody", anonymous=True)
+    send(match, bob_headers(), "GERMANY", "Trust nobody", ["FRANCE"], anonymous=True)
     GAMES[match].winner = Power.FRANCE
 
     payload = feed(match, carol_headers(), "ENGLAND")
@@ -197,7 +202,7 @@ def test_game_over_reveals_all_press_and_closes_private_press(match):
         ("Trust nobody", "GERMANY"),
     ]
     assert send(match, carol_headers(), "ENGLAND", "psst", ["FRANCE"]).status_code == 409
-    assert send(match, carol_headers(), "ENGLAND", "psst", anonymous=True).status_code == 409
+    assert send(match, carol_headers(), "ENGLAND", "psst", ["FRANCE"], anonymous=True).status_code == 409
     assert send(match, carol_headers(), "ENGLAND", "Good game").status_code == 200
 
 
@@ -220,8 +225,45 @@ def test_message_rules(match):
     assert send(match, alice_headers(), "FRANCE", "to me", ["FRANCE"]).status_code == 422
     assert send(match, alice_headers(), "FRANCE", "hi", ["ATLANTIS"]).status_code == 422
     # The sender is dropped from a group, and recipients are stored once each, in order.
-    group = send(match, alice_headers(), "FRANCE", "hi", ["ITALY", "FRANCE", "GERMANY", "ITALY"])
-    assert group.json()["recipients"] == ["GERMANY", "ITALY"]
+    group = send(
+        match, alice_headers(), "FRANCE", "hi", ["GERMANY", "FRANCE", "ENGLAND", "GERMANY"]
+    )
+    assert group.json()["recipients"] == ["ENGLAND", "GERMANY"]
+
+
+def test_an_anonymous_public_post_is_refused(match):
+    res = send(match, bob_headers(), "GERMANY", "Who said this?", anonymous=True)
+    assert res.status_code == 422
+    assert bodies(match, alice_headers(), "FRANCE") == []
+
+
+def test_a_message_to_an_empty_seat_is_refused(match):
+    # Nobody has claimed Italy, so nobody would read it, and whoever claims it later must not
+    # inherit it.
+    res = send(match, alice_headers(), "FRANCE", "Lepanto?", ["ITALY"])
+    assert res.status_code == 422
+    assert "ITALY" in res.json()["detail"]
+    group = send(match, alice_headers(), "FRANCE", "Lepanto?", ["GERMANY", "ITALY"])
+    assert group.status_code == 422
+    assert GAME_PRESS.get(match, []) == []
+
+
+def test_numbers_leave_no_gap_for_private_press_between_others(match):
+    send(match, alice_headers(), "FRANCE", "Public one")
+    send(match, alice_headers(), "FRANCE", "Split Belgium?", ["GERMANY"])
+    send(match, bob_headers(), "GERMANY", "Agreed", ["FRANCE"])
+    send(match, bob_headers(), "GERMANY", "Psst", ["FRANCE"], anonymous=True)
+    last = send(match, carol_headers(), "ENGLAND", "Public two").json()
+
+    carol = feed(match, carol_headers(), "ENGLAND")["messages"]
+    assert [m["seq"] for m in carol] == [1, 2]
+    assert last["seq"] == 2
+    alice = feed(match, alice_headers(), "FRANCE")["messages"]
+    assert [m["seq"] for m in alice] == [1, 2, 3, 4, 5]
+    # Paging uses the reader's own numbers.
+    assert [m["body"] for m in feed(match, carol_headers(), "ENGLAND", after=1)["messages"]] == [
+        "Public two"
+    ]
 
 
 def test_a_surrendered_power_can_no_longer_send(match):

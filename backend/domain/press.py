@@ -12,8 +12,12 @@ class PressMessage(BaseModel):
     to a client: `security.press.view_of` makes the copy a given player may see."""
 
     id: str
-    # Counts up within a game, so a client can ask for what it has not seen yet.
+    # Counts up within the game. It stays on the server: its gaps would show a player how much
+    # private press the others exchange.
     seq: int
+    # The message's place in each reader's own feed (1, 2, 3...), set when it is sent. This is
+    # the `seq` a reader is sent until the press is revealed, when everyone reads everything.
+    numbers: dict[Power, int] = Field(default_factory=dict)
     sender: Power
     anonymous: bool = False
     # Empty for public press. Otherwise the powers it was sent to, never including the sender.
@@ -29,11 +33,30 @@ class PressMessage(BaseModel):
     # read from the game's orders and never written to them.
     orders: list[Order] = Field(default_factory=list)
 
+    def readers(self) -> set[Power]:
+        """Who may read it before the press is revealed."""
+        if not self.recipients:
+            return set(Power)
+        return {self.sender, *self.recipients}
+
+
+def number_messages(messages: list[PressMessage]) -> None:
+    """Give each message that has no `numbers` yet its place in each reader's feed, counting on
+    from the messages before it. `messages` is in `seq` order. Press saved before numbering
+    existed is numbered the same way when it is loaded."""
+    last: dict[Power, int] = {}
+    for message in messages:
+        if not message.numbers:
+            message.numbers = {p: last.get(p, 0) + 1 for p in message.readers()}
+        last.update(message.numbers)
+
 
 class PressMessageView(BaseModel):
     """A message as one player sees it. `sender` is None while an anonymous author is hidden."""
 
     id: str
+    # Its place in this player's own feed, counting from 1. Once the press is revealed every
+    # player reads every message, so it is then the game-wide count.
     seq: int
     sender: Power | None
     anonymous: bool

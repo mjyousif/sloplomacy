@@ -9,6 +9,7 @@ import {
   mergeMessages,
   NOTES_CHANNEL,
   PUBLIC_CHANNEL,
+  readUpToNow,
   saveReadMarks,
   splitProvinceRefs,
   threadKey,
@@ -178,11 +179,24 @@ describe('read marks', () => {
 
   it('ignore anything that is not a count', () => {
     localStorage.setItem(
-      'sloplomacy_press_read:g1:FRANCE',
+      'sloplomacy_press_read_v2:g1:FRANCE',
       JSON.stringify({ public: 'x', notes: -1, 'FRANCE+ITALY': 2 }),
     );
     expect(loadReadMarks('g1', 'FRANCE')).toEqual({ 'FRANCE+ITALY': 2 });
-    localStorage.setItem('sloplomacy_press_read:g1:FRANCE', 'not json');
+    localStorage.setItem('sloplomacy_press_read_v2:g1:FRANCE', 'not json');
     expect(loadReadMarks('g1', 'FRANCE')).toEqual({});
+  });
+
+  it('keep revealed press apart, since it is numbered for the whole game', () => {
+    saveReadMarks('g1', 'FRANCE', { public: 2 });
+    saveReadMarks('g1', 'FRANCE', { public: 9 }, true);
+    expect(loadReadMarks('g1', 'FRANCE')).toEqual({ public: 2 });
+    expect(loadReadMarks('g1', 'FRANCE', true)).toEqual({ public: 9 });
+  });
+
+  it('can mark everything held as read', () => {
+    expect(
+      readUpToNow([msg(1, 'GERMANY'), msg(3, 'ENGLAND'), msg(2, 'GERMANY', ['FRANCE'])]),
+    ).toEqual({ [PUBLIC_CHANNEL]: 3, [channelOf(msg(2, 'GERMANY', ['FRANCE']))]: 2 });
   });
 });

@@ -198,19 +198,36 @@ export function splitProvinceRefs(
   return parts;
 }
 
-const READ_STORAGE_PREFIX = 'sloplomacy_press_read';
+// v2: `seq` became the reader's own number, so marks saved against the game-wide count are
+// dropped rather than misread.
+const READ_STORAGE_PREFIX = 'sloplomacy_press_read_v2';
 
-function readStorageKey(gameId: string, power: Power): string {
-  return `${READ_STORAGE_PREFIX}:${gameId}:${power}`;
+/**
+ * Revealed press is numbered for the whole game, not per reader, so its marks are kept apart
+ * from the ones made while the game was on.
+ */
+function readStorageKey(gameId: string, power: Power, revealed: boolean): string {
+  return `${READ_STORAGE_PREFIX}:${gameId}:${power}${revealed ? ':revealed' : ''}`;
+}
+
+/** The newest `seq` in each channel: everything held, marked read. */
+export function readUpToNow(messages: PressMessage[]): Record<string, number> {
+  const marks: Record<string, number> = {};
+  for (const m of messages) {
+    const channel = channelOf(m);
+    marks[channel] = Math.max(marks[channel] ?? 0, m.seq);
+  }
+  return marks;
 }
 
 /** How far this browser has read each channel of a game, by channel key. */
 export function loadReadMarks(
   gameId: string,
   power: Power,
+  revealed = false,
 ): Record<string, number> {
   try {
-    const raw = localStorage.getItem(readStorageKey(gameId, power));
+    const raw = localStorage.getItem(readStorageKey(gameId, power, revealed));
     const parsed: unknown = raw ? JSON.parse(raw) : null;
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
       return {};
@@ -230,9 +247,13 @@ export function saveReadMarks(
   gameId: string,
   power: Power,
   marks: Record<string, number>,
+  revealed = false,
 ): void {
   try {
-    localStorage.setItem(readStorageKey(gameId, power), JSON.stringify(marks));
+    localStorage.setItem(
+      readStorageKey(gameId, power, revealed),
+      JSON.stringify(marks),
+    );
   } catch {
     // Ignore storage quota / privacy mode restrictions
   }
