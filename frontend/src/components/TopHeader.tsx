@@ -1,6 +1,4 @@
 import {
-  AlertOctagon,
-  AlertTriangle,
   Crown,
   FlaskConical,
   LogIn,
@@ -28,10 +26,6 @@ export interface TopHeaderProps {
   /** The turn on the board. Shown only away from the lobby. */
   turn: { season: string; year: number; phase: string };
   winner: Power | null;
-  errorCount: number;
-  warningCount: number;
-  /** Opens the order check from the error or warning pill. */
-  onOpenOrderCheck: () => void;
   onBackToLobby: () => void;
   onEnterSoloSandbox: (event?: React.MouseEvent) => void;
   /** The match being played, named with the player's power in multiplayer. */
@@ -63,17 +57,14 @@ export interface TopHeaderProps {
 }
 
 /**
- * The desktop top bar: brand and navigation on the left, the turn and order check in the
- * middle while a board is open, and display settings and account on the right. Phones
+ * The desktop top bar: brand and navigation on the left, the turn (and the winner, once
+ * there is one) in the middle while a board is open, and display settings and account on the right. Phones
  * get `CompactTopBar` instead.
  */
 export function TopHeader({
   viewMode,
   turn,
   winner,
-  errorCount,
-  warningCount,
-  onOpenOrderCheck,
   onBackToLobby,
   onEnterSoloSandbox,
   matchSummary,
@@ -156,51 +147,20 @@ export function TopHeader({
             onSelectPower={onSelectHistoryPower}
           />
 
-          {(winner || errorCount > 0 || warningCount > 0) && (
+          {winner && (
             <div className={styles.headerCenterBadges}>
-              {winner && (
-                <button
-                  type="button"
-                  className={styles.gameOverPill}
-                  data-testid="game-over-pill"
-                  onClick={onOpenGameOverModal}
-                  title="View Campaign Conclusion Summary"
-                >
-                  <Crown size={14} />
-                  <span>
-                    {POWER_METADATA[winner].shortName.toUpperCase()} WINS
-                  </span>
-                </button>
-              )}
-
-              {(errorCount > 0 || warningCount > 0) && (
-                <div className={styles.headerSanityReadout}>
-                  {errorCount > 0 ? (
-                    <div
-                      className={styles.headerErrorPill}
-                      data-testid="header-error-pill"
-                      onClick={onOpenOrderCheck}
-                      title="Click to open Sanity Check Diagnostics"
-                    >
-                      <AlertOctagon size={15} />
-                      <span>
-                        Error: {errorCount}
-                        {warningCount > 0 ? ` • Warning: ${warningCount}` : ''}
-                      </span>
-                    </div>
-                  ) : (
-                    <div
-                      className={styles.headerWarningPill}
-                      data-testid="header-warning-pill"
-                      onClick={onOpenOrderCheck}
-                      title="Click to open Sanity Check Diagnostics"
-                    >
-                      <AlertTriangle size={15} />
-                      <span>Warning: {warningCount}</span>
-                    </div>
-                  )}
-                </div>
-              )}
+              <button
+                type="button"
+                className={styles.gameOverPill}
+                data-testid="game-over-pill"
+                onClick={onOpenGameOverModal}
+                title="View Campaign Conclusion Summary"
+              >
+                <Crown size={14} />
+                <span>
+                  {POWER_METADATA[winner].shortName.toUpperCase()} WINS
+                </span>
+              </button>
             </div>
           )}
         </div>

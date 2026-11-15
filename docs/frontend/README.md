@@ -54,7 +54,7 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   ├── Imperial Header Bar (AppHeader.tsx, on every view: TopHeader.tsx; CompactTopBar.tsx on phones: back, ≡ tools, turn, problem count, ⋯ menu; then the Direct-Edit banner and the toast)
 │   │   ├── Return to Lobby (Clickable Brand Emblem & Title)
 │   │   ├── Turn Chronicle Pill & History Viewer (TurnChronicle.tsx: turn, ‹ › step, dropdown, Live, hover-expanding nation chips)
-│   │   ├── Sanity Check Diagnostics Warning Pill
+│   │   ├── Game-Over Pill (once someone has won; order errors and warnings live in the order sidebar, not the top bar)
 │   │   ├── Real-Time WebSocket Synchronization Badge
 │   │   └── User Auth Profile / Guest Mode
 │   │

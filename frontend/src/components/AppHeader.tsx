@@ -155,9 +155,6 @@ export function AppHeader({
           viewMode={viewMode}
           turn={gameState}
           winner={gameState.winner ?? null}
-          errorCount={activeErrors.length}
-          warningCount={activeWarnings.length}
-          onOpenOrderCheck={() => handleFinalizeClick(false)}
           onBackToLobby={handleBackToLobby}
           onEnterSoloSandbox={handleEnterSoloSandbox}
           matchSummary={activeGameSummary}
