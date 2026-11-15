@@ -24,7 +24,7 @@ The **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** is designed as 
 
 ## High-Level Topology
 
-For detailed **Mermaid ER diagrams, Row-Level Security (RLS) boundaries, and frontend-to-service sequence diagrams**, see [Database Setup & Service Interactions](database-and-services.md).
+For detailed Mermaid diagrams, see [Database Setup & Row-Level Security](database.md) and [Service Interactions & Frontend Communication](service-interactions.md).
 
 ```mermaid
 flowchart TB
