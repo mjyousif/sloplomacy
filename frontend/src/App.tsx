@@ -356,6 +356,23 @@ export function App() {
     triggerToast('Signed out — now in Guest Mode.');
   };
   const boardState = directEdit.effectiveGameState ?? gameState;
+  const handleAdminResolveTurn = async (event?: React.MouseEvent) => {
+    if (!boardState || boardState.winner) return;
+    if (!requireRealBoard('resolve the real turn')) return;
+    const isMp = viewMode === 'multiplayer';
+    const ok = await confirm(
+      {
+        title: 'Force-Resolve Turn?',
+        message: isMp
+          ? `Force-resolve ${boardState.season} ${boardState.year} ${boardState.phase} and advance to the next phase? Other players will be notified of this admin action.`
+          : `Resolve ${boardState.season} ${boardState.year} ${boardState.phase} and advance to the next phase?`,
+        confirmLabel: 'Resolve Turn',
+      },
+      event,
+    );
+    if (!ok) return;
+    await handleAdjudicateTurn();
+  };
 
   return (
     <div
@@ -388,6 +405,7 @@ export function App() {
         openAdminTools={openAdminTools}
         onToggleDirectEdit={handleToggleEditBoard}
         turnClockOpen={isGameCreator && adminModalOpen}
+        onResolveTurn={handleAdminResolveTurn}
         onExitAdmin={handleExitAdmin}
         toastBanner={toastBanner}
         historyEntries={turnHistory.entries}

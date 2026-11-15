@@ -1,6 +1,7 @@
 """Press: the messages players send each other in a match (public, private threads, anonymous notes)."""
 
 from domain.board import Power
+from domain.orders import Order
 from pydantic import BaseModel, Field
 
 MAX_PRESS_BODY_LENGTH = 1000
@@ -23,6 +24,10 @@ class PressMessage(BaseModel):
     season: str
     year: int
     phase: str
+    # A suggestion: orders the sender proposes for this turn, for units of the sender and the
+    # recipients. Empty for a plain message. It is only what the sender attached: it is never
+    # read from the game's orders and never written to them.
+    orders: list[Order] = Field(default_factory=list)
 
 
 class PressMessageView(BaseModel):
@@ -38,6 +43,7 @@ class PressMessageView(BaseModel):
     season: str
     year: int
     phase: str
+    orders: list[Order] = Field(default_factory=list)
 
 
 class PressFeed(BaseModel):
@@ -55,4 +61,7 @@ class PressPostRequest(BaseModel):
     # Empty posts to the public box. Otherwise a private message to these powers.
     recipients: list[Power] = Field(default_factory=list)
     anonymous: bool = False
+    # May be empty when `orders` are attached.
     body: str = Field(max_length=MAX_PRESS_BODY_LENGTH * 4)
+    # Suggested orders, for a signed private thread in a Movement phase. See PressMessage.orders.
+    orders: list[Order] = Field(default_factory=list)

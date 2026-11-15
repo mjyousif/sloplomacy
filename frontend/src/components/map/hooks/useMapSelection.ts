@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import type {
   Order,
   Power,
@@ -24,6 +24,11 @@ export interface UseMapSelectionOptions {
   historyView: boolean;
   isAdjustmentPhase: boolean;
   isRetreatPhase: boolean;
+  /**
+   * While a move suggestion is being written: the powers whose units can be given orders (the
+   * player and the thread's other members). Null otherwise. Keep the array stable.
+   */
+  suggestPowers?: Power[] | null;
 }
 
 export interface MapSelection {
@@ -37,6 +42,8 @@ export interface MapSelection {
   selectedUnitOptions: UnitMoveOptions | null;
   /** True in the sandbox, or for a host with Direct-Edit on. Never on a past turn. */
   canEditAnyPower: boolean;
+  /** Whether the player may pick this unit up and order it now. */
+  canControl: (unit: Unit) => boolean;
   /** The power the player commands, or null on a past turn. */
   controlPower: Power | null;
   /** Where the selected unit can move or retreat to, with the coasts a fleet can land on. */
@@ -58,6 +65,7 @@ export function useMapSelection({
   historyView,
   isAdjustmentPhase,
   isRetreatPhase,
+  suggestPowers = null,
 }: UseMapSelectionOptions): MapSelection {
   // Check if selectedUnitId refers to a BUILD_ order or an existing Unit
   const isSelectedBuildOrder = Boolean(
@@ -76,10 +84,19 @@ export function useMapSelection({
   // A past turn is read-only: no power's units can be picked up, not even the player's own.
   const canEditAnyPower = !historyView && (sandboxMode || directEditActive);
   const controlPower: Power | null = historyView ? null : activePower;
-  // Strictly disallow controlling or showing the menu for foreign units otherwise
+  // Strictly disallow controlling or showing the menu for foreign units otherwise. A move
+  // suggestion is written for the units of the thread's members, the player's own included.
+  const canControl = useCallback(
+    (unit: Unit) =>
+      canEditAnyPower ||
+      (suggestPowers
+        ? !historyView && suggestPowers.includes(unit.power)
+        : unit.power === controlPower),
+    [canEditAnyPower, suggestPowers, historyView, controlPower],
+  );
   const selectedUnit =
     rawSelectedUnit &&
-    (rawSelectedUnit.power === controlPower || canEditAnyPower) &&
+    canControl(rawSelectedUnit) &&
     (!isRetreatPhase || rawSelectedUnit.is_dislodged)
       ? rawSelectedUnit
       : null;
@@ -128,6 +145,7 @@ export function useMapSelection({
     selectedUnit,
     selectedUnitOptions,
     canEditAnyPower,
+    canControl,
     controlPower,
     reachableList,
     reachableMap,

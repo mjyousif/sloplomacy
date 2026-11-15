@@ -195,11 +195,13 @@ describe('TopHeader: display settings and account', () => {
   it('shows the administrator dropdown next to display settings only for the game creator outside the lobby', async () => {
     const onOpenAdminTools = vi.fn();
     const onToggleAdminOverride = vi.fn();
+    const onResolveTurn = vi.fn();
     const onExitAdmin = vi.fn();
     const { rerender, props } = renderHeader({
       isGameCreator: true,
       onOpenAdminTools,
       onToggleAdminOverride,
+      onResolveTurn,
       onExitAdmin,
     });
 
@@ -221,6 +223,11 @@ describe('TopHeader: display settings and account', () => {
         .getByTestId('btn-open-admin-console')
         .querySelector('.lucide-clock'),
     ).toBeInTheDocument();
+    expect(
+      screen
+        .getByTestId('btn-admin-resolve-turn')
+        .querySelector('.lucide-play'),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId('btn-exit-admin-mode')).toBeNull();
 
     await userEvent.click(screen.getByTestId('btn-toggle-direct-edit'));
@@ -230,6 +237,24 @@ describe('TopHeader: display settings and account', () => {
     await userEvent.click(screen.getByTestId('btn-open-admin-console'));
     expect(onOpenAdminTools).toHaveBeenCalledTimes(1);
 
+    await userEvent.click(adminMenuBtn);
+    await userEvent.click(screen.getByTestId('btn-admin-resolve-turn'));
+    expect(onResolveTurn).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <TopHeader
+        {...props}
+        isGameCreator={true}
+        winner="FRANCE"
+        onOpenAdminTools={onOpenAdminTools}
+        onToggleAdminOverride={onToggleAdminOverride}
+        onResolveTurn={onResolveTurn}
+        onExitAdmin={onExitAdmin}
+      />,
+    );
+    await userEvent.click(screen.getByTestId('btn-admin-menu'));
+    expect(screen.getByTestId('btn-admin-resolve-turn')).toBeDisabled();
+
     rerender(
       <TopHeader
         {...props}
@@ -237,10 +262,10 @@ describe('TopHeader: display settings and account', () => {
         adminOverrideActive={true}
         onOpenAdminTools={onOpenAdminTools}
         onToggleAdminOverride={onToggleAdminOverride}
+        onResolveTurn={onResolveTurn}
         onExitAdmin={onExitAdmin}
       />,
     );
-    await userEvent.click(screen.getByTestId('btn-admin-menu'));
     const exitBtn = screen.getByTestId('btn-exit-admin-mode');
     expect(exitBtn).toHaveTextContent('Exit Admin Mode');
     await userEvent.click(exitBtn);
@@ -253,6 +278,7 @@ describe('TopHeader: display settings and account', () => {
         isGameCreator={true}
         onOpenAdminTools={onOpenAdminTools}
         onToggleAdminOverride={onToggleAdminOverride}
+        onResolveTurn={onResolveTurn}
         onExitAdmin={onExitAdmin}
       />,
     );

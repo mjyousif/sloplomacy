@@ -50,7 +50,6 @@ interface OrderFooterProps {
   blockingIssueCount: number;
   unconfirmedCount: number;
   isMultiplayer: boolean;
-  isGameCreator: boolean;
   gameOver: boolean;
   isAdjustmentPhase: boolean;
   isRetreatPhase: boolean;
@@ -61,9 +60,8 @@ interface OrderFooterProps {
 }
 
 /**
- * Finalize or unlock, then Resolve (solo) or the multiplayer consensus card with the host's
- * override. A fragment, because the sheet's CSS styles these buttons as direct children of its
- * controls row.
+ * Finalize or unlock, then Resolve (solo) or the multiplayer consensus card. A fragment, because
+ * the sheet's CSS styles these buttons as direct children of its controls row.
  */
 export const OrderFooter: React.FC<OrderFooterProps> = ({
   powerMeta,
@@ -71,7 +69,6 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
   blockingIssueCount,
   unconfirmedCount,
   isMultiplayer,
-  isGameCreator,
   gameOver,
   isAdjustmentPhase,
   isRetreatPhase,
@@ -161,23 +158,6 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
             {consensusInfo.description}
           </div>
         </div>
-
-        {isGameCreator && (
-          <button
-            type="button"
-            data-testid="btn-creator-override"
-            data-solo-ready={
-              consensusInfo.isSoloAdvanceReady ? 'true' : undefined
-            }
-            className={cx(styles.adjudicateTurnBtn, styles.creatorOverrideBtn)}
-            title={consensusInfo.buttonTitle}
-            onClick={onAdjudicateTurn}
-            disabled={gameOver}
-          >
-            <Play size={14} />
-            <span>{consensusInfo.buttonLabel}</span>
-          </button>
-        )}
       </div>
     )}
   </>

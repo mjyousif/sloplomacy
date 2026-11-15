@@ -54,6 +54,7 @@ export function useEuropeMap(
     onDockedBarChange,
     historyView = false,
     historyPower = null,
+    suggestion = null,
   }: EuropeMapProps,
   ref: React.ForwardedRef<EuropeMapHandle>,
 ) {
@@ -113,6 +114,7 @@ export function useEuropeMap(
     historyView,
     isAdjustmentPhase,
     isRetreatPhase,
+    suggestPowers: suggestion?.editablePowers ?? null,
   });
   const {
     selectedBuildOrder,
@@ -120,6 +122,7 @@ export function useEuropeMap(
     selectedUnit,
     selectedUnitOptions,
     canEditAnyPower,
+    canControl,
     controlPower,
     reachableList,
     reachableMap,
@@ -140,6 +143,7 @@ export function useEuropeMap(
     getUnitPoint,
     getProvincePoint,
     arrowScale,
+    visibleUnitIds: suggestion?.unitIds ?? null,
   });
   const {
     issuesByUnit,
@@ -363,6 +367,7 @@ export function useEuropeMap(
     unitsByProv,
     controlPower,
     canEditAnyPower,
+    canControl,
     activePower,
     selectedUnit,
     interactionMode,

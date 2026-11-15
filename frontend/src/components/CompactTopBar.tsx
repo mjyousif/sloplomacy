@@ -12,6 +12,7 @@ import {
   Menu,
   MoreHorizontal,
   Pencil,
+  Play,
   ShieldCheck,
   SlidersHorizontal,
   User as UserIcon,
@@ -53,6 +54,7 @@ export interface CompactTopBarProps {
   adminOverrideActive?: boolean;
   onToggleAdminOverride?: () => void;
   turnClockOpen?: boolean;
+  onResolveTurn?: (event?: React.MouseEvent) => void;
   onExitAdmin?: () => void;
   authUser: AuthUser | null;
   onSignIn: () => void;
@@ -103,6 +105,7 @@ export function CompactTopBar({
   adminOverrideActive = false,
   onToggleAdminOverride,
   turnClockOpen = false,
+  onResolveTurn,
   onExitAdmin,
   authUser,
   onSignIn,
@@ -387,6 +390,21 @@ export function CompactTopBar({
                       <span>
                         Turn and Clock Settings{turnClockOpen ? ': ON' : ''}
                       </span>
+                    </button>
+                  )}
+                  {onResolveTurn && (
+                    <button
+                      type="button"
+                      data-testid="btn-admin-resolve-turn"
+                      className={styles.compactMenuItem}
+                      disabled={Boolean(winner)}
+                      onClick={(event) => {
+                        closeMenu();
+                        onResolveTurn(event);
+                      }}
+                    >
+                      <Play size={18} />
+                      <span>Resolve Turn</span>
                     </button>
                   )}
                   {(adminOverrideActive || turnClockOpen) && onExitAdmin && (

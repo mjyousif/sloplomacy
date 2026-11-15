@@ -192,8 +192,9 @@ The chat of a multiplayer match, in `backend/domain/press.py` and `frontend/src/
 | `body` | `string` | Up to 1000 characters. |
 | `sent_at` | `string` | ISO time. |
 | `season`, `year`, `phase` | | The turn it was sent in. |
+| `orders` | `Order[]` | A move suggestion: orders for units of the sender and the recipients. Empty for a plain message. Only in a signed private thread message sent in a Movement phase. |
 
-`PressFeed` (`GET /api/press`) is `{ power, revealed, messages }`: the seat it was read as, whether the game is over and all press is shown, and the messages oldest first. `PressPostRequest` is `{ power, recipients, anonymous, body }`. `WebSocketPressUpdate` is `{ type: 'press', game_id, power, messages }`.
+`PressFeed` (`GET /api/press`) is `{ power, revealed, messages }`: the seat it was read as, whether the game is over and all press is shown, and the messages oldest first. `PressPostRequest` is `{ power, recipients, anonymous, body, orders? }`. `OrderSubmissionRequest` (`POST /api/orders/batch`) is `{ power, orders, turn? }`. `WebSocketPressUpdate` is `{ type: 'press', game_id, power, messages }`.
 
 Press is not part of `GameState`. See [Press in the API reference](../backend/api-reference.md#detailed-specifications-press).
 

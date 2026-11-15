@@ -87,3 +87,33 @@ def test_deleting_a_game_forgets_its_press(supabase):
 
     evict_game(gid)
     assert gid not in GAME_PRESS
+
+
+def test_suggested_orders_survive_a_restart(supabase):
+    gid = _create_game()
+    _join(gid, "GERMANY", BOB)
+    sent = client.post(
+        f"/api/press?game_id={gid}",
+        json={
+            "power": "FRANCE",
+            "body": "",
+            "recipients": ["GERMANY"],
+            "orders": [
+                {
+                    "unit_id": "GER_A_MUN",
+                    "power": "GERMANY",
+                    "unit_type": "A",
+                    "origin": "MUN",
+                    "order_type": "MOVE",
+                    "target": "BUR",
+                }
+            ],
+        },
+    )
+    assert sent.status_code == 200, sent.text
+
+    _restart_container(gid)
+
+    res = client.get(f"/api/press?game_id={gid}&power=GERMANY")
+    (message,) = res.json()["messages"]
+    assert [(o["unit_id"], o["target"]) for o in message["orders"]] == [("GER_A_MUN", "BUR")]

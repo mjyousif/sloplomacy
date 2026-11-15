@@ -34,6 +34,19 @@ def validate_order_references(order: Order) -> None:
             )
 
 
+def normalize_unit_order(order: Order, unit: Unit) -> Order:
+    """A copy of `order` whose power, unit type and origin come from the unit it is for, never
+    from what the client claimed. An army's order carries no target coast."""
+    updated = order.model_copy()
+    updated.power = unit.power
+    updated.unit_type = unit.unit_type
+    updated.origin = unit.province
+    updated.origin_coast = unit.coast
+    if unit.unit_type == UnitType.ARMY:
+        updated.target_coast = None
+    return updated
+
+
 def fleet_coast(unit_type: UnitType, province: ProvinceInfo, requested: str | None) -> str | None:
     """Return the coast a unit stands on. Only a fleet on a split-coast province has one."""
     if unit_type != UnitType.FLEET or not province.coasts:

@@ -470,7 +470,7 @@ Submits or modifies a single military instruction. Automatically triggers valida
 
 Returns `400` if the order names a province or coast that does not exist. A real but illegal move is accepted: the validator flags it, and the engine refuses it at adjudication.
 
-In multiplayer matches, callers must supply a valid `Authorization: Bearer <token>` matching the participant who claimed the Great Power (or game creator). Attempts by opponents or unauthenticated callers to issue orders for claimed powers return `403 Forbidden` or `401 Unauthorized`. An empty seat is in Civil Disorder, so only the host may order it. A build slot (`BUILD_<POWER>_<PROVINCE>`) belongs to the power it names, whatever the order's `power` says, and in `/api/orders/batch` every unit must belong to the batch's `power` (otherwise `403`). Returned `GameState` is sanitized for the commanding power to preserve Fog of War.
+In multiplayer matches, callers must supply a valid `Authorization: Bearer <token>` matching the participant who claimed the Great Power (or game creator). Attempts by opponents or unauthenticated callers to issue orders for claimed powers return `403 Forbidden` or `401 Unauthorized`. An empty seat is in Civil Disorder, so only the host may order it. A build slot (`BUILD_<POWER>_<PROVINCE>`) belongs to the power it names, whatever the order's `power` says, and in `/api/orders/batch` every unit must belong to the batch's `power` (otherwise `403`). Like `/api/order`, a batch may carry `turn` (e.g. `"Spring 1901 Movement"`): if the game has moved on it answers `409` and changes nothing. The client sends it when a player takes the orders of a move suggestion from press. Returned `GameState` is sanitized for the commanding power to preserve Fog of War.
 
 ---
 
@@ -723,6 +723,7 @@ Rules that hold on both endpoints and on the socket:
 - **Game over reveals everything.** Once the game has a winner, `revealed` is `true`, every seated player may read every message, and every `sender` is filled in.
 - Sandboxes have no press: a solo or saved sandbox answers `409`, a private sandbox copy (`sbx_`) `404`. A failed Supabase read answers `503`, never an empty feed.
 - A player who takes over a seat reads that seat's earlier press.
+- **A private thread message may suggest moves.** `orders` holds orders for units of the sender and the recipients: a joint plan, where the sender's own half is only a claim. It is exactly what the sender attached. The server never reads it from the game's orders and never writes it to them, so sending one changes no `GameState`. It goes only where its message goes (the thread, and everyone once the game is over). A recipient who wants to follow it sends their own part through `POST /api/orders/batch`.
 
 ### `GET /api/press`
 
@@ -748,7 +749,8 @@ Rules that hold on both endpoints and on the socket:
       "sent_at": "2026-11-13T22:42:10+00:00",
       "season": "Spring",
       "year": 1901,
-      "phase": "Movement"
+      "phase": "Movement",
+      "orders": []
     }
   ]
 }
@@ -761,13 +763,27 @@ Rules that hold on both endpoints and on the socket:
 { "power": "FRANCE", "recipients": ["GERMANY"], "anonymous": false, "body": "Support me into BUR?" }
 ```
 
+With a move suggestion (`body` may then be empty):
+```json
+{
+  "power": "FRANCE", "recipients": ["GERMANY"], "anonymous": false, "body": "",
+  "orders": [
+    { "unit_id": "GER_A_MUN", "power": "GERMANY", "unit_type": "A", "origin": "MUN", "order_type": "MOVE", "target": "BUR" },
+    { "unit_id": "FRA_A_PAR", "power": "FRANCE", "unit_type": "A", "origin": "PAR", "order_type": "SUPPORT", "target": "BUR", "aux_unit_origin": "MUN" }
+  ]
+}
+```
+
+Each suggested order is rebuilt from the unit it names (`power`, `unit_type`, `origin` and `origin_coast` are taken from the unit, as in `POST /api/order`) and stored as explicit. Like the order endpoints, this checks that the provinces and coasts exist, not that the move is legal.
+
 The sender is `power`, which must be the caller's own seat. The sender is dropped from `recipients`, and the rest are stored once each. The message is stamped with the turn it was sent in, sent to the sockets of the players who may read it, and saved. The response is the sender's own copy (`PressMessageView`).
 
 | Status | When |
 | :--- | :--- |
 | `403` | The caller does not hold `power`'s seat, or that power has surrendered. |
-| `409` | The game is over and the message is private or anonymous (only signed public messages remain), or the game is a sandbox. |
-| `422` | The body is empty or longer than 1000 characters, or the only recipient is the sender. |
+| `400` | A suggested order names a province or coast that does not exist. |
+| `409` | The game is over and the message is private or anonymous (only signed public messages remain), the game is a sandbox, or `orders` are attached outside a Movement phase. |
+| `422` | The body is empty (with no `orders`) or longer than 1000 characters, or the only recipient is the sender. With `orders`: the message is public or anonymous, a unit does not exist or belongs to a power outside the thread, an order is not a hold, move, support or convoy, or a unit has two orders. |
 | `429` | The seat sent more than 8 messages within 10 seconds. |
 
 ### Press on the game socket (`WebSocketPressUpdate`)
@@ -775,7 +791,7 @@ The sender is `power`, which must be the caller's own seat. The sender is droppe
 A seated player's game socket receives each new message it may read, as that player may see it. A socket without a seat is sent no press.
 
 ```json
-{ "type": "press", "game_id": "mp_ab12cd", "power": "GERMANY", "messages": [ { "id": "…", "seq": 4, "sender": "FRANCE", "anonymous": false, "recipients": ["GERMANY"], "body": "…", "sent_at": "…", "season": "Spring", "year": 1901, "phase": "Movement" } ] }
+{ "type": "press", "game_id": "mp_ab12cd", "power": "GERMANY", "messages": [ { "id": "…", "seq": 4, "sender": "FRANCE", "anonymous": false, "recipients": ["GERMANY"], "body": "…", "sent_at": "…", "season": "Spring", "year": 1901, "phase": "Movement", "orders": [] } ] }
 ```
 
 `power` is the seat the socket connected as, so a client can drop a message meant for a seat it has since left.

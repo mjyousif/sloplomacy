@@ -24,6 +24,7 @@ const msg = (seq: number, sender: Power | null = 'GERMANY'): PressMessage => ({
   season: 'Spring',
   year: 1901,
   phase: 'Movement',
+  orders: [],
 });
 
 const feed = (messages: PressMessage[], revealed = false): PressFeed => ({

@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 class OrderSubmissionRequest(BaseModel):
     power: Power
     orders: list[Order]
+    turn: str | None = None  # See SingleOrderUpdateRequest.turn
 
 
 class SetPowerRequest(BaseModel):

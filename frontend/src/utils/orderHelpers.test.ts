@@ -465,8 +465,6 @@ describe('getConsensusStatusInfo', () => {
     expect(info.isWaitingForPlayers).toBe(true);
     expect(info.title).toContain('Lobby: Waiting for Players');
     expect(info.title).toContain('1/2 min');
-    expect(info.isSoloAdvanceReady).toBe(false);
-    expect(info.buttonLabel).toBe('Advance Phase Solo (Host Override)');
   });
 
   it('shows orders locked and host solo advance guidance when single player has finalized', () => {
@@ -482,9 +480,7 @@ describe('getConsensusStatusInfo', () => {
 
     expect(info.isWaitingForPlayers).toBe(true);
     expect(info.title).toBe('Orders Locked • Waiting for Players (1/2 min)');
-    expect(info.description).toContain('Advance Phase Solo');
-    expect(info.buttonLabel).toBe('Advance Phase Solo (Host Override)');
-    expect(info.isSoloAdvanceReady).toBe(true);
+    expect(info.description).toContain('Administrator → Resolve Turn');
   });
 
   it('displays waiting on missing powers in active multiplayer match', () => {
@@ -501,8 +497,6 @@ describe('getConsensusStatusInfo', () => {
     expect(info.isWaitingForPlayers).toBe(false);
     expect(info.title).toBe('Resolution Progress: 1/2 Ready');
     expect(info.description).toContain('England');
-    expect(info.isSoloAdvanceReady).toBe(false);
-    expect(info.buttonLabel).toBe('Force Adjudicate Phase (Host Override)');
   });
 
   it('displays consensus reached when all required powers finalize in active match', () => {
@@ -519,7 +513,6 @@ describe('getConsensusStatusInfo', () => {
     expect(info.isWaitingForPlayers).toBe(false);
     expect(info.title).toBe('Consensus Reached (2/2)');
     expect(info.description).toContain('Resolving phase...');
-    expect(info.isSoloAdvanceReady).toBe(false);
   });
 
   it('handles game over state', () => {
@@ -534,6 +527,6 @@ describe('getConsensusStatusInfo', () => {
     });
 
     expect(info.title).toBe('Campaign Finished');
-    expect(info.buttonLabel).toBe('Game Over');
+    expect(info.description).toBe('Hostilities concluded.');
   });
 });

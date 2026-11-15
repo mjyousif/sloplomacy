@@ -1,4 +1,5 @@
-import { Clock, LogOut, Pencil, Wrench } from 'lucide-react';
+import { Clock, LogOut, Pencil, Play, Wrench } from 'lucide-react';
+import type React from 'react';
 import type { ReactNode } from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { cx } from '../utils/cx';
@@ -11,18 +12,22 @@ export interface AdminSettingsMenuProps {
   onToggleAdminOverride?: () => void;
   /** Whether the Turn and Clock Settings panel holds the right sidebar. */
   turnClockOpen?: boolean;
+  /** Force-resolve the current phase and advance to the next turn. */
+  onResolveTurn?: (event?: React.MouseEvent) => void;
+  gameOver?: boolean;
   /** Leaves whichever admin mode is on (Edit Board asks first if edits are staged). */
   onExitAdmin?: () => void;
 }
 
 interface AdminModeOption {
-  id: 'edit-board' | 'turn-clock';
+  id: 'edit-board' | 'turn-clock' | 'resolve-turn';
   testId: string;
   name: string;
   description: string;
   icon: ReactNode;
   active: boolean;
-  onSelect?: () => void;
+  disabled?: boolean;
+  onSelect?: (event?: React.MouseEvent) => void;
 }
 
 /**
@@ -34,6 +39,8 @@ export function AdminSettingsMenu({
   adminOverrideActive = false,
   onToggleAdminOverride,
   turnClockOpen = false,
+  onResolveTurn,
+  gameOver = false,
   onExitAdmin,
 }: AdminSettingsMenuProps) {
   const [open, setOpen] = useState(false);
@@ -81,6 +88,17 @@ export function AdminSettingsMenu({
       icon: <Clock size={18} />,
       active: turnClockOpen,
       onSelect: onOpenAdminTools,
+    },
+    {
+      id: 'resolve-turn',
+      testId: 'btn-admin-resolve-turn',
+      name: 'Resolve Turn',
+      description:
+        'Force-resolve the current phase and advance to the next turn.',
+      icon: <Play size={18} />,
+      active: false,
+      disabled: gameOver,
+      onSelect: onResolveTurn,
     },
   ];
 
@@ -135,9 +153,10 @@ export function AdminSettingsMenu({
                       styles.adminModeCard,
                     )}
                     data-active={opt.active}
-                    onClick={() => {
+                    disabled={opt.disabled}
+                    onClick={(event) => {
                       setOpen(false);
-                      if (!opt.active) opt.onSelect?.();
+                      if (!opt.active) opt.onSelect?.(event);
                     }}
                   >
                     <span className={styles.adminModeIcon}>{opt.icon}</span>

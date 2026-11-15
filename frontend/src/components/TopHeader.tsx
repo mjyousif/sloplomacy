@@ -45,6 +45,7 @@ export interface TopHeaderProps {
   adminOverrideActive?: boolean;
   onToggleAdminOverride?: () => void;
   turnClockOpen?: boolean;
+  onResolveTurn?: (event?: React.MouseEvent) => void;
   onExitAdmin?: () => void;
   authUser: AuthUser | null;
   onSignIn: () => void;
@@ -85,6 +86,7 @@ export function TopHeader({
   adminOverrideActive = false,
   onToggleAdminOverride,
   turnClockOpen = false,
+  onResolveTurn,
   onExitAdmin,
   authUser,
   onSignIn,
@@ -220,6 +222,8 @@ export function TopHeader({
             adminOverrideActive={adminOverrideActive}
             onToggleAdminOverride={onToggleAdminOverride}
             turnClockOpen={turnClockOpen}
+            onResolveTurn={onResolveTurn}
+            gameOver={Boolean(winner)}
             onExitAdmin={onExitAdmin}
           />
         )}

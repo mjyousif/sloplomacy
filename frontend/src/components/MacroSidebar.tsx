@@ -327,7 +327,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       blockingIssueCount={myBlockingIssues.length}
       unconfirmedCount={unconfirmedCount}
       isMultiplayer={isMultiplayer}
-      isGameCreator={isGameCreator}
       gameOver={gameOver}
       isAdjustmentPhase={isAdjustmentPhase}
       isRetreatPhase={isRetreatPhase}

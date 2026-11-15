@@ -145,33 +145,4 @@
     opacity: 0.55;
     cursor: not-allowed;
   }
-
-  .creator-override-btn {
-    background: #1e293b;
-    border-color: #475569;
-    color: #cbd5e1;
-    font-size: 0.74rem;
-    padding: 8px 12px;
-  }
-
-  .creator-override-btn:hover {
-    background: #334155;
-    border-color: #64748b;
-    color: #f8fafc;
-  }
-
-  .creator-override-btn[data-solo-ready="true"] {
-    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-    border-color: #38bdf8;
-    color: #38bdf8;
-    font-weight: 600;
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
-  }
-
-  .creator-override-btn[data-solo-ready="true"]:hover {
-    background: #1e293b;
-    border-color: #7dd3fc;
-    color: #f0f9ff;
-    box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
-  }
 }
