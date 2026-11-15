@@ -268,11 +268,12 @@ A Game Master agent can run a full game between seven agent players against the 
 | File | Purpose |
 | :--- | :--- |
 | `GM_PROMPT.md` | The prompt for the Game Master session: budget rules, setup, the per-phase loop, what to check and what to deliver. |
-| `sim_client.py` | The players' CLI for one seat: `state`, `orders`, `finalize`, `press-read`, `press-send`, `history`. Run it with no arguments for the order syntax. |
+| `sim_client.py` | The players' CLI for one seat: `state`, `orders`, `finalize`, `press-read`, `press-send`, `history`. Run it with no arguments for the order syntax. `--self-test` plays a scripted 1901 on a fresh game. |
+| `selftest.py` | The scripted year behind `--self-test`: moves, a dislodgement and its retreat, builds, a waive and a disband, through the players' own commands. Run it before any agent starts: `SIM_API=http://127.0.0.1:8020 python3 scripts/playtest/sim_client.py --self-test`. |
 | `gmtool.py` | Game Master views: one resolved turn with every order and its result (`hist N`), centre counts (`sc`), a fog-of-war check (`probe POWER`) and `units`. |
 | `watch.py` | A read-only spectator page (`python3 scripts/playtest/watch.py 8021`) showing every power's live orders and all press. |
 
-All three scripts read `SIM_API` (default `http://127.0.0.1:8020`) and `SIM_GAME`; `sim_client.py` also reads `SIM_POWER`. They sign in with the local demo token, so the backend must run with `ENVIRONMENT=development` (see [Local Demo Sign-In](#local-demo-sign-in)). Never point them at a deployed server. A run writes its notes, log and report to `artifacts/playtest/<timestamp>/`, which is gitignored.
+The scripts read `SIM_API` (default `http://127.0.0.1:8020`) and `SIM_GAME`; `sim_client.py` also reads `SIM_POWER`. They sign in with the local demo token, so the backend must run with `ENVIRONMENT=development` (see [Local Demo Sign-In](#local-demo-sign-in)). Never point them at a deployed server. A run writes its notes, log and report to `artifacts/playtest/<timestamp>/`, which is gitignored.
 
 ---
 

@@ -8,7 +8,7 @@ from typing import Any
 from domain.board import Power, Unit
 from domain.issues import ValidationIssue
 from domain.orders import Order, SimulationResult
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 
 class TimerStage(str, Enum):
@@ -115,7 +115,11 @@ class GameState(BaseModel):
     finalized_powers: list[Power] = Field(default_factory=list)
     surrendered_powers: list[Power] = Field(default_factory=list)
     issues: list[ValidationIssue] = Field(default_factory=list)
-    last_resolution: SimulationResult | None = None
+    # The phase being played, resolved from the orders as they stand (for a viewer: their own
+    # orders, every other power holding). A guess at the result, never a resolved phase.
+    preview: SimulationResult | None = None
+    # Only on an "Admin" history snapshot: the board edit it records, as a resolution.
+    admin_resolution: SimulationResult | None = None
     turn_history: list[str] = Field(default_factory=list)
     builds: dict[str, Any] | None = None
     retreats: dict[str, Any] | None = None
@@ -125,6 +129,18 @@ class GameState(BaseModel):
     state_revision: int = 1
     # Per unit id: where it may move, convoy and support. Rebuilt on refresh and load, never saved.
     unit_options: dict[str, UnitMoveOptions] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_last_resolution(cls, data: Any) -> Any:
+        """Saved games from before the rename hold `last_resolution`. On an Admin snapshot it was
+        the board edit; anywhere else it was the preview, which refresh rebuilds."""
+        if isinstance(data, dict) and "last_resolution" in data:
+            data = dict(data)
+            legacy = data.pop("last_resolution")
+            if data.get("phase") == "Admin" and data.get("admin_resolution") is None:
+                data["admin_resolution"] = legacy
+        return data
 
 
 class TurnHistoryEntry(BaseModel):

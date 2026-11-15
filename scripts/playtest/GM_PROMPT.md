@@ -26,14 +26,18 @@ You are an umpire and an investigator, never a player. Do not steer the Haikus' 
 2. Start the backend and record its pid (do NOT use `pkill -f`, it can match your own shell):
    `cd backend && ENVIRONMENT=development .venv/bin/uvicorn main:app --port 8020 > ../RUNDIR/server.log 2>&1 & echo $! > ../RUNDIR/server.pid`
    If 8020 is busy pick another port and set `SIM_API`. There is no Supabase, so persistence paths are NOT exercised.
+   Then run the harness self-test, which plays one scripted year on a fresh game (moves, a dislodgement
+   and retreat, builds, a waive and a disband) through the players' own commands:
+   `SIM_API=http://127.0.0.1:8020 python3 scripts/playtest/sim_client.py --self-test`. It must end with
+   `self-test passed`. If it fails, fix the CLI (or log the app bug) before any Haiku is started.
 3. Create the game and seat all 7 powers with `scripts/playtest/sim_client.py` (run it with no arguments
    to read its syntax). `SIM_API=http://127.0.0.1:8020 SIM_POWER=FRANCE python3 scripts/playtest/sim_client.py create "Playtest" FRANCE`
    prints the game id. Then for each other power: `SIM_GAME=<id> SIM_POWER=<P> python3 ... join`. France is the host.
 4. Smoke-check `state` once as FRANCE. Record the branch and commit under test (`git rev-parse HEAD`) in
    `RUNDIR/log.md`.
 5. Two helpers sit beside the CLI and take the same `SIM_API` and `SIM_GAME`. `python3 scripts/playtest/gmtool.py`
-   (`hist N`, `sc`, `probe POWER`, `units`) gives you compact views; use it instead of `history` and `raw`, whose
-   output is cut off. `python3 scripts/playtest/watch.py 8021` serves a read-only page with every power's live
+   (`hist N`, `sc`, `probe POWER`, `units`) gives you compact views; `hist N` adds builds, retreats and the
+   units after the phase to what the players' `history N` shows. `python3 scripts/playtest/watch.py 8021` serves a read-only page with every power's live
    orders and all press, so the user can watch; start it in the background, tell the user the URL and stop it at the end.
 
 ## The Haikus
@@ -51,12 +55,16 @@ Spawn prompt for each Haiku (fill `{POWER}`, `{API}`, `{GAME}`, `{RUNDIR}`):
 > and `history` (what everyone really ordered) before trusting anyone. Don't be passive: holding
 > everything loses.
 >
-> Tools: only this CLI, run from the repo root with env `SIM_API={API} SIM_GAME={GAME} SIM_POWER={POWER}`:
-> `python3 scripts/playtest/sim_client.py <cmd>`. Commands: `state` (board, your units with legal moves
+> Tools: only this CLI, run from the repo root. Write the env inline on **every** command, exactly like
+> this, and never keep the command in a shell variable (zsh will not split it, and it fails):
+> `SIM_API={API} SIM_GAME={GAME} SIM_POWER={POWER} python3 scripts/playtest/sim_client.py <cmd>`.
+> Commands: `state` (board, your units with legal moves
 > and supports, your current orders), `orders "A PAR - BUR" "F BRE H" ...` (your WHOLE order set for
 > the phase in one call), `finalize` (lock in), `unfinalize`, `press-read [after_seq]`,
-> `press-send "text" [--to POWER,POWER] [--anon]` (no `--to` = public; `--anon` = anonymous note),
-> `history [index]`. Run it with no arguments for the order syntax. Do NOT use `raw`, do not act as any
+> `press-send "text" [--to POWER,POWER] [--anon]` (no `--to` = public; `--anon` = anonymous note, needs `--to`),
+> `history [index]` (a past turn: what everyone ordered and how it went). A phase resolves only once
+> every player has finalized: `finalize` says whether it has, and `state`'s preview is your own guess
+> with everyone else holding, never the result. Run it with no arguments for the order syntax. Do NOT use `raw`, do not act as any
 > other power, do not read the repo, the server or other players' notes. Lying in press is allowed;
 > cheating the tools is not.
 >
@@ -76,7 +84,13 @@ Spawn prompt for each Haiku (fill `{POWER}`, `{API}`, `{GAME}`, `{RUNDIR}`):
 
 ## The loop (per phase)
 Read the phase with `state` (any seat; public info is the same).
-- **Movement phase** (Spring and Fall): wake all 7 in parallel (several SendMessage calls in one
+- **Every wake starts with the public result** of the phase that just resolved: one line per power
+  from `gmtool.py hist <last-index>` (what it ordered, what failed or was dislodged) and the centre
+  counts. Players then rarely need `history` themselves.
+- **Movement phase, 1901 and from 1904 on**: one wake per phase, `NEGOTIATE AND ORDER`: "read press,
+  send the messages you want, submit orders, finalize". Early openings and late positions need little
+  talk, and two wakes double the cost.
+- **Movement phase, 1902 and 1903**: wake all 7 in parallel (several SendMessage calls in one
   message) with `NEGOTIATE`: "read press, send the messages you want, update notes; do NOT order yet".
   Wait for all replies. Then wake all 7 with `ORDERS`: "read press, optionally send last messages,
   submit orders, finalize". The game resolves itself when all 7 have finalized.
@@ -99,7 +113,7 @@ Check these yourself each phase; do not rely on Haikus noticing.
 3. **Phase flow**: skipped or duplicate phases, a retreat phase when none is needed, winter when SC == units,
    auto-resolve timing, finalize/unfinalize edge cases, the stale `turn` guard.
 4. **Fog of war / secrecy** (read `AGENTS.md` section 4 invariants): during a phase, can a seat see
-   another's orders via `state`, `unit_options`, `issues`, `last_resolution`, `history`, or press? Run
+   another's orders via `state`, `unit_options`, `issues`, `preview`, `history`, or press? Run
    `gmtool.py probe <POWER>` for all seven seats every phase, once some orders are in. Also try `press-read`
    as a non-recipient and look for anonymous-note author leaks.
 5. **Press**: delivery, order, `after` paging, private threads of 2+ powers, anonymous notes, size limits.
@@ -113,6 +127,26 @@ Reproduce each suspected bug once before logging it (a single `state`/`history`/
 Before logging an app bug, search the open issues and PRs (`gh issue list --search`, `gh pr list --search`)
 and note any that already cover it. If you are not on `main`, say whether the code involved differs from
 `origin/main`.
+
+## Coverage checklist
+Tick these in `RUNDIR/log.md` as play reaches them. Five years from 1901 rarely reach the later ones.
+
+- [ ] a convoy ordered by a player (and one disrupted)
+- [ ] a build or move on a split coast (STP, SPA, BUL) after 1901
+- [ ] an anonymous note, and a private thread of three or more powers
+- [ ] a surrender, and units in civil disorder
+- [ ] an elimination
+- [ ] a power reaching 18 centres, game over, and the press reveal after it
+
+Whatever the main game has not reached by its last wake, play out in a **second probe game** as GM:
+a fresh game you seat and order yourself with the CLI, scripted only as far as the item needs. Keep it
+short and record it apart from the main game's log.
+
+**Mid-game start.** When the goal is eliminations, 18 centres or game over, do not play from 1901.
+Create the game and seat everyone, then, as the host (France), place the board before the first wake:
+`/api/admin/set-turn` for the season and year, and `/api/admin/board-edit` for units and centre
+ownership (see `docs/backend/api-reference.md`; send them with `raw`). Tell the Haikus the game starts
+there, and give each its starting position in its spawn prompt.
 
 ## Deliverables (end of game, or if you must stop early)
 Write `RUNDIR/FINDINGS.md`:

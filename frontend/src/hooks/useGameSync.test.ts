@@ -154,7 +154,7 @@ describe('useGameSync: game updates', () => {
 
   it('takes the new board and summary, with a resolution', () => {
     renderSync();
-    const st = state({ last_resolution: RESOLUTION });
+    const st = state({ preview: RESOLUTION });
     socket.options.onGameUpdate(update(st, { summary: SUMMARY }));
     expect(opts.setActiveGameSummary).toHaveBeenCalledWith(SUMMARY);
     expect(board).toBe(st);
@@ -193,7 +193,7 @@ describe('useGameSync: game updates behind a private sandbox', () => {
     const o = makeOptions({ sandboxGameId: 'sbx_1' });
     renderSync(o);
     socket.options.onGameUpdate(
-      update(state({ last_resolution: RESOLUTION }), { summary: SUMMARY }),
+      update(state({ preview: RESOLUTION }), { summary: SUMMARY }),
     );
     expect(o.setActiveGameSummary).toHaveBeenCalledWith(SUMMARY);
     expect(o.setHypotheticalMatchTimer).toHaveBeenCalledWith(TIMER);

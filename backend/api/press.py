@@ -21,7 +21,12 @@ from security.auth import AuthUser, get_current_user
 from security.press import feed_for, press_revealed, view_of
 from security.secrecy import viewer_power_for
 from storage.press import add_press, next_press_seq, persist_press, press_of
-from storage.store import PRIVATE_SANDBOXES, is_multiplayer_match, resolve_game
+from storage.store import (
+    GAME_SUMMARIES,
+    PRIVATE_SANDBOXES,
+    is_multiplayer_match,
+    resolve_game,
+)
 from storage.supabase import SupabaseUnavailable
 from ws.connection_manager import manager
 
@@ -184,6 +189,18 @@ async def send_press(
     recipients = sorted({p for p in req.recipients if p != seat}, key=lambda p: p.value)
     if req.recipients and not recipients:
         raise HTTPException(status_code=422, detail="You cannot send a message to yourself.")
+    if req.anonymous and not recipients:
+        raise HTTPException(
+            status_code=422,
+            detail="An anonymous note goes to chosen countries; public press is always signed.",
+        )
+    summary = GAME_SUMMARIES.get(gid)
+    seated = set(summary.participants) if summary else set()
+    if empty := [p.value for p in recipients if p.value not in seated]:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Nobody holds {', '.join(empty)} yet, so nobody would read it.",
+        )
     if seat in game.surrendered_powers:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

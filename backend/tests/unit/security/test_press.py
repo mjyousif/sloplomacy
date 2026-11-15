@@ -1,7 +1,7 @@
 """Who may read a press message, and whether its author is shown."""
 
 from domain.board import Power
-from domain.press import PressMessage
+from domain.press import PressMessage, number_messages
 from security.press import can_read, feed_for, view_of
 
 
@@ -35,8 +35,6 @@ def test_anonymous_author_is_hidden_from_everyone_but_themself():
     note = message(recipients=[Power.GERMANY], anonymous=True)
     assert view_of(note, Power.GERMANY, revealed=False).sender is None
     assert view_of(note, Power.FRANCE, revealed=False).sender == Power.FRANCE
-    public = message(anonymous=True)
-    assert view_of(public, Power.ENGLAND, revealed=False).sender is None
 
 
 def test_a_hidden_author_appears_nowhere_in_the_view():
@@ -57,8 +55,49 @@ def test_feed_keeps_order_and_skips_what_was_already_seen():
         message(3, sender=Power.GERMANY, recipients=[Power.FRANCE]),
         message(4),
     ]
-    assert [m.seq for m in feed_for(messages, Power.ENGLAND, revealed=False)] == [1, 4]
-    assert [m.seq for m in feed_for(messages, Power.GERMANY, revealed=False, after=2)] == [3, 4]
+    number_messages(messages)
+    assert [m.id for m in feed_for(messages, Power.ENGLAND, revealed=False)] == ["m1", "m4"]
+    later = feed_for(messages, Power.GERMANY, revealed=False, after=2)
+    assert [m.id for m in later] == ["m3", "m4"]
+
+
+def test_each_player_numbers_only_what_they_read():
+    # The private messages between France and Germany leave no gap in England's numbers.
+    messages = [
+        message(1),
+        message(2, recipients=[Power.GERMANY]),
+        message(3, sender=Power.GERMANY, recipients=[Power.FRANCE], anonymous=True),
+        message(4),
+    ]
+    number_messages(messages)
+    assert [m.seq for m in feed_for(messages, Power.ENGLAND, revealed=False)] == [1, 2]
+    assert [m.seq for m in feed_for(messages, Power.GERMANY, revealed=False)] == [1, 2, 3, 4]
+    # Nobody is sent the game-wide count or anyone else's numbers.
+    view = view_of(messages[3], Power.ENGLAND, revealed=False).model_dump()
+    assert "numbers" not in view
+    assert view["seq"] == 2
+
+
+def test_numbers_stay_put_when_the_oldest_press_is_dropped():
+    messages = [message(1), message(2, recipients=[Power.GERMANY]), message(3)]
+    number_messages(messages)
+    del messages[0]
+    messages.append(message(4))
+    number_messages(messages)
+    assert [m.seq for m in feed_for(messages, Power.ENGLAND, revealed=False)] == [2, 3]
+
+
+def test_press_saved_before_numbering_is_numbered_in_order():
+    messages = [message(5), message(9, recipients=[Power.GERMANY]), message(12)]
+    number_messages(messages)
+    assert [m.numbers[Power.ITALY] for m in (messages[0], messages[2])] == [1, 2]
+    assert messages[1].numbers == {Power.FRANCE: 2, Power.GERMANY: 2}
+
+
+def test_revealed_press_is_numbered_for_the_whole_game():
+    messages = [message(1), message(2, recipients=[Power.GERMANY]), message(3)]
+    number_messages(messages)
+    assert [m.seq for m in feed_for(messages, Power.ENGLAND, revealed=True)] == [1, 2, 3]
 
 
 def test_a_view_carries_the_suggested_orders_as_a_copy():

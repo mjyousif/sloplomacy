@@ -10,7 +10,7 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
-from domain.press import PressMessage
+from domain.press import PressMessage, number_messages
 from storage import supabase
 from storage.store import (
     DEFAULT_GAME_ID,
@@ -139,15 +139,19 @@ async def press_of(game_id: str) -> list[PressMessage]:
     """
     if game_id not in GAME_PRESS:
         saved = await load_press_from_db(game_id) if _is_saved_game(game_id) else []
+        saved.sort(key=lambda m: m.seq)
+        number_messages(saved)
         # Another request may have loaded (and added to) the list while this one was reading.
         GAME_PRESS.setdefault(game_id, saved)
     return GAME_PRESS[game_id]
 
 
 def add_press(game_id: str, message: PressMessage) -> None:
-    """Append to a game's press. The caller has already read it with `press_of`."""
+    """Append to a game's press, numbered in each reader's feed. The caller has already read it
+    with `press_of`."""
     messages = GAME_PRESS.setdefault(game_id, [])
     messages.append(message)
+    number_messages(messages)
     if len(messages) > MAX_PRESS_MESSAGES:
         del messages[: len(messages) - MAX_PRESS_MESSAGES]
 

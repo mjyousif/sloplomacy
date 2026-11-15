@@ -48,7 +48,8 @@ def test_game_ends_when_a_power_reaches_eighteen_centers():
 
     assert state["winner"] == "FRANCE"
     assert (state["season"], state["year"], state["phase"]) == ("Fall", 1907, "Movement")
-    assert state["last_resolution"]["winner"] == "FRANCE"
+    # The game is over, so there is no phase left to preview; the win shows only in `winner`.
+    assert state["preview"] is None
     assert "FRANCE" in state["turn_history"][0]
     assert client.get(f"/api/games/{game_id}").json()["status"] == "completed"
 
@@ -108,7 +109,7 @@ def test_previewing_a_winning_turn_does_not_end_the_game():
     # France's own preview: other viewers see the turn played out with France's orders hidden.
     state = client.get(f"/api/game?game_id={game_id}&power=FRANCE").json()["state"]
 
-    assert state["last_resolution"]["winner"] == "FRANCE"
+    assert state["preview"]["winner"] == "FRANCE"
     assert state["winner"] is None
     assert client.get(f"/api/games/{game_id}").json()["status"] != "completed"
 
@@ -169,3 +170,21 @@ def test_multiplayer_auto_adjudication_on_consensus_finalization():
     assert advanced_state["year"] == 1901
     assert advanced_state["phase"] == "Movement"
     assert advanced_state["finalized_powers"] == []
+
+
+def test_a_live_game_sends_a_preview_and_no_last_resolution():
+    """#262: the speculative result is `preview`; nothing calls it a resolved phase."""
+    game_id = _new_game()
+    client.post(f"/api/order?game_id={game_id}", json={"order": _order_payload(target="BUR")})
+
+    state = client.get(f"/api/game?game_id={game_id}&power=FRANCE").json()["state"]
+
+    assert "last_resolution" not in state
+    assert state["preview"]["resolutions"]["FRA_A_PAR"]["order_type"] == "MOVE"
+    assert state["admin_resolution"] is None
+
+
+def test_the_preview_is_never_saved():
+    from storage.supabase import DERIVED_STATE_FIELDS
+
+    assert "preview" in DERIVED_STATE_FIELDS

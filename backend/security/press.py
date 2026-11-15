@@ -8,6 +8,10 @@ Press has three kinds of message, told apart by `recipients` and `anonymous`:
 
 An anonymous author is hidden from everyone but themself, the host included. Once the game is
 over the press is `revealed`: every seated player may read every message and see every author.
+
+The `seq` a player is sent numbers the messages they may read 1, 2, 3... (`PressMessage.numbers`),
+never the game-wide count, whose gaps would show how much private press the others exchange.
+Once the press is revealed everyone reads everything, so it is then the game-wide count.
 """
 
 from domain.board import Power
@@ -21,9 +25,12 @@ def press_revealed(game: GameState) -> bool:
 
 
 def can_read(message: PressMessage, viewer: Power, revealed: bool) -> bool:
-    if revealed or not message.recipients:
-        return True
-    return viewer == message.sender or viewer in message.recipients
+    return revealed or viewer in message.readers()
+
+
+def number_for(message: PressMessage, viewer: Power, revealed: bool) -> int:
+    """The `seq` `viewer` is sent for `message`: its place in their own feed."""
+    return message.seq if revealed else message.numbers.get(viewer, 0)
 
 
 def view_of(message: PressMessage, viewer: Power, revealed: bool) -> PressMessageView:
@@ -31,7 +38,7 @@ def view_of(message: PressMessage, viewer: Power, revealed: bool) -> PressMessag
     author_shown = revealed or not message.anonymous or viewer == message.sender
     return PressMessageView(
         id=message.id,
-        seq=message.seq,
+        seq=number_for(message, viewer, revealed),
         sender=message.sender if author_shown else None,
         anonymous=message.anonymous,
         recipients=list(message.recipients),
@@ -47,9 +54,9 @@ def view_of(message: PressMessage, viewer: Power, revealed: bool) -> PressMessag
 def feed_for(
     messages: list[PressMessage], viewer: Power, revealed: bool, after: int = 0
 ) -> list[PressMessageView]:
-    """Every message newer than `after` that `viewer` may read, oldest first."""
+    """Every message `viewer` may read numbered after `after` in their own feed, oldest first."""
     return [
         view_of(message, viewer, revealed)
         for message in messages
-        if message.seq > after and can_read(message, viewer, revealed)
+        if can_read(message, viewer, revealed) and number_for(message, viewer, revealed) > after
     ]

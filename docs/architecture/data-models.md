@@ -133,7 +133,8 @@ Complete server snapshot of a game session.
 | `finalized_powers` | `Power[]` | Nations that have locked in their orders for the turn. |
 | `surrendered_powers`| `Power[]` | Nations operating under Civil Disorder due to concession. |
 | `issues` | `ValidationIssue[]` | Active diagnostic errors and warnings. |
-| `last_resolution` | `SimulationResult?` | Cached non-destructive simulation output. |
+| `preview` | `SimulationResult?` | The phase being played, resolved from the viewer's own orders with everyone else holding. Rebuilt per viewer by `sanitize_game_state_for_viewer`, never saved, `null` once there is a winner. A guess, never a resolved phase. |
+| `admin_resolution` | `SimulationResult?` | Only on an `"Admin"` history snapshot: the board edit it records. Saved games from before the rename have `last_resolution`, which is read into this on an Admin snapshot and dropped elsewhere. |
 | `turn_history` | `string[]` | Historical log of turn outcomes. |
 | `builds` | `Record<string, Any>?`| Build quotas and available home SCs during Winter Adjustments. |
 | `retreats` | `Record<string, Any>?`| Valid retreat provinces per dislodged unit during Retreats. |
@@ -185,7 +186,7 @@ The chat of a multiplayer match, in `backend/domain/press.py` and `frontend/src/
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `id` | `string` | Unique id. |
-| `seq` | `number` | Counts up within a game, so a client can ask for what it has not seen (`?after=`). |
+| `seq` | `number` | The message's place among the messages this player may read (1, 2, 3…), so a client can ask for what it has not seen (`?after=`). Once the press is revealed, the game-wide count. The server keeps the game-wide `seq` and each reader's number (`PressMessage.numbers`) to itself. |
 | `sender` | `Power?` | The author. `null` while an anonymous author is hidden from this viewer. |
 | `anonymous` | `boolean` | Sent unsigned. Still `true` once the author is revealed. |
 | `recipients` | `Power[]` | Empty for the public box. Otherwise the powers it was sent to, never the sender. |

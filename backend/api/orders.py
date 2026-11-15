@@ -11,6 +11,7 @@ from engine.order_utils import (
     refresh_diagnostics_and_simulation,
     reject_if_game_over,
     reject_stale_turn,
+    validate_build_slot,
     validate_order_references,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -60,6 +61,7 @@ async def update_single_order(
             )
         target_power = slot_power
     verify_power_authorization(game.game_id, target_power, current_user)
+    validate_build_slot(game, req.order)
 
     if req.order.unit_id in unit_map:
         unit = unit_map[req.order.unit_id]
@@ -153,6 +155,12 @@ async def update_batch_orders(
     reject_stale_turn(game, req.turn)
     verify_power_authorization(game.game_id, req.power, current_user)
     unit_map = {u.id: u for u in game.units}
+    named = [o.unit_id for o in req.orders]
+    if repeated := sorted({uid for uid in named if named.count(uid) > 1}):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Each unit takes one order per batch; repeated: {', '.join(repeated)}.",
+        )
     for o in req.orders:
         validate_order_references(o)
         if is_multiplayer_match(game.game_id):
@@ -164,6 +172,7 @@ async def update_batch_orders(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f"{o.unit_id} belongs to {owner.value}, not {req.power.value}.",
                 )
+        validate_build_slot(game, o)
     for o in req.orders:
         if o.unit_id in unit_map:
             u = unit_map[o.unit_id]

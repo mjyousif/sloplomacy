@@ -140,6 +140,7 @@ def refresh_diagnostics_and_simulation(game: GameState) -> None:
         game.retreats = None
         game.issues = []
         game.unit_options = {}
+        game.preview = None
         return
 
     if game.phase == "Adjustments":
@@ -169,7 +170,7 @@ def refresh_diagnostics_and_simulation(game: GameState) -> None:
         builds=game.builds,
         retreats=game.retreats,
     )
-    game.last_resolution = adjudicate_turn(
+    game.preview = adjudicate_turn(
         game.units,
         game.orders,
         game.ownership,
@@ -270,6 +271,32 @@ def everyone_is_ready(game: GameState) -> bool:
     if required:
         return all(p in game.finalized_powers for p in required)
     return game.phase != "Movement"
+
+
+def build_slot_province(slot_id: str) -> str | None:
+    """The home centre a build slot (`BUILD_<POWER>_<PROVINCE>`) is for."""
+    parts = slot_id.split("_", 2)
+    if len(parts) < 3 or parts[0] != "BUILD":
+        return None
+    return parts[2]
+
+
+def validate_build_slot(game: GameState, order: Order) -> None:
+    """Refuse an order on a build slot this phase does not have, or one naming a different home
+    centre than its slot. Otherwise the order and its resolution are filed under two slots."""
+    if not order.unit_id.startswith("BUILD_"):
+        return
+    if order.unit_id not in game.orders:
+        raise HTTPException(
+            status_code=404, detail=f"There is no build slot {order.unit_id} this phase."
+        )
+    home = build_slot_province(order.unit_id)
+    if order.origin != home and (order.order_type == OrderType.BUILD or order.origin):
+        raise HTTPException(
+            status_code=422,
+            detail=f"{order.unit_id} is the slot for {home}; it cannot build in "
+            f"{order.origin or 'no province'}.",
+        )
 
 
 def build_slot_power(slot_id: str) -> Power | None:

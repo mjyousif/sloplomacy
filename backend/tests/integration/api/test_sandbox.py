@@ -53,7 +53,7 @@ def test_sandbox_runs_on_a_private_copy_that_hides_opponents_orders():
     assert sandbox["orders"]["GER_A_BER"]["order_type"] == "HOLD"
     assert sandbox["orders"]["GER_A_BER"]["target"] is None
     # Nor does it reveal an order through any preview of the copy.
-    assert sandbox["last_resolution"]["resolutions"]["GER_A_BER"]["order_type"] == "HOLD"
+    assert sandbox["preview"]["resolutions"]["GER_A_BER"]["order_type"] == "HOLD"
 
 
 def test_hypothetical_orders_never_reach_the_real_match():

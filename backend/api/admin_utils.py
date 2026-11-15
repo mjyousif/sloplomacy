@@ -295,25 +295,26 @@ async def record_admin_history_and_log(
 
     if is_consecutive_admin:
         trailing = history[-1]
-        if trailing.last_resolution:
-            trailing.last_resolution.summary.extend(summary_lines)
-            trailing.last_resolution.new_units = copy.deepcopy(after_state.units)
-            trailing.last_resolution.new_ownership = copy.deepcopy(after_state.ownership)
-            trailing.last_resolution.next_season = after_state.season
-            trailing.last_resolution.next_year = after_state.year
-            trailing.last_resolution.next_phase = after_state.phase
-            trailing.last_resolution.builds = copy.deepcopy(after_state.builds)
-            trailing.last_resolution.retreats = copy.deepcopy(after_state.retreats)
-            trailing.last_resolution.winner = after_state.winner
+        if trailing.admin_resolution:
+            trailing.admin_resolution.summary.extend(summary_lines)
+            trailing.admin_resolution.new_units = copy.deepcopy(after_state.units)
+            trailing.admin_resolution.new_ownership = copy.deepcopy(after_state.ownership)
+            trailing.admin_resolution.next_season = after_state.season
+            trailing.admin_resolution.next_year = after_state.year
+            trailing.admin_resolution.next_phase = after_state.phase
+            trailing.admin_resolution.builds = copy.deepcopy(after_state.builds)
+            trailing.admin_resolution.retreats = copy.deepcopy(after_state.retreats)
+            trailing.admin_resolution.winner = after_state.winner
         # Recompute net orders between pre-admin baseline and new outcome
         trailing.orders = compute_admin_orders(trailing.units, after_state.units)
     else:
         admin_snap = before_state.model_copy(
-            deep=True, update={"last_resolution": None, "issues": [], "timer": None}
+            deep=True,
+            update={"preview": None, "admin_resolution": None, "issues": [], "timer": None},
         )
         admin_snap.phase = "Admin"
         admin_snap.orders = compute_admin_orders(before_state.units, after_state.units)
-        admin_snap.last_resolution = SimulationResult(
+        admin_snap.admin_resolution = SimulationResult(
             resolutions={},
             summary=list(summary_lines),
             new_units=copy.deepcopy(after_state.units),

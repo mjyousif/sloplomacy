@@ -94,8 +94,8 @@ export function useGameSync({
         return update.state;
       });
 
-      if (update.state.last_resolution) {
-        setSimulationResult(update.state.last_resolution);
+      if (update.state.preview) {
+        setSimulationResult(update.state.preview);
       }
     },
     [activeGameId, sandboxGameId, triggerToast],

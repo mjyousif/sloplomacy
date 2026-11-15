@@ -163,7 +163,7 @@ def build_scenario(
         ownership=ownership,
         finalized_powers=[],
         issues=[],
-        last_resolution=None,
+        preview=None,
         turn_history=turn_hist,
         retreats=retreats_data,
         builds=builds_data,

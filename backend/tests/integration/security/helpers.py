@@ -131,7 +131,7 @@ def secret_plan_match(private: bool = False) -> str:
 
 def assert_plan_hidden(state: dict) -> None:
     assert state["orders"]["FRA_A_PAR"]["order_type"] == "HOLD"
-    preview = state.get("last_resolution")
+    preview = state.get("preview")
     if preview:
         assert preview["resolutions"]["FRA_A_PAR"]["order_type"] == "HOLD"
 

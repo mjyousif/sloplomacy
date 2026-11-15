@@ -194,15 +194,16 @@ async def admin_rollback_turn(
     if prev_state.phase == "Admin":
         valid_phases = PHASES_BY_SEASON.get(prev_state.season, ["Movement"])
         next_p = (
-            prev_state.last_resolution.next_phase
-            if prev_state.last_resolution and prev_state.last_resolution.next_phase in valid_phases
+            prev_state.admin_resolution.next_phase
+            if prev_state.admin_resolution
+            and prev_state.admin_resolution.next_phase in valid_phases
             else valid_phases[0]
         )
         prev_state.phase = next_p
         prev_state.orders = create_default_orders(
             prev_state.units, prev_state.phase, prev_state.builds
         )
-        prev_state.last_resolution = None
+        prev_state.admin_resolution = None
 
     prev_state.finalized_powers = []
     if current and current.timer:
