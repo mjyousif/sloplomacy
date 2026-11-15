@@ -22,9 +22,6 @@ function renderHeader(overrides: Partial<TopHeaderProps> = {}) {
     viewMode: 'sandbox',
     turn: { season: 'Spring', year: 1901, phase: 'Movement' },
     winner: null,
-    errorCount: 0,
-    warningCount: 0,
-    onOpenOrderCheck: vi.fn(),
     onBackToLobby: vi.fn(),
     onEnterSoloSandbox: vi.fn(),
     matchSummary: null,
@@ -79,7 +76,7 @@ describe('TopHeader: brand and navigation', () => {
   });
 });
 
-describe('TopHeader: the turn and order check', () => {
+describe('TopHeader: the turn and the winner', () => {
   it('shows the turn on a board', () => {
     renderHeader({ turn: { season: 'Fall', year: 1903, phase: 'Retreats' } });
     const pill = screen.getByTestId('turn-chronicle-pill');
@@ -87,7 +84,7 @@ describe('TopHeader: the turn and order check', () => {
   });
 
   it('hides the board readout in the lobby', () => {
-    renderHeader({ viewMode: 'lobby', winner: 'ENGLAND', errorCount: 2 });
+    renderHeader({ viewMode: 'lobby', winner: 'ENGLAND' });
     expect(screen.queryByTestId('turn-chronicle-pill')).not.toBeInTheDocument();
     expect(screen.queryByText(/WINS/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Error/)).not.toBeInTheDocument();
@@ -98,38 +95,12 @@ describe('TopHeader: the turn and order check', () => {
     expect(screen.getByText('ENGLAND WINS')).toBeInTheDocument();
   });
 
-  it('shows no status pill when there are no errors or warnings', () => {
-    renderHeader();
-    expect(screen.queryByText('Valid Moves')).not.toBeInTheDocument();
+  it('shows no order-check pill: the order sidebar lists errors and warnings', () => {
+    renderHeader({ winner: 'ENGLAND' });
+    expect(screen.queryByTestId('header-error-pill')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('header-warning-pill')).not.toBeInTheDocument();
     expect(screen.queryByText(/Error/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Warning/)).not.toBeInTheDocument();
-  });
-
-  it('counts errors and warnings, and opens the order check', async () => {
-    const { props } = renderHeader({ errorCount: 2, warningCount: 1 });
-    const pill = screen.getByText('Error: 2 • Warning: 1');
-    expect(pill.closest('div')).toBe(screen.getByTestId('header-error-pill'));
-    await userEvent.click(pill);
-    expect(props.onOpenOrderCheck).toHaveBeenCalledTimes(1);
-  });
-
-  it('counts errors alone without a warning tail', () => {
-    renderHeader({ errorCount: 1 });
-    expect(screen.getByText('Error: 1')).toBeInTheDocument();
-  });
-
-  it('shows a single warning', () => {
-    renderHeader({ warningCount: 1 });
-    expect(screen.getByText('Warning: 1')).toBeInTheDocument();
-    expect(screen.queryByText('Valid Moves')).not.toBeInTheDocument();
-  });
-
-  it('shows warnings alone, which also open the order check', async () => {
-    const { props } = renderHeader({ warningCount: 3 });
-    const pill = screen.getByText('Warning: 3');
-    expect(pill.closest('div')).toBe(screen.getByTestId('header-warning-pill'));
-    await userEvent.click(pill);
-    expect(props.onOpenOrderCheck).toHaveBeenCalledTimes(1);
   });
 
   it('shows unified turn history controls when resolved turns exist', async () => {

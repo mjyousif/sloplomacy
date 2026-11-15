@@ -39,53 +39,6 @@
     white-space: nowrap;
   }
 
-  .header-sanity-readout {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-  }
-
-  .header-error-pill {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 8px;
-    background: rgba(239, 68, 68, 0.16);
-    border: 1px solid #ef4444;
-    color: #fca5a5;
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .header-error-pill:hover {
-    background: rgba(239, 68, 68, 0.26);
-  }
-
-  .header-warning-pill {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 8px;
-    background: rgba(245, 158, 11, 0.16);
-    border: 1px solid #f59e0b;
-    color: #fde68a;
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    /* @keyframes live in styles/base.css, so global() keeps their name. */
-    /* biome-ignore lint/correctness/noUnknownFunction: global() is CSS Modules syntax */
-    animation: 2.2s infinite global(pulse-amber);
-  }
-
-  .header-warning-pill:hover {
-    background: rgba(245, 158, 11, 0.26);
-  }
-
   .header-right-actions {
     display: flex;
     align-items: center;
