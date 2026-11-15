@@ -165,6 +165,15 @@ With `historyView` set, `App.tsx` feeds the map a `TurnRecord` from the turn sel
 - The Hypothetical banner stays hidden.
 - On phones the `TurnHistoryPill` goes into the `overlay` beside the clock.
 
+## Move Suggestions (`suggestion`)
+
+A move suggestion from press takes the map the way a past turn does. `GameWorkspace` passes the suggestion's orders as `orders` (with a plain hold for every other unit) and a `suggestion` prop, `{ editablePowers, unitIds }`:
+
+- `isUnitOrderVisible` is true only for the units in `unitIds`, whoever owns them, so the map draws the suggestion and nothing of the player's real orders.
+- While one is being written, `editablePowers` are the player and the thread's other members. `useMapSelection` returns `canControl(unit)`, which the click state machine and `UnitToken` use to decide what can be picked up: any unit in the sandbox or Direct-Edit, a unit of `editablePowers` here, and otherwise only the player's own. Each order goes to `onUpdateOrder`, which stages it in `suggestionStore` instead of sending it.
+- A received one is read-only: `historyView` is set, `editablePowers` is null, and there are no issues or simulation overlay.
+- The `SuggestionPill` goes into the `overlay`.
+
 ---
 
 ## Floating Unit Menu

@@ -59,3 +59,24 @@ def test_feed_keeps_order_and_skips_what_was_already_seen():
     ]
     assert [m.seq for m in feed_for(messages, Power.ENGLAND, revealed=False)] == [1, 4]
     assert [m.seq for m in feed_for(messages, Power.GERMANY, revealed=False, after=2)] == [3, 4]
+
+
+def test_a_view_carries_the_suggested_orders_as_a_copy():
+    from domain.board import UnitType
+    from domain.orders import Order, OrderType
+
+    suggestion = message(recipients=[Power.GERMANY])
+    suggestion.orders = [
+        Order(
+            unit_id="GER_A_MUN",
+            power=Power.GERMANY,
+            unit_type=UnitType.ARMY,
+            origin="MUN",
+            order_type=OrderType.MOVE,
+            target="BUR",
+        )
+    ]
+    view = view_of(suggestion, Power.GERMANY, revealed=False)
+    assert [o.target for o in view.orders] == ["BUR"]
+    view.orders[0].target = "RUH"
+    assert suggestion.orders[0].target == "BUR"

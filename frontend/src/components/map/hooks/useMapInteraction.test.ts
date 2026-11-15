@@ -45,6 +45,8 @@ const PROVINCES: Record<string, ProvinceInfo> = {
 };
 
 interface Board {
+  /** A move suggestion is being written for these powers' units. */
+  suggestPowers?: Power[];
   units: Unit[];
   phase?: 'Movement' | 'Retreats' | 'Adjustments';
   retreats?: Record<Power, Record<string, string[]>> | null;
@@ -96,6 +98,7 @@ function setup(board: Board) {
       historyView: board.historyView ?? false,
       isAdjustmentPhase,
       isRetreatPhase,
+      suggestPowers: board.suggestPowers ?? null,
     });
     const interaction = useMapInteraction({
       provinces: PROVINCES,
@@ -614,5 +617,34 @@ describe('useMapSelection', () => {
     expect(r().selection.selectedUnit).toBeNull();
     expect(r().selection.canEditAnyPower).toBe(false);
     expect(r().selection.controlPower).toBeNull();
+  });
+  it("lets a move suggestion order the thread's units, and nobody else's", () => {
+    const { r, clickUnit, clickProvince, onUpdateOrder } = setup({
+      units: [A_PAR, A_PIC_GER, A_MAR_ITA],
+      suggestPowers: ['FRANCE', 'GERMANY'],
+    });
+    expect(r().selection.canControl(A_PIC_GER)).toBe(true);
+    expect(r().selection.canControl(A_MAR_ITA)).toBe(false);
+
+    // A German unit is picked up and ordered like the player's own.
+    clickUnit(A_PIC_GER);
+    expect(r().selection.selectedUnit).toBe(A_PIC_GER);
+    clickProvince('BUR');
+    expect(onUpdateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ unit_id: A_PIC_GER.id, target: 'BUR' }),
+    );
+
+    // Italy is not in the thread: its unit cannot be selected.
+    clickUnit(A_MAR_ITA);
+    expect(r().selection.selectedUnit).toBeNull();
+  });
+
+  it('orders nothing through a suggestion on a past turn', () => {
+    const { r } = setup({
+      units: [A_PIC_GER],
+      suggestPowers: ['FRANCE', 'GERMANY'],
+      historyView: true,
+    });
+    expect(r().selection.canControl(A_PIC_GER)).toBe(false);
   });
 });

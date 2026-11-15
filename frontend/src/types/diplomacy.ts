@@ -431,7 +431,8 @@ export interface LobbyBrowsePage {
  * A press (chat) message as this player may see it. `recipients` is empty for the public box;
  * with recipients it is a private thread message, or a one-way note when `anonymous`.
  * `sender` is null while an anonymous author is hidden (it is the player's own power on their
- * own anonymous messages, and everyone's once the game is over).
+ * own anonymous messages, and everyone's once the game is over). `orders` holds the moves a
+ * private message suggests for units of its sender and recipients (empty for a plain message).
  */
 export interface PressMessage {
   id: string;
@@ -445,6 +446,7 @@ export interface PressMessage {
   season: string;
   year: number;
   phase: string;
+  orders: Order[];
 }
 
 /** `GET /api/press`: what the player's power may read, oldest first. */
@@ -459,7 +461,10 @@ export interface PressPostRequest {
   power: Power;
   recipients: Power[];
   anonymous: boolean;
+  /** May be empty when `orders` are attached. */
   body: string;
+  /** Suggested moves: a signed private thread in a Movement phase only. */
+  orders?: Order[];
 }
 
 /** New press for the seat this socket connected as. */

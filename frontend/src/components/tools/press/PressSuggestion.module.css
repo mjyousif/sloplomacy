@@ -1,0 +1,246 @@
+@layer components {
+  /* Move suggestions in press: the card under a message, and the draft above the composer. */
+  .card,
+  .draft {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 5px 6px;
+    border: 1px solid #5b4a1e;
+    border-radius: 5px;
+    background: rgba(180, 83, 9, 0.1);
+  }
+
+  .draft {
+    margin-top: 0;
+  }
+
+  .card-title,
+  .draft-title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #fcd34d;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .draft-title span {
+    flex: 1;
+  }
+
+  .draft-hint,
+  .card-stale {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.66rem;
+    line-height: 1.35;
+  }
+
+  .card-error {
+    margin: 0;
+    color: #fca5a5;
+    font-size: 0.66rem;
+  }
+
+  .order-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .order-group-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #cbd5e1;
+    font-size: 0.64rem;
+    font-weight: 700;
+  }
+
+  .order-lines {
+    margin: 1px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .order-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 1px 0 1px 8px;
+    color: #e2e8f0;
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.68rem;
+    line-height: 1.45;
+  }
+
+  .order-line[data-incomplete="true"] {
+    color: #fbbf24;
+  }
+
+  .remove-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex: none;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+  }
+
+  .remove-btn:hover,
+  .remove-btn:focus-visible {
+    background: rgba(248, 113, 113, 0.2);
+    color: #fecaca;
+    outline: none;
+  }
+
+  .card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .card-btn,
+  .discard-btn {
+    padding: 2px 8px;
+    border: 1px solid #7c5a16;
+    border-radius: 5px;
+    background: #141820;
+    color: #fde68a;
+    font: inherit;
+    font-size: 0.66rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .card-btn:hover:not(:disabled),
+  .discard-btn:hover {
+    border-color: #d97706;
+    color: #fffbeb;
+  }
+
+  .card-btn[aria-pressed="true"] {
+    background: rgba(180, 83, 9, 0.35);
+  }
+
+  .card-btn[data-variant="primary"] {
+    border-color: #b45309;
+    background: #b45309;
+    color: #fffbeb;
+  }
+
+  .card-btn[data-variant="primary"]:hover:not(:disabled) {
+    background: #d97706;
+  }
+
+  .card-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .card-btn:focus-visible,
+  .discard-btn:focus-visible {
+    outline: 2px solid #fcd34d;
+    outline-offset: 1px;
+  }
+
+  /* The composer's button that starts a suggestion, beside the mask. */
+  .suggest-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    flex-shrink: 0;
+    padding: 0;
+    border: 1px solid #3a475c;
+    border-radius: 6px;
+    background: #141820;
+    color: #8b99ad;
+    cursor: pointer;
+    transition:
+      background 0.12s ease,
+      border-color 0.12s ease,
+      color 0.12s ease;
+  }
+
+  .suggest-btn:hover {
+    border-color: #d97706;
+    color: #e2e8f0;
+  }
+
+  .suggest-btn[data-active="true"] {
+    border-color: #d97706;
+    background: #b45309;
+    color: #ffffff;
+    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.3);
+  }
+
+  .suggest-btn:focus-visible {
+    outline: 2px solid #fcd34d;
+    outline-offset: 1px;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .order-line {
+    font-size: 0.8rem;
+  }
+
+  :global([data-layout="compact"]) .order-group-name,
+  :global([data-layout="compact"]) .draft-hint,
+  :global([data-layout="compact"]) .card-stale,
+  :global([data-layout="compact"]) .card-error {
+    font-size: 0.76rem;
+  }
+
+  :global([data-layout="compact"]) .card-btn,
+  :global([data-layout="compact"]) .discard-btn {
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 0.8rem;
+  }
+
+  :global([data-layout="compact"]) .card-btn:hover:not(:disabled),
+  :global([data-layout="compact"]) .discard-btn:hover {
+    border-color: #7c5a16;
+    color: #fde68a;
+  }
+
+  :global([data-layout="compact"])
+    .card-btn[data-variant="primary"]:hover:not(:disabled) {
+    border-color: #b45309;
+    background: #b45309;
+    color: #fffbeb;
+  }
+
+  :global([data-layout="compact"]) .remove-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  :global([data-layout="compact"]) .suggest-btn {
+    width: 44px;
+  }
+
+  :global([data-layout="compact"]) .suggest-btn:hover {
+    border-color: #3a475c;
+    color: #8b99ad;
+  }
+
+  :global([data-layout="compact"]) .suggest-btn[data-active="true"] {
+    border-color: #d97706;
+    color: #ffffff;
+  }
+}

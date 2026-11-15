@@ -2,8 +2,10 @@ import { MessagesSquare } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { sendPress, usePressState } from '../../hooks/usePress';
+import { finishedOrders, useSuggestionState } from '../../hooks/useSuggestion';
 import { pressStore } from '../../lib/pressStore';
-import type { Power, ProvinceInfo } from '../../types/diplomacy';
+import { suggestionStore } from '../../lib/suggestionStore';
+import type { Power, ProvinceInfo, Unit } from '../../types/diplomacy';
 import {
   buildChannels,
   destinationOf,
@@ -15,6 +17,7 @@ import styles from './PressSection.module.css';
 import { PressChannelTabs } from './press/PressChannelTabs';
 import { PressComposer } from './press/PressComposer';
 import { PressMessageList } from './press/PressMessageList';
+import { PressSuggestionDraft } from './press/PressSuggestionDraft';
 import { channelLabel, listPowers } from './press/pressLabels';
 
 export interface PressSectionProps {
@@ -27,6 +30,15 @@ export interface PressSectionProps {
   /** The player surrendered this seat, so they can read but no longer write. */
   surrendered: boolean;
   provinces: Record<string, ProvinceInfo>;
+  /** The units on the live board, which name the units a move suggestion is for. */
+  units: Unit[];
+  /** The turn being played, e.g. "Spring 1901 Movement". */
+  turn: string;
+  /**
+   * The same turn while moves can be suggested, shown and taken: a Movement phase of a game
+   * still on, with the live board on screen. Null otherwise.
+   */
+  suggestTurn: string | null;
   onHighlightProvinces: (ids: string[]) => void;
   /** A province link was picked (the phone closes the drawer to show the map). */
   onProvincePicked?: () => void;
@@ -46,6 +58,8 @@ const EMPTY_TEXT: Record<string, string> = {
  * the Diplomatic Standing rows pick the conversation: none lit is the public box, lit countries
  * are a private thread with exactly those powers, and "anonymously" hides the author (a private
  * anonymous message is a one-way note). The store (`lib/pressStore`) holds the messages.
+ * A signed private thread can also carry a move suggestion: the lamp button starts one, it is
+ * written on the map (`lib/suggestionStore` holds the draft) and goes out with the next message.
  */
 export const PressSection: React.FC<PressSectionProps> = ({
   gameId,
@@ -53,18 +67,22 @@ export const PressSection: React.FC<PressSectionProps> = ({
   gameOver,
   surrendered,
   provinces,
+  units,
+  turn,
+  suggestTurn,
   onHighlightProvinces,
   onProvincePicked,
   visible = true,
 }) => {
   const press = usePressState();
+  const { draft, viewing } = useSuggestionState();
   const [open, setOpen] = useState(true);
   // A conversation picked from its chip that the recipients do not lead to: the notes with
   // nobody picked yet, or (after the game) a thread the player was never in.
   const [browseKey, setBrowseKey] = useState<string | null>(null);
   const recipients = press.recipients;
   const [anonymous, setAnonymous] = useState(false);
-  const [draft, setDraft] = useState('');
+  const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [onScreen, setOnScreen] = useState(true);
@@ -149,14 +167,55 @@ export const PressSection: React.FC<PressSectionProps> = ({
       : `Private to ${listPowers(recipients)}.`;
   }
 
+  const unitsByProvince = useMemo(() => {
+    const byProvince: Record<string, Unit> = {};
+    for (const unit of units) {
+      if (!unit.is_dislodged) byProvince[unit.province] = unit;
+    }
+    return byProvince;
+  }, [units]);
+
+  // A suggestion is written for one thread. Picking other countries discards it, so it is
+  // never sent to anyone but the powers it was written for.
+  const draftIsHere =
+    draft !== null &&
+    !anonymous &&
+    draft.members.length === recipients.length &&
+    draft.members.every((p) => recipients.includes(p));
+  useEffect(() => {
+    if (draft && !draftIsHere) suggestionStore.clear();
+  }, [draft, draftIsHere]);
+  const draftOrders = draftIsHere && draft ? Object.values(draft.orders) : [];
+  const sendable = finishedOrders(draftIsHere && draft ? draft.orders : {});
+  const canSuggest =
+    suggestTurn !== null &&
+    !blocked &&
+    !anonymous &&
+    recipients.length > 0 &&
+    active.kind === 'thread';
+  const startSuggestion = () => {
+    if (!draftIsHere && suggestTurn) {
+      suggestionStore.startDraft(recipients, suggestTurn);
+    }
+    onProvincePicked?.();
+  };
+
   const handleSend = async () => {
-    const body = draft.trim();
-    if (!body || sending || blocked) return;
+    const body = text.trim();
+    if ((!body && sendable.length === 0) || sending || blocked) return;
     setSending(true);
     setError(null);
     try {
-      await sendPress(gameId, { power, recipients, anonymous, body });
-      setDraft('');
+      await sendPress(gameId, {
+        power,
+        recipients,
+        anonymous,
+        body,
+        // A plain message is sent exactly as before.
+        ...(sendable.length > 0 ? { orders: sendable } : {}),
+      });
+      if (draftIsHere) suggestionStore.clear();
+      setText('');
     } catch (ex) {
       setError(
         ex instanceof Error ? ex.message : 'The message could not be sent.',
@@ -214,11 +273,17 @@ export const PressSection: React.FC<PressSectionProps> = ({
           }
           onHighlightProvinces={onHighlightProvinces}
           onProvincePicked={onProvincePicked}
+          suggestions={{
+            unitsByProvince,
+            turn,
+            boardFree: suggestTurn !== null,
+            viewingId: viewing?.id ?? null,
+          }}
         />
         <PressComposer
           plainOnly={gameOver || surrendered}
-          draft={draft}
-          onDraftChange={setDraft}
+          draft={text}
+          onDraftChange={setText}
           anonymous={anonymous}
           onAnonymousChange={changeAnonymous}
           destination={destination}
@@ -226,6 +291,26 @@ export const PressSection: React.FC<PressSectionProps> = ({
           sending={sending}
           error={error}
           onSend={handleSend}
+          suggest={
+            canSuggest || draftIsHere
+              ? {
+                  active: draftIsHere,
+                  count: sendable.length,
+                  incomplete: sendable.length < draftOrders.length,
+                  onStart: startSuggestion,
+                  attachment: (
+                    <PressSuggestionDraft
+                      orders={draftOrders}
+                      viewer={power}
+                      provinces={provinces}
+                      unitsByProvince={unitsByProvince}
+                      onRemove={suggestionStore.removeOrder}
+                      onDiscard={suggestionStore.clear}
+                    />
+                  ),
+                }
+              : undefined
+          }
         />
       </div>
     </CollapsibleSection>
