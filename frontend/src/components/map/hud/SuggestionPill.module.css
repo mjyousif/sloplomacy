@@ -3,14 +3,24 @@
   .suggestion-pill {
     position: absolute;
     top: 12px;
-    left: 50%;
+    /* The middle of the map between the sidebars. */
+    left: calc(
+      50% +
+      (var(--map-inset-left, 0px) - var(--map-inset-right, 0px)) /
+      2
+    );
     transform: translateX(-50%);
     z-index: 21;
     display: inline-flex;
     align-items: center;
     gap: 8px;
     width: max-content;
-    max-width: calc(100% - 24px);
+    max-width: calc(
+      100% -
+      24px -
+      var(--map-inset-left, 0px) -
+      var(--map-inset-right, 0px)
+    );
     padding: 5px 6px 5px 12px;
     border: 1px solid #b45309;
     border-radius: 999px;

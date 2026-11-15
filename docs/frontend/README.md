@@ -60,7 +60,7 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 │   │
 │   ├── ToolsSidebar.tsx (Left Collapsible Tools & Intel Panel; a ≡ drawer on phones; its parts are in tools/)
 │   │   ├── Collapse / Expand Rail Toggle (CollapsedRail.tsx, the 44px collapsed rail)
-│   │   ├── Map View & Camera Controls (MapControlsSection.tsx; Zoom In, Zoom Out, Fit Map 105% - CollapsibleSection static)
+│   │   ├── Map View & Camera Controls (MapControlsSection.tsx; Zoom In, Zoom Out, Fit Map - CollapsibleSection static)
 │   │   ├── Tactical Map Legend (Move, Support, Convoy, Conflict vectors - CollapsibleSection toggle)
 │   │   ├── Great Powers Standing & Command Selector (SC & Unit tallies - CollapsibleSection toggle)
 │   │   ├── Hypothetical Mode (What-If Opponent Guesses) & Tactical AI (CollapsibleSection toggle)

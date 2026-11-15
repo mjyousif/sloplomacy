@@ -186,6 +186,13 @@ describe('GameWorkspace: the live turn', () => {
     expect(seen.macro.variant).toBe('panel');
   });
 
+  it('tells the map which sidebars are collapsed, so its overlays keep clear of them', () => {
+    const { getByTestId } = render(<GameWorkspace {...props()} />);
+    const main = getByTestId('game-workspace');
+    expect(main).not.toHaveAttribute('data-left-collapsed');
+    expect(main).toHaveAttribute('data-right-collapsed', 'true');
+  });
+
   it('puts the drawer and the sheet on a phone', () => {
     const p = props({ isCompact: true });
     render(<GameWorkspace {...p} />);

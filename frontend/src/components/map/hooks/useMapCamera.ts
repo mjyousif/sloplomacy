@@ -13,16 +13,18 @@ import {
   type CameraBoundsOptions,
   type CameraState,
   COMPACT_MAX_ZOOM,
-  clampCamera,
   DEFAULT_CAMERA,
   elementPointToViewBox,
   getPhoneDefaultCamera,
   getViewportFit,
+  getWideHomeCamera,
   keepPointInView,
   MAP_CENTER_X,
   MAP_CENTER_Y,
+  WIDE_CAMERA_OPTIONS,
   zoomAtPoint,
 } from '../../../utils/mapCameraHelpers';
+import { readMapInsets } from './mapInsets';
 
 /** How long the zoom must stay still before a phone's tap targets are resized for it. */
 const TOUCH_TARGET_SETTLE_MS = 150;
@@ -84,7 +86,7 @@ export function useMapCamera({
 
   // Read through refs so the wheel listener and the rAF callback always see the current values.
   const cameraOptions = useMemo<CameraBoundsOptions | undefined>(
-    () => (compact ? { maxZoom: COMPACT_MAX_ZOOM } : undefined),
+    () => (compact ? { maxZoom: COMPACT_MAX_ZOOM } : WIDE_CAMERA_OPTIONS),
     [compact],
   );
   const cameraOptionsRef = useRef(cameraOptions);
@@ -205,19 +207,38 @@ export function useMapCamera({
     return () => svgEl.removeEventListener('wheel', onWheel);
   }, [svgRef, scheduleCameraSync, clientToViewBox]);
 
-  /** Zooms about the middle of the view, so whatever is in the middle stays there. */
+  /**
+   * Zooms about the middle of the view, so whatever is in the middle stays there. On a wide
+   * screen that is the middle of the strip between the sidebars, which float over the map.
+   */
   const zoomAboutCentre = useCallback(
     (newZoom: number) => {
+      const svg = svgRef.current;
+      const rect = svg?.getBoundingClientRect();
+      const insets = readMapInsets(svg);
+      const anchor = {
+        x:
+          rect && rect.width > 0 && rect.height > 0
+            ? clientToViewBox({
+                x:
+                  rect.left +
+                  insets.left +
+                  (rect.width - insets.left - insets.right) / 2,
+                y: rect.top + rect.height / 2,
+              }).x
+            : MAP_CENTER_X,
+        y: MAP_CENTER_Y,
+      };
       cameraRef.current = zoomAtPoint(
         cameraRef.current,
-        { x: MAP_CENTER_X, y: MAP_CENTER_Y },
+        anchor,
         newZoom,
         cameraOptionsRef.current,
       );
       syncCameraDOM();
       reportZoom();
     },
-    [syncCameraDOM, reportZoom],
+    [svgRef, clientToViewBox, syncCameraDOM, reportZoom],
   );
 
   const stepZoom = useCallback(
@@ -231,8 +252,17 @@ export function useMapCamera({
   ownUnitsCentreRef.current = ownUnitsCentre;
 
   const getHomeCamera = useCallback(() => {
-    if (!compact) return clampCamera({ ...DEFAULT_CAMERA });
     const rect = svgRef.current?.getBoundingClientRect();
+    if (!compact) {
+      const insets = readMapInsets(svgRef.current);
+      return getWideHomeCamera(
+        rect?.width ?? 0,
+        rect?.height ?? 0,
+        insets.left,
+        insets.right,
+        cameraOptionsRef.current,
+      );
+    }
     return getPhoneDefaultCamera(
       rect?.width ?? 0,
       rect?.height ?? 0,
@@ -247,15 +277,25 @@ export function useMapCamera({
     reportZoom();
   }, [getHomeCamera, syncCameraDOM, reportZoom]);
 
-  // Entering or leaving the phone layout, or switching powers on a phone, moves the camera
-  // home. The wide layout starts on DEFAULT_CAMERA already, so its first render is untouched.
-  const cameraHomeKeyRef = useRef<string>('wide');
+  // Opening the map, entering or leaving the phone layout, or switching powers on a phone, moves
+  // the camera home. On a wide screen home frames the board between the sidebars, which float
+  // over the map; opening or collapsing one later never moves the camera (#272).
+  const cameraHomeKeyRef = useRef<string | null>(null);
   useLayoutEffect(() => {
     const key = compact ? `compact:${activePower}` : 'wide';
     if (key === cameraHomeKeyRef.current) return;
     cameraHomeKeyRef.current = key;
+    // A camera already at home (the first render draws DEFAULT_CAMERA) is left untouched.
+    const home = getHomeCamera();
+    const current = cameraRef.current;
+    if (
+      home.x === current.x &&
+      home.y === current.y &&
+      home.zoom === current.zoom
+    )
+      return;
     resetCamera();
-  }, [compact, activePower, resetCamera]);
+  }, [compact, activePower, getHomeCamera, resetCamera]);
 
   useEffect(() => {
     // Tell App the starting zoom. Later reports read onZoomChange through its ref, so a new

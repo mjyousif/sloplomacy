@@ -2,7 +2,7 @@
   .phase-timer-widget {
     position: absolute;
     bottom: 14px;
-    left: 14px;
+    left: calc(14px + var(--map-inset-left, 0px));
     z-index: 10;
     width: 232px;
     display: flex;

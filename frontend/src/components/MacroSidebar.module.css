@@ -8,7 +8,12 @@
     gap: 8px;
   }
 
+  /* Floats over the map's right edge, so opening or collapsing it never resizes the map. */
   .macro-sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
     height: 100%;
     background: #171b22;
     border-left: 1px solid #282f3d;
@@ -22,15 +27,15 @@
   }
 
   .macro-sidebar[data-expanded="true"] {
-    width: 360px;
-    min-width: 340px;
-    max-width: 380px;
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
   }
 
   .macro-sidebar[data-collapsed="true"] {
-    width: 44px;
-    min-width: 44px;
-    max-width: 44px;
+    width: var(--sidebar-rail-width);
+    min-width: var(--sidebar-rail-width);
+    max-width: var(--sidebar-rail-width);
     align-items: center;
     padding: 8px 0;
     background: #13161c;
