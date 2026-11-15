@@ -114,7 +114,7 @@ sequenceDiagram
     API->>API: Verify caller holds France seat
     API->>Engine: validate_orders() + adjudicate_turn(is_simulation=True)
     API->>DB: persist_game() (JSONB upsert)
-    API-->>PlayerA: 200 OK (France sees own orders; foreign orders masked)
+    API-->>PlayerA: 200 OK (France sees own orders, foreign orders masked)
 
     API->>WSMgr: broadcast_game_update(game_id)
     WSMgr->>WSMgr: sanitize_game_state_for_viewer(state, viewer=France)
