@@ -234,7 +234,10 @@ describe('PressSection', () => {
     expect(screen.getByTestId('press-input')).toHaveAccessibleDescription(
       'To everyone, in the public box.',
     );
-    await userEvent.type(screen.getByTestId('press-input'), 'x'.repeat(1001));
+    // Paste, not type: 1001 keystrokes time out on a slow runner, and the
+    // abandoned typing then leaks into the next test's field.
+    await userEvent.click(screen.getByTestId('press-input'));
+    await userEvent.paste('x'.repeat(1001));
     expect(line).not.toHaveAttribute('data-quiet');
   });
 
