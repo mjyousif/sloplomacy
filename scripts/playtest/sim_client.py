@@ -2,18 +2,21 @@
 """Tiny CLI so a playtesting agent can play one seat without hand-writing HTTP.
 
 Env: SIM_API (default http://127.0.0.1:8020), SIM_GAME (game id), SIM_POWER (e.g. FRANCE).
+Put the env inline on every command (`SIM_API=... SIM_GAME=... SIM_POWER=... python3 ...`): in zsh a
+command kept in a variable is not split into words.
 Commands:
   create NAME POWER            host a private game (prints game id); passcode is always 'sim'
   join                         claim SIM_POWER in SIM_GAME
   state                        compact view of the board, your units/options, your orders
   orders "A PAR - BUR" "F BRE H" ...   submit your whole order set atomically (see syntax below)
-  finalize                     lock your orders in
+  finalize                     lock your orders in (prints one line)
   unfinalize
   press-read [AFTER_SEQ]
-  press-send "text" [--to POWER,POWER] [--anon]     (no --to = public)
-  history [INDEX]              list resolved turns, or show one with every power's orders
-  raw METHOD PATH [JSON]       escape hatch, e.g. raw GET /api/admin/status
-Order syntax: "A PAR H" | "A PAR - BUR" | "A GAS - SPA/SC"(fleet coast) | "A BEL - LON VIA" (convoy)
+  press-send "text" [--to POWER,POWER] [--anon]     (no --to = public; --anon needs --to)
+  history [INDEX]              list resolved turns, or one turn: every power's orders and results
+  raw METHOD PATH [JSON]       escape hatch, e.g. raw GET /api/admin/status (prints all of it)
+  --self-test                  play one scripted year on a fresh game and check every step
+Order syntax: "A PAR H" | "A PAR - BUR" | "F GAS - SPA/SC"(fleet coast) | "A BEL - LON VIA" (convoy)
   "A PAR S A MAR - BUR" | "A PAR S A MAR" (support hold) | "F NTH C A LON - BEL"
   retreats: "A LON R WAL" or "A LON D" | winter: "BUILD A VIE", "BUILD F STP/SC", "WAIVE", "DISBAND A BUD"
 """
@@ -22,6 +25,8 @@ import base64, json, os, re, sys, urllib.error, urllib.request
 API = os.environ.get("SIM_API", "http://127.0.0.1:8020")
 GAME = os.environ.get("SIM_GAME", "proto_1901")
 POWER = os.environ.get("SIM_POWER", "")
+POWERS = "AUSTRIA ENGLAND FRANCE GERMANY ITALY RUSSIA TURKEY".split()
+SCS = "EDI LVP LON BRE PAR MAR KIE MUN BER VEN ROM NAP VIE BUD TRI STP MOS WAR SEV CON ANK SMY NWY SWE DEN HOL BEL SPA POR TUN SER RUM BUL GRE".split()
 
 
 def token(power):
@@ -29,7 +34,11 @@ def token(power):
     return f"{b({'alg': 'none', 'typ': 'JWT'})}.{b({'sub': 'sim_' + power.lower(), 'email': power.lower() + '@sim.test'})}."
 
 
-def call(method, path, body=None, power=None):
+class ApiError(Exception):
+    pass
+
+
+def call(method, path, body=None, power=None, exit_on_error=True):
     sep = "&" if "?" in path else "?"
     req = urllib.request.Request(
         f"{API}{path}{sep}game_id={GAME}",
@@ -41,12 +50,60 @@ def call(method, path, body=None, power=None):
         with urllib.request.urlopen(req) as r:
             return json.loads(r.read() or "null")
     except urllib.error.HTTPError as e:
-        print(f"HTTP {e.code} {method} {path}: {e.read().decode()[:600]}")
+        msg = f"HTTP {e.code} {method} {path}: {e.read().decode()[:600]}"
+        if not exit_on_error:
+            raise ApiError(msg) from e
+        print(msg)
         sys.exit(1)
 
 
+def turn_of(g):
+    return f"{g['season']} {g['year']} {g['phase']}"
+
+
+def centres(ownership):
+    """Supply centres per power. Ownership also holds plain land a power last stood on."""
+    c = {}
+    for p, w in ownership.items():
+        if p in SCS:
+            c[w] = c.get(w, 0) + 1
+    return c
+
+
+def ostr(o):
+    t = o["order_type"]; u = f"{o['unit_type'][0]} {o['origin']}" + (f"/{o['origin_coast']}" if o.get("origin_coast") else "")
+    tgt = (o.get("target") or "") + (f"/{o['target_coast']}" if o.get("target_coast") else "")
+    if t == "MOVE": s = f"{u}-{tgt}" + (" VIA" if o.get("via_convoy") else "")
+    elif t == "SUPPORT": s = f"{u} S {o.get('aux_unit_origin')}" + (f"-{tgt}" if tgt and tgt != o.get("aux_unit_origin") else "")
+    elif t == "CONVOY": s = f"{u} C {o.get('aux_unit_origin')}-{tgt}"
+    elif t == "HOLD": s = f"{u} H"
+    elif t in ("BUILD", "WAIVE"): s = f"{t} {o['unit_type'][0] + ' ' if t == 'BUILD' else ''}{o['origin']}"
+    else: s = f"{u} {t}" + (f" {tgt}" if tgt else "")
+    return s + ("" if o.get("is_explicit") else "*")
+
+
+def print_turn(h):
+    """One resolved turn from GET /api/history/N: every power's orders with how they went."""
+    r = h["resolution"]; res = r["resolutions"]
+    print(turn_of(h), "->", r["next_season"], r["next_year"], r["next_phase"], "| winner", r["winner"], "| * = not ordered")
+    by = {}
+    for o in h["orders"].values():
+        x = res.get(o["unit_id"], {})
+        flag = "" if x.get("succeeded") else " FAIL"
+        flag += " bounced" if x.get("bounced") else ""; flag += " CUT" if x.get("cut") else ""
+        flag += f" DISLODGED by {x.get('dislodged_by')}" if x.get("dislodged") else ""
+        by.setdefault(o["power"], []).append(ostr(o) + flag)
+    for p, l in sorted(by.items()):
+        print(f"  {p[:3]}: " + "; ".join(l))
+    fmt = lambda own: " ".join(f"{k[:3]}={v}" for k, v in sorted(centres(own).items()))
+    print("  centres before:", fmt(h["ownership"]), "| after:", fmt(r["new_ownership"]))
+
+
 def parse(s, units, orders, power):
-    t = s.strip().upper().replace("–", "-")
+    t = re.sub(r"\s+", " ", s.strip().upper().replace("–", "-"))
+    m = re.match(r"^DISBAND ([AF]) ([A-Z]{3})(?:/[A-Z]{2})?$", t)
+    if m:
+        t = f"{m[1]} {m[2]} D"
     # In a retreat phase the dislodged unit and the new occupier share a province: the caller's own unit wins.
     by_prov = {u["province"]: u for u in sorted(units, key=lambda u: u["power"] == power)}
     if t == "WAIVE":
@@ -54,12 +111,8 @@ def parse(s, units, orders, power):
         return None if slot is None else {**slot, "order_type": "WAIVE", "is_explicit": True}
     m = re.match(r"^BUILD ([AF]) ([A-Z]{3})(?:/([A-Z]{2}))?$", t)
     if m:
-        taken = {o.get("origin") for o in orders.values() if o["order_type"] == "BUILD" and o["power"] == power}
-        # Build slots have one id per home centre (BUILD_FRANCE_BRE); match it first so two builds never share a slot.
-        slot = next((o for o in orders.values() if o["power"] == power and o["unit_id"] == f"BUILD_{power}_{m[2]}"), None) or next(
-            (o for o in orders.values() if o["power"] == power and o["order_type"] in ("WAIVE", "BUILD") and (o["origin"] == m[2] or o["order_type"] == "WAIVE" and m[2] not in taken)),
-            None,
-        )
+        # Build slots have one id per home centre (BUILD_FRANCE_BRE), and a build must use its own.
+        slot = orders.get(f"BUILD_{power}_{m[2]}")
         if slot is None:
             sys.exit(f"no build slot for {m[2]}; slots: {[o['unit_id'] for o in orders.values() if o['power']==power and o['order_type'] in ('WAIVE','BUILD')]}")
         return {**slot, "order_type": "BUILD", "unit_type": m[1], "origin": m[2], "origin_coast": m[3], "target": None, "is_explicit": True}
@@ -88,19 +141,36 @@ def parse(s, units, orders, power):
     return o
 
 
+def submit_orders(power, order_strs, exit_on_error=True):
+    g = call("GET", f"/api/game?power={power}", power=power)["state"]
+    orders = [o for o in (parse(s, g["units"], g["orders"], power) for s in order_strs) if o]
+    r = call("POST", "/api/orders/batch", {"power": power, "orders": orders, "turn": turn_of(g)}, power=power, exit_on_error=exit_on_error)
+    return len(orders), [i.get("message", i) for i in r.get("issues", []) if i.get("power", power) == power]
+
+
+def finalize(power, exit_on_error=True):
+    """Finalize and describe it in one line. Until every player has finalized, the phase has not
+    resolved: the state's `preview` is only a guess with everyone else holding."""
+    g = call("GET", f"/api/game?power={power}", power=power)["state"]
+    before = turn_of(g)
+    r = call("POST", "/api/finalize", {"power": power, "force": True, "turn": before}, power=power, exit_on_error=exit_on_error)
+    s = r["state"]
+    if turn_of(s) != before:
+        return f"finalized; {before} has RESOLVED, now {turn_of(s)} (see `history`)"
+    return f"finalized {power} for {before}; NOT resolved yet (the preview is not a result), finalized so far: {', '.join(sorted(s['finalized_powers']))}"
+
+
 def show_state():
     g = call("GET", "/api/game")["state"]
     me = POWER
-    sc = {}
-    for p, pw in g["ownership"].items():
-        sc[pw] = sc.get(pw, 0) + 1  # includes non-SC ownership; fine for a rough count
-    print(f"{g['season']} {g['year']} {g['phase']} | winner={g['winner']} | finalized={g['finalized_powers']} | surrendered={g['surrendered_powers']}")
+    print(f"{turn_of(g)} | winner={g['winner']} | finalized={g['finalized_powers']} | surrendered={g['surrendered_powers']}")
     by = {}
     for u in g["units"]:
         by.setdefault(u["power"], []).append(f"{u['unit_type'][0]} {u['province']}{'/' + u['coast'] if u.get('coast') else ''}{'(DISLODGED)' if u['is_dislodged'] else ''}")
-    for p, us in by.items():
-        print(f"  {p}: {', '.join(us)}")
-    print("  owned provinces:", {p: ", ".join(sorted(k for k, v in g['ownership'].items() if v == p)) for p in by})
+    sc = centres(g["ownership"])
+    for p, us in sorted(by.items()):
+        print(f"  {p} ({sc.get(p, 0)} centres): {', '.join(us)}")
+    print("  supply centres:", {p: ", ".join(sorted(k for k, v in g['ownership'].items() if v == p and k in SCS)) for p in sorted(by)})
     if g.get("builds") and me in g["builds"]:
         print("  YOUR BUILDS:", g["builds"][me])
     print(f"--- YOUR ({me}) units, options, current orders ---")
@@ -113,37 +183,49 @@ def show_state():
               f" | moves={opt.get('direct_moves')} convoy={opt.get('active_convoys')} supports={[(s['province'], s['moves']) for s in opt.get('valid_supports', [])]}")
     for o in g["orders"].values():
         if o["power"] == me and o["order_type"] in ("BUILD", "WAIVE"):
-            print(f"  build slot {o['unit_id']}: {o['order_type']} {o['origin']}")
+            what = f"BUILD {o['unit_type'][0]}" if o["order_type"] == "BUILD" else "WAIVE"
+            print(f"  build slot {o['unit_id']}: {what} {o['origin']}")
     if g["issues"]:
         print("  issues:", [i.get("message", i) for i in g["issues"]][:8])
     return g
 
 
+def ident(power):
+    return {"user_id": "sim_" + power.lower(), "email": power.lower() + "@sim.test", "display_name": power.title()}
+
+
+def self_test():
+    """One scripted year on a fresh game: moves, a dislodgement and its retreat, builds, a waive and
+    a disband, all through the same commands the players use. Exits non-zero on the first failure."""
+    from selftest import run
+
+    run(sys.modules[__name__])
+
+
 def main():
+    global GAME
     a = sys.argv[1:]
     if not a:
         sys.exit(__doc__)
     cmd = a[0]
-    ident = {"user_id": "sim_" + POWER.lower(), "email": POWER.lower() + "@sim.test", "display_name": POWER.title()}
-    if cmd == "create":
-        r = call("POST", "/api/games", {"name": a[1], "creator_power": a[2].upper(), **ident, "user_id": "sim_" + a[2].lower(), "email": a[2].lower() + "@sim.test",
-                                        "display_name": a[2].title(), "is_private": True, "passcode": "sim"}, power=a[2].upper())
+    if cmd == "--self-test":
+        self_test()
+    elif cmd == "create":
+        r = call("POST", "/api/games", {"name": a[1], "creator_power": a[2].upper(), **ident(a[2].upper()), "is_private": True, "passcode": "sim"}, power=a[2].upper())
         print(r["game_id"])
     elif cmd == "join":
-        call("POST", f"/api/games/{GAME}/join", {"power": POWER, "passcode": "sim", **ident})
+        call("POST", f"/api/games/{GAME}/join", {"power": POWER, "passcode": "sim", **ident(POWER)})
         print("joined", POWER)
     elif cmd == "state":
         show_state()
     elif cmd == "orders":
-        g = call("GET", "/api/game")["state"]
-        parsed = [parse(s, g["units"], g["orders"], POWER) for s in a[1:]]
-        orders = [o for o in parsed if o]
-        r = call("POST", "/api/orders/batch", {"power": POWER, "orders": orders})
-        print("accepted", len(orders), "orders; issues:", [i.get("message", i) for i in r.get("issues", []) if i.get("power", POWER) == POWER][:8])
-    elif cmd in ("finalize", "unfinalize"):
-        g = call("GET", "/api/game")["state"]
-        r = call("POST", f"/api/{cmd}", {"power": POWER, "force": True, "turn": f"{g['season']} {g['year']} {g['phase']}"} if cmd == "finalize" else {"power": POWER})
-        print(r if cmd == "finalize" else "unfinalized")
+        n, issues = submit_orders(POWER, a[1:])
+        print("accepted", n, "orders; issues:", issues[:8])
+    elif cmd == "finalize":
+        print(finalize(POWER))
+    elif cmd == "unfinalize":
+        call("POST", "/api/unfinalize", {"power": POWER})
+        print("unfinalized")
     elif cmd == "press-read":
         q = f"?after={a[1]}" if len(a) > 1 else ""
         f = call("GET", "/api/press" + q)
@@ -155,11 +237,16 @@ def main():
         call("POST", "/api/press", {"power": POWER, "recipients": to, "anonymous": "--anon" in a, "body": a[1]})
         print("sent")
     elif cmd == "history":
-        print(json.dumps(call("GET", "/api/history" + (f"/{a[1]}" if len(a) > 1 else "")), indent=1)[:6000])
+        if len(a) > 1:
+            print_turn(call("GET", f"/api/history/{a[1]}"))
+        else:
+            for t in call("GET", "/api/history"):
+                print(f"  {t['index']}: {turn_of(t)}")
     elif cmd == "raw":
-        print(json.dumps(call(a[1], a[2], json.loads(a[3]) if len(a) > 3 else None), indent=1)[:8000])
+        print(json.dumps(call(a[1], a[2], json.loads(a[3]) if len(a) > 3 else None), indent=1))
     else:
         sys.exit(__doc__)
 
 
-main()
+if __name__ == "__main__":
+    main()
