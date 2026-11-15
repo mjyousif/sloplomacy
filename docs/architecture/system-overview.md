@@ -24,57 +24,39 @@ The **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** is designed as 
 
 ## High-Level Topology
 
-```
-+-----------------------------------------------------------------------------------------+
-|                                    BROWSER CLIENT                                       |
-|                                                                                         |
-|   +-----------------------+              +--------------------------+                   |
-|   |    EuropeMap.tsx      |              |     MacroSidebar.tsx     |                   |
-|   |  - SVG Path Geometry  |<------------>|  - Unit Order Editors    |  Modals:          |
-|   |  - Pan / Zoom Matrix  |  Local State |  - Power Selector        |  - AuthModal      |
-|   |  - Visual Order Arrows|  (App.tsx)   |  - Validation Warnings   |  - LobbyView      |
-|   |  - Battle Indicators  |              |  - Turn & History log    |  - SaveSandboxModal|
-|   +-----------------------+              +--------------------------+  - SurrenderModal  |
-|                               ^                                        - SanityCheck    |
-|                               | JSON REST via fetch() (?game_id=...)                    |
-+-------------------------------|---------------------------------------------------------+
-                                v
-+-----------------------------------------------------------------------------------------+
-|                             FASTAPI BACKEND (:8000 / Cloud Run)                         |
-|                                                                                         |
-|                       +------------------------------------+                            |
-|                       |              main.py               |                            |
-|                       |  REST Routes, Multi-Game Registry, |                            |
-|                       |  Admin Handlers & Static SPA Mount |                            |
-|                       +-----------------+------------------+                            |
-|                                         |                                               |
-|                 +-----------------------+-----------------------+                       |
-|                 |                       |                       |                       |
-|                 v                       v                       v                       |
-|     +----------------------+  +--------------------+  +--------------------------+      |
-|     |     validator/       |  |    supabase.py     |  |      adjudicator/        |      |
-|     |  - Legality checks   |  |  - PostgREST REST  |  |  - 'diplomacy' engine    |      |
-|     |  - Blunder detection |  |  - JSONB upserts   |  |  - Movement, Retreats,   |      |
-|     |  - Movement, Retreats|  |  - Read-thru cache |  |    and Winter Adjustments|      |
-|     |    and Builds checks |  +---------+----------+  |  - Non-destructive Sim   |      |
-|     +----------------------+            |             +--------------------------+      |
-|                 ^                       |                           ^                   |
-|                 +-----------------------+---------------------------+                   |
-|                                         |                                               |
-|                              +----------v-----------+                                   |
-|                              |     topology/        |                                   |
-|                              |  - 76 Provinces      |                                   |
-|                              |  - Army/Fleet graph  |                                   |
-|                              |  - Coasts & Centers  |                                   |
-|                              +----------------------+                                   |
-+-----------------------------------------------------------------------------------------+
-                                          │
-                                          ▼
-+-----------------------------------------------------------------------------------------+
-|                              SUPABASE PERSISTENCE (Optional)                            |
-|  - Supabase Auth (Email, Google/Discord OAuth)                                          |
-|  - PostgreSQL Database (Profiles, Multiplayer Matches, JSONB Game State, RLS Policies)  |
-+-----------------------------------------------------------------------------------------+
+For detailed Mermaid diagrams, see [Database Setup & Row-Level Security](database.md) and [Service Interactions & Frontend Communication](service-interactions.md).
+
+```mermaid
+flowchart TB
+    subgraph Client["BROWSER CLIENT (React 19 + TypeScript + Vite)"]
+        Map["EuropeMap.tsx (SVG Geometry, Pan/Zoom, Order Arrows)"]
+        Sidebar["MacroSidebar & ToolsSidebar (Order Editors, Press, Standings)"]
+        Modals["Modals & Lobby (AuthModal, LobbyView, SaveSandboxModal, SurrenderModal)"]
+        Map <-->|"Local State (App.tsx & Hooks)"| Sidebar
+    end
+
+    subgraph Backend["FASTAPI BACKEND (:8000 / Cloud Run)"]
+        Main["main.py (Assembler) & api/* Domain Routers + WebSockets"]
+        Validator["validator/ (Legality & Blunder Checks)"]
+        Adjudicator["adjudicator/ ('diplomacy' Engine & Simulation)"]
+        Storage["storage/ (L1 Store & supabase.py PostgREST)"]
+        Topology["topology/ (76 Provinces, Coasts, Centers)"]
+
+        Main --> Validator
+        Main --> Adjudicator
+        Main --> Storage
+        Validator --> Topology
+        Adjudicator --> Topology
+    end
+
+    subgraph Supabase["SUPABASE (Auth & PostgreSQL)"]
+        SupaAuth["Supabase Auth (Email, Google/Discord OAuth)"]
+        SupaDB["PostgreSQL (profiles, multiplayer_games JSONB, RLS)"]
+    end
+
+    Client <-->|"JSON REST /api/* & WebSocket /ws/*"| Main
+    Client <-->|"Auth SDK (JWT Session)"| SupaAuth
+    Storage <-->|"HTTPS PostgREST (service_role)"| SupaDB
 ```
 
 ---
