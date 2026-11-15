@@ -339,6 +339,23 @@ export interface MultiplayerGameSummary {
   is_draft?: boolean;
   is_private?: boolean;
   has_passcode?: boolean;
+  /** The board for a small map. Only `GET /api/games/mine` sends it; null everywhere else. */
+  board?: BoardPreview | null;
+  /** Unix time the running phase clock ends; null when untimed, voting or paused. */
+  deadline?: number | null;
+}
+
+export interface PreviewUnit {
+  power: Power;
+  unit_type: UnitType;
+  province: string;
+  coast?: string | null;
+}
+
+/** Who owns what and where the units stand, with no orders: what a mini map is drawn from. */
+export interface BoardPreview {
+  ownership: Record<string, Power>;
+  units: PreviewUnit[];
 }
 
 export interface CreateGameRequest {
