@@ -2,15 +2,16 @@
 
 import os
 import time
-import uuid
-from datetime import datetime, timezone
 
-from api.admin_utils import record_admin_history_and_log, resolve_admin_actor
+from api.admin_utils import (
+    create_admin_log_entry,
+    record_admin_history_and_log,
+    resolve_admin_actor,
+)
 from api.turns import timer_players
 from domain.game_state import (
     FIRST_YEAR,
     PHASES_BY_SEASON,
-    AdminActionLogEntry,
     GameState,
     TurnHistoryEntry,
 )
@@ -222,28 +223,17 @@ async def admin_rollback_turn(
         x_user_id,
         x_user_email,
     )
-    ack_list = [x for x in (actor_id, actor_email) if x]
-    summary = GAME_SUMMARIES.get(gid)
-    if summary:
-        for p_key, part in summary.participants.items():
-            if (actor_id and part.user_id == actor_id) or (
-                actor_email and part.email and part.email.lower() == actor_email.lower()
-            ):
-                if p_key not in ack_list:
-                    ack_list.append(p_key)
-
     if current and current.admin_log:
         prev_state.admin_log = list(current.admin_log)
     prev_state.admin_log.append(
-        AdminActionLogEntry(
-            id=str(uuid.uuid4()),
-            timestamp=datetime.now(timezone.utc).isoformat(),
-            actor=actor_email,
+        create_admin_log_entry(
+            gid,
             season=prev_state.season,
             year=prev_state.year,
             phase=prev_state.phase,
             summary_lines=[summary_line],
-            acknowledged_by=ack_list,
+            actor=actor_email,
+            actor_id=actor_id,
         )
     )
     prev_state.state_revision = (

@@ -293,9 +293,6 @@ export interface ConsensusStatusInfo {
   isWaitingForPlayers: boolean;
   title: string;
   description: string;
-  buttonLabel: string;
-  buttonTitle: string;
-  isSoloAdvanceReady: boolean;
 }
 
 export function getConsensusStatusInfo({
@@ -339,9 +336,6 @@ export function getConsensusStatusInfo({
       isWaitingForPlayers,
       title: 'Campaign Finished',
       description: 'Hostilities concluded.',
-      buttonLabel: 'Game Over',
-      buttonTitle: 'Campaign Finished',
-      isSoloAdvanceReady: false,
     };
   }
 
@@ -351,13 +345,6 @@ export function getConsensusStatusInfo({
       title: 'Waiting for Players',
       description:
         'No active envoys have claimed powers with active units yet.',
-      buttonLabel: isWaitingForPlayers
-        ? 'Advance Phase Solo (Host Override)'
-        : 'Force Adjudicate Phase (Host Override)',
-      buttonTitle: isWaitingForPlayers
-        ? 'Host Admin Override: Advance immediately solo without waiting for other players to join'
-        : 'Host Admin Override: Force advance to the next season immediately',
-      isSoloAdvanceReady: false,
     };
   }
 
@@ -369,17 +356,13 @@ export function getConsensusStatusInfo({
     const description = !isReady
       ? 'Multiplayer campaigns require at least 2 players to auto-resolve turns. Orders can be prepared and finalized while waiting for opponents.'
       : isGameCreator
-        ? 'Your orders are locked. Auto-resolution begins once 2+ players join. As host, you can click "Advance Phase Solo" below to resolve now without waiting.'
+        ? 'Your orders are locked. Auto-resolution begins once 2+ players join. As host, you can use Administrator → Resolve Turn to advance now without waiting.'
         : 'Your orders are locked. Auto-resolution begins once 2+ players join. Waiting for opponents to join or the host to advance.';
 
     return {
       isWaitingForPlayers: true,
       title,
       description,
-      buttonLabel: 'Advance Phase Solo (Host Override)',
-      buttonTitle:
-        'Host Admin Override: Advance immediately solo without waiting for other players to join',
-      isSoloAdvanceReady: isReady,
     };
   }
 
@@ -391,10 +374,6 @@ export function getConsensusStatusInfo({
       description: `Waiting on: ${missingPowers
         .map((p) => POWER_METADATA[p]?.shortName || p)
         .join(', ')}`,
-      buttonLabel: 'Force Adjudicate Phase (Host Override)',
-      buttonTitle:
-        'Host Admin Override: Force advance to the next season immediately',
-      isSoloAdvanceReady: false,
     };
   }
 
@@ -402,9 +381,5 @@ export function getConsensusStatusInfo({
     isWaitingForPlayers: false,
     title: `Consensus Reached (${totalRequiredCount}/${totalRequiredCount})`,
     description: 'All required powers finalized! Resolving phase...',
-    buttonLabel: 'Force Adjudicate Phase (Host Override)',
-    buttonTitle:
-      'Host Admin Override: Force advance to the next season immediately',
-    isSoloAdvanceReady: false,
   };
 }

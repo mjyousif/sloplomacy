@@ -44,6 +44,7 @@ export interface AppHeaderProps {
   openAdminTools: () => void;
   onToggleDirectEdit: () => void;
   turnClockOpen?: boolean;
+  onResolveTurn?: (event?: React.MouseEvent) => void;
   onExitAdmin?: () => void;
   toastBanner: string | null;
   historyEntries?: TurnHistoryEntry[];
@@ -86,6 +87,7 @@ export function AppHeader({
   openAdminTools,
   onToggleDirectEdit,
   turnClockOpen = false,
+  onResolveTurn,
   onExitAdmin,
   toastBanner,
   historyEntries,
@@ -135,6 +137,7 @@ export function AppHeader({
           adminOverrideActive={directEditActive}
           onToggleAdminOverride={onToggleDirectEdit}
           turnClockOpen={turnClockOpen}
+          onResolveTurn={onResolveTurn}
           onExitAdmin={onExitAdmin}
           authUser={authUser}
           onSignIn={() => openAuthPrompt(undefined, 'signin')}
@@ -167,6 +170,7 @@ export function AppHeader({
           adminOverrideActive={directEditActive}
           onToggleAdminOverride={onToggleDirectEdit}
           turnClockOpen={turnClockOpen}
+          onResolveTurn={onResolveTurn}
           onExitAdmin={onExitAdmin}
           authUser={authUser}
           onSignIn={() => openAuthPrompt(undefined, 'signin')}

@@ -151,3 +151,38 @@ def test_admin_batch_board_edit_and_optimistic_concurrency_conflict():
     )
     assert conflict_res.status_code == 409
     assert "Board state changed" in conflict_res.json()["detail"]
+
+
+def test_admin_force_resolve_logs_warning_for_other_players():
+    game_id = _seated_game()
+    creator_headers = _auth_headers()
+    bob_headers = make_auth_headers("bob", "bob@test.com")
+
+    res = client.post(f"/api/adjudicate?game_id={game_id}", headers=creator_headers)
+    assert res.status_code == 200
+    st = res.json()
+    assert st["season"] == "Fall"
+    assert st["year"] == 1901
+    assert st["phase"] == "Movement"
+    assert len(st["admin_log"]) == 1
+    entry = st["admin_log"][0]
+    assert entry["actor"] == "host"
+    assert "host" in entry["acknowledged_by"]
+    assert "bob" not in entry["acknowledged_by"]
+    assert any(
+        "Force-resolved Spring 1901 Movement Phase." in line for line in entry["summary_lines"]
+    )
+    assert st["turn_history"][0].startswith("[ADMIN OVERRIDE] Force-resolved Spring 1901 Movement:")
+
+    # Bob sees the unacknowledged entry until he acknowledges it
+    bob_state = client.get(f"/api/game?game_id={game_id}", headers=bob_headers).json()["state"]
+    assert len(bob_state["admin_log"]) == 1
+    assert "bob" not in bob_state["admin_log"][0]["acknowledged_by"]
+
+    ack_res = client.post(
+        f"/api/admin/acknowledge?game_id={game_id}",
+        json={"entry_ids": [entry["id"]]},
+        headers=bob_headers,
+    )
+    assert ack_res.status_code == 200
+    assert ack_res.json()["acknowledged_by"] == "bob"
