@@ -29,16 +29,18 @@ You are an umpire and an investigator, never a player. Do not steer the Haikus' 
 3. Create the game and seat all 7 powers with `scripts/playtest/sim_client.py` (run it with no arguments
    to read its syntax). `SIM_API=http://127.0.0.1:8020 SIM_POWER=FRANCE python3 scripts/playtest/sim_client.py create "Playtest" FRANCE`
    prints the game id. Then for each other power: `SIM_GAME=<id> SIM_POWER=<P> python3 ... join`. France is the host.
-4. Smoke-check `state` once as FRANCE.
+4. Smoke-check `state` once as FRANCE. Record the branch and commit under test (`git rev-parse HEAD`) in
+   `RUNDIR/log.md`.
 5. Two helpers sit beside the CLI and take the same `SIM_API` and `SIM_GAME`. `python3 scripts/playtest/gmtool.py`
    (`hist N`, `sc`, `probe POWER`, `units`) gives you compact views; use it instead of `history` and `raw`, whose
    output is cut off. `python3 scripts/playtest/watch.py 8021` serves a read-only page with every power's live
    orders and all press, so the user can watch; start it in the background, tell the user the URL and stop it at the end.
 
 ## The Haikus
-Spawn 7 subagents with the Agent tool, `model: "haiku"`, named `AUSTRIA`..`TURKEY`. Keep each alive and
-wake it with SendMessage every phase (it remembers promises and betrayals). If one dies or bloats,
-spawn a replacement and tell it to read its notes file `RUNDIR/notes/<POWER>.md`, which every Haiku maintains.
+Spawn 7 subagents with the Agent tool, `model: "haiku"`, named `AUSTRIA`..`TURKEY`. Wake each with
+SendMessage every phase. Its context grows with every wake, so **replace all seven at each Spring**
+(and any that dies earlier): spawn a fresh one with the same prompt and tell it to read its notes file
+`RUNDIR/notes/<POWER>.md` first. The notes carry its promises and betrayals across the swap.
 Spawn prompt for each Haiku (fill `{POWER}`, `{API}`, `{GAME}`, `{RUNDIR}`):
 
 > You are the ruler of **{POWER}** in a 1901 game of Diplomacy against six other AI rulers. **Your only
@@ -59,16 +61,18 @@ Spawn prompt for each Haiku (fill `{POWER}`, `{API}`, `{GAME}`, `{RUNDIR}`):
 > cheating the tools is not.
 >
 > Keep a short private notes file at `{RUNDIR}/notes/{POWER}.md` (create it): who you trust, promises
-> made and received, your plan, betrayals. Update it at the end of each wake.
+> made and received, your plan, betrayals, and **one supply centre you aim to take this year**. Update it
+> at the end of each wake.
 >
 > I will wake you each phase with a task such as NEGOTIATE or ORDERS. Do exactly that task in at most
-> ~8 tool calls and reply in two parts. **STATUS**: what you did, in 40 words or fewer. **FINDINGS**:
+> ~8 tool calls and reply in two parts. **STATUS**: what you did and your target centre for the year,
+> in 40 words or fewer. **FINDINGS**:
 > only if something looked wrong, surprising or confusing (an order rejected that you thought legal, a
 > result that contradicts the rules, a nonsensical message, an error). Give each finding its own
 > separate allowance of up to 100 words, so never trim one to fit the status: say exactly what you
 > did (the CLI call or orders), what you expected, what happened, and quote error text or output
-> verbatim. Start it with "BUG:" if it looks like a game bug rather than your own mistake. Write
-> "FINDINGS: none" otherwise.
+> verbatim. Before you report, run the exact same command once more and quote both outputs. Start it
+> with "BUG:" if it looks like a game bug rather than your own mistake. Write "FINDINGS: none" otherwise.
 
 ## The loop (per phase)
 Read the phase with `state` (any seat; public info is the same).
@@ -95,9 +99,9 @@ Check these yourself each phase; do not rely on Haikus noticing.
 3. **Phase flow**: skipped or duplicate phases, a retreat phase when none is needed, winter when SC == units,
    auto-resolve timing, finalize/unfinalize edge cases, the stale `turn` guard.
 4. **Fog of war / secrecy** (read `AGENTS.md` section 4 invariants): during a phase, can a seat see
-   another's orders via `state`, `unit_options`, `issues`, `last_resolution`, `history`, or press? One
-   probe per phase, e.g. `SIM_POWER=<A>` calling `state` and checking foreign orders are masked, `press-read`
-   as a non-recipient, anonymous-note author leaks.
+   another's orders via `state`, `unit_options`, `issues`, `last_resolution`, `history`, or press? Run
+   `gmtool.py probe <POWER>` for all seven seats every phase, once some orders are in. Also try `press-read`
+   as a non-recipient and look for anonymous-note author leaks.
 5. **Press**: delivery, order, `after` paging, private threads of 2+ powers, anonymous notes, size limits.
 6. **Win / draw / elimination**: eliminated powers, civil disorder (units hold, no builds), winner at 18,
    behaviour after game over.
@@ -106,6 +110,9 @@ Check these yourself each phase; do not rely on Haikus noticing.
    even if the engine is technically right.
 Reproduce each suspected bug once before logging it (a single `state`/`history`/`raw` call as GM is fine;
 `raw` is reserved for you). Separate "Haiku mistake" from "app bug".
+Before logging an app bug, search the open issues and PRs (`gh issue list --search`, `gh pr list --search`)
+and note any that already cover it. If you are not on `main`, say whether the code involved differs from
+`origin/main`.
 
 ## Deliverables (end of game, or if you must stop early)
 Write `RUNDIR/FINDINGS.md`:
@@ -118,4 +125,6 @@ Write `RUNDIR/FINDINGS.md`:
   civil disorder, ...).
 - **Process notes**: Haiku misbehaviour, cost, what to change in this prompt next run.
 Then stop the server with `kill $(cat RUNDIR/server.pid)` and give the user a 10-line summary with the
-path to `FINDINGS.md`. Do not fix bugs, open issues or PRs, or commit anything.
+path to `FINDINGS.md`. Do not fix application bugs, open issues or PRs, or commit anything. The harness is
+the exception: if a script in `scripts/playtest/` is broken, patch it at once so the game is not held up,
+and list every patch in the process notes.
