@@ -76,7 +76,7 @@ In the compact layout the game screen is the map, with everything else layered o
 
 ### Order sheet (`BottomSheet.tsx`, `MacroSidebar variant="sheet"`)
 - **Stops**: peek, half and full (`utils/sheetHelpers.ts`). It starts at peek every time a game opens. Drag the handle and let go to settle on the nearest stop, or flick to go one stop further. A tap or the keyboard steps peek → half → full → peek. It only slides when it moves between stops, never when it is measured or the screen rotates.
-- **Peek**: the power with its unit, supply centre and unconfirmed counts (which the desktop rail only gives in tooltips), the status badge, Clear All Orders, then Finalize and Resolve. In a match, Resolve is the consensus card, plus Force Adjudicate for the host.
+- **Peek**: the power with its unit, supply centre and unconfirmed counts (which the desktop rail only gives in tooltips), the status badge, Clear All Orders, then Finalize and Resolve. In a match, Resolve is the consensus card (the host's force-resolve override lives in the top bar's ⋯ Administrator menu).
 - **Body**: the phase notes, builds and unit cards, then Surrender and the version badge. While the sheet is lowered the body is off screen and `inert`.
 - **Spacer**: the sheet leaves a spacer as tall as its peek, so the map ends where the peek begins and the phone camera fits the map that is actually visible.
 
@@ -168,7 +168,7 @@ Shown under Diplomatic Standing to a seated player of a multiplayer match (never
 - **Scenario Management & Saving**: One-click "Reset 1901" scenario start and "Save Sandbox". Clicking "Save Sandbox" opens `SaveSandboxModal.tsx`, letting the commander specify a custom name (e.g., "Balkans 1901 Tactical Analysis") before promoting their personal draft sandbox in-place to a permanent saved sandbox.
 
 ### 6. Interactive Direct-Edit Mode & Administrator Controls (Game Creator Only)
-- **Top Bar Administrator Menu (`AdminSettingsMenu.tsx`)**: Room creators access `Edit Board` and `Turn and Clock Settings` from the `Wrench` button (`btn-admin-menu`) in the top bar (or ⋯ menu on phones).
+- **Top Bar Administrator Menu (`AdminSettingsMenu.tsx`)**: Room creators access `Edit Board`, `Turn and Clock Settings`, and `Resolve Turn` from the `Wrench` button (`btn-admin-menu`) in the top bar (or ⋯ menu on phones). `Resolve Turn` prompts `ConfirmModal` before calling `POST /api/adjudicate` and, in multiplayer matches, records an `AdminActionLogEntry` that triggers `AdminActionWarningModal` for other players.
 - **Turn and Clock Settings (`AdminTurnClockSidebar.tsx`)**: Repurposes the right sidebar (or phone bottom sheet) for turn and clock arbitration (`TurnControlTab`: Revert to Past Turn with snapshot dropdown, Adjust Game Clock & Season, and Unlock All Power Orders).
 - **Interactive Direct-Edit Mode (`useAdminDirectEdit.ts`, `AdminTileInspector.tsx`)**:
   - Suppresses reachability reticles and green/amber/purple province highlights on the map.
@@ -242,7 +242,7 @@ Pieces must not be defined inside `MacroSidebar`: a component defined in a rende
   - **Active Match Mode (>= 2 Players)**: Displays `"Resolution Progress: X/Y Ready"` and `"Waiting on: [Powers]"`, transitioning to `"Consensus Reached (Y/Y)"` when all required powers finalize.
 - **"Adjudicate Turn & Advance" (`POST /api/adjudicate`)**:
   - In Solo / Sandbox Mode: Commits moves and advances the season/phase.
-  - In Multiplayer Mode: Restricted to the **Game Creator**. When testing solo in a waiting lobby (< 2 players), the host button explicitly displays `"Advance Phase Solo (Host Override)"` to advance turns without waiting for opponents. In active matches, it acts as `"Force Adjudicate Phase (Host Override)"` to bypass stalled or AFK players. Unauthorized non-creator calls return `403 Forbidden`. Once a power has won, the button is disabled and reads "Game Over".
+  - In Multiplayer Mode: Restricted to the **Game Creator** via the **Administrator → Resolve Turn** option (`btn-admin-resolve-turn`) in the top bar (or ⋯ menu on phones), rather than in the order footer. Prompts `ConfirmModal` before calling `POST /api/adjudicate`, and logs an `AdminActionLogEntry` so other participants receive `AdminActionWarningModal`. Unauthorized non-creator calls return `403 Forbidden`. Once a power has won, the option is disabled.
 
 ---
 

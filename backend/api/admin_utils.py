@@ -214,6 +214,43 @@ def compute_board_edit_summary(
     return lines
 
 
+def create_admin_log_entry(
+    game_id: str,
+    season: str,
+    year: int,
+    phase: str,
+    summary_lines: list[str],
+    actor: str,
+    actor_id: str | None = None,
+) -> AdminActionLogEntry:
+    """Build an AdminActionLogEntry with the acting admin already acknowledged."""
+    ack_list: list[str] = []
+    if actor_id:
+        ack_list.append(actor_id)
+    if actor and actor not in ack_list:
+        ack_list.append(actor)
+
+    summary = GAME_SUMMARIES.get(game_id)
+    if summary:
+        for p_key, part in summary.participants.items():
+            if (actor_id and part.user_id == actor_id) or (
+                actor and part.email and part.email.lower() == actor.lower()
+            ):
+                if p_key not in ack_list:
+                    ack_list.append(p_key)
+
+    return AdminActionLogEntry(
+        id=str(uuid.uuid4()),
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        actor=actor,
+        season=season,
+        year=year,
+        phase=phase,
+        summary_lines=summary_lines,
+        acknowledged_by=ack_list,
+    )
+
+
 async def record_admin_history_and_log(
     game_id: str,
     before_state: GameState,
@@ -236,31 +273,14 @@ async def record_admin_history_and_log(
     after_state.state_revision = max(before_state.state_revision, after_state.state_revision) + 1
 
     # 1. Audit log entry
-    entry_id = str(uuid.uuid4())
-    ack_list: list[str] = []
-    if actor_id:
-        ack_list.append(actor_id)
-    if actor and actor not in ack_list:
-        ack_list.append(actor)
-
-    summary = GAME_SUMMARIES.get(game_id)
-    if summary:
-        for p_key, part in summary.participants.items():
-            if (actor_id and part.user_id == actor_id) or (
-                actor and part.email and part.email.lower() == actor.lower()
-            ):
-                if p_key not in ack_list:
-                    ack_list.append(p_key)
-
-    entry = AdminActionLogEntry(
-        id=entry_id,
-        timestamp=datetime.now(timezone.utc).isoformat(),
-        actor=actor,
+    entry = create_admin_log_entry(
+        game_id,
         season=before_state.season,
         year=before_state.year,
         phase=before_state.phase,
         summary_lines=summary_lines,
-        acknowledged_by=ack_list,
+        actor=actor,
+        actor_id=actor_id,
     )
     after_state.admin_log.append(entry)
 

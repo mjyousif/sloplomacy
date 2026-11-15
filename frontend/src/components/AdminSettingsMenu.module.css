@@ -15,9 +15,14 @@
     padding: 8px 10px;
   }
 
-  button.admin-mode-card:hover {
+  button.admin-mode-card:hover:not(:disabled) {
     background: #2a3140;
     border-color: #4b5568;
+  }
+
+  button.admin-mode-card:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
   }
 
   button.admin-mode-card[data-active="true"] {
