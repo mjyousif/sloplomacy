@@ -99,7 +99,7 @@ Check these yourself each phase; do not rely on Haikus noticing.
 3. **Phase flow**: skipped or duplicate phases, a retreat phase when none is needed, winter when SC == units,
    auto-resolve timing, finalize/unfinalize edge cases, the stale `turn` guard.
 4. **Fog of war / secrecy** (read `AGENTS.md` section 4 invariants): during a phase, can a seat see
-   another's orders via `state`, `unit_options`, `issues`, `last_resolution`, `history`, or press? Run
+   another's orders via `state`, `unit_options`, `issues`, `preview`, `history`, or press? Run
    `gmtool.py probe <POWER>` for all seven seats every phase, once some orders are in. Also try `press-read`
    as a non-recipient and look for anonymous-note author leaks.
 5. **Press**: delivery, order, `after` paging, private threads of 2+ powers, anonymous notes, size limits.

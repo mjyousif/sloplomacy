@@ -171,7 +171,10 @@ export interface GameState {
   finalized_powers: Power[];
   surrendered_powers?: Power[];
   issues: ValidationIssue[];
-  last_resolution?: SimulationResult | null;
+  /** The phase being played, resolved from the viewer's orders with everyone else holding. A guess, never a result. */
+  preview?: SimulationResult | null;
+  /** Only on an "Admin" history snapshot: the board edit it records. */
+  admin_resolution?: SimulationResult | null;
   turn_history: string[];
   builds?: Record<Power, { count: number; homes: string[] }> | null;
   retreats?: Record<Power, Record<string, string[]>> | null;

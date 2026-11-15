@@ -262,8 +262,10 @@ def sanitize_game_state_for_viewer(
         masked_game.orders = defaults
         masked_game.issues = []
 
-    if game.last_resolution is not None:
-        masked_game.last_resolution = adjudicate_turn(
+    # Rebuilt for every viewer from what they may see, so the stored preview never leaves.
+    masked_game.preview = None
+    if not game.winner:
+        masked_game.preview = adjudicate_turn(
             game.units,
             masked_game.orders,
             game.ownership,

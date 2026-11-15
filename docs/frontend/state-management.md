@@ -112,7 +112,7 @@ App.handleUpdateOrder(order)
 App.applyServerState(st)
          │
          ├──► setGameState(st)
-         ├──► setSimulationResult(st.last_resolution)
+         ├──► setSimulationResult(st.preview)
          └──► Triggers re-render of map arrows & diagnostics
 ```
 

@@ -247,11 +247,11 @@ def test_rollback_recomputes_what_a_snapshot_leaves_out():
     game_id = _seated_game()
     client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers())
     snapshot = GAME_HISTORY[game_id][-1]
-    assert snapshot.last_resolution is None
+    assert snapshot.preview is None
 
     state = client.post(f"/api/admin/rollback?game_id={game_id}", headers=_auth_headers()).json()
 
-    assert state["last_resolution"] is not None
+    assert state["preview"] is not None
 
 
 def test_api_test_seed_scenarios_and_security(monkeypatch):

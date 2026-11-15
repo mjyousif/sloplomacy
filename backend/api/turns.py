@@ -111,7 +111,7 @@ async def _execute_adjudication(
     if gid not in GAME_HISTORY:
         GAME_HISTORY[gid] = []
     GAME_HISTORY[gid].append(
-        game.model_copy(deep=True, update={"last_resolution": None, "issues": [], "timer": None})
+        game.model_copy(deep=True, update={"preview": None, "issues": [], "timer": None})
     )
     if len(GAME_HISTORY[gid]) > 30:
         GAME_HISTORY[gid].pop(0)
@@ -154,7 +154,6 @@ async def _execute_adjudication(
     if result.winner:
         game.winner = result.winner
         game.timer = None
-        game.last_resolution = result
         game.turn_history.insert(0, f"{result.winner.value} has won the game in {prev_label}.")
         if summary := GAME_SUMMARIES.get(gid):
             summary.winner = result.winner
@@ -325,9 +324,9 @@ async def simulate_current_orders(
     game = await resolve_game(game_id)
     refresh_diagnostics_and_simulation(game)
     visible = sanitize_game_state_for_viewer(game, viewer_power_for(game.game_id, current_user))
-    if visible.last_resolution is None:
+    if visible.preview is None:
         raise HTTPException(status_code=500, detail="Tactical preview could not be computed.")
-    return visible.last_resolution
+    return visible.preview
 
 
 @router.post(

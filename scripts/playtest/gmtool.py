@@ -63,10 +63,10 @@ elif cmd == "probe":
     v = sys.argv[2]
     g = call("GET", "/api/game", power=v)["state"]
     leaks = [ostr(o) for o in g["orders"].values() if o["power"] != v and (o.get("is_explicit") or o["order_type"] not in ("HOLD", "WAIVE", "DISBAND"))]
-    lr = g.get("last_resolution") or {}
+    lr = g.get("preview") or {}
     lrleak = [f"{k}:{x['order_type']}>{x.get('target')}" for k, x in (lr.get("resolutions") or {}).items() if not k.startswith(v[:3]) and x["order_type"] != "HOLD"]
     iss = [i for i in g["issues"] if i.get("power") not in (None, v)]
-    print(f"probe as {v} in {g['season']} {g['year']} {g['phase']}: fin={g['finalized_powers']} foreign orders visible={leaks} last_resolution foreign non-hold={lrleak} foreign issues={len(iss)}")
+    print(f"probe as {v} in {g['season']} {g['year']} {g['phase']}: fin={g['finalized_powers']} foreign orders visible={leaks} preview foreign non-hold={lrleak} foreign issues={len(iss)}")
     mine = {k: (x["succeeded"], x["bounced"], x.get("reason", "")[:60]) for k, x in (lr.get("resolutions") or {}).items() if k.startswith(v[:3])}
     print("  own preview:", mine)
 elif cmd == "units":

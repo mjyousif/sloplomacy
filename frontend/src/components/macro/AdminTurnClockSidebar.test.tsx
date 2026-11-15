@@ -26,7 +26,7 @@ const STATE = {
   surrendered_powers: [],
   issues: [],
   turn_history: [],
-  last_resolution: null,
+  preview: null,
   winner: null,
 } as unknown as GameState;
 

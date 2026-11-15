@@ -140,6 +140,7 @@ def refresh_diagnostics_and_simulation(game: GameState) -> None:
         game.retreats = None
         game.issues = []
         game.unit_options = {}
+        game.preview = None
         return
 
     if game.phase == "Adjustments":
@@ -169,7 +170,7 @@ def refresh_diagnostics_and_simulation(game: GameState) -> None:
         builds=game.builds,
         retreats=game.retreats,
     )
-    game.last_resolution = adjudicate_turn(
+    game.preview = adjudicate_turn(
         game.units,
         game.orders,
         game.ownership,
