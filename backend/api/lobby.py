@@ -59,8 +59,14 @@ async def browse_games(
     summary="List My Games",
 )
 async def list_my_games(current_user: AuthUser | None = Depends(get_current_user)):
-    """Every game the signed-in caller holds a seat in or saved, private campaigns included."""
+    """Every game the signed-in caller holds a seat in or saved, private campaigns included.
+
+    Each carries its board preview, which no other summary response does.
+    """
     if not current_user:
         raise HTTPException(status_code=401, detail="Sign in to list your games.")
     await refresh_lobby_summaries()
-    return [sanitize_summary_for_viewer(s) for s in summaries_for_user(current_user.user_id)]
+    return [
+        sanitize_summary_for_viewer(s, keep_board=True)
+        for s in summaries_for_user(current_user.user_id)
+    ]

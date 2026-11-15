@@ -16,6 +16,7 @@ Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #
 - [ ] The WebSocket learns the caller from the `auth` first message (`?handshake=1`). Never put a token in a URL (Cloud Run logs it).
 - [ ] Per-viewer broadcast: each socket gets its own masked copy, not one shared payload.
 - [ ] A lobby listing (`GET /api/games`, `/api/games/browse`, `/ws/lobby`) goes through `storage.lobby.public_summaries`, so it never names a private campaign or a sandbox. The lobby socket shares one payload, so anything per-player belongs in `GET /api/games/mine` instead. Browse rows carry no emails or user ids.
+- [ ] Every summary a client receives goes through `sanitize_summary_for_viewer`, which strips emails and the `board` preview. Only `GET /api/games/mine` passes `keep_board=True`. Never return `GAME_SUMMARIES[...]` directly.
 
 - [ ] Press (chat) is per seat: every read and socket push goes through `security.press` (`can_read`, `view_of`), which hides private messages from other powers and an anonymous `sender` from everyone but the author. Never return or log a stored `PressMessage`, and never put press in `GameState`, where it would ride along with every board broadcast. A message's suggested `orders` are only what its sender attached: never fill them from `game.orders`, and never write them into a game.
 

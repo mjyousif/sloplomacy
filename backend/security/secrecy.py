@@ -202,8 +202,14 @@ def public_host_name(summary: MultiplayerGameSummary) -> str:
     return "Unknown host"
 
 
-def sanitize_summary_for_viewer(summary: MultiplayerGameSummary) -> MultiplayerGameSummary:
-    """Return a copy of `summary` with all user email addresses stripped."""
+def sanitize_summary_for_viewer(
+    summary: MultiplayerGameSummary, keep_board: bool = False
+) -> MultiplayerGameSummary:
+    """Return a copy of `summary` with all user email addresses stripped.
+
+    The board preview is dropped too unless `keep_board` is set, which only a player's own
+    games (`GET /api/games/mine`) do: the lobby list and socket go to everyone.
+    """
     sanitized_participants = {
         key: part.model_copy(
             update={
@@ -220,6 +226,7 @@ def sanitize_summary_for_viewer(summary: MultiplayerGameSummary) -> MultiplayerG
         update={
             "created_by": public_host_name(summary),
             "participants": sanitized_participants,
+            "board": summary.board if keep_board else None,
         }
     )
 
