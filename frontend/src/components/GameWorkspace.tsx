@@ -26,12 +26,15 @@ import {
   type EuropeMapHandle,
 } from './EuropeMap';
 import styles from './GameWorkspace.module.css';
+import { PhaseTimerWidget } from './game/PhaseTimerWidget';
 import { MacroSidebar } from './MacroSidebar';
 import type { AdminTurnClockSettings } from './macro/AdminTurnClockSidebar';
 import { SuggestionPill } from './map/hud/SuggestionPill';
-import { PhaseTimerWidget } from './PhaseTimerWidget';
 import { ToolsSidebar } from './ToolsSidebar';
-import { TurnHistoryPill, TurnHistorySelector } from './TurnHistorySelector';
+import {
+  TurnHistoryPill,
+  TurnHistorySelector,
+} from './tools/TurnHistorySelector';
 
 // Stable empties for a past turn, so the map's memoized layers are not rebuilt every render.
 const NO_ISSUES: ValidationIssue[] = [];

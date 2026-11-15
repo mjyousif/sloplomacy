@@ -1,6 +1,6 @@
 import { Compass } from 'lucide-react';
 import type React from 'react';
-import { cx } from '../utils/cx';
+import { cx } from '../../utils/cx';
 import styles from './BrandEmblem.module.css';
 
 interface BrandEmblemProps {

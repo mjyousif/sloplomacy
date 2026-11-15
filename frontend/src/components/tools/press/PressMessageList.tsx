@@ -8,7 +8,7 @@ import {
   type ProvinceInfo,
 } from '../../../types/diplomacy';
 import { sameTurn, splitProvinceRefs } from '../../../utils/pressHelpers';
-import { PowerFlag } from '../../PowerFlag';
+import { PowerFlag } from '../../ui/PowerFlag';
 import styles from '../PressSection.module.css';
 import {
   PressSuggestionCard,

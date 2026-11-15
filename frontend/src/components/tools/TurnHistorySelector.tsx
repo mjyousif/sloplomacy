@@ -5,10 +5,10 @@ import {
   POWER_METADATA,
   type Power,
   type TurnHistoryEntry,
-} from '../types/diplomacy';
-import { cx } from '../utils/cx';
-import { shortTurnLabel } from '../utils/historyHelpers';
-import { turnLabel } from '../utils/timerHelpers';
+} from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
+import { shortTurnLabel } from '../../utils/historyHelpers';
+import { turnLabel } from '../../utils/timerHelpers';
 import styles from './TurnHistorySelector.module.css';
 
 /** "AUS", "ENG" …: the nation chips' labels. */

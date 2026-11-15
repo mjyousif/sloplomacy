@@ -12,8 +12,8 @@ import {
 } from '../types/diplomacy';
 import type { DisplayPrefs } from '../utils/displayPrefs';
 import styles from './AppHeader.module.css';
-import { CompactTopBar } from './CompactTopBar';
-import { TopHeader } from './TopHeader';
+import { CompactTopBar } from './header/CompactTopBar';
+import { TopHeader } from './header/TopHeader';
 
 export interface AppHeaderProps {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';

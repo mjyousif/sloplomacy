@@ -2,9 +2,9 @@ import { Clock, LogOut, Pencil, Play, Wrench } from 'lucide-react';
 import type React from 'react';
 import type { ReactNode } from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
-import { cx } from '../utils/cx';
+import { cx } from '../../utils/cx';
+import displayStyles from '../header/DisplaySettings.module.css';
 import styles from './AdminSettingsMenu.module.css';
-import displayStyles from './DisplaySettings.module.css';
 
 export interface AdminSettingsMenuProps {
   onOpenAdminTools?: () => void;

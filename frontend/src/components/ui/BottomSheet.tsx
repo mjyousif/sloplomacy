@@ -14,7 +14,7 @@ import {
   type SheetSnap,
   type SheetSnapHeights,
   snapHeights,
-} from '../utils/sheetHelpers';
+} from '../../utils/sheetHelpers';
 import styles from './BottomSheet.module.css';
 
 export interface BottomSheetProps {

@@ -2,8 +2,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { AuthUser, MultiplayerGameSummary } from '../types/diplomacy';
-import { DEFAULT_DISPLAY_PREFS } from '../utils/displayPrefs';
+import type { AuthUser, MultiplayerGameSummary } from '../../types/diplomacy';
+import { DEFAULT_DISPLAY_PREFS } from '../../utils/displayPrefs';
 import { TopHeader, type TopHeaderProps } from './TopHeader';
 
 const ALICE: AuthUser = {

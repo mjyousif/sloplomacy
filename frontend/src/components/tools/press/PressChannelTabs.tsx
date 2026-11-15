@@ -2,7 +2,7 @@ import { Megaphone, VenetianMask } from 'lucide-react';
 import type React from 'react';
 import type { Power } from '../../../types/diplomacy';
 import type { PressChannel } from '../../../utils/pressHelpers';
-import { PowerFlag } from '../../PowerFlag';
+import { PowerFlag } from '../../ui/PowerFlag';
 import styles from '../PressSection.module.css';
 import { channelLabel } from './pressLabels';
 

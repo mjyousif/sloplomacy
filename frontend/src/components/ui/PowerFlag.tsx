@@ -1,5 +1,5 @@
 import type React from 'react';
-import { POWER_METADATA, type Power } from '../types/diplomacy';
+import { POWER_METADATA, type Power } from '../../types/diplomacy';
 
 export interface PowerFlagProps extends React.SVGProps<SVGSVGElement> {
   power: Power;

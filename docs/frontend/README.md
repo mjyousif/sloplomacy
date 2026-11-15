@@ -17,14 +17,16 @@ frontend/
     ├── App.tsx                  # Root state coordinator and viewMode router ('lobby' | 'multiplayer' | 'sandbox')
     ├── App.module.css           # The app shell, loading and error screens (components / compact layers)
     ├── styles/                  # Cascade layers (index.css), tokens.css, base.css, and layerOrder.test.ts
-    ├── components/              # Top-level views, headers, sidebars, and feature packages (with co-located *.module.css & *.test.ts[x])
+    ├── components/              # App & feature entrypoints (with co-located *.module.css & *.test.ts[x])
+    │   ├── header/              # Desktop/compact top bars, display settings menu, turn chronicle, version badge
+    │   ├── ui/                  # Shared UI primitives (BottomSheet, CollapsibleSection, BrandEmblem, PowerFlag, chrome/form styles)
     │   ├── map/                 # Interactive SVG board: hooks/, hud/, layers/ (orders/, units/), and curve geometry
-    │   ├── tools/               # Left ToolsSidebar sections (incl. PressSection and press/), SaveSandboxModal, and collapsed rail
+    │   ├── tools/               # Left ToolsSidebar sections (incl. PressSection and press/), TurnHistorySelector, SaveSandboxModal, and collapsed rail
     │   ├── macro/               # Right MacroSidebar order sheet, controls/, admin sidebars, and build slots
     │   ├── lobby/               # Match browser, host/join cards, power picker, and lobby dialogs
-    │   ├── admin/               # Turn & clock control tab and admin action warning modal
+    │   ├── admin/               # AdminSettingsMenu, TurnControlTab, and AdminActionWarningModal
     │   ├── auth/                # Sign-in / sign-up modal and account settings modal
-    │   ├── game/                # Match-lifecycle and pre-finalization modals (surrender, game over, sanity check)
+    │   ├── game/                # PhaseTimerWidget and match-lifecycle modals (surrender, game over, sanity check)
     │   ├── modal/               # Generic modal primitives (Modal, ConfirmModal, PromptDialog styles)
     │   └── pieces/              # Map piece geometry, outlines, marks, and styles/ (classic, seated, compact, flag, nameplate)
     ├── data/                    # Static SVG map paths (europeMapGeometry), piece placements (mapLayouts), text metrics
@@ -41,11 +43,11 @@ frontend/
 
 ```
 App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
-├── AppHeader (TopHeader on desktop, CompactTopBar on phones, Direct-Edit banner, toast)
+├── AppHeader                                ──► components/header/ & components/admin/AdminSettingsMenu
 ├── LobbyView (viewMode === 'lobby')          ──► components/lobby/
 ├── GameWorkspace (multiplayer | sandbox)
 │   ├── ToolsSidebar                         ──► components/tools/
-│   ├── EuropeMap (SVG board + HUD)          ──► components/map/ & components/pieces/
+│   ├── EuropeMap (SVG board + HUD)          ──► components/map/, components/pieces/, & components/game/PhaseTimerWidget
 │   └── MacroSidebar (order sheet & admin)   ──► components/macro/ & components/admin/
 └── AppModals (global modal coordinator)     ──► components/modal/, auth/, admin/, game/, tools/
 ```

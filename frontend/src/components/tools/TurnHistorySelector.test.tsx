@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { TurnHistoryEntry } from '../types/diplomacy';
+import type { TurnHistoryEntry } from '../../types/diplomacy';
 import { TurnHistoryPill, TurnHistorySelector } from './TurnHistorySelector';
 
 const ENTRIES: TurnHistoryEntry[] = [

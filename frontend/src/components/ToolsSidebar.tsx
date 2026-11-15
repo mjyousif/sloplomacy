@@ -2,7 +2,6 @@ import { PanelLeftClose, Sliders, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef } from 'react';
 import { cx } from '../utils/cx';
-import chromeStyles from './SidebarChrome.module.css';
 import styles from './ToolsSidebar.module.css';
 import { CollapsedRail } from './tools/CollapsedRail';
 import { MapControlsSection } from './tools/MapControlsSection';
@@ -10,6 +9,7 @@ import { PressSection } from './tools/PressSection';
 import { SandboxToolsSection } from './tools/SandboxToolsSection';
 import { StandingsSection } from './tools/StandingsSection';
 import type { ToolsSidebarProps } from './tools/toolsSidebarProps';
+import chromeStyles from './ui/SidebarChrome.module.css';
 
 export type { ToolsSidebarProps };
 

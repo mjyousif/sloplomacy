@@ -12,7 +12,7 @@ import {
   NOTES_CHANNEL,
   PUBLIC_CHANNEL,
 } from '../../utils/pressHelpers';
-import { CollapsibleSection } from '../CollapsibleSection';
+import { CollapsibleSection } from '../ui/CollapsibleSection';
 import styles from './PressSection.module.css';
 import { PressChannelTabs } from './press/PressChannelTabs';
 import { PressComposer } from './press/PressComposer';

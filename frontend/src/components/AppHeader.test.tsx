@@ -5,13 +5,13 @@ import type { GameState, MultiplayerGameSummary } from '../types/diplomacy';
 import { AppHeader, type AppHeaderProps } from './AppHeader';
 
 const seen = vi.hoisted(() => ({}) as Record<string, any>);
-vi.mock('./CompactTopBar', () => ({
+vi.mock('./header/CompactTopBar', () => ({
   CompactTopBar: (p: any) => {
     seen.compact = p;
     return <nav>compact bar</nav>;
   },
 }));
-vi.mock('./TopHeader', () => ({
+vi.mock('./header/TopHeader', () => ({
   TopHeader: (p: any) => {
     seen.wide = p;
     return <header>top header</header>;

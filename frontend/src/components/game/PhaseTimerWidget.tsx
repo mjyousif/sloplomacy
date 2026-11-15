@@ -1,7 +1,7 @@
 import { ChevronUp, Clock, Pause, Play, Plus } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import type { PhaseTimer, Power, TimerChoice } from '../types/diplomacy';
+import type { PhaseTimer, Power, TimerChoice } from '../../types/diplomacy';
 import {
   clockPillLabel,
   countVotes,
@@ -10,7 +10,7 @@ import {
   powersNotReady,
   powersYetToVote,
   TIMER_OPTIONS,
-} from '../utils/timerHelpers';
+} from '../../utils/timerHelpers';
 import styles from './PhaseTimerWidget.module.css';
 
 export interface PhaseTimerWidgetProps {

@@ -7,7 +7,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../../types/diplomacy';
-import { PowerFlag } from '../PowerFlag';
+import { PowerFlag } from '../ui/PowerFlag';
 import styles from './GameRoomCard.module.css';
 
 export interface GameRoomCardProps {

@@ -18,17 +18,21 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
-import type { DisplayPrefsSaveState } from '../hooks/useDisplayPrefs';
-import { type AuthUser, POWER_METADATA, type Power } from '../types/diplomacy';
-import { cx } from '../utils/cx';
-import type { DisplayPrefs } from '../utils/displayPrefs';
-import { BrandEmblem } from './BrandEmblem';
-import styles from './CompactTopBar.module.css';
-import { DisplaySettingsOptions } from './DisplaySettingsMenu';
+import type { DisplayPrefsSaveState } from '../../hooks/useDisplayPrefs';
+import {
+  type AuthUser,
+  POWER_METADATA,
+  type Power,
+} from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
+import type { DisplayPrefs } from '../../utils/displayPrefs';
 import {
   PressUnreadBadge,
   pressBadgeAnchor,
-} from './tools/press/PressUnreadBadge';
+} from '../tools/press/PressUnreadBadge';
+import { BrandEmblem } from '../ui/BrandEmblem';
+import styles from './CompactTopBar.module.css';
+import { DisplaySettingsOptions } from './DisplaySettingsMenu';
 
 export interface CompactTopBarProps {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';

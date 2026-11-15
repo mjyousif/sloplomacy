@@ -1,7 +1,7 @@
 import { Check, ExternalLink, GitCommit } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
-import { cx } from '../utils/cx';
+import { cx } from '../../utils/cx';
 import styles from './VersionBadge.module.css';
 
 interface VersionBadgeProps {

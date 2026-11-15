@@ -1,6 +1,6 @@
 import { SlidersHorizontal, Volume2, VolumeX } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
-import type { DisplayPrefsSaveState } from '../hooks/useDisplayPrefs';
+import type { DisplayPrefsSaveState } from '../../hooks/useDisplayPrefs';
 import {
   type DisplayPrefs,
   PIECE_STYLE_LABELS,
@@ -9,9 +9,14 @@ import {
   UNIT_MARK_LABELS,
   UNIT_MARKS,
   type UnitMark,
-} from '../utils/displayPrefs';
+} from '../../utils/displayPrefs';
+import {
+  getPieceFrame,
+  MapPiece,
+  makePiecePill,
+  SupplyStar,
+} from '../MapPiece';
 import styles from './DisplaySettings.module.css';
-import { getPieceFrame, MapPiece, makePiecePill, SupplyStar } from './MapPiece';
 
 const PREVIEW_COLOR = '#2f6e49';
 const PREVIEW_LAND = '#c9c9a0';

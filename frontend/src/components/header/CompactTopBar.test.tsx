@@ -4,14 +4,14 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import type { MultiplayerGameSummary } from '../types/diplomacy';
-import { DEFAULT_DISPLAY_PREFS } from '../utils/displayPrefs';
+import type { MultiplayerGameSummary } from '../../types/diplomacy';
+import { DEFAULT_DISPLAY_PREFS } from '../../utils/displayPrefs';
+import { SurrenderModal } from '../game/SurrenderModal';
 import {
   CompactTopBar,
   type CompactTopBarProps,
   describeIssueCount,
 } from './CompactTopBar';
-import { SurrenderModal } from './game/SurrenderModal';
 
 const noop = () => {};
 

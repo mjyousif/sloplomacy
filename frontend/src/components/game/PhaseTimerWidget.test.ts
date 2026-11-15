@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import type { PhaseTimer } from '../types/diplomacy';
+import type { PhaseTimer } from '../../types/diplomacy';
 import {
   PhaseTimerWidget,
   type PhaseTimerWidgetProps,

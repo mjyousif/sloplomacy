@@ -12,8 +12,8 @@ import {
   type ValidationIssue,
 } from '../../types/diplomacy';
 import type { OrderProgress } from '../../utils/orderProgress';
-import { PowerFlag } from '../PowerFlag';
-import chromeStyles from '../SidebarChrome.module.css';
+import { PowerFlag } from '../ui/PowerFlag';
+import chromeStyles from '../ui/SidebarChrome.module.css';
 import styles from './PowerHeader.module.css';
 
 /** Civil Disorder, Finalized, the issue count or Drafting. */

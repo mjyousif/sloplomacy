@@ -13,7 +13,7 @@ import {
   getSupplyCenterCounts,
 } from '../../utils/gameOverHelpers';
 import { Modal } from '../modal/Modal';
-import { PowerFlag } from '../PowerFlag';
+import { PowerFlag } from '../ui/PowerFlag';
 import styles from './GameOverModal.module.css';
 
 export interface GameOverModalProps {

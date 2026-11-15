@@ -5,16 +5,16 @@ import {
   POWER_METADATA,
   type Power,
   type TurnHistoryEntry,
-} from '../types/diplomacy';
-import { cx } from '../utils/cx';
-import { turnLabel } from '../utils/timerHelpers';
+} from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
+import { turnLabel } from '../../utils/timerHelpers';
 import {
   IconSelectDropdown,
   type IconSelectOption,
-} from './map/hud/IconSelectDropdown';
+} from '../map/hud/IconSelectDropdown';
+import { PowerFilterChips, powerCode } from '../tools/TurnHistorySelector';
+import historyStyles from '../tools/TurnHistorySelector.module.css';
 import styles from './TurnChronicle.module.css';
-import { PowerFilterChips, powerCode } from './TurnHistorySelector';
-import historyStyles from './TurnHistorySelector.module.css';
 
 const LIVE_VALUE = 'live';
 

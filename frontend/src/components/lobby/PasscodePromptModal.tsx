@@ -5,9 +5,9 @@ import {
   POWER_METADATA,
   type Power,
 } from '../../types/diplomacy';
-import fieldStyles from '../FormField.module.css';
 import { Modal, ModalCloseButton, ModalFooter } from '../modal/Modal';
 import promptStyles from '../modal/PromptDialog.module.css';
+import fieldStyles from '../ui/FormField.module.css';
 
 export interface PasscodePromptModalProps {
   passcodeModalTarget: { game: MultiplayerGameSummary; power: Power } | null;

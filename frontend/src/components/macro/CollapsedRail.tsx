@@ -9,8 +9,8 @@ import type React from 'react';
 import { POWER_METADATA, type Power } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
 import type { OrderProgress } from '../../utils/orderProgress';
-import { PowerFlag } from '../PowerFlag';
-import chromeStyles from '../SidebarChrome.module.css';
+import { PowerFlag } from '../ui/PowerFlag';
+import chromeStyles from '../ui/SidebarChrome.module.css';
 import styles from './CollapsedRail.module.css';
 
 export type CollapsedRailAdminMode = 'direct-edit' | 'turn-clock';

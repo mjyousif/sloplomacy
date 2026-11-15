@@ -1,9 +1,9 @@
 import { BookmarkCheck, Save, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import fieldStyles from '../FormField.module.css';
 import { Modal, ModalCloseButton, ModalFooter } from '../modal/Modal';
 import promptStyles from '../modal/PromptDialog.module.css';
+import fieldStyles from '../ui/FormField.module.css';
 
 export interface SaveSandboxModalProps {
   isOpen: boolean;

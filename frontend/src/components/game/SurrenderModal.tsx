@@ -8,7 +8,7 @@ import {
 } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
 import { Modal, ModalCloseButton, ModalFooter } from '../modal/Modal';
-import { PowerFlag } from '../PowerFlag';
+import { PowerFlag } from '../ui/PowerFlag';
 import styles from './SurrenderModal.module.css';
 
 interface SurrenderModalProps {

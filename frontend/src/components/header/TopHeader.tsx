@@ -5,18 +5,18 @@ import {
   LogOut,
   User as UserIcon,
 } from 'lucide-react';
-import type { DisplayPrefsSaveState } from '../hooks/useDisplayPrefs';
+import type { DisplayPrefsSaveState } from '../../hooks/useDisplayPrefs';
 import {
   type AuthUser,
   type MultiplayerGameSummary,
   POWER_METADATA,
   type Power,
   type TurnHistoryEntry,
-} from '../types/diplomacy';
-import { cx } from '../utils/cx';
-import type { DisplayPrefs } from '../utils/displayPrefs';
-import { AdminSettingsMenu } from './AdminSettingsMenu';
-import { BrandEmblem } from './BrandEmblem';
+} from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
+import type { DisplayPrefs } from '../../utils/displayPrefs';
+import { AdminSettingsMenu } from '../admin/AdminSettingsMenu';
+import { BrandEmblem } from '../ui/BrandEmblem';
 import { DisplaySettingsMenu } from './DisplaySettingsMenu';
 import styles from './TopHeader.module.css';
 import { TurnChronicle } from './TurnChronicle';
