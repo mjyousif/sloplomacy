@@ -195,7 +195,8 @@ async def admin_rollback_turn(
         valid_phases = PHASES_BY_SEASON.get(prev_state.season, ["Movement"])
         next_p = (
             prev_state.admin_resolution.next_phase
-            if prev_state.admin_resolution and prev_state.admin_resolution.next_phase in valid_phases
+            if prev_state.admin_resolution
+            and prev_state.admin_resolution.next_phase in valid_phases
             else valid_phases[0]
         )
         prev_state.phase = next_p

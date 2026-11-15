@@ -41,12 +41,18 @@ describe('press read marks when the game ends', () => {
 
     // The revealed feed is renumbered for the whole game, private press included.
     const revealed = [msg(1, 'GERMANY'), msg(4, 'ENGLAND'), msg(7, 'ITALY')];
-    pressStore.setFeed('g1', { power: 'FRANCE', revealed: true, messages: revealed });
+    pressStore.setFeed('g1', {
+      power: 'FRANCE',
+      revealed: true,
+      messages: revealed,
+    });
 
     const { lastRead } = pressStore.getState();
     expect(lastRead).toEqual({ [PUBLIC_CHANNEL]: 7 });
     expect(totalUnread(revealed, 'FRANCE', lastRead)).toBe(0);
-    expect(loadReadMarks('g1', 'FRANCE', true)).toEqual({ [PUBLIC_CHANNEL]: 7 });
+    expect(loadReadMarks('g1', 'FRANCE', true)).toEqual({
+      [PUBLIC_CHANNEL]: 7,
+    });
     // The marks from before the end are left as they were.
     expect(loadReadMarks('g1', 'FRANCE')).toEqual({ [PUBLIC_CHANNEL]: 1 });
   });

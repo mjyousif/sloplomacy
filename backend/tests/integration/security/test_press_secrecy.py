@@ -127,7 +127,12 @@ def test_a_player_cannot_send_as_another_power(match):
 
 def test_an_anonymous_author_is_hidden_from_other_players_and_the_host(match):
     sent = send(
-        match, bob_headers(), "GERMANY", "Someone will stab France", ["FRANCE", "ENGLAND"], anonymous=True
+        match,
+        bob_headers(),
+        "GERMANY",
+        "Someone will stab France",
+        ["FRANCE", "ENGLAND"],
+        anonymous=True,
     )
     assert sent.status_code == 200
     assert sent.json()["sender"] == "GERMANY"
@@ -202,7 +207,10 @@ def test_game_over_reveals_all_press_and_closes_private_press(match):
         ("Trust nobody", "GERMANY"),
     ]
     assert send(match, carol_headers(), "ENGLAND", "psst", ["FRANCE"]).status_code == 409
-    assert send(match, carol_headers(), "ENGLAND", "psst", ["FRANCE"], anonymous=True).status_code == 409
+    assert (
+        send(match, carol_headers(), "ENGLAND", "psst", ["FRANCE"], anonymous=True).status_code
+        == 409
+    )
     assert send(match, carol_headers(), "ENGLAND", "Good game").status_code == 200
 
 

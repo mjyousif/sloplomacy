@@ -11,6 +11,7 @@ Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #
 
 - [ ] Every response or broadcast of a live match's `GameState` goes through `sanitize_game_state_for_viewer`. A `waiting` match (a lobby, or one that dropped to one player) is still live: never skip masking by status. This includes votes, extends, ready, `power`, `simulate`, save-as and WebSocket pushes. Returning `game` directly is a bug.
 - [ ] Derived fields are masked too: `preview`, issues, diagnostics, history. Rebuild them from what the viewer may see, never filter after the fact.
+- [ ] Counters leak too. A sequence number shared by messages that different viewers may read shows, by its gaps, how many they cannot see. Number per viewer (press `seq` comes from `PressMessage.numbers`).
 - [ ] A `?power=` query only selects among the caller's own seats. It never grants a view of another power.
 - [ ] The WebSocket learns the caller from the `auth` first message (`?handshake=1`). Never put a token in a URL (Cloud Run logs it).
 - [ ] Per-viewer broadcast: each socket gets its own masked copy, not one shared payload.

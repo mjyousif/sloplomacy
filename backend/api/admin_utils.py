@@ -309,7 +309,8 @@ async def record_admin_history_and_log(
         trailing.orders = compute_admin_orders(trailing.units, after_state.units)
     else:
         admin_snap = before_state.model_copy(
-            deep=True, update={"preview": None, "admin_resolution": None, "issues": [], "timer": None}
+            deep=True,
+            update={"preview": None, "admin_resolution": None, "issues": [], "timer": None},
         )
         admin_snap.phase = "Admin"
         admin_snap.orders = compute_admin_orders(before_state.units, after_state.units)

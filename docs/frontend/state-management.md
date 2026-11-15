@@ -48,7 +48,7 @@ The state the workspace alone uses (`mapRef`, `zoomPercent`, `hoveredUnitId`) an
 | `highlightedProvinces`| `string[]` | UI | Provinces highlighted during targeting or diagnostic inspection. |
 | `sandboxMode` | `boolean` | Mode | True when user is in Hypothetical Mode (Eye icon, guessing opponent moves), from `useSandboxSession`. |
 | `sandboxGameId` | `string \| null` | Mode | Id of the private server-side copy used by a multiplayer sandbox, or `null`, from `useSandboxSession`. Drafts, AI plans and previews go to `draftGameId`, which is this id when set and `activeGameId` otherwise. |
-| `simulationResult` | `SimulationResult \| null`| UI | Cached non-destructive simulation preview from the server. |
+| `simulationResult` | `SimulationResult \| null`| UI | The server's `preview` of the phase being played (a guess with everyone else holding, never a result), or a past turn's resolution. |
 | `showSimulationOverlay`| `boolean` | UI | Whether combat resolutions (arrows, bounces, cuts) are projected on the map, from `useSandboxSession`. |
 | `adminModalOpen` | `boolean` | Admin | Controls visibility of the game creator's Turn and Clock Settings sidebar panel (`AdminTurnClockSidebar`). |
 | `adminOverrideActive`| `boolean` | Admin | The host's Direct-Edit toggle. It only takes effect through the derived `directEditActive`, which also requires `isGameCreator`, so it does nothing in a game the player does not host. |

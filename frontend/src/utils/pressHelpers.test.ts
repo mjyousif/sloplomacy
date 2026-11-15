@@ -196,7 +196,14 @@ describe('read marks', () => {
 
   it('can mark everything held as read', () => {
     expect(
-      readUpToNow([msg(1, 'GERMANY'), msg(3, 'ENGLAND'), msg(2, 'GERMANY', ['FRANCE'])]),
-    ).toEqual({ [PUBLIC_CHANNEL]: 3, [channelOf(msg(2, 'GERMANY', ['FRANCE']))]: 2 });
+      readUpToNow([
+        msg(1, 'GERMANY'),
+        msg(3, 'ENGLAND'),
+        msg(2, 'GERMANY', ['FRANCE']),
+      ]),
+    ).toEqual({
+      [PUBLIC_CHANNEL]: 3,
+      [channelOf(msg(2, 'GERMANY', ['FRANCE']))]: 2,
+    });
   });
 });

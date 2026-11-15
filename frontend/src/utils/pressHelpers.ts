@@ -206,7 +206,11 @@ const READ_STORAGE_PREFIX = 'sloplomacy_press_read_v2';
  * Revealed press is numbered for the whole game, not per reader, so its marks are kept apart
  * from the ones made while the game was on.
  */
-function readStorageKey(gameId: string, power: Power, revealed: boolean): string {
+function readStorageKey(
+  gameId: string,
+  power: Power,
+  revealed: boolean,
+): string {
   return `${READ_STORAGE_PREFIX}:${gameId}:${power}${revealed ? ':revealed' : ''}`;
 }
 
