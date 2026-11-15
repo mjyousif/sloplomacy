@@ -9,7 +9,6 @@ function setup(over: Partial<MyGamesSectionProps> = {}) {
   const props: MyGamesSectionProps = {
     user: ME,
     myGames: [],
-    hostFormPlace: 'on the right',
     handlePowerSlotClick: vi.fn(async () => {}),
     onOpenAuth: vi.fn(),
     onOpenSurrenderModal: vi.fn(),
@@ -41,18 +40,13 @@ describe('MyGamesSection', () => {
     expect(props.onOpenAuth).toHaveBeenCalledWith(undefined, 'signin');
   });
 
-  it('tells a player with no games where the Host form is', () => {
-    const a = setup();
+  it('points a player with no games at the Host game button', () => {
+    setup();
     expect(screen.getByText('0 Games')).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Host a public or private campaign on the right, or join/,
+        /Host a public or private campaign with Host game, or join/,
       ),
-    ).toBeInTheDocument();
-    a.view.unmount();
-    setup({ hostFormPlace: 'below' });
-    expect(
-      screen.getByText(/private campaign below, or join/),
     ).toBeInTheDocument();
   });
 

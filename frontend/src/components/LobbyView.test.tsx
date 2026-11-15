@@ -5,11 +5,11 @@ import {
   card,
   MINE,
   OPEN,
+  openHost,
   resetLobbyEnv,
   SANDBOX,
   SECRET,
   setup,
-  stubMatchMedia,
 } from './LobbyView.testkit';
 import { game } from './lobby/lobby.testkit';
 
@@ -17,7 +17,7 @@ beforeEach(resetLobbyEnv);
 afterEach(() => vi.useRealTimers());
 
 describe('LobbyView layout', () => {
-  it('stacks the hero, both sections, both cards and the footer in order', () => {
+  it('stacks the hero, the action row, both sections and the footer in order', () => {
     const { view } = setup();
     const root = view.container.firstElementChild as HTMLElement;
     expect(
@@ -26,28 +26,24 @@ describe('LobbyView layout', () => {
     const grid = screen.getByTestId('lobby-main-grid');
     expect(
       [...grid.children].map((c) => c.getAttribute('data-testid')),
-    ).toEqual(['lobby-games-column', 'lobby-create-column']);
+    ).toEqual(['lobby-games-column']);
     expect(
       [...screen.getByTestId('lobby-games-column').children].map(
-        (c) => c.tagName,
+        (c) => c.getAttribute('data-testid') ?? c.tagName,
       ),
-    ).toEqual(['SECTION', 'SECTION']);
+    ).toEqual(['lobby-action-row', 'SECTION', 'SECTION']);
+    // The Host and Join forms are not on the page until their buttons open them.
     expect(
-      [...screen.getByTestId('lobby-create-column').children].map((c) =>
-        c.getAttribute('data-testid'),
-      ),
-    ).toEqual(['create-campaign-card', 'join-with-code-card']);
+      screen.queryByTestId('create-campaign-card'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('join-with-code-card')).not.toBeInTheDocument();
   });
 
-  it('says "on the right" on a desktop and "below" on a phone', () => {
-    const first = setup();
-    expect(
-      screen.getAllByText(/campaign on the right|match on the right/),
-    ).toHaveLength(2);
-    first.view.unmount();
-    stubMatchMedia(true);
+  it('points both empty lists at the Host game button', () => {
     setup();
-    expect(screen.getAllByText(/campaign below|match below/)).toHaveLength(2);
+    expect(
+      screen.getAllByText(/campaign with Host game|match with Host game/),
+    ).toHaveLength(2);
   });
 
   it('sorts games: my list gets mine and saved sandboxes, the lobbies skip sandboxes', () => {
@@ -111,6 +107,7 @@ describe('LobbyView details', () => {
       value: { writeText },
       configurable: true,
     });
+    openHost();
     await user.click(
       screen.getByRole('button', { name: /Private \(Passcode\)/ }),
     );

@@ -24,11 +24,9 @@ export const PowerPicker: React.FC<PowerPickerProps> = ({
             type="button"
             onClick={() => onSelect(pwr)}
             data-selected={selected ? 'true' : undefined}
+            aria-pressed={selected}
             className={styles.createPowerOption}
-            style={{
-              borderColor: selected ? meta.color : undefined,
-              backgroundColor: selected ? meta.lightBg : undefined,
-            }}
+            style={{ backgroundColor: selected ? meta.lightBg : undefined }}
           >
             <PowerFlag power={pwr} width={22} height={15} />
             <span>{meta.shortName}</span>

@@ -1,6 +1,6 @@
 // @scenario mobile
 // @order 6
-// @description Phone (390x844, touch): full-width map, order sheet, ≡ tools drawer, docked unit bar, card-to-map selection, a move by tap, a winter build, a past turn from the drawer, and back to the lobby.
+// @description Phone (390x844, touch): full-width map, order sheet, ≡ tools drawer, docked unit bar, card-to-map selection, a move by tap, a winter build, a past turn from the drawer, the lobby's Host and Join dialogs, and back to the lobby.
 import { test, expect, Page } from '@playwright/test';
 import { ScenarioRecorder, playBurgundyBounce, seedScenario } from './helpers';
 
@@ -140,6 +140,37 @@ test.describe('Scenario 06: Phone game screen', () => {
       await expect(page.locator('[data-testid="compact-brand"]')).toContainText(/Sloplomacy/i);
       await expectNoSidewaysScroll(page);
       await recorder.recordStep(page, '08_lobby_returned');
+
+      recorder.finalize('PASSED');
+    } catch (err) {
+      recorder.finalize('FAILED');
+      throw err;
+    }
+  });
+
+  test('opens Host game as a dialog that fits the phone', async ({ page }) => {
+    const recorder = new ScenarioRecorder('mobile_lobby_dialogs');
+    recorder.attachListeners(page);
+
+    try {
+      await page.goto('/');
+      await page.waitForSelector('[data-testid="btn-enter-sandbox"]', { timeout: 15000 });
+      await page.getByRole('button', { name: 'Host game' }).tap();
+      const hostDialog = page.getByRole('dialog', { name: 'Host game' });
+      await expect(hostDialog).toBeVisible();
+      const box = await hostDialog.boundingBox();
+      const viewport = page.viewportSize();
+      expect(box && viewport && box.x >= 0 && box.x + box.width <= viewport.width).toBe(true);
+      expect(box && viewport && box.y >= 0 && box.y + box.height <= viewport.height).toBe(true);
+      await expectNoSidewaysScroll(page);
+      await recorder.recordStep(page, '01_host_game_dialog');
+      await page.getByRole('button', { name: 'Close Host game' }).tap();
+      await expect(hostDialog).toHaveCount(0);
+
+      await page.getByRole('button', { name: 'Join with code' }).tap();
+      await expect(page.getByRole('dialog', { name: 'Join with code' })).toBeVisible();
+      await expectNoSidewaysScroll(page);
+      await recorder.recordStep(page, '02_join_with_code_dialog');
 
       recorder.finalize('PASSED');
     } catch (err) {

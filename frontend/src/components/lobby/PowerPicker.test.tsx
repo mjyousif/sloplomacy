@@ -19,9 +19,11 @@ describe('PowerPicker', () => {
     expect(selected[0].querySelector('span')).toHaveTextContent(
       POWER_METADATA.ITALY.shortName,
     );
-    expect(selected[0].style.borderColor).not.toBe('');
+    // The chosen one is told to assistive tech too, and only it carries its power's tint.
+    expect(buttons.map((b) => b.getAttribute('aria-pressed'))).toEqual(
+      ALL_POWERS.map((p) => String(p === 'ITALY')),
+    );
     expect(selected[0].style.backgroundColor).not.toBe('');
-    expect(buttons[0].style.borderColor).toBe('');
     expect(buttons[0].style.backgroundColor).toBe('');
     // None of them submit a form around them.
     expect(buttons.every((b) => b.getAttribute('type') === 'button')).toBe(

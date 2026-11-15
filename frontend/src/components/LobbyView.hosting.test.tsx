@@ -2,7 +2,14 @@
 import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MultiplayerGameSummary } from '../types/diplomacy';
-import { resetLobbyEnv, setup } from './LobbyView.testkit';
+import {
+  hostDialog,
+  joinDialog,
+  openHost,
+  openJoin,
+  resetLobbyEnv,
+  setup,
+} from './LobbyView.testkit';
 import { game } from './lobby/lobby.testkit';
 
 beforeEach(resetLobbyEnv);
@@ -13,9 +20,11 @@ describe('LobbyView hosting', () => {
 
   it('sends a guest to sign up instead', async () => {
     const { props, user } = setup({ user: null });
+    openHost();
     await user.click(
       screen.getByRole('button', { name: 'Sign In to Host Campaign' }),
     );
+    expect(hostDialog()).not.toBeInTheDocument();
     expect(props.onOpenAuth).toHaveBeenCalledWith(
       'Sign in or create an account to host a new multiplayer Diplomacy campaign.',
       'signup',
@@ -25,6 +34,7 @@ describe('LobbyView hosting', () => {
 
   it('creates a public game with the trimmed name and the picked country', async () => {
     const { props, user } = setup();
+    openHost();
     await user.type(nameField(), '  Vienna ');
     await user.click(
       screen.getByText('Germany', {
@@ -40,6 +50,9 @@ describe('LobbyView hosting', () => {
       false,
       '',
     );
+    // The dialog closes, and opens again with an empty name.
+    expect(hostDialog()).not.toBeInTheDocument();
+    openHost();
     expect(nameField()).toHaveValue('');
     expect(
       screen.queryByText('Private Campaign Created!'),
@@ -48,6 +61,7 @@ describe('LobbyView hosting', () => {
 
   it('names an unnamed game after the player', async () => {
     const { props, user } = setup();
+    openHost();
     await user.click(
       screen.getByRole('button', { name: /Create & Play as France/ }),
     );
@@ -57,6 +71,7 @@ describe('LobbyView hosting', () => {
 
   it('wants a passcode for a private game', async () => {
     const { props, user } = setup();
+    openHost();
     await user.click(
       screen.getByRole('button', { name: /Private \(Passcode\)/ }),
     );
@@ -69,6 +84,7 @@ describe('LobbyView hosting', () => {
       screen.getByText('Please specify a passcode for your private campaign.'),
     ).toBeInTheDocument();
     expect(props.onCreateGame).not.toHaveBeenCalled();
+    expect(hostDialog()).toBeInTheDocument();
   });
 
   it('shows the credentials of a private game, and copies them with a 2.5 s tick', async () => {
@@ -82,6 +98,7 @@ describe('LobbyView hosting', () => {
       value: { writeText },
       configurable: true,
     });
+    openHost();
     await user.type(nameField(), 'Fresh');
     await user.click(
       screen.getByRole('button', { name: /Private \(Passcode\)/ }),
@@ -100,7 +117,7 @@ describe('LobbyView hosting', () => {
       'sekret',
     );
     expect(screen.getByText('Private Campaign Created!')).toBeInTheDocument();
-    expect(nameField()).toHaveValue('');
+    expect(hostDialog()).not.toBeInTheDocument();
 
     vi.useFakeTimers({ shouldAdvanceTime: true });
     fireEvent.click(screen.getByTitle('Copy Game ID'));
@@ -120,6 +137,7 @@ describe('LobbyView hosting', () => {
 
   it('empties the passcode after creating, and shows no credentials when none come back', async () => {
     const { props, user } = setup();
+    openHost();
     await user.click(
       screen.getByRole('button', { name: /Private \(Passcode\)/ }),
     );
@@ -132,6 +150,7 @@ describe('LobbyView hosting', () => {
       screen.queryByText('Private Campaign Created!'),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/Cannot read/)).not.toBeInTheDocument();
+    openHost();
     expect(screen.getByLabelText('Campaign Passcode / PIN')).toHaveValue('');
   });
 
@@ -141,10 +160,12 @@ describe('LobbyView hosting', () => {
       .mockRejectedValueOnce(new Error('Name taken'))
       .mockRejectedValueOnce(new Error(''));
     const { user } = setup({ onCreateGame });
+    openHost();
     await user.click(
       screen.getByRole('button', { name: /Create & Play as France/ }),
     );
     expect(screen.getByText('Name taken')).toBeInTheDocument();
+    expect(hostDialog()).toBeInTheDocument();
     await user.click(
       screen.getByRole('button', { name: /Create & Play as France/ }),
     );
@@ -157,6 +178,7 @@ describe('LobbyView hosting', () => {
       () => new Promise<MultiplayerGameSummary | void>((r) => (finish = r)),
     );
     const { user } = setup({ onCreateGame });
+    openHost();
     await user.click(
       screen.getByRole('button', { name: /Create & Play as France/ }),
     );
@@ -164,6 +186,8 @@ describe('LobbyView hosting', () => {
       screen.getByRole('button', { name: 'Creating Campaign...' }),
     ).toBeDisabled();
     await act(async () => finish());
+    expect(hostDialog()).not.toBeInTheDocument();
+    openHost();
     expect(
       screen.getByRole('button', { name: /Create & Play as France/ }),
     ).toBeEnabled();
@@ -175,21 +199,26 @@ describe('LobbyView joining with a code', () => {
 
   it('asks a guest to sign in', async () => {
     const { props } = setup({ user: null });
+    openJoin();
     fireEvent.submit(idField().closest('form') as Element);
     expect(props.onOpenAuth).toHaveBeenCalledWith(
       'Sign in or create an account to join a campaign.',
       'signin',
     );
+    expect(joinDialog()).not.toBeInTheDocument();
   });
 
   it('ignores a blank Game ID', () => {
     const { props } = setup();
+    openJoin();
     fireEvent.submit(idField().closest('form') as Element);
     expect(props.onJoinOrEnterGame).not.toHaveBeenCalled();
+    expect(joinDialog()).toBeInTheDocument();
   });
 
   it('joins with the trimmed id and passcode, then empties both', async () => {
     const { props, user } = setup();
+    openJoin();
     await user.type(idField(), ' mp_77 ');
     await user.type(screen.getByLabelText('Lobby Passcode'), ' pw ');
     await user.click(
@@ -205,6 +234,9 @@ describe('LobbyView joining with a code', () => {
       'TURKEY',
       'pw',
     );
+    // The dialog closes, and opens again with both fields empty.
+    expect(joinDialog()).not.toBeInTheDocument();
+    openJoin();
     expect(idField()).toHaveValue('');
     expect(screen.getByLabelText('Lobby Passcode')).toHaveValue('');
     expect(
@@ -218,11 +250,13 @@ describe('LobbyView joining with a code', () => {
       .mockRejectedValueOnce(new Error('No such game'))
       .mockRejectedValueOnce(new Error(''));
     const { user } = setup({ onJoinOrEnterGame });
+    openJoin();
     await user.type(idField(), 'mp_1');
     await user.click(
       screen.getByRole('button', { name: /Unlock & Claim England/ }),
     );
     expect(screen.getByText('No such game')).toBeInTheDocument();
+    expect(joinDialog()).toBeInTheDocument();
     expect(idField()).toHaveValue('mp_1');
     await user.click(
       screen.getByRole('button', { name: /Unlock & Claim England/ }),
@@ -240,6 +274,7 @@ describe('LobbyView joining with a code', () => {
       () => new Promise<void>((r) => (finish = r)),
     );
     const { user } = setup({ onJoinOrEnterGame });
+    openJoin();
     await user.type(idField(), 'mp_1');
     await user.click(
       screen.getByRole('button', { name: /Unlock & Claim England/ }),

@@ -1,18 +1,20 @@
 import type React from 'react';
 import { useState } from 'react';
-import { useCompactLayout } from '../hooks/useCompactLayout';
 import {
   type AuthUser,
   type MultiplayerGameSummary,
   POWER_METADATA,
   type Power,
 } from '../types/diplomacy';
-import { defaultCampaignName } from '../utils/campaignName';
 import { isVisibleInMyActiveCampaigns } from '../utils/gameOverHelpers';
 import { VersionBadge } from './header/VersionBadge';
 import styles from './LobbyView.module.css';
 import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
+import { useHostGameForm } from './lobby/hooks/useHostGameForm';
+import { useJoinWithCodeForm } from './lobby/hooks/useJoinWithCodeForm';
 import { JoinWithCodeCard } from './lobby/JoinWithCodeCard';
+import { LobbyActionRow } from './lobby/LobbyActionRow';
+import { LobbyFormDialog } from './lobby/LobbyFormDialog';
 import { LobbyHero } from './lobby/LobbyHero';
 import { MyGamesSection } from './lobby/MyGamesSection';
 import { OpenLobbiesSection } from './lobby/OpenLobbiesSection';
@@ -51,33 +53,22 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onJoinOrEnterGame,
   onOpenSurrenderModal,
 }) => {
-  // On a phone the Host and Join forms sit below the game lists instead of beside them.
-  const hostFormPlace = useCompactLayout() ? 'below' : 'on the right';
-
-  // Host game form state
-  const [newGameName, setNewGameName] = useState('');
-  const [selectedCreatePower, setSelectedCreatePower] =
-    useState<Power>('FRANCE');
-  const [isPrivate, setIsPrivate] = useState<boolean>(false);
-  const [passcode, setPasscode] = useState<string>('');
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-
-  // Modal for newly created private campaign
-  const [createdPrivateModal, setCreatedPrivateModal] = useState<{
-    gameId: string;
-    name: string;
-    passcode: string;
-    power: Power;
-  } | null>(null);
+  // Host and Join with code open as dialogs from the action row; one at a time.
+  const [openDialog, setOpenDialog] = useState<'host' | 'join' | null>(null);
+  const closeDialog = () => setOpenDialog(null);
+  const host = useHostGameForm({
+    user,
+    onOpenAuth,
+    onCreateGame,
+    onDone: closeDialog,
+  });
+  const join = useJoinWithCodeForm({
+    user,
+    onOpenAuth,
+    onJoinOrEnterGame,
+    onDone: closeDialog,
+  });
   const [copiedField, setCopiedField] = useState<string | null>(null);
-
-  // Join by Game ID & Passcode form state
-  const [joinCodeGameId, setJoinCodeGameId] = useState('');
-  const [joinCodePasscode, setJoinCodePasscode] = useState('');
-  const [joinCodePower, setJoinCodePower] = useState<Power>('ENGLAND');
-  const [joinCodeLoading, setJoinCodeLoading] = useState(false);
-  const [joinCodeError, setJoinCodeError] = useState<string | null>(null);
 
   // Modal prompt when clicking a private game slot in the list
   const [passcodeModalTarget, setPasscodeModalTarget] = useState<{
@@ -112,45 +103,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   const multiplayerLobbies = games.filter(
     (g) => !g.is_sandbox && g.status !== 'completed' && !g.winner,
   );
-
-  const handleCreateMatch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) {
-      onOpenAuth(
-        'Sign in or create an account to host a new multiplayer Diplomacy campaign.',
-        'signup',
-      );
-      return;
-    }
-    if (isPrivate && !passcode.trim()) {
-      setCreateError('Please specify a passcode for your private campaign.');
-      return;
-    }
-    setCreating(true);
-    setCreateError(null);
-    try {
-      const summary = await onCreateGame(
-        newGameName.trim() || defaultCampaignName(user.displayName),
-        selectedCreatePower,
-        isPrivate,
-        passcode.trim(),
-      );
-      if (isPrivate && summary && passcode.trim()) {
-        setCreatedPrivateModal({
-          gameId: summary.game_id,
-          name: summary.name,
-          passcode: passcode.trim(),
-          power: selectedCreatePower,
-        });
-      }
-      setNewGameName('');
-      setPasscode('');
-    } catch (err: any) {
-      setCreateError(err.message || 'Failed to create campaign.');
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const handlePowerSlotClick = async (
     game: MultiplayerGameSummary,
@@ -210,31 +162,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     }
   };
 
-  const handleJoinCodeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) {
-      onOpenAuth('Sign in or create an account to join a campaign.', 'signin');
-      return;
-    }
-    const cleanId = joinCodeGameId.trim();
-    if (!cleanId) return;
-
-    setJoinCodeLoading(true);
-    setJoinCodeError(null);
-    try {
-      await onJoinOrEnterGame(cleanId, joinCodePower, joinCodePasscode.trim());
-      setJoinCodeGameId('');
-      setJoinCodePasscode('');
-    } catch (err: any) {
-      setJoinCodeError(
-        err.message ||
-          'Could not join campaign. Please verify Game ID and passcode.',
-      );
-    } finally {
-      setJoinCodeLoading(false);
-    }
-  };
-
   return (
     <div className={styles.lobbyContainer}>
       <LobbyHero
@@ -244,15 +171,24 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       />
 
       <div className={styles.lobbyMainGrid} data-testid="lobby-main-grid">
-        {/* Left Column: My Games + Open Lobbies */}
+        {/* Host and Join buttons, then My Games + Open Lobbies */}
         <div
           className={styles.lobbyGamesColumn}
           data-testid="lobby-games-column"
         >
+          <LobbyActionRow
+            onHostGame={() => {
+              host.clearError();
+              setOpenDialog('host');
+            }}
+            onJoinWithCode={() => {
+              join.clearError();
+              setOpenDialog('join');
+            }}
+          />
           <MyGamesSection
             user={user}
             myGames={myGames}
-            hostFormPlace={hostFormPlace}
             handlePowerSlotClick={handlePowerSlotClick}
             onOpenAuth={onOpenAuth}
             onOpenSurrenderModal={onOpenSurrenderModal}
@@ -263,45 +199,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             multiplayerLobbies={multiplayerLobbies}
             loadingGames={loadingGames}
             onRefreshGames={onRefreshGames}
-            hostFormPlace={hostFormPlace}
             joiningKey={joiningKey}
             handlePowerSlotClick={handlePowerSlotClick}
             onOpenSurrenderModal={onOpenSurrenderModal}
           />
         </div>
-
-        {/* Right Column: Host New Multiplayer Campaign & Join with Code */}
-        <aside data-testid="lobby-create-column">
-          {/* 1. Host New Campaign Card */}
-          <CreateCampaignPanel
-            user={user}
-            newGameName={newGameName}
-            setNewGameName={setNewGameName}
-            isPrivate={isPrivate}
-            setIsPrivate={setIsPrivate}
-            passcode={passcode}
-            setPasscode={setPasscode}
-            selectedCreatePower={selectedCreatePower}
-            setSelectedCreatePower={setSelectedCreatePower}
-            createError={createError}
-            creating={creating}
-            handleCreateMatch={handleCreateMatch}
-          />
-
-          {/* 2. Join Private Campaign by Game ID & Passcode */}
-          <JoinWithCodeCard
-            user={user}
-            joinCodeGameId={joinCodeGameId}
-            setJoinCodeGameId={setJoinCodeGameId}
-            joinCodePasscode={joinCodePasscode}
-            setJoinCodePasscode={setJoinCodePasscode}
-            joinCodePower={joinCodePower}
-            setJoinCodePower={setJoinCodePower}
-            joinCodeLoading={joinCodeLoading}
-            joinCodeError={joinCodeError}
-            handleJoinCodeSubmit={handleJoinCodeSubmit}
-          />
-        </aside>
       </div>
 
       {/* FOOTER BAR */}
@@ -312,10 +214,29 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         <VersionBadge />
       </footer>
 
+      {openDialog === 'host' && (
+        <LobbyFormDialog
+          label="Host game"
+          testId="host-game-dialog"
+          onClose={closeDialog}
+        >
+          <CreateCampaignPanel user={user} {...host.panel} />
+        </LobbyFormDialog>
+      )}
+      {openDialog === 'join' && (
+        <LobbyFormDialog
+          label="Join with code"
+          testId="join-with-code-dialog"
+          onClose={closeDialog}
+        >
+          <JoinWithCodeCard user={user} {...join.card} />
+        </LobbyFormDialog>
+      )}
+
       {/* CONFIRMATION MODAL: PRIVATE CAMPAIGN CREATED */}
       <PrivateCampaignCreatedModal
-        createdPrivateModal={createdPrivateModal}
-        onClose={() => setCreatedPrivateModal(null)}
+        createdPrivateModal={host.createdPrivate}
+        onClose={host.closeCreatedPrivate}
         handleCopy={handleCopy}
         copiedGameId={copiedField === 'gid'}
         copiedPasscode={copiedField === 'pw'}

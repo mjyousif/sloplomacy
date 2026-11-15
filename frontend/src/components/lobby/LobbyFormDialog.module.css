@@ -1,0 +1,48 @@
+@layer components {
+  /* The form card inside brings its own background, border and padding. */
+  .card {
+    position: relative;
+    max-width: 440px;
+    border-radius: 12px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65);
+  }
+
+  .close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .close:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: #334155;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .close {
+    top: 4px;
+    right: 4px;
+  }
+
+  /* Modal's phone rule sets no hover state, so the wide one is restated here. */
+  :global([data-layout="compact"]) .close:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: #334155;
+  }
+}
