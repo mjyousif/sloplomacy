@@ -58,12 +58,6 @@
     line-height: 1.15;
   }
 
-  .tools-header-sub {
-    font-size: 0.65rem;
-    color: #94a3b8;
-    display: block;
-  }
-
   .tools-sidebar-content {
     flex: 1;
     overflow-y: auto;

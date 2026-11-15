@@ -71,8 +71,8 @@ describe('MacroSidebar panel', () => {
       'active-power-banner',
       'macro-units-scroll-area',
       'macro-footer-actions',
-      null,
     ]);
+    expect(screen.queryByTitle(/Build revision:/)).toBeNull();
     expect(
       aside
         .querySelector('[data-testid="active-power-banner"]')

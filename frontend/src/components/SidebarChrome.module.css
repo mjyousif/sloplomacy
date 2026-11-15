@@ -69,12 +69,4 @@
   .rail-expand-chevron:hover {
     opacity: 1;
   }
-
-  .sidebar-version-footer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 6px;
-    padding-top: 4px;
-  }
 }

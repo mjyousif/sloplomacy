@@ -17,7 +17,6 @@ import type { DirectEditMapHandlers } from '../EuropeMap';
 import macroStyles from '../MacroSidebar.module.css';
 import { AdminTileInspector } from '../map/hud/AdminTileInspector';
 import chromeStyles from '../SidebarChrome.module.css';
-import { VersionBadge } from '../VersionBadge';
 import styles from './AdminDirectEditSidebar.module.css';
 import adminSidebarStyles from './AdminSidebar.module.css';
 import { CollapsedRail } from './CollapsedRail';
@@ -290,9 +289,6 @@ export function AdminDirectEditSidebar({
           <div className={macroStyles.macroUnitsScrollArea}>
             {inspectorContent}
           </div>
-          <div className={chromeStyles.sidebarVersionFooter}>
-            <VersionBadge />
-          </div>
         </div>
       </BottomSheet>
     );
@@ -362,10 +358,6 @@ export function AdminDirectEditSidebar({
       </div>
 
       <div className={macroStyles.macroUnitsScrollArea}>{inspectorContent}</div>
-
-      <div className={chromeStyles.sidebarVersionFooter}>
-        <VersionBadge />
-      </div>
     </aside>
   );
 }

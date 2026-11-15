@@ -117,20 +117,15 @@ describe('ToolsSidebar', () => {
     expect(html).not.toContain('CHANCELLERY TOOLS');
   });
 
-  it('renders expanded tools layout with legend, zoom, powers and sandbox', () => {
+  it('renders expanded tools layout with zoom, powers and sandbox (no legend or subtitle)', () => {
     const html = renderToString(
       React.createElement(ToolsSidebar, baseToolsProps),
     );
     expect(html).toContain('CHANCELLERY TOOLS');
+    expect(html).not.toContain('Intel, Camera');
     expect(html).toContain('MAP VIEW &amp; CAMERA');
     expect(html).toContain('105%');
-    expect(html).toContain('TACTICAL MAP LEGEND');
-    expect(html).toContain('Move / Attack');
-    expect(html).not.toContain('Move / Attack Vector');
-    expect(html).toContain('Support Link');
-    expect(html).toContain('Fleet Convoy');
-    expect(html).toContain('Warning');
-    expect(html).not.toContain('Warning / Dislodgement');
+    expect(html).not.toContain('TACTICAL MAP LEGEND');
     expect(html).toContain('COMMAND NATION (SELECT)');
     expect(html).toContain('France');
     expect(html).toContain('England');
@@ -138,20 +133,6 @@ describe('ToolsSidebar', () => {
     expect(html).toContain('HYPOTHETICAL MODE &amp; PRE-MOVES');
     expect(html).toContain('Enter Hypothetical Mode');
     expect(html).not.toContain('CREATOR ADMIN TOOLS');
-  });
-
-  it('pairs the legend entries so convoy sits beside move and warning beside support', () => {
-    const html = renderToString(
-      React.createElement(ToolsSidebar, baseToolsProps),
-    );
-    const order = [
-      'Move / Attack',
-      'Fleet Convoy',
-      'Support Link',
-      'Warning',
-    ].map((label) => html.indexOf(label));
-    expect(order).not.toContain(-1);
-    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
   it('renders sandbox as collapsible section with toggle buttons (admin tools moved to display settings)', () => {
@@ -169,8 +150,8 @@ describe('ToolsSidebar', () => {
     expect(html).not.toContain('CREATOR ADMIN TOOLS');
 
     const buttons = html.match(/data-testid="sidebar-section-toggle"/g);
-    // Legend, Powers, Sandbox -> 3 collapsible sections
-    expect(buttons?.length).toBe(3);
+    // Powers, Sandbox -> 2 collapsible sections
+    expect(buttons?.length).toBe(2);
   });
 
   it('renders SVG flags and rank badges in diplomatic standings', () => {
@@ -243,8 +224,9 @@ describe('ToolsSidebar', () => {
     it('shows the full tools, even when the desktop rail was collapsed, but no zoom section', () => {
       const html = drawer({ open: true, collapsed: true });
       expect(html).toContain('data-testid="tools-drawer"');
-      expect(html).toContain('TACTICAL MAP LEGEND');
+      expect(html).toContain('COMMAND NATION (SELECT)');
       expect(html).toContain('Enter Hypothetical Mode');
+      expect(html).not.toContain('TACTICAL MAP LEGEND');
       expect(html).not.toContain('data-testid="tools-sidebar-collapsed"');
       // The zoom buttons are on the map on a phone.
       expect(html).not.toContain('MAP VIEW &amp; CAMERA');
