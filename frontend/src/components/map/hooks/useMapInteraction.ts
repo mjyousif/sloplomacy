@@ -103,13 +103,8 @@ export function useMapInteraction({
   selection,
   gestures,
 }: UseMapInteractionOptions): MapInteraction {
-  const {
-    selectedUnit,
-    selectedUnitOptions,
-    controlPower,
-    canEditAnyPower,
-    reachableMap,
-  } = selection;
+  const { selectedUnit, selectedUnitOptions, canControl, reachableMap } =
+    selection;
   const { isPanningRef, dragMovedRef } = gestures;
 
   const [hoveredProv, setHoveredProv] = useState<string | null>(null);
@@ -168,7 +163,7 @@ export function useMapInteraction({
       if (!u.is_dislodged) {
         // If there is also a dislodged unit in this province, select the dislodged unit!
         const dis = dislodgedByProv[u.province];
-        if (dis && (dis.power === controlPower || canEditAnyPower)) {
+        if (dis && canControl(dis)) {
           onSelectUnit(dis.id);
           setInteractionMode('MOVE');
           return;
@@ -176,8 +171,7 @@ export function useMapInteraction({
         clearSelection();
         return;
       }
-      const canControl = u.power === controlPower || canEditAnyPower;
-      if (!canControl) {
+      if (!canControl(u)) {
         clearSelection();
         return;
       }
@@ -191,8 +185,7 @@ export function useMapInteraction({
     }
 
     if (isAdjustmentPhase) {
-      const canControl = u.power === controlPower || canEditAnyPower;
-      if (!canControl) {
+      if (!canControl(u)) {
         clearSelection();
         return;
       }
@@ -272,8 +265,7 @@ export function useMapInteraction({
     }
 
     // 6. Foreign units: in MOVE mode delegate to province click (allows land or convoy attacks)
-    const canControlClickedUnit = u.power === controlPower || canEditAnyPower;
-    if (!canControlClickedUnit) {
+    if (!canControl(u)) {
       if (selectedUnit && interactionMode === 'MOVE') {
         handleProvinceClick(u.province);
         return;
@@ -350,11 +342,7 @@ export function useMapInteraction({
         return;
       }
       const occ = unitsByProv[provId];
-      if (
-        occ &&
-        (occ.power === controlPower || canEditAnyPower) &&
-        (builds?.[occ.power]?.count ?? 0) < 0
-      ) {
+      if (occ && canControl(occ) && (builds?.[occ.power]?.count ?? 0) < 0) {
         onSelectUnit(selectedUnitId === occ.id ? null : occ.id);
         return;
       }
@@ -365,7 +353,7 @@ export function useMapInteraction({
     if (isRetreatPhase) {
       if (!selectedUnit) {
         const dis = dislodgedByProv[provId];
-        if (dis && (dis.power === controlPower || canEditAnyPower)) {
+        if (dis && canControl(dis)) {
           onSelectUnit(dis.id);
           setInteractionMode('MOVE');
         }
@@ -376,7 +364,7 @@ export function useMapInteraction({
         return;
       }
       const dis = dislodgedByProv[provId];
-      if (dis && (dis.power === controlPower || canEditAnyPower)) {
+      if (dis && canControl(dis)) {
         onSelectUnit(dis.id);
         setInteractionMode('MOVE');
       } else {
@@ -387,7 +375,7 @@ export function useMapInteraction({
 
     if (!selectedUnit) {
       const occupant = unitsByProv[provId];
-      if (occupant && (occupant.power === controlPower || canEditAnyPower)) {
+      if (occupant && canControl(occupant)) {
         onSelectUnit(occupant.id);
         setInteractionMode('MOVE');
       }
@@ -412,7 +400,7 @@ export function useMapInteraction({
 
       if (!isReachable && !canConvoyMove) {
         const occupant = unitsByProv[provId];
-        if (occupant && (occupant.power === controlPower || canEditAnyPower)) {
+        if (occupant && canControl(occupant)) {
           onSelectUnit(occupant.id);
           setInteractionMode('MOVE');
           setPendingAuxOrigin(null);

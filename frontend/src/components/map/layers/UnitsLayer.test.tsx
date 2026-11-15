@@ -26,7 +26,9 @@ const A_MAR = unitAt('FRANCE', 'A', 'MAR');
 function draw(units: Unit[], ctx: Partial<UnitLayerContext> = {}) {
   const unitsByProv: Record<string, Unit> = {};
   for (const u of units) if (!u.is_dislodged) unitsByProv[u.province] = u;
+  const controlPower = 'controlPower' in ctx ? ctx.controlPower : 'FRANCE';
   const full: UnitLayerContext = {
+    canControl: (u) => Boolean(ctx.canEditAnyPower) || u.power === controlPower,
     orders: {},
     provinces: FRANCE_PROVINCES,
     ownership: {},

@@ -34,9 +34,8 @@ def no_rate_limit_carryover():
     _recent_posts.clear()
 
 
-@pytest.fixture
-def match() -> str:
-    """Alice hosts as France, Bob is Germany and Carol is England."""
+def three_player_match() -> str:
+    """A match where Alice hosts as France, Bob is Germany and Carol is England."""
     gid = client.post(
         "/api/games",
         json={
@@ -58,6 +57,12 @@ def match() -> str:
         )
         assert joined.status_code == 200, joined.text
     return gid
+
+
+@pytest.fixture
+def match() -> str:
+    """Alice hosts as France, Bob is Germany and Carol is England."""
+    return three_player_match()
 
 
 def send(gid, headers, power, body="hello", recipients=(), anonymous=False):

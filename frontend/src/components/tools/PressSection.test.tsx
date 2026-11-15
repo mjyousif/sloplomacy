@@ -3,6 +3,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { pressStore } from '../../lib/pressStore';
+import { suggestionStore } from '../../lib/suggestionStore';
 import type { Power, PressMessage, ProvinceInfo } from '../../types/diplomacy';
 import { threadKey } from '../../utils/pressHelpers';
 import { PressSection, type PressSectionProps } from './PressSection';
@@ -27,6 +28,7 @@ const msg = (
   season: 'Spring',
   year: 1901,
   phase: 'Movement',
+  orders: [],
   ...extra,
 });
 
@@ -41,6 +43,9 @@ const base = (extra: Partial<PressSectionProps> = {}): PressSectionProps => ({
   gameOver: false,
   surrendered: false,
   provinces: PROVINCES,
+  units: [],
+  turn: 'Spring 1901 Movement',
+  suggestTurn: 'Spring 1901 Movement',
   onHighlightProvinces: vi.fn(),
   ...extra,
 });
@@ -71,6 +76,7 @@ const lastPost = () => {
 beforeEach(() => {
   localStorage.clear();
   pressStore.reset();
+  suggestionStore.reset();
   authedFetch.mockReset();
   authedFetch.mockImplementation(async (_url: string, init: RequestInit) => ({
     ok: true,
@@ -328,5 +334,89 @@ describe('PressSection', () => {
     expect(bodies()).toEqual(['Farewell']);
     expect(screen.getByTestId('press-input')).toBeDisabled();
     expect(destination()).toContain('You surrendered');
+  });
+});
+
+describe('PressSection: move suggestions', () => {
+  const lamp = () => screen.queryByTestId('press-suggest');
+  const order = {
+    unit_id: 'GER_A_MUN',
+    power: 'GERMANY' as Power,
+    unit_type: 'A' as const,
+    origin: 'MUN',
+    order_type: 'MOVE' as const,
+    target: 'BUR',
+    via_convoy: false,
+    is_explicit: true,
+  };
+
+  it('offers the lamp only in a signed private thread, during a Movement turn', async () => {
+    const { rerender } = render(<PressSection {...base()} />);
+    fill([]);
+    expect(lamp()).toBeNull();
+    await tick('GERMANY');
+    expect(lamp()).not.toBeNull();
+    await userEvent.click(screen.getByTestId('press-anonymous'));
+    expect(lamp()).toBeNull();
+    await userEvent.click(screen.getByTestId('press-anonymous'));
+    rerender(<PressSection {...base({ suggestTurn: null })} />);
+    expect(lamp()).toBeNull();
+  });
+
+  it('starts a draft for the thread, and sends its orders with a message that needs no text', async () => {
+    const onProvincePicked = vi.fn();
+    render(<PressSection {...base({ onProvincePicked })} />);
+    fill([]);
+    await tick('GERMANY');
+    await userEvent.click(screen.getByTestId('press-suggest'));
+    expect(suggestionStore.getState().draft).toMatchObject({
+      members: ['GERMANY'],
+      turn: 'Spring 1901 Movement',
+    });
+    // The phone closes its drawer to show the map.
+    expect(onProvincePicked).toHaveBeenCalled();
+    expect(screen.getByTestId('press-suggestion-draft')).toBeInTheDocument();
+    // The mask is put away: a suggestion is always signed.
+    expect(screen.queryByTestId('press-anonymous')).toBeNull();
+    expect(screen.getByTestId('press-send')).toBeDisabled();
+
+    act(() => suggestionStore.stageOrder(order));
+    expect(screen.getAllByTestId('suggested-order')).toHaveLength(1);
+    await userEvent.click(screen.getByTestId('press-send'));
+    expect(lastPost().body).toEqual({
+      power: 'FRANCE',
+      recipients: ['GERMANY'],
+      anonymous: false,
+      body: '',
+      orders: [order],
+    });
+    await waitFor(() => expect(suggestionStore.getState().draft).toBeNull());
+  });
+
+  it('does not send an order that is not finished', async () => {
+    render(<PressSection {...base()} />);
+    fill([]);
+    await tick('GERMANY');
+    await userEvent.click(screen.getByTestId('press-suggest'));
+    act(() => suggestionStore.stageOrder({ ...order, target: null }));
+    await userEvent.type(screen.getByTestId('press-input'), 'Hello');
+    expect(screen.getByTestId('press-send')).toBeDisabled();
+    await userEvent.click(
+      within(screen.getByTestId('press-suggestion-draft')).getByRole('button', {
+        name: /^Remove/,
+      }),
+    );
+    expect(screen.getByTestId('press-send')).toBeEnabled();
+  });
+
+  it('discards the draft when other countries are picked, so it reaches nobody else', async () => {
+    render(<PressSection {...base()} />);
+    fill([]);
+    await tick('GERMANY');
+    await userEvent.click(screen.getByTestId('press-suggest'));
+    act(() => suggestionStore.stageOrder(order));
+    await tick('ENGLAND');
+    await waitFor(() => expect(suggestionStore.getState().draft).toBeNull());
+    expect(screen.queryByTestId('press-suggestion-draft')).toBeNull();
   });
 });

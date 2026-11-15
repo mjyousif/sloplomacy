@@ -10,6 +10,10 @@ import {
 import { sameTurn, splitProvinceRefs } from '../../../utils/pressHelpers';
 import { PowerFlag } from '../../PowerFlag';
 import styles from '../PressSection.module.css';
+import {
+  PressSuggestionCard,
+  type PressSuggestionContext,
+} from './PressSuggestionCard';
 import { listPowers, powerName } from './pressLabels';
 
 export interface PressMessageListProps {
@@ -24,6 +28,8 @@ export interface PressMessageListProps {
   /** A province link was tapped or clicked (the phone closes its drawer to show the map). */
   onProvincePicked?: () => void;
   listRef?: React.Ref<HTMLDivElement>;
+  /** For the messages that suggest moves. */
+  suggestions: PressSuggestionContext;
 }
 
 function timeOf(sentAt: string): string {
@@ -89,6 +95,7 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
   onHighlightProvinces,
   onProvincePicked,
   listRef,
+  suggestions,
 }) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const lastId = messages.length ? messages[messages.length - 1].id : null;
@@ -179,12 +186,23 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
                     : ''}
                 </div>
               )}
-              <PressBody
-                body={message.body}
-                provinces={provinces}
-                onHighlightProvinces={onHighlightProvinces}
-                onProvincePicked={onProvincePicked}
-              />
+              {message.body && (
+                <PressBody
+                  body={message.body}
+                  provinces={provinces}
+                  onHighlightProvinces={onHighlightProvinces}
+                  onProvincePicked={onProvincePicked}
+                />
+              )}
+              {message.orders.length > 0 && (
+                <PressSuggestionCard
+                  {...suggestions}
+                  message={message}
+                  viewer={viewer}
+                  provinces={provinces}
+                  onShowMap={onProvincePicked}
+                />
+              )}
             </article>
           </div>
         );

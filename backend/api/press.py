@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from domain.board import Power
 from domain.game_state import GameState
+from domain.orders import Order, OrderType
 from domain.press import (
     MAX_PRESS_BODY_LENGTH,
     PressFeed,
@@ -14,6 +15,7 @@ from domain.press import (
     PressMessageView,
     PressPostRequest,
 )
+from engine.order_utils import normalize_unit_order, validate_order_references
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from security.auth import AuthUser, get_current_user
 from security.press import feed_for, press_revealed, view_of
@@ -29,6 +31,9 @@ router = APIRouter(tags=["Press"])
 RATE_LIMIT_MESSAGES = 8
 RATE_LIMIT_WINDOW_SECONDS = 10.0
 _recent_posts: dict[tuple[str, Power], deque[float]] = defaultdict(deque)
+
+# What a suggestion may hold: the orders of a Movement phase.
+SUGGESTABLE_ORDER_TYPES = {OrderType.HOLD, OrderType.MOVE, OrderType.SUPPORT, OrderType.CONVOY}
 
 
 async def _press_seat(
@@ -75,6 +80,56 @@ def _check_rate(game_id: str, power: Power) -> None:
     recent.append(now)
 
 
+def _suggested_orders(
+    game: GameState, seat: Power, recipients: list[Power], req: PressPostRequest
+) -> list[Order]:
+    """The orders a suggestion will carry, checked and rebuilt from the units they are for.
+
+    A suggestion is a signed message in a private thread, made in a Movement phase, with at most
+    one order for each unit, and only for units of the sender and the recipients. Nothing here
+    reads or writes the game's own orders: the message holds only what the sender attached.
+    Like `POST /api/order`, it checks that the provinces exist, not that the moves are legal.
+    """
+    if not req.orders:
+        return []
+    if not recipients or req.anonymous:
+        raise HTTPException(
+            status_code=422,
+            detail="Moves can only be suggested in a signed private message.",
+        )
+    if game.phase != "Movement":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Moves can only be suggested during a Movement phase.",
+        )
+    members = {seat, *recipients}
+    units = {u.id: u for u in game.units}
+    orders: dict[str, Order] = {}
+    for order in req.orders:
+        unit = units.get(order.unit_id)
+        if unit is None:
+            raise HTTPException(status_code=422, detail=f"There is no unit {order.unit_id}.")
+        if unit.power not in members:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{order.unit_id} belongs to {unit.power.value}, who is not in this thread.",
+            )
+        if order.order_type not in SUGGESTABLE_ORDER_TYPES:
+            raise HTTPException(
+                status_code=422,
+                detail=f"A {order.order_type.value} order cannot be suggested.",
+            )
+        if order.unit_id in orders:
+            raise HTTPException(
+                status_code=422, detail=f"{order.unit_id} has more than one suggested order."
+            )
+        validate_order_references(order)
+        suggested = normalize_unit_order(order, unit)
+        suggested.is_explicit = True
+        orders[unit.id] = suggested
+    return list(orders.values())
+
+
 @router.get(
     "/api/press",
     response_model=PressFeed,
@@ -105,7 +160,9 @@ async def read_press(
     summary="Send Press",
     description=(
         "Post to the public box (no recipients), to a private thread (recipients), or send an "
-        "anonymous note (recipients and `anonymous`). The sender is the caller's own seat."
+        "anonymous note (recipients and `anonymous`). The sender is the caller's own seat. A "
+        "signed private message may carry `orders`: moves suggested for the units of the "
+        "sender and the recipients, which change nobody's real orders."
     ),
 )
 async def send_press(
@@ -117,7 +174,7 @@ async def send_press(
     gid = game.game_id
 
     body = req.body.strip()
-    if not body:
+    if not body and not req.orders:
         raise HTTPException(status_code=422, detail="A message cannot be empty.")
     if len(body) > MAX_PRESS_BODY_LENGTH:
         raise HTTPException(
@@ -140,6 +197,8 @@ async def send_press(
 
     _check_rate(gid, seat)
     await _loaded_press(gid)
+    # Checked after the last await, so the orders are for the turn the message is stamped with.
+    orders = _suggested_orders(game, seat, recipients, req)
     # No await between reading the next number and adding the message, so no two share one.
     message = PressMessage(
         id=uuid.uuid4().hex,
@@ -152,6 +211,7 @@ async def send_press(
         season=game.season,
         year=game.year,
         phase=game.phase,
+        orders=orders,
     )
     add_press(gid, message)
 

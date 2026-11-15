@@ -1,5 +1,5 @@
 // @scenario press
-// @description Press (chat) between three seated players: public box, a private thread a third player never receives, an anonymous note, province links lighting the map, unread badges, and the phone drawer.
+// @description Press (chat) between three seated players: public box, a private thread a third player never receives, an anonymous note, province links lighting the map, unread badges, the phone drawer, and a move suggestion written on the map, shown to its recipient and taken into their orders.
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import { DEFAULT_E2E_API_URL, ScenarioRecorder } from './helpers';
 
@@ -214,6 +214,135 @@ test.describe('Scenario: Press between three players', () => {
       const railButton = alice.locator('[data-testid="tools-rail-press-btn"]');
       await expect(railButton.locator('[data-testid="press-unread-badge"]')).toHaveText('1');
       await recorder.recordStep(alice, 'collapsed_rail_unread_badge');
+
+      recorder.finalize('PASSED');
+    } catch (error) {
+      recorder.finalize('FAILED');
+      throw error;
+    }
+  });
+
+  test('move suggestion: written on the map, shown and taken by its recipient', async ({
+    browser,
+  }) => {
+    const recorder = new ScenarioRecorder('press_suggestion');
+    const matchName = `Press plan ${Date.now()}`;
+    const unit = (page: Page, id: string) =>
+      page.locator(`[data-testid="unit-token"][data-unit-id="${id}"]`);
+    // Where the selected unit can go, drawn over the province.
+    const province = (page: Page, id: string) =>
+      page.locator(
+        `[data-testid="reachable-reticle"][data-province-id="${id}"]`,
+      );
+    const arrow = (page: Page, unitId: string, target: string) =>
+      page.locator(
+        `[data-testid="order-arrow"][data-order-unit="${unitId}"][data-order-target="${target}"]`,
+      );
+    const ordersOf = async (player: Player, gameId: string) =>
+      (await api(player, `/api/game?game_id=${gameId}&power=${player.power}`))
+        .state.orders;
+    try {
+      const gameId = await createMatch(matchName);
+      const alice = await openAs(browser, ALICE, matchName);
+      const bob = await openAs(browser, BOB, matchName);
+      recorder.attachListeners(alice);
+      recorder.attachListeners(bob);
+
+      // 1. The lamp button is only offered in a private thread.
+      await alice
+        .locator('[data-testid="press-section"]')
+        .scrollIntoViewIfNeeded();
+      await expect(alice.locator('[data-testid="press-suggest"]')).toHaveCount(
+        0,
+      );
+      await alice
+        .locator('[data-testid="press-recipient-GERMANY"]:visible')
+        .click();
+      const lamp = alice.locator('[data-testid="press-suggest"]:visible');
+      await lamp.click();
+      await expect(lamp).toHaveAttribute('aria-pressed', 'true');
+      const alicePill = alice.locator('[data-testid="suggestion-pill"]');
+      await expect(alicePill).toHaveAttribute('data-mode', 'draft');
+      await expect(
+        alice.locator('[data-testid="history-lock-bar"]'),
+      ).toBeVisible();
+      await recorder.recordStep(alice, 'suggest_mode_started_empty');
+
+      // 2. Alice orders a German unit and one of her own on the map. England is not in the
+      // thread, so its units cannot be picked up.
+      await unit(alice, 'GER_A_MUN').click();
+      await province(alice, 'BUR').click();
+      await expect(arrow(alice, 'GER_A_MUN', 'BUR')).toBeVisible();
+      await unit(alice, 'FRA_A_PAR').click();
+      await province(alice, 'PIC').click();
+      await expect(arrow(alice, 'FRA_A_PAR', 'PIC')).toBeVisible();
+      await unit(alice, 'ENG_F_LON').click();
+      await expect(
+        alice.locator('[data-testid="unit-floating-menu"]'),
+      ).toHaveCount(0);
+      const draft = alice.locator('[data-testid="press-suggestion-draft"]');
+      await expect(
+        draft.locator('[data-testid="suggested-order"]'),
+      ).toHaveCount(2);
+      await recorder.recordStep(alice, 'joint_plan_drawn_on_map_and_listed');
+
+      // Nothing has reached the server: Alice's real orders are as they were.
+      expect((await ordersOf(ALICE, gameId)).FRA_A_PAR.order_type).toBe('HOLD');
+
+      // 3. Sending it ends suggest mode, and her own board shows no such order.
+      await send(alice, 'Take Burgundy. I go north.');
+      await expect(alicePill).toHaveCount(0);
+      await expect(arrow(alice, 'FRA_A_PAR', 'PIC')).toHaveCount(0);
+      const sent = messages(alice)
+        .last()
+        .locator('[data-testid="press-suggestion"]');
+      await expect(sent.locator('[data-testid="suggested-order"]')).toHaveCount(
+        2,
+      );
+      await expect(sent.locator('[data-testid="suggestion-use"]')).toHaveCount(
+        0,
+      );
+      await recorder.recordStep(alice, 'suggestion_sent_in_thread');
+      expect((await ordersOf(ALICE, gameId)).FRA_A_PAR.order_type).toBe('HOLD');
+
+      // Carol (England) is served no part of it.
+      const carolFeed = await api(
+        CAROL,
+        `/api/press?game_id=${gameId}&power=ENGLAND`,
+      );
+      expect(carolFeed.messages).toEqual([]);
+
+      // 4. Bob opens the thread and shows the plan on the map: both halves, read-only.
+      await bob
+        .locator('[data-testid="press-section"]')
+        .scrollIntoViewIfNeeded();
+      await bob.locator('[data-testid="press-channel-FRANCE+GERMANY"]').click();
+      const card = messages(bob)
+        .last()
+        .locator('[data-testid="press-suggestion"]');
+      await expect(
+        card.locator('[data-testid="suggested-orders-GERMANY"]'),
+      ).toContainText('A MUN');
+      await card.locator('[data-testid="suggestion-show"]').click();
+      const bobPill = bob.locator('[data-testid="suggestion-pill"]');
+      await expect(bobPill).toHaveAttribute('data-mode', 'view');
+      await expect(arrow(bob, 'GER_A_MUN', 'BUR')).toBeVisible();
+      await expect(arrow(bob, 'FRA_A_PAR', 'PIC')).toBeVisible();
+      await unit(bob, 'GER_A_MUN').click({ force: true });
+      await expect(
+        bob.locator('[data-testid="unit-floating-menu"]'),
+      ).toHaveCount(0);
+      await recorder.recordStep(bob, 'recipient_views_suggestion_on_map');
+      expect((await ordersOf(BOB, gameId)).GER_A_MUN.order_type).toBe('HOLD');
+
+      // 5. Bob takes it: his own unit gets the order, France's half stays a claim.
+      await bobPill.locator('[data-testid="suggestion-take"]').click();
+      await expect(bobPill).toHaveCount(0);
+      await expect(arrow(bob, 'GER_A_MUN', 'BUR')).toBeVisible();
+      await expect(arrow(bob, 'FRA_A_PAR', 'PIC')).toHaveCount(0);
+      await recorder.recordStep(bob, 'recipient_took_the_orders');
+      expect((await ordersOf(BOB, gameId)).GER_A_MUN.target).toBe('BUR');
+      expect((await ordersOf(ALICE, gameId)).FRA_A_PAR.order_type).toBe('HOLD');
 
       recorder.finalize('PASSED');
     } catch (error) {

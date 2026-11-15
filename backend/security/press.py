@@ -40,6 +40,7 @@ def view_of(message: PressMessage, viewer: Power, revealed: bool) -> PressMessag
         season=message.season,
         year=message.year,
         phase=message.phase,
+        orders=[order.model_copy() for order in message.orders],
     )
 
 
