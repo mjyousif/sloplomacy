@@ -8,7 +8,7 @@ import { ToolsSidebar, type ToolsSidebarProps } from './ToolsSidebar';
 const props = (extra: Partial<ToolsSidebarProps> = {}): ToolsSidebarProps => ({
   collapsed: false,
   onToggleCollapse: vi.fn(),
-  zoomPercent: 105,
+  zoomPercent: 100,
   onZoomIn: vi.fn(),
   onZoomOut: vi.fn(),
   onResetCamera: vi.fn(),
@@ -78,7 +78,7 @@ describe('ToolsSidebar panel', () => {
       foreignModifiedOrdersCount: 2,
     });
     render(<ToolsSidebar {...p} />);
-    expect(screen.getByText('105%')).toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
     expect(screen.getByText('DIPLOMATIC STANDING')).toBeInTheDocument();
     expect(screen.getByTitle('Civil Disorder')).toBeInTheDocument();
     expect(screen.getByText('2 foreign moves plotted')).toBeInTheDocument();
@@ -191,7 +191,7 @@ describe('ToolsSidebar wiring', () => {
       ['onZoomIn', () => screen.getByTitle('Zoom In')],
       [
         'onResetCamera',
-        () => screen.getByTitle('Reset Map to 105% Default View'),
+        () => screen.getByTitle('Reset Map to 100% Default View'),
       ],
       ['onSelectPower', () => screen.getAllByTestId('power-standing-card')[0]],
       ['onToggleSandboxMode', () => screen.getByTestId('btn-toggle-sandbox')],

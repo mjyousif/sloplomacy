@@ -68,7 +68,7 @@ describe('useMapCamera', () => {
     expect(result.current.cameraRef.current).toEqual(DEFAULT_CAMERA);
     // The wide layout's first render already draws DEFAULT_CAMERA, so nothing is rewritten.
     expect(readTransform(group)).toBeNull();
-    expect(onZoomChange).toHaveBeenCalledExactlyOnceWith(105);
+    expect(onZoomChange).toHaveBeenCalledExactlyOnceWith(100);
   });
 
   it('zooms about the middle of the view and reports each new figure once', () => {
@@ -79,10 +79,10 @@ describe('useMapCamera', () => {
     const expected = zoomAtPoint(
       DEFAULT_CAMERA,
       { x: MAP_CENTER_X, y: MAP_CENTER_Y },
-      1.25,
+      1.2,
     );
     expect(readTransform(group)).toEqual(expected);
-    expect(onZoomChange).toHaveBeenCalledExactlyOnceWith(125);
+    expect(onZoomChange).toHaveBeenCalledExactlyOnceWith(120);
     // The floating menu is placed in screen space, so it follows every camera write.
     expect(onCameraSync).toHaveBeenCalledTimes(1);
 
@@ -124,7 +124,7 @@ describe('useMapCamera', () => {
     const once = zoomAtPoint(
       DEFAULT_CAMERA,
       cursor,
-      Number((1.05 * Math.exp(0.28)).toFixed(3)),
+      Number((DEFAULT_CAMERA.zoom * Math.exp(0.28)).toFixed(3)),
     );
     const twice = zoomAtPoint(
       once,

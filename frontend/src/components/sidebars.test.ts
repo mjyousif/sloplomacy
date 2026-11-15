@@ -87,7 +87,7 @@ describe('ToolsSidebar', () => {
   const baseToolsProps: ToolsSidebarProps = {
     collapsed: false,
     onToggleCollapse: vi.fn(),
-    zoomPercent: 105,
+    zoomPercent: 100,
     onZoomIn: vi.fn(),
     onZoomOut: vi.fn(),
     onResetCamera: vi.fn(),
@@ -124,7 +124,7 @@ describe('ToolsSidebar', () => {
     expect(html).toContain('CHANCELLERY TOOLS');
     expect(html).not.toContain('Intel, Camera');
     expect(html).toContain('MAP VIEW &amp; CAMERA');
-    expect(html).toContain('105%');
+    expect(html).toContain('100%');
     expect(html).not.toContain('TACTICAL MAP LEGEND');
     expect(html).toContain('COMMAND NATION (SELECT)');
     expect(html).toContain('France');

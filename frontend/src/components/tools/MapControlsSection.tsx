@@ -49,7 +49,7 @@ export const MapControlsSection: React.FC<MapControlsSectionProps> = ({
           type="button"
           className={buttonStyles.toolsBtn}
           onClick={onResetCamera}
-          title="Reset Map to 105% Default View"
+          title="Reset Map to 100% Default View"
         >
           <Maximize2 size={13} />
           <span>Fit Map</span>

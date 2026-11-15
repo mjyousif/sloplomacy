@@ -32,8 +32,8 @@ export const MAX_ZOOM = 3.0;
 
 export const DEFAULT_CAMERA: CameraState = {
   x: 0,
-  y: -35,
-  zoom: 1.05,
+  y: 0,
+  zoom: 1,
 };
 
 export const DEFAULT_MARGIN_X = 400;

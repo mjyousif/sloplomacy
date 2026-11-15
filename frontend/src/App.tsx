@@ -25,6 +25,7 @@ import { useWorkspaceLayout } from './hooks/useWorkspaceLayout';
 import { signOutUser } from './lib/supabase';
 import type { SimulationResult } from './types/diplomacy';
 import { checkIsGameCreator } from './utils/adminHelpers';
+import { DEFAULT_CAMERA } from './utils/mapCameraHelpers';
 import { turnLabel } from './utils/timerHelpers';
 
 export function App() {
@@ -88,7 +89,9 @@ export function App() {
   const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
   const [adminOverrideActive, setAdminOverrideActive] =
     useState<boolean>(false);
-  const [zoomPercent, setZoomPercent] = useState<number>(105);
+  const [zoomPercent, setZoomPercent] = useState<number>(() =>
+    Math.round(DEFAULT_CAMERA.zoom * 100),
+  );
   const isCompact = useCompactLayout();
   const layout = useWorkspaceLayout({ viewMode, activeGameId, isCompact });
   const mapRef = useRef<EuropeMapHandle | null>(null);
