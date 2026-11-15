@@ -39,10 +39,14 @@ export interface SeatActionsOptions {
   authUser: AuthUser | null;
   openAuthPrompt: (reason?: string, tab?: AuthModalTab) => void;
   /** From `useSandboxSession`. */
+  sandboxMode?: boolean;
+  draftGameId?: string;
+  setSandboxGameId?: Dispatch<SetStateAction<string | null>>;
   setSandboxMode: Dispatch<SetStateAction<boolean>>;
   setShowSimulationOverlay: Dispatch<SetStateAction<boolean>>;
   requireRealBoard: (action: string) => boolean;
   /** The passcodes typed for private matches during this visit. */
+  matchPasscodes?: Record<string, string>;
   setMatchPasscodes: Dispatch<SetStateAction<Record<string, string>>>;
   confirm: (
     options: ConfirmOptions,
@@ -73,9 +77,13 @@ export function useSeatActions({
   fetchGamesList,
   authUser,
   openAuthPrompt,
+  sandboxMode = false,
+  draftGameId,
+  setSandboxGameId,
   setSandboxMode,
   setShowSimulationOverlay,
   requireRealBoard,
+  matchPasscodes,
   setMatchPasscodes,
   confirm,
   triggerToast,
@@ -90,12 +98,13 @@ export function useSeatActions({
   );
 
   const handleEnterSoloSandbox = async (event?: React.MouseEvent) => {
+    const isExportingBoard = viewMode !== 'lobby' && Boolean(activeGameId);
     if (viewMode === 'multiplayer' && activeGameSummary) {
       const confirmLeave = await confirm(
         {
-          title: 'Switch to the Solo Sandbox?',
-          message: `You leave match "${activeGameSummary.name}" for the Solo Sandbox board. Your submitted orders remain safe on the server.`,
-          confirmLabel: 'Switch',
+          title: 'Export to Solo Sandbox?',
+          message: `Export the current state of "${activeGameSummary.name}" into your Solo Sandbox (overriding your previous draft sandbox). Your submitted match orders stay safe on the server.`,
+          confirmLabel: 'Export & Switch',
         },
         event,
       );
@@ -104,11 +113,20 @@ export function useSeatActions({
     try {
       setLoading(true);
       const storedDraftId = readStoredSoloSandboxId();
-      const query = storedDraftId
-        ? `?resume_game_id=${encodeURIComponent(storedDraftId)}`
-        : '';
+      const params = new URLSearchParams();
+      if (storedDraftId) {
+        params.set('resume_game_id', storedDraftId);
+      }
+      if (isExportingBoard) {
+        params.set('source_game_id', draftGameId ?? activeGameId);
+      }
+      const query = params.toString() ? `?${params.toString()}` : '';
+      const passcode = isExportingBoard
+        ? matchPasscodes?.[activeGameId]
+        : undefined;
       const res = await authedFetch(`${API_BASE}/games/solo-sandbox${query}`, {
         method: 'POST',
+        headers: passcode ? { 'X-Passcode': passcode } : undefined,
       });
       if (!res.ok) {
         throw new Error(`Failed to create solo sandbox (${res.status})`);
@@ -124,9 +142,13 @@ export function useSeatActions({
       setProvinces(data.provinces);
       setSelectedUnitId(null);
       setLockedPower(null);
+      setSandboxGameId?.(null);
       setSandboxMode(false);
       setShowSimulationOverlay(false);
       setViewMode('sandbox');
+      if (isExportingBoard) {
+        triggerToast('Current game state exported to a new Solo Sandbox.');
+      }
     } catch (err: any) {
       console.error(err);
       triggerToast('Could not launch personal solo sandbox.');
@@ -340,8 +362,8 @@ export function useSeatActions({
   };
 
   const handleSelectPower = async (power: Power) => {
-    // In multiplayer mode, country is locked to the player's claimed power
-    if (viewMode === 'multiplayer' && lockedPower) {
+    // In multiplayer mode (outside Hypothetical Mode), country is locked to the player's claimed power
+    if (viewMode === 'multiplayer' && lockedPower && !sandboxMode) {
       if (power !== lockedPower) {
         triggerToast(
           `Country locked: You are playing as ${POWER_METADATA[lockedPower].shortName} in this multiplayer campaign.`,
@@ -349,9 +371,11 @@ export function useSeatActions({
       }
       return;
     }
+    const targetGameId =
+      sandboxMode && draftGameId ? draftGameId : activeGameId;
     try {
       const res = await authedFetch(
-        `${API_BASE}/power?game_id=${encodeURIComponent(activeGameId)}`,
+        `${API_BASE}/power?game_id=${encodeURIComponent(targetGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

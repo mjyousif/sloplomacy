@@ -74,23 +74,25 @@ describe('ToolsSidebar panel', () => {
       isMultiplayer: true,
       sandboxMode: true,
       surrenderedPowers: ['ENGLAND'],
-      onGenerateAIMoves: vi.fn(),
+      showAllMoves: true,
+      onChangeShowAllMoves: vi.fn(),
       foreignModifiedOrdersCount: 2,
     });
     render(<ToolsSidebar {...p} />);
     expect(screen.getByText('100%')).toBeInTheDocument();
     expect(screen.getByText('DIPLOMATIC STANDING')).toBeInTheDocument();
+    expect(screen.getByTestId('standings-moves-all')).toBeInTheDocument();
+    expect(screen.getByTestId('standings-moves-selected')).toBeInTheDocument();
     expect(screen.getByTitle('Civil Disorder')).toBeInTheDocument();
     expect(screen.getByText('2 foreign moves plotted')).toBeInTheDocument();
-    expect(screen.getByText('Plan All 7')).toBeInTheDocument();
+    expect(screen.queryByText('Plan All 7')).toBeNull();
     await userEvent.click(screen.getByTitle('Zoom In'));
     expect(p.onZoomIn).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByTestId('btn-toggle-sandbox'));
     expect(p.onToggleSandboxMode).toHaveBeenCalledTimes(1);
   });
 
-  it('passes the override and the step handler down', async () => {
-    const onAIStepTurn = vi.fn();
+  it('passes the direct-edit override down', () => {
     const issue = {
       id: 'i',
       severity: 'error',
@@ -104,14 +106,10 @@ describe('ToolsSidebar panel', () => {
     const { rerender } = render(
       <ToolsSidebar
         {...props({
-          onGenerateAIMoves: vi.fn(),
-          onAIStepTurn,
           issues: [issue],
         })}
       />,
     );
-    await userEvent.click(screen.getByText('AI Step Turn'));
-    expect(onAIStepTurn).toHaveBeenCalledTimes(1);
     // England's issue is hidden from France's player...
     expect(screen.queryByTitle('1 issues')).toBeNull();
     // ...until the host's direct-edit override is on
@@ -149,10 +147,9 @@ function spies() {
     onZoomOut: vi.fn(),
     onResetCamera: vi.fn(),
     onSelectPower: vi.fn(),
+    onChangeShowAllMoves: vi.fn(),
     onToggleSandboxMode: vi.fn(),
     onClearForeignPreMoves: vi.fn(),
-    onGenerateAIMoves: vi.fn(),
-    onAIStepTurn: vi.fn(),
     onLoadScenario: vi.fn(),
     onSaveSandboxClick: vi.fn(),
     onClose: vi.fn(),
@@ -178,6 +175,7 @@ describe('ToolsSidebar wiring', () => {
     props({
       ...s,
       sandboxMode: true,
+      showAllMoves: true,
       foreignModifiedOrdersCount: 2,
     });
 
@@ -194,9 +192,11 @@ describe('ToolsSidebar wiring', () => {
         () => screen.getByTitle('Reset Map to 100% Default View'),
       ],
       ['onSelectPower', () => screen.getAllByTestId('power-standing-card')[0]],
+      [
+        'onChangeShowAllMoves',
+        () => screen.getByTestId('standings-moves-selected'),
+      ],
       ['onToggleSandboxMode', () => screen.getByTestId('btn-toggle-sandbox')],
-      ['onGenerateAIMoves', () => screen.getByText('Plan Opponents')],
-      ['onAIStepTurn', () => screen.getByText('AI Step Turn')],
       [
         'onClearForeignPreMoves',
         () => screen.getByTitle('Discard all foreign pre-moves'),
@@ -295,17 +295,21 @@ describe('ToolsSidebar wiring', () => {
 
   it('shows the sandbox panel in the mode it is given', () => {
     const { rerender } = render(
-      <ToolsSidebar
-        {...props({ isMultiplayer: true, onGenerateAIMoves: vi.fn() })}
-      />,
+      <ToolsSidebar {...props({ isMultiplayer: true })} />,
     );
-    expect(screen.queryByText('Plan Opponents')).toBeNull();
+    expect(screen.getByTestId('btn-toggle-sandbox')).toBeInTheDocument();
+    expect(screen.queryByTestId('standings-moves-all')).toBeNull();
     expect(screen.queryByTestId('btn-reset-scenario')).toBeNull();
     rerender(
       <ToolsSidebar
-        {...props({ onGenerateAIMoves: vi.fn(), onSaveSandboxClick: vi.fn() })}
+        {...props({
+          onSaveSandboxClick: vi.fn(),
+          showAllMoves: true,
+          onChangeShowAllMoves: vi.fn(),
+        })}
       />,
     );
+    expect(screen.getByTestId('standings-moves-all')).toBeInTheDocument();
     expect(screen.getByTestId('btn-reset-scenario')).toBeInTheDocument();
     expect(screen.getByTestId('btn-save-sandbox')).toBeInTheDocument();
   });

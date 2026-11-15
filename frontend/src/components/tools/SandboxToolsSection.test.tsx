@@ -29,7 +29,7 @@ describe('SandboxToolsSection: the mode switch', () => {
     expect(toggle).not.toHaveAttribute('data-active', 'true');
     expect(screen.queryByText('ACTIVE')).toBeNull();
     expect(
-      screen.getByText(/Enter Hypothetical Mode to guess enemy moves/),
+      screen.getByText(/Enter Hypothetical Mode to test foreign moves/),
     ).toBeInTheDocument();
     await userEvent.click(toggle);
     expect(onToggleSandboxMode).toHaveBeenCalledTimes(1);
@@ -43,49 +43,6 @@ describe('SandboxToolsSection: the mode switch', () => {
     expect(toggle).toHaveAttribute('data-active', 'true');
     expect(screen.getByTestId('sandbox-live-pill')).toHaveTextContent('ACTIVE');
     expect(screen.getByText(/Hypothetical Mode active/)).toBeInTheDocument();
-  });
-});
-
-describe('SandboxToolsSection: General Staff AI', () => {
-  it('needs a handler to show', () => {
-    render(<SandboxToolsSection {...props()} />);
-    expect(screen.queryByText('Tactical General Staff AI')).toBeNull();
-  });
-
-  it('plans opponents, all seven, and steps the turn in a solo game', async () => {
-    const onGenerateAIMoves = vi.fn();
-    const onAIStepTurn = vi.fn();
-    render(
-      <SandboxToolsSection {...props({ onGenerateAIMoves, onAIStepTurn })} />,
-    );
-    await userEvent.click(screen.getByText('Plan Opponents'));
-    expect(onGenerateAIMoves).toHaveBeenLastCalledWith(undefined, false);
-    await userEvent.click(screen.getByText('Plan All 7'));
-    expect(onGenerateAIMoves).toHaveBeenLastCalledWith(undefined, true);
-    await userEvent.click(screen.getByText('AI Step Turn'));
-    expect(onAIStepTurn).toHaveBeenCalledTimes(1);
-    expect(onGenerateAIMoves).toHaveBeenCalledTimes(2);
-  });
-
-  it('has no step button without a handler', () => {
-    render(<SandboxToolsSection {...props({ onGenerateAIMoves: vi.fn() })} />);
-    expect(screen.queryByText('AI Step Turn')).toBeNull();
-  });
-
-  it('hides the AI in a multiplayer match until Hypothetical Mode, and then has no step', () => {
-    const shared = {
-      isMultiplayer: true,
-      onGenerateAIMoves: vi.fn(),
-      onAIStepTurn: vi.fn(),
-    };
-    const { rerender } = render(<SandboxToolsSection {...props(shared)} />);
-    expect(screen.queryByText('Plan Opponents')).toBeNull();
-    rerender(
-      <SandboxToolsSection {...props({ ...shared, sandboxMode: true })} />,
-    );
-    expect(screen.getByText('Plan Opponents')).toBeInTheDocument();
-    expect(screen.getByText('Plan All 7')).toBeInTheDocument();
-    expect(screen.queryByText('AI Step Turn')).toBeNull();
   });
 });
 

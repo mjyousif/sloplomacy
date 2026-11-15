@@ -43,6 +43,9 @@ from storage.store import (
     GAME_HISTORY,
     GAME_SUMMARIES,
     HISTORY_UNSAVED,
+    PRIVATE_SANDBOXES,
+    SANDBOX_CHECKPOINTS,
+    clear_ephemeral_sandboxes_for,
     persist_game,
     resolve_game,
     sync_summary,
@@ -166,6 +169,8 @@ async def _execute_adjudication(
     refresh_diagnostics_and_simulation(game)
     if summary := GAME_SUMMARIES.get(gid):
         summary.last_moved_at = datetime.now(timezone.utc).isoformat()
+    if gid not in PRIVATE_SANDBOXES and SANDBOX_CHECKPOINTS.get(gid) is None:
+        clear_ephemeral_sandboxes_for(gid)
     sync_summary(game.game_id)
     await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)

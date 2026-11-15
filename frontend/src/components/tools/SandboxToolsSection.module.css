@@ -46,47 +46,6 @@
     margin: 6px 0 8px 0;
   }
 
-  .tools-ai-block {
-    background: #151a22;
-    border: 1px solid #283141;
-    border-radius: 6px;
-    padding: 7px 8px;
-    margin-bottom: 7px;
-  }
-
-  .tools-ai-header {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.67rem;
-    font-weight: 700;
-    color: #93c5fd;
-    margin-bottom: 6px;
-  }
-
-  .tools-ai-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px;
-  }
-
-  button.tools-ai-btn {
-    font-size: 0.68rem;
-    padding: 4px 6px;
-  }
-
-  button.tools-ai-btn[data-step="true"] {
-    grid-column: span 2;
-    background: #1e3a5f;
-    border-color: #3b82f6;
-    color: #93c5fd;
-  }
-
-  button.tools-ai-btn[data-step="true"]:hover {
-    background: #2563eb;
-    color: #ffffff;
-  }
-
   .tools-foreign-summary {
     display: flex;
     align-items: center;

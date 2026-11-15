@@ -12,6 +12,7 @@ from storage.store import (
     GAME_PASSCODES,
     GAME_SUMMARIES,
     GAMES,
+    PRIVATE_SANDBOXES,
     PROFILE_NAMES,
     is_multiplayer_match,
     resolve_game,
@@ -317,7 +318,11 @@ def caller_owns_saved_sandbox(
 
 
 def require_saved_sandbox_owner(game_id: str, current_user: AuthUser | None) -> None:
-    """Refuse anyone but its owner on a saved sandbox (one player's private study board)."""
+    """Refuse anyone but its owner on a saved or private sandbox (one player's study board)."""
+    if game_id in PRIVATE_SANDBOXES:
+        match_id, seat_power = PRIVATE_SANDBOXES[game_id]
+        require_own_seat(match_id, seat_power, current_user)
+        return
     summary = GAME_SUMMARIES.get(game_id)
     if summary and summary.is_sandbox and not caller_owns_saved_sandbox(summary, current_user):
         raise HTTPException(
@@ -344,4 +349,8 @@ async def saved_sandbox_guard(
             )  # Loads a saved game's summary; the route reports a missing one.
         except HTTPException:
             return
+    if gid in PRIVATE_SANDBOXES and (
+        request.url.path.startswith("/api/history") or request.url.path == "/api/sandbox/exit"
+    ):
+        return
     require_saved_sandbox_owner(gid, current_user)

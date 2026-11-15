@@ -26,13 +26,14 @@ export interface ToolsSidebarProps {
   issues: ValidationIssue[];
   isMultiplayer?: boolean;
   participants?: Record<string, GameParticipant>;
-  // Sandbox & AI
+  /** When in sandbox or hypothetical mode, whether the map renders orders for all powers or only activePower. */
+  showAllMoves?: boolean;
+  onChangeShowAllMoves?: (showAll: boolean) => void;
+  // Sandbox & Hypothetical Mode
   sandboxMode: boolean;
   onToggleSandboxMode: () => void;
   onClearForeignPreMoves: () => void;
   foreignModifiedOrdersCount: number;
-  onGenerateAIMoves?: (powers?: Power[], includeActive?: boolean) => void;
-  onAIStepTurn?: () => void;
   onLoadScenario: (scenarioId: string) => void;
   onSaveSandboxClick?: () => void;
   adminOverrideActive?: boolean;

@@ -29,12 +29,12 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   issues,
   isMultiplayer = false,
   participants,
+  showAllMoves,
+  onChangeShowAllMoves,
   sandboxMode,
   onToggleSandboxMode,
   onClearForeignPreMoves,
   foreignModifiedOrdersCount,
-  onGenerateAIMoves,
-  onAIStepTurn,
   onLoadScenario,
   onSaveSandboxClick,
   adminOverrideActive = false,
@@ -143,6 +143,8 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           issues={issues}
           isMultiplayer={isMultiplayer}
           participants={participants}
+          showAllMoves={showAllMoves}
+          onChangeShowAllMoves={onChangeShowAllMoves}
           sandboxMode={sandboxMode}
           adminOverrideActive={adminOverrideActive}
           pressPower={
@@ -155,14 +157,12 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
         {/* 5. PRESS: PUBLIC BOX AND PRIVATE THREADS */}
         {press && <PressSection {...press} visible={!isDrawer || open} />}
 
-        {/* 6. HYPOTHETICAL MODE & TACTICAL AI GENERAL STAFF */}
+        {/* 6. HYPOTHETICAL MODE & PRE-MOVES */}
         <SandboxToolsSection
           sandboxMode={sandboxMode}
           onToggleSandboxMode={onToggleSandboxMode}
           onClearForeignPreMoves={onClearForeignPreMoves}
           foreignModifiedOrdersCount={foreignModifiedOrdersCount}
-          onGenerateAIMoves={onGenerateAIMoves}
-          onAIStepTurn={onAIStepTurn}
           onLoadScenario={onLoadScenario}
           onSaveSandboxClick={onSaveSandboxClick}
           isMultiplayer={isMultiplayer}

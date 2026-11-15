@@ -10,6 +10,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
+    caller_holds_seat,
     caller_owns_saved_sandbox,
     sanitize_game_state_for_viewer,
     sanitize_summary_for_viewer,
@@ -21,6 +22,7 @@ from storage.store import (
     GAME_PASSCODES,
     GAME_SUMMARIES,
     GAMES,
+    PRIVATE_SANDBOXES,
     cache_loaded_game,
     is_multiplayer_match,
     sync_summary,
@@ -85,6 +87,12 @@ async def ws_game_endpoint(
         except ValueError:
             pass
     power_enum = viewer_power_for(game_id, current_user, requested)
+
+    if game_id in PRIVATE_SANDBOXES:
+        match_id, seat_power = PRIVATE_SANDBOXES[game_id]
+        if not caller_holds_seat(GAME_SUMMARIES.get(match_id), seat_power, current_user):
+            await websocket.close(code=4403)
+            return
 
     summary = GAME_SUMMARIES.get(game_id)
     if summary and summary.is_sandbox and not caller_owns_saved_sandbox(summary, current_user):

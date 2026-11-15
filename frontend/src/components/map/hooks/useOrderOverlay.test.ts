@@ -127,6 +127,23 @@ describe('useOrderOverlay', () => {
     }).isUnitOrderVisible;
     expect(sandbox(A_PIC_GER)).toBe(true);
 
+    const selectedOnly = overlay({
+      units: [],
+      canEditAnyPower: true,
+      showAllMoves: false,
+    }).isUnitOrderVisible;
+    expect([selectedOnly(A_PAR), selectedOnly(A_PIC_GER)]).toEqual([
+      true,
+      false,
+    ]);
+
+    const showAll = overlay({
+      units: [],
+      canEditAnyPower: false,
+      showAllMoves: true,
+    }).isUnitOrderVisible;
+    expect([showAll(A_PAR), showAll(A_PIC_GER)]).toEqual([true, true]);
+
     const past = overlay({
       units: [],
       historyView: true,

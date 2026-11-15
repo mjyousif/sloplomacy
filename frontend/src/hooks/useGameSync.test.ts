@@ -215,6 +215,36 @@ describe('useGameSync: game updates behind a private sandbox', () => {
     socket.options.onGameUpdate(update(state({ timer: undefined })));
     expect(o.setHypotheticalMatchTimer).toHaveBeenCalledWith(null);
   });
+
+  it('exits Hypothetical Mode and paints the live board when a WS update advances past sandboxOriginTurn', () => {
+    const setSandboxOriginTurn = vi.fn();
+    const setSandboxGameId = vi.fn();
+    const setSandboxMode = vi.fn();
+    const setShowSimulationOverlay = vi.fn();
+    const setSelectedUnitId = vi.fn();
+    const o = makeOptions({
+      sandboxGameId: 'sbx_1',
+      sandboxOriginTurn: 'Spring 1901 Movement',
+      setSandboxOriginTurn,
+      setSandboxGameId,
+      setSandboxMode,
+      setShowSimulationOverlay,
+      setSelectedUnitId,
+    });
+    renderSync(o);
+    const nextTurn = state({ season: 'Fall', year: 1901, phase: 'Movement' });
+    socket.options.onGameUpdate(update(nextTurn, { summary: SUMMARY }));
+    expect(setSandboxGameId).toHaveBeenCalledWith(null);
+    expect(setSandboxMode).toHaveBeenCalledWith(false);
+    expect(setShowSimulationOverlay).toHaveBeenCalledWith(false);
+    expect(setSandboxOriginTurn).toHaveBeenCalledWith(null);
+    expect(o.setHypotheticalMatchTimer).toHaveBeenCalledWith(null);
+    expect(setSelectedUnitId).toHaveBeenCalledWith(null);
+    expect(o.applyServerState).toHaveBeenCalledWith(nextTurn);
+    expect(o.triggerToast).toHaveBeenCalledWith(
+      'Turn ended (Fall 1901 Movement) — hypothetical branch cleared.',
+    );
+  });
 });
 
 describe('useGameSync: lobby updates', () => {
@@ -433,6 +463,36 @@ describe('useGameSync: the fallback poll', () => {
     await tick();
     expect(opts.setHypotheticalMatchTimer).toHaveBeenCalledWith(TIMER);
     expect(opts.applyServerState).not.toHaveBeenCalled();
+  });
+
+  it('exits Hypothetical Mode and applies live state when polling observes a new turn', async () => {
+    const nextTurn = state({ season: 'Fall', year: 1901, phase: 'Movement' });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ state: nextTurn, summary: SUMMARY }),
+    });
+    const setSandboxOriginTurn = vi.fn();
+    const setSandboxGameId = vi.fn();
+    const setSandboxMode = vi.fn();
+    const setShowSimulationOverlay = vi.fn();
+    const setSelectedUnitId = vi.fn();
+    renderSync(
+      makeOptions({
+        sandboxGameId: 'sbx_1',
+        sandboxOriginTurn: 'Spring 1901 Movement',
+        setSandboxOriginTurn,
+        setSandboxGameId,
+        setSandboxMode,
+        setShowSimulationOverlay,
+        setSelectedUnitId,
+      }),
+    );
+    await tick();
+    expect(setSandboxGameId).toHaveBeenCalledWith(null);
+    expect(setSandboxMode).toHaveBeenCalledWith(false);
+    expect(setShowSimulationOverlay).toHaveBeenCalledWith(false);
+    expect(setSandboxOriginTurn).toHaveBeenCalledWith(null);
+    expect(setSelectedUnitId).toHaveBeenCalledWith(null);
   });
 
   it('removes its tab listener when it stops', () => {

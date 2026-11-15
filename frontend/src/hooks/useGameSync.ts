@@ -16,6 +16,7 @@ import type {
   WebSocketLobbyUpdate,
 } from '../types/diplomacy';
 import { readStoredSoloSandboxId } from '../utils/soloSandboxStorage';
+import { turnLabel } from '../utils/timerHelpers';
 import { useDiplomacyWebSocket } from './useDiplomacyWebSocket';
 
 const API_BASE = '/api';
@@ -26,6 +27,13 @@ export interface GameSyncOptions {
   playerPower: Power;
   /** The private sandbox copy's id while the player is in one. The real match keeps moving behind it. */
   sandboxGameId: string | null;
+  /** Real match turn label captured when Hypothetical Mode opened, so turn advances clear the branch. */
+  sandboxOriginTurn?: string | null;
+  setSandboxOriginTurn?: Dispatch<SetStateAction<string | null>>;
+  setSandboxGameId?: Dispatch<SetStateAction<string | null>>;
+  setSandboxMode?: Dispatch<SetStateAction<boolean>>;
+  setShowSimulationOverlay?: Dispatch<SetStateAction<boolean>>;
+  setSelectedUnitId?: Dispatch<SetStateAction<string | null>>;
   /** Passcodes the player typed for private matches during this visit, by game id. */
   matchPasscodes: Record<string, string>;
   /** The signed-in user's id, so the socket reconnects on sign-in and sign-out. */
@@ -54,6 +62,12 @@ export function useGameSync({
   activeGameId,
   playerPower,
   sandboxGameId,
+  sandboxOriginTurn = null,
+  setSandboxOriginTurn,
+  setSandboxGameId,
+  setSandboxMode,
+  setShowSimulationOverlay,
+  setSelectedUnitId,
   matchPasscodes,
   authKey,
   triggerToast,
@@ -67,6 +81,38 @@ export function useGameSync({
   fetchGamesList,
   fetchMyGames,
 }: GameSyncOptions) {
+  const syncBehindPrivateSandbox = useCallback(
+    (liveState: GameState) => {
+      if (sandboxOriginTurn && turnLabel(liveState) !== sandboxOriginTurn) {
+        setSandboxGameId?.(null);
+        setSandboxMode?.(false);
+        setShowSimulationOverlay?.(false);
+        setSandboxOriginTurn?.(null);
+        setHypotheticalMatchTimer(null);
+        setSelectedUnitId?.(null);
+        applyServerState(liveState);
+        triggerToast(
+          `Turn ended (${turnLabel(liveState)}) — hypothetical branch cleared.`,
+        );
+        return;
+      }
+      setHypotheticalMatchTimer(liveState.timer ?? null);
+    },
+    [
+      sandboxOriginTurn,
+      setSandboxGameId,
+      setSandboxMode,
+      setShowSimulationOverlay,
+      setSandboxOriginTurn,
+      setHypotheticalMatchTimer,
+      setSelectedUnitId,
+      applyServerState,
+      triggerToast,
+    ],
+  );
+  const syncBehindPrivateSandboxRef = useRef(syncBehindPrivateSandbox);
+  syncBehindPrivateSandboxRef.current = syncBehindPrivateSandbox;
+
   const handleWsGameUpdate = useCallback(
     (update: WebSocketGameUpdate) => {
       if (update.game_id !== activeGameId) return;
@@ -74,9 +120,10 @@ export function useGameSync({
       if (update.summary) {
         setActiveGameSummary(update.summary);
       }
-      // The real match keeps moving behind a private sandbox; exiting catches the board up.
+      // The real match keeps moving behind a private sandbox; same-turn updates only sync the clock,
+      // while a turn end exits Hypothetical Mode and paints the new live turn.
       if (sandboxGameId) {
-        setHypotheticalMatchTimer(update.state.timer ?? null);
+        syncBehindPrivateSandboxRef.current(update.state);
         return;
       }
 
@@ -173,8 +220,8 @@ export function useGameSync({
         // A reply still in flight must not repaint a board the player has since left.
         if (abandoned || !data?.state) return;
         if (sandboxGameId) {
-          // The poll also runs the clock, so it continues behind a private sandbox.
-          setHypotheticalMatchTimer(data.state.timer ?? null);
+          // The poll also runs the clock, and clears Hypothetical Mode if the real turn ended.
+          syncBehindPrivateSandboxRef.current(data.state);
         } else {
           applyServerState(data.state);
         }

@@ -4,8 +4,9 @@ import time
 import uuid
 from datetime import datetime, timezone
 
+from api.solo_sandbox_helpers import create_or_resume_solo_sandbox
 from domain.board import Power
-from domain.game_state import GameParticipant, GameState, MultiplayerGameSummary
+from domain.game_state import GameParticipant, MultiplayerGameSummary
 from domain.requests import CreateGameRequest, GameBootstrapResponse, SaveSandboxRequest
 from engine.order_utils import (
     refresh_diagnostics_and_simulation,
@@ -15,7 +16,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from scenarios.presets import build_scenario
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
-    caller_owns_saved_sandbox,
     require_view_access,
     sanitize_game_state_for_viewer,
     sanitize_summary_for_viewer,
@@ -233,122 +233,24 @@ async def create_multiplayer_game(
     return sanitize_summary_for_viewer(summary)
 
 
-async def _try_load_draft_sandbox(
-    gid: str, current_user: AuthUser | None
-) -> tuple[GameState, MultiplayerGameSummary] | None:
-    if not gid or gid in (DEFAULT_GAME_ID, "proto_1901"):
-        return None
-    if gid not in GAMES and supabase.is_persistence_enabled():
-        try:
-            loaded = await load_saved_game(gid)
-            if loaded is not None:
-                cache_loaded_game(gid, loaded)
-        except Exception:
-            return None
-    game = GAMES.get(gid)
-    summary = GAME_SUMMARIES.get(gid)
-    if not (game and summary and summary.is_sandbox and summary.is_draft):
-        return None
-    if not caller_owns_saved_sandbox(summary, current_user):
-        return None
-    if current_user and summary.creator_id in (None, "", "guest"):
-        summary.creator_id = current_user.user_id
-        summary.created_by = current_user.email or summary.created_by
-        await persist_game(gid)
-    sync_summary(gid)
-    return game, summary
-
-
 @router.post(
     "/api/games/solo-sandbox",
     response_model=GameBootstrapResponse,
-    summary="Create or Resume Personal Solo Sandbox",
+    summary="Create, Export, or Resume Personal Solo Sandbox",
 )
 async def create_solo_sandbox(
     resume_game_id: str | None = Query(default=None),
+    source_game_id: str | None = Query(default=None),
+    passcode: str | None = Query(default=None),
+    x_passcode: str | None = Header(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    if resume_game_id:
-        resumed = await _try_load_draft_sandbox(resume_game_id.strip(), current_user)
-        if resumed:
-            game_state, summary = resumed
-            return GameBootstrapResponse(
-                state=game_state,
-                provinces=PROVINCES,
-                summary=sanitize_summary_for_viewer(summary),
-            )
-
-    if current_user and current_user.user_id and current_user.user_id != "guest":
-        candidates = [
-            s
-            for gid, s in GAME_SUMMARIES.items()
-            if gid not in (DEFAULT_GAME_ID, "proto_1901")
-            and s.is_sandbox
-            and s.is_draft
-            and s.creator_id
-            and s.creator_id != "guest"
-            and (
-                s.creator_id == current_user.user_id
-                or (
-                    s.created_by
-                    and current_user.email
-                    and s.created_by.lower() == current_user.email.lower()
-                )
-            )
-        ]
-        candidates.sort(key=lambda s: s.created_at or "", reverse=True)
-        for cand in candidates:
-            resumed = await _try_load_draft_sandbox(cand.game_id, current_user)
-            if resumed:
-                game_state, summary = resumed
-                return GameBootstrapResponse(
-                    state=game_state,
-                    provinces=PROVINCES,
-                    summary=sanitize_summary_for_viewer(summary),
-                )
-
-    check_game_capacity()
-    gid = f"solo_{uuid.uuid4().hex[:8]}"
-    now_iso = datetime.now(timezone.utc).isoformat()
-    game_state = build_scenario("standard_1901", Power.FRANCE, gid)
-    GAMES[gid] = game_state
-    SANDBOX_CHECKPOINTS[gid] = None
-    GAME_HISTORY[gid] = []
-
-    effective_user_id = current_user.user_id if current_user else "guest"
-    effective_email = (
-        (current_user.email or "guest@diplomacy.local") if current_user else "guest@diplomacy.local"
-    )
-    display_name = PROFILE_NAMES.get(effective_user_id) or "Envoy"
-    summary = MultiplayerGameSummary(
-        game_id=gid,
-        name=f"Draft Tactical Sandbox ({game_state.season} {game_state.year})",
-        status="active",
-        season=game_state.season,
-        year=game_state.year,
-        phase=game_state.phase,
-        created_by=effective_email,
-        creator_id=effective_user_id,
-        created_at=now_iso,
-        participants={
-            Power.FRANCE.value: GameParticipant(
-                user_id=effective_user_id,
-                email=effective_email,
-                display_name=display_name,
-                power=Power.FRANCE,
-                joined_at=now_iso,
-            )
-        },
-        finalized_powers=[],
-        is_sandbox=True,
-        is_draft=True,
-    )
-    GAME_SUMMARIES[gid] = summary
-    await persist_game(gid)
-    return GameBootstrapResponse(
-        state=game_state,
-        provinces=PROVINCES,
-        summary=sanitize_summary_for_viewer(summary),
+    return await create_or_resume_solo_sandbox(
+        resume_game_id=resume_game_id,
+        source_game_id=source_game_id,
+        passcode=passcode or x_passcode,
+        current_user=current_user,
+        sync_lobby=sync_lobby_with_db,
     )
 
 

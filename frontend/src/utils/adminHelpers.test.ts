@@ -134,6 +134,12 @@ describe('resolvePlayerPower', () => {
     );
   });
 
+  it('follows the active game power in multiplayer Hypothetical Mode', () => {
+    expect(resolvePlayerPower('multiplayer', 'FRANCE', 'GERMANY', true)).toBe(
+      'GERMANY',
+    );
+  });
+
   it('follows the game in the sandbox, where the player can switch powers', () => {
     expect(resolvePlayerPower('sandbox', null, 'TURKEY')).toBe('TURKEY');
   });

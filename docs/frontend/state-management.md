@@ -10,7 +10,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 
 - `hooks/useGameSession.ts`: the open game (`activeGameId`, `activeGameSummary`), the player's seat (`lockedPower`, and `playerPower` derived from it by `resolvePlayerPower`), the board (`gameState`, `provinces`, `loading`, `errorMsg`) and the lobby's games (`gamesList`, `loadingGames`), with `fetchGame`, `fetchGamesList`, `fetchMyGames`, `applyServerState` and `boardRequestSeq`. It runs no effects.
 - `hooks/useGameSync.ts`: what keeps them current: the socket (`useDiplomacyWebSocket`) and its two message handlers, the first load on mount, `handleTimerExpired`, and the fallback poll. App calls it later than `useGameSession`, where these effects have always run, so they keep their order among App's effects (after the display-prefs, layout-reset and turn-history effects, before `useSandboxExit`).
-- `hooks/useSandboxSession.ts`: the sandbox tools. Hypothetical Mode (`sandboxMode`, the private copy's `sandboxGameId`, `hypotheticalMatchTimer`, `showSimulationOverlay`, `handleToggleSandboxMode`, `handleClearForeignPreMoves`), what is worked out from the copy (`draftGameId`, `matchTimer`, `requireRealBoard`), the tactical AI (`handleGenerateAIMoves`, `handleAIStepTurn`), the scenario reset (`handleLoadScenario`) and saving to an account (`saveSandboxModalOpen`, `savingSandbox`, `handleOpenSaveSandboxModal`, `handleSaveSandboxToAccount`). It runs no effects, and App calls it just before `useGameSync`, which reads `sandboxGameId`.
+- `hooks/useSandboxSession.ts`: the sandbox tools. Hypothetical Mode (`sandboxMode`, the private copy's `sandboxGameId`, `sandboxOriginTurn`, `hypotheticalMatchTimer`, `showSimulationOverlay`, `handleToggleSandboxMode`, `handleClearForeignPreMoves`), what is worked out from the copy (`draftGameId`, `matchTimer`, `requireRealBoard`), the scenario reset (`handleLoadScenario`) and saving to an account (`saveSandboxModalOpen`, `savingSandbox`, `handleOpenSaveSandboxModal`, `handleSaveSandboxToAccount`). It runs no effects, and App calls it just before `useGameSync`, which reads `sandboxGameId` and `sandboxOriginTurn`.
 - `hooks/useSandboxExit.ts`: the one effect that closes the private copy when the player leaves the match board by any route. App calls it right after `useGameSync`, where this effect has always run, so on leaving a match from Hypothetical Mode the socket switches before `POST /api/sandbox/exit` goes out.
 - `hooks/useSidebarSelection.ts`: where the selected unit was picked. The selection is the one `selectedUnitId` the map and the sidebar share, so a unit picked on the map still lights its card and a unit picked on the sidebar still lights its provinces. `GameWorkspace` sends the sidebar's picks through `selectFromSidebar` and the map's through `selectFromMap`, and the hook's `suppressUnitMenu` tells the map not to float its unit menu over a unit whose card is already on screen. The next different selection, or the map re-picking the unit, ends it.
 - `hooks/useMatchActions.ts`: what a player does in a match: `handleUpdateOrder`, `handleConfirmAllHolds`, `handleFinalizeClick` with the Sanity Check modal (`sanityModalOpen`, `sanityModalIssues`), `handleUnfinalizeClick`, `handleAdjudicateTurn` with its double-click guard, and the clock buttons (`postTimerAction`). It runs no effects.
@@ -46,9 +46,10 @@ The state the workspace alone uses (`mapRef`, `zoomPercent`, `hoveredUnitId`) an
 | `selectedUnitId` | `string \| null` | UI | Currently selected military unit on the map or in the sidebar. |
 | `hoveredUnitId` | `string \| null` | UI | Unit hovered for cross-component highlighting. Set from `onPointerEnter`/`onPointerLeave` on map pieces and sidebar cards, which ignore `pointerType === 'touch'`: a finger has no hover, so a tap would otherwise leave the highlight on. |
 | `highlightedProvinces`| `string[]` | UI | Provinces highlighted during targeting or diagnostic inspection. |
-| `sandboxMode` | `boolean` | Mode | True when user is in Hypothetical Mode (Eye icon, guessing opponent moves), from `useSandboxSession`. |
-| `sandboxGameId` | `string \| null` | Mode | Id of the private server-side copy used by a multiplayer sandbox, or `null`, from `useSandboxSession`. Drafts, AI plans and previews go to `draftGameId`, which is this id when set and `activeGameId` otherwise. |
-| `simulationResult` | `SimulationResult \| null`| UI | The server's `preview` of the phase being played (a guess with everyone else holding, never a result), or a past turn's resolution. |
+| `sandboxMode` | `boolean` | Mode | True when user is in Hypothetical Mode (Eye icon, ephemeral what-if exploration), from `useSandboxSession`. |
+| `sandboxGameId` | `string \| null` | Mode | Id of the ephemeral server-side copy used by Multiplayer Hypothetical Mode, or `null`, from `useSandboxSession`. Drafts, power switches, previews, and hypothetical `Step Turn Forward` resolves go to `draftGameId`, which is this id when set and `activeGameId` otherwise. |
+| `sandboxOriginTurn` | `string \| null` | Mode | Live match turn label (`turnLabel(gameState)`) captured before entering Hypothetical Mode, from `useSandboxSession`. `useGameSync` uses it to auto-exit Hypothetical Mode when the real match advances to a new turn. |
+| `simulationResult` | `SimulationResult \| null`| UI | The server's `preview` of the phase being played, a hypothetical `Step Turn Forward` resolution, or a past turn's resolution. |
 | `showSimulationOverlay`| `boolean` | UI | Whether combat resolutions (arrows, bounces, cuts) are projected on the map, from `useSandboxSession`. |
 | `adminModalOpen` | `boolean` | Admin | Controls visibility of the game creator's Turn and Clock Settings sidebar panel (`AdminTurnClockSidebar`). |
 | `adminOverrideActive`| `boolean` | Admin | The host's Direct-Edit toggle. It only takes effect through the derived `directEditActive`, which also requires `isGameCreator`, so it does nothing in a game the player does not host. |
@@ -140,32 +141,36 @@ App.applyServerState(st)
 When a user enables **Hypothetical Mode** (`Eye` icon in tools sidebar):
 
 1. **Entering Hypothetical Mode (`handleToggleSandboxMode`)**:
+   - Captures `sandboxOriginTurn` from the live board's `turnLabel(gameState)` before applying the sandbox state.
    - Dispatches `POST /api/sandbox/enter?game_id={activeGameId}`.
-   - In a multiplayer match the backend returns a private copy with its own `game_id`, stored in `sandboxGameId`. Elsewhere it creates an in-memory clone (`SANDBOX_CHECKPOINTS[game_id]`).
+   - In a multiplayer match the backend returns (or resumes, if on the same live turn) an ephemeral private copy (`sbx_`) stored in `sandboxGameId`. Elsewhere it checkpoints the real board (`SANDBOX_CHECKPOINTS[game_id]`) and resumes any same-turn `SANDBOX_BRANCHES[game_id]`.
    - The UI displays an indicator banner: `"HYPOTHETICAL PLANNING & OUTCOME PREVIEW"`.
-2. **Multi-Power Operations**:
-   - The player can assign orders to foreign units to test opponent combinations and battle predictions.
+2. **Multi-Power Operations, Move Visibility & Stepping Turns**:
+   - Clicking any nation in Diplomatic Standings switches active command (`handleSelectPower` posts to `draftGameId`, allowed in multiplayer when `sandboxMode` is true via `resolvePlayerPower(..., sandboxMode)`).
+   - `GameWorkspace` holds `showAllSandboxMoves` (`All Moves` vs `Selected Nation` in `StandingsSection`) so commanders can view all 7 powers' orders or focus on `activePower`.
+   - `Step Turn Forward` (`handleAdjudicateTurn`) adjudicates `draftGameId` when `sandboxMode` is true, advancing the ephemeral branch across turns without touching the live match.
    - The outcome overlay is on while in Hypothetical Mode, so the map shows how all hypothetical forces interact.
-3. **Exiting Hypothetical Mode**:
+3. **Exiting Hypothetical Mode & Live Turn Advancement**:
    - Dispatches `POST /api/sandbox/exit?game_id={draftGameId}`.
-   - The backend restores the pre-sandbox checkpoint, or discards the private copy and returns the real match.
-   - The player's own active-power orders are preserved. In a multiplayer match that needs the match to still be on the same turn; if it moved on, a toast says the sandbox orders were not kept.
-   - All foreign hypothetical orders are purged to prevent accidental submission.
+   - The backend restores the real match or pre-sandbox checkpoint and real orders without mutating real game state (never carrying hypothetical orders back to the live match).
+   - The ephemeral branch (`sbx_` or `SANDBOX_BRANCHES`) persists across exit/re-enter for the duration of the live turn and is erased when the real turn ends (resolution, admin rollback/set-turn/board-edit, scenario load/seed).
+   - While `sandboxGameId` is set, if `useGameSync` receives a WebSocket update or poll response whose `turnLabel` differs from `sandboxOriginTurn`, it automatically exits Hypothetical Mode, clears `sandboxGameId` / `sandboxOriginTurn`, applies the live board, and notifies the player with a toast.
 4. **Clearing Foreign Orders**:
    - Dispatches `POST /api/sandbox/clear-foreign?game_id={draftGameId}`.
-   - Cleans all hypothetical enemy orders while remaining in Hypothetical mode.
+   - Cleans all hypothetical enemy orders while remaining in Hypothetical Mode.
 
-While `sandboxGameId` is set, the board shows the private copy and is kept apart from the real match:
+While `sandboxGameId` is set, the board shows the ephemeral private copy and is kept apart from the real match:
 
-- WebSocket updates (and fallback polling when disconnected) for the match update `activeGameSummary` and `hypotheticalMatchTimer`. The clock continues to run via WebSocket heartbeats or fallback polling. A deadline can pass here, and orders in the copy reach the match only on exit, so the timer widget warns the player. Exiting brings the board back up to date.
-- Finalize, Unlock, Resolve, Surrender and the Admin Console are refused with a toast (`requireRealBoard`), because they act on the real match and the player would be looking at a hypothetical board.
-- Leaving the match view by any route closes the sandbox through the effect in `useSandboxExit`, which watches `viewMode`.
+- WebSocket updates (and fallback polling when disconnected) for the match update `activeGameSummary` and `hypotheticalMatchTimer`. The clock continues to run via WebSocket heartbeats or fallback polling.
+- Finalize, Unlock, Surrender and the Admin Console are refused with a toast (`requireRealBoard`), because they act on the real match and the player would be looking at a hypothetical board.
+- Leaving the match view by any route closes Hypothetical Mode through the effect in `useSandboxExit`, which watches `viewMode`.
 
 ### Solo Sandbox Isolation, Session Persistence & In-Place Promotion
 
-1. **Entering & Resuming Solo Sandbox (`handleEnterSoloSandbox`)**:
+1. **Entering, Resuming & Exporting to Solo Sandbox (`handleEnterSoloSandbox`)**:
    - Reads `sloplomacy_solo_sandbox_id` from `localStorage` (`readStoredSoloSandboxId`) and dispatches `POST /api/games/solo-sandbox` (passing `?resume_game_id=<storedId>` when present).
-   - If the stored draft ID is still active (or if the signed-in user already owns an unpromoted draft), the backend resumes it with all orders and turns intact. Otherwise, it initializes a dedicated, isolated draft sandbox (`solo_<uuid>`, `is_sandbox: true`, `is_draft: true`) and stores the ID in `localStorage`.
+   - When invoked from any active board (`viewMode !== 'lobby'`), also sends `source_game_id` (`draftGameId ?? activeGameId`) and any match `X-Passcode`: the backend validates view access, sanitizes live multiplayer state (masking opponent orders to `HOLD`), deletes any previous draft sandbox (`solo_*`, `is_draft: true`), and creates a new draft seeded from that snapshot, resetting `sandboxGameId` to `null`.
+   - From the lobby, if the stored draft ID is still active (or if the signed-in user already owns an unpromoted draft), the backend resumes it with all orders and turns intact. Otherwise, it initializes a fresh isolated draft sandbox (`solo_<uuid>`, `is_sandbox: true`, `is_draft: true`) and stores the ID in `localStorage`.
    - Draft sandboxes are excluded from public lobby lists and `/ws/lobby` broadcasts, ensuring that two visitors launching Solo Sandbox never interact or see each other's moves.
 2. **Promoting to Saved Sandbox (`handleSaveSandboxToAccount`)**:
    - Clicking "Save Sandbox" opens `SaveSandboxModal` (`saveSandboxModalOpen = true`), allowing the commander to specify a custom name.

@@ -48,8 +48,7 @@ def test_fastapi_endpoints_and_finalize_sanity_check():
     # Reset back to standard 1901
     client.post("/api/scenario", json={"scenario_id": "standard_1901", "active_power": "RUSSIA"})
 
-    # Test Sandbox Enter/Exit isolation: Russia enters sandbox, plots German & Austrian moves, then exits
-    client.post("/api/sandbox/enter", json={"power": "RUSSIA"})
+    # Submit Russia's real move before entering Hypothetical Mode
     client.post(
         "/api/order",
         json={
@@ -60,6 +59,23 @@ def test_fastapi_endpoints_and_finalize_sanity_check():
                 "origin": "MOS",
                 "order_type": "MOVE",
                 "target": "UKR",
+                "is_explicit": True,
+            }
+        },
+    )
+
+    # Test Sandbox Enter/Exit isolation: Russia enters sandbox, edits own & foreign moves hypothetically, then exits
+    client.post("/api/sandbox/enter", json={"power": "RUSSIA"})
+    client.post(
+        "/api/order",
+        json={
+            "order": {
+                "unit_id": "RUS_A_MOS",
+                "power": "RUSSIA",
+                "unit_type": "A",
+                "origin": "MOS",
+                "order_type": "MOVE",
+                "target": "STP",
                 "is_explicit": True,
             }
         },
@@ -81,7 +97,7 @@ def test_fastapi_endpoints_and_finalize_sanity_check():
     exit_res = client.post("/api/sandbox/exit", json={"power": "RUSSIA"})
     assert exit_res.status_code == 200
     after_exit = exit_res.json()
-    # Russia's own move persists, while Germany's hypothetical move is wiped back to default HOLD
+    # Real board and orders are restored while both own and foreign hypothetical guesses are rolled back
     assert after_exit["orders"]["RUS_A_MOS"]["order_type"] == "MOVE"
     assert after_exit["orders"]["RUS_A_MOS"]["target"] == "UKR"
     assert after_exit["orders"]["GER_A_BER"]["order_type"] == "HOLD"

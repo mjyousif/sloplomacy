@@ -200,6 +200,27 @@ describe('useSeatActions: picking a power', () => {
     expect(o.setSelectedUnitId).toHaveBeenCalledWith(null);
   });
 
+  it('switches the commanded power on a multiplayer hypothetical branch when sandboxMode is on', async () => {
+    supabase.authedFetch.mockResolvedValue(reply(200, STATE));
+    const o = makeOptions({
+      viewMode: 'multiplayer',
+      activeGameId: 'mp_1',
+      lockedPower: 'FRANCE',
+      sandboxMode: true,
+      draftGameId: 'sbx_9',
+    });
+    const { result } = renderSeats(o);
+    await act(() => result.current.handleSelectPower('GERMANY'));
+    expect(sent()).toEqual({
+      url: '/api/power?game_id=sbx_9',
+      method: 'POST',
+      body: { power: 'GERMANY' },
+    });
+    expect(o.applyServerState).toHaveBeenCalledWith(STATE);
+    expect(o.setSelectedUnitId).toHaveBeenCalledWith(null);
+    expect(o.triggerToast).not.toHaveBeenCalled();
+  });
+
   it('ignores a refused pick, and a match player with no seat may still pick', async () => {
     supabase.authedFetch.mockResolvedValue(reply(400, {}));
     const o = makeOptions({ viewMode: 'multiplayer', lockedPower: null });

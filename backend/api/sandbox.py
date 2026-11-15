@@ -5,7 +5,7 @@ import uuid
 from api.turns import _execute_adjudication
 from domain.board import Power
 from domain.game_state import GameState
-from domain.orders import Order, OrderType
+from domain.orders import OrderType
 from domain.requests import GenerateAIOrdersRequest, ScenarioRequest, SetPowerRequest
 from engine.ai import generate_tactical_orders
 from engine.order_utils import (
@@ -28,10 +28,13 @@ from storage.store import (
     GAME_SUMMARIES,
     GAMES,
     HISTORY_UNSAVED,
+    PRIVATE_SANDBOX_TURNS,
     PRIVATE_SANDBOXES,
+    SANDBOX_BRANCHES,
     SANDBOX_CHECKPOINTS,
     SANDBOX_HISTORY_CHECKPOINTS,
     check_game_capacity,
+    clear_ephemeral_sandboxes_for,
     evict_game,
     is_multiplayer_match,
     persist_game,
@@ -47,9 +50,14 @@ router = APIRouter(tags=["Sandbox & AI Planning"])
 
 
 def open_private_sandbox(match: GameState, power: Power) -> GameState:
-    """Give a multiplayer seat a private sandbox copy under its own sbx_ game id."""
+    """Give a multiplayer seat a private ephemeral sandbox branch for the current turn."""
+    match_turn = (match.season, match.year, match.phase)
     for sandbox_id, owner in list(PRIVATE_SANDBOXES.items()):
         if owner == (match.game_id, power):
+            existing = GAMES.get(sandbox_id)
+            if existing and PRIVATE_SANDBOX_TURNS.get(sandbox_id) == match_turn:
+                refresh_diagnostics_and_simulation(existing)
+                return existing
             evict_game(sandbox_id)
 
     sandbox_id = f"sbx_{uuid.uuid4().hex[:8]}"
@@ -59,43 +67,24 @@ def open_private_sandbox(match: GameState, power: Power) -> GameState:
     sandbox.timer = None  # The match keeps the real clock, and a copy must never run out
     reset_foreign_orders(sandbox, power)
     GAMES[sandbox_id] = sandbox
+    GAME_HISTORY[sandbox_id] = []
     SANDBOX_CHECKPOINTS[sandbox_id] = None
     PRIVATE_SANDBOXES[sandbox_id] = (match.game_id, power)
+    PRIVATE_SANDBOX_TURNS[sandbox_id] = match_turn
     refresh_diagnostics_and_simulation(sandbox)
     return sandbox
 
 
 async def close_private_sandbox(sandbox: GameState) -> GameState:
-    """Discard a private sandbox and return the real match."""
-    match_id, power = PRIVATE_SANDBOXES[sandbox.game_id]
-    evict_game(sandbox.game_id)
+    """Return the real match without mutating it; keep same-turn branch for resume."""
+    match_id, _power = PRIVATE_SANDBOXES[sandbox.game_id]
     match = await resolve_game(match_id)
-
-    summary = GAME_SUMMARIES.get(match_id)
-    holds_seat = bool(
-        summary and power.value in summary.participants and power not in match.surrendered_powers
-    )
-    same_turn = (match.season, match.year, match.phase) == (
-        sandbox.season,
-        sandbox.year,
-        sandbox.phase,
-    )
-    changed_orders = {
-        ord_id: o
-        for ord_id, o in sandbox.orders.items()
-        if o.power == power and match.orders.get(ord_id) != o
-    }
-    if not (holds_seat and same_turn and changed_orders):
-        return match
-
-    match.orders.update(changed_orders)
-    if power in match.finalized_powers:
-        match.finalized_powers.remove(power)
-    refresh_diagnostics_and_simulation(match)
-    sync_summary(match_id)
-    await persist_game(match_id)
-    await broadcast_game_update(match_id, match)
-    await broadcast_lobby_update()
+    if PRIVATE_SANDBOX_TURNS.get(sandbox.game_id) != (
+        match.season,
+        match.year,
+        match.phase,
+    ):
+        evict_game(sandbox.game_id)
     return match
 
 
@@ -103,7 +92,7 @@ async def close_private_sandbox(sandbox: GameState) -> GameState:
     "/api/sandbox/enter",
     response_model=GameState,
     summary="Enter Sandbox Mode",
-    description="Activate Sandbox Mode: creates an isolated private hypothetical copy for multiplayer matches, or checkpoints a solo game.",
+    description="Activate Sandbox Mode: creates or resumes an isolated private hypothetical branch for multiplayer matches, or checkpoints a solo game.",
 )
 async def enter_sandbox_mode(
     req: SetPowerRequest,
@@ -117,11 +106,21 @@ async def enter_sandbox_mode(
         require_own_seat(gid, req.power, current_user)
         return open_private_sandbox(game, req.power)
 
-    game.active_power = req.power
+    origin_turn = (game.season, game.year, game.phase)
     SANDBOX_CHECKPOINTS[gid] = game.model_copy(deep=True)
     SANDBOX_HISTORY_CHECKPOINTS[gid] = [
         snap.model_copy(deep=True) for snap in GAME_HISTORY.get(gid, [])
     ]
+    branch = SANDBOX_BRANCHES.get(gid)
+    if branch is not None and branch[0] == origin_turn:
+        branch_state = branch[1].model_copy(deep=True)
+        branch_state.active_power = req.power
+        GAMES[gid] = branch_state
+        GAME_HISTORY[gid] = [snap.model_copy(deep=True) for snap in branch[2]]
+        game = branch_state
+    else:
+        SANDBOX_BRANCHES.pop(gid, None)
+        game.active_power = req.power
     refresh_diagnostics_and_simulation(game)
     await broadcast_game_update(gid, game)
     return game
@@ -131,7 +130,7 @@ async def enter_sandbox_mode(
     "/api/sandbox/exit",
     response_model=GameState,
     summary="Exit Sandbox Mode",
-    description="Exit Sandbox Mode and restore the authoritative game state (carrying over player's modified orders).",
+    description="Exit Hypothetical Mode and restore the real board state and moves (hypothetical changes stay only in the ephemeral branch for this turn).",
 )
 async def exit_sandbox_mode(
     req: SetPowerRequest,
@@ -142,39 +141,34 @@ async def exit_sandbox_mode(
     gid = game.game_id
     if gid in PRIVATE_SANDBOXES:
         match_id, power = PRIVATE_SANDBOXES[gid]
-        if caller_holds_seat(GAME_SUMMARIES.get(match_id), power, current_user):
+        summary = GAME_SUMMARIES.get(match_id)
+        if caller_holds_seat(summary, power, current_user):
             match = await close_private_sandbox(game)
             return sanitize_game_state_for_viewer(match, power)
-        evict_game(gid)
+        if not summary or power.value not in summary.participants:
+            evict_game(gid)
         match = await resolve_game(match_id)
         return sanitize_game_state_for_viewer(match, viewer_power_for(match_id, current_user))
     reject_on_multiplayer_match(gid)
 
     checkpoint = SANDBOX_CHECKPOINTS.get(gid)
     if checkpoint is not None:
-        same_turn = (
-            game.season == checkpoint.season
-            and game.year == checkpoint.year
-            and game.phase == checkpoint.phase
+        origin_turn = (checkpoint.season, checkpoint.year, checkpoint.phase)
+        SANDBOX_BRANCHES[gid] = (
+            origin_turn,
+            game.model_copy(deep=True),
+            [snap.model_copy(deep=True) for snap in GAME_HISTORY.get(gid, [])],
         )
-        saved_own_orders: dict[str, Order] = {}
-        if same_turn:
-            for uid, ord_obj in game.orders.items():
-                if ord_obj.power == req.power:
-                    saved_own_orders[uid] = ord_obj.model_copy(deep=True)
-
         restored = checkpoint.model_copy(deep=True)
         restored.active_power = req.power
-        for uid, ord_obj in saved_own_orders.items():
-            restored.orders[uid] = ord_obj
         GAMES[gid] = restored
         game = restored
         SANDBOX_CHECKPOINTS[gid] = None
         # Turns stepped in the sandbox were hypothetical, so they leave the history with it.
         GAME_HISTORY[gid] = SANDBOX_HISTORY_CHECKPOINTS.pop(gid, GAME_HISTORY.get(gid, []))
         HISTORY_UNSAVED.add(gid)
-
-    reset_foreign_orders(game, req.power)
+    else:
+        reset_foreign_orders(game, req.power)
 
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
@@ -292,7 +286,7 @@ async def load_scenario(
     current = await resolve_game(game_id)
     gid = current.game_id
     verify_admin_access(gid, current_user)
-    SANDBOX_CHECKPOINTS[gid] = None
+    clear_ephemeral_sandboxes_for(gid)
     GAME_HISTORY[gid] = []
     HISTORY_UNSAVED.add(gid)
     power = req.active_power or current.active_power
