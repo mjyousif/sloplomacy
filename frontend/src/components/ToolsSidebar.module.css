@@ -1,5 +1,10 @@
 @layer components {
+  /* Floats over the map's left edge, so opening or collapsing it never resizes the map. */
   .tools-sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
     height: 100%;
     background: #171b22;
     border-right: 1px solid #282f3d;
@@ -14,15 +19,15 @@
   }
 
   .tools-sidebar.tools-sidebar-expanded {
-    width: 290px;
-    min-width: 290px;
-    max-width: 290px;
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
   }
 
   .tools-sidebar.tools-sidebar-collapsed {
-    width: 44px;
-    min-width: 44px;
-    max-width: 44px;
+    width: var(--sidebar-rail-width);
+    min-width: var(--sidebar-rail-width);
+    max-width: var(--sidebar-rail-width);
     align-items: center;
     padding: 8px 0;
     background: #13161c;
@@ -56,12 +61,6 @@
     color: #f8eed9;
     margin: 0;
     line-height: 1.15;
-  }
-
-  .tools-header-sub {
-    font-size: 0.65rem;
-    color: #94a3b8;
-    display: block;
   }
 
   .tools-sidebar-content {

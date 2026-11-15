@@ -90,13 +90,13 @@ def test_naming_a_power_in_get_game_does_not_show_its_orders():
 
     own = client.get(f"/api/game?game_id={gid}", headers=alice_headers()).json()["state"]
     assert own["orders"]["FRA_A_PAR"]["order_type"] == "MOVE"
-    assert own["last_resolution"]["resolutions"]["FRA_A_PAR"]["order_type"] == "MOVE"
+    assert own["preview"]["resolutions"]["FRA_A_PAR"]["order_type"] == "MOVE"
 
 
 def test_turn_preview_is_built_only_from_what_the_viewer_may_see():
     gid = secret_plan_match()
     state = client.get(f"/api/game?game_id={gid}", headers=bob_headers()).json()["state"]
-    assert state["last_resolution"]["resolutions"]["FRA_A_PAR"]["order_type"] == "HOLD"
+    assert state["preview"]["resolutions"]["FRA_A_PAR"]["order_type"] == "HOLD"
 
     for headers in (bob_headers(), {}):
         res = client.post(f"/api/simulate?game_id={gid}", headers=headers)

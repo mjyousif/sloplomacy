@@ -254,10 +254,26 @@ Use the file name (without `.spec.ts`) as the `ScenarioRecorder` name, because t
 | `builds` | Winter adjustments, Army/Fleet builds, bicoastal STP/NC Fleet build, deficit disband | `artifacts/e2e/winter_builds/` |
 | `mobile` | Phone (390x844, touch taps): full-width map, order sheet, ≡ tools drawer, docked unit bar, card-to-map selection, a move by tap, a winter build, a past turn from the drawer with its map pill | `artifacts/e2e/mobile_compact_hud/`, `artifacts/e2e/mobile_winter_build/`, `artifacts/e2e/mobile_turn_history/` |
 | `history` | Turn history: a resolved bounce shown with every nation's orders, nation chips, the read-only orders panel, back to live | `artifacts/e2e/turn_history/` |
-| `press` | Press (chat) between three seated players in two browsers: public box, a private thread the third player is never served, an anonymous note, province links lighting the map, unread badges, and the phone drawer | `artifacts/e2e/press/`, `artifacts/e2e/press_phone/` |
+| `press` | Press (chat) between three seated players in two browsers: public box, a private thread the third player is never served, anonymous messages in a group thread and the public box (never in a one-to-one thread), province links lighting the map, unread badges, and the phone drawer | `artifacts/e2e/press/`, `artifacts/e2e/press_phone/` |
 | `convoy_scenarios` | Authoritative convoy reachability: ocean-blue potential/chained vs solid-green active highlights + reticles, dead-end path filtering, broken chains, 4-ship Trans-Med convoy, and bicoastal landings | `artifacts/e2e/convoy_scenarios/` |
 
 Each scenario exports a `summary.json` containing the execution status (`PASSED`/`FAILED`), step-by-step screenshot paths, and any browser console or uncaught page runtime errors.
+
+---
+
+## Agent Playtest Harness (`scripts/playtest/`)
+
+A Game Master agent can run a full game between seven agent players against the real backend, to find bugs that only show up in play. It talks to the API only, so it does not cover the UI, the game socket, the turn clock or Supabase persistence.
+
+| File | Purpose |
+| :--- | :--- |
+| `GM_PROMPT.md` | The prompt for the Game Master session: budget rules, setup, the per-phase loop, what to check and what to deliver. |
+| `sim_client.py` | The players' CLI for one seat: `state`, `orders`, `finalize`, `press-read`, `press-send`, `history`. Run it with no arguments for the order syntax. `--self-test` plays a scripted 1901 on a fresh game. |
+| `selftest.py` | The scripted year behind `--self-test`: moves, a dislodgement and its retreat, builds, a waive and a disband, through the players' own commands. Run it before any agent starts: `SIM_API=http://127.0.0.1:8020 python3 scripts/playtest/sim_client.py --self-test`. |
+| `gmtool.py` | Game Master views: one resolved turn with every order and its result (`hist N`), centre counts (`sc`), a fog-of-war check (`probe POWER`) and `units`. |
+| `watch.py` | A read-only spectator page (`python3 scripts/playtest/watch.py 8021`) showing every power's live orders and all press. |
+
+The scripts read `SIM_API` (default `http://127.0.0.1:8020`) and `SIM_GAME`; `sim_client.py` also reads `SIM_POWER`. They sign in with the local demo token, so the backend must run with `ENVIRONMENT=development` (see [Local Demo Sign-In](#local-demo-sign-in)). Never point them at a deployed server. A run writes its notes, log and report to `artifacts/playtest/<timestamp>/`, which is gitignored.
 
 ---
 

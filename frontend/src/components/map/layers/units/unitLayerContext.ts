@@ -21,6 +21,8 @@ export interface UnitLayerContext {
   /** The power the player commands, or null on a past turn. */
   controlPower: Power | null;
   canEditAnyPower: boolean;
+  /** Whether the player may pick this unit up and order it now. */
+  canControl: (unit: Unit) => boolean;
   activePower: Power;
   selectedUnit: Unit | null;
   interactionMode?: MapInteractionMode;

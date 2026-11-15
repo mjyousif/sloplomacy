@@ -1,4 +1,11 @@
-import { type Dispatch, type SetStateAction, useRef, useState } from 'react';
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import { suggestionStore } from '../lib/suggestionStore';
 import { authedFetch } from '../lib/supabase';
 import {
   type FinalizeResponse,
@@ -100,6 +107,49 @@ export function useMatchActions({
       console.error(e);
     }
   };
+
+  // Taking a move suggestion from press: the player's own part of it replaces those units'
+  // orders in one all-or-nothing batch. The Press section reaches this through the store.
+  const adoptOrders = async (orders: Order[]): Promise<string | null> => {
+    if (!gameState || !lockedPower || orders.length === 0) {
+      return 'There are no orders here for your units.';
+    }
+    if (!requireRealBoard('use suggested orders'))
+      return 'Leave Hypothetical Mode first.';
+    try {
+      const res = await authedFetch(
+        `${API_BASE}/orders/batch?game_id=${encodeURIComponent(activeGameId)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            power: lockedPower,
+            orders,
+            turn: turnLabel(gameState),
+          }),
+        },
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        return err.detail || 'Those orders were not accepted.';
+      }
+      applyServerState(await res.json());
+      setSelectedUnitId(null);
+      triggerToast(
+        `Suggested orders copied to ${orders.length} of your units. Review them, then finalize.`,
+      );
+      return null;
+    } catch (e) {
+      console.error(e);
+      return 'Those orders could not be sent.';
+    }
+  };
+  const adoptRef = useRef(adoptOrders);
+  adoptRef.current = adoptOrders;
+  useEffect(() => {
+    suggestionStore.setAdopter((orders) => adoptRef.current(orders));
+    return () => suggestionStore.setAdopter(null);
+  }, []);
 
   const handleClearAllOrders = async () => {
     if (!gameState) return;

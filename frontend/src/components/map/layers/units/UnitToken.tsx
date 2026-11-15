@@ -34,7 +34,7 @@ export function UnitToken({
     ownership,
     unitsByProv,
     controlPower,
-    canEditAnyPower,
+    canControl,
     activePower,
     selectedUnit,
     interactionMode,
@@ -67,7 +67,7 @@ export function UnitToken({
   const pt = getUnitPoint(unit);
   const meta = POWER_METADATA[unit.power];
   const order = orders[unit.id];
-  const isControllable = unit.power === controlPower || canEditAnyPower;
+  const isControllable = canControl(unit);
   const isTargetableWhileSelected = Boolean(
     selectedUnit && unit.id !== selectedUnit.id && interactionMode,
   );

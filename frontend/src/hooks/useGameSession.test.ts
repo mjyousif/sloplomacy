@@ -127,7 +127,7 @@ describe('useGameSession: the player’s power', () => {
 describe('useGameSession: applyServerState', () => {
   it('sets the board and passes on a resolution', () => {
     const { result } = renderSession();
-    const st = state({ last_resolution: RESOLUTION });
+    const st = state({ preview: RESOLUTION });
     act(() => result.current.applyServerState(st));
     expect(result.current.gameState).toBe(st);
     expect(setSimulationResult).toHaveBeenCalledWith(RESOLUTION);
@@ -244,7 +244,7 @@ describe('useGameSession: the player’s own games', () => {
 
 describe('useGameSession: fetchGame', () => {
   const BOARD = {
-    state: state({ last_resolution: RESOLUTION }),
+    state: state({ preview: RESOLUTION }),
     provinces: FRANCE_PROVINCES,
     summary: SUMMARY,
   };

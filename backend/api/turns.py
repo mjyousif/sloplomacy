@@ -2,8 +2,10 @@ import logging
 import time
 from datetime import datetime, timezone
 
+from api.admin_utils import create_admin_log_entry, resolve_admin_actor
+from api.orders import reject_if_surrendered
 from domain.board import Power
-from domain.game_state import GameState, TimerStage
+from domain.game_state import AdminActionLogEntry, GameState, TimerStage
 from domain.issues import IssueSeverity
 from domain.orders import SimulationResult
 from domain.requests import (
@@ -28,7 +30,7 @@ from engine.phase_timer import (
     start_phase_clock,
 )
 from engine.validator.orchestrator import validate_orders
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
     sanitize_game_state_for_viewer,
@@ -100,7 +102,9 @@ def reject_stale_turn(game: GameState, turn: str | None) -> None:
         )
 
 
-async def _execute_adjudication(game: GameState) -> GameState:
+async def _execute_adjudication(
+    game: GameState, admin_entry: AdminActionLogEntry | None = None
+) -> GameState:
     gid = game.game_id
 
     if game.winner:
@@ -111,7 +115,7 @@ async def _execute_adjudication(game: GameState) -> GameState:
     if gid not in GAME_HISTORY:
         GAME_HISTORY[gid] = []
     GAME_HISTORY[gid].append(
-        game.model_copy(deep=True, update={"last_resolution": None, "issues": [], "timer": None})
+        game.model_copy(deep=True, update={"preview": None, "issues": [], "timer": None})
     )
     if len(GAME_HISTORY[gid]) > 30:
         GAME_HISTORY[gid].pop(0)
@@ -132,7 +136,12 @@ async def _execute_adjudication(game: GameState) -> GameState:
     next_phase = result.next_phase or "Movement"
 
     new_orders = create_default_orders(result.new_units, next_phase, result.builds)
-    history_entry = f"Resolved {prev_label}: {len(result.summary)} tactical actions processed."
+    history_entry = (
+        f"[ADMIN OVERRIDE] Force-resolved {prev_label}: "
+        f"{len(result.summary)} tactical actions processed."
+        if admin_entry
+        else f"Resolved {prev_label}: {len(result.summary)} tactical actions processed."
+    )
     game.season = next_season
     game.year = next_year
     game.phase = next_phase
@@ -144,10 +153,11 @@ async def _execute_adjudication(game: GameState) -> GameState:
     game.finalized_powers = []
     game.state_revision += 1
     game.turn_history.insert(0, history_entry)
+    if admin_entry:
+        game.admin_log.append(admin_entry)
     if result.winner:
         game.winner = result.winner
         game.timer = None
-        game.last_resolution = result
         game.turn_history.insert(0, f"{result.winner.value} has won the game in {prev_label}.")
         if summary := GAME_SUMMARIES.get(gid):
             summary.winner = result.winner
@@ -237,6 +247,7 @@ async def finalize_power_orders(
     reject_if_game_over(game)
     reject_stale_turn(game, req.turn)
     verify_power_authorization(game.game_id, req.power, current_user)
+    reject_if_surrendered(game, req.power)
     power_issues = validate_orders(
         game.units,
         game.orders,
@@ -296,6 +307,7 @@ async def unfinalize_power_orders(
     game = await resolve_game(game_id)
     reject_if_game_over(game)
     verify_power_authorization(game.game_id, req.power, current_user)
+    reject_if_surrendered(game, req.power)
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)
     game.state_revision += 1
@@ -320,9 +332,9 @@ async def simulate_current_orders(
     game = await resolve_game(game_id)
     refresh_diagnostics_and_simulation(game)
     visible = sanitize_game_state_for_viewer(game, viewer_power_for(game.game_id, current_user))
-    if visible.last_resolution is None:
+    if visible.preview is None:
         raise HTTPException(status_code=500, detail="Tactical preview could not be computed.")
-    return visible.last_resolution
+    return visible.preview
 
 
 @router.post(
@@ -336,17 +348,33 @@ async def adjudicate_and_advance(
     # The turn the caller meant to resolve. A second click arrives after it resolved and is refused.
     turn: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
+    x_user_id: str | None = Header(default=None),
+    x_user_email: str | None = Header(default=None),
 ):
     game = await resolve_game(game_id)
     gid = game.game_id
 
+    admin_entry: AdminActionLogEntry | None = None
     if gid != DEFAULT_GAME_ID:
         summary = GAME_SUMMARIES.get(gid)
         if summary and not summary.is_sandbox:
             verify_admin_access(gid, current_user)
+            actor_email, actor_id = resolve_admin_actor(
+                gid, current_user, None, None, x_user_id, x_user_email
+            )
+            prev_label = f"{game.season} {game.year} {game.phase}"
+            admin_entry = create_admin_log_entry(
+                gid,
+                season=game.season,
+                year=game.year,
+                phase=game.phase,
+                summary_lines=[f"[ADMIN OVERRIDE] Force-resolved {prev_label} Phase."],
+                actor=actor_email,
+                actor_id=actor_id,
+            )
 
     reject_stale_turn(game, turn)
-    return await _execute_adjudication(game)
+    return await _execute_adjudication(game, admin_entry=admin_entry)
 
 
 @router.post(

@@ -31,7 +31,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `GET` | `/api/game` | Fetch current game state (scoped to caller's seat) and province topology | *None* | `GameBootstrapResponse` |
 | `POST` | `/api/power` | Switch active viewing power (returns what the caller's own seat may see) | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/order` | Submit or update an order for a single military unit or build slot | `SingleOrderUpdateRequest` | `GameState` |
-| `POST` | `/api/orders/batch` | Update multiple orders simultaneously (atomic: invalid order rejects with `400`) | `OrderSubmissionRequest` | `GameState` |
+| `POST` | `/api/orders/batch` | Update multiple orders simultaneously (atomic: an invalid batch changes nothing) | `OrderSubmissionRequest` | `GameState` |
 | `POST` | `/api/orders/confirm-all` | Mark all default orders of a given power as explicitly confirmed | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/orders/clear-all` | Reset every order of a given power to the phase default and withdraw its finalization | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/finalize` | Pre-flight sanity check and finalize power's orders; auto-adjudicates when all are ready | `FinalizeRequest` | `FinalizeResponse` |
@@ -45,7 +45,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/history` | List the game's resolved phases, oldest first (up to the last 30) | *None* | `List[TurnHistoryEntry]` |
 | `GET` | `/api/press` | The press (chat) the caller's seat may read, oldest first; `?after=<seq>` for newer messages only | *None* | `PressFeed` |
-| `POST` | `/api/press` | Send press from the caller's seat: public, a private thread, or an anonymous note | `PressPostRequest` | `PressMessageView` |
+| `POST` | `/api/press` | Send press from the caller's seat to the public box or a private thread, signed or anonymous | `PressPostRequest` | `PressMessageView` |
 | `GET` | `/api/history/{index}` | One resolved phase as it began, with every power's orders and how each resolved | *None* | `TurnRecord` |
 
 ### Sandbox & AI Planning
@@ -365,7 +365,7 @@ Bootstraps the client by returning the current `GameState` along with the comple
 
 - **Query Parameters**:
   - `game_id` *(optional, string)*: Scoped match identifier (defaults to `proto_1901`).
-  - `power` *(optional, Power)*: Picks which of the caller's own seats to view. It is checked against the caller's seat and never shows another power's orders: naming a seat you do not hold gives the same view as not naming one. In multiplayer matches, whether `waiting` or `active`, foreign unadjudicated moves are masked to default `HOLD`s, foreign diagnostic issues are excluded, and `last_resolution` (the turn preview) is rebuilt from the viewer's own orders with everyone else holding (Fog of War).
+  - `power` *(optional, Power)*: Picks which of the caller's own seats to view. It is checked against the caller's seat and never shows another power's orders: naming a seat you do not hold gives the same view as not naming one. In multiplayer matches, whether `waiting` or `active`, foreign unadjudicated moves are masked to default `HOLD`s, foreign diagnostic issues are excluded, and `preview` (the phase being played, resolved from the viewer's own orders with everyone else holding) is rebuilt per viewer (Fog of War). `preview` is a guess, never a resolved phase: what really happened is in `GET /api/history`. It is `null` once the game has a winner.
   - `passcode` *(optional, string)*: Passcode for private campaigns (compared using timing-safe `hmac.compare_digest`).
 - **Headers**:
   - `X-Passcode` *(optional, string)*: Header alternative for campaign passcode.
@@ -387,7 +387,8 @@ Bootstraps the client by returning the current `GameState` along with the comple
     "finalized_powers": [],
     "surrendered_powers": [],
     "issues": [...],
-    "last_resolution": {...},
+    "preview": {...},
+    "admin_resolution": null,
     "turn_history": ["Game initialized — Spring 1901 Diplomatic & Movement Phase."],
     "builds": null,
     "retreats": null
@@ -474,7 +475,9 @@ Submits or modifies a single military instruction. Automatically triggers valida
 
 Returns `400` if the order names a province or coast that does not exist. A real but illegal move is accepted: the validator flags it, and the engine refuses it at adjudication.
 
-In multiplayer matches, callers must supply a valid `Authorization: Bearer <token>` matching the participant who claimed the Great Power (or game creator). Attempts by opponents or unauthenticated callers to issue orders for claimed powers return `403 Forbidden` or `401 Unauthorized`. An empty seat is in Civil Disorder, so only the host may order it. A build slot (`BUILD_<POWER>_<PROVINCE>`) belongs to the power it names, whatever the order's `power` says, and in `/api/orders/batch` every unit must belong to the batch's `power` (otherwise `403`). Returned `GameState` is sanitized for the commanding power to preserve Fog of War.
+An order on a build slot must fit the slot: `404` for a slot the phase does not have (a home centre that is occupied, not owned, or any slot outside Winter), and `422` for a `BUILD` whose `origin` is not the slot's own home centre (`BUILD_FRANCE_BRE` builds only in `BRE`). Otherwise the stored order and its resolution would be filed under different slots. `/api/orders/batch` also answers `422` when two orders name the same `unit_id`, so no order silently replaces another. A refused batch changes nothing.
+
+In multiplayer matches, callers must supply a valid `Authorization: Bearer <token>` matching the participant who claimed the Great Power (or game creator). Attempts by opponents or unauthenticated callers to issue orders for claimed powers return `403 Forbidden` or `401 Unauthorized`. An empty seat is in Civil Disorder, so only the host may order it. A surrendered power is in Civil Disorder too: `/api/order`, `/api/orders/batch`, `/api/orders/clear-all`, `/api/orders/confirm-all`, `/api/finalize` and `/api/unfinalize` answer `403` for it in a live match (a sandbox is unaffected), until a player claims the seat again. A build slot (`BUILD_<POWER>_<PROVINCE>`) belongs to the power it names, whatever the order's `power` says, and in `/api/orders/batch` every unit must belong to the batch's `power` (otherwise `403`). Like `/api/order`, a batch may carry `turn` (e.g. `"Spring 1901 Movement"`): if the game has moved on it answers `409` and changes nothing. The client sends it when a player takes the orders of a move suggestion from press. Returned `GameState` is sanitized for the commanding power to preserve Fog of War.
 
 ---
 
@@ -546,7 +549,7 @@ Lists the phases of a game that have resolved, oldest first, for the turn select
 ```
 
 ### `GET /api/history/{index}`
-Returns one resolved phase from `GET /api/history`, as the board stood when it began, with **every** power's orders and how each resolved. For standard phases (`Movement`, `Retreats`, `Adjustments`), `resolution` comes from running the snapshot through the adjudicator again. For consolidated `"Admin"` snapshots (`phase: "Admin"`), `resolution` returns the stored `snap.last_resolution` (containing the post-admin `new_units`, `new_ownership`, and `summary` audit lines) directly, with `orders` showing the before/after diff (`BUILD`, `DISBAND`, `MOVE`, `HOLD`). Same parameters and access rules as the list, and `404` for an index out of range. Only what the map needs is returned: the snapshot's clock, log and finalize marks stay on the server.
+Returns one resolved phase from `GET /api/history`, as the board stood when it began, with **every** power's orders and how each resolved. For standard phases (`Movement`, `Retreats`, `Adjustments`), `resolution` comes from running the snapshot through the adjudicator again. For consolidated `"Admin"` snapshots (`phase: "Admin"`), `resolution` returns the stored `snap.admin_resolution` (containing the post-admin `new_units`, `new_ownership`, and `summary` audit lines) directly, with `orders` showing the before/after diff (`BUILD`, `DISBAND`, `MOVE`, `HOLD`). Same parameters and access rules as the list, and `404` for an index out of range. Only what the map needs is returned: the snapshot's clock, log and finalize marks stay on the server.
 
 #### Response (`TurnRecord`):
 ```json
@@ -712,21 +715,24 @@ Marks one or more `AdminActionLogEntry` items in `GameState.admin_log` as acknow
 
 ## Detailed Specifications: Press
 
-Press is the chat of a multiplayer match. A message is one of three kinds, told apart by `recipients` and `anonymous`:
+Press is the chat of a multiplayer match. A message goes to the public box or to a private thread, told apart by `recipients`, and either may be `anonymous`:
 
-| Kind | `recipients` | `anonymous` | Who reads it |
-| :--- | :--- | :--- | :--- |
-| Public | empty | either | Every seated player. With `anonymous`, nobody is told who wrote it. |
-| Private thread | one or more powers | `false` | The sender and the recipients. A thread is the set of powers in it, so everyone in it can answer. |
-| Anonymous note | one or more powers | `true` | The same readers, but the author is hidden, so it cannot be answered. |
+| Kind | `recipients` | Who reads it |
+| :--- | :--- | :--- |
+| Public | empty | Every seated player. |
+| Private thread | one or more powers | The sender and the recipients. A thread is the set of powers in it, so everyone in it can answer. |
+
+With `anonymous` the readers are the same, but the author is hidden. A one-to-one thread cannot be anonymous (`422`), because the other player would know who wrote it, so an anonymous private message needs at least two recipients. It is posted in the thread like any other message and can be answered there.
 
 Rules that hold on both endpoints and on the socket:
 
 - **Seated players only.** The caller's seat comes from their token (`viewer_power_for`). `power` only picks among the caller's own seats; naming another power's seat answers `403`. A spectator, or a host without a seat, gets `403`, because what is returned depends on which power is asking.
-- **An anonymous author is hidden from everyone but themself**, the host included: `sender` is `null` in every other player's copy.
+- **An anonymous author is hidden from everyone but themself**, the host included: `sender` is `null` in every other player's copy. In those copies a private message's `recipients` lists the whole thread, the author included, because the real list leaves out exactly the author. The author's own copy keeps the real recipients.
 - **Game over reveals everything.** Once the game has a winner, `revealed` is `true`, every seated player may read every message, and every `sender` is filled in.
 - Sandboxes have no press: a solo or saved sandbox answers `409`, a private sandbox copy (`sbx_`) `404`. A failed Supabase read answers `503`, never an empty feed.
-- A player who takes over a seat reads that seat's earlier press.
+- A player who takes over a seat reads that seat's earlier press. A private message can only go to seats someone holds, so nobody inherits a message sent to an empty seat.
+- **`seq` is the reader's own count.** Each player's messages are numbered 1, 2, 3… among the messages that player may read, so its gaps show nothing about other players' private press. The game-wide count stays on the server. Once the press is revealed every player reads every message, so `seq` is then the game-wide count, and a client reads the whole feed again.
+- **A private thread message may suggest moves.** `orders` holds orders for units of the sender and the recipients: a joint plan, where the sender's own half is only a claim. It is exactly what the sender attached. The server never reads it from the game's orders and never writes it to them, so sending one changes no `GameState`. It goes only where its message goes (the thread, and everyone once the game is over). A recipient who wants to follow it sends their own part through `POST /api/orders/batch`.
 
 ### `GET /api/press`
 
@@ -734,7 +740,7 @@ Rules that hold on both endpoints and on the socket:
 | :--- | :--- |
 | `game_id` | The match. |
 | `power` | The caller's seat to read as. Optional for a signed-in player with one seat. |
-| `after` | Only messages with a `seq` above this. |
+| `after` | Only messages with a `seq` above this (the reader's own numbering). |
 
 #### Response (`PressFeed`):
 ```json
@@ -747,12 +753,13 @@ Rules that hold on both endpoints and on the socket:
       "seq": 3,
       "sender": null,
       "anonymous": true,
-      "recipients": ["FRANCE"],
+      "recipients": ["ENGLAND", "FRANCE", "GERMANY"],
       "body": "England means to take the Channel.",
       "sent_at": "2026-11-13T22:42:10+00:00",
       "season": "Spring",
       "year": 1901,
-      "phase": "Movement"
+      "phase": "Movement",
+      "orders": []
     }
   ]
 }
@@ -765,21 +772,35 @@ Rules that hold on both endpoints and on the socket:
 { "power": "FRANCE", "recipients": ["GERMANY"], "anonymous": false, "body": "Support me into BUR?" }
 ```
 
+With a move suggestion (`body` may then be empty):
+```json
+{
+  "power": "FRANCE", "recipients": ["GERMANY"], "anonymous": false, "body": "",
+  "orders": [
+    { "unit_id": "GER_A_MUN", "power": "GERMANY", "unit_type": "A", "origin": "MUN", "order_type": "MOVE", "target": "BUR" },
+    { "unit_id": "FRA_A_PAR", "power": "FRANCE", "unit_type": "A", "origin": "PAR", "order_type": "SUPPORT", "target": "BUR", "aux_unit_origin": "MUN" }
+  ]
+}
+```
+
+Each suggested order is rebuilt from the unit it names (`power`, `unit_type`, `origin` and `origin_coast` are taken from the unit, as in `POST /api/order`) and stored as explicit. Like the order endpoints, this checks that the provinces and coasts exist, not that the move is legal.
+
 The sender is `power`, which must be the caller's own seat. The sender is dropped from `recipients`, and the rest are stored once each. The message is stamped with the turn it was sent in, sent to the sockets of the players who may read it, and saved. The response is the sender's own copy (`PressMessageView`).
 
 | Status | When |
 | :--- | :--- |
 | `403` | The caller does not hold `power`'s seat, or that power has surrendered. |
-| `409` | The game is over and the message is private or anonymous (only signed public messages remain), or the game is a sandbox. |
-| `422` | The body is empty or longer than 1000 characters, or the only recipient is the sender. |
+| `400` | A suggested order names a province or coast that does not exist. |
+| `409` | The game is over and the message is private or anonymous (only signed public messages remain), the game is a sandbox, or `orders` are attached outside a Movement phase. |
+| `422` | The body is empty (with no `orders`) or longer than 1000 characters, the only recipient is the sender, an anonymous message has exactly one recipient (a one-to-one thread), or a recipient's seat is empty. With `orders`: the message is public or anonymous, a unit does not exist or belongs to a power outside the thread, an order is not a hold, move, support or convoy, or a unit has two orders. |
 | `429` | The seat sent more than 8 messages within 10 seconds. |
 
 ### Press on the game socket (`WebSocketPressUpdate`)
 
-A seated player's game socket receives each new message it may read, as that player may see it. A socket without a seat is sent no press.
+A seated player's game socket receives each new message it may read, as that player may see it and numbered in that player's own feed. A socket without a seat is sent no press.
 
 ```json
-{ "type": "press", "game_id": "mp_ab12cd", "power": "GERMANY", "messages": [ { "id": "…", "seq": 4, "sender": "FRANCE", "anonymous": false, "recipients": ["GERMANY"], "body": "…", "sent_at": "…", "season": "Spring", "year": 1901, "phase": "Movement" } ] }
+{ "type": "press", "game_id": "mp_ab12cd", "power": "GERMANY", "messages": [ { "id": "…", "seq": 4, "sender": "FRANCE", "anonymous": false, "recipients": ["GERMANY"], "body": "…", "sent_at": "…", "season": "Spring", "year": 1901, "phase": "Movement", "orders": [] } ] }
 ```
 
 `power` is the seat the socket connected as, so a client can drop a message meant for a seat it has since left.

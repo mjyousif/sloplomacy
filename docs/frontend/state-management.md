@@ -21,10 +21,11 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 - `components/macro/useSheetSelection.ts`: not App state but the order sheet's own reaction to `selectedUnitId` (the phone has no hover, so it calls `onHighlightProvinces` for the selected unit's provinces, and raising the sheet scrolls that unit's card to the top). `utils/orderProgress.ts` holds the order panel's derived counts, recomputed on each render of `MacroSidebar` and never stored.
 - `hooks/useToast.ts`: the toast banner and `triggerToast`.
 - `hooks/usePress.ts` and `lib/pressStore.ts`: press (chat). This is the one piece of game data that is not App state. `pressStore` is a small store outside React holding the messages of the match on screen for the player's seat, how far each conversation was read, the countries picked as recipients of the next message (picked on the standings rows, used by the Press section), and whether the game socket is up. `useDiplomacyWebSocket` adds `press` socket messages to it, `usePressSync` (called by `GameWorkspace`) reads `GET /api/press` when the match, the seat or game-over changes, catches up with `?after=` when the socket comes back and polls while it is down, and `usePressState` / `usePressBadge` read it with `useSyncExternalStore`. That lets `PressSection`, the collapsed rail and the phone's ≡ button share it without props through App. The store drops anything for another match or seat, and is emptied when the player leaves the board.
+- `hooks/useSuggestion.ts` and `lib/suggestionStore.ts`: the move suggestion on the map. The store, outside React like `pressStore`, holds either the draft being written (`{ members, turn, orders }`) or the received message being looked at, never both. `PressSection` starts, lists and sends the draft; `useSuggestionBoard` (called by `GameWorkspace`) turns whichever is held into the board the map draws (the suggested orders, a plain hold for every other unit, and which units and powers are involved) and ends it when the turn resolves, the phase is not Movement, the game is over, the game screen is left, or the board is needed for Hypothetical Mode, Direct-Edit or a past turn. A draft never reaches the server or `gameState.orders` until it is sent as press. Taking a suggestion goes through `suggestionStore.adopt`, which `useMatchActions` registers because it holds `applyServerState`: one `POST /api/orders/batch` with the player's own units and the turn.
 
 App renders four pieces, none of which keeps state; each takes one prop per value it uses, named as in App:
 
-- `components/AppHeader.tsx`: the desktop header (`components/TopHeader.tsx`) or the phone bar (`CompactTopBar`), then the Direct-Edit banner and the toast. It works out the player's error and warning counts for the order check.
+- `components/AppHeader.tsx`: the desktop header (`components/header/TopHeader.tsx`) or the phone bar (`CompactTopBar`), then the Direct-Edit banner and the toast. It works out the player's error and warning counts for the order check.
 - `LobbyView` in the lobby, or `components/GameWorkspace.tsx` on a board: the tools sidebar, the map with the clock and the phone's history pill over it, and the order sidebar. It also counts the other powers' changed orders for the tools sidebar. On a past turn it hands the map that turn, with the selection, hover, issues and order callbacks switched off.
 - `components/AppModals.tsx`: the Sanity Check, Surrender & Leave, Save Sandbox (and its default name), admin action warning and sign-in modals, and the confirm prompt. They render on the lobby too.
 
@@ -48,11 +49,11 @@ The state the workspace alone uses (`mapRef`, `zoomPercent`, `hoveredUnitId`) an
 | `sandboxMode` | `boolean` | Mode | True when user is in Hypothetical Mode (Eye icon, ephemeral what-if exploration), from `useSandboxSession`. |
 | `sandboxGameId` | `string \| null` | Mode | Id of the ephemeral server-side copy used by Multiplayer Hypothetical Mode, or `null`, from `useSandboxSession`. Drafts, power switches, previews, and hypothetical `Step Turn Forward` resolves go to `draftGameId`, which is this id when set and `activeGameId` otherwise. |
 | `sandboxOriginTurn` | `string \| null` | Mode | Live match turn label (`turnLabel(gameState)`) captured before entering Hypothetical Mode, from `useSandboxSession`. `useGameSync` uses it to auto-exit Hypothetical Mode when the real match advances to a new turn. |
-| `simulationResult` | `SimulationResult \| null`| UI | Cached non-destructive simulation preview from the server. |
+| `simulationResult` | `SimulationResult \| null`| UI | The server's `preview` of the phase being played, a hypothetical `Step Turn Forward` resolution, or a past turn's resolution. |
 | `showSimulationOverlay`| `boolean` | UI | Whether combat resolutions (arrows, bounces, cuts) are projected on the map, from `useSandboxSession`. |
 | `adminModalOpen` | `boolean` | Admin | Controls visibility of the game creator's Turn and Clock Settings sidebar panel (`AdminTurnClockSidebar`). |
 | `adminOverrideActive`| `boolean` | Admin | The host's Direct-Edit toggle. It only takes effect through the derived `directEditActive`, which also requires `isGameCreator`, so it does nothing in a game the player does not host. |
-| `leftSidebarCollapsed`| `boolean` | UI | Whether the Left Tools Sidebar is collapsed into a 44px rail, from `useWorkspaceLayout`. Desktop only: phones have no rails. |
+| `leftSidebarCollapsed`| `boolean` | UI | Whether the Left Tools Sidebar is collapsed into a 44px rail, from `useWorkspaceLayout`. Desktop only: phones have no rails. The sidebar floats over the map, so this never moves the camera. |
 | `rightSidebarCollapsed`| `boolean` | UI | Whether the Right Tactical Sidebar is collapsed into a 44px rail, from `useWorkspaceLayout`. Desktop only. |
 | `sheetSnap` | `'peek' \| 'half' \| 'full'` | UI (phone) | Where the phone order sheet sits, from `useWorkspaceLayout`. It goes back to `'peek'` whenever the game, the view or the layout changes, and drops to `'peek'` when `EuropeMap` reports through `onDockedBarChange` that its docked unit bar is up. |
 | `toolsDrawerOpen` | `boolean` | UI (phone) | Whether the tools drawer is open, from `useWorkspaceLayout`. ≡ toggles it, and it shuts when the game, the view or the layout changes. Closing it hands focus back to ≡ (`toolsToggleRef`). |
@@ -112,7 +113,7 @@ App.handleUpdateOrder(order)
 App.applyServerState(st)
          │
          ├──► setGameState(st)
-         ├──► setSimulationResult(st.last_resolution)
+         ├──► setSimulationResult(st.preview)
          └──► Triggers re-render of map arrows & diagnostics
 ```
 

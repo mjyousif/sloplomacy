@@ -4,6 +4,17 @@
     display: flex;
     overflow: hidden;
     position: relative;
+    /* The sidebars float over the map (#272), so the map's overlays keep clear of them by these. */
+    --map-inset-left: var(--sidebar-width);
+    --map-inset-right: var(--sidebar-width);
+  }
+
+  .war-room-workspace[data-left-collapsed="true"] {
+    --map-inset-left: var(--sidebar-rail-width);
+  }
+
+  .war-room-workspace[data-right-collapsed="true"] {
+    --map-inset-right: var(--sidebar-rail-width);
   }
 }
 
@@ -13,6 +24,9 @@
      sidebar rails. The sheet leaves a spacer as tall as its peek, so the map ends where the peek
      begins. */
   :global([data-layout="compact"]) .war-room-workspace {
+    /* No sidebar rails on a phone: the drawer and the sheet cover the map only while open. */
+    --map-inset-left: 0px;
+    --map-inset-right: 0px;
     flex-direction: column;
     /* Without this the board's own height (723px on a phone held sideways) props the game area
        open past the bottom of the screen. */

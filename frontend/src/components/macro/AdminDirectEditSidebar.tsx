@@ -12,12 +12,11 @@ import type { StagedChangeEntry } from '../../utils/adminHelpers';
 import { cx } from '../../utils/cx';
 import type { OrderProgress } from '../../utils/orderProgress';
 import type { SheetSnap } from '../../utils/sheetHelpers';
-import { BottomSheet } from '../BottomSheet';
 import type { DirectEditMapHandlers } from '../EuropeMap';
 import macroStyles from '../MacroSidebar.module.css';
 import { AdminTileInspector } from '../map/hud/AdminTileInspector';
-import chromeStyles from '../SidebarChrome.module.css';
-import { VersionBadge } from '../VersionBadge';
+import { BottomSheet } from '../ui/BottomSheet';
+import chromeStyles from '../ui/SidebarChrome.module.css';
 import styles from './AdminDirectEditSidebar.module.css';
 import adminSidebarStyles from './AdminSidebar.module.css';
 import { CollapsedRail } from './CollapsedRail';
@@ -290,9 +289,6 @@ export function AdminDirectEditSidebar({
           <div className={macroStyles.macroUnitsScrollArea}>
             {inspectorContent}
           </div>
-          <div className={chromeStyles.sidebarVersionFooter}>
-            <VersionBadge />
-          </div>
         </div>
       </BottomSheet>
     );
@@ -362,10 +358,6 @@ export function AdminDirectEditSidebar({
       </div>
 
       <div className={macroStyles.macroUnitsScrollArea}>{inspectorContent}</div>
-
-      <div className={chromeStyles.sidebarVersionFooter}>
-        <VersionBadge />
-      </div>
     </aside>
   );
 }

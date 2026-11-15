@@ -5,13 +5,13 @@ import type { GameState, MultiplayerGameSummary } from '../types/diplomacy';
 import { AppHeader, type AppHeaderProps } from './AppHeader';
 
 const seen = vi.hoisted(() => ({}) as Record<string, any>);
-vi.mock('./CompactTopBar', () => ({
+vi.mock('./header/CompactTopBar', () => ({
   CompactTopBar: (p: any) => {
     seen.compact = p;
     return <nav>compact bar</nav>;
   },
 }));
-vi.mock('./TopHeader', () => ({
+vi.mock('./header/TopHeader', () => ({
   TopHeader: (p: any) => {
     seen.wide = p;
     return <header>top header</header>;
@@ -67,7 +67,7 @@ beforeEach(() => {
 });
 
 describe('AppHeader: the top bar', () => {
-  it("gives the desktop header the board and the player's own problems", () => {
+  it('gives the desktop header the board but not the order problems, which its order sidebar shows', () => {
     const p = props();
     render(<AppHeader {...p} />);
     expect(screen.getByText('top header')).toBeInTheDocument();
@@ -76,21 +76,20 @@ describe('AppHeader: the top bar', () => {
     expect(h.viewMode).toBe('multiplayer');
     expect(h.turn).toBe(STATE);
     expect(h.winner).toBeNull();
-    expect(h.errorCount).toBe(1);
-    expect(h.warningCount).toBe(2);
+    expect(h.errorCount).toBeUndefined();
+    expect(h.warningCount).toBeUndefined();
+    expect(h.onOpenOrderCheck).toBeUndefined();
     expect(h.matchSummary).toBe(MATCH);
     expect(h.playerPower).toBe('FRANCE');
     expect(h.onBackToLobby).toBe(p.handleBackToLobby);
     expect(h.onEnterSoloSandbox).toBe(p.handleEnterSoloSandbox);
     expect(h.onChangeDisplayPrefs).toBe(p.updateDisplayPrefs);
     expect(h.onSignOut).toBe(p.handleSignOut);
-    h.onOpenOrderCheck();
-    expect(p.handleFinalizeClick).toHaveBeenCalledWith(false);
     h.onSignIn();
     expect(p.openAuthPrompt).toHaveBeenCalledWith(undefined, 'signin');
   });
 
-  it('gives a phone the one-row bar, with the match label and the tools toggle', () => {
+  it("gives a phone the one-row bar, with the player's own problems, the match label and the tools toggle", () => {
     const p = props({ isCompact: true, toolsDrawerOpen: true });
     render(<AppHeader {...p} />);
     expect(screen.getByText('compact bar')).toBeInTheDocument();

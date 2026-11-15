@@ -31,6 +31,11 @@ export interface UseOrderOverlayOptions {
   getProvincePoint: (provCode: string, coast?: string | null) => Point;
   /** How far the active piece style pushes arrows off a piece. */
   arrowScale: number;
+  /**
+   * A move suggestion is on the map: only these units' orders are drawn, whoever owns them.
+   * Null otherwise.
+   */
+  visibleUnitIds?: ReadonlySet<string> | null;
 }
 
 export interface OrderOverlay {
@@ -61,6 +66,7 @@ export function useOrderOverlay({
   getUnitPoint,
   getProvincePoint,
   arrowScale,
+  visibleUnitIds = null,
 }: UseOrderOverlayOptions): OrderOverlay {
   const { issuesByUnit, issuesByProvince } = useMemo(() => {
     // Only show issues for activePower unless foreign units can be edited
@@ -88,12 +94,21 @@ export function useOrderOverlay({
   // Filter which units' orders are visible on the map:
   const isUnitOrderVisible = useCallback(
     (u: Unit) =>
-      historyView
-        ? historyPower === null || u.power === historyPower
-        : showAllMoves !== undefined
-          ? showAllMoves || u.power === activePower
-          : canEditAnyPower || u.power === activePower,
-    [historyView, historyPower, showAllMoves, canEditAnyPower, activePower],
+      visibleUnitIds
+        ? visibleUnitIds.has(u.id)
+        : historyView
+          ? historyPower === null || u.power === historyPower
+          : showAllMoves !== undefined
+            ? showAllMoves || u.power === activePower
+            : canEditAnyPower || u.power === activePower,
+    [
+      visibleUnitIds,
+      historyView,
+      historyPower,
+      showAllMoves,
+      canEditAnyPower,
+      activePower,
+    ],
   );
 
   // Count how many valid supports each moving/holding unit receives among visible orders

@@ -125,6 +125,19 @@ export interface EuropeMapProps {
   historyView?: boolean;
   /** History only: draw just this power's orders. Null draws everyone's. */
   historyPower?: Power | null;
+  /** A move suggestion from press is on the map in place of the player's orders. */
+  suggestion?: SuggestionMapMode | null;
+}
+
+/**
+ * How the map shows a move suggestion (see `hooks/useSuggestion`). `orders` then holds the
+ * suggestion, and only the units in `unitIds` have theirs drawn. While it is being written,
+ * `editablePowers` are the powers whose units can be ordered; a received one is read-only
+ * (`historyView`) and has none.
+ */
+export interface SuggestionMapMode {
+  editablePowers: Power[] | null;
+  unitIds: ReadonlySet<string>;
 }
 
 export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(

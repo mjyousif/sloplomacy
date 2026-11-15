@@ -119,7 +119,26 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await recorder.recordStep(page, '05_move_and_support_vectors_rendered');
 
       // 7. Finalize the French orders
-      await expect(page.locator('[data-testid="btn-clear-all"]')).toBeVisible();
+      // Clear All asks first: Cancel keeps the orders, then Yes clears them, and the
+      // move is given again before finalizing.
+      const clearAllBtn = page.locator('[data-testid="btn-clear-all"]');
+      await expect(clearAllBtn).toBeVisible();
+      await clearAllBtn.click();
+      await expect(page.locator('[data-testid="btn-clear-all-confirm"]')).toBeVisible();
+      await expect(page.locator('[data-testid="btn-clear-all-cancel"]')).toBeFocused();
+      await recorder.recordStep(page, '05b_clear_all_confirm');
+      await page.locator('[data-testid="btn-clear-all-cancel"]').click();
+      await expect(clearAllBtn).toBeVisible();
+      await expect(supportArrow).toBeVisible();
+      await clearAllBtn.click();
+      await page.locator('[data-testid="btn-clear-all-confirm"]').click();
+      await expect(clearAllBtn).toBeVisible();
+      await expect(supportArrow).toHaveCount(0);
+      await expect(orderArrow).toHaveCount(0);
+      await moveTab.click();
+      await targetSelect.click();
+      await parisCard.getByRole('option', { name: 'Burgundy' }).click();
+      await expect(orderArrow).toBeVisible();
 
       const finalizeBtn = page.locator('[data-testid="btn-finalize-orders"]');
       await expect(finalizeBtn).toBeVisible();

@@ -3,10 +3,10 @@ import { useRef, useState } from 'react';
 import styles from './App.module.css';
 import { AppHeader } from './components/AppHeader';
 import { AppModals } from './components/AppModals';
-import { useConfirm } from './components/ConfirmModal';
 import type { EuropeMapHandle } from './components/EuropeMap';
 import { GameWorkspace } from './components/GameWorkspace';
 import { LobbyView } from './components/LobbyView';
+import { useConfirm } from './components/modal/ConfirmModal';
 import { useAdminDirectEdit } from './hooks/useAdminDirectEdit';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useCompactLayout } from './hooks/useCompactLayout';
@@ -25,6 +25,7 @@ import { useWorkspaceLayout } from './hooks/useWorkspaceLayout';
 import { signOutUser } from './lib/supabase';
 import type { SimulationResult } from './types/diplomacy';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
+import { DEFAULT_CAMERA } from './utils/mapCameraHelpers';
 import { turnLabel } from './utils/timerHelpers';
 
 export function App() {
@@ -88,7 +89,9 @@ export function App() {
   const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
   const [adminOverrideActive, setAdminOverrideActive] =
     useState<boolean>(false);
-  const [zoomPercent, setZoomPercent] = useState<number>(105);
+  const [zoomPercent, setZoomPercent] = useState<number>(() =>
+    Math.round(DEFAULT_CAMERA.zoom * 100),
+  );
   const isCompact = useCompactLayout();
   const layout = useWorkspaceLayout({ viewMode, activeGameId, isCompact });
   const mapRef = useRef<EuropeMapHandle | null>(null);
@@ -374,6 +377,23 @@ export function App() {
     triggerToast('Signed out — now in Guest Mode.');
   };
   const boardState = directEdit.effectiveGameState ?? gameState;
+  const handleAdminResolveTurn = async (event?: React.MouseEvent) => {
+    if (!boardState || boardState.winner) return;
+    if (!requireRealBoard('resolve the real turn')) return;
+    const isMp = viewMode === 'multiplayer';
+    const ok = await confirm(
+      {
+        title: 'Force-Resolve Turn?',
+        message: isMp
+          ? `Force-resolve ${boardState.season} ${boardState.year} ${boardState.phase} and advance to the next phase? Other players will be notified of this admin action.`
+          : `Resolve ${boardState.season} ${boardState.year} ${boardState.phase} and advance to the next phase?`,
+        confirmLabel: 'Resolve Turn',
+      },
+      event,
+    );
+    if (!ok) return;
+    await handleAdjudicateTurn();
+  };
 
   return (
     <div
@@ -406,6 +426,7 @@ export function App() {
         openAdminTools={openAdminTools}
         onToggleDirectEdit={handleToggleEditBoard}
         turnClockOpen={isGameCreator && adminModalOpen}
+        onResolveTurn={handleAdminResolveTurn}
         onExitAdmin={handleExitAdmin}
         toastBanner={toastBanner}
         historyEntries={turnHistory.entries}

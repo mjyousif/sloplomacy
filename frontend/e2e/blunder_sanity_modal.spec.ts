@@ -19,6 +19,35 @@ test.describe('Scenario 03: Tactical Blunder Detection & Sanity Check Modal', ()
       await page.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
       await recorder.recordStep(page, '01_blunder_board_loaded');
 
+      // 2b. Compact rows glow yellow for a warning and keep the explanation
+      // behind a ⚠ button (#271).
+      await page.locator('[data-testid="btn-toggle-compact-orders"]').click();
+      const warnRow = page
+        .locator('[data-testid="unit-macro-card"][data-compact="true"][data-status="warning"]')
+        .first();
+      await expect(warnRow).toBeVisible();
+      await expect(
+        warnRow.locator('[data-testid="unit-diagnostic-alert"][data-severity="warning"]'),
+      ).toHaveCount(0);
+      const warnToggle = warnRow.locator('[data-testid="btn-unit-warning-toggle"]');
+      await expect(warnToggle).toHaveAttribute('aria-expanded', 'false');
+      await recorder.recordStep(page, '01b_compact_warning_closed');
+
+      await warnToggle.click();
+      await expect(warnToggle).toHaveAttribute('aria-expanded', 'true');
+      await expect(
+        warnRow.locator('[data-testid="unit-diagnostic-alert"][data-severity="warning"]').first(),
+      ).toBeVisible();
+      // The toggle never selects the unit.
+      await expect(warnRow).not.toHaveAttribute('data-selected', 'true');
+      await recorder.recordStep(page, '01c_compact_warning_open');
+
+      await warnToggle.click();
+      await expect(
+        warnRow.locator('[data-testid="unit-diagnostic-alert"][data-severity="warning"]'),
+      ).toHaveCount(0);
+      await page.locator('[data-testid="btn-toggle-compact-orders"]').click();
+
       // 3. Attempt to finalize orders with warnings active
       const finalizeBtn = page.locator('[data-testid="btn-finalize-orders"]');
       await expect(finalizeBtn).toBeVisible();

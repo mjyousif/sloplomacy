@@ -5,7 +5,9 @@ The tactical workspace divides user controls into two specialized, independently
 1. **Left Sidebar (`ToolsSidebar.tsx`)**: Dedicated to general tools, cartographic legend, map camera & zoom options, Great Powers standing, Pre-Move Sandbox testing, and creator admin tools.
 2. **Right Sidebar (`MacroSidebar.tsx`)**: Dedicated strictly to core gameplay: active sovereign command, phase instructions, unit order drafting, home builds, and turn finalization/adjudication.
 
-Both sidebars feature smooth, 44px collapsed rail views with quick tool icons and status badges, maximizing map screen estate while keeping all critical functions accessible.
+Both sidebars are the same width (`--sidebar-width`, 360px, in `styles/tokens.css`) and collapse to 44px rails (`--sidebar-rail-width`) with quick tool icons and status badges.
+
+On a wide screen the sidebars float over the map instead of sitting beside it: the map fills the whole workspace underneath them. Opening or collapsing a sidebar only covers or uncovers the map's edge, so the board never moves or re-fits. The workspace (`GameWorkspace`) marks a collapsed sidebar with `data-left-collapsed` / `data-right-collapsed`, and its stylesheet turns those into `--map-inset-left` / `--map-inset-right` for whatever sits over the map. See [Map under the sidebars](map-renderer.md#map-under-the-sidebars).
 
 Phones have no rails. The right sidebar becomes a pull-up order sheet and the left one a drawer opened from ≡ in the top bar. See [Phone Game Screen](#phone-game-screen).
 
@@ -17,7 +19,8 @@ To prevent interface bloat and preserve a clean, focused tactical workspace, adh
 
 1. **Authoritative Lobby Navigation**: The clickable brand emblem and title (`SLOPLOMACY 1901`) in the top command header is the single authoritative control to return to the match lobby; never add separate "Main Page" or "Home" tab buttons to the header. On phones the ← button at the left of `CompactTopBar` takes this role, because a phone has no tooltip to explain the brand.
 2. **Sidebar Collapse & Rail Ownership**: Sidebar expand and collapse actions belong exclusively on the sidebars themselves (in their headers when expanded, and on their 44px slim rails when collapsed). Do not introduce top navigation header pill buttons to toggle sidebars. Phones are the exception, because they have no rails: ≡ in the phone top bar opens the tools drawer, and the order sheet's own handle raises and lowers it.
-3. **Unobstructed Map Canvas**: The interactive SVG European map viewport must remain free of floating camera/zoom overlay boxes. All stepped zooming, percentage readout, and camera reset/fit actions belong in the Left Tools Sidebar (`ToolsSidebar.tsx`), accessible both in full view and via rail icons. The one exception is the phone layout, which has no wheel and no tools rail: there `EuropeMap` shows zoom in, zoom out and "Back to my units" in the map's bottom-right corner. See [Phone camera](map-renderer.md#phone-camera-compact-prop).
+3. **Overlays Keep Clear of the Sidebars**: Anything placed over the map (banners, pills, the turn clock, the coast picker, the floating unit menu) offsets or centres itself with `--map-inset-left` / `--map-inset-right`, never with a width written into its own stylesheet or script. A centred overlay uses `left: calc(50% + (var(--map-inset-left, 0px) - var(--map-inset-right, 0px)) / 2)`.
+4. **Unobstructed Map Canvas**: The interactive SVG European map viewport must remain free of floating camera/zoom overlay boxes. All stepped zooming, percentage readout, and camera reset/fit actions belong in the Left Tools Sidebar (`ToolsSidebar.tsx`), accessible both in full view and via rail icons. The one exception is the phone layout, which has no wheel and no tools rail: there `EuropeMap` shows zoom in, zoom out and "Back to my units" in the map's bottom-right corner. See [Phone camera](map-renderer.md#phone-camera-compact-prop).
 4. **Personal Display Settings in the Top Bar**: The `SlidersHorizontal` icon in the top header's right-hand actions opens `DisplaySettingsMenu.tsx`, whenever a board is open and for guests too. See [Top Bar Display Settings](#top-bar-display-settings). On phones it sits inside the ⋯ menu instead.
 5. **Tactical Map Legend Purity**: The Tactical Map Legend is strictly a visual guide for map symbology (movement vectors, support reticles, convoy anchors, and warning/dislodgement markers). Never embed rulebook mechanics or geography text footnotes (e.g. dual coasts or impassable terrain); interactive modal dialogs and cartographic text handle these directly.
 
@@ -51,7 +54,7 @@ The previews render with the real `MapPiece`, so they always match the map. Thes
 On a wide screen the header is `TopHeader.tsx`. `AppHeader.tsx` picks it (or `CompactTopBar` on a phone) and passes it the data and handlers it shows, and it keeps no state of its own:
 
 - **Left**: the brand, which goes back to the lobby, then the Solo Sandbox tab (marked while in the solo sandbox) and, in a multiplayer match, the match name with your power.
-- **Center**, only on a board: the unified fixed-width turn chronicle and history viewer (`TurnChronicle.tsx`), the winner once there is one, and, when errors or warnings exist, the red/amber order-check pill (which asks to finalize and opens the order check; nothing is shown when there are no errors or warnings).
+- **Center**, only on a board: the unified fixed-width turn chronicle and history viewer (`TurnChronicle.tsx`), and the winner once there is one. The top bar shows no order errors or warnings: the order sidebar on the right already lists them on each unit card.
   - The chronicle shows the fixed-width nation filter button (icon-only until a nation is chosen, then showing its 3-letter code) to the left of the calendar phase `IconSelectDropdown` menu (chevron-free, e.g. `"Spring 1901 Movement"`), followed by `‹` and `›` regardless of whether resolved phases exist yet. While viewing a past turn, a yellow revert-icon button appears beside `›` to jump straight back to live.
   - Before the first phase resolves, the history controls stay disabled and there is no filter tray. While on the latest (live) turn, the nation filter button stays disabled and grayed out; entering an admin mode (Edit Board or Turn and Clock Settings) puts the view back on the latest turn and locks the chronicle controls until admin mode exits.
   - While viewing a past turn, clicking the filter button expands a tray below it labeled `"Filter by nation"` with the nation filter chips (`All`, `AUS` … `TUR`), which narrow the past turn's orders to one nation and outline the filter button in the selected nation's color. Clicking outside, pressing Escape, or opening the phase dropdown closes the tray so the two menus never overlap.
@@ -65,7 +68,7 @@ In the compact layout (see [Responsive & Layout Specifications](styling-and-them
 
 - **Left**: in a game, a ← button back to the lobby, then ≡, which opens the [tools drawer](#phone-game-screen). In the lobby, the brand.
 - **Turn**: on two lines, the season and year above the phase ("Spring 1901" over "Movement"), so the full phase name fits beside four buttons at 360px. A separator only screen readers see keeps it reading as "Spring 1901 · Movement".
-- **Order problems**: a red or amber badge with the count of your errors and warnings. Tapping it does what the desktop pill does: it asks to finalize, and the server answers with the order check. With no problems it shows a green check that does nothing. Once someone has won, it shows the winner instead.
+- **Order problems**: a red or amber badge with the count of your errors and warnings. Phones have no order sidebar, so this badge is the only count of them on the board. Tapping it asks to finalize, and the server answers with the order check. With no problems it shows a green check that does nothing. Once someone has won, it shows the winner instead.
 - **⋯ menu**: Live Sync status with what it follows (the lobby feed or the game id), the match and your power, Solo Sandbox, Display settings (the same choices as `DisplaySettingsMenu`, from its `DisplaySettingsOptions`), and your account with its email, Sign In / Register or Sign Out. An amber dot on ⋯ means Live Sync is reconnecting. The menu closes on an outside tap, Escape, or after any action.
 
 ---
@@ -76,7 +79,7 @@ In the compact layout the game screen is the map, with everything else layered o
 
 ### Order sheet (`BottomSheet.tsx`, `MacroSidebar variant="sheet"`)
 - **Stops**: peek, half and full (`utils/sheetHelpers.ts`). It starts at peek every time a game opens. Drag the handle and let go to settle on the nearest stop, or flick to go one stop further. A tap or the keyboard steps peek → half → full → peek. It only slides when it moves between stops, never when it is measured or the screen rotates.
-- **Peek**: the power with its unit, supply centre and unconfirmed counts (which the desktop rail only gives in tooltips), the status badge, Clear All Orders, then Finalize and Resolve. In a match, Resolve is the consensus card, plus Force Adjudicate for the host.
+- **Peek**: the power with its unit, supply centre and unconfirmed counts (which the desktop rail only gives in tooltips), the status badge, Clear All Orders, then Finalize and Resolve. In a match, Resolve is the consensus card (the host's force-resolve override lives in the top bar's ⋯ Administrator menu).
 - **Body**: the phase notes, builds and unit cards, then Surrender and the version badge. While the sheet is lowered the body is off screen and `inert`.
 - **Spacer**: the sheet leaves a spacer as tall as its peek, so the map ends where the peek begins and the phone camera fits the map that is actually visible.
 
@@ -102,7 +105,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 ## Reusable Collapsible Section (`CollapsibleSection.tsx`)
 
 `CollapsibleSection.tsx` standardizes all sidebar panel sections with a shared design and typographic hierarchy:
-- **Collapsible or Static Modes**: Set `collapsible={true}` for sections that can fold shut (such as Tactical Map Legend, Great Powers Standing, Pre-Move Sandbox, and Creator Admin Tools), or `collapsible={false}` for action controls (such as Map View & Camera) that share identical headers and borders without toggle behavior.
+- **Collapsible or Static Modes**: Set `collapsible={true}` for sections that can fold shut (such as Great Powers Standing, Pre-Move Sandbox, and Creator Admin Tools), or `collapsible={false}` for action controls (such as Map View & Camera) that share identical headers and borders without toggle behavior.
 - **Accessible ARIA Attributes**: Includes `aria-expanded` and `aria-controls` on the toggle button with animated chevron indicators (`ChevronDown` / `ChevronRight`).
 - **Badge and Counter Support**: Accepts an optional `badge` node (such as zoom percentage badges or unit counts).
 - **Controlled & Uncontrolled Support**: Supports `defaultOpen` for initial expansion state, or `isOpen` and `onToggle` for controlled state management.
@@ -111,24 +114,15 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 
 ## Left Sidebar: Chancellery Tools & Intel (`ToolsSidebar.tsx`)
 
-`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Everything else is in `components/tools/`: `CollapsedRail`, then one component per section below (`MapControlsSection`, `MapLegendSection`, `StandingsSection` with `useStandingsSort`, `PressSection` with its pieces in `tools/press/`, `SandboxToolsSection`). Each section takes only the props it reads, typed as a `Pick<>` of `ToolsSidebarProps` (`tools/toolsSidebarProps.ts`). The parent decides which sections show: the zoom section is left out of the drawer, while Administrator controls live in Display Settings (`DisplaySettingsMenu.tsx`).
+`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Everything else is in `components/tools/`: `CollapsedRail`, then one component per section below (`MapControlsSection`, `StandingsSection` with `useStandingsSort`, `PressSection` with its pieces in `tools/press/`, `SandboxToolsSection`). Each section takes only the props it reads, typed as a `Pick<>` of `ToolsSidebarProps` (`tools/toolsSidebarProps.ts`). The parent decides which sections show: the zoom section is left out of the drawer, while Administrator controls live in Display Settings (`DisplaySettingsMenu.tsx`).
 
 ### 1. Map View & Camera Controls
 - Rendered via a non-collapsible `CollapsibleSection` to retain uniform visual hierarchy with action controls.
 - **Zoom In (`+`) & Zoom Out (`-`)**: Stepped zooming across the SVG canvas.
-- **Current Zoom Readout**: Real-time percentage indicator (e.g., `105%`).
-- **Fit Map / Reset Camera**: Instantly realigns camera to the default center framing at 105% zoom. On a phone it returns to the phone view instead: the board filling the screen's height around the player's own units.
+- **Current Zoom Readout**: Real-time percentage indicator (e.g., `90%`).
+- **Fit Map / Reset Camera**: Instantly realigns the camera to the home view: the board framed in the strip between the sidebars (`getWideHomeCamera`, about 90% at 1440×900). On a phone it returns to the phone view instead: the board filling the screen's height around the player's own units.
 
-### 2. Tactical Map Cartographic Legend
-- Rendered inside a collapsible `CollapsibleSection` (`defaultOpen={true}`). Commanders can collapse the legend to free vertical space for power rosters and sandbox controls.
-- Laid out as a two-column grid, paired into two rows split by a vertical hairline divider, so the legend costs half the vertical space it used to.
-- Displays symbolic explanations for all map vector overlays, in reading order:
-  - **Move / Attack**: Blue curved arrow indicating unit repositioning.
-  - **Fleet Convoy**: Purple wavy line representing naval troop transport.
-  - **Support Link**: Teal dashed line with target reticle indicating defensive or offensive support.
-  - **Warning**: Red/amber alert indicating illegal orders, cut supports, or retreats.
-
-### 3. Great Powers Diplomatic Standing & Command Selector
+### 2. Great Powers Diplomatic Standing & Command Selector
 - Lists all 7 Great Powers (Austria-Hungary, England, France, Germany, Italy, Russia, Turkey) with their authentic World War I (1901–1918) SVG flags, toggleable sorting (`By Score` vs `Default`), dynamic numeric ranking (1–7), player names in multiplayer, national colors, controlled Supply Centers, and active field units.
 - **Toggleable Standings Sort**:
   - Segmented toggle at the top of the standings list allows commanders to switch between:
@@ -150,12 +144,13 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 ### 4. Press (`tools/PressSection.tsx`)
 Shown under Diplomatic Standing to a seated player of a multiplayer match (never in a sandbox, and not to a spectator). Its pieces are in `tools/press/`.
 
-- **Conversations** (`PressChannelTabs`): a chip for the public box, one per private thread (the flags of the other powers in it) and one for anonymous notes, each with its unread count.
+- **Conversations** (`PressChannelTabs`): a chip for the public box, and one per private thread (the flags of the other powers in it), each with its unread count. Anonymous messages are posted in the conversation they were written in.
 - **Messages** (`PressMessageList`): the picked conversation, oldest first, with a divider wherever the turn changes. An anonymous message shows a mask and "Anonymous"; the player's own shows "You" with an "anonymously" tag.
 - **Province links**: a province named in a message, by its code in capitals (`BUR`) or its full name in any case (`Burgundy`), is a link. Hovering lights it on the map; clicking keeps it lit, and on a phone also closes the drawer.
-- **Recipients are picked on the standings**: in a match with press, every other country's Diplomatic Standing row has a letter button on its right (`PressPickButton` in `StandingsSection`). Clicking it lights it and adds that country to the next message's recipients; clicking again takes it off. Nothing lit is the public box, lit countries are the thread of exactly those powers, and lit countries with the mask button lit is a one-way note. A country with no player cannot be picked, the player's own row has no button, and the buttons go away once the game is over or the player has surrendered. Each button carries the unread count of the player's one-to-one thread with that country. The picked countries live in `pressStore`, which is how the two sections share them. Picking a country opens the Press section if it was folded.
-- **Composer** (`PressComposer`): the message field (Enter sends, Shift+Enter is a new line), a mask button that posts anonymously, and Send. While the mask is lit the field has a dashed purple border and reads "Write anonymously…". There is no help text: a line appears under the field only when something stops the message being sent (nobody picked for a note, game over, surrendered, too long). Where the message goes is still read to screen readers with the field.
-- **Unread**: a conversation is marked read only while its list is actually on screen (the section open, the drawer open, and the list scrolled into the sidebar's view). Read marks are kept per game and seat in `localStorage`.
+- **Recipients are picked on the standings**: in a match with press, every other country's Diplomatic Standing row has a letter button on its right (`PressPickButton` in `StandingsSection`). Clicking it lights it and adds that country to the next message's recipients; clicking again takes it off. Nothing lit is the public box and lit countries are the thread of exactly those powers. A country with no player cannot be picked, the player's own row has no button, and the buttons go away once the game is over or the player has surrendered. Each button carries the unread count of the player's one-to-one thread with that country. The picked countries live in `pressStore`, which is how the two sections share them. Picking a country opens the Press section if it was folded.
+- **Composer** (`PressComposer`): the message field (Enter sends, Shift+Enter is a new line), a mask button that posts anonymously in the open conversation, and Send. The mask is disabled (and its tooltip says why) in a one-to-one thread, where the other player would know who wrote it; it stays chosen, and comes back lit in the public box or a thread of three or more. While the mask is lit the field has a dashed purple border and reads "Write anonymously…". There is no help text: a line appears under the field only when something stops the message being sent (game over, surrendered, too long). Where the message goes is still read to screen readers with the field.
+- **Move suggestions**: in a signed private thread, during a Movement phase, the composer has a lamp button (`press-suggest`) beside the mask. It starts suggest mode and the phone closes the drawer to show the map. The player then orders units on the map the usual way: the other members' units and any of their own they want to show (a joint plan; their own half starts empty and their real orders are never touched). The draft is listed above the field (`PressSuggestionDraft`), where an order can be taken off or the whole draft discarded, and it goes out with the next message, which then needs no text. The mask is put away while a draft is open, an unfinished order blocks Send, and picking other countries discards the draft so it cannot reach anyone it was not written for. A message that carries a suggestion shows it in a card under its text (`PressSuggestionCard`): the orders by power, **Show on map**, and for a recipient **Use these orders**, which copies the orders for their own units into their real orders (one atomic batch, nothing finalized, still editable). The sender is not told. Both buttons work only during the turn the message was sent in and while the live board is on screen; afterwards the card keeps the order text and says which turn it was for. While a suggestion has the board the order sidebar is locked with the bar a past turn uses ("Viewing France's suggestion", **Back to live**), and a pill on the map (`map/hud/SuggestionPill`) says what is shown, offers **Use these orders** for a received one, and closes it.
+- **Unread**: a conversation is marked read only while its list is actually on screen (the section open, the drawer open, and the list scrolled into the sidebar's view). Read marks are kept per game and seat in `localStorage`, counted in the player's own message numbers. Revealed press is numbered for the whole game, so its marks are kept apart, and when the game ends everything already on screen starts as read rather than the whole revealed history counting as unread.
 - **Game over**: every thread and every anonymous author is shown to all players. The letter buttons and the mask button go away and only the public box can still be written to.
 - A surrendered player can read but not write.
 
@@ -166,7 +161,7 @@ Shown under Diplomatic Standing to a seated player of a multiplayer match (never
 - **Scenario Management & Saving**: One-click "Reset 1901" scenario start and "Save Sandbox". Clicking "Save Sandbox" opens `SaveSandboxModal.tsx`, letting the commander specify a custom name (e.g., "Balkans 1901 Tactical Analysis") before promoting their personal draft sandbox in-place to a permanent saved sandbox. Clicking "Solo Sandbox" in the top bar while viewing any game board exports that board's visible state into a new personal draft sandbox (overriding any previous draft sandbox).
 
 ### 6. Interactive Direct-Edit Mode & Administrator Controls (Game Creator Only)
-- **Top Bar Administrator Menu (`AdminSettingsMenu.tsx`)**: Room creators access `Edit Board` and `Turn and Clock Settings` from the `Wrench` button (`btn-admin-menu`) in the top bar (or ⋯ menu on phones).
+- **Top Bar Administrator Menu (`AdminSettingsMenu.tsx`)**: Room creators access `Edit Board`, `Turn and Clock Settings`, and `Resolve Turn` from the `Wrench` button (`btn-admin-menu`) in the top bar (or ⋯ menu on phones). `Resolve Turn` prompts `ConfirmModal` before calling `POST /api/adjudicate` and, in multiplayer matches, records an `AdminActionLogEntry` that triggers `AdminActionWarningModal` for other players.
 - **Turn and Clock Settings (`AdminTurnClockSidebar.tsx`)**: Repurposes the right sidebar (or phone bottom sheet) for turn and clock arbitration (`TurnControlTab`: Revert to Past Turn with snapshot dropdown, Adjust Game Clock & Season, and Unlock All Power Orders).
 - **Interactive Direct-Edit Mode (`useAdminDirectEdit.ts`, `AdminTileInspector.tsx`)**:
   - Suppresses reachability reticles and green/amber/purple province highlights on the map.
@@ -196,11 +191,13 @@ Shown under Diplomatic Standing to a seated player of a multiplayer match (never
 | `UnitMacroCard` | One unit: header, status pill (`Incomplete` while a MOVE, SUPPORT or CONVOY has no target yet), behavior bar, then `OrderTypeTabs` and `OrderParameterControls`, issues and the simulation strip |
 | `OrderTypeTabs` | The order-type buttons for the phase (Retreat/Disband, Keep/Disband or Hold/Move/Support/Convoy) |
 | `OrderParameterControls` | The selects for the order's type, in `macro/controls/` (`RetreatControls`, `MoveControls`, `SupportControls`, `ConvoyControls`); each takes only the props it reads |
-| `OrderFooter` (with `ClearAllButton`, `SurrenderButton`) | The Clear All Orders and Surrender buttons, and the footer: Finalize or Unlock, then Resolve or the consensus card. `OrderFooter` itself is a fragment, because the sheet's CSS styles these buttons as direct children of `.macro-sheet-controls` |
+| `OrderFooter` (with `ClearAllButton`, `SurrenderButton`) | The Clear All Orders button (with its Yes / Cancel question) and the Surrender button, and the footer: Finalize or Unlock, then Resolve or the consensus card. `OrderFooter` itself is a fragment, because the sheet's CSS styles these buttons as direct children of `.macro-sheet-controls` |
 | `CollapsedRail` | The rail's contents. The `<aside>` stays in `MacroSidebar` so collapsing keeps one element and the width transition on `.macro-sidebar` plays |
 | `useSheetSelection` | The sheet's two reactions to the selected unit (highlight its provinces, scroll its card up when the sheet is raised) |
 
 **Picking an order type opens the order, it does not fill it in.** Choosing MOVE, SUPPORT or CONVOY on a card sends an order with no destination, supported unit or convoyed army, the way the map's unit menu waits for a click. The card shows `Choose a destination` (or unit, or army), an `Incomplete` pill, and blank selects (`Choose a destination…`), and no arrow is drawn. A default would look like an order the player meant. Until they pick, the server's validator reports it (`Missing Destination`, `Incomplete Support Order`) and the adjudicator leaves the unit holding. HOLD, DISBAND and RETREAT are complete at once (a retreat still starts on the first legal province). The MOVE destination is the same hover-aware dropdown as the SUPPORT and CONVOY selects (and the compact row's), so hovering a province in the menu previews it on the map; only the retreat select and the phone's native selects are plain `<select>`s.
+
+**Compact rows keep a warning folded away.** The desktop panel's Compact/Detailed button (`btn-toggle-compact-orders`, remembered in `localStorage` as `sloplomacy_compact_orders`) draws each movement-phase unit as a one-line row. A row with a warning and no error (`data-compact="true"` with `data-status="warning"`) glows amber like the warning box itself, and a ⚠ button at its end (`btn-unit-warning-toggle`, `aria-expanded`, "Show warning"/"Hide warning") opens and closes the warning's explanation under the row. It starts closed, the state is local to the card, and the button stops the click so it never selects or deselects the unit. Errors still show their explanation at once, as do info notes; detailed cards and the phone sheet are unchanged.
 
 Pieces must not be defined inside `MacroSidebar`: a component defined in a render is a new type each time and remounts its subtree, which drops select focus.
 
@@ -214,7 +211,7 @@ Pieces must not be defined inside `MacroSidebar`: a component defined in a rende
 - **Retreats**: Prompts commanders on dislodged units requiring retreat destinations or disband orders. Until the player picks, a dislodged unit's card reads `NO ORDER · Disbands unless it retreats` and neither button is pressed: the server's default DISBAND (`is_explicit: false`) is what happens if nobody acts, not a choice.
 
 ### 3. Quick Action Toolbar
-- **"Clear All Orders"**: Resets every order of the power to its phase default (units hold, dislodged units disband, build slots blank) and withdraws its finalization via `POST /api/orders/clear-all`.
+- **"Clear All Orders"**: Resets every order of the power to its phase default (units hold, dislodged units disband, build slots blank) and withdraws its finalization via `POST /api/orders/clear-all`. The first click only asks: the button's spot splits in half into **Yes** (left, red, `btn-clear-all-confirm`, clears) and **Cancel** (right, `btn-clear-all-cancel`), inside a `clear-all-confirm` group. Focus moves to Cancel; Cancel, Yes or Escape put the button back. The question never times out, but `MacroSidebar` keys the button by season and phase, so it closes when the turn moves on. The desktop quick-action row and the phone sheet's controls row show the same component (the sheet gives its two buttons the 44px touch height).
 - **"Surrender & Leave"** (Multiplayer): Accessible button to surrender sovereign command and place units in Civil Disorder.
 
 ### 4. Macro Force Orders Roster
@@ -240,8 +237,8 @@ Pieces must not be defined inside `MacroSidebar`: a component defined in a rende
   - **Active Match Mode (>= 2 Players)**: Displays `"Resolution Progress: X/Y Ready"` and `"Waiting on: [Powers]"`, transitioning to `"Consensus Reached (Y/Y)"` when all required powers finalize.
 - **"Adjudicate Turn & Advance" / "Step Turn Forward" (`POST /api/adjudicate`)**:
   - In Solo / Sandbox Mode: Commits moves and advances the season/phase.
-  - In Hypothetical Mode (Solo or Multiplayer): Steps the ephemeral hypothetical branch forward (`draftGameId`) so players can inspect multi-turn outcomes without mutating the real game.
-  - In Multiplayer Mode (Outside Hypothetical Mode): Restricted to the **Game Creator**. When testing solo in a waiting lobby (< 2 players), the host button explicitly displays `"Advance Phase Solo (Host Override)"` to advance turns without waiting for opponents. In active matches, it acts as `"Force Adjudicate Phase (Host Override)"` to bypass stalled or AFK players. Unauthorized non-creator calls return `403 Forbidden`. Once a power has won, the button is disabled and reads "Game Over".
+  - In Hypothetical Mode (Solo or Multiplayer): Steps the ephemeral hypothetical branch forward (`draftGameId`) via **Step Turn Forward** so players can inspect multi-turn outcomes without mutating the real game.
+  - In Multiplayer Mode (Outside Hypothetical Mode): Restricted to the **Game Creator** via the **Administrator → Resolve Turn** option (`btn-admin-resolve-turn`) in the top bar (or ⋯ menu on phones), rather than in the order footer. Prompts `ConfirmModal` before calling `POST /api/adjudicate`, and logs an `AdminActionLogEntry` so other participants receive `AdminActionWarningModal`. Unauthorized non-creator calls return `403 Forbidden`. Once a power has won, the option is disabled.
 
 ---
 
@@ -251,6 +248,6 @@ Desktop only. When either sidebar is collapsed:
 - **Left Tools Rail (44px)**: Houses collapse toggle, mini Zoom In / Out / Fit buttons, Sandbox active glow indicator, and Admin icon. In a match with press it also has a Press button with the unread count, which expands the sidebar.
 - **Right Tactical Rail (44px)**: Houses collapse toggle, active nation crest, unconfirmed orders counter pill (or green checkmark when complete), and warning badge.
 ### 8. Version Revision Badge (`VersionBadge.tsx`)
-- Sits at the sticky footer bottom of the sidebar.
+- Sits in the main lobby footer (`LobbyView.tsx`).
 - Displays the current build revision short SHA (`rev <sha>`) with one-click clipboard copy and direct link to the commit on GitHub.
 

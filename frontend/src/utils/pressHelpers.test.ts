@@ -7,8 +7,8 @@ import {
   destinationOf,
   loadReadMarks,
   mergeMessages,
-  NOTES_CHANNEL,
   PUBLIC_CHANNEL,
+  readUpToNow,
   saveReadMarks,
   splitProvinceRefs,
   threadKey,
@@ -31,6 +31,7 @@ const msg = (
   season: 'Spring',
   year: 1901,
   phase: 'Movement',
+  orders: [],
   ...extra,
 });
 
@@ -68,25 +69,28 @@ describe('channels', () => {
     expect(channelOf(msg(2, null))).toBe(PUBLIC_CHANNEL);
   });
 
-  it('puts every anonymous private message in the notes, even once revealed', () => {
-    expect(channelOf(msg(1, null, ['FRANCE']))).toBe(NOTES_CHANNEL);
-    expect(channelOf(msg(2, 'GERMANY', ['FRANCE'], { anonymous: true }))).toBe(
-      NOTES_CHANNEL,
+  it('puts an anonymous private message in its thread, hidden or revealed', () => {
+    const thread = threadKey(['FRANCE', 'GERMANY', 'ITALY']);
+    // While the author is hidden the server lists the whole thread as the recipients.
+    expect(channelOf(msg(1, null, ['FRANCE', 'GERMANY', 'ITALY']))).toBe(
+      thread,
     );
+    expect(
+      channelOf(msg(2, 'GERMANY', ['FRANCE', 'ITALY'], { anonymous: true })),
+    ).toBe(thread);
   });
 
   it('says where a message being written will land', () => {
-    expect(destinationOf([], true, 'FRANCE')).toBe(PUBLIC_CHANNEL);
-    expect(destinationOf(['GERMANY'], true, 'FRANCE')).toBe(NOTES_CHANNEL);
-    expect(destinationOf(['GERMANY'], false, 'FRANCE')).toBe(
+    expect(destinationOf([], 'FRANCE')).toBe(PUBLIC_CHANNEL);
+    expect(destinationOf(['GERMANY'], 'FRANCE')).toBe(
       threadKey(['FRANCE', 'GERMANY']),
     );
   });
 
-  it('lists the public box first, busiest threads next and the notes last', () => {
+  it('lists the public box first and the busiest threads next', () => {
     const channels = buildChannels(
       [
-        msg(1, null, ['FRANCE']),
+        msg(1, null, ['FRANCE', 'GERMANY', 'ITALY']),
         msg(2, 'ITALY', ['FRANCE']),
         msg(3, 'GERMANY', ['FRANCE']),
       ],
@@ -97,7 +101,7 @@ describe('channels', () => {
       PUBLIC_CHANNEL,
       'FRANCE+GERMANY',
       'FRANCE+ITALY',
-      NOTES_CHANNEL,
+      'FRANCE+GERMANY+ITALY',
     ]);
     expect(channels[1].members).toEqual(['FRANCE', 'GERMANY']);
   });
@@ -177,11 +181,31 @@ describe('read marks', () => {
 
   it('ignore anything that is not a count', () => {
     localStorage.setItem(
-      'sloplomacy_press_read:g1:FRANCE',
+      'sloplomacy_press_read_v2:g1:FRANCE',
       JSON.stringify({ public: 'x', notes: -1, 'FRANCE+ITALY': 2 }),
     );
     expect(loadReadMarks('g1', 'FRANCE')).toEqual({ 'FRANCE+ITALY': 2 });
-    localStorage.setItem('sloplomacy_press_read:g1:FRANCE', 'not json');
+    localStorage.setItem('sloplomacy_press_read_v2:g1:FRANCE', 'not json');
     expect(loadReadMarks('g1', 'FRANCE')).toEqual({});
+  });
+
+  it('keep revealed press apart, since it is numbered for the whole game', () => {
+    saveReadMarks('g1', 'FRANCE', { public: 2 });
+    saveReadMarks('g1', 'FRANCE', { public: 9 }, true);
+    expect(loadReadMarks('g1', 'FRANCE')).toEqual({ public: 2 });
+    expect(loadReadMarks('g1', 'FRANCE', true)).toEqual({ public: 9 });
+  });
+
+  it('can mark everything held as read', () => {
+    expect(
+      readUpToNow([
+        msg(1, 'GERMANY'),
+        msg(3, 'ENGLAND'),
+        msg(2, 'GERMANY', ['FRANCE']),
+      ]),
+    ).toEqual({
+      [PUBLIC_CHANNEL]: 3,
+      [channelOf(msg(2, 'GERMANY', ['FRANCE']))]: 2,
+    });
   });
 });

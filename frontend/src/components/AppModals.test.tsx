@@ -17,13 +17,19 @@ const { seen, stub } = vi.hoisted(() => {
   };
   return { seen, stub };
 });
-vi.mock('./SanityCheckModal', () => ({ SanityCheckModal: stub('sanity') }));
-vi.mock('./SurrenderModal', () => ({ SurrenderModal: stub('surrender') }));
-vi.mock('./SaveSandboxModal', () => ({ SaveSandboxModal: stub('save') }));
-vi.mock('./AdminActionWarningModal', () => ({
+vi.mock('./game/SanityCheckModal', () => ({
+  SanityCheckModal: stub('sanity'),
+}));
+vi.mock('./game/SurrenderModal', () => ({
+  SurrenderModal: stub('surrender'),
+}));
+vi.mock('./tools/SaveSandboxModal', () => ({
+  SaveSandboxModal: stub('save'),
+}));
+vi.mock('./admin/AdminActionWarningModal', () => ({
   AdminActionWarningModal: stub('admin-warning'),
 }));
-vi.mock('./AuthModal', () => ({ AuthModal: stub('auth') }));
+vi.mock('./auth/AuthModal', () => ({ AuthModal: stub('auth') }));
 
 const STATE = { season: 'Fall', year: 1903 } as GameState;
 const USER = { id: 'u1', displayName: 'Ada' } as AuthUser;

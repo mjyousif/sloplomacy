@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ConfirmOptions } from '../components/ConfirmModal';
+import type { ConfirmOptions } from '../components/modal/ConfirmModal';
 import type {
   AuthUser,
   GameState,

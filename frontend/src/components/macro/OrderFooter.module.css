@@ -34,6 +34,32 @@
     color: #ffffff;
   }
 
+  /* Clear All's question: Yes and Cancel split the button's own spot in half. An invisible copy
+     of the button sits in the same cell, so the question is as wide as the button wherever
+     the row sizes it by its content (the phone sheet). */
+  .clear-all-confirm {
+    flex: 1;
+    display: grid;
+  }
+
+  .clear-all-confirm > * {
+    grid-area: 1 / 1;
+  }
+
+  .clear-all-ghost {
+    visibility: hidden;
+  }
+
+  .clear-all-choices {
+    display: flex;
+    gap: 4px;
+  }
+
+  .clear-all-choices > .quick-action-btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
   /* Multiplayer Resolution & Consensus Controls */
   .mp-resolution-controls {
     display: flex;
@@ -145,33 +171,13 @@
     opacity: 0.55;
     cursor: not-allowed;
   }
+}
 
-  .creator-override-btn {
-    background: #1e293b;
-    border-color: #475569;
-    color: #cbd5e1;
-    font-size: 0.74rem;
-    padding: 8px 12px;
-  }
-
-  .creator-override-btn:hover {
-    background: #334155;
-    border-color: #64748b;
-    color: #f8fafc;
-  }
-
-  .creator-override-btn[data-solo-ready="true"] {
-    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-    border-color: #38bdf8;
-    color: #38bdf8;
-    font-weight: 600;
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
-  }
-
-  .creator-override-btn[data-solo-ready="true"]:hover {
-    background: #1e293b;
-    border-color: #7dd3fc;
-    color: #f0f9ff;
-    box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+@layer compact {
+  /* In the phone sheet the question takes the button's place in its controls row, whose
+     direct children are buttons, so its two buttons get the same touch height. */
+  :global([data-layout="compact"]) .clear-all-confirm button {
+    min-height: 44px;
+    margin: 0;
   }
 }

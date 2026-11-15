@@ -8,7 +8,7 @@ import { ToolsSidebar, type ToolsSidebarProps } from './ToolsSidebar';
 const props = (extra: Partial<ToolsSidebarProps> = {}): ToolsSidebarProps => ({
   collapsed: false,
   onToggleCollapse: vi.fn(),
-  zoomPercent: 105,
+  zoomPercent: 100,
   onZoomIn: vi.fn(),
   onZoomOut: vi.fn(),
   onResetCamera: vi.fn(),
@@ -33,7 +33,6 @@ describe('ToolsSidebar panel', () => {
     const order = [
       'CHANCELLERY TOOLS',
       'MAP VIEW & CAMERA',
-      'TACTICAL MAP LEGEND',
       'COMMAND NATION (SELECT)',
       'HYPOTHETICAL MODE & PRE-MOVES',
     ].map((t) => text.indexOf(t));
@@ -44,6 +43,8 @@ describe('ToolsSidebar panel', () => {
       screen.getByLabelText('Chancellery Tools & Intel'),
     ).not.toHaveAttribute('role');
     expect(screen.queryByText('CREATOR ADMIN TOOLS')).toBeNull();
+    expect(screen.queryByText('TACTICAL MAP LEGEND')).toBeNull();
+    expect(screen.queryByText('Intel, Camera & War Room')).toBeNull();
   });
 
   it('collapses with its header button and folds to the rail', async () => {
@@ -78,7 +79,7 @@ describe('ToolsSidebar panel', () => {
       foreignModifiedOrdersCount: 2,
     });
     render(<ToolsSidebar {...p} />);
-    expect(screen.getByText('105%')).toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
     expect(screen.getByText('DIPLOMATIC STANDING')).toBeInTheDocument();
     expect(screen.getByTestId('standings-moves-all')).toBeInTheDocument();
     expect(screen.getByTestId('standings-moves-selected')).toBeInTheDocument();
@@ -188,7 +189,7 @@ describe('ToolsSidebar wiring', () => {
       ['onZoomIn', () => screen.getByTitle('Zoom In')],
       [
         'onResetCamera',
-        () => screen.getByTitle('Reset Map to 105% Default View'),
+        () => screen.getByTitle('Reset Map to 100% Default View'),
       ],
       ['onSelectPower', () => screen.getAllByTestId('power-standing-card')[0]],
       [
@@ -326,7 +327,8 @@ describe('ToolsSidebar drawer', () => {
     expect(dialog).toHaveAttribute('data-drawer', 'true');
     expect(screen.queryByText('MAP VIEW & CAMERA')).toBeNull();
     expect(screen.queryByTestId('tools-sidebar-collapse-btn')).toBeNull();
-    expect(screen.getByText('TACTICAL MAP LEGEND')).toBeInTheDocument();
+    expect(screen.getByText('COMMAND NATION (SELECT)')).toBeInTheDocument();
+    expect(screen.queryByText('TACTICAL MAP LEGEND')).toBeNull();
     expect(screen.queryByLabelText('Tools Sidebar Collapsed')).toBeNull();
   });
 

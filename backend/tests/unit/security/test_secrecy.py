@@ -84,7 +84,7 @@ def game():
         orders=orders,
         ownership=ownership,
         issues=[issue(Power.FRANCE), issue(Power.GERMANY)],
-        last_resolution=adjudicate_turn(units, orders, ownership),
+        preview=adjudicate_turn(units, orders, ownership),
     )
     GAME_SUMMARIES[GID] = summary(seat(ALICE, Power.FRANCE), seat(BOB, Power.GERMANY))
     yield g
@@ -112,10 +112,10 @@ def test_a_spectator_sees_no_plans_and_no_issues(game):
 def test_the_turn_preview_is_rebuilt_from_what_the_viewer_may_see(game):
     # The real preview has the two armies bouncing in Burgundy. France's preview must not, or it
     # would give away that Germany is moving there.
-    assert game.last_resolution.resolutions["FRA_A_PAR"].bounced
+    assert game.preview.resolutions["FRA_A_PAR"].bounced
     seen = sanitize_game_state_for_viewer(game, Power.FRANCE)
-    assert not seen.last_resolution.resolutions["FRA_A_PAR"].bounced
-    assert seen.last_resolution.resolutions["GER_A_MUN"].order_type == OrderType.HOLD
+    assert not seen.preview.resolutions["FRA_A_PAR"].bounced
+    assert seen.preview.resolutions["GER_A_MUN"].order_type == OrderType.HOLD
 
 
 def test_masking_leaves_the_real_game_untouched(game):

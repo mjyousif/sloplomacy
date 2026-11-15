@@ -10,6 +10,7 @@ import {
   getCameraBounds,
   getPhoneDefaultCamera,
   getViewportFit,
+  getWideHomeCamera,
   halfNearestDistances,
   keepPointInView,
   MAP_CENTER_X,
@@ -19,6 +20,7 @@ import {
   MIN_TOUCH_RADIUS_PX,
   MIN_ZOOM,
   pinchStep,
+  WIDE_CAMERA_OPTIONS,
   zoomAtPoint,
 } from './mapCameraHelpers';
 
@@ -366,5 +368,56 @@ describe('phone tap targets', () => {
 
   it('keeps the style radius until the zoom is known', () => {
     expect(compactHitRadius(0, 0, 30)).toBe(0);
+  });
+});
+
+describe('getWideHomeCamera (#272)', () => {
+  // Where a board point lands on screen, for a map element `width` wide whose left edge is at `left`.
+  const toScreen = (
+    cam: { x: number; y: number; zoom: number },
+    p: { x: number; y: number },
+    width: number,
+    height: number,
+    left = 0,
+  ) => {
+    const { scale, offsetX, offsetY } = getViewportFit(width, height);
+    return {
+      x:
+        left +
+        offsetX +
+        scale * (MAP_CENTER_X + (p.x - MAP_CENTER_X) * cam.zoom + cam.x),
+      y:
+        offsetY +
+        scale * (MAP_CENTER_Y + (p.y - MAP_CENTER_Y) * cam.zoom + cam.y),
+    };
+  };
+
+  it('is the usual default with no sidebars or no size', () => {
+    expect(getWideHomeCamera(1440, 830, 0, 0)).toEqual(DEFAULT_CAMERA);
+    expect(getWideHomeCamera(0, 0, 360, 360)).toEqual(DEFAULT_CAMERA);
+    expect(getWideHomeCamera(600, 830, 360, 360)).toEqual(DEFAULT_CAMERA);
+  });
+
+  it('frames the board between the sidebars as the default frames it in a map that narrow', () => {
+    const W = 1440;
+    const H = 830;
+    const L = 360;
+    const R = 44;
+    const cam = getWideHomeCamera(W, H, L, R, WIDE_CAMERA_OPTIONS);
+    for (const p of [
+      { x: 0, y: 0 },
+      { x: 1524, y: 1357 },
+      { x: 560, y: 760 },
+    ]) {
+      const now = toScreen(cam, p, W, H);
+      const before = toScreen(DEFAULT_CAMERA, p, W - L - R, H, L);
+      expect(now.x).toBeCloseTo(before.x, 0);
+      expect(now.y).toBeCloseTo(before.y, 0);
+    }
+  });
+
+  it('stays within the wide limits', () => {
+    const cam = getWideHomeCamera(1280, 830, 360, 360, WIDE_CAMERA_OPTIONS);
+    expect(cam).toEqual(clampCamera(cam, WIDE_CAMERA_OPTIONS));
   });
 });

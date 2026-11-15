@@ -13,11 +13,10 @@ import { cx } from '../../utils/cx';
 import type { OrderProgress } from '../../utils/orderProgress';
 import type { SheetSnap } from '../../utils/sheetHelpers';
 import { TurnControlTab } from '../admin/TurnControlTab';
-import { BottomSheet } from '../BottomSheet';
-import { useConfirm } from '../ConfirmModal';
 import macroStyles from '../MacroSidebar.module.css';
-import chromeStyles from '../SidebarChrome.module.css';
-import { VersionBadge } from '../VersionBadge';
+import { useConfirm } from '../modal/ConfirmModal';
+import { BottomSheet } from '../ui/BottomSheet';
+import chromeStyles from '../ui/SidebarChrome.module.css';
 import adminSidebarStyles from './AdminSidebar.module.css';
 import styles from './AdminTurnClockSidebar.module.css';
 import { CollapsedRail } from './CollapsedRail';
@@ -302,9 +301,6 @@ export function AdminTurnClockSidebar({
       >
         <div className={macroStyles.macroSheetBody}>
           <div className={macroStyles.macroUnitsScrollArea}>{bodyContent}</div>
-          <div className={chromeStyles.sidebarVersionFooter}>
-            <VersionBadge />
-          </div>
         </div>
       </BottomSheet>
     );
@@ -367,10 +363,6 @@ export function AdminTurnClockSidebar({
       </div>
 
       <div className={macroStyles.macroUnitsScrollArea}>{bodyContent}</div>
-
-      <div className={chromeStyles.sidebarVersionFooter}>
-        <VersionBadge />
-      </div>
     </aside>
   );
 }

@@ -2,19 +2,21 @@ import { MessagesSquare } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { sendPress, usePressState } from '../../hooks/usePress';
+import { finishedOrders, useSuggestionState } from '../../hooks/useSuggestion';
 import { pressStore } from '../../lib/pressStore';
-import type { Power, ProvinceInfo } from '../../types/diplomacy';
+import { suggestionStore } from '../../lib/suggestionStore';
+import type { Power, ProvinceInfo, Unit } from '../../types/diplomacy';
 import {
   buildChannels,
   destinationOf,
-  NOTES_CHANNEL,
   PUBLIC_CHANNEL,
 } from '../../utils/pressHelpers';
-import { CollapsibleSection } from '../CollapsibleSection';
+import { CollapsibleSection } from '../ui/CollapsibleSection';
 import styles from './PressSection.module.css';
 import { PressChannelTabs } from './press/PressChannelTabs';
 import { PressComposer } from './press/PressComposer';
 import { PressMessageList } from './press/PressMessageList';
+import { PressSuggestionDraft } from './press/PressSuggestionDraft';
 import { channelLabel, listPowers } from './press/pressLabels';
 
 export interface PressSectionProps {
@@ -27,6 +29,15 @@ export interface PressSectionProps {
   /** The player surrendered this seat, so they can read but no longer write. */
   surrendered: boolean;
   provinces: Record<string, ProvinceInfo>;
+  /** The units on the live board, which name the units a move suggestion is for. */
+  units: Unit[];
+  /** The turn being played, e.g. "Spring 1901 Movement". */
+  turn: string;
+  /**
+   * The same turn while moves can be suggested, shown and taken: a Movement phase of a game
+   * still on, with the live board on screen. Null otherwise.
+   */
+  suggestTurn: string | null;
   onHighlightProvinces: (ids: string[]) => void;
   /** A province link was picked (the phone closes the drawer to show the map). */
   onProvincePicked?: () => void;
@@ -37,15 +48,19 @@ export interface PressSectionProps {
 const EMPTY_TEXT: Record<string, string> = {
   [PUBLIC_CHANNEL]:
     'No public press yet. Every player reads what is posted here.',
-  [NOTES_CHANNEL]:
-    'Anonymous notes you send or receive appear here. A note cannot be answered.',
 };
 
+const ONE_TO_ONE_ANONYMOUS =
+  'Not in a one-to-one thread: the other player would know it was you';
+
 /**
- * Press: the public box, private threads and anonymous notes of a match. The letter buttons on
- * the Diplomatic Standing rows pick the conversation: none lit is the public box, lit countries
- * are a private thread with exactly those powers, and "anonymously" hides the author (a private
- * anonymous message is a one-way note). The store (`lib/pressStore`) holds the messages.
+ * Press: the public box and private threads of a match. The letter buttons on the Diplomatic
+ * Standing rows pick the conversation: none lit is the public box, lit countries are a private
+ * thread with exactly those powers. The mask hides the author in whichever one is open, except
+ * a one-to-one thread, where the other player would know. The store (`lib/pressStore`) holds
+ * the messages.
+ * A signed private thread can also carry a move suggestion: the lamp button starts one, it is
+ * written on the map (`lib/suggestionStore` holds the draft) and goes out with the next message.
  */
 export const PressSection: React.FC<PressSectionProps> = ({
   gameId,
@@ -53,18 +68,22 @@ export const PressSection: React.FC<PressSectionProps> = ({
   gameOver,
   surrendered,
   provinces,
+  units,
+  turn,
+  suggestTurn,
   onHighlightProvinces,
   onProvincePicked,
   visible = true,
 }) => {
   const press = usePressState();
+  const { draft, viewing } = useSuggestionState();
   const [open, setOpen] = useState(true);
-  // A conversation picked from its chip that the recipients do not lead to: the notes with
-  // nobody picked yet, or (after the game) a thread the player was never in.
+  // A conversation picked from its chip that the recipients do not lead to: (after the game) a
+  // thread the player was never in.
   const [browseKey, setBrowseKey] = useState<string | null>(null);
   const recipients = press.recipients;
   const [anonymous, setAnonymous] = useState(false);
-  const [draft, setDraft] = useState('');
+  const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [onScreen, setOnScreen] = useState(true);
@@ -79,7 +98,7 @@ export const PressSection: React.FC<PressSectionProps> = ({
     setBrowseKey(null);
     if (recipients.length > 0) setOpen(true);
   }
-  const activeKey = browseKey ?? destinationOf(recipients, anonymous, power);
+  const activeKey = browseKey ?? destinationOf(recipients, power);
   const channels = useMemo(
     () =>
       buildChannels(
@@ -113,7 +132,6 @@ export const PressSection: React.FC<PressSectionProps> = ({
   const selectChannel = (key: string) => {
     const channel = channels.find((c) => c.key === key);
     const mine = channel?.kind === 'thread' && channel.members.includes(power);
-    setAnonymous(key === NOTES_CHANNEL);
     pressStore.setRecipients(
       mine ? (channel?.members ?? []).filter((p) => p !== power) : [],
     );
@@ -137,26 +155,68 @@ export const PressSection: React.FC<PressSectionProps> = ({
     blocked =
       'The game is over. Private press is closed and shown to everyone.';
   else if (!inOwnThread) blocked = 'You are not in this thread.';
-  else if (active.key === NOTES_CHANNEL && recipients.length === 0)
-    blocked = 'Pick who receives the anonymous note on the standings above.';
 
-  let destination = anonymous
+  // The mask is kept while a one-to-one thread is open, but not used there.
+  const oneToOne = recipients.length === 1;
+  const sendAnonymous = anonymous && !oneToOne;
+  let destination = sendAnonymous
     ? 'To everyone, unsigned.'
     : 'To everyone, in the public box.';
   if (recipients.length > 0) {
-    destination = anonymous
-      ? `Anonymous note to ${listPowers(recipients)}. They cannot reply.`
+    destination = sendAnonymous
+      ? `Unsigned, to the thread with ${listPowers(recipients)}.`
       : `Private to ${listPowers(recipients)}.`;
   }
 
+  const unitsByProvince = useMemo(() => {
+    const byProvince: Record<string, Unit> = {};
+    for (const unit of units) {
+      if (!unit.is_dislodged) byProvince[unit.province] = unit;
+    }
+    return byProvince;
+  }, [units]);
+
+  // A suggestion is written for one thread. Picking other countries discards it, so it is
+  // never sent to anyone but the powers it was written for.
+  const draftIsHere =
+    draft !== null &&
+    !sendAnonymous &&
+    draft.members.length === recipients.length &&
+    draft.members.every((p) => recipients.includes(p));
+  useEffect(() => {
+    if (draft && !draftIsHere) suggestionStore.clear();
+  }, [draft, draftIsHere]);
+  const draftOrders = draftIsHere && draft ? Object.values(draft.orders) : [];
+  const sendable = finishedOrders(draftIsHere && draft ? draft.orders : {});
+  const canSuggest =
+    suggestTurn !== null &&
+    !blocked &&
+    !sendAnonymous &&
+    recipients.length > 0 &&
+    active.kind === 'thread';
+  const startSuggestion = () => {
+    if (!draftIsHere && suggestTurn) {
+      suggestionStore.startDraft(recipients, suggestTurn);
+    }
+    onProvincePicked?.();
+  };
+
   const handleSend = async () => {
-    const body = draft.trim();
-    if (!body || sending || blocked) return;
+    const body = text.trim();
+    if ((!body && sendable.length === 0) || sending || blocked) return;
     setSending(true);
     setError(null);
     try {
-      await sendPress(gameId, { power, recipients, anonymous, body });
-      setDraft('');
+      await sendPress(gameId, {
+        power,
+        recipients,
+        anonymous: sendAnonymous,
+        body,
+        // A plain message is sent exactly as before.
+        ...(sendable.length > 0 ? { orders: sendable } : {}),
+      });
+      if (draftIsHere) suggestionStore.clear();
+      setText('');
     } catch (ex) {
       setError(
         ex instanceof Error ? ex.message : 'The message could not be sent.',
@@ -203,7 +263,6 @@ export const PressSection: React.FC<PressSectionProps> = ({
           messages={active.messages}
           viewer={power}
           provinces={provinces}
-          showRecipients={active.key === NOTES_CHANNEL}
           emptyText={
             press.status === 'loading'
               ? 'Reading the dispatches…'
@@ -214,18 +273,45 @@ export const PressSection: React.FC<PressSectionProps> = ({
           }
           onHighlightProvinces={onHighlightProvinces}
           onProvincePicked={onProvincePicked}
+          suggestions={{
+            unitsByProvince,
+            turn,
+            boardFree: suggestTurn !== null,
+            viewingId: viewing?.id ?? null,
+          }}
         />
         <PressComposer
           plainOnly={gameOver || surrendered}
-          draft={draft}
-          onDraftChange={setDraft}
-          anonymous={anonymous}
+          draft={text}
+          onDraftChange={setText}
+          anonymous={sendAnonymous}
+          anonymousDisabled={oneToOne ? ONE_TO_ONE_ANONYMOUS : undefined}
           onAnonymousChange={changeAnonymous}
           destination={destination}
           blocked={blocked}
           sending={sending}
           error={error}
           onSend={handleSend}
+          suggest={
+            canSuggest || draftIsHere
+              ? {
+                  active: draftIsHere,
+                  count: sendable.length,
+                  incomplete: sendable.length < draftOrders.length,
+                  onStart: startSuggestion,
+                  attachment: (
+                    <PressSuggestionDraft
+                      orders={draftOrders}
+                      viewer={power}
+                      provinces={provinces}
+                      unitsByProvince={unitsByProvince}
+                      onRemove={suggestionStore.removeOrder}
+                      onDiscard={suggestionStore.clear}
+                    />
+                  ),
+                }
+              : undefined
+          }
         />
       </div>
     </CollapsibleSection>

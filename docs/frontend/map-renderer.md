@@ -39,7 +39,16 @@ App passes `compact` from `useCompactLayout()`. On a phone the map:
 - **Makes pieces finger-sized**: every piece gets a transparent hit circle at least 22px in radius on screen (`compactHitRadius`), capped at half the distance to the nearest other piece (`halfNearestDistances`) so neighbours keep their own targets. Classic and Name as piece get one too, which they don't need on desktop. It is resized once the zoom has been still for 150ms, not on every frame of a pinch.
 - **Says "Tap"** instead of "Click" in its hints.
 
-The wide layout is unchanged: it starts on `DEFAULT_CAMERA`, keeps the `3.0x` ceiling, renders no zoom buttons, floats its popups and keeps the styles' own hit areas.
+The wide layout keeps the `3.0x` ceiling, renders no zoom buttons, floats its popups and keeps the styles' own hit areas. Its start is described below.
+
+### Map under the sidebars
+
+On a wide screen the map element fills the whole workspace and both sidebars float over its edges (`position: absolute` on `.tools-sidebar`, `.macro-sidebar` and `.map-viewport-container`). Collapsing a sidebar therefore never resizes the map, and the camera is never touched: every province stays on the same screen pixel.
+
+- **Insets.** `GameWorkspace.module.css` sets `--map-inset-left` / `--map-inset-right` to the sidebar or rail width (0 on a phone). `map/hooks/mapInsets.ts` (`readMapInsets`) reads them in script; the CSS overlays use them directly. The map's frame (`.map-viewport-container::after`) hugs the uncovered strip.
+- **Home view.** `getWideHomeCamera` (`utils/mapCameraHelpers.ts`) frames the board in the strip between the sidebars exactly as `DEFAULT_CAMERA` framed it in a map element that narrow. The camera goes there when the map opens and on Fit, using the sidebars open at that moment. With no insets it is `DEFAULT_CAMERA`. Because the element is wider than the strip, the zoom figure reads lower than before for the same view (about 90% at 1440×900).
+- **Limits.** `WIDE_CAMERA_OPTIONS` lowers the zoom floor to `0.5` and widens the sideways pan margin, so a board edge can be brought out from under an open sidebar.
+- **Zoom buttons** zoom about the middle of the strip, not the middle of the element. The floating unit menu is kept inside the strip (`useUnitMenuPlacement`).
 
 The browser pane sends mouse events. The `mobile` E2E scenario turns on Playwright's touch emulation, so its taps arrive as touch, but neither can drag or pinch: those have unit tests (`mapCameraHelpers.test.ts`, `map/hooks/useMapCamera.test.ts`, `map/hooks/useMapGestures.test.ts`, `sheetHelpers.test.ts`) and need a real phone to check by hand.
 
@@ -164,6 +173,15 @@ With `historyView` set, `App.tsx` feeds the map a `TurnRecord` from the turn sel
 - In an Adjustments phase the build tokens are the builds that were ordered (`adjustmentOrdersFor`), for every power. Waived slots are not drawn.
 - The Hypothetical banner stays hidden.
 - On phones the `TurnHistoryPill` goes into the `overlay` beside the clock.
+
+## Move Suggestions (`suggestion`)
+
+A move suggestion from press takes the map the way a past turn does. `GameWorkspace` passes the suggestion's orders as `orders` (with a plain hold for every other unit) and a `suggestion` prop, `{ editablePowers, unitIds }`:
+
+- `isUnitOrderVisible` is true only for the units in `unitIds`, whoever owns them, so the map draws the suggestion and nothing of the player's real orders.
+- While one is being written, `editablePowers` are the player and the thread's other members. `useMapSelection` returns `canControl(unit)`, which the click state machine and `UnitToken` use to decide what can be picked up: any unit in the sandbox or Direct-Edit, a unit of `editablePowers` here, and otherwise only the player's own. Each order goes to `onUpdateOrder`, which stages it in `suggestionStore` instead of sending it.
+- A received one is read-only: `historyView` is set, `editablePowers` is null, and there are no issues or simulation overlay.
+- The `SuggestionPill` goes into the `overlay`.
 
 ---
 

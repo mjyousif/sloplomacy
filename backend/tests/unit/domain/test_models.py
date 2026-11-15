@@ -39,7 +39,7 @@ def full_game() -> GameState:
                 power=Power.FRANCE,
             )
         ],
-        last_resolution=adjudicate_turn(units, orders, ownership),
+        preview=adjudicate_turn(units, orders, ownership),
         timer=PhaseTimer(
             stage=TimerStage.VOTING,
             players=[Power.FRANCE, Power.ENGLAND],
@@ -55,6 +55,23 @@ def test_a_game_survives_a_json_round_trip():
     assert restored.model_dump(exclude={"timer"}) == game.model_dump(exclude={"timer"})
     assert restored.timer.votes == game.timer.votes
     assert restored.timer.deadline == game.timer.deadline
+
+
+def test_a_saved_game_from_before_the_rename_drops_its_old_preview():
+    data = json.loads(full_game().model_dump_json())
+    data["last_resolution"] = data.pop("preview")
+    restored = GameState.model_validate(data)
+    assert restored.preview is None
+    assert restored.admin_resolution is None
+
+
+def test_an_old_admin_snapshot_keeps_its_board_edit():
+    data = json.loads(full_game().model_dump_json())
+    data["phase"] = "Admin"
+    data["last_resolution"] = data.pop("preview")
+    restored = GameState.model_validate(data)
+    assert restored.admin_resolution is not None
+    assert restored.preview is None
 
 
 def test_enums_serialise_as_their_plain_values():

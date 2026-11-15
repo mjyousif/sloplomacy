@@ -15,9 +15,11 @@ import {
   elementPointToViewBox,
   getPhoneDefaultCamera,
   getViewportFit,
+  getWideHomeCamera,
   MAP_CENTER_X,
   MAP_CENTER_Y,
   MAX_ZOOM,
+  WIDE_CAMERA_OPTIONS,
   zoomAtPoint,
 } from '../../../utils/mapCameraHelpers';
 import {
@@ -66,7 +68,7 @@ describe('useMapCamera', () => {
     expect(result.current.cameraRef.current).toEqual(DEFAULT_CAMERA);
     // The wide layout's first render already draws DEFAULT_CAMERA, so nothing is rewritten.
     expect(readTransform(group)).toBeNull();
-    expect(onZoomChange).toHaveBeenCalledExactlyOnceWith(105);
+    expect(onZoomChange).toHaveBeenCalledExactlyOnceWith(100);
   });
 
   it('zooms about the middle of the view and reports each new figure once', () => {
@@ -77,10 +79,10 @@ describe('useMapCamera', () => {
     const expected = zoomAtPoint(
       DEFAULT_CAMERA,
       { x: MAP_CENTER_X, y: MAP_CENTER_Y },
-      1.25,
+      1.2,
     );
     expect(readTransform(group)).toEqual(expected);
-    expect(onZoomChange).toHaveBeenCalledExactlyOnceWith(125);
+    expect(onZoomChange).toHaveBeenCalledExactlyOnceWith(120);
     // The floating menu is placed in screen space, so it follows every camera write.
     expect(onCameraSync).toHaveBeenCalledTimes(1);
 
@@ -122,7 +124,7 @@ describe('useMapCamera', () => {
     const once = zoomAtPoint(
       DEFAULT_CAMERA,
       cursor,
-      Number((1.05 * Math.exp(0.28)).toFixed(3)),
+      Number((DEFAULT_CAMERA.zoom * Math.exp(0.28)).toFixed(3)),
     );
     const twice = zoomAtPoint(
       once,
@@ -164,6 +166,20 @@ describe('useMapCamera', () => {
     act(() => result.current.stepZoom(0.6));
     act(() => result.current.resetCamera());
     expect(result.current.cameraRef.current).toEqual(DEFAULT_CAMERA);
+  });
+
+  it('frames the board between the floating sidebars, and stays put when one collapses', () => {
+    const box = makeMapSvg();
+    box.svg.style.setProperty('--map-inset-left', '200px');
+    box.svg.style.setProperty('--map-inset-right', '44px');
+    const { result, rerender, initialProps } = setup({}, box);
+    const home = getWideHomeCamera(980, 860, 200, 44, WIDE_CAMERA_OPTIONS);
+    expect(result.current.cameraRef.current).toEqual(home);
+
+    // Collapsing the left sidebar only uncovers more map: the camera doesn't move.
+    box.svg.style.setProperty('--map-inset-left', '44px');
+    rerender({ ...initialProps });
+    expect(result.current.cameraRef.current).toEqual(home);
   });
 
   it("starts a phone around the player's own units, and follows a change of power", () => {

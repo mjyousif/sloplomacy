@@ -314,6 +314,7 @@ describe('StandingsSection: press recipients', () => {
     season: 'Spring',
     year: 1901,
     phase: 'Movement',
+    orders: [],
   });
   const openPress = () => act(() => pressStore.open('g1', 'FRANCE'));
 

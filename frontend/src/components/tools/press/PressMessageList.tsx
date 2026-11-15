@@ -8,9 +8,13 @@ import {
   type ProvinceInfo,
 } from '../../../types/diplomacy';
 import { sameTurn, splitProvinceRefs } from '../../../utils/pressHelpers';
-import { PowerFlag } from '../../PowerFlag';
+import { PowerFlag } from '../../ui/PowerFlag';
 import styles from '../PressSection.module.css';
-import { listPowers, powerName } from './pressLabels';
+import {
+  PressSuggestionCard,
+  type PressSuggestionContext,
+} from './PressSuggestionCard';
+import { powerName } from './pressLabels';
 
 export interface PressMessageListProps {
   messages: PressMessage[];
@@ -18,12 +22,12 @@ export interface PressMessageListProps {
   provinces: Record<string, ProvinceInfo>;
   /** Shown when the channel has no messages. */
   emptyText: string;
-  /** Names each message's recipients: the notes list mixes notes to different powers. */
-  showRecipients: boolean;
   onHighlightProvinces: (ids: string[]) => void;
   /** A province link was tapped or clicked (the phone closes its drawer to show the map). */
   onProvincePicked?: () => void;
   listRef?: React.Ref<HTMLDivElement>;
+  /** For the messages that suggest moves. */
+  suggestions: PressSuggestionContext;
 }
 
 function timeOf(sentAt: string): string {
@@ -85,10 +89,10 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
   viewer,
   provinces,
   emptyText,
-  showRecipients,
   onHighlightProvinces,
   onProvincePicked,
   listRef,
+  suggestions,
 }) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const lastId = messages.length ? messages[messages.length - 1].id : null;
@@ -168,23 +172,23 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
                   {timeOf(message.sent_at)}
                 </time>
               </header>
-              {showRecipients && message.recipients.length > 0 && (
-                <div className={styles.messageRecipients}>
-                  to{' '}
-                  {listPowers(message.recipients.filter((p) => p !== viewer))}
-                  {message.recipients.includes(viewer)
-                    ? message.recipients.length > 1
-                      ? ' and you'
-                      : 'you'
-                    : ''}
-                </div>
+              {message.body && (
+                <PressBody
+                  body={message.body}
+                  provinces={provinces}
+                  onHighlightProvinces={onHighlightProvinces}
+                  onProvincePicked={onProvincePicked}
+                />
               )}
-              <PressBody
-                body={message.body}
-                provinces={provinces}
-                onHighlightProvinces={onHighlightProvinces}
-                onProvincePicked={onProvincePicked}
-              />
+              {message.orders.length > 0 && (
+                <PressSuggestionCard
+                  {...suggestions}
+                  message={message}
+                  viewer={viewer}
+                  provinces={provinces}
+                  onShowMap={onProvincePicked}
+                />
+              )}
             </article>
           </div>
         );

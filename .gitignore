@@ -22,6 +22,7 @@ Thumbs.db
 
 # E2E Test Artifacts & Playwright
 artifacts/e2e/
+artifacts/playtest/
 frontend/test-results/
 frontend/playwright-report/
 

@@ -1,8 +1,9 @@
 @layer components {
+  /* The map fills the whole workspace, under both sidebars, so collapsing one only uncovers
+     more of it and never moves the board. */
   .map-viewport-container {
-    flex: 1;
-    position: relative;
-    height: 100%;
+    position: absolute;
+    inset: 0;
     background-color: #1c0b06;
     background-image:
       radial-gradient(
@@ -32,10 +33,11 @@
     user-select: none;
   }
 
+  /* The frame hugs the part of the map the sidebars leave uncovered. */
   .map-viewport-container::after {
     content: "";
     position: absolute;
-    inset: 0;
+    inset: 0 var(--map-inset-right, 0px) 0 var(--map-inset-left, 0px);
     pointer-events: none;
     z-index: 4;
     border: 3px solid rgba(180, 130, 45, 0.26);
@@ -65,6 +67,8 @@
 
 @layer compact {
   :global([data-layout="compact"]) .map-viewport-container {
+    position: relative;
+    inset: auto;
     flex: 1 1 0;
     width: 100%;
     height: auto;

@@ -1,8 +1,8 @@
-import { Megaphone, VenetianMask } from 'lucide-react';
+import { Megaphone } from 'lucide-react';
 import type React from 'react';
 import type { Power } from '../../../types/diplomacy';
 import type { PressChannel } from '../../../utils/pressHelpers';
-import { PowerFlag } from '../../PowerFlag';
+import { PowerFlag } from '../../ui/PowerFlag';
 import styles from '../PressSection.module.css';
 import { channelLabel } from './pressLabels';
 
@@ -13,7 +13,7 @@ export interface PressChannelTabsProps {
   onSelect: (key: string) => void;
 }
 
-/** One chip per conversation: the public box, each private thread, and the anonymous notes. */
+/** One chip per conversation: the public box and each private thread. */
 export const PressChannelTabs: React.FC<PressChannelTabsProps> = ({
   channels,
   activeKey,
@@ -46,12 +46,6 @@ export const PressChannelTabs: React.FC<PressChannelTabsProps> = ({
             <>
               <Megaphone size={11} aria-hidden="true" />
               <span>Public</span>
-            </>
-          )}
-          {channel.kind === 'notes' && (
-            <>
-              <VenetianMask size={12} aria-hidden="true" />
-              <span>Notes</span>
             </>
           )}
           {channel.kind === 'thread' &&

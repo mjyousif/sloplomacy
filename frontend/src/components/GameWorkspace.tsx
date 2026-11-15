@@ -6,7 +6,9 @@ import {
 } from 'react';
 import { usePressSync } from '../hooks/usePress';
 import { useSidebarSelection } from '../hooks/useSidebarSelection';
+import { useSuggestionBoard } from '../hooks/useSuggestion';
 import type { TurnHistory } from '../hooks/useTurnHistory';
+import { suggestionStore } from '../lib/suggestionStore';
 import type {
   GameState,
   MultiplayerGameSummary,
@@ -29,11 +31,15 @@ import {
   type EuropeMapHandle,
 } from './EuropeMap';
 import styles from './GameWorkspace.module.css';
+import { PhaseTimerWidget } from './game/PhaseTimerWidget';
 import { MacroSidebar } from './MacroSidebar';
 import type { AdminTurnClockSettings } from './macro/AdminTurnClockSidebar';
-import { PhaseTimerWidget } from './PhaseTimerWidget';
+import { SuggestionPill } from './map/hud/SuggestionPill';
 import { ToolsSidebar } from './ToolsSidebar';
-import { TurnHistoryPill, TurnHistorySelector } from './TurnHistorySelector';
+import {
+  TurnHistoryPill,
+  TurnHistorySelector,
+} from './tools/TurnHistorySelector';
 
 // Stable empties for a past turn, so the map's memoized layers are not rebuilt every render.
 const NO_ISSUES: ValidationIssue[] = [];
@@ -113,7 +119,9 @@ export interface GameWorkspaceProps {
 /**
  * The game screen of a sandbox or a match: the tools sidebar (a drawer on a phone), the map
  * with the turn clock over it, and the order sidebar (a pull-up sheet on a phone). A past turn
- * from the turn selector is drawn on the map with nothing on it selectable.
+ * from the turn selector is drawn on the map with nothing on it selectable. A move suggestion
+ * from press takes the board the same way: the map holds its orders and the order sidebar is
+ * locked, so the player's real orders stay as they are.
  */
 export function GameWorkspace({
   viewMode,
@@ -187,8 +195,20 @@ export function GameWorkspace({
       : null;
   const gameOver = Boolean(gameState.winner);
   usePressSync({ gameId: pressGameId, power: lockedPower, gameOver });
+  const suggestion = useSuggestionBoard({
+    gameState,
+    power: pressGameId ? lockedPower : null,
+    blocked: sandboxMode || directEditActive || viewingHistory,
+  });
+  const suggestionView = suggestion?.mode === 'view';
+  const readOnly = viewingHistory || suggestionView;
   return (
-    <main className={styles.warRoomWorkspace} data-testid="game-workspace">
+    <main
+      className={styles.warRoomWorkspace}
+      data-testid="game-workspace"
+      data-left-collapsed={leftSidebarCollapsed ? 'true' : undefined}
+      data-right-collapsed={rightSidebarCollapsed ? 'true' : undefined}
+    >
       {/* LEFT SIDEBAR: Tools, Legend, Zoom, Standing, Sandbox & Admin */}
       <ToolsSidebar
         collapsed={leftSidebarCollapsed}
@@ -250,6 +270,18 @@ export function GameWorkspace({
                   lockedPower,
                 ),
                 provinces,
+                units: gameState.units,
+                turn: turnLabel(gameState),
+                // Moves can be suggested, shown and taken while the live Movement turn is on
+                // the board.
+                suggestTurn:
+                  gameState.phase === 'Movement' &&
+                  !gameOver &&
+                  !sandboxMode &&
+                  !directEditActive &&
+                  !viewingHistory
+                    ? turnLabel(gameState)
+                    : null,
                 onHighlightProvinces: setHighlightedProvinces,
                 onProvincePicked: isCompact ? closeToolsDrawer : undefined,
               }
@@ -267,7 +299,8 @@ export function GameWorkspace({
         unitMark={displayPrefs.unitMark}
         provinces={provinces}
         units={historyTurn?.units ?? gameState.units}
-        orders={historyTurn?.orders ?? gameState.orders}
+        orders={historyTurn?.orders ?? suggestion?.orders ?? gameState.orders}
+        suggestion={suggestion?.map}
         ownership={historyTurn?.ownership ?? gameState.ownership}
         activePower={playerPower}
         sandboxMode={sandboxMode}
@@ -277,19 +310,25 @@ export function GameWorkspace({
         }
         directEditActive={directEditActive}
         directEdit={directEdit}
-        selectedUnitId={viewingHistory ? null : selectedUnitId}
-        hoveredUnitId={viewingHistory ? null : hoveredUnitId}
+        selectedUnitId={readOnly ? null : selectedUnitId}
+        hoveredUnitId={readOnly ? null : hoveredUnitId}
         highlightedProvinces={
           viewingHistory ? NO_PROVINCES : highlightedProvinces
         }
-        issues={viewingHistory ? NO_ISSUES : gameState.issues}
-        simulationResult={historyTurn?.resolution ?? simulationResult}
-        showSimulationOverlay={viewingHistory || showSimulationOverlay}
-        onSelectUnit={viewingHistory ? ignore : selectFromMap}
+        issues={viewingHistory || suggestion ? NO_ISSUES : gameState.issues}
+        simulationResult={
+          historyTurn?.resolution ?? (suggestion ? null : simulationResult)
+        }
+        showSimulationOverlay={
+          viewingHistory || (showSimulationOverlay && !suggestion)
+        }
+        onSelectUnit={readOnly ? ignore : selectFromMap}
         suppressUnitMenu={suppressUnitMenu}
-        onHoverUnit={viewingHistory ? ignore : setHoveredUnitId}
-        onUpdateOrder={viewingHistory ? ignore : handleUpdateOrder}
-        historyView={viewingHistory}
+        onHoverUnit={readOnly ? ignore : setHoveredUnitId}
+        onUpdateOrder={
+          readOnly ? ignore : (suggestion?.stage ?? handleUpdateOrder)
+        }
+        historyView={readOnly}
         historyPower={turnHistory.power}
         phase={historyTurn?.phase ?? gameState.phase}
         season={historyTurn?.season ?? gameState.season}
@@ -327,6 +366,12 @@ export function GameWorkspace({
                   onExpire={handleTimerExpired}
                 />
               )}
+            {suggestion && !viewingHistory && (
+              <SuggestionPill
+                suggestion={suggestion}
+                onClose={suggestionStore.clear}
+              />
+            )}
             {isCompact && viewedEntry && (
               <TurnHistoryPill
                 entry={viewedEntry}
@@ -346,8 +391,12 @@ export function GameWorkspace({
         variant={isCompact ? 'sheet' : 'panel'}
         sheetSnap={sheetSnap}
         onSheetSnapChange={setSheetSnap}
-        historyLabel={viewedEntry ? turnLabel(viewedEntry) : null}
-        onReturnToLive={turnHistory.goLive}
+        historyLabel={
+          viewedEntry ? turnLabel(viewedEntry) : (suggestion?.label ?? null)
+        }
+        onReturnToLive={
+          viewedEntry ? turnHistory.goLive : suggestionStore.clear
+        }
         provinces={provinces}
         units={gameState.units}
         orders={gameState.orders}

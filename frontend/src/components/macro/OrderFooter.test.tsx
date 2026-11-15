@@ -9,9 +9,6 @@ const CONSENSUS: ConsensusStatusInfo = {
   isWaitingForPlayers: false,
   title: 'Resolution Progress: 1/2 Ready',
   description: 'Waiting on: England',
-  buttonLabel: 'Force Adjudicate Phase (Host Override)',
-  buttonTitle: 'Host Admin Override: Force advance',
-  isSoloAdvanceReady: false,
 };
 
 const footer = (over: Partial<Parameters<typeof OrderFooter>[0]> = {}) => {
@@ -27,7 +24,6 @@ const footer = (over: Partial<Parameters<typeof OrderFooter>[0]> = {}) => {
       blockingIssueCount={0}
       unconfirmedCount={0}
       isMultiplayer={false}
-      isGameCreator={false}
       gameOver={false}
       isAdjustmentPhase={false}
       isRetreatPhase={false}
@@ -40,13 +36,22 @@ const footer = (over: Partial<Parameters<typeof OrderFooter>[0]> = {}) => {
 };
 
 describe('ClearAllButton', () => {
-  it('clears all orders on click', () => {
+  it('asks first, then clears all orders on Yes', () => {
     const onClearAllOrders = vi.fn();
     render(<ClearAllButton onClearAllOrders={onClearAllOrders} />);
     const btn = screen.getByTestId('btn-clear-all');
     expect(btn).toHaveTextContent('Clear All Orders');
     fireEvent.click(btn);
+    expect(onClearAllOrders).not.toHaveBeenCalled();
+    expect(screen.getByTestId('btn-clear-all-confirm')).toHaveTextContent(
+      'Yes',
+    );
+    expect(screen.getByTestId('btn-clear-all-cancel')).toHaveTextContent(
+      'Cancel',
+    );
+    fireEvent.click(screen.getByTestId('btn-clear-all-confirm'));
     expect(onClearAllOrders).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('btn-clear-all')).toBeInTheDocument();
   });
 });
 
@@ -153,33 +158,11 @@ describe('OrderFooter', () => {
       );
     });
 
-    it('gives only the host the override, which carries the consensus label', () => {
-      const guest = footer({ isMultiplayer: true });
+    it('does not render a host override button in the multiplayer footer', () => {
+      const { container } = footer({ isMultiplayer: true });
       expect(
-        guest.container.querySelector('[data-testid="btn-creator-override"]'),
+        container.querySelector('[data-testid="btn-creator-override"]'),
       ).toBeNull();
-      guest.unmount();
-
-      const host = footer({
-        isMultiplayer: true,
-        isGameCreator: true,
-        consensusInfo: { ...CONSENSUS, isSoloAdvanceReady: true },
-      });
-      const btn = screen.getByTestId('btn-creator-override');
-      expect(btn).toHaveTextContent(CONSENSUS.buttonLabel);
-      expect(btn).toHaveAttribute('title', CONSENSUS.buttonTitle);
-      expect(btn).toHaveAttribute('data-solo-ready', 'true');
-      fireEvent.click(btn);
-      expect(host.onAdjudicateTurn).toHaveBeenCalledTimes(1);
-    });
-
-    it('disables the host override when the game is over', () => {
-      footer({
-        isMultiplayer: true,
-        isGameCreator: true,
-        gameOver: true,
-      });
-      expect(screen.getByTestId('btn-creator-override')).toBeDisabled();
     });
   });
 });

@@ -17,7 +17,6 @@ import {
   getRequiredPowers,
 } from '../utils/orderProgress';
 import type { SheetSnap } from '../utils/sheetHelpers';
-import { BottomSheet } from './BottomSheet';
 import type { DirectEditMapHandlers } from './EuropeMap';
 import styles from './MacroSidebar.module.css';
 import { AdminDirectEditSidebar } from './macro/AdminDirectEditSidebar';
@@ -34,8 +33,7 @@ import {
 import { HistoryLockBar, PhaseContext, PowerHeader } from './macro/PowerHeader';
 import { UnitOrderList } from './macro/UnitOrderList';
 import { useSheetSelection } from './macro/useSheetSelection';
-import chromeStyles from './SidebarChrome.module.css';
-import { VersionBadge } from './VersionBadge';
+import { BottomSheet } from './ui/BottomSheet';
 
 export interface MacroSidebarProps {
   provinces: Record<string, ProvinceInfo>;
@@ -148,7 +146,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   const powerMeta = POWER_METADATA[activePower];
   const isFinalized = finalizedPowers.includes(activePower);
   const isSurrendered = surrenderedPowers.includes(activePower);
-
   const isAdjustmentPhase = phase === 'Adjustments' || season === 'Winter';
   const isRetreatPhase = phase === 'Retreats';
 
@@ -212,7 +209,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     isRetreatPhase,
   });
   const { myBlockingIssues, unconfirmedCount } = progress;
-
   const isSheet = variant === 'sheet';
   const [compactOrders, setCompactOrders] = useState<boolean>(() => {
     try {
@@ -276,10 +272,12 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
   // The pieces of the expanded panel. The desktop panel and the phone sheet arrange the same
   // pieces differently, so neither copies the other.
-  const clearAllButton = <ClearAllButton onClearAllOrders={onClearAllOrders} />;
+  const clearAllButton = isSurrendered ? null : (
+    <ClearAllButton key={season + phase} onClearAllOrders={onClearAllOrders} />
+  );
 
   const surrenderButton =
-    isMultiplayer && onSurrenderClick ? (
+    isMultiplayer && onSurrenderClick && !isSurrendered ? (
       <SurrenderButton onSurrenderClick={onSurrenderClick} />
     ) : null;
 
@@ -324,10 +322,10 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     <OrderFooter
       powerMeta={powerMeta}
       isFinalized={isFinalized}
+      isSurrendered={isSurrendered}
       blockingIssueCount={myBlockingIssues.length}
       unconfirmedCount={unconfirmedCount}
       isMultiplayer={isMultiplayer}
-      isGameCreator={isGameCreator}
       gameOver={gameOver}
       isAdjustmentPhase={isAdjustmentPhase}
       isRetreatPhase={isRetreatPhase}
@@ -421,7 +419,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           data-testid="macro-sheet-body"
           data-history-locked={locked ? 'true' : undefined}
           ref={sheetBodyRef}
-          inert={locked || undefined}
+          inert={locked || isSurrendered || undefined}
         >
           {phaseContext}
           <div
@@ -438,9 +436,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
               {surrenderButton}
             </div>
           )}
-          <div className={chromeStyles.sidebarVersionFooter}>
-            <VersionBadge />
-          </div>
         </div>
       </BottomSheet>
     );
@@ -505,7 +500,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         className={styles.macroUnitsScrollArea}
         data-testid="macro-units-scroll-area"
         ref={panelScrollRef}
-        inert={locked || undefined}
+        inert={locked || isSurrendered || undefined}
       >
         {unitList}
       </div>
@@ -517,9 +512,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         inert={locked || undefined}
       >
         {footerActions}
-      </div>
-      <div className={chromeStyles.sidebarVersionFooter}>
-        <VersionBadge />
       </div>
     </aside>
   );

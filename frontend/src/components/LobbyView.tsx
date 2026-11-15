@@ -9,6 +9,7 @@ import {
 } from '../types/diplomacy';
 import { defaultCampaignName } from '../utils/campaignName';
 import { isVisibleInMyActiveCampaigns } from '../utils/gameOverHelpers';
+import { VersionBadge } from './header/VersionBadge';
 import styles from './LobbyView.module.css';
 import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
 import { JoinWithCodeCard } from './lobby/JoinWithCodeCard';
@@ -17,7 +18,6 @@ import { MyGamesSection } from './lobby/MyGamesSection';
 import { OpenLobbiesSection } from './lobby/OpenLobbiesSection';
 import { PasscodePromptModal } from './lobby/PasscodePromptModal';
 import { PrivateCampaignCreatedModal } from './lobby/PrivateCampaignCreatedModal';
-import { VersionBadge } from './VersionBadge';
 
 interface LobbyViewProps {
   user: AuthUser | null;

@@ -12,8 +12,8 @@ import {
 } from '../types/diplomacy';
 import type { DisplayPrefs } from '../utils/displayPrefs';
 import styles from './AppHeader.module.css';
-import { CompactTopBar } from './CompactTopBar';
-import { TopHeader } from './TopHeader';
+import { CompactTopBar } from './header/CompactTopBar';
+import { TopHeader } from './header/TopHeader';
 
 export interface AppHeaderProps {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -44,6 +44,7 @@ export interface AppHeaderProps {
   openAdminTools: () => void;
   onToggleDirectEdit: () => void;
   turnClockOpen?: boolean;
+  onResolveTurn?: (event?: React.MouseEvent) => void;
   onExitAdmin?: () => void;
   toastBanner: string | null;
   historyEntries?: TurnHistoryEntry[];
@@ -86,6 +87,7 @@ export function AppHeader({
   openAdminTools,
   onToggleDirectEdit,
   turnClockOpen = false,
+  onResolveTurn,
   onExitAdmin,
   toastBanner,
   historyEntries,
@@ -135,6 +137,7 @@ export function AppHeader({
           adminOverrideActive={directEditActive}
           onToggleAdminOverride={onToggleDirectEdit}
           turnClockOpen={turnClockOpen}
+          onResolveTurn={onResolveTurn}
           onExitAdmin={onExitAdmin}
           authUser={authUser}
           onSignIn={() => openAuthPrompt(undefined, 'signin')}
@@ -152,9 +155,6 @@ export function AppHeader({
           viewMode={viewMode}
           turn={gameState}
           winner={gameState.winner ?? null}
-          errorCount={activeErrors.length}
-          warningCount={activeWarnings.length}
-          onOpenOrderCheck={() => handleFinalizeClick(false)}
           onBackToLobby={handleBackToLobby}
           onEnterSoloSandbox={handleEnterSoloSandbox}
           matchSummary={activeGameSummary}
@@ -167,6 +167,7 @@ export function AppHeader({
           adminOverrideActive={directEditActive}
           onToggleAdminOverride={onToggleDirectEdit}
           turnClockOpen={turnClockOpen}
+          onResolveTurn={onResolveTurn}
           onExitAdmin={onExitAdmin}
           authUser={authUser}
           onSignIn={() => openAuthPrompt(undefined, 'signin')}

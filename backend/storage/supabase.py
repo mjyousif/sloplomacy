@@ -17,7 +17,8 @@ logger = logging.getLogger("diplomacy.database")
 ROOM_CODE_REGEX = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 
 # Rebuilt from the board whenever a game loads, so saving them would only bloat every row.
-DERIVED_STATE_FIELDS = {"unit_options"}
+# Rebuilt from the board on refresh and for every viewer, never saved.
+DERIVED_STATE_FIELDS = {"unit_options", "preview"}
 
 
 def is_valid_room_code(code: str | None) -> bool:

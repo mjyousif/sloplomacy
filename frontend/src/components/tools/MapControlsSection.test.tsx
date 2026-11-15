@@ -24,7 +24,7 @@ describe('MapControlsSection', () => {
       [onZoomIn, onZoomOut, onResetCamera].map((f) => f.mock.calls.length),
     ).toEqual([1, 0, 0]);
     await userEvent.click(screen.getByTitle('Zoom Out'));
-    await userEvent.click(screen.getByTitle('Reset Map to 105% Default View'));
+    await userEvent.click(screen.getByTitle('Reset Map to 100% Default View'));
     expect(
       [onZoomIn, onZoomOut, onResetCamera].map((f) => f.mock.calls.length),
     ).toEqual([1, 1, 1]);
@@ -33,7 +33,7 @@ describe('MapControlsSection', () => {
   it('is not collapsible', () => {
     render(
       <MapControlsSection
-        zoomPercent={105}
+        zoomPercent={100}
         onZoomIn={vi.fn()}
         onZoomOut={vi.fn()}
         onResetCamera={vi.fn()}

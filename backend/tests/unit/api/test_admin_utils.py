@@ -89,7 +89,7 @@ async def test_record_admin_history_and_log_consolidation(base_game):
     assert snap1.phase == "Admin"
     assert snap1.season == "Spring"
     assert snap1.year == 1901
-    assert len(snap1.last_resolution.summary) == 1
+    assert len(snap1.admin_resolution.summary) == 1
     # Pre-admin baseline is preserved: BER
     assert next(u for u in snap1.units if u.id == "GER_A_BER").province == "BER"
     # Order diff shows MOVE to MUN
@@ -113,7 +113,7 @@ async def test_record_admin_history_and_log_consolidation(base_game):
     assert len(GAME_HISTORY[gid]) == 1
     consolidated = GAME_HISTORY[gid][0]
     # Summary contains both lines
-    assert len(consolidated.last_resolution.summary) == 2
+    assert len(consolidated.admin_resolution.summary) == 2
     # Baseline still holds initial pre-admin units: BER and LON are in baseline
     assert len(consolidated.units) == 3
     # Net order diff: GER_A_BER is MOVE MUN, ENG_F_LON is DISBAND

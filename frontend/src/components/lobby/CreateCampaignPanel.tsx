@@ -5,7 +5,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../../types/diplomacy';
-import fieldStyles from '../FormField.module.css';
+import fieldStyles from '../ui/FormField.module.css';
 import styles from './LobbyFormCard.module.css';
 import { PowerPicker } from './PowerPicker';
 

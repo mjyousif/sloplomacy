@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { Point } from '../../../data/europeMapGeometry';
 import type { Unit } from '../../../types/diplomacy';
 import type { CameraState } from '../../../utils/mapCameraHelpers';
+import { readMapInsets } from './mapInsets';
 import type { PendingCoastChoice } from './useMapInteraction';
 
 /** How far the docked unit bar sits above the bottom of the map (`.docked-bar` in `FloatingMenu.module.css`). */
@@ -148,6 +149,10 @@ export function useUnitMenuPlacement({
 
     const menuW = 256;
     const menuH = 98;
+    // Keep the menu in the strip the floating sidebars leave uncovered.
+    const insets = readMapInsets(containerRef.current);
+    const minX = insets.left;
+    const maxX = W - insets.right - menuW;
 
     const candidates: Point[] = [
       { x: unitScreen.x - menuW / 2, y: unitScreen.y - menuH - 95 }, // Above
@@ -164,7 +169,7 @@ export function useUnitMenuPlacement({
     let bestScore = -Infinity;
 
     for (const cand of candidates) {
-      const clampedX = Math.max(14, Math.min(W - menuW - 14, cand.x));
+      const clampedX = Math.max(minX + 14, Math.min(maxX - 14, cand.x));
       const clampedY = Math.max(64, Math.min(H - menuH - 14, cand.y));
       const centerX = clampedX + menuW / 2;
       const centerY = clampedY + menuH / 2;
@@ -187,8 +192,8 @@ export function useUnitMenuPlacement({
 
     return {
       left: Math.max(
-        10,
-        Math.min(W - menuW - 10, bestCandidate.x + menuDragOffsetRef.current.x),
+        minX + 10,
+        Math.min(maxX - 10, bestCandidate.x + menuDragOffsetRef.current.x),
       ),
       top: Math.max(
         10,

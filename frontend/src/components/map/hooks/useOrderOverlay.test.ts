@@ -105,6 +105,18 @@ describe('useOrderOverlay', () => {
     expect(issuesByUnit[A_PIC_GER.id]).toEqual([theirs]);
   });
 
+  it('draws only the suggested units while a move suggestion is on the map', () => {
+    const suggested = overlay({
+      units: [A_PAR, A_BUR, A_PIC_GER],
+      visibleUnitIds: new Set([A_PIC_GER.id, A_BUR.id]),
+    }).isUnitOrderVisible;
+    expect([suggested(A_PAR), suggested(A_BUR), suggested(A_PIC_GER)]).toEqual([
+      false,
+      true,
+      true,
+    ]);
+  });
+
   it("draws the player's own orders, everyone's in the sandbox, and a past turn's by nation", () => {
     const own = overlay({ units: [A_PAR, A_PIC_GER] }).isUnitOrderVisible;
     expect([own(A_PAR), own(A_PIC_GER)]).toEqual([true, false]);

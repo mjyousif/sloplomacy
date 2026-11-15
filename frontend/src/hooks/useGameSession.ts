@@ -17,7 +17,7 @@ const API_BASE = '/api';
 
 export interface GameSessionOptions {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
-  /** Where a server state's `last_resolution` goes. */
+  /** Where a server state's `preview` goes. */
   setSimulationResult: (result: SimulationResult) => void;
 }
 
@@ -62,8 +62,8 @@ export function useGameSession({
 
   const applyServerState = (st: GameState) => {
     setGameState(st);
-    if (st.last_resolution) {
-      setSimulationResult(st.last_resolution);
+    if (st.preview) {
+      setSimulationResult(st.preview);
     }
   };
 

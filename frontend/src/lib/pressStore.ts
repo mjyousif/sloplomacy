@@ -2,6 +2,7 @@ import type { Power, PressFeed, PressMessage } from '../types/diplomacy';
 import {
   loadReadMarks,
   mergeMessages,
+  readUpToNow,
   saveReadMarks,
 } from '../utils/pressHelpers';
 
@@ -80,13 +81,27 @@ export const pressStore = {
     set({ ...EMPTY, socketOpen: state.socketOpen });
   },
 
-  /** A whole feed from `GET /api/press` replaces what is held. */
+  /**
+   * A whole feed from `GET /api/press` replaces what is held. Once the press is revealed it is
+   * numbered for the whole game, so the read marks switch to that numbering; the first time,
+   * everything held is marked read rather than the whole revealed history counted as unread.
+   */
   setFeed(gameId: string, feed: PressFeed): void {
     if (!inScope(gameId, feed.power)) return;
+    const messages = [...feed.messages].sort((a, b) => a.seq - b.seq);
+    let lastRead = state.lastRead;
+    if (feed.revealed !== state.revealed) {
+      lastRead = loadReadMarks(gameId, feed.power, feed.revealed);
+      if (feed.revealed && Object.keys(lastRead).length === 0) {
+        lastRead = readUpToNow(messages);
+        saveReadMarks(gameId, feed.power, lastRead, true);
+      }
+    }
     set({
       ...state,
-      messages: [...feed.messages].sort((a, b) => a.seq - b.seq),
+      messages,
       revealed: feed.revealed,
+      lastRead,
       status: 'ready',
     });
   },
@@ -107,7 +122,7 @@ export const pressStore = {
     if (state.gameId === null || state.power === null) return;
     if ((state.lastRead[channel] ?? 0) >= seq) return;
     const lastRead = { ...state.lastRead, [channel]: seq };
-    saveReadMarks(state.gameId, state.power, lastRead);
+    saveReadMarks(state.gameId, state.power, lastRead, state.revealed);
     set({ ...state, lastRead });
   },
 
