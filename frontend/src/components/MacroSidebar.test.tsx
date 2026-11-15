@@ -86,6 +86,7 @@ describe('MacroSidebar panel', () => {
   it('wires Clear All, Finalize and Resolve to their handlers', () => {
     const { props } = sidebar();
     fireEvent.click(screen.getByTestId('btn-clear-all'));
+    fireEvent.click(screen.getByTestId('btn-clear-all-confirm'));
     fireEvent.click(screen.getByTestId('btn-finalize-orders'));
     fireEvent.click(screen.getByTestId('btn-adjudicate-phase'));
     expect(props.onClearAllOrders).toHaveBeenCalledTimes(1);
@@ -329,6 +330,68 @@ describe('MacroSidebar panel', () => {
       expect(container.querySelector('aside')).toBe(aside);
       expect(aside).toHaveAttribute('data-testid', 'macro-sidebar');
     });
+  });
+});
+
+describe('MacroSidebar Clear All confirmation', () => {
+  it('asks first: the first click clears nothing and focuses Cancel', () => {
+    const { props } = sidebar();
+    fireEvent.click(screen.getByTestId('btn-clear-all'));
+    expect(props.onClearAllOrders).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('btn-clear-all')).toBeNull();
+    const group = screen.getByTestId('clear-all-confirm');
+    expect(
+      Array.from(
+        group.querySelectorAll<HTMLElement>('button[data-testid]'),
+      ).map((b) => b.dataset.testid),
+    ).toEqual(['btn-clear-all-confirm', 'btn-clear-all-cancel']);
+    expect(screen.getByTestId('btn-clear-all-cancel')).toHaveFocus();
+  });
+
+  it('Yes clears once and puts the button back', () => {
+    const { props } = sidebar();
+    fireEvent.click(screen.getByTestId('btn-clear-all'));
+    fireEvent.click(screen.getByTestId('btn-clear-all-confirm'));
+    expect(props.onClearAllOrders).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('clear-all-confirm')).toBeNull();
+    expect(screen.getByTestId('btn-clear-all')).toHaveFocus();
+  });
+
+  it('Cancel and Escape put the button back without clearing', () => {
+    const { props } = sidebar();
+    fireEvent.click(screen.getByTestId('btn-clear-all'));
+    fireEvent.click(screen.getByTestId('btn-clear-all-cancel'));
+    expect(screen.getByTestId('btn-clear-all')).toHaveFocus();
+    fireEvent.click(screen.getByTestId('btn-clear-all'));
+    fireEvent.keyDown(screen.getByTestId('btn-clear-all-cancel'), {
+      key: 'Escape',
+    });
+    expect(screen.getByTestId('btn-clear-all')).toBeInTheDocument();
+    expect(screen.queryByTestId('clear-all-confirm')).toBeNull();
+    expect(props.onClearAllOrders).not.toHaveBeenCalled();
+  });
+
+  it('does not carry an open question into the next phase', () => {
+    const { props, rerender } = sidebar();
+    fireEvent.click(screen.getByTestId('btn-clear-all'));
+    rerender(<MacroSidebar {...props} phase="Retreats" />);
+    expect(screen.getByTestId('btn-clear-all')).toBeInTheDocument();
+    expect(screen.queryByTestId('clear-all-confirm')).toBeNull();
+  });
+
+  it("takes the button's place in the phone sheet", () => {
+    const { container } = sidebar({ variant: 'sheet' });
+    fireEvent.click(screen.getByTestId('btn-clear-all'));
+    const controls = container.querySelector(
+      '[data-testid="macro-sheet-controls"]',
+    ) as HTMLElement;
+    expect(
+      Array.from(controls.children).map((c) => c.getAttribute('data-testid')),
+    ).toEqual([
+      'clear-all-confirm',
+      'btn-finalize-orders',
+      'btn-adjudicate-phase',
+    ]);
   });
 });
 
