@@ -396,3 +396,71 @@ describe('UnitMacroCard compact dropdown hover', () => {
     expect(screen.getByTestId('select-support-target').tagName).toBe('SELECT');
   });
 });
+
+describe('UnitMacroCard compact warning toggle (#271)', () => {
+  const warnRow = (over: Partial<Props> = {}) =>
+    card({
+      compact: true,
+      hasWarn: true,
+      unitIssues: [issue(A_BRE, 'warning', 'w1')],
+      ...over,
+    });
+  const alerts = (root: HTMLElement) =>
+    root.querySelectorAll('[data-testid="unit-diagnostic-alert"]');
+
+  it('glows as a warning row with the explanation closed by default', () => {
+    const { root } = warnRow();
+    expect(root).toHaveAttribute('data-status', 'warning');
+    expect(root).toHaveAttribute('data-compact', 'true');
+    expect(alerts(root)).toHaveLength(0);
+    expect(screen.queryByText(/Message w1/)).not.toBeInTheDocument();
+    const toggle = screen.getByTestId('btn-unit-warning-toggle');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAccessibleName('Show warning');
+  });
+
+  it('opens and closes the explanation without selecting the unit', () => {
+    const { root, onSelectUnit } = warnRow();
+    const toggle = screen.getByTestId('btn-unit-warning-toggle');
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveAccessibleName('Hide warning');
+    expect(alerts(root)).toHaveLength(1);
+    expect(alerts(root)[0]).toHaveAttribute('data-severity', 'warning');
+    expect(screen.getByText(/Message w1/)).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(alerts(root)).toHaveLength(0);
+    expect(onSelectUnit).not.toHaveBeenCalled();
+  });
+
+  it('keeps info alerts shown while the warning is closed', () => {
+    const { root } = warnRow({
+      unitIssues: [issue(A_BRE, 'warning', 'w1'), issue(A_BRE, 'info', 'i1')],
+    });
+    expect(alerts(root)).toHaveLength(1);
+    expect(alerts(root)[0]).toHaveAttribute('data-severity', 'info');
+  });
+
+  it('leaves an error row and a detailed card always showing their alerts', () => {
+    const errorRow = card({
+      compact: true,
+      hasError: true,
+      hasWarn: true,
+      unitIssues: [issue(A_BRE, 'error', 'e1'), issue(A_BRE, 'warning', 'w1')],
+    });
+    expect(
+      screen.queryByTestId('btn-unit-warning-toggle'),
+    ).not.toBeInTheDocument();
+    expect(alerts(errorRow.root)).toHaveLength(2);
+    errorRow.unmount();
+
+    const detailed = warnRow({ compact: false });
+    expect(
+      screen.queryByTestId('btn-unit-warning-toggle'),
+    ).not.toBeInTheDocument();
+    expect(alerts(detailed.root)).toHaveLength(1);
+  });
+});

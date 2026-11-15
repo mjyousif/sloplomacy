@@ -8,7 +8,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type React from 'react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type {
   Order,
   OrderResolution,
@@ -99,6 +99,14 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
 
   const isCompactRow = compact && !isAdjustmentPhase && !isRetreatPhase;
   const isCardHoveredRef = useRef(false);
+  // A compact row with a warning (and no error) glows yellow and keeps the
+  // explanation behind a ⚠ button, so the one-line layout stays one line.
+  const hasWarnToggle = isCompactRow && hasWarn && !hasError;
+  const [isWarnOpen, setIsWarnOpen] = useState(false);
+  const visibleIssues =
+    hasWarnToggle && !isWarnOpen
+      ? unitIssues.filter((iss) => iss.severity !== 'warning')
+      : unitIssues;
 
   const getCardHighlightedProvinces = useCallback(() => {
     const provs = [unit.province];
@@ -227,6 +235,23 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
                 />
               )}
             </div>
+            {hasWarnToggle && (
+              <button
+                type="button"
+                className={styles.unitWarningToggle}
+                data-testid="btn-unit-warning-toggle"
+                data-active={isWarnOpen ? 'true' : undefined}
+                aria-expanded={isWarnOpen}
+                aria-label={isWarnOpen ? 'Hide warning' : 'Show warning'}
+                title={isWarnOpen ? 'Hide warning' : 'Show warning'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsWarnOpen((open) => !open);
+                }}
+              >
+                <AlertTriangle size={12} />
+              </button>
+            )}
           </div>
           {(order?.order_type === 'SUPPORT' ||
             order?.order_type === 'CONVOY') && (
@@ -412,8 +437,8 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
         </>
       )}
 
-      {/* Diagnostic Alerts */}
-      {unitIssues.map((iss) => (
+      {/* Diagnostic Alerts (a compact warning row shows its warnings only while opened) */}
+      {visibleIssues.map((iss) => (
         <div
           key={iss.id}
           className={cx(styles.unitDiagnosticAlert, styles[iss.severity])}
