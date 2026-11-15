@@ -141,18 +141,36 @@ def test_an_anonymous_author_is_hidden_from_other_players_and_the_host(match):
         (seen,) = payload["messages"]
         assert seen["anonymous"] is True
         assert seen["sender"] is None
-        assert "GERMANY" not in str(payload["messages"])
+        # Germany is named only as one member of the whole thread, like France and England.
+        assert seen["recipients"] == ["ENGLAND", "FRANCE", "GERMANY"]
+        assert "GERMANY" not in str({k: v for k, v in seen.items() if k != "recipients"})
     (own,) = feed(match, bob_headers(), "GERMANY")["messages"]
     assert own["sender"] == "GERMANY"
 
 
-def test_an_anonymous_note_reaches_only_its_recipients_unsigned(match):
-    sent = send(match, bob_headers(), "GERMANY", "Watch the Channel", ["FRANCE"], anonymous=True)
+def test_an_anonymous_thread_message_names_the_whole_thread_not_its_author(match):
+    # Germany writes anonymously in the England-France-Germany thread. The real recipients
+    # (England, France) would name Germany as the one left out, so readers get the whole thread.
+    sent = send(
+        match, bob_headers(), "GERMANY", "Watch the Channel", ["FRANCE", "ENGLAND"], anonymous=True
+    )
     assert sent.status_code == 200
-    (note,) = feed(match, alice_headers(), "FRANCE")["messages"]
-    assert note["sender"] is None
-    assert note["recipients"] == ["FRANCE"]
-    assert bodies(match, carol_headers(), "ENGLAND") == []
+    assert sent.json()["recipients"] == ["ENGLAND", "FRANCE"]
+    for headers, power in ((alice_headers(), "FRANCE"), (carol_headers(), "ENGLAND")):
+        (seen,) = feed(match, headers, power)["messages"]
+        assert seen["sender"] is None
+        assert seen["recipients"] == ["ENGLAND", "FRANCE", "GERMANY"]
+    (own,) = feed(match, bob_headers(), "GERMANY")["messages"]
+    assert own["recipients"] == ["ENGLAND", "FRANCE"]
+    # Someone without a seat still reads nothing.
+    assert client.get(f"/api/press?game_id={match}", headers=mallory_headers()).status_code == 403
+
+
+def test_an_anonymous_message_in_a_one_to_one_thread_is_refused(match):
+    # The only other player in the thread would know who wrote it.
+    res = send(match, bob_headers(), "GERMANY", "Watch the Channel", ["FRANCE"], anonymous=True)
+    assert res.status_code == 422
+    assert bodies(match, alice_headers(), "FRANCE") == []
 
 
 def test_the_socket_delivers_press_only_to_players_who_may_read_it(match):
@@ -169,23 +187,26 @@ def test_the_socket_delivers_press_only_to_players_who_may_read_it(match):
     spectator = spectator_ctx.__enter__()
     assert receive_json(spectator)["type"] == "game_update"
     try:
-        send(match, alice_headers(), "FRANCE", "For Germany only", ["GERMANY"], anonymous=True)
-        send(match, alice_headers(), "FRANCE", "For everyone")
+        send(match, alice_headers(), "FRANCE", "For Germany only", ["GERMANY"])
+        send(match, alice_headers(), "FRANCE", "For everyone", anonymous=True)
 
         private = receive_json(bob)
         assert private["type"] == "press"
         assert private["power"] == "GERMANY"
         assert private["messages"][0]["body"] == "For Germany only"
-        assert private["messages"][0]["sender"] is None
-        assert "FRANCE" not in str(private["messages"][0]["sender"])
+        assert private["messages"][0]["sender"] == "FRANCE"
 
         # The first press Carol is sent is the public one: the private one never came.
         first = receive_json(carol)
         assert first["type"] == "press"
         assert [m["body"] for m in first["messages"]] == ["For everyone"]
+        # It was posted anonymously, so no socket is told who wrote it.
+        assert first["messages"][0]["sender"] is None
+        assert "FRANCE" not in str(first["messages"])
         # Each socket is sent the reader's own number, so Carol's shows no gap either.
         assert first["messages"][0]["seq"] == 1
-        assert receive_json(bob)["messages"][0]["seq"] == 2
+        public = receive_json(bob)["messages"][0]
+        assert (public["seq"], public["sender"]) == (2, None)
 
         # A socket without a seat is sent no press at all.
         spectator.send_json({"type": "ping"})
@@ -197,7 +218,7 @@ def test_the_socket_delivers_press_only_to_players_who_may_read_it(match):
 
 def test_game_over_reveals_all_press_and_closes_private_press(match):
     send(match, alice_headers(), "FRANCE", "Split Belgium?", ["GERMANY"])
-    send(match, bob_headers(), "GERMANY", "Trust nobody", ["FRANCE"], anonymous=True)
+    send(match, bob_headers(), "GERMANY", "Trust nobody", anonymous=True)
     GAMES[match].winner = Power.FRANCE
 
     payload = feed(match, carol_headers(), "ENGLAND")
@@ -208,9 +229,12 @@ def test_game_over_reveals_all_press_and_closes_private_press(match):
     ]
     assert send(match, carol_headers(), "ENGLAND", "psst", ["FRANCE"]).status_code == 409
     assert (
-        send(match, carol_headers(), "ENGLAND", "psst", ["FRANCE"], anonymous=True).status_code
+        send(
+            match, carol_headers(), "ENGLAND", "psst", ["FRANCE", "GERMANY"], anonymous=True
+        ).status_code
         == 409
     )
+    assert send(match, carol_headers(), "ENGLAND", "psst", anonymous=True).status_code == 409
     assert send(match, carol_headers(), "ENGLAND", "Good game").status_code == 200
 
 
@@ -239,10 +263,13 @@ def test_message_rules(match):
     assert group.json()["recipients"] == ["ENGLAND", "GERMANY"]
 
 
-def test_an_anonymous_public_post_is_refused(match):
+def test_an_anonymous_public_post_reaches_everyone_unsigned(match):
     res = send(match, bob_headers(), "GERMANY", "Who said this?", anonymous=True)
-    assert res.status_code == 422
-    assert bodies(match, alice_headers(), "FRANCE") == []
+    assert res.status_code == 200, res.text
+    assert res.json()["sender"] == "GERMANY"
+    for headers, power in ((alice_headers(), "FRANCE"), (carol_headers(), "ENGLAND")):
+        (seen,) = feed(match, headers, power)["messages"]
+        assert (seen["body"], seen["sender"], seen["recipients"]) == ("Who said this?", None, [])
 
 
 def test_a_message_to_an_empty_seat_is_refused(match):
@@ -260,7 +287,7 @@ def test_numbers_leave_no_gap_for_private_press_between_others(match):
     send(match, alice_headers(), "FRANCE", "Public one")
     send(match, alice_headers(), "FRANCE", "Split Belgium?", ["GERMANY"])
     send(match, bob_headers(), "GERMANY", "Agreed", ["FRANCE"])
-    send(match, bob_headers(), "GERMANY", "Psst", ["FRANCE"], anonymous=True)
+    send(match, bob_headers(), "GERMANY", "Psst", ["FRANCE"])
     last = send(match, carol_headers(), "ENGLAND", "Public two").json()
 
     carol = feed(match, carol_headers(), "ENGLAND")["messages"]

@@ -12,6 +12,8 @@ export interface PressComposerProps {
   onDraftChange: (draft: string) => void;
   anonymous: boolean;
   onAnonymousChange: (anonymous: boolean) => void;
+  /** Why the open conversation cannot be written to anonymously, or undefined when it can. */
+  anonymousDisabled?: string;
   /** Says in words where the message will go. */
   destination: string;
   /** Why nothing can be sent right now, or null when it can. */
@@ -48,6 +50,7 @@ export const PressComposer: React.FC<PressComposerProps> = ({
   onDraftChange,
   anonymous,
   onAnonymousChange,
+  anonymousDisabled,
   destination,
   blocked,
   sending,
@@ -126,10 +129,12 @@ export const PressComposer: React.FC<PressComposerProps> = ({
             data-active={anonymous ? 'true' : undefined}
             aria-pressed={anonymous}
             aria-label="Post anonymously"
+            disabled={Boolean(anonymousDisabled)}
             title={
-              anonymous
+              anonymousDisabled ??
+              (anonymous
                 ? 'Posting anonymously (click to sign your messages)'
-                : 'Post anonymously'
+                : 'Post anonymously')
             }
             onClick={() => onAnonymousChange(!anonymous)}
           >

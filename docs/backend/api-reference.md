@@ -45,7 +45,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/history` | List the game's resolved phases, oldest first (up to the last 30) | *None* | `List[TurnHistoryEntry]` |
 | `GET` | `/api/press` | The press (chat) the caller's seat may read, oldest first; `?after=<seq>` for newer messages only | *None* | `PressFeed` |
-| `POST` | `/api/press` | Send press from the caller's seat: public, a private thread, or an anonymous note | `PressPostRequest` | `PressMessageView` |
+| `POST` | `/api/press` | Send press from the caller's seat to the public box or a private thread, signed or anonymous | `PressPostRequest` | `PressMessageView` |
 | `GET` | `/api/history/{index}` | One resolved phase as it began, with every power's orders and how each resolved | *None* | `TurnRecord` |
 
 ### Sandbox & AI Planning
@@ -711,18 +711,19 @@ Marks one or more `AdminActionLogEntry` items in `GameState.admin_log` as acknow
 
 ## Detailed Specifications: Press
 
-Press is the chat of a multiplayer match. A message is one of three kinds, told apart by `recipients` and `anonymous`:
+Press is the chat of a multiplayer match. A message goes to the public box or to a private thread, told apart by `recipients`, and either may be `anonymous`:
 
-| Kind | `recipients` | `anonymous` | Who reads it |
-| :--- | :--- | :--- | :--- |
-| Public | empty | `false` | Every seated player. Public press is always signed: an anonymous message with no recipients is refused with `422`. |
-| Private thread | one or more powers | `false` | The sender and the recipients. A thread is the set of powers in it, so everyone in it can answer. |
-| Anonymous note | one or more powers | `true` | The same readers, but the author is hidden, so it cannot be answered. |
+| Kind | `recipients` | Who reads it |
+| :--- | :--- | :--- |
+| Public | empty | Every seated player. |
+| Private thread | one or more powers | The sender and the recipients. A thread is the set of powers in it, so everyone in it can answer. |
+
+With `anonymous` the readers are the same, but the author is hidden. A one-to-one thread cannot be anonymous (`422`), because the other player would know who wrote it, so an anonymous private message needs at least two recipients. It is posted in the thread like any other message and can be answered there.
 
 Rules that hold on both endpoints and on the socket:
 
 - **Seated players only.** The caller's seat comes from their token (`viewer_power_for`). `power` only picks among the caller's own seats; naming another power's seat answers `403`. A spectator, or a host without a seat, gets `403`, because what is returned depends on which power is asking.
-- **An anonymous author is hidden from everyone but themself**, the host included: `sender` is `null` in every other player's copy.
+- **An anonymous author is hidden from everyone but themself**, the host included: `sender` is `null` in every other player's copy. In those copies a private message's `recipients` lists the whole thread, the author included, because the real list leaves out exactly the author. The author's own copy keeps the real recipients.
 - **Game over reveals everything.** Once the game has a winner, `revealed` is `true`, every seated player may read every message, and every `sender` is filled in.
 - Sandboxes have no press: a solo or saved sandbox answers `409`, a private sandbox copy (`sbx_`) `404`. A failed Supabase read answers `503`, never an empty feed.
 - A player who takes over a seat reads that seat's earlier press. A private message can only go to seats someone holds, so nobody inherits a message sent to an empty seat.
@@ -748,7 +749,7 @@ Rules that hold on both endpoints and on the socket:
       "seq": 3,
       "sender": null,
       "anonymous": true,
-      "recipients": ["FRANCE"],
+      "recipients": ["ENGLAND", "FRANCE", "GERMANY"],
       "body": "England means to take the Channel.",
       "sent_at": "2026-11-13T22:42:10+00:00",
       "season": "Spring",
@@ -787,7 +788,7 @@ The sender is `power`, which must be the caller's own seat. The sender is droppe
 | `403` | The caller does not hold `power`'s seat, or that power has surrendered. |
 | `400` | A suggested order names a province or coast that does not exist. |
 | `409` | The game is over and the message is private or anonymous (only signed public messages remain), the game is a sandbox, or `orders` are attached outside a Movement phase. |
-| `422` | The body is empty (with no `orders`) or longer than 1000 characters, the only recipient is the sender, a message is anonymous with no recipients, or a recipient's seat is empty. With `orders`: the message is public or anonymous, a unit does not exist or belongs to a power outside the thread, an order is not a hold, move, support or convoy, or a unit has two orders. |
+| `422` | The body is empty (with no `orders`) or longer than 1000 characters, the only recipient is the sender, an anonymous message has exactly one recipient (a one-to-one thread), or a recipient's seat is empty. With `orders`: the message is public or anonymous, a unit does not exist or belongs to a power outside the thread, an order is not a hold, move, support or convoy, or a unit has two orders. |
 | `429` | The seat sent more than 8 messages within 10 seconds. |
 
 ### Press on the game socket (`WebSocketPressUpdate`)

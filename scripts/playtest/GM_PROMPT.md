@@ -61,7 +61,7 @@ Spawn prompt for each Haiku (fill `{POWER}`, `{API}`, `{GAME}`, `{RUNDIR}`):
 > Commands: `state` (board, your units with legal moves
 > and supports, your current orders), `orders "A PAR - BUR" "F BRE H" ...` (your WHOLE order set for
 > the phase in one call), `finalize` (lock in), `unfinalize`, `press-read [after_seq]`,
-> `press-send "text" [--to POWER,POWER] [--anon]` (no `--to` = public; `--anon` = anonymous note, needs `--to`),
+> `press-send "text" [--to POWER,POWER] [--anon]` (no `--to` = public; `--anon` = author hidden, public or a thread of 2+ others),
 > `history [index]` (a past turn: what everyone ordered and how it went). A phase resolves only once
 > every player has finalized: `finalize` says whether it has, and `state`'s preview is your own guess
 > with everyone else holding, never the result. Run it with no arguments for the order syntax. Do NOT use `raw`, do not act as any
@@ -116,7 +116,7 @@ Check these yourself each phase; do not rely on Haikus noticing.
    another's orders via `state`, `unit_options`, `issues`, `preview`, `history`, or press? Run
    `gmtool.py probe <POWER>` for all seven seats every phase, once some orders are in. Also try `press-read`
    as a non-recipient and look for anonymous-note author leaks.
-5. **Press**: delivery, order, `after` paging, private threads of 2+ powers, anonymous notes, size limits.
+5. **Press**: delivery, order, `after` paging, private threads of 2+ powers, anonymous public and thread messages, size limits.
 6. **Win / draw / elimination**: eliminated powers, civil disorder (units hold, no builds), winner at 18,
    behaviour after game over.
 7. **Clarity**: warnings and issue messages that are wrong or misleading; anything a human would find odd.
@@ -133,7 +133,7 @@ Tick these in `RUNDIR/log.md` as play reaches them. Five years from 1901 rarely 
 
 - [ ] a convoy ordered by a player (and one disrupted)
 - [ ] a build or move on a split coast (STP, SPA, BUL) after 1901
-- [ ] an anonymous note, and a private thread of three or more powers
+- [ ] an anonymous public message, an anonymous message in a thread of three or more, and a private thread of three or more powers
 - [ ] a surrender, and units in civil disorder
 - [ ] an elimination
 - [ ] a power reaching 18 centres, game over, and the press reveal after it

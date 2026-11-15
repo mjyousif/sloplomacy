@@ -19,7 +19,7 @@ backend/
 │   ├── admin.py             # Administrator turn controls (status, rollback, jumps, unfinalize-all, test seed)
 │   ├── admin_units.py       # Administrator board overrides (unit spawner/teleport/destroy, ownership)
 │   ├── history.py           # Read-only turn history: resolved phases with every power's orders and outcomes
-│   ├── press.py             # Press (chat): the public box, private threads and anonymous notes of a match
+│   ├── press.py             # Press (chat): the public box and private threads of a match, signed or anonymous
 │   └── websocket.py         # Real-time WebSockets for turn state updates and lobby room events
 ├── domain/                  # Core Pydantic domain models & schemas
 │   ├── board.py             # Power, UnitType, ProvinceType, ProvinceInfo, Unit

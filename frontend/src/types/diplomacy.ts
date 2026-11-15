@@ -432,9 +432,10 @@ export interface LobbyBrowsePage {
 
 /**
  * A press (chat) message as this player may see it. `recipients` is empty for the public box;
- * with recipients it is a private thread message, or a one-way note when `anonymous`.
- * `sender` is null while an anonymous author is hidden (it is the player's own power on their
- * own anonymous messages, and everyone's once the game is over). `orders` holds the moves a
+ * with recipients it is a private thread message. Either may be `anonymous`. `sender` is null
+ * while an anonymous author is hidden (it is the player's own power on their own anonymous
+ * messages, and everyone's once the game is over); a hidden author's private message lists the
+ * whole thread as `recipients`, so the one power missing from the list cannot name them. `orders` holds the moves a
  * private message suggests for units of its sender and recipients (empty for a plain message).
  */
 export interface PressMessage {

@@ -152,7 +152,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           }
         />
 
-        {/* 5. PRESS: PUBLIC BOX, PRIVATE THREADS & ANONYMOUS NOTES */}
+        {/* 5. PRESS: PUBLIC BOX AND PRIVATE THREADS */}
         {press && <PressSection {...press} visible={!isDrawer || open} />}
 
         {/* 6. HYPOTHETICAL MODE & TACTICAL AI GENERAL STAFF */}

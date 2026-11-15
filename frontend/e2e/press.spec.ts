@@ -1,5 +1,5 @@
 // @scenario press
-// @description Press (chat) between three seated players: public box, a private thread a third player never receives, an anonymous note, province links lighting the map, unread badges, the phone drawer, and a move suggestion written on the map, shown to its recipient and taken into their orders.
+// @description Press (chat) between three seated players: public box, a private thread a third player never receives, anonymous messages in a group thread and the public box (never in a one-to-one thread), province links lighting the map, unread badges, the phone drawer, and a move suggestion written on the map, shown to its recipient and taken into their orders.
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import { DEFAULT_E2E_API_URL, ScenarioRecorder } from './helpers';
 
@@ -111,7 +111,7 @@ async function send(page: Page, text: string) {
 }
 
 test.describe('Scenario: Press between three players', () => {
-  test('public box, private thread, anonymous note and province links', async ({
+  test('public box, private thread, anonymous press and province links', async ({
     browser,
   }) => {
     const recorder = new ScenarioRecorder('press');
@@ -182,38 +182,57 @@ test.describe('Scenario: Press between three players', () => {
       await recorder.recordStep(alice, 'thread_open_belgium_highlighted_on_map');
       await belgium.click();
 
-      // 5. An anonymous note: France is still lit for Bob, who lights the mask beside Send. Alice cannot see who sent it.
+      // 5. Anonymous press. In the one-to-one thread with France the mask is off: France would
+      // know who wrote it.
       const bobMask = bob.locator('[data-testid="press-anonymous"]:visible');
+      await expect(bobMask).toBeDisabled();
+      await recorder.recordStep(bob, 'mask_disabled_in_one_to_one_thread');
+      // With England lit too it is the three-power thread, and the message is posted there.
+      const bobToEngland = bob.locator('[data-testid="press-recipient-ENGLAND"]:visible');
+      await bobToEngland.click();
       await bobMask.click();
       await expect(bobMask).toHaveAttribute('aria-pressed', 'true');
       await expect(bob.locator('[data-testid="press-destination"]')).toHaveText(
-        'Anonymous note to France. They cannot reply.',
+        'Unsigned, to the thread with France, England.',
       );
       await send(bob, 'England means to take the Channel.');
-      const notes = alice.locator('[data-testid="press-channel-notes"]');
-      await expect(notes.locator('[data-testid="press-unread"]')).toHaveText('1');
-      await notes.click();
+      const group = alice.locator('[data-testid="press-channel-FRANCE+ENGLAND+GERMANY"]');
+      await expect(group.locator('[data-testid="press-unread"]')).toHaveText('1');
+      await group.click();
       await expect(messages(alice)).toHaveCount(1);
       await expect(messages(alice).first().locator('[data-testid="press-author"]')).toHaveText(
         'Anonymous',
       );
-      await expect(alice.locator('[data-testid="press-destination"]')).toHaveText(
-        'Pick who receives the anonymous note on the standings above.',
-      );
-      await recorder.recordStep(alice, 'anonymous_note_author_hidden');
-      await recorder.recordStep(bob, 'sender_sees_own_note_in_notes');
+      await expect(alice.locator('[data-testid="press-channel-notes"]')).toHaveCount(0);
+      await recorder.recordStep(alice, 'anonymous_in_group_thread_author_hidden');
+      await recorder.recordStep(bob, 'sender_sees_own_anonymous_message_in_thread');
+      // Carol is in the thread too. She is told the whole thread, never who wrote it.
+      const carolGroup = (
+        await api(CAROL, `/api/press?game_id=${gameId}&power=ENGLAND`)
+      ).messages.find((m: { body: string }) => m.body.startsWith('England means'));
+      expect(carolGroup.sender).toBeNull();
+      expect(carolGroup.recipients).toEqual(['ENGLAND', 'FRANCE', 'GERMANY']);
 
-      // 6. With the sidebar folded, the rail's Press button carries the unread count.
+      // 6. With nobody lit the mask stays on and posts to the public box. With the sidebar
+      // folded, Alice's rail Press button carries the unread count.
       await alice.locator('[data-testid="press-channel-public"]').click();
       await alice.locator('[data-testid="tools-sidebar-collapse-btn"]').click();
-      await bobMask.click();
-      await expect(bobMask).toHaveAttribute('aria-pressed', 'false');
       await bobToFrance.click();
+      await bobToEngland.click();
       await expect(bobToFrance).toHaveAttribute('aria-pressed', 'false');
-      await send(bob, 'Germany agrees to the peace.');
+      await expect(bobMask).toHaveAttribute('aria-pressed', 'true');
+      await expect(bob.locator('[data-testid="press-destination"]')).toHaveText(
+        'To everyone, unsigned.',
+      );
+      await send(bob, 'Someone here will betray France.');
       const railButton = alice.locator('[data-testid="tools-rail-press-btn"]');
       await expect(railButton.locator('[data-testid="press-unread-badge"]')).toHaveText('1');
       await recorder.recordStep(alice, 'collapsed_rail_unread_badge');
+      await recorder.recordStep(bob, 'anonymous_public_post');
+      const carolPublic = (
+        await api(CAROL, `/api/press?game_id=${gameId}&power=ENGLAND`)
+      ).messages.find((m: { body: string }) => m.body.startsWith('Someone here'));
+      expect(carolPublic.sender).toBeNull();
 
       recorder.finalize('PASSED');
     } catch (error) {

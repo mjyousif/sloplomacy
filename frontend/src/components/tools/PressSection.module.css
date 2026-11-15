@@ -209,12 +209,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .message-recipients {
-    margin-top: 1px;
-    color: #8b99ad;
-    font-size: 0.6rem;
-  }
-
   .message-body {
     margin: 2px 0 0;
     color: #e2e8f0;
@@ -319,6 +313,13 @@
     background: #6d28d9;
     color: #ffffff;
     box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.3);
+  }
+
+  .anonymous-btn:disabled {
+    border-color: #28303e;
+    background: #1c222c;
+    color: #4b586e;
+    cursor: not-allowed;
   }
 
   .anonymous-btn:focus-visible {
