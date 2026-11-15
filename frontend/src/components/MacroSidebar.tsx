@@ -17,7 +17,6 @@ import {
   getRequiredPowers,
 } from '../utils/orderProgress';
 import type { SheetSnap } from '../utils/sheetHelpers';
-import { BottomSheet } from './BottomSheet';
 import type { DirectEditMapHandlers } from './EuropeMap';
 import styles from './MacroSidebar.module.css';
 import { AdminDirectEditSidebar } from './macro/AdminDirectEditSidebar';
@@ -34,6 +33,7 @@ import {
 import { HistoryLockBar, PhaseContext, PowerHeader } from './macro/PowerHeader';
 import { UnitOrderList } from './macro/UnitOrderList';
 import { useSheetSelection } from './macro/useSheetSelection';
+import { BottomSheet } from './ui/BottomSheet';
 
 export interface MacroSidebarProps {
   provinces: Record<string, ProvinceInfo>;

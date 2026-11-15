@@ -1,6 +1,6 @@
 import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 import type React from 'react';
-import { CollapsibleSection } from '../CollapsibleSection';
+import { CollapsibleSection } from '../ui/CollapsibleSection';
 import styles from './MapControlsSection.module.css';
 import buttonStyles from './ToolsButton.module.css';
 import type { ToolsSidebarProps } from './toolsSidebarProps';

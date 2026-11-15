@@ -3,7 +3,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../../../types/diplomacy';
-import { PowerFlag } from '../../PowerFlag';
+import { PowerFlag } from '../../ui/PowerFlag';
 import { IconSelectDropdown } from './IconSelectDropdown';
 
 export interface PowerFlagDropdownProps {

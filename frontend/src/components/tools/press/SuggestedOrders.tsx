@@ -11,7 +11,7 @@ import {
   formatOrderSummary,
   isOrderIncomplete,
 } from '../../../utils/orderHelpers';
-import { PowerFlag } from '../../PowerFlag';
+import { PowerFlag } from '../../ui/PowerFlag';
 import styles from './PressSuggestion.module.css';
 import { powerName } from './pressLabels';
 

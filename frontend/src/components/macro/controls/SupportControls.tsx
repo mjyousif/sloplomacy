@@ -10,7 +10,7 @@ import {
   IconSelectDropdown,
   type IconSelectOption,
 } from '../../map/hud/IconSelectDropdown';
-import { PowerFlag } from '../../PowerFlag';
+import { PowerFlag } from '../../ui/PowerFlag';
 import styles from '../OrderParameterControls.module.css';
 import { orderParamDropdownClassNames } from './orderParamDropdown';
 

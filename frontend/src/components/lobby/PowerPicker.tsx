@@ -1,6 +1,6 @@
 import type React from 'react';
 import { ALL_POWERS, POWER_METADATA, type Power } from '../../types/diplomacy';
-import { PowerFlag } from '../PowerFlag';
+import { PowerFlag } from '../ui/PowerFlag';
 import styles from './PowerPicker.module.css';
 
 export interface PowerPickerProps {

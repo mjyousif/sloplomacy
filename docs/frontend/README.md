@@ -17,13 +17,17 @@ frontend/
     ├── App.tsx                  # Root state coordinator and viewMode router ('lobby' | 'multiplayer' | 'sandbox')
     ├── App.module.css           # The app shell, loading and error screens (components / compact layers)
     ├── styles/                  # Cascade layers (index.css), tokens.css, base.css, and layerOrder.test.ts
-    ├── components/              # Top-level views, modals, headers, sidebars (with co-located *.module.css & *.test.ts[x])
-    │   ├── map/                 # Interactive SVG board: hooks/, hud/, layers/ (orders/), and curve geometry
-    │   ├── tools/               # Left ToolsSidebar sections (incl. PressSection and press/), collapsed rail, and standings sort hook
+    ├── components/              # App & feature entrypoints (with co-located *.module.css & *.test.ts[x])
+    │   ├── header/              # Desktop/compact top bars, display settings menu, turn chronicle, version badge
+    │   ├── ui/                  # Shared UI primitives (BottomSheet, CollapsibleSection, BrandEmblem, PowerFlag, chrome/form styles)
+    │   ├── map/                 # Interactive SVG board: hooks/, hud/, layers/ (orders/, units/), and curve geometry
+    │   ├── tools/               # Left ToolsSidebar sections (incl. PressSection and press/), TurnHistorySelector, SaveSandboxModal, and collapsed rail
     │   ├── macro/               # Right MacroSidebar order sheet, controls/, admin sidebars, and build slots
     │   ├── lobby/               # Match browser, host/join cards, power picker, and lobby dialogs
-    │   ├── admin/               # Turn & clock control tab
-    │   ├── modal/               # Shared Modal shell and PromptDialog styles
+    │   ├── admin/               # AdminSettingsMenu, TurnControlTab, and AdminActionWarningModal
+    │   ├── auth/                # Sign-in / sign-up modal and account settings modal
+    │   ├── game/                # PhaseTimerWidget and match-lifecycle modals (surrender, game over, sanity check)
+    │   ├── modal/               # Generic modal primitives (Modal, ConfirmModal, PromptDialog styles)
     │   └── pieces/              # Map piece geometry, outlines, marks, and styles/ (classic, seated, compact, flag, nameplate)
     ├── data/                    # Static SVG map paths (europeMapGeometry), piece placements (mapLayouts), text metrics
     ├── hooks/                   # App state hooks (session, sync, sandbox, match/seat actions, auth, layout, history, display prefs)
@@ -35,71 +39,17 @@ frontend/
 
 ---
 
-## Component Tree
+## View & Package Architecture
 
 ```
 App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
-│
-├── View 1: LobbyView.tsx (when viewMode === 'lobby')
-│   ├── Match List & Lobbies Browser (with Private badge and empty state)
-│   ├── Host Game Form (Public vs Private with Passcode protection)
-│   ├── Join Private Campaign Form (by Game ID & Passcode)
-│   ├── Private Campaign Credentials Modal (Copy Game ID & Passcode)
-│   ├── Private Lobby Passcode Modal Prompt
-│   ├── Seat Claim Controls (7 Great Powers)
-│   ├── Active & Saved Sandboxes Roster
-│   └── User Auth Header & Profile Switcher
-│
-├── View 2: GameWorkspace.tsx (when viewMode === 'multiplayer' | 'sandbox')
-│   ├── Imperial Header Bar (AppHeader.tsx, on every view: TopHeader.tsx; CompactTopBar.tsx on phones: back, ≡ tools, turn, problem count, ⋯ menu; then the Direct-Edit banner and the toast)
-│   │   ├── Return to Lobby (Clickable Brand Emblem & Title)
-│   │   ├── Turn Chronicle Pill & History Viewer (TurnChronicle.tsx: turn, ‹ › step, dropdown, Live, hover-expanding nation chips)
-│   │   ├── Game-Over Pill (once someone has won; order errors and warnings live in the order sidebar, not the top bar)
-│   │   ├── Real-Time WebSocket Synchronization Badge
-│   │   └── User Auth Profile / Guest Mode
-│   │
-│   ├── ToolsSidebar.tsx (Left Collapsible Tools & Intel Panel; a ≡ drawer on phones; its parts are in tools/)
-│   │   ├── Collapse / Expand Rail Toggle (CollapsedRail.tsx, the 44px collapsed rail)
-│   │   ├── Map View & Camera Controls (MapControlsSection.tsx; Zoom In, Zoom Out, Fit Map - CollapsibleSection static)
-│   │   ├── Tactical Map Legend (Move, Support, Convoy, Conflict vectors - CollapsibleSection toggle)
-│   │   ├── Great Powers Standing & Command Selector (SC & Unit tallies - CollapsibleSection toggle)
-│   │   ├── Hypothetical Mode (What-If Opponent Guesses) & Tactical AI (CollapsibleSection toggle)
-│   │   ├── Foreign Guesses Count & Discard Actions
-│   │   ├── Creator Admin Console & Direct-Edit Override Trigger (CollapsibleSection toggle)
-│   │   └── Turn History footer on phones (TurnHistorySelector.tsx inside ≡ drawer)
-│   │
-│   ├── EuropeMap.tsx (Center Interactive SVG Board)
-│   │   ├── Authentic Cartographic Background Layer
-│   │   ├── Province Fill & Ownership Borders
-│   │   ├── Province Names Fitted to the Active Piece Style
-│   │   ├── Supply Center Markers
-│   │   ├── Unit Pieces (MapPiece, in the player's chosen style and mark)
-│   │   ├── Dislodged Unit Retreat Badges
-│   │   ├── Dynamic SVG Order Vectors & Bezier Arrows
-│   │   ├── Combat Clashes, Bounces & Cut Indicators
-│   │   ├── Past Turns (`historyView`): every nation's orders with their outcomes, read-only
-│   │   ├── Interactive Unit Radial Menu & Coast Picker
-│   │   └── Imperative Camera Control Handle (`EuropeMapHandle`)
-│   │
-│   └── MacroSidebar.tsx (Right Collapsible Tactical Command Panel; the pull-up order sheet on phones)
-│       ├── Collapse / Expand Rail Toggle (44px collapsed rail)
-│       ├── Active Sovereign Command Header & Supply Center Telemetry
-│       ├── Phase Context Alerts (Winter Adjustments Quota, Retreats Dislodgements)
-│       ├── Quick Command Actions ("Clear All Orders", "Surrender & Leave")
-│       ├── Home Supply Center Builds (Army / Fleet / Waive)
-│       ├── Unit Order Cards (Hold, Move, Support, Convoy, Retreat, Disband)
-│       ├── Inline Validation Diagnostics & Combat Simulation Badges
-│       ├── Sticky Footer: Order Finalization & Phase Adjudication Actions
-│       └── Past-turn bar ("Viewing … · Back to live"), with everything below it dimmed and inert
-│
-├── Modals & Overlays (AppModals.tsx renders the dialogues, on every view)
-│   ├── DisplaySettingsMenu.tsx (Top bar popover for piece style and marks)
-│   ├── AuthModal.tsx (Supabase login/signup & local dev auth toggle)
-│   ├── AdminSettingsMenu.tsx (Top bar Wrench popover: Edit Board & Turn and Clock Settings)
-│   ├── AdminActionWarningModal.tsx (Creator action notice & acknowledgment prompt)
-│   ├── SurrenderModal.tsx (Civil Disorder concession dialogue)
-│   ├── SanityCheckModal.tsx (Tactical Blunder Gatekeeper before order finalization)
-│   └── PhaseTimerWidget.tsx (Turn clock over the bottom left of the map, via EuropeMap's overlay prop)
+├── AppHeader                                ──► components/header/ & components/admin/AdminSettingsMenu
+├── LobbyView (viewMode === 'lobby')          ──► components/lobby/
+├── GameWorkspace (multiplayer | sandbox)
+│   ├── ToolsSidebar                         ──► components/tools/
+│   ├── EuropeMap (SVG board + HUD)          ──► components/map/, components/pieces/, & components/game/PhaseTimerWidget
+│   └── MacroSidebar (order sheet & admin)   ──► components/macro/ & components/admin/
+└── AppModals (global modal coordinator)     ──► components/modal/, auth/, admin/, game/, tools/
 ```
 
 ---

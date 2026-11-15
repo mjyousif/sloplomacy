@@ -1,5 +1,5 @@
 import { type Dispatch, type SetStateAction, useState } from 'react';
-import type { ConfirmOptions } from '../components/ConfirmModal';
+import type { ConfirmOptions } from '../components/modal/ConfirmModal';
 import { authedFetch, getAuthHeaders } from '../lib/supabase';
 import {
   type AuthUser,

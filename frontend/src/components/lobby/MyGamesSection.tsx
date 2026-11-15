@@ -7,7 +7,7 @@ import {
   type Power,
 } from '../../types/diplomacy';
 import { getCompletedCampaignStatus } from '../../utils/gameOverHelpers';
-import { PowerFlag } from '../PowerFlag';
+import { PowerFlag } from '../ui/PowerFlag';
 import sectionStyles from './LobbySection.module.css';
 import styles from './MyGamesSection.module.css';
 

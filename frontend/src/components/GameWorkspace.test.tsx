@@ -30,13 +30,13 @@ vi.mock('./MacroSidebar', () => ({
     return null;
   },
 }));
-vi.mock('./PhaseTimerWidget', () => ({
+vi.mock('./game/PhaseTimerWidget', () => ({
   PhaseTimerWidget: (p: any) => {
     seen.timer = p;
     return <i>timer</i>;
   },
 }));
-vi.mock('./TurnHistorySelector', () => ({
+vi.mock('./tools/TurnHistorySelector', () => ({
   TurnHistorySelector: (p: any) => {
     seen.selector = p;
     return null;

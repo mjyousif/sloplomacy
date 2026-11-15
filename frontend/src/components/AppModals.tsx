@@ -10,13 +10,13 @@ import {
   type ProvinceInfo,
   type ValidationIssue,
 } from '../types/diplomacy';
-import { AccountModal } from './AccountModal';
-import { AdminActionWarningModal } from './AdminActionWarningModal';
-import { AuthModal } from './AuthModal';
-import { GameOverModal } from './GameOverModal';
-import { SanityCheckModal } from './SanityCheckModal';
-import { SaveSandboxModal } from './SaveSandboxModal';
-import { SurrenderModal } from './SurrenderModal';
+import { AdminActionWarningModal } from './admin/AdminActionWarningModal';
+import { AccountModal } from './auth/AccountModal';
+import { AuthModal } from './auth/AuthModal';
+import { GameOverModal } from './game/GameOverModal';
+import { SanityCheckModal } from './game/SanityCheckModal';
+import { SurrenderModal } from './game/SurrenderModal';
+import { SaveSandboxModal } from './tools/SaveSandboxModal';
 
 export interface AppModalsProps {
   gameState: GameState;

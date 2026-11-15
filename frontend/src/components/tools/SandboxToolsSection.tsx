@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { cx } from '../../utils/cx';
-import { CollapsibleSection } from '../CollapsibleSection';
+import { CollapsibleSection } from '../ui/CollapsibleSection';
 import styles from './SandboxToolsSection.module.css';
 import buttonStyles from './ToolsButton.module.css';
 import type { ToolsSidebarProps } from './toolsSidebarProps';

@@ -10,8 +10,8 @@ import {
 import type React from 'react';
 import { usePressBadge } from '../../hooks/usePress';
 import { cx } from '../../utils/cx';
-import chromeStyles from '../SidebarChrome.module.css';
 import styles from '../ToolsSidebar.module.css';
+import chromeStyles from '../ui/SidebarChrome.module.css';
 import { PressUnreadBadge, pressBadgeAnchor } from './press/PressUnreadBadge';
 import type { ToolsSidebarProps } from './toolsSidebarProps';
 

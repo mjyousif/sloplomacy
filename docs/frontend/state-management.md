@@ -25,7 +25,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 
 App renders four pieces, none of which keeps state; each takes one prop per value it uses, named as in App:
 
-- `components/AppHeader.tsx`: the desktop header (`components/TopHeader.tsx`) or the phone bar (`CompactTopBar`), then the Direct-Edit banner and the toast. It works out the player's error and warning counts for the order check.
+- `components/AppHeader.tsx`: the desktop header (`components/header/TopHeader.tsx`) or the phone bar (`CompactTopBar`), then the Direct-Edit banner and the toast. It works out the player's error and warning counts for the order check.
 - `LobbyView` in the lobby, or `components/GameWorkspace.tsx` on a board: the tools sidebar, the map with the clock and the phone's history pill over it, and the order sidebar. It also counts the other powers' changed orders for the tools sidebar. On a past turn it hands the map that turn, with the selection, hover, issues and order callbacks switched off.
 - `components/AppModals.tsx`: the Sanity Check, Surrender & Leave, Save Sandbox (and its default name), admin action warning and sign-in modals, and the confirm prompt. They render on the lobby too.
 
