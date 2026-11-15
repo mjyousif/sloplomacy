@@ -126,6 +126,8 @@ export const SurrenderButton: React.FC<{ onSurrenderClick: () => void }> = ({
 interface OrderFooterProps {
   powerMeta: PowerMeta;
   isFinalized: boolean;
+  /** A surrendered power is in Civil Disorder: finalizing and unlocking are off. */
+  isSurrendered?: boolean;
   blockingIssueCount: number;
   unconfirmedCount: number;
   isMultiplayer: boolean;
@@ -145,6 +147,7 @@ interface OrderFooterProps {
 export const OrderFooter: React.FC<OrderFooterProps> = ({
   powerMeta,
   isFinalized,
+  isSurrendered = false,
   blockingIssueCount,
   unconfirmedCount,
   isMultiplayer,
@@ -161,6 +164,7 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
       <button
         type="button"
         data-testid="btn-finalize-orders"
+        disabled={isSurrendered}
         data-warning={blockingIssueCount > 0 ? 'true' : undefined}
         className={styles.finalizePrimaryBtn}
         onClick={onFinalizeClick}
@@ -187,6 +191,7 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
       <button
         type="button"
         data-testid="btn-unfinalize-orders"
+        disabled={isSurrendered}
         className={styles.unfinalizeBtn}
         onClick={onUnfinalizeClick}
       >

@@ -274,12 +274,12 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
   // The pieces of the expanded panel. The desktop panel and the phone sheet arrange the same
   // pieces differently, so neither copies the other.
-  const clearAllButton = (
+  const clearAllButton = isSurrendered ? null : (
     <ClearAllButton key={season + phase} onClearAllOrders={onClearAllOrders} />
   );
 
   const surrenderButton =
-    isMultiplayer && onSurrenderClick ? (
+    isMultiplayer && onSurrenderClick && !isSurrendered ? (
       <SurrenderButton onSurrenderClick={onSurrenderClick} />
     ) : null;
 
@@ -324,6 +324,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     <OrderFooter
       powerMeta={powerMeta}
       isFinalized={isFinalized}
+      isSurrendered={isSurrendered}
       blockingIssueCount={myBlockingIssues.length}
       unconfirmedCount={unconfirmedCount}
       isMultiplayer={isMultiplayer}
@@ -420,7 +421,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           data-testid="macro-sheet-body"
           data-history-locked={locked ? 'true' : undefined}
           ref={sheetBodyRef}
-          inert={locked || undefined}
+          inert={locked || isSurrendered || undefined}
         >
           {phaseContext}
           <div
@@ -501,7 +502,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         className={styles.macroUnitsScrollArea}
         data-testid="macro-units-scroll-area"
         ref={panelScrollRef}
-        inert={locked || undefined}
+        inert={locked || isSurrendered || undefined}
       >
         {unitList}
       </div>

@@ -1,6 +1,6 @@
 """FastAPI router for tactical orders and order confirmations."""
 
-from domain.board import UnitType
+from domain.board import Power, UnitType
 from domain.game_state import GameState
 from domain.orders import OrderType
 from domain.requests import OrderSubmissionRequest, SetPowerRequest, SingleOrderUpdateRequest
@@ -34,6 +34,15 @@ from ws.connection_manager import (
 router = APIRouter(tags=["Match & Tactical Operations"])
 
 
+def reject_if_surrendered(game: GameState, power: Power) -> None:
+    """A surrendered power is in Civil Disorder, so a live match takes no orders for it."""
+    if power in game.surrendered_powers and is_multiplayer_match(game.game_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"{power.value} has surrendered and is in Civil Disorder.",
+        )
+
+
 @router.post(
     "/api/order",
     response_model=GameState,
@@ -62,6 +71,7 @@ async def update_single_order(
         target_power = slot_power
     verify_power_authorization(game.game_id, target_power, current_user)
     validate_build_slot(game, req.order)
+    reject_if_surrendered(game, target_power)
 
     if req.order.unit_id in unit_map:
         unit = unit_map[req.order.unit_id]
@@ -154,6 +164,7 @@ async def update_batch_orders(
     reject_if_game_over(game)
     reject_stale_turn(game, req.turn)
     verify_power_authorization(game.game_id, req.power, current_user)
+    reject_if_surrendered(game, req.power)
     unit_map = {u.id: u for u in game.units}
     named = [o.unit_id for o in req.orders]
     if repeated := sorted({uid for uid in named if named.count(uid) > 1}):
@@ -213,6 +224,7 @@ async def clear_all_power_orders(
     game = await resolve_game(game_id)
     reject_if_game_over(game)
     verify_power_authorization(game.game_id, req.power, current_user)
+    reject_if_surrendered(game, req.power)
     # Build slots only exist for a count > 0, so compute them from the current board first.
     refresh_diagnostics_and_simulation(game)
     defaults = create_default_orders(game.units, game.phase, game.builds)
@@ -246,6 +258,7 @@ async def confirm_all_power_orders(
     game = await resolve_game(game_id)
     reject_if_game_over(game)
     verify_power_authorization(game.game_id, req.power, current_user)
+    reject_if_surrendered(game, req.power)
     for ord_obj in game.orders.values():
         if ord_obj.power == req.power:
             ord_obj.is_explicit = True
