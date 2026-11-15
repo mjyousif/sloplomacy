@@ -16,7 +16,6 @@ export interface OpenLobbiesSectionProps {
   loadingGames: boolean;
   onRefreshGames: () => void;
   /** Where the Host form sits: "below" on a phone, "on the right" otherwise. */
-  hostFormPlace: string;
   joiningKey: string | null;
   handlePowerSlotClick: (
     game: MultiplayerGameSummary,
@@ -31,7 +30,6 @@ export const OpenLobbiesSection: React.FC<OpenLobbiesSectionProps> = ({
   multiplayerLobbies,
   loadingGames,
   onRefreshGames,
-  hostFormPlace,
   joiningKey,
   handlePowerSlotClick,
   onOpenSurrenderModal,
@@ -65,7 +63,7 @@ export const OpenLobbiesSection: React.FC<OpenLobbiesSectionProps> = ({
               <strong>No Active Campaigns Right Now</strong>
               <p>
                 There are no active multiplayer lobbies yet. Host a new public
-                or private match {hostFormPlace}, or join a friend&apos;s game
+                or private match with Host game, or join a friend&apos;s game
                 using their Game ID and passcode!
               </p>
             </div>

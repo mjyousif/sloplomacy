@@ -225,8 +225,24 @@ interface MultiplayerGameSummary {
   is_draft?: boolean;
   is_private?: boolean;
   has_passcode?: boolean;
+  board?: BoardPreview | null; // only on GET /api/games/mine; null on every other response
+  deadline?: number | null;    // Unix time the running phase clock ends; null otherwise
+}
+
+interface BoardPreview {
+  ownership: Record<string, Power>; // province id -> owner
+  units: PreviewUnit[];             // units still on the board; dislodged ones are left out
+}
+
+interface PreviewUnit {
+  power: Power;
+  unit_type: UnitType;
+  province: string;
+  coast?: string | null;
 }
 ```
+
+*Note on `board`*: `sync_summary` copies the board from the loaded `GameState` each time the summary is brought up to date, so the homepage can draw a small map of a player's own games without opening them. It holds ownership and unit positions only: no orders, retreats or builds. `sanitize_summary_for_viewer` drops it unless `keep_board=True`, which only `GET /api/games/mine` passes. A game saved before this field existed has `board: null` until it is next loaded.
 
 *Note on `is_draft`*: Ephemeral personal solo sandbox sessions created via `POST /api/games/solo-sandbox` set `is_draft: true`. Draft sandboxes are hidden from public lobby listings and `/ws/lobby` WebSocket feeds to preserve player isolation, and can be promoted to permanent saved sandboxes (`is_draft: false`) via `POST /api/games/save-sandbox`.
 

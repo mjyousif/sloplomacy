@@ -16,7 +16,6 @@ export interface MyGamesSectionProps {
   /** The games the signed-in player holds a seat in. */
   myGames: MultiplayerGameSummary[];
   /** Where the Host form sits: "below" on a phone, "on the right" otherwise. */
-  hostFormPlace: string;
   handlePowerSlotClick: (
     game: MultiplayerGameSummary,
     power: Power,
@@ -29,7 +28,6 @@ export interface MyGamesSectionProps {
 export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
   user,
   myGames,
-  hostFormPlace,
   handlePowerSlotClick,
   onOpenAuth,
   onOpenSurrenderModal,
@@ -70,7 +68,7 @@ export const MyGamesSection: React.FC<MyGamesSectionProps> = ({
         <div className={sectionStyles.lobbyEmptyBox}>
           <p>
             You haven&apos;t joined any campaigns yet. Host a public or private
-            campaign {hostFormPlace}, or join using a Game ID &amp; passcode!
+            campaign with Host game, or join using a Game ID &amp; passcode!
           </p>
         </div>
       ) : (
