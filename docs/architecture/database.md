@@ -87,6 +87,17 @@ erDiagram
 - **Optimistic Concurrency (`state_revision`)**: Incremented on mutations and checked by admin board-edit operations (`backend/api/admin_units.py`) to prevent stale overwrites.
 - **Sanitized View (`public.lobby_games`)**: Excludes `game_state`, `history`, `press`, and plaintext `passcode` (exposing `has_passcode` boolean instead), and filters out sandboxes and private games.
 
+### JSONB Column Breakdown (`public.multiplayer_games`)
+
+For the full field-by-field schema of each model, see [Data Models & Contracts](data-models.md). In `public.multiplayer_games`, those models are persisted as:
+
+| Column | Stored JSON Shape | Persistence & Stripping Rules |
+| :--- | :--- | :--- |
+| `game_state` | `{ "state": GameState, "summary": MultiplayerGameSummary, "passcode": string \| null }` | `unit_options` (`DERIVED_STATE_FIELDS`) is excluded and rebuilt on load; `preview` is never saved (`null`, rebuilt per viewer). `state.admin_log` stores admin audit entries. |
+| `summary` | `MultiplayerGameSummary` (metadata, `participants`, `finalized_powers`, `surrendered_powers`, `board` preview, `deadline`) | For registered UUID users, `created_by` and `participants[*].display_name` are stripped on save and hydrated from `public.profiles` on load. |
+| `history` | `GameState[]` (resolved phase snapshots + `phase: "Admin"` snapshots with `admin_resolution`, oldest first) | `unit_options` is excluded from each snapshot. Saving with `history=None` leaves existing DB history untouched. |
+| `press` | `PressMessage[]` (in-game chat messages, oldest first: `id`, `seq`, `numbers`, `sender`, `anonymous`, `recipients`, `body`, `orders`, `sent_at`, `season`, `year`, `phase`) | Written independently by `backend/storage/press.py` so chat saves and turn saves never overwrite each other. |
+
 ---
 
 ## 2. Row-Level Security (RLS) & Trust Boundaries
