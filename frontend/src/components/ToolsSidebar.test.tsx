@@ -33,7 +33,6 @@ describe('ToolsSidebar panel', () => {
     const order = [
       'CHANCELLERY TOOLS',
       'MAP VIEW & CAMERA',
-      'TACTICAL MAP LEGEND',
       'COMMAND NATION (SELECT)',
       'HYPOTHETICAL MODE & PRE-MOVES',
     ].map((t) => text.indexOf(t));
@@ -44,6 +43,8 @@ describe('ToolsSidebar panel', () => {
       screen.getByLabelText('Chancellery Tools & Intel'),
     ).not.toHaveAttribute('role');
     expect(screen.queryByText('CREATOR ADMIN TOOLS')).toBeNull();
+    expect(screen.queryByText('TACTICAL MAP LEGEND')).toBeNull();
+    expect(screen.queryByText('Intel, Camera & War Room')).toBeNull();
   });
 
   it('collapses with its header button and folds to the rail', async () => {
@@ -322,7 +323,8 @@ describe('ToolsSidebar drawer', () => {
     expect(dialog).toHaveAttribute('data-drawer', 'true');
     expect(screen.queryByText('MAP VIEW & CAMERA')).toBeNull();
     expect(screen.queryByTestId('tools-sidebar-collapse-btn')).toBeNull();
-    expect(screen.getByText('TACTICAL MAP LEGEND')).toBeInTheDocument();
+    expect(screen.getByText('COMMAND NATION (SELECT)')).toBeInTheDocument();
+    expect(screen.queryByText('TACTICAL MAP LEGEND')).toBeNull();
     expect(screen.queryByLabelText('Tools Sidebar Collapsed')).toBeNull();
   });
 

@@ -102,7 +102,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 ## Reusable Collapsible Section (`CollapsibleSection.tsx`)
 
 `CollapsibleSection.tsx` standardizes all sidebar panel sections with a shared design and typographic hierarchy:
-- **Collapsible or Static Modes**: Set `collapsible={true}` for sections that can fold shut (such as Tactical Map Legend, Great Powers Standing, Pre-Move Sandbox, and Creator Admin Tools), or `collapsible={false}` for action controls (such as Map View & Camera) that share identical headers and borders without toggle behavior.
+- **Collapsible or Static Modes**: Set `collapsible={true}` for sections that can fold shut (such as Great Powers Standing, Pre-Move Sandbox, and Creator Admin Tools), or `collapsible={false}` for action controls (such as Map View & Camera) that share identical headers and borders without toggle behavior.
 - **Accessible ARIA Attributes**: Includes `aria-expanded` and `aria-controls` on the toggle button with animated chevron indicators (`ChevronDown` / `ChevronRight`).
 - **Badge and Counter Support**: Accepts an optional `badge` node (such as zoom percentage badges or unit counts).
 - **Controlled & Uncontrolled Support**: Supports `defaultOpen` for initial expansion state, or `isOpen` and `onToggle` for controlled state management.
@@ -111,7 +111,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 
 ## Left Sidebar: Chancellery Tools & Intel (`ToolsSidebar.tsx`)
 
-`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Everything else is in `components/tools/`: `CollapsedRail`, then one component per section below (`MapControlsSection`, `MapLegendSection`, `StandingsSection` with `useStandingsSort`, `PressSection` with its pieces in `tools/press/`, `SandboxToolsSection`). Each section takes only the props it reads, typed as a `Pick<>` of `ToolsSidebarProps` (`tools/toolsSidebarProps.ts`). The parent decides which sections show: the zoom section is left out of the drawer, while Administrator controls live in Display Settings (`DisplaySettingsMenu.tsx`).
+`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Everything else is in `components/tools/`: `CollapsedRail`, then one component per section below (`MapControlsSection`, `StandingsSection` with `useStandingsSort`, `PressSection` with its pieces in `tools/press/`, `SandboxToolsSection`). Each section takes only the props it reads, typed as a `Pick<>` of `ToolsSidebarProps` (`tools/toolsSidebarProps.ts`). The parent decides which sections show: the zoom section is left out of the drawer, while Administrator controls live in Display Settings (`DisplaySettingsMenu.tsx`).
 
 ### 1. Map View & Camera Controls
 - Rendered via a non-collapsible `CollapsibleSection` to retain uniform visual hierarchy with action controls.
@@ -119,16 +119,7 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 - **Current Zoom Readout**: Real-time percentage indicator (e.g., `105%`).
 - **Fit Map / Reset Camera**: Instantly realigns camera to the default center framing at 105% zoom. On a phone it returns to the phone view instead: the board filling the screen's height around the player's own units.
 
-### 2. Tactical Map Cartographic Legend
-- Rendered inside a collapsible `CollapsibleSection` (`defaultOpen={true}`). Commanders can collapse the legend to free vertical space for power rosters and sandbox controls.
-- Laid out as a two-column grid, paired into two rows split by a vertical hairline divider, so the legend costs half the vertical space it used to.
-- Displays symbolic explanations for all map vector overlays, in reading order:
-  - **Move / Attack**: Blue curved arrow indicating unit repositioning.
-  - **Fleet Convoy**: Purple wavy line representing naval troop transport.
-  - **Support Link**: Teal dashed line with target reticle indicating defensive or offensive support.
-  - **Warning**: Red/amber alert indicating illegal orders, cut supports, or retreats.
-
-### 3. Great Powers Diplomatic Standing & Command Selector
+### 2. Great Powers Diplomatic Standing & Command Selector
 - Lists all 7 Great Powers (Austria-Hungary, England, France, Germany, Italy, Russia, Turkey) with their authentic World War I (1901–1918) SVG flags, toggleable sorting (`By Score` vs `Default`), dynamic numeric ranking (1–7), player names in multiplayer, national colors, controlled Supply Centers, and active field units.
 - **Toggleable Standings Sort**:
   - Segmented toggle at the top of the standings list allows commanders to switch between:
@@ -251,6 +242,6 @@ Desktop only. When either sidebar is collapsed:
 - **Left Tools Rail (44px)**: Houses collapse toggle, mini Zoom In / Out / Fit buttons, Sandbox active glow indicator, and Admin icon. In a match with press it also has a Press button with the unread count, which expands the sidebar.
 - **Right Tactical Rail (44px)**: Houses collapse toggle, active nation crest, unconfirmed orders counter pill (or green checkmark when complete), and warning badge.
 ### 8. Version Revision Badge (`VersionBadge.tsx`)
-- Sits at the sticky footer bottom of the sidebar.
+- Sits in the main lobby footer (`LobbyView.tsx`).
 - Displays the current build revision short SHA (`rev <sha>`) with one-click clipboard copy and direct link to the commit on GitHub.
 

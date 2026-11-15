@@ -6,7 +6,6 @@ import chromeStyles from './SidebarChrome.module.css';
 import styles from './ToolsSidebar.module.css';
 import { CollapsedRail } from './tools/CollapsedRail';
 import { MapControlsSection } from './tools/MapControlsSection';
-import { MapLegendSection } from './tools/MapLegendSection';
 import { PressSection } from './tools/PressSection';
 import { SandboxToolsSection } from './tools/SandboxToolsSection';
 import { StandingsSection } from './tools/StandingsSection';
@@ -92,12 +91,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
       <div className={styles.toolsSidebarHeader}>
         <div className={styles.toolsHeaderTitle}>
           <Sliders size={16} className={styles.toolsHeaderIcon} />
-          <div>
-            <h3>CHANCELLERY TOOLS</h3>
-            <span className={styles.toolsHeaderSub}>
-              Intel, Camera &amp; War Room
-            </span>
-          </div>
+          <h3>CHANCELLERY TOOLS</h3>
         </div>
         {isDrawer ? (
           <button
@@ -138,10 +132,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           />
         )}
 
-        {/* 3. CARTOGRAPHIC TACTICAL LEGEND */}
-        <MapLegendSection />
-
-        {/* 4. GREAT POWERS STANDING & SELECTION */}
+        {/* 3. GREAT POWERS STANDING & SELECTION */}
         <StandingsSection
           activePower={activePower}
           onSelectPower={onSelectPower}

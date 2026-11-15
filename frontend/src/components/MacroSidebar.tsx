@@ -34,8 +34,6 @@ import {
 import { HistoryLockBar, PhaseContext, PowerHeader } from './macro/PowerHeader';
 import { UnitOrderList } from './macro/UnitOrderList';
 import { useSheetSelection } from './macro/useSheetSelection';
-import chromeStyles from './SidebarChrome.module.css';
-import { VersionBadge } from './VersionBadge';
 
 export interface MacroSidebarProps {
   provinces: Record<string, ProvinceInfo>;
@@ -440,9 +438,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
               {surrenderButton}
             </div>
           )}
-          <div className={chromeStyles.sidebarVersionFooter}>
-            <VersionBadge />
-          </div>
         </div>
       </BottomSheet>
     );
@@ -519,9 +514,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         inert={locked || undefined}
       >
         {footerActions}
-      </div>
-      <div className={chromeStyles.sidebarVersionFooter}>
-        <VersionBadge />
       </div>
     </aside>
   );
