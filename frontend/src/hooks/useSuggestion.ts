@@ -113,10 +113,14 @@ export function useSuggestionBoard({
       }
     }
     if (draft) {
-      const members = [power, ...draft.members];
+      const members = draft.anonymous
+        ? [...draft.members]
+        : [power, ...draft.members];
       return {
         mode: 'draft' as const,
-        label: `your suggestion to ${draft.members.map(nameOf).join(', ')}`,
+        label: draft.anonymous
+          ? `your anonymous suggestion to ${draft.members.map(nameOf).join(', ')}`
+          : `your suggestion to ${draft.members.map(nameOf).join(', ')}`,
         orders,
         map: { editablePowers: members, unitIds },
         count: unitIds.size,
@@ -130,9 +134,11 @@ export function useSuggestionBoard({
     return {
       mode: 'view' as const,
       label:
-        sender === null || sender === power
-          ? 'your suggestion'
-          : `${nameOf(sender)}'s suggestion`,
+        sender === null
+          ? 'anonymous suggestion'
+          : sender === power
+            ? 'your suggestion'
+            : `${nameOf(sender)}'s suggestion`,
       orders,
       map: { editablePowers: null, unitIds },
       count: unitIds.size,

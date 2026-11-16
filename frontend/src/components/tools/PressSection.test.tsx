@@ -198,30 +198,40 @@ describe('PressSection', () => {
     expect(screen.queryByTestId('press-channel-notes')).toBeNull();
   });
 
-  it('turns the mask off in a one-to-one thread, where the other player would know', async () => {
+  it('sends an anonymous one-to-one message as a one-way backchannel', async () => {
     render(<PressSection {...base()} />);
     fill([]);
     await userEvent.click(screen.getByTestId('press-anonymous'));
     await tick('GERMANY');
     const mask = screen.getByTestId('press-anonymous');
-    expect(mask).toBeDisabled();
-    expect(mask).toHaveAttribute('aria-pressed', 'false');
-    expect(mask).toHaveAttribute(
-      'title',
-      expect.stringContaining('the other player would know'),
-    );
-    expect(destination()).toBe('Private to Germany.');
-    await userEvent.type(screen.getByTestId('press-input'), 'Hi{Enter}');
+    expect(mask).toBeEnabled();
+    expect(mask).toHaveAttribute('aria-pressed', 'true');
+    expect(destination()).toBe('Unsigned, to Germany (one-way backchannel).');
+    await userEvent.type(screen.getByTestId('press-input'), 'Watch out{Enter}');
     expect(lastPost().body).toMatchObject({
       recipients: ['GERMANY'],
-      anonymous: false,
+      anonymous: true,
     });
-    // A third country brings the choice back.
-    await tick('ENGLAND');
-    expect(screen.getByTestId('press-anonymous')).toBeEnabled();
-    expect(screen.getByTestId('press-anonymous')).toHaveAttribute(
-      'aria-pressed',
-      'true',
+    await waitFor(() => expect(bodies()).toEqual(['Watch out']));
+    const own = screen.getByTestId('press-message');
+    expect(within(own).getByText('anonymously')).toBeInTheDocument();
+  });
+
+  it('shows incoming anonymous DMs in the Backchannel inbox with sending disabled', async () => {
+    render(<PressSection {...base()} />);
+    fill([msg(1, null, 'Watch the Channel', ['FRANCE'])]);
+    const backchannelTab = tab('backchannel');
+    expect(backchannelTab).toHaveTextContent('Backchannel');
+    await userEvent.click(backchannelTab);
+    expect(screen.getByTestId('press-channel-caption')).toHaveTextContent(
+      'Anonymous backchannel',
+    );
+    expect(bodies()).toEqual(['Watch the Channel']);
+    expect(authors()).toEqual(['Anonymous']);
+    expect(screen.getByTestId('press-input')).toBeDisabled();
+    expect(screen.getByTestId('press-send')).toBeDisabled();
+    expect(destination()).toBe(
+      'Select a power in Diplomatic Standing to send an anonymous message.',
     );
   });
 

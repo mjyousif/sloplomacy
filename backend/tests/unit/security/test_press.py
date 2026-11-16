@@ -60,6 +60,22 @@ def test_the_author_and_the_reveal_see_the_real_recipients():
     assert view_of(note, Power.GERMANY, revealed=True).recipients == [Power.GERMANY, Power.ITALY]
 
 
+def test_a_one_to_one_anonymous_message_keeps_only_the_recipient():
+    dm = message(sender=Power.FRANCE, recipients=[Power.GERMANY], anonymous=True)
+    to_germany = view_of(dm, Power.GERMANY, revealed=False)
+    assert to_germany.sender is None
+    assert to_germany.recipients == [Power.GERMANY]
+    assert "FRANCE" not in to_germany.model_dump_json()
+
+    to_france = view_of(dm, Power.FRANCE, revealed=False)
+    assert to_france.sender == Power.FRANCE
+    assert to_france.recipients == [Power.GERMANY]
+
+    revealed = view_of(dm, Power.GERMANY, revealed=True)
+    assert revealed.sender == Power.FRANCE
+    assert revealed.recipients == [Power.GERMANY]
+
+
 def test_game_over_reveals_every_message_and_author():
     note = message(recipients=[Power.GERMANY, Power.ITALY], anonymous=True)
     assert can_read(note, Power.TURKEY, revealed=True)
