@@ -352,7 +352,10 @@ export interface PreviewUnit {
   coast?: string | null;
 }
 
-/** Who owns what and where the units stand, with no orders: what a mini map is drawn from. */
+/**
+ * Who owns what and where the units stand, with no orders: what a mini map is drawn from.
+ * `ownership` is as a map colours it: it also names the home power of land nobody has claimed.
+ */
 export interface BoardPreview {
   ownership: Record<string, Power>;
   units: PreviewUnit[];

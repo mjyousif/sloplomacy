@@ -123,6 +123,8 @@ App.applyServerState(st)
 
 1. **Viewing Matches (`GET /api/games`)**:
    - `LobbyView.tsx` loads the list of open lobbies, ongoing matches, and saved sandboxes.
+   - **A player with games** gets the map-first homepage. `sortMyGames` (`utils/heroGame.ts`) orders their games: the ones waiting on their orders first (soonest clock deadline first, untimed ones after), then the ones waiting on others, finished campaigns, and saved sandboxes; ties go to a game that has resolved a turn, then to the most recently played. `pickHeroGame` takes the first that is not a sandbox for `lobby/FeaturedGameHero.tsx`, and the rest go to `lobby/OtherGamesStrip.tsx`. Both draw `lobby/MiniMap.tsx` from the summary's `board`, which only `GET /api/games/mine` sends; a game with no `board` yet draws the bare map. Leave, Surrender and Delete sit behind the ⋯ menu (`lobby/GameActionsMenu.tsx`) and still open the surrender dialog.
+   - **A guest, or a player with no games** (or only saved sandboxes), keeps the `LobbyHero` banner. `MyGamesSection` now holds only the guest's sign-in box and the no-games hint.
 2. **Creating a Match (`POST /api/games`)**:
    - Users create custom rooms or isolated sandboxes.
    - The lobby's **Host game** and **Join with code** buttons (`lobby/LobbyActionRow.tsx`) each open their form in a dialog (`lobby/LobbyFormDialog.tsx`: closes on Escape, the ✕ or a click outside). `LobbyView` holds only which dialog is open. The fields and submit handlers live in `lobby/hooks/useHostGameForm.ts` and `useJoinWithCodeForm.ts`, so what was typed survives closing the dialog, and an old error is cleared when it opens again. A dialog closes itself once the game is created or the seat claimed, or when a guest is sent to sign in.

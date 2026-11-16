@@ -10,6 +10,7 @@ from domain.game_state import (
     TimerStage,
 )
 from domain.press import PressMessage
+from engine.adjudicator.territory import displayed_owners
 from engine.reachability import compute_unit_options
 from fastapi import HTTPException, status
 from storage import supabase
@@ -109,7 +110,7 @@ def sync_summary(game_id: str) -> None:
         summary.finalized_powers = list(st.finalized_powers)
         summary.surrendered_powers = list(st.surrendered_powers)
         summary.board = BoardPreview(
-            ownership=dict(st.ownership),
+            ownership=displayed_owners(st.ownership),
             units=[
                 PreviewUnit(
                     power=u.power, unit_type=u.unit_type, province=u.province, coast=u.coast

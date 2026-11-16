@@ -35,3 +35,23 @@ def claim_occupied_territory(ownership: dict[str, Power], units: list[Unit]) -> 
     for unit in units:
         if not unit.is_dislodged and is_claimable_territory(unit.province):
             ownership[unit.province] = unit.power
+
+
+def displayed_owners(ownership: dict[str, Power]) -> dict[str, Power]:
+    """Who each land province is drawn for on a map: `ownership`, plus home territory.
+
+    A land province that is not a supply center and that nobody has claimed yet is drawn for its
+    home power, as the board does (`ProvincesLayer` on the client). A supply center is drawn only
+    for whoever owns it, except before any ownership is known, when it too falls back to its home
+    power. This only colours a map: count centers with `supply_center_owners`.
+    """
+    shown = dict(ownership)
+    for prov, info in PROVINCES.items():
+        if prov in shown or not info.home_power:
+            continue
+        if info.type in (ProvinceType.SEA, ProvinceType.IMPASSABLE):
+            continue
+        if info.is_supply_center and ownership:
+            continue
+        shown[prov] = info.home_power
+    return shown
