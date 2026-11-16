@@ -3,7 +3,7 @@
 from domain.board import Power, UnitType
 from domain.orders import OrderType
 from engine.adjudicator.resolver import adjudicate_turn, compute_current_builds
-from engine.adjudicator.territory import supply_center_owners
+from engine.adjudicator.territory import displayed_owners, supply_center_owners
 from engine.topology.provinces import get_initial_ownership
 from tests.unit.engine.adjudicator.helpers import _order, _unit
 
@@ -105,3 +105,36 @@ def test_claimed_land_never_counts_toward_builds():
     builds = compute_current_builds(units, ownership, 1901)
     assert builds["AUSTRIA"]["count"] == 2  # three home centers, one unit
     assert "BOH" not in supply_center_owners(ownership)
+
+
+def test_displayed_owners_adds_unclaimed_home_land_and_keeps_claims():
+    ownership = get_initial_ownership()
+    shown = displayed_owners(ownership)
+
+    # Burgundy is French home land that is not a supply center, so nobody owns it yet.
+    assert "BUR" not in ownership
+    assert shown["BUR"] == Power.FRANCE
+    # A claim wins over the home power, and the input is left as it was.
+    ownership["BUR"] = Power.GERMANY
+    assert displayed_owners(ownership)["BUR"] == Power.GERMANY
+    assert shown["BUR"] == Power.FRANCE
+
+
+def test_displayed_owners_leaves_centers_seas_and_neutral_land_alone():
+    ownership = get_initial_ownership()
+    del ownership["PAR"]
+    shown = displayed_owners(ownership)
+
+    # A supply center nobody holds stays unowned: it is not handed back to its home power.
+    assert "PAR" not in shown
+    assert supply_center_owners(shown) == supply_center_owners(ownership)
+    # Seas, Switzerland and land with no home power are never coloured.
+    assert not {"NTH", "MAO", "SWI", "SPA", "NAF"} & set(shown)
+
+
+def test_displayed_owners_falls_back_to_home_centers_before_any_ownership_is_known():
+    shown = displayed_owners({})
+
+    assert shown["PAR"] == Power.FRANCE
+    assert shown["BUR"] == Power.FRANCE
+    assert "SPA" not in shown

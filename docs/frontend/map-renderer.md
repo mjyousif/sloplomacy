@@ -124,7 +124,7 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
 
 The homepage draws a small, static picture of a game from the `board` on its summary (`ownership` and unit positions, sent only by `GET /api/games/mine`). It is not `EuropeMap`: nothing on it can be clicked, it has no camera, and it ignores the player's piece style and marks.
 
-- It draws the land provinces of `ALL_PROVINCE_GEOMETRIES` over a sea-coloured background (the seas are the keys of `SEA_SHORT_NAMES`), each in parchment or in its owner's `fillColor` washed over parchment, the way the board tints the land a power holds.
+- It draws the land provinces of `ALL_PROVINCE_GEOMETRIES` over a sea-coloured background (the seas are the keys of `SEA_SHORT_NAMES`), each in parchment or in its owner's `fillColor` washed over parchment, the way the board tints the land a power holds. The server has already applied the board's home-territory rule to `board.ownership` (`displayed_owners`), so unclaimed home land that is not a supply center, such as Burgundy at the start, is coloured for its home power here just as `ProvincesLayer` colours it from `home_power`.
 - Units are plain marks at the `compact` layout's unit points, which keep every unit inside its own province: a disc for an army, a square for a fleet, in the power's colour. The viewer's own units get a gold ring. Thumbnails pass `showUnits={false}`.
 - With no `board` (a game saved before the field existed and not loaded since) it draws the bare map, and the hero says the map appears once the game has been opened.
 

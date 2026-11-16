@@ -87,6 +87,11 @@ test.describe('Scenario: Homepage map hero', () => {
       const heroMap = hero.getByTestId('mini-map');
       await expect(heroMap).toHaveAttribute('data-has-board', 'true');
       expect(await heroMap.locator('[data-owner]').count()).toBeGreaterThan(20);
+      // Land that is not a supply center shows who controls it: Burgundy is still French home
+      // land, and Spain belongs to nobody.
+      await expect(heroMap.locator('[data-province-id="BUR"]')).toHaveAttribute('data-owner', 'FRANCE');
+      await expect(heroMap.locator('[data-province-id="UKR"]')).toHaveAttribute('data-owner', 'RUSSIA');
+      expect(await heroMap.locator('[data-province-id="SPA"]').getAttribute('data-owner')).toBeNull();
       expect(await heroMap.locator('[data-testid="mini-map-unit"]').count()).toBe(22);
       expect(await heroMap.locator('[data-mine="true"]').count()).toBe(3);
 

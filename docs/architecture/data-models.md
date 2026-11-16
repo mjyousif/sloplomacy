@@ -230,7 +230,7 @@ interface MultiplayerGameSummary {
 }
 
 interface BoardPreview {
-  ownership: Record<string, Power>; // province id -> owner
+  ownership: Record<string, Power>; // province id -> who the map draws it for (see note)
   units: PreviewUnit[];             // units still on the board; dislodged ones are left out
 }
 
@@ -242,7 +242,7 @@ interface PreviewUnit {
 }
 ```
 
-*Note on `board`*: `sync_summary` copies the board from the loaded `GameState` each time the summary is brought up to date, so the homepage can draw a small map of a player's own games without opening them. It holds ownership and unit positions only: no orders, retreats or builds. `sanitize_summary_for_viewer` drops it unless `keep_board=True`, which only `GET /api/games/mine` passes. A game saved before this field existed has `board: null` until it is next loaded.
+*Note on `board`*: `sync_summary` copies the board from the loaded `GameState` each time the summary is brought up to date, so the homepage can draw a small map of a player's own games without opening them. It holds ownership and unit positions only: no orders, retreats or builds. Its `ownership` is `displayed_owners(GameState.ownership)` (`engine/adjudicator/territory.py`): the game's ownership plus the home power of each land province that is not a supply center and that nobody has claimed yet, which is how the board colours them. It is for drawing only; count supply centers by filtering to supply centers. `sanitize_summary_for_viewer` drops it unless `keep_board=True`, which only `GET /api/games/mine` passes. A game saved before this field existed has `board: null` until it is next loaded.
 
 *Note on `is_draft`*: Ephemeral personal solo sandbox sessions created via `POST /api/games/solo-sandbox` set `is_draft: true`. Draft sandboxes are hidden from public lobby listings and `/ws/lobby` WebSocket feeds to preserve player isolation, and can be promoted to permanent saved sandboxes (`is_draft: false`) via `POST /api/games/save-sandbox`.
 
