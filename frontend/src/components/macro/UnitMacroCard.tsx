@@ -21,6 +21,7 @@ import type {
 import { cx } from '../../utils/cx';
 import { isOrderIncomplete, splitProvinceCode } from '../../utils/orderHelpers';
 import { MoveControls } from './controls/MoveControls';
+import { RetreatControls } from './controls/RetreatControls';
 import { OrderParameterControls } from './OrderParameterControls';
 import { OrderTypeTabs } from './OrderTypeTabs';
 import styles from './UnitMacroCard.module.css';
@@ -97,7 +98,7 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
     changeOrderType(u, type);
   };
 
-  const isCompactRow = compact && !isAdjustmentPhase && !isRetreatPhase;
+  const isCompactRow = compact;
   const isCardHoveredRef = useRef(false);
   // A compact row with a warning (and no error) glows yellow and keeps the
   // explanation behind a ⚠ button, so the one-line layout stays one line.
@@ -198,41 +199,106 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
               className={styles.unitCompactControls}
               onClick={(e) => e.stopPropagation()}
             >
-              <OrderTypeTabs
-                unit={unit}
-                order={order}
-                provinces={provinces}
-                validRetreats={validRetreats}
-                isDisbanding={isDisbanding}
-                isRetreatPhase={isRetreatPhase}
-                isAdjustmentPhase={isAdjustmentPhase}
-                buildCount={buildCount}
-                compact={true}
-                handleOrderTypeChange={handleOrderTypeChange}
-              />
-              {order?.order_type === 'MOVE' ? (
-                <MoveControls
-                  dropdownClassNames={{
-                    root: styles.unitCompactDropdown,
-                    trigger: styles.unitCompactTrigger,
-                    value: styles.unitCompactValue,
-                    menu: styles.unitCompactMenu,
-                  }}
-                  unit={unit}
-                  order={order}
-                  provinces={provinces}
-                  reachable={reachable}
-                  unitOptions={unitOptions}
-                  compact={true}
-                  useNativeSelect={useNativeSelect}
-                  onUpdateOrder={onUpdateOrder}
-                  onHoverProvince={handleHoverOptionProvince}
-                />
+              {isAdjustmentPhase ? (
+                buildCount < 0 ? (
+                  <OrderTypeTabs
+                    unit={unit}
+                    order={order}
+                    provinces={provinces}
+                    validRetreats={validRetreats}
+                    isDisbanding={isDisbanding}
+                    isRetreatPhase={isRetreatPhase}
+                    isAdjustmentPhase={isAdjustmentPhase}
+                    buildCount={buildCount}
+                    compact={true}
+                    handleOrderTypeChange={handleOrderTypeChange}
+                  />
+                ) : (
+                  <span
+                    className={cx(styles.unitMiniPill, styles.confirmed)}
+                    data-testid="unit-mini-pill"
+                  >
+                    <CheckCircle2 size={10} /> Retained
+                  </span>
+                )
+              ) : isRetreatPhase ? (
+                unit.is_dislodged ? (
+                  <>
+                    <OrderTypeTabs
+                      unit={unit}
+                      order={order}
+                      provinces={provinces}
+                      validRetreats={validRetreats}
+                      isDisbanding={isDisbanding}
+                      isRetreatPhase={isRetreatPhase}
+                      isAdjustmentPhase={isAdjustmentPhase}
+                      buildCount={buildCount}
+                      compact={true}
+                      handleOrderTypeChange={handleOrderTypeChange}
+                    />
+                    {order?.order_type === 'RETREAT' ? (
+                      <RetreatControls
+                        unit={unit}
+                        order={order}
+                        provinces={provinces}
+                        validRetreats={validRetreats}
+                        compact={true}
+                        onUpdateOrder={onUpdateOrder}
+                      />
+                    ) : (
+                      <span
+                        className={styles.unitCompactTargetPlaceholder}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </>
+                ) : (
+                  <span
+                    className={cx(styles.unitMiniPill, styles.confirmed)}
+                    data-testid="unit-mini-pill"
+                  >
+                    <CheckCircle2 size={10} /> Retained
+                  </span>
+                )
               ) : (
-                <span
-                  className={styles.unitCompactTargetPlaceholder}
-                  aria-hidden="true"
-                />
+                <>
+                  <OrderTypeTabs
+                    unit={unit}
+                    order={order}
+                    provinces={provinces}
+                    validRetreats={validRetreats}
+                    isDisbanding={isDisbanding}
+                    isRetreatPhase={isRetreatPhase}
+                    isAdjustmentPhase={isAdjustmentPhase}
+                    buildCount={buildCount}
+                    compact={true}
+                    handleOrderTypeChange={handleOrderTypeChange}
+                  />
+                  {order?.order_type === 'MOVE' ? (
+                    <MoveControls
+                      dropdownClassNames={{
+                        root: styles.unitCompactDropdown,
+                        trigger: styles.unitCompactTrigger,
+                        value: styles.unitCompactValue,
+                        menu: styles.unitCompactMenu,
+                      }}
+                      unit={unit}
+                      order={order}
+                      provinces={provinces}
+                      reachable={reachable}
+                      unitOptions={unitOptions}
+                      compact={true}
+                      useNativeSelect={useNativeSelect}
+                      onUpdateOrder={onUpdateOrder}
+                      onHoverProvince={handleHoverOptionProvince}
+                    />
+                  ) : (
+                    <span
+                      className={styles.unitCompactTargetPlaceholder}
+                      aria-hidden="true"
+                    />
+                  )}
+                </>
               )}
             </div>
             {hasWarnToggle && (
@@ -253,30 +319,32 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
               </button>
             )}
           </div>
-          {(order?.order_type === 'SUPPORT' ||
-            order?.order_type === 'CONVOY') && (
-            <div
-              className={styles.unitCompactSubcontrols}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <OrderParameterControls
-                unit={unit}
-                order={order}
-                provinces={provinces}
-                units={units}
-                unitsByProv={unitsByProv}
-                orders={orders}
-                reachable={reachable}
-                validRetreats={validRetreats}
-                unitOptions={unitOptions}
-                isRetreatPhase={isRetreatPhase}
-                compact={true}
-                useNativeSelect={useNativeSelect}
-                onUpdateOrder={onUpdateOrder}
-                onHoverProvince={handleHoverOptionProvince}
-              />
-            </div>
-          )}
+          {!isAdjustmentPhase &&
+            !isRetreatPhase &&
+            (order?.order_type === 'SUPPORT' ||
+              order?.order_type === 'CONVOY') && (
+              <div
+                className={styles.unitCompactSubcontrols}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <OrderParameterControls
+                  unit={unit}
+                  order={order}
+                  provinces={provinces}
+                  units={units}
+                  unitsByProv={unitsByProv}
+                  orders={orders}
+                  reachable={reachable}
+                  validRetreats={validRetreats}
+                  unitOptions={unitOptions}
+                  isRetreatPhase={isRetreatPhase}
+                  compact={true}
+                  useNativeSelect={useNativeSelect}
+                  onUpdateOrder={onUpdateOrder}
+                  onHoverProvince={handleHoverOptionProvince}
+                />
+              </div>
+            )}
         </>
       ) : (
         <>

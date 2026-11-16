@@ -129,6 +129,30 @@
   .history-lock-live-btn:hover {
     background: #92400e;
   }
+
+  .history-lock-bar[data-admin-phase="true"] {
+    border-bottom-color: #991b1b;
+    background: #241417;
+    color: #f87171;
+  }
+
+  .history-lock-bar[data-admin-phase="true"] .history-lock-label {
+    color: #fecaca;
+  }
+
+  .history-lock-bar[data-admin-phase="true"] .history-lock-label strong {
+    color: #fee2e2;
+  }
+
+  .history-lock-bar[data-admin-phase="true"] .history-lock-live-btn {
+    border-color: #dc2626;
+    background: #7f1d1d;
+    color: #fecaca;
+  }
+
+  .history-lock-bar[data-admin-phase="true"] .history-lock-live-btn:hover {
+    background: #991b1b;
+  }
 }
 
 @layer compact {

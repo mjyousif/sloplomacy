@@ -1,5 +1,5 @@
 // @scenario press
-// @description Press (chat) between three seated players: public box, a private thread a third player never receives, anonymous messages in a group thread and the public box (never in a one-to-one thread), province links lighting the map, unread badges, the phone drawer, and a move suggestion written on the map, shown to its recipient and taken into their orders.
+// @description Press (chat) between three seated players: public box, a private thread a third player never receives, one-way anonymous DMs in the Backchannel inbox, anonymous messages in a group thread and the public box, province links lighting the map, unread badges, the phone drawer, and a move suggestion written on the map, shown to its recipient and taken into their orders.
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import { DEFAULT_E2E_API_URL, ScenarioRecorder } from './helpers';
 
@@ -182,15 +182,35 @@ test.describe('Scenario: Press between three players', () => {
       await recorder.recordStep(alice, 'thread_open_belgium_highlighted_on_map');
       await belgium.click();
 
-      // 5. Anonymous press. In the one-to-one thread with France the mask is off: France would
-      // know who wrote it.
+      // 5. Anonymous press. In the one-to-one thread with France, the mask sends a one-way
+      // message to France's Backchannel inbox without revealing Germany.
       const bobMask = bob.locator('[data-testid="press-anonymous"]:visible');
-      await expect(bobMask).toBeDisabled();
-      await recorder.recordStep(bob, 'mask_disabled_in_one_to_one_thread');
+      await expect(bobMask).toBeEnabled();
+      await bobMask.click();
+      await expect(bobMask).toHaveAttribute('aria-pressed', 'true');
+      await expect(bob.locator('[data-testid="press-destination"]')).toHaveText(
+        'Unsigned, to France (one-way backchannel).',
+      );
+      await send(bob, 'Watch the North Sea.');
+      await recorder.recordStep(bob, 'backchannel_sent_one_way');
+
+      const backchannel = alice.locator('[data-testid="press-channel-backchannel"]');
+      await expect(backchannel.locator('[data-testid="press-unread"]')).toHaveText('1');
+      await backchannel.click();
+      await expect(alice.locator('[data-testid="press-channel-caption"]')).toHaveText(
+        'Anonymous backchannel',
+      );
+      await expect(messages(alice)).toHaveCount(1);
+      await expect(messages(alice).first().locator('[data-testid="press-author"]')).toHaveText(
+        'Anonymous',
+      );
+      await expect(alice.locator('[data-testid="press-input"]:visible')).toBeDisabled();
+      await expect(alice.locator('[data-testid="press-send"]:visible')).toBeDisabled();
+      await recorder.recordStep(alice, 'backchannel_received_in_inbox');
+
       // With England lit too it is the three-power thread, and the message is posted there.
       const bobToEngland = bob.locator('[data-testid="press-recipient-ENGLAND"]:visible');
       await bobToEngland.click();
-      await bobMask.click();
       await expect(bobMask).toHaveAttribute('aria-pressed', 'true');
       await expect(bob.locator('[data-testid="press-destination"]')).toHaveText(
         'Unsigned, to the thread with France, England.',

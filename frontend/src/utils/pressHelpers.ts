@@ -7,7 +7,9 @@ import {
 
 /** The box every seated player reads. */
 export const PUBLIC_CHANNEL = 'public';
-export type PressChannelKind = 'public' | 'thread';
+/** The receive-only inbox for incoming one-to-one anonymous messages. */
+export const BACKCHANNEL = 'backchannel';
+export type PressChannelKind = 'public' | 'backchannel' | 'thread';
 
 export interface PressChannel {
   key: string;
@@ -34,10 +36,14 @@ export function threadMembers(key: string): Power[] {
 
 /**
  * Which channel a message is shown in, signed or anonymous. While an anonymous author is hidden
- * (`sender` null) the server lists the whole thread as its recipients.
+ * (`sender` null), a group message lists the whole thread as its recipients; a one-to-one
+ * anonymous message lists only the recipient and goes into the Backchannel inbox.
  */
 export function channelOf(message: PressMessage): string {
   if (message.recipients.length === 0) return PUBLIC_CHANNEL;
+  if (message.sender === null && message.recipients.length === 1) {
+    return BACKCHANNEL;
+  }
   const sender = message.sender ? [message.sender] : [];
   return threadKey([...sender, ...message.recipients]);
 }
@@ -49,7 +55,9 @@ export function destinationOf(recipients: Power[], viewer: Power): string {
 }
 
 function kindOf(key: string): PressChannelKind {
-  return key === PUBLIC_CHANNEL ? 'public' : 'thread';
+  if (key === PUBLIC_CHANNEL) return 'public';
+  if (key === BACKCHANNEL) return 'backchannel';
+  return 'thread';
 }
 
 /**
@@ -82,7 +90,8 @@ export function buildChannels(
       lastSeq: list.length ? list[list.length - 1].seq : 0,
     };
   });
-  const rank = (c: PressChannel) => (c.kind === 'public' ? 0 : 1);
+  const rank = (c: PressChannel) =>
+    c.kind === 'public' ? 0 : c.kind === 'backchannel' ? 1 : 2;
   return channels.sort(
     (a, b) =>
       rank(a) - rank(b) || b.lastSeq - a.lastSeq || a.key.localeCompare(b.key),

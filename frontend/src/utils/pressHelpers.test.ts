@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Power, PressMessage, ProvinceInfo } from '../types/diplomacy';
 import {
+  BACKCHANNEL,
   buildChannels,
   channelOf,
   destinationOf,
@@ -78,6 +79,29 @@ describe('channels', () => {
     expect(
       channelOf(msg(2, 'GERMANY', ['FRANCE', 'ITALY'], { anonymous: true })),
     ).toBe(thread);
+  });
+
+  it('routes incoming one-to-one anonymous messages to the Backchannel inbox', () => {
+    expect(channelOf(msg(1, null, ['FRANCE']))).toBe(BACKCHANNEL);
+    // The sender still sees their own sent message in their thread with the recipient.
+    expect(channelOf(msg(2, 'FRANCE', ['GERMANY'], { anonymous: true }))).toBe(
+      threadKey(['FRANCE', 'GERMANY']),
+    );
+  });
+
+  it('places Backchannel right after Public when incoming anonymous DMs exist', () => {
+    const channels = buildChannels(
+      [msg(1, 'GERMANY', ['FRANCE']), msg(2, null, ['FRANCE'])],
+      'FRANCE',
+      {},
+    );
+    expect(channels.map((c) => c.key)).toEqual([
+      PUBLIC_CHANNEL,
+      BACKCHANNEL,
+      'FRANCE+GERMANY',
+    ]);
+    expect(channels[1].kind).toBe('backchannel');
+    expect(channels[1].members).toEqual([]);
   });
 
   it('says where a message being written will land', () => {

@@ -98,10 +98,36 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
     if (nextOrder) onUpdateOrder(nextOrder);
   };
 
+  const showBuildsSection =
+    isAdjustmentPhase && buildCount > 0 && buildHomes.length > 0;
+  const densityToggle =
+    !isSheet && onToggleCompactOrders ? (
+      <button
+        type="button"
+        data-testid="btn-toggle-compact-orders"
+        className={styles.macroDensityToggle}
+        aria-pressed={compactOrders}
+        onClick={onToggleCompactOrders}
+        title={
+          compactOrders
+            ? 'Switch to detailed order cards'
+            : 'Switch to compact one-line order rows'
+        }
+      >
+        {compactOrders ? <Rows3 size={12} /> : <LayoutList size={12} />}
+        <span>{compactOrders ? 'Detailed' : 'Compact'}</span>
+      </button>
+    ) : null;
+  const hintLabel = (
+    <span className={styles.macroHint} data-testid="macro-hint">
+      {isSheet ? 'Tap a card or the map' : 'Click card or map'}
+    </span>
+  );
+
   return (
     <>
       {/* Winter Builds */}
-      {isAdjustmentPhase && buildCount > 0 && buildHomes.length > 0 && (
+      {showBuildsSection && (
         <div
           className={styles.macroBuildsWrapper}
           data-testid="macro-builds-wrapper"
@@ -113,9 +139,7 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
             <span>
               HOME BUILDS ({assignedBuildsCount}/{maxAllowedBuilds} ASSIGNED)
             </span>
-            <span className={styles.macroHint} data-testid="macro-hint">
-              {isSheet ? 'Tap a card or the map' : 'Click card or map'}
-            </span>
+            {densityToggle ?? hintLabel}
           </div>
           {buildHomes.map((homeProv) => {
             const bId = `BUILD_${activePower}_${homeProv}`;
@@ -129,6 +153,7 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
                 isSelected={selectedUnitId === bId}
                 provinces={provinces}
                 unitsByProv={unitsByProv}
+                compact={compactOrders}
                 onSelectUnit={onSelectUnit}
                 onHoverUnit={onHoverUnit}
                 onHighlightProvinces={onHighlightProvinces}
@@ -145,30 +170,7 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
             ? `DISBAND UNITS (${assignedDisbandsCount}/${neededDisbands} SELECTED)`
             : `ACTIVE FORCE ORDERS (${myUnits.length} UNITS)`}
         </span>
-        {!isSheet &&
-        !isAdjustmentPhase &&
-        !isRetreatPhase &&
-        onToggleCompactOrders ? (
-          <button
-            type="button"
-            data-testid="btn-toggle-compact-orders"
-            className={styles.macroDensityToggle}
-            aria-pressed={compactOrders}
-            onClick={onToggleCompactOrders}
-            title={
-              compactOrders
-                ? 'Switch to detailed order cards'
-                : 'Switch to compact one-line order rows'
-            }
-          >
-            {compactOrders ? <Rows3 size={12} /> : <LayoutList size={12} />}
-            <span>{compactOrders ? 'Detailed' : 'Compact'}</span>
-          </button>
-        ) : (
-          <span className={styles.macroHint} data-testid="macro-hint">
-            {isSheet ? 'Tap a card or the map' : 'Click card or map'}
-          </span>
-        )}
+        {!showBuildsSection && densityToggle ? densityToggle : hintLabel}
       </div>
 
       {myUnits.map((unit) => {

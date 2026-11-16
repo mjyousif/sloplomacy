@@ -1,4 +1,4 @@
-import { Megaphone } from 'lucide-react';
+import { Megaphone, VenetianMask } from 'lucide-react';
 import type React from 'react';
 import type { Power } from '../../../types/diplomacy';
 import type { PressChannel } from '../../../utils/pressHelpers';
@@ -46,6 +46,12 @@ export const PressChannelTabs: React.FC<PressChannelTabsProps> = ({
             <>
               <Megaphone size={11} aria-hidden="true" />
               <span>Public</span>
+            </>
+          )}
+          {channel.kind === 'backchannel' && (
+            <>
+              <VenetianMask size={11} aria-hidden="true" />
+              <span>Backchannel</span>
             </>
           )}
           {channel.kind === 'thread' &&

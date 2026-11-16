@@ -91,6 +91,8 @@ export interface MacroSidebarProps {
    * inert under a bar that leads back to the live turn, so nothing is edited out of sight.
    */
   historyLabel?: string | null;
+  /** True when the viewed history entry is an admin board edit. */
+  historyIsAdmin?: boolean;
   onReturnToLive?: () => void;
   /** Repurposes the right sidebar into the Edit Board Inspector. */
   directEditActive?: boolean;
@@ -138,6 +140,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   sheetSnap = 'peek',
   onSheetSnapChange,
   historyLabel = null,
+  historyIsAdmin = false,
   onReturnToLive,
   directEditActive = false,
   directEdit,
@@ -340,6 +343,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   const lockBar = locked && (
     <HistoryLockBar
       historyLabel={historyLabel}
+      historyIsAdmin={historyIsAdmin}
       onReturnToLive={onReturnToLive}
     />
   );

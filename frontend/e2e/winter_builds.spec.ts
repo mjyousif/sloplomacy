@@ -41,6 +41,16 @@ test.describe('Scenario 05: Winter Adjustments, Bicoastal Fleet Builds & Deficit
       await expect(page.locator('[data-testid="build-token"][data-home-province="BRE"]')).toBeVisible();
       await recorder.recordStep(page, '02_builds_placed_in_par_and_bre');
 
+      // 3b. Toggle Compact mode and verify build slots and retained units stay condensed
+      const compactToggle = page.locator('[data-testid="btn-toggle-compact-orders"]');
+      await expect(compactToggle).toBeVisible();
+      await compactToggle.click();
+      await expect(parBuildCard.locator('[data-testid="build-compact-row"]')).toBeVisible();
+      await expect(breBuildCard.locator('[data-testid="build-compact-row"]')).toBeVisible();
+      await expect(page.locator('[data-testid="unit-compact-row"]').first()).toBeVisible();
+      await recorder.recordStep(page, '02b_winter_builds_compact');
+      await compactToggle.click();
+
       // 4. Switch to RUSSIA and place a bicoastal Fleet build on St. Petersburg North Coast (STP/NC)
       const russiaCard = page.locator('[data-testid="power-standing-card"][data-power="RUSSIA"]');
       await expect(russiaCard).toBeVisible();

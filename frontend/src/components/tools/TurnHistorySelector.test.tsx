@@ -56,8 +56,16 @@ describe('TurnHistorySelector', () => {
     );
     expect(options.map((o) => o.textContent)).toContain('Spring 1901 Movement');
 
-    // Phone pill displays compact shortTurnLabel
+    // Phone pill displays compact shortTurnLabel and marks Admin phase
     expect(screen.getByText('S1901 Adm')).toBeInTheDocument();
+    expect(screen.getByTestId('turn-history')).toHaveAttribute(
+      'data-admin-phase',
+      'true',
+    );
+    expect(screen.getByTestId('turn-history-pill')).toHaveAttribute(
+      'data-admin-phase',
+      'true',
+    );
   });
 
   it('calls onSelect when selecting an entry from the dropdown', () => {
