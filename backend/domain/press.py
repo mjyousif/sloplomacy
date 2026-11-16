@@ -60,9 +60,9 @@ class PressMessageView(BaseModel):
     seq: int
     sender: Power | None
     anonymous: bool
-    # Who it was sent to. While an anonymous author is hidden, a private message lists every
-    # power in its thread instead, the author included: the real list leaves out exactly the
-    # author, which would name them.
+    # Who it was sent to. While an anonymous author is hidden in a group thread, this lists every
+    # power in the thread instead (author included), since the real list leaves out the author.
+    # For a one-to-one anonymous message, it lists only the recipient.
     recipients: list[Power]
     body: str
     sent_at: str
