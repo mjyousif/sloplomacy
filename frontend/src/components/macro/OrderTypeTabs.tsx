@@ -42,13 +42,19 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
   if (isRetreatPhase) {
     if (!unit.is_dislodged) return null;
     return (
-      <div className={styles.orderTypeTabs} data-testid="order-type-tabs">
+      <div
+        className={styles.orderTypeTabs}
+        data-testid="order-type-tabs"
+        data-compact={compact ? 'true' : undefined}
+      >
         {validRetreats.length > 0 && (
           <button
             type="button"
             data-testid="btn-order-retreat"
+            data-compact={compact ? 'true' : undefined}
             aria-pressed={order?.order_type === 'RETREAT'}
             data-active={order?.order_type === 'RETREAT' ? 'true' : undefined}
+            title="Retreat"
             className={styles.orderTabBtn}
             style={
               order?.order_type === 'RETREAT'
@@ -61,14 +67,22 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
             }
             onClick={() => handleOrderTypeChange(unit, 'RETREAT')}
           >
-            <MoveRight size={11} /> RETREAT
+            {compact ? (
+              'R'
+            ) : (
+              <>
+                <MoveRight size={11} /> RETREAT
+              </>
+            )}
           </button>
         )}
         <button
           type="button"
           data-testid="btn-order-disband"
+          data-compact={compact ? 'true' : undefined}
           aria-pressed={isChosenDisband(order)}
           data-active={isChosenDisband(order) ? 'true' : undefined}
+          title="Disband"
           className={styles.orderTabBtn}
           style={
             isChosenDisband(order)
@@ -81,7 +95,13 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
           }
           onClick={() => handleOrderTypeChange(unit, 'DISBAND')}
         >
-          <Trash2 size={11} /> DISBAND
+          {compact ? (
+            'D'
+          ) : (
+            <>
+              <Trash2 size={11} /> DISBAND
+            </>
+          )}
         </button>
       </div>
     );
@@ -90,22 +110,38 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
   if (isAdjustmentPhase) {
     if (!(buildCount < 0)) return null;
     return (
-      <div className={styles.orderTypeTabs} data-testid="order-type-tabs">
+      <div
+        className={styles.orderTypeTabs}
+        data-testid="order-type-tabs"
+        data-compact={compact ? 'true' : undefined}
+      >
         <button
           type="button"
           data-testid="btn-adjustment-keep"
+          data-compact={compact ? 'true' : undefined}
+          data-compact-label={compact ? 'true' : undefined}
           aria-pressed={!isDisbanding}
           data-active={!isDisbanding ? 'true' : undefined}
+          title="Keep unit"
           className={styles.orderTabBtn}
           onClick={() => handleOrderTypeChange(unit, 'HOLD')}
         >
-          <Shield size={11} /> KEEP UNIT
+          {compact ? (
+            'Keep'
+          ) : (
+            <>
+              <Shield size={11} /> KEEP UNIT
+            </>
+          )}
         </button>
         <button
           type="button"
           data-testid="btn-adjustment-disband"
+          data-compact={compact ? 'true' : undefined}
+          data-compact-label={compact ? 'true' : undefined}
           aria-pressed={isDisbanding}
           data-active={isDisbanding ? 'true' : undefined}
+          title="Disband unit"
           className={styles.orderTabBtn}
           style={
             isDisbanding
@@ -118,7 +154,13 @@ export const OrderTypeTabs: React.FC<OrderTypeTabsProps> = ({
           }
           onClick={() => handleOrderTypeChange(unit, 'DISBAND')}
         >
-          <Trash2 size={11} /> DISBAND UNIT
+          {compact ? (
+            'Disband'
+          ) : (
+            <>
+              <Trash2 size={11} /> DISBAND UNIT
+            </>
+          )}
         </button>
       </div>
     );

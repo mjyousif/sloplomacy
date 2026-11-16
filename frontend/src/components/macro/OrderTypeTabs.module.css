@@ -39,6 +39,13 @@
     border-radius: 4px;
   }
 
+  .order-tab-btn[data-compact="true"][data-compact-label="true"] {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 0 6px;
+    gap: 3px;
+  }
+
   .order-tab-btn[data-compact="true"]:disabled {
     opacity: 0.3;
     cursor: not-allowed;
