@@ -2,13 +2,14 @@
 
 A message is public (no recipients), which every seated player reads, or a private thread
 message (recipients), which the sender and the recipients read. Either may be `anonymous`: the
-same readers, but nobody is told who wrote it. A private one needs at least two recipients,
-because in a one-to-one thread the reader would know.
+same readers, but nobody is told who wrote it.
 
-An anonymous author is hidden from everyone but themself, the host included. A hidden author's
-private message lists the whole thread as its recipients, author included, since the real list
-leaves out exactly the author. Once the game is
-over the press is `revealed`: every seated player may read every message and see every author.
+An anonymous author is hidden from everyone but themself, the host included. In a group thread
+(two or more recipients), a hidden author's message lists the whole thread as its recipients,
+author included, since the real list leaves out exactly the author. In a one-to-one anonymous
+message (one recipient), `recipients` stays just that recipient so the sender is not revealed.
+Once the game is over the press is `revealed`: every seated player may read every message and see
+every author.
 
 The `seq` a player is sent numbers the messages they may read 1, 2, 3... (`PressMessage.numbers`),
 never the game-wide count, whose gaps would show how much private press the others exchange.
@@ -44,12 +45,16 @@ def _thread_of(message: PressMessage) -> list[Power]:
 def view_of(message: PressMessage, viewer: Power, revealed: bool) -> PressMessageView:
     """The copy of `message` that `viewer` may be sent. Call `can_read` first."""
     author_shown = revealed or not message.anonymous or viewer == message.sender
+    if not author_shown and len(message.recipients) >= 2:
+        recipients = _thread_of(message)
+    else:
+        recipients = list(message.recipients)
     return PressMessageView(
         id=message.id,
         seq=number_for(message, viewer, revealed),
         sender=message.sender if author_shown else None,
         anonymous=message.anonymous,
-        recipients=_thread_of(message) if not author_shown else list(message.recipients),
+        recipients=recipients,
         body=message.body,
         sent_at=message.sent_at,
         season=message.season,

@@ -116,9 +116,14 @@ export const PhaseContext: React.FC<{
 /** The bar over a past turn's orders that leads back to the live turn. */
 export const HistoryLockBar: React.FC<{
   historyLabel: string;
+  historyIsAdmin?: boolean;
   onReturnToLive?: () => void;
-}> = ({ historyLabel, onReturnToLive }) => (
-  <div className={styles.historyLockBar} data-testid="history-lock-bar">
+}> = ({ historyLabel, historyIsAdmin = false, onReturnToLive }) => (
+  <div
+    className={styles.historyLockBar}
+    data-testid="history-lock-bar"
+    data-admin-phase={historyIsAdmin ? 'true' : undefined}
+  >
     <History size={13} aria-hidden="true" />
     <span className={styles.historyLockLabel}>
       Viewing <strong>{historyLabel}</strong>

@@ -7,6 +7,7 @@ import { pressStore } from '../../lib/pressStore';
 import { suggestionStore } from '../../lib/suggestionStore';
 import type { Power, ProvinceInfo, Unit } from '../../types/diplomacy';
 import {
+  BACKCHANNEL,
   buildChannels,
   destinationOf,
   PUBLIC_CHANNEL,
@@ -48,17 +49,16 @@ export interface PressSectionProps {
 const EMPTY_TEXT: Record<string, string> = {
   [PUBLIC_CHANNEL]:
     'No public press yet. Every player reads what is posted here.',
+  [BACKCHANNEL]:
+    'No anonymous backchannel messages yet. Incoming unsigned notes addressed to you appear here.',
 };
-
-const ONE_TO_ONE_ANONYMOUS =
-  'Not in a one-to-one thread: the other player would know it was you';
 
 /**
  * Press: the public box and private threads of a match. The letter buttons on the Diplomatic
  * Standing rows pick the conversation: none lit is the public box, lit countries are a private
- * thread with exactly those powers. The mask hides the author in whichever one is open, except
- * a one-to-one thread, where the other player would know. The store (`lib/pressStore`) holds
- * the messages.
+ * thread with exactly those powers. The mask hides the author in whichever one is open;
+ * incoming one-to-one anonymous notes land in the receive-only Backchannel inbox. The store
+ * (`lib/pressStore`) holds the messages.
  * A signed private thread can also carry a move suggestion: the lamp button starts one, it is
  * written on the map (`lib/suggestionStore` holds the draft) and goes out with the next message.
  */
@@ -154,15 +154,20 @@ export const PressSection: React.FC<PressSectionProps> = ({
   else if (gameOver && active.key !== PUBLIC_CHANNEL)
     blocked =
       'The game is over. Private press is closed and shown to everyone.';
+  else if (active.kind === 'backchannel')
+    blocked =
+      'Select a power in Diplomatic Standing to send an anonymous message.';
   else if (!inOwnThread) blocked = 'You are not in this thread.';
 
-  // The mask is kept while a one-to-one thread is open, but not used there.
-  const oneToOne = recipients.length === 1;
-  const sendAnonymous = anonymous && !oneToOne;
+  const sendAnonymous = anonymous;
   let destination = sendAnonymous
     ? 'To everyone, unsigned.'
     : 'To everyone, in the public box.';
-  if (recipients.length > 0) {
+  if (recipients.length === 1) {
+    destination = sendAnonymous
+      ? `Unsigned, to ${listPowers(recipients)} (one-way backchannel).`
+      : `Private to ${listPowers(recipients)}.`;
+  } else if (recipients.length > 1) {
     destination = sendAnonymous
       ? `Unsigned, to the thread with ${listPowers(recipients)}.`
       : `Private to ${listPowers(recipients)}.`;
@@ -176,11 +181,12 @@ export const PressSection: React.FC<PressSectionProps> = ({
     return byProvince;
   }, [units]);
 
-  // A suggestion is written for one thread. Picking other countries discards it, so it is
-  // never sent to anyone but the powers it was written for.
+  // A suggestion is written for one thread (and either signed or one-to-one anonymous).
+  // Switching countries or toggling the mask discards it so own-unit orders never leak.
   const draftIsHere =
     draft !== null &&
-    !sendAnonymous &&
+    Boolean(draft.anonymous) === sendAnonymous &&
+    (!sendAnonymous || recipients.length === 1) &&
     draft.members.length === recipients.length &&
     draft.members.every((p) => recipients.includes(p));
   useEffect(() => {
@@ -191,12 +197,12 @@ export const PressSection: React.FC<PressSectionProps> = ({
   const canSuggest =
     suggestTurn !== null &&
     !blocked &&
-    !sendAnonymous &&
+    (!sendAnonymous || recipients.length === 1) &&
     recipients.length > 0 &&
     active.kind === 'thread';
   const startSuggestion = () => {
     if (!draftIsHere && suggestTurn) {
-      suggestionStore.startDraft(recipients, suggestTurn);
+      suggestionStore.startDraft(recipients, suggestTurn, sendAnonymous);
     }
     onProvincePicked?.();
   };
@@ -285,7 +291,6 @@ export const PressSection: React.FC<PressSectionProps> = ({
           draft={text}
           onDraftChange={setText}
           anonymous={sendAnonymous}
-          anonymousDisabled={oneToOne ? ONE_TO_ONE_ANONYMOUS : undefined}
           onAnonymousChange={changeAnonymous}
           destination={destination}
           blocked={blocked}
