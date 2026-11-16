@@ -464,3 +464,65 @@ describe('UnitMacroCard compact warning toggle (#271)', () => {
     expect(alerts(detailed.root)).toHaveLength(1);
   });
 });
+
+describe('UnitMacroCard compact mode in Adjustments and Retreats (#285)', () => {
+  it('renders a compact Retained row in Adjustments when no disbands are needed', () => {
+    const { root } = card({
+      compact: true,
+      isAdjustmentPhase: true,
+      buildCount: 1,
+    });
+    expect(root).toHaveAttribute('data-compact', 'true');
+    expect(screen.getByTestId('unit-compact-row')).toBeInTheDocument();
+    expect(screen.getByTestId('unit-mini-pill')).toHaveTextContent('Retained');
+    expect(screen.queryByTestId('order-type-tabs')).not.toBeInTheDocument();
+  });
+
+  it('renders compact Keep / Disband buttons in Adjustments when disbanding is required', () => {
+    const { root, handleOrderTypeChange } = card({
+      compact: true,
+      isAdjustmentPhase: true,
+      buildCount: -1,
+    });
+    expect(root).toHaveAttribute('data-compact', 'true');
+    const keepBtn = screen.getByTestId('btn-adjustment-keep');
+    const disbandBtn = screen.getByTestId('btn-adjustment-disband');
+    expect(keepBtn).toHaveTextContent('Keep');
+    expect(disbandBtn).toHaveTextContent('Disband');
+    fireEvent.click(disbandBtn);
+    expect(handleOrderTypeChange).toHaveBeenCalledWith(A_BRE, 'DISBAND');
+  });
+
+  it('renders a compact Retained row for non-dislodged units in Retreats', () => {
+    const { root } = card({
+      compact: true,
+      isRetreatPhase: true,
+    });
+    expect(root).toHaveAttribute('data-compact', 'true');
+    expect(screen.getByTestId('unit-compact-row')).toBeInTheDocument();
+    expect(screen.getByTestId('unit-mini-pill')).toHaveTextContent('Retained');
+  });
+
+  it('renders compact R / D tabs and inline retreat select for dislodged units in Retreats', () => {
+    const dislodged = unitAt('FRANCE', 'A', 'BRE', { is_dislodged: true });
+    const { root, onUpdateOrder } = card({
+      unit: dislodged,
+      order: orderFor(dislodged, 'RETREAT', { target: 'PIC' }),
+      compact: true,
+      isRetreatPhase: true,
+      validRetreats: [
+        { province: 'PIC', coasts: [] },
+        { province: 'PAR', coasts: [] },
+      ],
+    });
+    expect(root).toHaveAttribute('data-compact', 'true');
+    expect(screen.getByTestId('btn-order-retreat')).toHaveTextContent('R');
+    expect(screen.getByTestId('btn-order-disband')).toHaveTextContent('D');
+    const sel = screen.getByTestId('select-retreat-target');
+    expect(sel).toHaveAttribute('data-compact', 'true');
+    fireEvent.change(sel, { target: { value: 'PAR' } });
+    expect(onUpdateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ order_type: 'RETREAT', target: 'PAR' }),
+    );
+  });
+});

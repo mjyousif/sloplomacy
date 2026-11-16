@@ -284,5 +284,41 @@ describe('UnitOrderList', () => {
       fireEvent.click(screen.getByTestId('build-macro-card'));
       expect(onSelectUnit).toHaveBeenCalledWith('BUILD_FRANCE_MAR');
     });
+
+    it('keeps the compact toggle and renders compact build and retained rows in winter', () => {
+      const onToggleCompactOrders = vi.fn();
+      const { container } = list(
+        {
+          isAdjustmentPhase: true,
+          compactOrders: true,
+          onToggleCompactOrders,
+        },
+        { isAdjustmentPhase: true, builds: owed(1, ['MAR']) as never },
+      );
+      expect(screen.getByTestId('btn-toggle-compact-orders')).toHaveTextContent(
+        'Detailed',
+      );
+      expect(screen.getByTestId('build-compact-row')).toBeInTheDocument();
+      expect(screen.getByTestId('btn-build-army')).toHaveTextContent('+A');
+      expect(screen.getByTestId('btn-build-waive')).toHaveTextContent('Waive');
+      expect(
+        container.querySelectorAll('[data-testid="unit-compact-row"]'),
+      ).toHaveLength(3);
+    });
+  });
+
+  it('keeps the compact toggle in retreats', () => {
+    const onToggleCompactOrders = vi.fn();
+    list(
+      {
+        isRetreatPhase: true,
+        compactOrders: true,
+        onToggleCompactOrders,
+      },
+      { isRetreatPhase: true },
+    );
+    expect(screen.getByTestId('btn-toggle-compact-orders')).toHaveTextContent(
+      'Detailed',
+    );
   });
 });

@@ -48,6 +48,15 @@ test.describe('Scenario 04: Dislodgement & Retreat Resolution', () => {
       await expect(retreatArrow).toBeVisible();
       await recorder.recordStep(page, '03_retreat_order_submitted');
 
+      // 5b. Toggle Compact mode and verify dislodged and retained rows stay condensed
+      const compactToggle = page.locator('[data-testid="btn-toggle-compact-orders"]');
+      await expect(compactToggle).toBeVisible();
+      await compactToggle.click();
+      await expect(page.locator('[data-testid="unit-compact-row"]').first()).toBeVisible();
+      await expect(page.locator('[data-testid="select-retreat-target"]')).toHaveAttribute('data-compact', 'true');
+      await recorder.recordStep(page, '03b_retreat_compact');
+      await compactToggle.click();
+
       // 6. Adjudicate retreats
       const adjudicateBtn = page.locator('[data-testid="btn-adjudicate-phase"]');
       await expect(adjudicateBtn).toBeVisible();
