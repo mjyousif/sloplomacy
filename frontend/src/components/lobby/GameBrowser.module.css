@@ -1,5 +1,5 @@
 @layer components {
-  .lobby-refresh-btn {
+  .refresh {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -13,24 +13,27 @@
     cursor: pointer;
   }
 
-  .lobby-refresh-btn:hover {
+  .refresh:hover:not(:disabled) {
     background: #303847;
   }
 
-  .lobby-cards-stack {
+  .list {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
-  .empty-globe-icon {
+  .empty-icon {
     color: var(--text-dim);
     flex-shrink: 0;
   }
 }
 
 @layer compact {
-  :global([data-layout="compact"]) .lobby-refresh-btn {
+  :global([data-layout="compact"]) .refresh {
     min-height: 44px;
   }
 }

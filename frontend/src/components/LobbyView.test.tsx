@@ -1,17 +1,24 @@
 // @vitest-environment jsdom
-import { act, fireEvent, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  card,
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { LobbyView } from './LobbyView';
+import {
+  browserRow,
   MINE,
   OPEN,
   openHost,
   resetLobbyEnv,
   SANDBOX,
-  SECRET,
   setup,
+  stubBrowse,
 } from './LobbyView.testkit';
-import { game } from './lobby/lobby.testkit';
+import { browseRow, game } from './lobby/lobby.testkit';
 
 beforeEach(resetLobbyEnv);
 afterEach(() => vi.useRealTimers());
@@ -31,7 +38,7 @@ describe('LobbyView layout', () => {
       [...screen.getByTestId('lobby-games-column').children].map(
         (c) => c.getAttribute('data-testid') ?? c.tagName,
       ),
-    ).toEqual(['SECTION', 'lobby-action-row', 'SECTION']);
+    ).toEqual(['SECTION', 'lobby-action-row', 'game-browser']);
     // The Host and Join forms are not on the page until their buttons open them.
     expect(
       screen.queryByTestId('create-campaign-card'),
@@ -39,8 +46,9 @@ describe('LobbyView layout', () => {
     expect(screen.queryByTestId('join-with-code-card')).not.toBeInTheDocument();
   });
 
-  it('points both empty lists at the Host game button', () => {
+  it('points both empty lists at the Host game button', async () => {
     setup();
+    await screen.findByText('No Open Campaigns Right Now');
     expect(
       screen.getAllByText(/campaign with Host game|match with Host game/),
     ).toHaveLength(2);
@@ -56,22 +64,27 @@ describe('LobbyView layout', () => {
       [...screen.getByTestId('lobby-games-column').children].map(
         (c) => c.getAttribute('data-testid') ?? c.tagName,
       ),
-    ).toEqual(['other-games-strip', 'lobby-action-row', 'SECTION']);
+    ).toEqual(['other-games-strip', 'lobby-action-row', 'game-browser']);
     expect(screen.queryByTestId('lobby-hero')).toBeNull();
     expect(screen.queryByText('My Active Campaigns & Saved Games')).toBeNull();
   });
 
-  it('sorts games: the hero takes my match, the strip my sandbox, the lobbies skip sandboxes', () => {
+  it('sorts games: the hero takes my match, the strip my sandbox, the browser lists public games', async () => {
+    stubBrowse([
+      browseRow({ game_id: 'mp_open', name: 'Open Table' }),
+      browseRow({ game_id: 'mp_mine', name: 'My Table' }),
+    ]);
     setup({ games: [OPEN, SANDBOX, MINE] });
     expect(screen.getByTestId('hero-game-name')).toHaveTextContent('My Table');
     expect(
       screen.getAllByTestId('my-game-name').map((n) => n.textContent),
     ).toEqual(['Saved Study']);
     expect(
-      screen
-        .getAllByTestId('lobby-game-card')
-        .map((c) => c.querySelector('h3')?.textContent),
-    ).toEqual(['Open Table', 'My Table']);
+      within(await screen.findByTestId('browser-list'))
+        .getAllByRole('listitem')
+        .filter((li) => li.dataset.testid?.startsWith('browser-row-'))
+        .map((li) => li.dataset.testid),
+    ).toEqual(['browser-row-mp_open', 'browser-row-mp_mine']);
   });
 
   it('keeps the banner for a player whose only game is a saved sandbox', () => {
@@ -171,112 +184,66 @@ describe('LobbyView details', () => {
   });
 });
 
-describe('LobbyView claiming a seat', () => {
+describe('LobbyView game browser', () => {
   it('asks a guest to sign in, naming the country and game', async () => {
+    stubBrowse([browseRow({ game_id: 'mp_open', name: 'Open Table' })]);
     const { props, user } = setup({ user: null, games: [OPEN] });
-    await user.click(within(card('Open Table')).getByText(/Claim France/));
+    const row = await browserRow('mp_open');
+    await user.click(within(row).getByRole('button', { name: 'Join' }));
+    await user.click(within(row).getByRole('button', { name: /Claim Italy/ }));
     expect(props.onOpenAuth).toHaveBeenCalledWith(
-      'Sign in or create an account to claim France in "Open Table".',
+      'Sign in or create an account to claim Italy in "Open Table".',
       'signin',
     );
     expect(props.onJoinOrEnterGame).not.toHaveBeenCalled();
   });
 
   it('joins an open game at once and marks the seat while it goes', async () => {
+    stubBrowse([browseRow({ game_id: 'mp_open', name: 'Open Table' })]);
     let finish: () => void = () => {};
     const onJoinOrEnterGame = vi.fn(
       () => new Promise<void>((r) => (finish = r)),
     );
     const { user } = setup({ games: [OPEN], onJoinOrEnterGame });
-    await user.click(within(card('Open Table')).getByText(/Claim Russia/));
+    const row = await browserRow('mp_open');
+    await user.click(within(row).getByRole('button', { name: 'Join' }));
+    await user.click(within(row).getByRole('button', { name: /Claim Turkey/ }));
     expect(onJoinOrEnterGame).toHaveBeenCalledExactlyOnceWith(
       'mp_open',
-      'RUSSIA',
+      'TURKEY',
     );
-    expect(screen.getByText('Entering...')).toBeInTheDocument();
+    expect(within(row).getByText('Entering...')).toBeInTheDocument();
     await act(async () => finish());
-    expect(screen.queryByText('Entering...')).not.toBeInTheDocument();
+    expect(within(row).queryByText('Entering...')).not.toBeInTheDocument();
   });
 
-  it('survives a refused join and clears the marker', async () => {
-    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const onJoinOrEnterGame = vi.fn(async () => {
-      throw new Error('full');
-    });
-    const { user } = setup({ games: [OPEN], onJoinOrEnterGame });
-    await user.click(within(card('Open Table')).getByText(/Claim Russia/));
-    expect(err).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText('Entering...')).not.toBeInTheDocument();
-    err.mockRestore();
-  });
-
-  it('asks a newcomer for the passcode of a private game', async () => {
-    const { props, user } = setup({ games: [SECRET] });
-    await user.click(within(card('Secret Table')).getByText(/Claim Italy/));
-    expect(props.onJoinOrEnterGame).not.toHaveBeenCalled();
-    expect(screen.getByText('Enter Campaign Passcode')).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Passcode'), '  v1901 ');
-    await user.click(
-      screen.getByRole('button', { name: /Unlock & Claim Italy/ }),
+  it('offers Resume on a public game the player already holds a seat in', async () => {
+    stubBrowse([browseRow({ game_id: 'mp_mine', name: 'My Table' })]);
+    const { props } = setup({ games: [MINE] });
+    const row = await browserRow('mp_mine');
+    expect(within(row).getByTestId('seat-AUSTRIA')).toHaveAttribute(
+      'data-seat',
+      'mine',
     );
+    expect(within(row).queryByRole('button', { name: 'Join' })).toBeNull();
+    fireEvent.click(within(row).getByRole('button', { name: /Resume/ }));
     expect(props.onJoinOrEnterGame).toHaveBeenCalledExactlyOnceWith(
-      'mp_sec',
-      'ITALY',
-      'v1901',
+      'mp_mine',
+      'AUSTRIA',
     );
-    expect(
-      screen.queryByText('Enter Campaign Passcode'),
-    ).not.toBeInTheDocument();
   });
 
-  it('keeps the passcode box open with the reason when the passcode is refused', async () => {
-    const onJoinOrEnterGame = vi.fn(async () => {
-      throw new Error('Wrong passcode');
-    });
-    const { user } = setup({ games: [SECRET], onJoinOrEnterGame });
-    await user.click(within(card('Secret Table')).getByText(/Claim Italy/));
-    await user.type(screen.getByLabelText('Passcode'), 'nope');
-    await user.click(
-      screen.getByRole('button', { name: /Unlock & Claim Italy/ }),
-    );
-    expect(screen.getByText('Wrong passcode')).toBeInTheDocument();
-    expect(screen.getByLabelText('Passcode')).toHaveValue('nope');
+  it('reloads the open page when the lobby list changes', async () => {
+    const fetchMock = stubBrowse([browseRow()]);
+    const { props, view } = setup({ games: [OPEN] });
+    await browserRow('mp_open');
+    const calls = fetchMock.mock.calls.length;
+    view.rerender(<LobbyView {...props} games={[OPEN, MINE]} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(calls + 1));
   });
+});
 
-  it('falls back to a standard message when the refusal has none', async () => {
-    const onJoinOrEnterGame = vi.fn(async () => {
-      throw new Error('');
-    });
-    const { user } = setup({ games: [SECRET], onJoinOrEnterGame });
-    await user.click(within(card('Secret Table')).getByText(/Claim Italy/));
-    await user.type(screen.getByLabelText('Passcode'), 'x');
-    await user.click(
-      screen.getByRole('button', { name: /Unlock & Claim Italy/ }),
-    );
-    expect(
-      screen.getByText('Incorrect passcode for this private campaign.'),
-    ).toBeInTheDocument();
-  });
-
-  it('clears the box, and its old error, when it is reopened', async () => {
-    const onJoinOrEnterGame = vi.fn(async () => {
-      throw new Error('Wrong passcode');
-    });
-    const { user } = setup({ games: [SECRET], onJoinOrEnterGame });
-    await user.click(within(card('Secret Table')).getByText(/Claim Italy/));
-    await user.type(screen.getByLabelText('Passcode'), 'nope');
-    await user.click(
-      screen.getByRole('button', { name: /Unlock & Claim Italy/ }),
-    );
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(
-      screen.queryByText('Enter Campaign Passcode'),
-    ).not.toBeInTheDocument();
-    await user.click(within(card('Secret Table')).getByText(/Claim Italy/));
-    expect(screen.getByLabelText('Passcode')).toHaveValue('');
-    expect(screen.queryByText('Wrong passcode')).not.toBeInTheDocument();
-  });
-
+describe('LobbyView my games', () => {
   it('lets a player already seated in a private game back in without a passcode', async () => {
     const { props, user } = setup({ games: [MINE] });
     await user.click(screen.getByRole('button', { name: /Resume as Austria/ }));

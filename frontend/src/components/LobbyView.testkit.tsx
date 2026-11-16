@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import type { LobbyGameRow } from '../types/diplomacy';
 import { LobbyView } from './LobbyView';
-import { game, ME, seat } from './lobby/lobby.testkit';
+import { browseFetch, browsePage, game, ME, seat } from './lobby/lobby.testkit';
 
 export function stubMatchMedia(compact: boolean) {
   vi.stubGlobal('matchMedia', (q: string) => ({
@@ -15,9 +16,17 @@ export function stubMatchMedia(compact: boolean) {
   }));
 }
 
+/** Answers the game browser's requests with these public rows; returns the fetch stub. */
+export function stubBrowse(rows: LobbyGameRow[] = []) {
+  const fetchMock = browseFetch(() => browsePage(rows));
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
 /** Call from `beforeEach` / `afterEach` of each LobbyView test file. */
 export function resetLobbyEnv() {
   stubMatchMedia(false);
+  stubBrowse();
 }
 
 export type Props = React.ComponentProps<typeof LobbyView>;
@@ -67,7 +76,6 @@ export const SANDBOX = game({
   is_sandbox: true,
   participants: { ITALY: seat('ITALY', 'me') },
 });
-export const card = (name: string) =>
-  screen
-    .getByText(name)
-    .closest('[data-testid="lobby-game-card"]') as HTMLElement;
+/** The game browser's row for a game, once its page has loaded. */
+export const browserRow = (gameId: string) =>
+  screen.findByTestId(`browser-row-${gameId}`);

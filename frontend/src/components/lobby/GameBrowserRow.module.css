@@ -1,0 +1,218 @@
+@layer components {
+  .row {
+    border-radius: 9px;
+    background: #212734;
+    border: 1px solid #374051;
+  }
+
+  .row[data-expanded="true"] {
+    border-color: var(--gold-primary);
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 96px auto 92px;
+    grid-template-areas: "name turn seats action";
+    align-items: center;
+    gap: 14px;
+    padding: 10px 14px;
+  }
+
+  .name {
+    grid-area: name;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .game-name {
+    overflow: hidden;
+    color: var(--text-bright);
+    font-size: 0.86rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .meta {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .turn {
+    grid-area: turn;
+    color: var(--gold-text);
+    font-size: 0.76rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .seats {
+    grid-area: seats;
+    display: flex;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .seat {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: var(--radius-xs);
+    border: 1px solid transparent;
+    line-height: 0;
+  }
+
+  .seat[data-seat="free"] {
+    border-color: color-mix(in srgb, var(--seat-color) 70%, transparent);
+  }
+
+  .seat[data-seat="taken"] {
+    border-color: rgba(255, 255, 255, 0.14);
+    opacity: 0.45;
+    filter: grayscale(1);
+  }
+
+  .seat[data-seat="mine"] {
+    border-color: var(--gold-text);
+    box-shadow: 0 0 0 1px var(--gold-primary);
+  }
+
+  .action {
+    grid-area: action;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 11px;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .button[data-variant="join"] {
+    background: var(--surface-raised);
+    border: 1px solid var(--gold-primary);
+    color: var(--gold-text);
+  }
+
+  .button[data-variant="join"]:hover:not(:disabled) {
+    background: #303847;
+  }
+
+  .button[data-variant="join"]:disabled {
+    border-color: #3c4454;
+    color: var(--text-dim);
+    cursor: not-allowed;
+  }
+
+  .button[data-variant="resume"] {
+    background: var(--gold-gradient);
+    border: 1px solid #e2b55f;
+    color: var(--surface-page);
+  }
+
+  .claim-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    padding: 0 14px 12px;
+  }
+
+  .claim {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 9px;
+    border-radius: var(--radius-md);
+    background: var(--surface-elevated);
+    border: 1px solid color-mix(in srgb, var(--seat-color) 70%, #353e4f);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .claim:hover:not(:disabled) {
+    background: #283041;
+    transform: translateY(-1px);
+  }
+
+  .claim[data-seat="taken"] {
+    background: #1b202b;
+    border-color: rgba(255, 255, 255, 0.08);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .claim-top {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .claim-name {
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .claim[data-seat="taken"] .claim-name {
+    color: #7a756c;
+  }
+
+  .claim-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+}
+
+@layer compact {
+  /* Name and button on the first line, turn and seats below. The seats span two
+     columns so their width never pushes the button column wider. */
+  :global([data-layout="compact"]) .main {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name name action"
+      "turn seats seats";
+    row-gap: 8px;
+    column-gap: 10px;
+    padding: 10px 12px;
+  }
+
+  :global([data-layout="compact"]) .seats {
+    justify-content: flex-end;
+  }
+
+  :global([data-layout="compact"]) .button {
+    min-height: 44px;
+    padding: 0 14px;
+  }
+
+  :global([data-layout="compact"]) .claim-grid {
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    padding: 0 12px 12px;
+  }
+
+  :global([data-layout="compact"]) .claim {
+    min-height: 56px;
+  }
+
+  :global([data-layout="compact"]) .claim-status {
+    font-size: 0.75rem;
+  }
+}

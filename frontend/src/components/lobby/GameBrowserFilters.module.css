@@ -1,0 +1,141 @@
+@layer components {
+  .filters {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border-radius: 9px;
+    background: rgba(15, 18, 24, 0.55);
+    border: 1px solid #313846;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .label {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .segment,
+  .countries {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    min-width: 0;
+  }
+
+  .segment {
+    gap: 0;
+    border: 1px solid #3c4454;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .segment button {
+    padding: 5px 12px;
+    background: var(--surface-raised);
+    border: none;
+    border-right: 1px solid #3c4454;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .segment button:last-child {
+    border-right: none;
+  }
+
+  .segment button[data-active="true"] {
+    background: rgba(200, 150, 62, 0.22);
+    color: var(--gold-text);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised);
+    border: 1px solid #3c4454;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .chip[data-active="true"] {
+    background: #2f3646;
+    color: var(--text-bright);
+  }
+
+  .field {
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    background: #171b24;
+    border: 1px solid #3c4454;
+    color: var(--text-primary);
+    font-size: 0.75rem;
+  }
+
+  .field:disabled {
+    opacity: 0.45;
+  }
+
+  .field[data-field="year"] {
+    width: 76px;
+  }
+
+  .clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    padding: 4px 9px;
+    border-radius: var(--radius-sm);
+    background: none;
+    border: 1px solid #3c4454;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    cursor: pointer;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .filters {
+    padding: 10px;
+  }
+
+  :global([data-layout="compact"]) .segment button {
+    min-height: 40px;
+    padding: 0 14px;
+  }
+
+  :global([data-layout="compact"]) .chip {
+    min-height: 32px;
+  }
+
+  :global([data-layout="compact"]) .field {
+    min-height: 40px;
+    font-size: 16px;
+  }
+
+  :global([data-layout="compact"]) .clear {
+    margin-left: 0;
+    min-height: 40px;
+  }
+}
