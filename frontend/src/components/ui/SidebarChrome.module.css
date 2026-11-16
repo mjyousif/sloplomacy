@@ -3,47 +3,47 @@
     flex-shrink: 0;
     background: transparent;
     border: 1px solid #364152;
-    border-radius: 6px;
-    color: #94a3b8;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
     width: 26px;
     height: 26px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: var(--transition-fast);
   }
 
   .sidebar-collapse-toggle-btn:hover {
     background: #2b3544;
-    color: #f1f5f9;
-    border-color: #64748b;
+    color: var(--text-soft);
+    border-color: var(--text-dim);
   }
 
   .sidebar-rail-btn {
     width: 32px;
     height: 32px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: 1px solid transparent;
     background: transparent;
-    color: #8b99ad;
+    color: var(--text-subtle);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: var(--transition-fast);
   }
 
   .sidebar-rail-btn:hover {
     background: #232b38;
-    color: #f1f5f9;
+    color: var(--text-soft);
     border-color: #3b4759;
   }
 
   .sidebar-rail-btn.rail-toggle-btn {
-    background: #1c222c;
+    background: var(--surface-card);
     border-color: #2e3848;
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 
   .sidebar-rail-btn.rail-toggle-btn:hover {

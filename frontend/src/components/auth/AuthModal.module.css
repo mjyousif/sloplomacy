@@ -28,7 +28,7 @@
   }
 
   .auth-modal-title-row h2 {
-    font-family: "Cinzel", serif;
+    font-family: var(--font-display);
     font-size: 1.15rem;
     margin: 0;
     color: #f7ebd2;
@@ -48,10 +48,10 @@
 
   .auth-reason-banner {
     padding: 10px 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: rgba(200, 150, 62, 0.15);
     border: 1px solid rgba(200, 150, 62, 0.45);
-    color: #fde68a;
+    color: var(--gold-text);
     font-size: 0.78rem;
     line-height: 1.45;
     margin-bottom: 12px;
@@ -64,14 +64,14 @@
   .status-pill {
     display: inline-block;
     padding: 4px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     font-size: 0.7rem;
     font-weight: 600;
   }
 
   .status-pill[data-source="live"] {
-    background: rgba(16, 185, 129, 0.15);
-    color: #6ee7b7;
+    background: var(--success-tint);
+    color: var(--success-text);
     border: 1px solid rgba(16, 185, 129, 0.35);
   }
 
@@ -94,10 +94,10 @@
     justify-content: center;
     gap: 7px;
     padding: 9px 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: #252c3b;
     border: 1px solid #3d475c;
-    color: #f8fafc;
+    color: var(--text-bright);
     font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
@@ -109,7 +109,7 @@
 
   .oauth-icon {
     font-weight: 800;
-    color: #fde68a;
+    color: var(--gold-text);
   }
 
   .auth-divider {
@@ -117,7 +117,7 @@
     position: relative;
     margin: 12px 0;
     font-size: 0.72rem;
-    color: #64748b;
+    color: var(--text-dim);
   }
 
   .auth-tabs {
@@ -125,9 +125,9 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 6px;
     margin-bottom: 14px;
-    background: #131720;
+    background: var(--surface-deep);
     padding: 4px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
   }
 
   .auth-tab {
@@ -136,7 +136,7 @@
     justify-content: center;
     gap: 5px;
     padding: 7px 8px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: none;
     background: transparent;
     color: #9ca3af;
@@ -147,7 +147,7 @@
 
   .auth-tab[data-active="true"] {
     background: #262e3e;
-    color: #fde68a;
+    color: var(--gold-text);
   }
 
   .auth-form {
@@ -168,24 +168,24 @@
     gap: 5px;
     font-size: 0.74rem;
     font-weight: 600;
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 
   .auth-field input {
     padding: 9px 12px;
     border-radius: 7px;
     border: 1px solid #3b4456;
-    background: #131720;
-    color: #f8fafc;
+    background: var(--surface-deep);
+    color: var(--text-bright);
     font-size: 0.85rem;
   }
 
   .auth-error-box {
     padding: 8px 11px;
     border-radius: 7px;
-    background: rgba(239, 68, 68, 0.16);
-    border: 1px solid #ef4444;
-    color: #fca5a5;
+    background: var(--danger-tint);
+    border: 1px solid var(--danger-primary);
+    color: var(--danger-text);
     font-size: 0.76rem;
   }
 
@@ -204,10 +204,10 @@
     justify-content: center;
     gap: 7px;
     padding: 10px 16px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+    border-radius: var(--radius-md);
+    background: var(--gold-gradient);
     border: 1px solid #e5b964;
-    color: #14171c;
+    color: var(--surface-page);
     font-size: 0.84rem;
     font-weight: 800;
     cursor: pointer;
@@ -228,7 +228,7 @@
   .auth-guest-link {
     background: transparent;
     border: none;
-    color: #fde68a;
+    color: var(--gold-text);
     font-weight: 700;
     font-size: 0.75rem;
     cursor: pointer;

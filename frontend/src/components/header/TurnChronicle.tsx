@@ -84,6 +84,7 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
   const viewedEntry =
     hasHistory && viewIndex !== null ? (entries[viewIndex] ?? null) : null;
   const viewingPast = viewedEntry !== null;
+  const viewingAdmin = viewedEntry?.phase === 'Admin';
   const filterDisabled = controlsDisabled || !viewingPast;
   const expanded = !filterDisabled && trayOpen;
   const activeFilterColor =
@@ -147,6 +148,7 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
         className={styles.turnChroniclePill}
         data-testid="turn-chronicle-pill"
         data-viewing-past={viewingPast ? 'true' : undefined}
+        data-admin-phase={viewingAdmin ? 'true' : undefined}
       >
         <button
           type="button"
@@ -246,6 +248,7 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
           type="button"
           className={styles.turnChronicleLiveBtn}
           data-testid="turn-history-live"
+          data-admin-phase={viewingAdmin ? 'true' : undefined}
           onClick={() => onSelect?.(null)}
           aria-label="Back to live"
           title="Back to live"
@@ -265,6 +268,7 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
           <div
             className={styles.turnHistoryTray}
             data-viewing-past={viewingPast ? 'true' : undefined}
+            data-admin-phase={viewingAdmin ? 'true' : undefined}
           >
             <div className={styles.turnHistoryTrayHeader}>
               <span>Filter by nation</span>

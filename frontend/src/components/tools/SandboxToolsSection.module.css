@@ -6,14 +6,14 @@
     justify-content: center;
     gap: 7px;
     padding: 7px 10px;
-    border-radius: 6px;
-    border: 1px solid #38bdf8;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--info-sky);
     background: rgba(14, 165, 233, 0.12);
-    color: #38bdf8;
+    color: var(--info-sky);
     font-size: 0.74rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--transition-base);
   }
 
   .tools-sandbox-toggle-btn:hover {
@@ -22,8 +22,8 @@
 
   .tools-sandbox-toggle-btn[data-active="true"] {
     background: #0284c7;
-    border-color: #38bdf8;
-    color: #ffffff;
+    border-color: var(--info-sky);
+    color: var(--color-white);
     box-shadow: 0 0 12px rgba(14, 165, 233, 0.45);
   }
 
@@ -33,7 +33,7 @@
     padding: 1px 5px;
     border-radius: 3px;
     background: #0284c7;
-    color: #ffffff;
+    color: var(--color-white);
     /* @keyframes live in styles/base.css, so global() keeps their name. */
     /* biome-ignore lint/correctness/noUnknownFunction: global() is CSS Modules syntax */
     animation: 2s infinite ease-in-out global(pulse-live);
@@ -41,7 +41,7 @@
 
   .tools-micro-desc {
     font-size: 0.65rem;
-    color: #8b99ad;
+    color: var(--text-subtle);
     line-height: 1.35;
     margin: 6px 0 8px 0;
   }
@@ -55,7 +55,7 @@
     border: 1px solid rgba(245, 158, 11, 0.3);
     border-radius: 5px;
     font-size: 0.67rem;
-    color: #fbbf24;
+    color: var(--amber-text);
     margin-bottom: 6px;
   }
 
@@ -64,10 +64,10 @@
     align-items: center;
     gap: 3px;
     padding: 2px 5px;
-    border-radius: 4px;
-    border: 1px solid #475569;
-    background: #334155;
-    color: #f1f5f9;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border-slate-strong);
+    background: var(--border-slate);
+    color: var(--text-soft);
     font-size: 0.62rem;
     font-weight: 600;
     cursor: pointer;

@@ -6,7 +6,7 @@
     /* The map column is as wide as the map itself, so the board is never letterboxed. */
     grid-template-columns: minmax(0, 640px) minmax(300px, 1fr);
     background: #1a1f29;
-    border: 1px solid #c8963e;
+    border: 1px solid var(--gold-primary);
     border-radius: 14px;
     /* The ⋯ menu opens upward inside the panel, so nothing needs to escape the card. */
     overflow: hidden;
@@ -26,9 +26,9 @@
     transform: translateX(-50%);
     margin: 0;
     padding: 6px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: rgba(20, 23, 28, 0.82);
-    color: #e2e8f0;
+    color: var(--text-primary);
     font-size: 0.78rem;
     white-space: nowrap;
   }
@@ -45,24 +45,24 @@
   .status {
     align-self: flex-start;
     padding: 4px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     font-size: 0.76rem;
     font-weight: 800;
     letter-spacing: 0.02em;
-    background: #252b37;
+    background: var(--surface-raised);
     border: 1px solid #3c4454;
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 
   .status[data-status="your-move"] {
     background: rgba(200, 150, 62, 0.2);
     border-color: #e5b964;
-    color: #fde68a;
+    color: var(--gold-text);
   }
 
   .status[data-status="finished"] {
     background: rgba(56, 189, 248, 0.12);
-    border-color: #38bdf8;
+    border-color: var(--info-sky);
     color: #bae6fd;
   }
 
@@ -72,7 +72,7 @@
     flex-wrap: wrap;
     gap: 10px;
     margin: 0;
-    font-family: "Cinzel", serif;
+    font-family: var(--font-display);
     font-size: 1.5rem;
     font-weight: 700;
     color: #f7ebd2;
@@ -84,9 +84,9 @@
     align-items: center;
     gap: 4px;
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     border: 1px solid #e5b964;
-    color: #fde68a;
+    color: var(--gold-text);
     font-family: inherit;
     font-size: 0.7rem;
     font-weight: 700;
@@ -97,7 +97,7 @@
     align-items: center;
     gap: 8px;
     margin: 0;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     font-size: 0.92rem;
   }
 
@@ -115,17 +115,17 @@
     justify-content: center;
     gap: 8px;
     padding: 12px 18px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+    border-radius: var(--radius-md);
+    background: var(--gold-gradient);
     border: 1px solid #e5b964;
-    color: #14171c;
+    color: var(--surface-page);
     font-size: 0.9rem;
     font-weight: 800;
     cursor: pointer;
   }
 
   .enter:hover {
-    border-color: #fde68a;
+    border-color: var(--gold-text);
     box-shadow: 0 0 14px rgba(229, 185, 100, 0.3);
   }
 }
@@ -156,7 +156,7 @@
 
   /* The wide hover state, restated so the phone rule above does not drop it. */
   :global([data-layout="compact"]) .enter:hover {
-    border-color: #fde68a;
+    border-color: var(--gold-text);
     box-shadow: 0 0 14px rgba(229, 185, 100, 0.3);
   }
 }

@@ -1,12 +1,12 @@
 @layer components {
   .unit-floating-menu {
     position: absolute;
-    z-index: 25;
+    z-index: var(--z-map-hud);
     width: 248px;
     background: rgba(18, 22, 29, 0.96);
     backdrop-filter: blur(10px);
     border: 1.5px solid #eab308;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     padding: 8px 10px;
     box-shadow: 0 14px 34px rgba(0, 0, 0, 0.65);
     display: flex;
@@ -38,7 +38,7 @@
   }
 
   .floating-drag-grip {
-    color: #94a3b8;
+    color: var(--text-muted);
     flex-shrink: 0;
   }
 
@@ -47,7 +47,7 @@
     align-items: center;
     gap: 6px;
     font-size: 0.8rem;
-    color: #f8fafc;
+    color: var(--text-bright);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -56,25 +56,25 @@
   .floating-close-btn {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--text-muted);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 2px;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
   }
 
   .floating-close-btn:hover {
-    background: #334155;
-    color: #ffffff;
+    background: var(--border-slate);
+    color: var(--color-white);
   }
 
   .tactical-power-dot {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    border: 1.5px solid #fff;
+    border: 1.5px solid var(--color-white);
     flex-shrink: 0;
   }
 
@@ -90,14 +90,14 @@
     justify-content: center;
     gap: 4px;
     padding: 6px 8px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: 1px solid #3f4859;
-    background: #252b37;
-    color: #e2e8f0;
+    background: var(--surface-raised);
+    color: var(--text-primary);
     font-size: 0.72rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: var(--transition-fast);
   }
 
   .tactical-mode-btn:hover {
@@ -107,18 +107,18 @@
   .tactical-mode-btn[data-state="active"] {
     background: #2563eb;
     border-color: #60a5fa;
-    color: #ffffff;
+    color: var(--color-white);
   }
 
   .tactical-mode-btn[data-state="hold"] {
     background: #0d9488;
     border-color: #2dd4bf;
-    color: #ffffff;
+    color: var(--color-white);
   }
 
   .floating-menu-hint {
     font-size: 0.71rem;
-    color: #fde68a;
+    color: var(--gold-text);
     line-height: 1.35;
   }
 }
@@ -133,7 +133,7 @@
     left: 8px;
     right: 8px;
     bottom: 8px;
-    z-index: 25;
+    z-index: var(--z-map-hud);
     width: auto;
     transform: none;
     animation: none;
@@ -155,10 +155,10 @@
     min-height: 40px;
     padding: 0 12px;
     border: 1px solid #3f4859;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     font-size: 0.85rem;
     font-weight: 600;
-    color: #e2e8f0;
+    color: var(--text-primary);
   }
 
   :global([data-layout="compact"]) .docked-bar .floating-menu-buttons {

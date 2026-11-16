@@ -153,6 +153,31 @@ describe('useSuggestionBoard', () => {
     unmount();
     expect(suggestionStore.getState().draft).toBeNull();
   });
+
+  it('restricts anonymous backchannel drafts to only the recipient units', () => {
+    const { result } = board();
+    act(() => suggestionStore.startDraft(['GERMANY'], TURN, true));
+    expect(result.current?.map.editablePowers).toEqual(['GERMANY']);
+    expect(result.current?.label).toBe('your anonymous suggestion to Germany');
+
+    act(() => {
+      result.current?.stage(move(UNITS[0], 'BUR')); // France's own unit: ignored
+      result.current?.stage(move(UNITS[1], 'BUR')); // Germany's unit: accepted
+    });
+    expect(Object.keys(suggestionStore.getState().draft?.orders ?? {})).toEqual(
+      [UNITS[1].id],
+    );
+  });
+
+  it('labels an anonymous backchannel suggestion without claiming it is yours', () => {
+    const { result } = board();
+    act(() =>
+      suggestionStore.view(
+        message({ sender: null, anonymous: true, recipients: ['FRANCE'] }),
+      ),
+    );
+    expect(result.current?.label).toBe('anonymous suggestion');
+  });
 });
 
 describe('finishedOrders', () => {

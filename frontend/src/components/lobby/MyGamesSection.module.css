@@ -2,9 +2,9 @@
   .lobby-inline-auth-btn {
     padding: 8px 16px;
     border-radius: 7px;
-    background: #c8963e;
+    background: var(--gold-primary);
     border: none;
-    color: #14171c;
+    color: var(--surface-page);
     font-weight: 700;
     font-size: 0.78rem;
     cursor: pointer;

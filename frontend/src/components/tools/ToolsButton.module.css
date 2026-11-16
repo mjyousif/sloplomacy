@@ -5,20 +5,20 @@
     justify-content: center;
     gap: 5px;
     padding: 5px 8px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: 1px solid #333e50;
     background: #222936;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     font-size: 0.72rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: var(--transition-fast);
   }
 
   .tools-btn:hover {
     background: #2d3648;
     border-color: #4b586e;
-    color: #ffffff;
+    color: var(--color-white);
   }
 }
 

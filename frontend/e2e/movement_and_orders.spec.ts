@@ -78,10 +78,10 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       const burOption = parisCard.getByRole('option', { name: 'Burgundy' });
       await burOption.hover();
       const burPath = page.locator('[data-testid="province-path"][data-province-id="BUR"]');
-      await expect(burPath).toHaveAttribute('stroke-width', '3.5');
+      await expect(burPath).toHaveAttribute('stroke', '#eab308');
       await recorder.recordStep(page, '04c_destination_hover_preview');
       await burOption.click();
-      await expect(burPath).not.toHaveAttribute('stroke-width', '3.5');
+      await expect(burPath).not.toHaveAttribute('stroke', '#eab308');
       await expect(orderArrow).toBeVisible();
 
       // 6. Order French Army in Marseilles (FRA_A_MAR) to SUPPORT A PAR -> BUR and verify SUPPORT arrow

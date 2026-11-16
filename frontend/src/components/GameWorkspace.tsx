@@ -394,6 +394,7 @@ export function GameWorkspace({
         historyLabel={
           viewedEntry ? turnLabel(viewedEntry) : (suggestion?.label ?? null)
         }
+        historyIsAdmin={viewedEntry?.phase === 'Admin'}
         onReturnToLive={
           viewedEntry ? turnHistory.goLive : suggestionStore.clear
         }

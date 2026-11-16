@@ -1,7 +1,7 @@
 @layer components {
   .powers-sort-segmented {
     display: flex;
-    background: #141820;
+    background: var(--surface-panel);
     border: 1px solid #28303e;
     border-radius: 5px;
     padding: 2px;
@@ -19,15 +19,15 @@
     border-radius: 3px;
     border: none;
     background: transparent;
-    color: #8b99ad;
+    color: var(--text-subtle);
     font-size: 0.64rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: var(--transition-fast);
   }
 
   .powers-sort-pill:hover {
-    color: #e2e8f0;
+    color: var(--text-primary);
     background: rgba(255, 255, 255, 0.04);
   }
 
@@ -48,7 +48,7 @@
   .powers-sort-label {
     font-size: 0.62rem;
     font-weight: 700;
-    color: #8b99ad;
+    color: var(--text-subtle);
     white-space: nowrap;
   }
 
@@ -68,11 +68,11 @@
     align-items: center;
     justify-content: space-between;
     padding: 5px 8px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: 1px solid #27303e;
-    border-left: 3px solid #64748b;
-    background: #1c222c;
-    transition: all 0.12s ease;
+    border-left: 3px solid var(--text-dim);
+    background: var(--surface-card);
+    transition: var(--transition-fast);
     overflow: hidden;
   }
 
@@ -102,7 +102,7 @@
   .power-card-rank {
     font-size: 0.72rem;
     font-weight: 700;
-    color: #94a3b8;
+    color: var(--text-muted);
     min-width: 14px;
     text-align: center;
     flex-shrink: 0;
@@ -129,7 +129,7 @@
     align-items: center;
     gap: 4px;
     font-size: 0.72rem;
-    color: #e2e8f0;
+    color: var(--text-primary);
     min-width: 0;
   }
 
@@ -147,7 +147,7 @@
 
   .power-card-player {
     font-size: 0.62rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-weight: 500;
     max-width: 68px;
     overflow: hidden;
@@ -165,7 +165,7 @@
     line-height: 1.2;
     border-radius: 3px;
     background: #2563eb;
-    color: #ffffff;
+    color: var(--color-white);
     margin-left: 2px;
     flex-shrink: 0;
   }
@@ -175,7 +175,7 @@
     align-items: center;
     gap: 4px;
     font-size: 0.63rem;
-    color: #8b99ad;
+    color: var(--text-subtle);
     white-space: nowrap;
   }
 
@@ -206,8 +206,8 @@
     padding: 0;
     border: 1px solid #3a475c;
     border-radius: 5px;
-    background: #141820;
-    color: #8b99ad;
+    background: var(--surface-panel);
+    color: var(--text-subtle);
     cursor: pointer;
     transition:
       background 0.12s ease,
@@ -217,13 +217,13 @@
 
   .press-pick-btn:hover:not(:disabled) {
     border-color: #60a5fa;
-    color: #e2e8f0;
+    color: var(--text-primary);
   }
 
   .press-pick-btn[data-active="true"] {
     border-color: #60a5fa;
     background: #2563eb;
-    color: #ffffff;
+    color: var(--color-white);
     box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
   }
 
@@ -249,8 +249,8 @@
     height: 14px;
     padding: 0 3px;
     border-radius: 7px;
-    background: #d97706;
-    color: #fff;
+    background: var(--amber-hover);
+    color: var(--color-white);
     font-size: 0.55rem;
     font-weight: 700;
     line-height: 1;
@@ -264,22 +264,22 @@
     font-size: 0.62rem;
     font-weight: 700;
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
   }
 
   .mini-status-tag[data-status="finalized"] {
     background: rgba(16, 185, 129, 0.18);
-    color: #34d399;
+    color: var(--success-primary);
   }
 
   .mini-status-tag[data-status="warning"] {
-    background: rgba(245, 158, 11, 0.2);
-    color: #fbbf24;
+    background: var(--amber-tint);
+    color: var(--amber-text);
   }
 
   .mini-status-tag[data-status="surrendered"] {
     background: rgba(239, 68, 68, 0.2);
-    color: #f87171;
+    color: var(--danger-light);
   }
 }
 

@@ -24,8 +24,8 @@
     font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: 0.05em;
-    color: #fca5a5;
-    font-family: "Cinzel", serif;
+    color: var(--danger-text);
+    font-family: var(--font-display);
   }
 
   .admin-sidebar-icon {
@@ -44,7 +44,7 @@
   .admin-sidebar-subtitle {
     display: block;
     font-size: 0.68rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     line-height: 1.25;
   }
 }

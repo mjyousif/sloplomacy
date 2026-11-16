@@ -1,7 +1,7 @@
 @layer components {
   .lobby-game-card {
     padding: 18px;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     background: #212734;
     border: 1px solid #374051;
   }
@@ -24,7 +24,7 @@
     margin: 0 0 4px;
     font-size: 1rem;
     font-weight: 700;
-    color: #f8fafc;
+    color: var(--text-bright);
   }
 
   .lobby-game-meta {
@@ -33,12 +33,12 @@
   }
 
   .game-id-mono {
-    font-family: "JetBrains Mono", monospace;
+    font-family: var(--font-mono);
     font-size: 0.75rem;
-    color: #38bdf8;
+    color: var(--info-sky);
     background: rgba(56, 189, 248, 0.1);
     padding: 1px 5px;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
     border: 1px solid rgba(56, 189, 248, 0.25);
   }
 
@@ -53,42 +53,42 @@
     align-items: center;
     gap: 5px;
     padding: 4px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: #171b24;
     border: 1px solid #363f52;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     font-size: 0.72rem;
     font-weight: 600;
   }
 
   .game-status-pill {
     padding: 4px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     font-size: 0.72rem;
     font-weight: 700;
   }
 
   .game-status-pill[data-status="active"] {
-    background: rgba(16, 185, 129, 0.15);
-    color: #6ee7b7;
+    background: var(--success-tint);
+    color: var(--success-text);
     border: 1px solid rgba(16, 185, 129, 0.35);
   }
 
   .game-status-pill[data-status="waiting"] {
     background: rgba(245, 158, 11, 0.15);
-    color: #fde68a;
+    color: var(--gold-text);
     border: 1px solid rgba(245, 158, 11, 0.35);
   }
 
   .game-status-pill[data-status="private"] {
     background: rgba(217, 119, 6, 0.18);
-    border: 1px solid #d97706;
-    color: #fbbf24;
+    border: 1px solid var(--amber-hover);
+    color: var(--amber-text);
   }
 
   .lobby-powers-instruction {
     font-size: 0.78rem;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     margin-bottom: 12px;
   }
 
@@ -105,20 +105,20 @@
     align-items: center;
     gap: 5px;
     padding: 5px 11px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: rgba(239, 68, 68, 0.12);
     border: 1px solid rgba(239, 68, 68, 0.35);
-    color: #fca5a5;
+    color: var(--danger-text);
     font-size: 0.72rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--transition-base);
   }
 
   .lobby-claim-leave-btn:hover {
     background: rgba(239, 68, 68, 0.28);
-    border-color: #ef4444;
-    color: #ffffff;
+    border-color: var(--danger-primary);
+    color: var(--color-white);
   }
 
   .lobby-power-slots-grid {
@@ -134,10 +134,10 @@
     justify-content: space-between;
     gap: 6px;
     padding: 10px;
-    border-radius: 8px;
-    background: #222836;
+    border-radius: var(--radius-md);
+    background: var(--surface-elevated);
     border: 1px solid #353e4f;
-    color: #e2e8f0;
+    color: var(--text-primary);
     text-align: left;
     cursor: pointer;
     transition: all 0.14s ease;
@@ -145,7 +145,11 @@
 
   .power-slot-btn:hover:not(:disabled) {
     background: #283041;
-    border-color: color-mix(in srgb, var(--power-accent, #64748b) 60%, #cbd5e1);
+    border-color: color-mix(
+      in srgb,
+      var(--power-accent, var(--text-dim)) 60%,
+      var(--text-secondary)
+    );
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
@@ -170,11 +174,11 @@
   .power-slot-name {
     font-size: 0.78rem;
     font-weight: 800;
-    color: #e2e8f0;
+    color: var(--text-primary);
   }
 
   .power-slot-btn[data-state="mine"] .power-slot-name {
-    color: #f8fafc;
+    color: var(--text-bright);
   }
 
   .power-slot-btn[data-state="taken"] .power-slot-name {
@@ -195,12 +199,12 @@
   }
 
   .slot-claim-label {
-    color: #94a3b8;
+    color: var(--text-muted);
     transition: color 0.14s ease;
   }
 
   .power-slot-btn:hover:not(:disabled) .slot-claim-label {
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 }
 

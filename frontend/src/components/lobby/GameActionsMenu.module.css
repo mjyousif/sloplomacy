@@ -10,17 +10,17 @@
     justify-content: center;
     width: 36px;
     height: 36px;
-    border-radius: 8px;
-    background: #252b37;
+    border-radius: var(--radius-md);
+    background: var(--surface-raised);
     border: 1px solid #3c4454;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     cursor: pointer;
   }
 
   .trigger:hover,
   .trigger[aria-expanded="true"] {
     background: #303847;
-    color: #f8fafc;
+    color: var(--text-bright);
   }
 
   .menu {
@@ -42,10 +42,10 @@
     gap: 8px;
     width: 100%;
     padding: 8px 10px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: none;
     background: transparent;
-    color: #fca5a5;
+    color: var(--danger-text);
     font-size: 0.8rem;
     font-weight: 600;
     text-align: left;
@@ -67,7 +67,7 @@
   :global([data-layout="compact"]) .trigger:hover,
   :global([data-layout="compact"]) .trigger[aria-expanded="true"] {
     background: #303847;
-    color: #f8fafc;
+    color: var(--text-bright);
   }
 
   :global([data-layout="compact"]) .item {

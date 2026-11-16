@@ -23,13 +23,13 @@ test.describe('Collapsible Sidebar Sections', () => {
       const sidebar = page.locator('[data-testid="tools-sidebar"]');
       await expect(sidebar).toBeVisible();
 
-      // Find the toggle buttons for sections (Creator Admin Tools moved to Display Settings)
+      // Find the toggle buttons for sections (Tactical Map Legend was removed; Creator Admin Tools moved to Display Settings)
       const legendToggle = page.locator('[data-testid="sidebar-section-toggle"]', { hasText: 'TACTICAL MAP LEGEND' });
       const powersToggle = page.locator('[data-testid="sidebar-section-toggle"]', { hasText: 'COMMAND NATION' });
       const sandboxToggle = page.locator('[data-testid="sidebar-section-toggle"]', { hasText: 'HYPOTHETICAL MODE' });
       const adminToggle = page.locator('[data-testid="sidebar-section-toggle"]', { hasText: 'CREATOR ADMIN TOOLS' });
 
-      await expect(legendToggle).toBeVisible();
+      await expect(legendToggle).toHaveCount(0);
       await expect(powersToggle).toBeVisible();
       await expect(sandboxToggle).toBeVisible();
       await expect(adminToggle).toHaveCount(0);

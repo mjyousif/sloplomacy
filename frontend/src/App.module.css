@@ -4,7 +4,7 @@
     flex-direction: column;
     width: 100vw;
     height: 100vh;
-    background: #14171c;
+    background: var(--surface-page);
     color: #f3efe6;
   }
 
@@ -17,7 +17,7 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    background: #14171c;
+    background: var(--surface-page);
     color: #f3efe6;
   }
 }

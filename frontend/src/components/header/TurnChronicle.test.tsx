@@ -119,6 +119,14 @@ describe('TurnChronicle', () => {
       'data-viewing-past',
       'true',
     );
+    expect(screen.getByTestId('turn-chronicle-pill')).toHaveAttribute(
+      'data-admin-phase',
+      'true',
+    );
+    expect(screen.getByTestId('turn-history-live')).toHaveAttribute(
+      'data-admin-phase',
+      'true',
+    );
     expect(screen.getByTestId('turn-history-select')).toHaveTextContent(
       'Spring 1901 — Admin Edit',
     );
@@ -148,6 +156,9 @@ describe('TurnChronicle', () => {
   it('enables country filter chips on a past turn and outlines the filter button in that nation’s color', async () => {
     const user = userEvent.setup();
     const { props, rerender } = renderChronicle({ viewIndex: 0 });
+    expect(screen.getByTestId('turn-chronicle-pill')).not.toHaveAttribute(
+      'data-admin-phase',
+    );
 
     await user.click(screen.getByTestId('turn-history-filter-toggle'));
     expect(screen.getByText('Filter by nation')).toBeInTheDocument();
@@ -191,6 +202,9 @@ describe('TurnChronicle', () => {
   it('locks the dropdown, steps and filter tray while locked is true', async () => {
     const user = userEvent.setup();
     const { props, rerender } = renderChronicle({ viewIndex: 0 });
+    expect(screen.getByTestId('turn-chronicle-pill')).not.toHaveAttribute(
+      'data-admin-phase',
+    );
     const tray = screen.getByTestId('turn-history-tray');
 
     await user.click(screen.getByTestId('turn-history-filter-toggle'));

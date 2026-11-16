@@ -166,11 +166,22 @@ def test_an_anonymous_thread_message_names_the_whole_thread_not_its_author(match
     assert client.get(f"/api/press?game_id={match}", headers=mallory_headers()).status_code == 403
 
 
-def test_an_anonymous_message_in_a_one_to_one_thread_is_refused(match):
-    # The only other player in the thread would know who wrote it.
+def test_a_one_to_one_anonymous_message_hides_its_author_and_reaches_only_the_recipient(match):
     res = send(match, bob_headers(), "GERMANY", "Watch the Channel", ["FRANCE"], anonymous=True)
-    assert res.status_code == 422
-    assert bodies(match, alice_headers(), "FRANCE") == []
+    assert res.status_code == 200, res.text
+    assert res.json()["sender"] == "GERMANY"
+
+    (seen,) = feed(match, alice_headers(), "FRANCE")["messages"]
+    assert seen["anonymous"] is True
+    assert seen["sender"] is None
+    assert seen["recipients"] == ["FRANCE"]
+    assert "GERMANY" not in str(seen)
+
+    (own,) = feed(match, bob_headers(), "GERMANY")["messages"]
+    assert own["sender"] == "GERMANY"
+    assert own["recipients"] == ["FRANCE"]
+
+    assert bodies(match, carol_headers(), "ENGLAND") == []
 
 
 def test_the_socket_delivers_press_only_to_players_who_may_read_it(match):

@@ -155,6 +155,17 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
         .locator('[data-testid="unit-floating-menu"]')
         .getByRole('button', { name: 'Convoy' })
         .click();
+      // Drag the floating menu header up so it doesn't cover Picardy on the map
+      const maoMenuHeader = page.locator('[data-testid="floating-menu-header"]');
+      const headerBox = await maoMenuHeader.boundingBox();
+      if (headerBox) {
+        const cx = headerBox.x + headerBox.width / 2;
+        const cy = headerBox.y + headerBox.height / 2;
+        await page.mouse.move(cx, cy);
+        await page.mouse.down();
+        await page.mouse.move(cx, cy - 160, { steps: 5 });
+        await page.mouse.up();
+      }
       await page
         .locator('[data-testid="unit-token"][data-unit-id="FRA_A_PIC"]')
         .click();
