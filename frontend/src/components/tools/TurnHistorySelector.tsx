@@ -108,6 +108,7 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
 }) => {
   if (entries.length === 0) return null;
   const viewingPast = viewIndex !== null;
+  const viewingAdmin = viewingPast && entries[viewIndex]?.phase === 'Admin';
 
   const pick = (index: number | null) => {
     onSelect(index);
@@ -120,6 +121,7 @@ export const TurnHistorySelector: React.FC<TurnHistorySelectorProps> = ({
       aria-label="Turn history"
       data-testid="turn-history"
       data-viewing-past={viewingPast ? 'true' : undefined}
+      data-admin-phase={viewingAdmin ? 'true' : undefined}
     >
       <div className={styles.turnHistoryRow}>
         <button
@@ -214,6 +216,7 @@ export const TurnHistoryPill: React.FC<TurnHistoryPillProps> = ({
   <div
     className={styles.turnHistoryPill}
     data-testid="turn-history-pill"
+    data-admin-phase={entry.phase === 'Admin' ? 'true' : undefined}
     role="group"
     aria-label={`Showing ${turnLabel(entry)}`}
   >
