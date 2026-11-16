@@ -54,7 +54,7 @@ test.describe('Scenario 06: Phone game screen', () => {
 
       // The order sheet starts lowered, showing the controls a player needs every turn.
       expect(await sheetSnap(page)).toBe('peek');
-      await expect(page.locator('[data-testid="btn-confirm-all"]')).toBeVisible();
+      await expect(page.locator('[data-testid="btn-clear-all"]')).toBeVisible();
       await expect(page.locator('[data-testid="btn-finalize-orders"]')).toBeVisible();
       await expect(page.locator('[data-testid="btn-adjudicate-phase"]')).toBeVisible();
       await expect(page.locator('[data-testid="macro-sheet-counts"]')).toContainText('3 units');
