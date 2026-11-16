@@ -189,7 +189,9 @@ class PreviewUnit(BaseModel):
 class BoardPreview(BaseModel):
     """What the homepage draws a small map from: who owns what and where the units stand.
 
-    It holds no orders, retreats or builds, so it shows nothing a player in the game cannot see.
+    `ownership` is the board's as a map colours it (`displayed_owners`): it also names the home
+    power of land nobody has claimed yet. It holds no orders, retreats or builds, so it shows
+    nothing a player in the game cannot see.
     """
 
     ownership: dict[str, Power] = Field(default_factory=dict)

@@ -7,9 +7,11 @@ import {
   type Power,
 } from '../types/diplomacy';
 import { isVisibleInMyActiveCampaigns } from '../utils/gameOverHelpers';
+import { pickHeroGame, sortMyGames } from '../utils/heroGame';
 import { VersionBadge } from './header/VersionBadge';
 import styles from './LobbyView.module.css';
 import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
+import { FeaturedGameHero } from './lobby/FeaturedGameHero';
 import { GameBrowser } from './lobby/GameBrowser';
 import { useHostGameForm } from './lobby/hooks/useHostGameForm';
 import { useJoinWithCodeForm } from './lobby/hooks/useJoinWithCodeForm';
@@ -18,6 +20,7 @@ import { LobbyActionRow } from './lobby/LobbyActionRow';
 import { LobbyFormDialog } from './lobby/LobbyFormDialog';
 import { LobbyHero } from './lobby/LobbyHero';
 import { MyGamesSection } from './lobby/MyGamesSection';
+import { OtherGamesStrip } from './lobby/OtherGamesStrip';
 import { PrivateCampaignCreatedModal } from './lobby/PrivateCampaignCreatedModal';
 
 interface LobbyViewProps {
@@ -79,13 +82,19 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
   // The user's active games (including unwitnessed & <24h grace); public games are in the browser
   const myGames = user
-    ? games.filter(
-        (g) =>
-          Object.values(g.participants || {}).some(
-            (p) => p.user_id === user.id,
-          ) && isVisibleInMyActiveCampaigns(g, user),
+    ? sortMyGames(
+        games.filter(
+          (g) =>
+            Object.values(g.participants || {}).some(
+              (p) => p.user_id === user.id,
+            ) && isVisibleInMyActiveCampaigns(g, user),
+        ),
+        user,
       )
     : [];
+  // The game that most needs the player takes the top of the page; the rest sit in the strip.
+  const heroGame = pickHeroGame(myGames, user);
+  const otherGames = myGames.filter((g) => g !== heroGame);
 
   const handlePowerSlotClick = async (
     game: MultiplayerGameSummary,
@@ -109,18 +118,37 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
   return (
     <div className={styles.lobbyContainer}>
-      <LobbyHero
-        user={user}
-        onEnterSandbox={onEnterSandbox}
-        onOpenAuth={onOpenAuth}
-      />
+      {user && heroGame ? (
+        <FeaturedGameHero
+          user={user}
+          game={heroGame}
+          onEnterGame={handlePowerSlotClick}
+          onOpenSurrenderModal={onOpenSurrenderModal}
+        />
+      ) : (
+        <LobbyHero
+          user={user}
+          onEnterSandbox={onEnterSandbox}
+          onOpenAuth={onOpenAuth}
+        />
+      )}
 
       <div className={styles.lobbyMainGrid} data-testid="lobby-main-grid">
-        {/* Host and Join buttons, then My Games + Open Lobbies */}
+        {/* The player's other games, the Host and Join buttons, then the public game browser */}
         <div
           className={styles.lobbyGamesColumn}
           data-testid="lobby-games-column"
         >
+          {user && myGames.length > 0 ? (
+            <OtherGamesStrip
+              user={user}
+              games={otherGames}
+              onEnterGame={handlePowerSlotClick}
+              onOpenSurrenderModal={onOpenSurrenderModal}
+            />
+          ) : (
+            <MyGamesSection user={user} onOpenAuth={onOpenAuth} />
+          )}
           <LobbyActionRow
             onHostGame={() => {
               host.clearError();
@@ -130,13 +158,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               join.clearError();
               setOpenDialog('join');
             }}
-          />
-          <MyGamesSection
-            user={user}
-            myGames={myGames}
-            handlePowerSlotClick={handlePowerSlotClick}
-            onOpenAuth={onOpenAuth}
-            onOpenSurrenderModal={onOpenSurrenderModal}
           />
 
           <GameBrowser

@@ -36,6 +36,7 @@ In a fresh worktree run `npm ci` in `frontend/` (and `pip install -r backend/req
 - convoy reachability, fleet chains, green/blue convoy highlights → `convoy_scenarios`
 - Game Over modal, victory conclusion, winner pill → `game_over`
 - press (chat), its section in the tools sidebar, `/api/press` → `press`
+- homepage for a player with games: map hero, mini map, other-games strip, `board` on `/api/games/mine` → `lobby_home`
 - the lobby's public game browser, its filters, rows and seat claims, `/api/games/browse` → `lobby_browser`
 
 **Run only the one scenario that covers your change.** Backend changes count: E2E runs against the real backend, so run the matching scenario when you change API responses, adjudication, phase flow, sandbox, validator or auth behavior (for example adjudication or retreats -> `retreats`, `builds`, `movement`; validator -> `blunder`; sandbox endpoints -> `sandbox`). Skip E2E only when nothing a user can see or click could change: docs, comments, refactors fully covered by tests, infra scripts, or internals such as persistence or security headers with no change to responses. Avoid `run --all` unless the change is broad (shared layout, App.tsx state flow, map rendering across phases), because it is slow and the screenshots cost tokens to read. Look only at the screenshots from the steps your change affects.

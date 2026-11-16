@@ -171,7 +171,7 @@ Games with an open seat come first, then the most recently played (`last_moved_a
 ### 1b. `GET /api/games/mine`
 Returns every game the caller holds a seat in or owns, as `List[MultiplayerGameSummary]`, including private campaigns and saved sandboxes. Draft sandboxes are left out. The caller comes from the `Authorization: Bearer <token>` header; without one it answers `401`. It lists only the caller's own games, so it shows no one else's private campaign.
 
-This is the only response whose summaries carry `board` (a `BoardPreview`: province ownership and unit positions, never orders), for the map on the homepage. Every other summary response, the lobby socket included, sends `board: null`. `deadline` is the Unix time the running phase clock ends, or `null`.
+This is the only response whose summaries carry `board` (a `BoardPreview`: province ownership as the map colours it, home land nobody has claimed included, and unit positions, never orders), for the map on the homepage. Every other summary response, the lobby socket included, sends `board: null`. `deadline` is the Unix time the running phase clock ends, or `null`.
 
 ---
 

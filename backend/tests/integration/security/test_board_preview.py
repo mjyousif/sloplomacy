@@ -8,6 +8,7 @@ import time
 
 import pytest
 from domain.game_state import PhaseTimer, TimerStage
+from engine.adjudicator.territory import displayed_owners
 from main import app
 from starlette.testclient import TestClient
 from storage.store import GAME_SUMMARIES, GAMES
@@ -54,7 +55,11 @@ def test_mine_carries_the_board_for_a_player_in_the_game(match):
     board = _mine(HOST, match)["board"]
     state = GAMES[match]
 
-    assert board["ownership"] == {prov: p.value for prov, p in state.ownership.items()}
+    shown = displayed_owners(state.ownership)
+    assert board["ownership"] == {prov: p.value for prov, p in shown.items()}
+    # Home land nobody has claimed is coloured for its home power, as on the board.
+    assert "BUR" not in state.ownership
+    assert board["ownership"]["BUR"] == "FRANCE"
     assert len(board["units"]) == len(state.units)
     assert {"power": "FRANCE", "unit_type": "A", "province": "PAR", "coast": None} in board["units"]
     assert _mine(GUEST, match)["board"] == board

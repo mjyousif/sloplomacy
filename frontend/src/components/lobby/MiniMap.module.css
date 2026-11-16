@@ -1,0 +1,29 @@
+@layer components {
+  /* The board's own palette in small: sage sea, parchment land, each owner's fill on top. */
+  .mini-map {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #b9c3b4;
+  }
+
+  .province {
+    stroke: #4a3f33;
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+  }
+
+  /* No `fill` here: each province carries its colour as an attribute (parchment, or its
+     owner's tint), which a rule in this sheet would override. */
+
+  .unit {
+    stroke: #fffaf0;
+    stroke-width: 4;
+  }
+
+  /* The viewer's own units: a wider gold ring. */
+  .unit[data-mine="true"] {
+    stroke: #fde047;
+    stroke-width: 7;
+  }
+}
