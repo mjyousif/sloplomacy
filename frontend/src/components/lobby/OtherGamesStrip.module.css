@@ -1,0 +1,134 @@
+@layer components {
+  .heading {
+    margin: 0 0 12px;
+    font-family: "Cinzel", serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #f7ebd2;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  /* Not clipped: the ⋯ menu opens upward over the card. */
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 12px;
+    background: #1a1f29;
+    border: 1px solid #313846;
+  }
+
+  .card[data-urgency="your-move"] {
+    border-color: #c8963e;
+  }
+
+  .thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1524 / 1357;
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #b9c3b4;
+    color: #4a3f33;
+  }
+
+  .body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 0 4px;
+  }
+
+  .status {
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    background: #252b37;
+    border: 1px solid #3c4454;
+    color: #cbd5e1;
+  }
+
+  .status[data-status="your-move"] {
+    background: rgba(200, 150, 62, 0.2);
+    border-color: #e5b964;
+    color: #fde68a;
+  }
+
+  .status[data-status="finished"] {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: #38bdf8;
+    color: #bae6fd;
+  }
+
+  .name {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #f8fafc;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    color: #9ca3af;
+    font-size: 0.8rem;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+  }
+
+  .enter {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: #252b37;
+    border: 1px solid #3c4454;
+    color: #f8fafc;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .enter:hover {
+    background: #303847;
+    border-color: #e5b964;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .cards {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  :global([data-layout="compact"]) .enter {
+    height: 44px;
+  }
+
+  /* The wide hover state, restated so the phone rule above does not drop it. */
+  :global([data-layout="compact"]) .enter:hover {
+    background: #303847;
+    border-color: #e5b964;
+  }
+}

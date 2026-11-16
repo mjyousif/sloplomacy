@@ -23,7 +23,7 @@ frontend/
     │   ├── map/                 # Interactive SVG board: hooks/, hud/, layers/ (orders/, units/), and curve geometry
     │   ├── tools/               # Left ToolsSidebar sections (incl. PressSection and press/), TurnHistorySelector, SaveSandboxModal, and collapsed rail
     │   ├── macro/               # Right MacroSidebar order sheet, controls/, admin sidebars, and build slots
-    │   ├── lobby/               # Match browser, Host/Join buttons and their form dialogs, power picker
+    │   ├── lobby/               # Map hero and strip of the player's games (MiniMap), match browser, Host/Join dialogs, power picker
     │   ├── admin/               # AdminSettingsMenu, TurnControlTab, and AdminActionWarningModal
     │   ├── auth/                # Sign-in / sign-up modal and account settings modal
     │   ├── game/                # PhaseTimerWidget and match-lifecycle modals (surrender, game over, sanity check)

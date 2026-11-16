@@ -1,0 +1,162 @@
+@layer components {
+  .hero {
+    max-width: 1280px;
+    margin: 0 auto 24px;
+    display: grid;
+    /* The map column is as wide as the map itself, so the board is never letterboxed. */
+    grid-template-columns: minmax(0, 640px) minmax(300px, 1fr);
+    background: #1a1f29;
+    border: 1px solid #c8963e;
+    border-radius: 14px;
+    /* The ⋯ menu opens upward inside the panel, so nothing needs to escape the card. */
+    overflow: hidden;
+  }
+
+  .map-pane {
+    position: relative;
+    aspect-ratio: 1524 / 1357;
+    width: 100%;
+    background: #b9c3b4;
+  }
+
+  .no-board {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(20, 23, 28, 0.82);
+    color: #e2e8f0;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    padding: 28px 30px;
+    border-left: 1px solid #313846;
+  }
+
+  .status {
+    align-self: flex-start;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    background: #252b37;
+    border: 1px solid #3c4454;
+    color: #cbd5e1;
+  }
+
+  .status[data-status="your-move"] {
+    background: rgba(200, 150, 62, 0.2);
+    border-color: #e5b964;
+    color: #fde68a;
+  }
+
+  .status[data-status="finished"] {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: #38bdf8;
+    color: #bae6fd;
+  }
+
+  .name {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0;
+    font-family: "Cinzel", serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #f7ebd2;
+    line-height: 1.25;
+  }
+
+  .private-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid #e5b964;
+    color: #fde68a;
+    font-family: inherit;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 0.92rem;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .enter {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 18px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+    border: 1px solid #e5b964;
+    color: #14171c;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .enter:hover {
+    border-color: #fde68a;
+    box-shadow: 0 0 14px rgba(229, 185, 100, 0.3);
+  }
+}
+
+@layer compact {
+  /* The phone lobby is a flex column, and a clipped box may shrink to nothing in one. */
+  :global([data-layout="compact"]) .hero {
+    order: 0;
+    flex-shrink: 0;
+    width: 100%;
+    margin: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :global([data-layout="compact"]) .panel {
+    padding: 16px 14px;
+    border-left: none;
+    border-top: 1px solid #313846;
+  }
+
+  :global([data-layout="compact"]) .name {
+    font-size: 1.2rem;
+  }
+
+  :global([data-layout="compact"]) .enter {
+    min-height: 44px;
+  }
+
+  /* The wide hover state, restated so the phone rule above does not drop it. */
+  :global([data-layout="compact"]) .enter:hover {
+    border-color: #fde68a;
+    box-shadow: 0 0 14px rgba(229, 185, 100, 0.3);
+  }
+}

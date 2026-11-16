@@ -17,7 +17,7 @@ beforeEach(resetLobbyEnv);
 afterEach(() => vi.useRealTimers());
 
 describe('LobbyView layout', () => {
-  it('stacks the hero, the action row, both sections and the footer in order', () => {
+  it('stacks the hero, the empty my-games box, the action row, the lobbies and the footer', () => {
     const { view } = setup();
     const root = view.container.firstElementChild as HTMLElement;
     expect(
@@ -31,7 +31,7 @@ describe('LobbyView layout', () => {
       [...screen.getByTestId('lobby-games-column').children].map(
         (c) => c.getAttribute('data-testid') ?? c.tagName,
       ),
-    ).toEqual(['lobby-action-row', 'SECTION', 'SECTION']);
+    ).toEqual(['SECTION', 'lobby-action-row', 'SECTION']);
     // The Host and Join forms are not on the page until their buttons open them.
     expect(
       screen.queryByTestId('create-campaign-card'),
@@ -46,15 +46,27 @@ describe('LobbyView layout', () => {
     ).toHaveLength(2);
   });
 
-  it('sorts games: my list gets mine and saved sandboxes, the lobbies skip sandboxes', () => {
-    setup({ games: [OPEN, MINE, SANDBOX] });
-    expect(screen.getByText('2 Games')).toBeInTheDocument();
-    const mine = screen.getAllByTestId('my-game-row');
+  it('gives a player with games the map hero and the strip in place of the banner', () => {
+    const { view } = setup({ games: [OPEN, MINE, SANDBOX] });
+    const root = view.container.firstElementChild as HTMLElement;
     expect(
-      mine.map(
-        (r) => r.querySelector('[data-testid="my-game-name"]')?.textContent,
+      [...root.children].map((c) => c.getAttribute('data-testid')),
+    ).toEqual(['featured-game-hero', 'lobby-main-grid', 'lobby-footer']);
+    expect(
+      [...screen.getByTestId('lobby-games-column').children].map(
+        (c) => c.getAttribute('data-testid') ?? c.tagName,
       ),
-    ).toEqual(['My Table', 'Saved Study']);
+    ).toEqual(['other-games-strip', 'lobby-action-row', 'SECTION']);
+    expect(screen.queryByTestId('lobby-hero')).toBeNull();
+    expect(screen.queryByText('My Active Campaigns & Saved Games')).toBeNull();
+  });
+
+  it('sorts games: the hero takes my match, the strip my sandbox, the lobbies skip sandboxes', () => {
+    setup({ games: [OPEN, SANDBOX, MINE] });
+    expect(screen.getByTestId('hero-game-name')).toHaveTextContent('My Table');
+    expect(
+      screen.getAllByTestId('my-game-name').map((n) => n.textContent),
+    ).toEqual(['Saved Study']);
     expect(
       screen
         .getAllByTestId('lobby-game-card')
@@ -62,12 +74,34 @@ describe('LobbyView layout', () => {
     ).toEqual(['Open Table', 'My Table']);
   });
 
+  it('keeps the banner for a player whose only game is a saved sandbox', () => {
+    setup({ games: [SANDBOX] });
+    expect(screen.getByTestId('lobby-hero')).toBeInTheDocument();
+    expect(screen.queryByTestId('featured-game-hero')).toBeNull();
+    expect(
+      screen.getAllByTestId('my-game-name').map((n) => n.textContent),
+    ).toEqual(['Saved Study']);
+  });
+
+  it('enters the hero game through the seat-claim path', async () => {
+    const { props, user } = setup({ games: [MINE] });
+    await user.click(screen.getByTestId('hero-enter-btn'));
+    expect(props.onJoinOrEnterGame).toHaveBeenCalledExactlyOnceWith(
+      'mp_mine',
+      'AUSTRIA',
+    );
+    // The hero has the only game, so there is no strip.
+    expect(screen.queryByTestId('other-games-strip')).toBeNull();
+  });
+
   it('shows a guest the lock box and no "my games" for them', () => {
     setup({ user: null, games: [MINE] });
     expect(
       screen.getByText('Account Required to Save & Track Campaigns'),
     ).toBeInTheDocument();
-    expect(screen.queryByTestId('my-game-row')).toBeNull();
+    expect(screen.queryByTestId('featured-game-hero')).toBeNull();
+    expect(screen.queryByTestId('my-game-card')).toBeNull();
+    expect(screen.getByTestId('lobby-hero')).toBeInTheDocument();
   });
 });
 
@@ -257,6 +291,9 @@ describe('LobbyView claiming a seat', () => {
 
   it('sends a leave press to the surrender modal with its game', async () => {
     const { props, user } = setup({ games: [MINE] });
+    await user.click(
+      screen.getByRole('button', { name: 'More actions for My Table' }),
+    );
     await user.click(screen.getByTestId('leave-campaign-btn'));
     expect(props.onOpenSurrenderModal).toHaveBeenCalledExactlyOnceWith(
       MINE,
