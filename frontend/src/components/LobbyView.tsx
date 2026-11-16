@@ -10,6 +10,7 @@ import { isVisibleInMyActiveCampaigns } from '../utils/gameOverHelpers';
 import { VersionBadge } from './header/VersionBadge';
 import styles from './LobbyView.module.css';
 import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
+import { GameBrowser } from './lobby/GameBrowser';
 import { useHostGameForm } from './lobby/hooks/useHostGameForm';
 import { useJoinWithCodeForm } from './lobby/hooks/useJoinWithCodeForm';
 import { JoinWithCodeCard } from './lobby/JoinWithCodeCard';
@@ -17,8 +18,6 @@ import { LobbyActionRow } from './lobby/LobbyActionRow';
 import { LobbyFormDialog } from './lobby/LobbyFormDialog';
 import { LobbyHero } from './lobby/LobbyHero';
 import { MyGamesSection } from './lobby/MyGamesSection';
-import { OpenLobbiesSection } from './lobby/OpenLobbiesSection';
-import { PasscodePromptModal } from './lobby/PasscodePromptModal';
 import { PrivateCampaignCreatedModal } from './lobby/PrivateCampaignCreatedModal';
 
 interface LobbyViewProps {
@@ -70,18 +69,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   });
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // Modal prompt when clicking a private game slot in the list
-  const [passcodeModalTarget, setPasscodeModalTarget] = useState<{
-    game: MultiplayerGameSummary;
-    power: Power;
-  } | null>(null);
-  const [enteredModalPasscode, setEnteredModalPasscode] = useState('');
-  const [passcodeModalError, setPasscodeModalError] = useState<string | null>(
-    null,
-  );
-
-  const [joiningKey, setJoiningKey] = useState<string | null>(null);
-
   const handleCopy = (text: string, fieldId: string) => {
     navigator.clipboard.writeText(text);
     setCopiedField(fieldId);
@@ -90,7 +77,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     }, 2500);
   };
 
-  // Separate games into user's active games (including unwitnessed & <24h grace) vs open multiplayer lobbies
+  // The user's active games (including unwitnessed & <24h grace); public games are in the browser
   const myGames = user
     ? games.filter(
         (g) =>
@@ -99,10 +86,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           ) && isVisibleInMyActiveCampaigns(g, user),
       )
     : [];
-
-  const multiplayerLobbies = games.filter(
-    (g) => !g.is_sandbox && g.status !== 'completed' && !g.winner,
-  );
 
   const handlePowerSlotClick = async (
     game: MultiplayerGameSummary,
@@ -116,49 +99,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       return;
     }
 
-    const isAlreadyClaimedByMe =
-      game.participants && game.participants[power]?.user_id === user.id;
-    const isAlreadyInThisGame = Boolean(
-      user &&
-        Object.values(game.participants || {}).some(
-          (p) => p.user_id === user.id,
-        ),
-    );
-
-    // If private with passcode and user isn't already a participant, ask for passcode!
-    if (game.has_passcode && !isAlreadyClaimedByMe && !isAlreadyInThisGame) {
-      setPasscodeModalTarget({ game, power });
-      setEnteredModalPasscode('');
-      setPasscodeModalError(null);
-      return;
-    }
-
-    const key = `${game.game_id}_${power}`;
-    setJoiningKey(key);
+    // Every game reaching here holds the player's seat, so no passcode is asked for.
     try {
       await onJoinOrEnterGame(game.game_id, power);
     } catch (err) {
       console.error(err);
-    } finally {
-      setJoiningKey(null);
-    }
-  };
-
-  const handlePasscodeModalSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!passcodeModalTarget) return;
-    setPasscodeModalError(null);
-    try {
-      await onJoinOrEnterGame(
-        passcodeModalTarget.game.game_id,
-        passcodeModalTarget.power,
-        enteredModalPasscode.trim(),
-      );
-      setPasscodeModalTarget(null);
-    } catch (err: any) {
-      setPasscodeModalError(
-        err.message || 'Incorrect passcode for this private campaign.',
-      );
     }
   };
 
@@ -194,14 +139,14 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             onOpenSurrenderModal={onOpenSurrenderModal}
           />
 
-          <OpenLobbiesSection
+          <GameBrowser
             user={user}
-            multiplayerLobbies={multiplayerLobbies}
+            myGames={myGames}
+            refreshSignal={games}
             loadingGames={loadingGames}
             onRefreshGames={onRefreshGames}
-            joiningKey={joiningKey}
-            handlePowerSlotClick={handlePowerSlotClick}
-            onOpenSurrenderModal={onOpenSurrenderModal}
+            onOpenAuth={onOpenAuth}
+            onJoinOrEnterGame={onJoinOrEnterGame}
           />
         </div>
       </div>
@@ -240,16 +185,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         handleCopy={handleCopy}
         copiedGameId={copiedField === 'gid'}
         copiedPasscode={copiedField === 'pw'}
-      />
-
-      <PasscodePromptModal
-        passcodeModalTarget={passcodeModalTarget}
-        onClose={() => setPasscodeModalTarget(null)}
-        enteredModalPasscode={enteredModalPasscode}
-        setEnteredModalPasscode={setEnteredModalPasscode}
-        passcodeModalError={passcodeModalError}
-        handlePasscodeModalSubmit={handlePasscodeModalSubmit}
-        joiningKey={joiningKey}
       />
     </div>
   );
