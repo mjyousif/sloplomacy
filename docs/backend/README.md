@@ -9,64 +9,17 @@ The backend service is located in the `backend/` directory. It is built with **F
 ```
 backend/
 ├── main.py                  # FastAPI app instance, CORS/security headers, router inclusion
-├── api/                     # Modular FastAPI routers
-│   ├── games.py             # Match rooms: lobby list, creation, loading, deletion, saving a sandbox
-│   ├── lobby.py             # Lobby browser: paged public matches with filters, and the caller's own games
-│   ├── seats.py             # Seats: joining/claiming, leaving, surrendering, picking the active power
-│   ├── orders.py            # Single order submission, batch atomic updates, confirm-all, clear-all
-│   ├── turns.py             # Finalization, turn adjudication, phase timer votes and extensions
-│   ├── sandbox.py           # Isolated sandbox mode ("War Room"), hypothetical simulation, AI order generation
-│   ├── admin.py             # Administrator turn controls (status, rollback, jumps, unfinalize-all, test seed)
-│   ├── admin_units.py       # Administrator board overrides (unit spawner/teleport/destroy, ownership)
-│   ├── history.py           # Read-only turn history: resolved phases with every power's orders and outcomes
-│   ├── press.py             # Press (chat): the public box and private threads of a match, signed or anonymous
-│   └── websocket.py         # Real-time WebSockets for turn state updates and lobby room events
-├── domain/                  # Core Pydantic domain models & schemas
-│   ├── board.py             # Power, UnitType, ProvinceType, ProvinceInfo, Unit
-│   ├── orders.py            # OrderType, Order, OrderResolution, SimulationResult
-│   ├── issues.py            # IssueSeverity, IssueCode, ValidationIssue
-│   ├── game_state.py        # GameState, PhaseTimer, turn history, seats and lobby summaries
-│   ├── press.py             # PressMessage (stored), PressMessageView (what one player sees), PressFeed
-│   └── requests.py          # Request/response bodies (incl. GameBootstrapResponse) and WebSocket messages
-├── engine/                  # Authoritative rules & simulation engine
+├── api/                     # Domain-partitioned FastAPI routers (games, lobby, seats, orders, turns, sandbox, admin, history, press, websocket)
+├── domain/                  # Core Pydantic domain models & schemas (board, orders, issues, game state, press, request/WS DTOs)
+├── engine/                  # Authoritative rules & simulation engine (phase timer, tactical AI, order/default helpers)
 │   ├── adjudicator/         # DATC turn adjudication over python 'diplomacy', one module per phase
-│   │   ├── resolver.py      # create_diplomacy_game, compute_current_builds, adjudicate_turn
-│   │   ├── translator.py    # Order and phase name <-> engine string conversion
-│   │   ├── context.py       # ResolutionContext shared by the phase modules
-│   │   ├── movement.py      # Movement: engine orders, strengths, dislodgements
-│   │   ├── retreats.py      # Retreats: engine orders and where each unit went
-│   │   └── adjustments.py   # Builds, disbands, waivers and civil disorder disbands
-│   ├── validator/           # Pre-flight tactical blunder checker (Movement, Retreats, Builds)
-│   │   ├── orchestrator.py  # validate_orders: runs the phase's checks in a fixed order
-│   │   ├── issues.py        # IssueCollector: numbers issues and filters by power
-│   │   ├── retreats.py      # Retreat destinations, retreat self-bounces
-│   │   ├── adjustments.py   # Build and disband quotas
-│   │   ├── legality.py      # Movement, per unit: legality, supports, convoys
-│   │   ├── diagnostics.py   # Movement, across units: self-bounces and direct swaps
-│   │   └── convoys.py       # has_active_convoy_chain
-│   ├── reachability/        # Authoritative move, convoy chain and support options per unit
-│   │   ├── __init__.py      # compute_unit_options orchestrator (Movement, Retreats, Adjustments)
-│   │   ├── moves.py         # Direct adjacent moves and retreat destination codes
-│   │   ├── sea_graph.py     # Sea-zone connectivity tables and Menger simple-path routing
-│   │   ├── convoys.py       # Army active/potential convoys and fleet direct/chained options
-│   │   └── supports.py      # Legal support options (hold and move) per unit
-│   ├── topology/            # Europe 1901 map
-│   │   ├── provinces.py     # Province records, adjacencies & coasts, 1901 units and ownership (data)
-│   │   └── graph.py         # Movement, support & convoy reachability rules, coast parsing
-│   ├── phase_timer.py       # Multiplayer turn clock rules: votes, pausing, extensions & deadlines
-│   ├── ai.py                # Authoritative Diplomacy Tactical AI engine (DATC-compliant heuristics)
-│   └── order_utils.py       # Civil disorder rules, default orders, and build/disband calculations
-├── storage/                 # Persistence layer & authoritative in-memory state store
-│   ├── store.py             # Global room dictionaries (GAMES, GAME_SUMMARIES, etc.) & lifecycle helpers
-│   ├── lobby.py             # Which games the public lobby lists, a player's own games, browse filters & paging
-│   └── supabase.py          # Supabase PostgreSQL PostgREST upsert & read-through cache
-├── security/                # Authentication, authorization, and viewer secrecy
-│   ├── auth.py              # Supabase JWT token verification (HS256/ES256/JWKS)
-│   └── secrecy.py           # Fog-of-war spectator masking & seat privilege validation
+│   ├── validator/           # Pre-flight tactical blunder & legality checker (Movement, Retreats, Builds)
+│   ├── reachability/        # Authoritative move, convoy chain, and support options per unit
+│   └── topology/            # Europe 1901 province data, adjacencies, coasts, and graph reachability rules
+├── storage/                 # In-memory room store, public/personal lobby queries, press store, and Supabase PostgREST persistence
+├── security/                # Supabase JWT verification, viewer secrecy masking, and press/seat authorization
 ├── scenarios/               # Historical scenario presets & multiplayer lobby seeding
-│   └── presets.py           # SCENARIO_IDS, build_scenario, and default lobby seeds
-├── ws/                      # WebSocket connection management & broadcasts
-│   └── connection_manager.py # Thread-safe connection tracking & JSON message delivery
+├── ws/                      # Thread-safe WebSocket connection tracking & broadcast dispatch
 ├── tests/                   # pytest suites, laid out as described in "Running Backend Tests"
 │   ├── unit/                # One module at a time, mirroring the packages (unit/engine/adjudicator/, ...)
 │   └── integration/         # The app through HTTP and the game socket (integration/api/, ...)
