@@ -3,8 +3,8 @@
   .card {
     max-width: 480px;
     background: #181d26;
-    border: 1px solid #c8963e;
-    border-radius: 12px;
+    border: 1px solid var(--gold-primary);
+    border-radius: var(--radius-xl);
     padding: 24px;
     box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65);
     /* No @keyframes named modalFadeIn exists, so nothing animates; kept as it was. */
@@ -23,8 +23,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #fde68a;
-    font-family: "Cinzel", serif;
+    color: var(--gold-text);
+    font-family: var(--font-display);
     font-size: 1.1rem;
   }
 
@@ -38,10 +38,10 @@
     align-items: center;
     justify-content: center;
     padding: 5px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: 1px solid transparent;
     background: transparent;
-    color: #94a3b8;
+    color: var(--text-muted);
     cursor: pointer;
     transition:
       color 0.15s ease,
@@ -50,9 +50,9 @@
   }
 
   .close:hover:not(:disabled) {
-    color: #f8fafc;
+    color: var(--text-bright);
     background: rgba(255, 255, 255, 0.06);
-    border-color: #334155;
+    border-color: var(--border-slate);
   }
 
   .close:disabled {
@@ -62,7 +62,7 @@
 
   .description {
     font-size: 0.84rem;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     line-height: 1.5;
     margin-bottom: 18px;
   }
@@ -86,10 +86,10 @@
     justify-content: center;
     gap: 8px;
     padding: 11px 18px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+    border-radius: var(--radius-md);
+    background: var(--gold-gradient);
     border: 1px solid #e5b964;
-    color: #14171c;
+    color: var(--surface-page);
     font-size: 0.84rem;
     font-weight: 800;
     cursor: pointer;
@@ -112,10 +112,10 @@
     align-items: center;
     justify-content: center;
     padding: 11px 18px;
-    border-radius: 8px;
-    background: #222836;
+    border-radius: var(--radius-md);
+    background: var(--surface-elevated);
     border: 1px solid #3b4456;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
@@ -127,7 +127,7 @@
 
   .cancel-button:hover:not(:disabled) {
     background: #2d3548;
-    color: #f8fafc;
+    color: var(--text-bright);
     border-color: #4f5b73;
   }
 
@@ -146,16 +146,16 @@
   :global([data-layout="compact"]) .close {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--text-muted);
     cursor: pointer;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
   }
 
   /* The phone layer beats the hover rule above whatever its specificity, so the hover tint is
      restated here. */
   :global([data-layout="compact"]) .close:hover:not(:disabled) {
-    color: #f8fafc;
+    color: var(--text-bright);
     background: rgba(255, 255, 255, 0.06);
-    border-color: #334155;
+    border-color: var(--border-slate);
   }
 }

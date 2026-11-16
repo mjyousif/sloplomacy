@@ -26,12 +26,12 @@
   }
 
   button.admin-mode-card[data-active="true"] {
-    border-color: #dc2626;
+    border-color: var(--danger-strong);
     background: rgba(153, 27, 27, 0.22);
   }
 
   button.admin-mode-card:focus-visible {
-    outline: 2px solid #dc2626;
+    outline: 2px solid var(--danger-strong);
     outline-offset: 1px;
   }
 
@@ -42,7 +42,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: #1a1f28;
     border: 1px solid #353b47;
     color: #e05252;
@@ -51,7 +51,7 @@
   button.admin-mode-card[data-active="true"] .admin-mode-icon {
     background: rgba(185, 28, 28, 0.24);
     border-color: rgba(220, 38, 38, 0.55);
-    color: #fecaca;
+    color: var(--danger-text-soft);
   }
 
   .admin-mode-exit-btn {
@@ -62,19 +62,19 @@
     gap: 6px;
     padding: 7px 12px;
     border-radius: 7px;
-    border: 1px solid #475569;
+    border: 1px solid var(--border-slate-strong);
     background: #232936;
-    color: #f1f5f9;
+    color: var(--text-soft);
     font-family: inherit;
     font-size: 0.76rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--transition-base);
   }
 
   .admin-mode-exit-btn:hover {
-    border-color: #f87171;
+    border-color: var(--danger-light);
     background: rgba(185, 28, 28, 0.24);
-    color: #ffffff;
+    color: var(--color-white);
   }
 }

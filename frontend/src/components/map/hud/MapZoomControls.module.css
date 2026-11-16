@@ -8,7 +8,7 @@
     right: 10px;
     /* EuropeMap sets --docked-bar-h while the docked unit bar is up, so the buttons ride above it. */
     bottom: calc(10px + var(--docked-bar-h, 0px));
-    z-index: 20;
+    z-index: var(--z-sidebar);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -21,10 +21,10 @@
     width: 44px;
     height: 44px;
     padding: 0;
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
     border: 1px solid rgba(148, 163, 184, 0.35);
     background: rgba(15, 23, 42, 0.92);
-    color: #e2e8f0;
+    color: var(--text-primary);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
     touch-action: manipulation;
   }

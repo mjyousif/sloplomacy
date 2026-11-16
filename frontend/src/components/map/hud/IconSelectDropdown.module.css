@@ -5,7 +5,7 @@
   }
 
   .icon-select-dropdown[data-open="true"] {
-    z-index: 95;
+    z-index: var(--z-dropdown);
   }
 
   .icon-select-dropdown-trigger {
@@ -15,10 +15,10 @@
     justify-content: space-between;
     gap: 8px;
     padding: 6px 8px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: 1px solid #3b4456;
-    background: #131720;
-    color: #f8fafc;
+    background: var(--surface-deep);
+    color: var(--text-bright);
     font-size: 0.76rem;
     font-weight: 500;
     cursor: pointer;
@@ -29,13 +29,13 @@
   }
 
   .icon-select-dropdown-trigger:hover:not(:disabled) {
-    border-color: #64748b;
+    border-color: var(--text-dim);
   }
 
   .icon-select-dropdown-trigger:disabled {
     background: #1a202c;
     border-color: #2b3342;
-    color: #64748b;
+    color: var(--text-dim);
     opacity: 0.55;
     cursor: not-allowed;
   }
@@ -48,12 +48,12 @@
   }
 
   .icon-select-dropdown-placeholder {
-    color: #94a3b8;
+    color: var(--text-muted);
   }
 
   .icon-select-dropdown-chevron {
     flex-shrink: 0;
-    color: #94a3b8;
+    color: var(--text-muted);
     transition: transform 0.15s ease;
   }
 
@@ -66,12 +66,12 @@
     top: calc(100% + 4px);
     left: 0;
     right: 0;
-    z-index: 95;
+    z-index: var(--z-dropdown);
     max-height: 220px;
     overflow-y: auto;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: 1px solid #3b4456;
-    background: #131720;
+    background: var(--surface-deep);
     padding: 3px;
     display: flex;
     flex-direction: column;
@@ -86,9 +86,9 @@
     gap: 8px;
     padding: 6px 8px;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
     background: transparent;
-    color: #e2e8f0;
+    color: var(--text-primary);
     font-size: 0.75rem;
     font-weight: 500;
     text-align: left;
@@ -97,12 +97,12 @@
 
   .icon-select-dropdown-option:hover {
     background: #1e2636;
-    color: #f8fafc;
+    color: var(--text-bright);
   }
 
   .icon-select-dropdown-option[data-selected="true"] {
     background: rgba(185, 28, 28, 0.24);
-    color: #fecaca;
+    color: var(--danger-text-soft);
     font-weight: 700;
   }
 }

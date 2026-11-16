@@ -12,9 +12,9 @@
     align-items: center;
     gap: 8px;
     padding: 10px 16px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: #1e293b;
-    border: 1px solid #c8963e;
+    border: 1px solid var(--gold-primary);
     color: #fef08a;
     font-size: 0.8rem;
     font-weight: 600;

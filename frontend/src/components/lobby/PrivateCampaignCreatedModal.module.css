@@ -3,16 +3,16 @@
 
   .cred-label {
     font-size: 0.78rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
   .cred-value {
-    font-family: "JetBrains Mono", monospace;
+    font-family: var(--font-mono);
     font-size: 0.95rem;
-    color: #38bdf8;
+    color: var(--info-sky);
     font-weight: 700;
   }
 
@@ -22,13 +22,13 @@
     gap: 5px;
     padding: 5px 10px;
     border-radius: 5px;
-    border: 1px solid #38bdf8;
+    border: 1px solid var(--info-sky);
     background: rgba(56, 189, 248, 0.12);
-    color: #38bdf8;
+    color: var(--info-sky);
     font-size: 0.74rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--transition-base);
   }
 
   .cred-copy-btn:hover {

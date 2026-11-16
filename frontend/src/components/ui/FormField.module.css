@@ -8,15 +8,15 @@
   .lobby-field label {
     font-size: 0.75rem;
     font-weight: 700;
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 
   .lobby-field input {
     padding: 9px 12px;
     border-radius: 7px;
     border: 1px solid #3b4456;
-    background: #131720;
-    color: #f8fafc;
+    background: var(--surface-deep);
+    color: var(--text-bright);
     font-size: 0.84rem;
   }
 
@@ -25,10 +25,10 @@
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: rgba(220, 38, 38, 0.15);
-    border: 1px solid #dc2626;
-    color: #fca5a5;
+    border: 1px solid var(--danger-strong);
+    color: var(--danger-text);
     font-size: 0.78rem;
   }
 
@@ -42,7 +42,7 @@
   .passcode-input-wrap .input-icon {
     position: absolute;
     left: 12px;
-    color: #c8963e;
+    color: var(--gold-primary);
     pointer-events: none;
     flex-shrink: 0;
   }
@@ -51,10 +51,10 @@
     width: 100%;
     box-sizing: border-box;
     padding: 11px 14px 11px 38px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border: 1px solid #3b4456;
     background: #0f131a;
-    color: #f8fafc;
+    color: var(--text-bright);
     font-size: 0.9rem;
     transition:
       border-color 0.15s ease,
@@ -63,7 +63,7 @@
 
   .passcode-input-wrap input:focus {
     outline: none;
-    border-color: #c8963e;
+    border-color: var(--gold-primary);
     box-shadow: 0 0 0 3px rgba(200, 150, 62, 0.2);
   }
 

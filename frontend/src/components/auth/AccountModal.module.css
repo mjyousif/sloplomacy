@@ -2,7 +2,7 @@
   .account-field-label {
     font-size: 0.76rem;
     font-weight: 700;
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 
   .account-readonly-value {
@@ -10,17 +10,17 @@
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: rgba(15, 23, 42, 0.5);
     border: 1px dashed #2e3545;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.84rem;
     user-select: text;
   }
 
   .account-readonly-value svg {
     flex-shrink: 0;
-    color: #64748b;
+    color: var(--text-dim);
   }
 
   .account-signout-btn {
@@ -29,10 +29,10 @@
     justify-content: center;
     gap: 7px;
     padding: 9px 14px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: rgba(239, 68, 68, 0.08);
     border: 1px solid rgba(239, 68, 68, 0.35);
-    color: #fca5a5;
+    color: var(--danger-text);
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
@@ -43,7 +43,7 @@
   }
 
   .account-signout-btn:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.16);
+    background: var(--danger-tint);
     border-color: rgba(248, 113, 113, 0.55);
   }
 

@@ -8,7 +8,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 30;
+    z-index: var(--z-header-bar);
     display: flex;
     flex-direction: column;
     background: #171b22;
@@ -61,7 +61,7 @@
     overscroll-behavior: contain;
     border-top: 1px solid #262d3a;
     scrollbar-width: thin;
-    scrollbar-color: #333d4e transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
   :global([data-layout="compact"]) .bottom-sheet-body::-webkit-scrollbar {
@@ -73,12 +73,12 @@
   }
 
   :global([data-layout="compact"]) .bottom-sheet-body::-webkit-scrollbar-thumb {
-    background: #333d4e;
-    border-radius: 4px;
+    background: var(--scrollbar-thumb);
+    border-radius: var(--radius-xs);
   }
 
   :global([data-layout="compact"])
     .bottom-sheet-body::-webkit-scrollbar-thumb:hover {
-    background: #475569;
+    background: var(--border-slate-strong);
   }
 }

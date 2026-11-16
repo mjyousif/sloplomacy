@@ -3,7 +3,7 @@
     width: 100%;
     max-width: 100%;
     margin: 8px 0;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border: 1px solid #2e3848;
     background: #171c26;
     overflow: visible;
@@ -31,7 +31,7 @@
   .admin-inspector-divider {
     width: 100%;
     border: none;
-    border-top: 1px solid #334155;
+    border-top: 1px solid var(--border-slate);
     margin: 2px 0;
   }
 
@@ -47,7 +47,7 @@
     gap: 5px;
     font-size: 0.78rem;
     font-weight: 700;
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 
   .admin-inspector-unit-header {
@@ -82,9 +82,9 @@
     gap: 4px;
     padding: 3px 8px;
     border-radius: 5px;
-    border: 1px solid #ef4444;
+    border: 1px solid var(--danger-primary);
     background: rgba(239, 68, 68, 0.18);
-    color: #fca5a5;
+    color: var(--danger-text);
     font-size: 0.7rem;
     font-weight: 700;
     cursor: pointer;
@@ -106,7 +106,7 @@
   .admin-inspector-sublabel {
     font-size: 0.72rem;
     font-weight: 600;
-    color: #94a3b8;
+    color: var(--text-muted);
   }
 
   .admin-inspector-row {
@@ -117,10 +117,10 @@
 
   .admin-order-icon {
     flex-shrink: 0;
-    color: #94a3b8;
+    color: var(--text-muted);
   }
 
   .admin-order-option[data-selected="true"] .admin-order-icon {
-    color: #fecaca;
+    color: var(--danger-text-soft);
   }
 }

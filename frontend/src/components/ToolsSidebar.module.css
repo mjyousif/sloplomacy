@@ -10,7 +10,7 @@
     border-right: 1px solid #282f3d;
     display: flex;
     flex-direction: column;
-    z-index: 20;
+    z-index: var(--z-sidebar);
     transition:
       width 0.18s cubic-bezier(0.4, 0, 0.2, 1),
       min-width 0.18s cubic-bezier(0.4, 0, 0.2, 1);
@@ -54,7 +54,7 @@
   }
 
   .tools-header-title h3 {
-    font-family: "Cinzel", serif;
+    font-family: var(--font-display);
     font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -68,7 +68,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: thin;
-    scrollbar-color: #333d4e transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
   .tools-sidebar-content::-webkit-scrollbar {
@@ -76,8 +76,8 @@
   }
 
   .tools-sidebar-content::-webkit-scrollbar-thumb {
-    background: #333d4e;
-    border-radius: 4px;
+    background: var(--scrollbar-thumb);
+    border-radius: var(--radius-xs);
   }
 
   .rail-group {
@@ -89,7 +89,7 @@
 
   button.rail-active-glow[data-active="true"] {
     background: #0284c7;
-    color: #ffffff;
+    color: var(--color-white);
     box-shadow: 0 0 10px rgba(14, 165, 233, 0.6);
   }
 }
