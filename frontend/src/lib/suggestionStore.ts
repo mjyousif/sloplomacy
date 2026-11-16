@@ -54,7 +54,12 @@ export const suggestionStore = {
   /** Starts writing a suggestion to a thread. It starts empty. */
   startDraft(members: Power[], turn: string, anonymous = false): void {
     set({
-      draft: { members: [...members], turn, anonymous, orders: {} },
+      draft: {
+        members: [...members],
+        turn,
+        orders: {},
+        ...(anonymous ? { anonymous: true } : {}),
+      },
       viewing: null,
     });
   },
