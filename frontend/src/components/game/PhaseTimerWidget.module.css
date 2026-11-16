@@ -34,8 +34,7 @@
   }
 
   .phase-timer-clock {
-    font-family:
-      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--font-mono);
     font-size: 1.9rem;
     font-weight: 700;
     line-height: 1;
@@ -43,7 +42,7 @@
   }
 
   .phase-timer-clock[data-low="true"] {
-    color: #f87171;
+    color: var(--danger-light);
   }
 
   .phase-timer-options {
@@ -63,7 +62,7 @@
     color: #f5e6c8;
     background: rgba(120, 83, 34, 0.25);
     border: 1px solid #785322;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
   }
 
@@ -109,19 +108,18 @@
     top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 20;
+    z-index: var(--z-sidebar);
     display: inline-flex;
     align-items: center;
     gap: 6px;
     min-height: 40px;
     padding: 0 14px;
     border: 1px solid #785322;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: rgba(20, 11, 7, 0.94);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-popover);
     color: #f5e6c8;
-    font-family:
-      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--font-mono);
     font-size: 0.9rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
@@ -130,7 +128,7 @@
 
   :global([data-layout="compact"]) .phase-timer-pill[data-low="true"] {
     border-color: #b91c1c;
-    color: #f87171;
+    color: var(--danger-light);
   }
 
   /* In Hypothetical Mode the real clock keeps running; the full widget says so. */
@@ -138,7 +136,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #f59e0b;
+    background: var(--amber-primary);
   }
 
   :global([data-layout="compact"]) .phase-timer-widget {

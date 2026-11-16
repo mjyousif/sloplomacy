@@ -1,8 +1,8 @@
 @layer components {
   .sanity-modal-card {
     max-width: 620px;
-    background: #1c212b;
-    border: 2px solid #f59e0b;
+    background: var(--surface-card-alt);
+    border: 2px solid var(--amber-primary);
     border-radius: 14px;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75);
     overflow: hidden;
@@ -34,10 +34,10 @@
   .sanity-hazard-badge {
     width: 44px;
     height: 44px;
-    border-radius: 10px;
-    background: rgba(245, 158, 11, 0.2);
-    border: 1px solid #f59e0b;
-    color: #fbbf24;
+    border-radius: var(--radius-lg);
+    background: var(--amber-tint);
+    border: 1px solid var(--amber-primary);
+    color: var(--amber-text);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -48,30 +48,30 @@
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.1em;
-    color: #fbbf24;
+    color: var(--amber-text);
   }
 
   .sanity-main-title {
-    font-family: "Cinzel", serif;
+    font-family: var(--font-display);
     font-size: 1.12rem;
     font-weight: 800;
-    color: #f8fafc;
+    color: var(--text-bright);
     margin-top: 2px;
   }
 
   .sanity-close-x {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--text-muted);
     cursor: pointer;
   }
 
   .sanity-summary-banner {
     padding: 12px 22px;
-    background: #161a22;
+    background: var(--surface-subtle);
     border-bottom: 1px solid #2b3242;
     font-size: 0.83rem;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     line-height: 1.45;
   }
 
@@ -88,13 +88,13 @@
     align-items: flex-start;
     gap: 12px;
     padding: 12px 14px;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     background: #242a36;
     border: 1px solid #394256;
   }
 
   .sanity-issue-item[data-severity="warning"] {
-    border-left: 4px solid #f59e0b;
+    border-left: 4px solid var(--amber-primary);
   }
 
   .sanity-issue-item[data-severity="info"] {
@@ -102,12 +102,12 @@
   }
 
   .sanity-issue-item[data-severity="error"] {
-    border-left: 4px solid #ef4444;
+    border-left: 4px solid var(--danger-primary);
   }
 
   .sanity-issue-icon {
     margin-top: 2px;
-    color: #fbbf24;
+    color: var(--amber-text);
   }
 
   .sanity-issue-item[data-severity="info"] .sanity-issue-icon {
@@ -115,7 +115,7 @@
   }
 
   .sanity-issue-item[data-severity="error"] .sanity-issue-icon {
-    color: #f87171;
+    color: var(--danger-light);
   }
 
   .sanity-issue-content {
@@ -130,15 +130,15 @@
   }
 
   .sanity-code-pill {
-    font-family: "JetBrains Mono", monospace;
+    font-family: var(--font-mono);
     font-size: 0.64rem;
     font-weight: 700;
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
   }
 
   .sanity-code-pill[data-severity="warning"] {
-    background: rgba(245, 158, 11, 0.2);
+    background: var(--amber-tint);
     color: #fcd34d;
   }
 
@@ -149,17 +149,17 @@
 
   .sanity-code-pill[data-severity="error"] {
     background: rgba(239, 68, 68, 0.25);
-    color: #fca5a5;
+    color: var(--danger-text);
   }
 
   .sanity-issue-title {
     font-size: 0.88rem;
-    color: #f8fafc;
+    color: var(--text-bright);
   }
 
   .sanity-issue-message {
     font-size: 0.78rem;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     line-height: 1.4;
   }
 
@@ -168,10 +168,10 @@
     align-items: center;
     gap: 5px;
     padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid #475569;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-slate-strong);
     background: #1b2029;
-    color: #e2e8f0;
+    color: var(--text-primary);
     font-size: 0.73rem;
     font-weight: 600;
     cursor: pointer;
@@ -189,16 +189,16 @@
     justify-content: flex-end;
     gap: 12px;
     padding: 15px 22px;
-    background: #161a22;
+    background: var(--surface-subtle);
     border-top: 1px solid #2d3545;
   }
 
   .sanity-back-btn {
     padding: 10px 18px;
-    border-radius: 8px;
-    border: 1px solid #64748b;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--text-dim);
     background: #283140;
-    color: #ffffff;
+    color: var(--color-white);
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
@@ -213,10 +213,14 @@
     align-items: center;
     gap: 7px;
     padding: 10px 18px;
-    border-radius: 8px;
-    border: 1px solid #f59e0b;
-    background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
-    color: #ffffff;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--amber-primary);
+    background: linear-gradient(
+      180deg,
+      var(--amber-hover) 0%,
+      var(--amber-deep) 100%
+    );
+    color: var(--color-white);
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
@@ -230,7 +234,7 @@
   .admin-warning-intro {
     margin: 0 0 12px;
     font-size: 0.84rem;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     line-height: 1.45;
   }
 
@@ -244,7 +248,7 @@
 
   .admin-warning-entry-card {
     padding: 10px 14px;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     border: 1px solid rgba(239, 68, 68, 0.4);
     background: rgba(127, 29, 29, 0.18);
   }
@@ -256,12 +260,12 @@
     gap: 8px;
     margin-bottom: 6px;
     font-size: 0.74rem;
-    color: #fca5a5;
+    color: var(--danger-text);
   }
 
   .admin-warning-turn-badge {
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: rgba(239, 68, 68, 0.25);
     color: #fee2e2;
     font-weight: 700;
@@ -269,14 +273,14 @@
 
   .admin-warning-time {
     margin-left: auto;
-    color: #94a3b8;
+    color: var(--text-muted);
   }
 
   .admin-warning-summary-list {
     margin: 0;
     padding-left: 18px;
     font-size: 0.8rem;
-    color: #f8fafc;
+    color: var(--text-bright);
     line-height: 1.45;
   }
 }

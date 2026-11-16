@@ -9,7 +9,7 @@
     background: linear-gradient(180deg, #1f242d 0%, #171b22 100%);
     border-bottom: 1px solid #353b47;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
-    z-index: 30;
+    z-index: var(--z-header-bar);
   }
 
   .brand-and-nav {
@@ -30,7 +30,7 @@
   }
 
   .brand-title {
-    font-family: "Cinzel", serif;
+    font-family: var(--font-display);
     font-size: 1.05rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -51,7 +51,7 @@
     align-items: center;
     gap: 6px;
     padding: 5px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     border: 1px solid #d4af37;
     background: rgba(212, 175, 55, 0.14);
     color: #f5e6b3;
@@ -101,7 +101,7 @@
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--transition-base);
   }
 
   .nav-tab-btn:hover {
@@ -112,7 +112,7 @@
   .nav-tab-btn[data-active="true"] {
     background: rgba(200, 150, 62, 0.16);
     border-color: rgba(200, 150, 62, 0.5);
-    color: #fde68a;
+    color: var(--gold-text);
   }
 
   .nav-active-match-pill {
@@ -161,7 +161,7 @@
     align-items: center;
     gap: 6px;
     padding: 5px 11px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: rgba(16, 185, 129, 0.14);
     border: 1px solid rgba(16, 185, 129, 0.4);
     color: #a7f3d0;
@@ -185,10 +185,10 @@
 
   .header-guest-tag {
     padding: 4px 9px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: rgba(148, 163, 184, 0.12);
     border: 1px solid rgba(148, 163, 184, 0.25);
-    color: #cbd5e1;
+    color: var(--text-secondary);
     font-size: 0.72rem;
     font-weight: 600;
     white-space: nowrap;
@@ -204,13 +204,13 @@
     font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--transition-base);
   }
 
   .header-auth-btn[data-variant="signin"] {
-    background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+    background: var(--gold-gradient);
     border: 1px solid #e0b25b;
-    color: #14171c;
+    color: var(--surface-page);
   }
 
   .header-auth-btn[data-variant="signin"]:hover {
@@ -218,13 +218,13 @@
   }
 
   .header-auth-btn[data-variant="signout"] {
-    background: #252b37;
+    background: var(--surface-raised);
     border: 1px solid #3f4859;
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 
   .header-auth-btn[data-variant="signout"]:hover {
     background: #313949;
-    color: #ffffff;
+    color: var(--color-white);
   }
 }

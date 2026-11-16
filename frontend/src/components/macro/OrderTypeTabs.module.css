@@ -23,7 +23,7 @@
     border-radius: 5px;
     border: 1px solid #353f52;
     background: #1d222c;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.68rem;
     font-weight: 700;
     cursor: pointer;
@@ -36,7 +36,7 @@
     height: 22px;
     padding: 0;
     font-size: 0.66rem;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
   }
 
   .order-tab-btn[data-compact="true"]:disabled {
@@ -45,13 +45,13 @@
   }
 
   .order-tab-btn:hover {
-    color: #e2e8f0;
+    color: var(--text-primary);
     background: #282f3d;
   }
 
   .order-tab-btn[data-active="true"] {
-    background: #334155;
-    border-color: #94a3b8;
-    color: #ffffff;
+    background: var(--border-slate);
+    border-color: var(--text-muted);
+    color: var(--color-white);
   }
 }

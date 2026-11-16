@@ -11,27 +11,27 @@
     justify-content: center;
     gap: 8px;
     padding: 9px 16px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     font-size: 0.82rem;
     font-weight: 800;
     cursor: pointer;
   }
 
   .action[data-variant="host"] {
-    background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+    background: var(--gold-gradient);
     border: 1px solid #e5b964;
-    color: #14171c;
+    color: var(--surface-page);
   }
 
   .action[data-variant="host"]:hover {
-    border-color: #fde68a;
+    border-color: var(--gold-text);
     box-shadow: 0 0 12px rgba(229, 185, 100, 0.25);
   }
 
   .action[data-variant="join"] {
-    background: #252b37;
+    background: var(--surface-raised);
     border: 1px solid #3c4454;
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 
   .action[data-variant="join"]:hover {

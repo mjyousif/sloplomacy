@@ -15,7 +15,7 @@
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: #8b99ad;
+    color: var(--text-subtle);
     margin-bottom: 7px;
   }
 
@@ -32,7 +32,7 @@
     border: none;
     padding: 0;
     margin: 0;
-    color: #8b99ad;
+    color: var(--text-subtle);
     font-family: inherit;
     font-size: 0.65rem;
     font-weight: 700;
@@ -43,7 +43,7 @@
   }
 
   .sidebar-section-toggle-btn:hover {
-    color: #e2e8f0;
+    color: var(--text-primary);
   }
 
   .sidebar-section-static-header {
@@ -51,7 +51,7 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    color: #8b99ad;
+    color: var(--text-subtle);
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -68,20 +68,20 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #64748b;
+    color: var(--text-dim);
     transition:
       transform 0.15s ease,
       color 0.15s ease;
   }
 
   .sidebar-section-toggle-btn:hover .sidebar-section-chevron {
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 
   .sidebar-section-icon {
     display: inline-flex;
     align-items: center;
-    color: #94a3b8;
+    color: var(--text-muted);
   }
 
   .sidebar-section-badge-wrap {

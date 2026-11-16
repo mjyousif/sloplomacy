@@ -24,10 +24,10 @@
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: rgba(148, 163, 184, 0.14);
     border: 1px solid rgba(148, 163, 184, 0.28);
-    color: #cbd5e1;
+    color: var(--text-secondary);
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -36,11 +36,11 @@
   .lobby-era-pill[data-variant="gold"] {
     background: rgba(200, 150, 62, 0.16);
     border-color: rgba(200, 150, 62, 0.45);
-    color: #fde68a;
+    color: var(--gold-text);
   }
 
   .lobby-hero-title {
-    font-family: "Cinzel", serif;
+    font-family: var(--font-display);
     font-size: 2rem;
     font-weight: 800;
     color: #f7ebd2;
@@ -49,7 +49,7 @@
   }
 
   .lobby-hero-subtitle {
-    color: #cbd5e1;
+    color: var(--text-secondary);
     font-size: 0.94rem;
     line-height: 1.55;
     margin: 0 0 20px;
@@ -68,14 +68,14 @@
     gap: 9px;
     padding: 11px 20px;
     border-radius: 9px;
-    background: linear-gradient(135deg, #c8963e 0%, #9b6c1b 100%);
+    background: var(--gold-gradient);
     border: 1px solid #e5b964;
-    color: #14171c;
+    color: var(--surface-page);
     font-size: 0.86rem;
     font-weight: 800;
     cursor: pointer;
     box-shadow: 0 4px 14px rgba(200, 150, 62, 0.3);
-    transition: all 0.15s ease;
+    transition: var(--transition-base);
   }
 
   .lobby-primary-cta:hover {
@@ -95,7 +95,7 @@
     font-size: 0.84rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--transition-base);
   }
 
   .lobby-secondary-cta:hover {
@@ -110,7 +110,7 @@
 
   .mode-card {
     padding: 16px;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     background: rgba(15, 18, 24, 0.65);
     border: 1px solid #323946;
   }
@@ -126,14 +126,14 @@
     gap: 8px;
     font-size: 0.8rem;
     font-weight: 700;
-    color: #fde68a;
+    color: var(--gold-text);
     margin-bottom: 10px;
   }
 
   .mode-card ul {
     margin: 0;
     padding-left: 16px;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     font-size: 0.78rem;
     line-height: 1.6;
   }

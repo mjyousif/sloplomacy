@@ -10,7 +10,7 @@
   }
 
   .power-banner-title {
-    font-family: "Cinzel", serif;
+    font-family: var(--font-display);
     font-size: 0.98rem;
     font-weight: 800;
     color: #f8eed9;
@@ -21,7 +21,7 @@
 
   .power-banner-sub {
     font-size: 0.73rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     margin-top: 2px;
   }
 
@@ -40,14 +40,14 @@
     align-items: center;
     gap: 5px;
     padding: 4px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     font-size: 0.7rem;
     font-weight: 700;
   }
 
   .status-badge[data-status="finalized"] {
     background: rgba(16, 185, 129, 0.18);
-    color: #6ee7b7;
+    color: var(--success-text);
     border: 1px solid rgba(16, 185, 129, 0.4);
   }
 
@@ -59,19 +59,19 @@
 
   .status-badge[data-status="drafting"] {
     background: #2d3544;
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 
   .status-badge[data-status="surrendered"] {
     background: rgba(239, 68, 68, 0.15);
     border: 1px solid rgba(239, 68, 68, 0.45);
-    color: #fca5a5;
+    color: var(--danger-text);
   }
 
   .macro-phase-context-box {
     margin-top: 8px;
     padding: 6px 10px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-size: 0.68rem;
     line-height: 1.35;
   }
@@ -97,7 +97,7 @@
     padding: 7px 10px;
     border-bottom: 1px solid #6b5426;
     background: #1b1a16;
-    color: #f59e0b;
+    color: var(--amber-primary);
     font-size: 0.72rem;
   }
 
@@ -111,16 +111,16 @@
   }
 
   .history-lock-label strong {
-    color: #fde68a;
+    color: var(--gold-text);
   }
 
   .history-lock-live-btn {
     flex-shrink: 0;
     padding: 4px 9px;
-    border: 1px solid #b45309;
+    border: 1px solid var(--amber-deep);
     border-radius: 5px;
     background: #78350f;
-    color: #fde68a;
+    color: var(--gold-text);
     font-size: 0.68rem;
     font-weight: 700;
     cursor: pointer;
@@ -153,7 +153,7 @@
   }
 
   :global([data-layout="compact"]) .macro-sheet-power .power-name-text {
-    font-family: "Cinzel", serif;
+    font-family: var(--font-display);
     font-size: 1rem;
     font-weight: 800;
     color: #f8eed9;
@@ -161,7 +161,7 @@
 
   :global([data-layout="compact"]) .macro-sheet-counts {
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--text-muted);
   }
 
   :global([data-layout="compact"]) .macro-sheet-status-row .status-badge {
@@ -176,7 +176,7 @@
     padding: 4px 10px;
     margin: -2px 0 6px;
     border: 1px solid #6b5426;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
   }
 
   :global([data-layout="compact"]) .history-lock-live-btn {

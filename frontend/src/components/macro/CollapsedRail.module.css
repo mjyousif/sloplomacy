@@ -3,7 +3,7 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    border: 2px solid #64748b;
+    border: 2px solid var(--text-dim);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -20,14 +20,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #f87171;
+    color: var(--danger-light);
     background: rgba(185, 28, 28, 0.16);
     margin-bottom: 6px;
   }
 
   .railBadgeStaged {
     background: #b91c1c;
-    color: #ffffff;
+    color: var(--color-white);
     font-size: 0.65rem;
     font-weight: 800;
     width: 20px;
@@ -45,7 +45,7 @@
   }
 
   .railBadgeUnconfirmed {
-    background: #f59e0b;
+    background: var(--amber-primary);
     color: #111827;
     font-size: 0.65rem;
     font-weight: 800;
@@ -59,7 +59,7 @@
 
   .railBadgeClean {
     background: rgba(16, 185, 129, 0.2);
-    color: #34d399;
+    color: var(--success-primary);
     font-size: 0.7rem;
     font-weight: 800;
     width: 20px;
@@ -71,7 +71,7 @@
   }
 
   .railWarnBadge {
-    color: #f87171;
+    color: var(--danger-light);
     margin-top: 6px;
   }
 }

@@ -19,7 +19,7 @@
     border-left: 1px solid #282f3d;
     display: flex;
     flex-direction: column;
-    z-index: 20;
+    z-index: var(--z-sidebar);
     transition:
       width 0.18s cubic-bezier(0.4, 0, 0.2, 1),
       min-width 0.18s cubic-bezier(0.4, 0, 0.2, 1);
@@ -63,7 +63,7 @@
     flex-direction: column;
     gap: 8px;
     scrollbar-width: thin;
-    scrollbar-color: #333d4e transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
   .macro-units-scroll-area::-webkit-scrollbar {
@@ -75,12 +75,12 @@
   }
 
   .macro-units-scroll-area::-webkit-scrollbar-thumb {
-    background: #333d4e;
-    border-radius: 4px;
+    background: var(--scrollbar-thumb);
+    border-radius: var(--radius-xs);
   }
 
   .macro-units-scroll-area::-webkit-scrollbar-thumb:hover {
-    background: #475569;
+    background: var(--border-slate-strong);
   }
 
   .macro-sidebar[data-history-locked="true"] > [inert],

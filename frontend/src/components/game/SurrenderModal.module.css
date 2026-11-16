@@ -1,8 +1,8 @@
 @layer components {
   .surrender-modal-card {
     max-width: 560px;
-    background: #1c212b;
-    border: 2px solid #ef4444;
+    background: var(--surface-card-alt);
+    border: 2px solid var(--danger-primary);
     border-radius: 14px;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
     overflow: hidden;
@@ -33,7 +33,7 @@
   .surrender-hazard-badge {
     width: 44px;
     height: 44px;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -42,44 +42,44 @@
 
   .surrender-hazard-badge[data-variant="flag"] {
     background: rgba(239, 68, 68, 0.2);
-    border: 1px solid #ef4444;
-    color: #f87171;
+    border: 1px solid var(--danger-primary);
+    color: var(--danger-light);
   }
 
   .surrender-hazard-badge[data-variant="trash"] {
-    background: rgba(245, 158, 11, 0.2);
-    border: 1px solid #f59e0b;
-    color: #fbbf24;
+    background: var(--amber-tint);
+    border: 1px solid var(--amber-primary);
+    color: var(--amber-text);
   }
 
   .surrender-overline {
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.1em;
-    color: #f87171;
+    color: var(--danger-light);
   }
 
   .surrender-main-title {
-    font-family: "Cinzel", serif;
+    font-family: var(--font-display);
     font-size: 1.15rem;
     font-weight: 700;
-    color: #f8fafc;
+    color: var(--text-bright);
     margin: 3px 0 0 0;
   }
 
   .surrender-close-x {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--text-muted);
     cursor: pointer;
     padding: 4px;
-    border-radius: 6px;
-    transition: all 0.15s ease;
+    border-radius: var(--radius-sm);
+    transition: var(--transition-base);
   }
 
   .surrender-close-x:hover {
     background: #2d3545;
-    color: #fff;
+    color: var(--color-white);
   }
 
   .surrender-power-banner {
@@ -107,13 +107,13 @@
 
   .surrender-campaign-name {
     font-size: 0.78rem;
-    color: #94a3b8;
+    color: var(--text-muted);
   }
 
   .surrender-body-content {
     padding: 18px 22px;
     font-size: 0.85rem;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     line-height: 1.5;
   }
 
@@ -129,18 +129,18 @@
     align-items: flex-start;
     padding: 10px 14px;
     background: rgba(15, 23, 42, 0.5);
-    border: 1px solid #334155;
-    border-radius: 8px;
+    border: 1px solid var(--border-slate);
+    border-radius: var(--radius-md);
   }
 
   .consequence-item .warn-icon {
-    color: #f87171;
+    color: var(--danger-light);
     margin-top: 2px;
     flex-shrink: 0;
   }
 
   .consequence-item strong {
-    color: #f1f5f9;
+    color: var(--text-soft);
     font-size: 0.82rem;
     display: block;
     margin-bottom: 3px;
@@ -149,7 +149,7 @@
   .consequence-item p {
     margin: 0;
     font-size: 0.76rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     line-height: 1.4;
   }
 
@@ -159,20 +159,20 @@
     justify-content: space-between;
     gap: 12px;
     padding: 15px 22px;
-    background: #161a22;
+    background: var(--surface-subtle);
     border-top: 1px solid #2d3545;
   }
 
   .surrender-cancel-btn {
     padding: 10px 16px;
-    border-radius: 8px;
-    border: 1px solid #64748b;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--text-dim);
     background: #283140;
-    color: #ffffff;
+    color: var(--color-white);
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--transition-base);
   }
 
   .surrender-cancel-btn:hover:not(:disabled) {
@@ -190,18 +190,18 @@
     align-items: center;
     gap: 6px;
     padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid #94a3b8;
-    background: #334155;
-    color: #f8fafc;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--text-muted);
+    background: var(--border-slate);
+    color: var(--text-bright);
     font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--transition-base);
   }
 
   .surrender-secondary-btn:hover:not(:disabled) {
-    background: #475569;
+    background: var(--border-slate-strong);
   }
 
   .surrender-danger-btn {
@@ -209,18 +209,18 @@
     align-items: center;
     gap: 7px;
     padding: 10px 18px;
-    border-radius: 8px;
-    border: 1px solid #ef4444;
-    background: linear-gradient(180deg, #dc2626 0%, #991b1b 100%);
-    color: #ffffff;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--danger-primary);
+    background: linear-gradient(180deg, var(--danger-strong) 0%, #991b1b 100%);
+    color: var(--color-white);
     font-size: 0.82rem;
     font-weight: 800;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--transition-base);
   }
 
   .surrender-danger-btn:hover:not(:disabled) {
-    background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+    background: linear-gradient(180deg, var(--danger-primary) 0%, #b91c1c 100%);
     box-shadow: 0 4px 16px rgba(220, 38, 38, 0.45);
   }
 
@@ -252,7 +252,7 @@
     margin: 0;
     font-size: 0.78rem;
     line-height: 1.45;
-    color: #94a3b8;
+    color: var(--text-muted);
     text-align: center;
   }
 

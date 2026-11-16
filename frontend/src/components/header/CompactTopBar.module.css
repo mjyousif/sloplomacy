@@ -16,7 +16,7 @@
   }
 
   .ws-status-dot[data-online="false"] {
-    background: #f59e0b;
+    background: var(--amber-primary);
     box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
   }
 }
@@ -45,9 +45,9 @@
     width: 44px;
     height: 44px;
     border: none;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     background: transparent;
-    color: #e2e8f0;
+    color: var(--text-primary);
     cursor: pointer;
   }
 
@@ -72,7 +72,7 @@
   }
 
   .compact-brand-title {
-    font-family: "Cinzel", serif;
+    font-family: var(--font-display);
     font-size: 1rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -88,7 +88,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    font-family: "Cinzel", serif;
+    font-family: var(--font-display);
     line-height: 1.15;
     white-space: nowrap;
   }
@@ -102,7 +102,7 @@
   .compact-turn-season {
     font-size: 0.92rem;
     font-weight: 700;
-    color: #fde68a;
+    color: var(--gold-text);
   }
 
   .compact-turn-phase {
@@ -131,23 +131,23 @@
     height: 36px;
     min-width: 44px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     border: 1px solid;
     font-size: 0.88rem;
     font-weight: 700;
   }
 
   .compact-issue-badge[data-status="errors"] {
-    background: rgba(239, 68, 68, 0.16);
-    border-color: #ef4444;
-    color: #fca5a5;
+    background: var(--danger-tint);
+    border-color: var(--danger-primary);
+    color: var(--danger-text);
     cursor: pointer;
   }
 
   .compact-issue-badge[data-status="warnings"] {
     background: rgba(245, 158, 11, 0.16);
-    border-color: #f59e0b;
-    color: #fde68a;
+    border-color: var(--amber-primary);
+    color: var(--gold-text);
     cursor: pointer;
   }
 
@@ -158,9 +158,9 @@
   }
 
   .compact-winner-badge {
-    background: rgba(200, 150, 62, 0.18);
-    border-color: #c8963e;
-    color: #fde68a;
+    background: var(--gold-tint);
+    border-color: var(--gold-primary);
+    color: var(--gold-text);
     cursor: pointer;
   }
 
@@ -171,7 +171,7 @@
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: #f59e0b;
+    background: var(--amber-primary);
     box-shadow: 0 0 0 2px #1d2129;
   }
 
@@ -195,7 +195,7 @@
     padding: 8px;
     background: #1b202b;
     border: 1px solid #3f4859;
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65);
   }
 
@@ -224,24 +224,24 @@
   .compact-menu-status-text strong,
   .compact-menu-user strong {
     font-size: 0.92rem;
-    color: #f1ede4;
+    color: var(--text-ivory);
   }
 
   .compact-menu-status-text span,
   .compact-menu-user span {
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     overflow-wrap: anywhere;
   }
 
   .compact-menu-match {
-    color: #fde68a;
+    color: var(--gold-text);
     font-size: 0.9rem;
     font-weight: 600;
   }
 
   .compact-menu-user {
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 
   .compact-menu-item,
@@ -253,9 +253,9 @@
     min-height: 48px;
     padding: 0 12px;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: transparent;
-    color: #e2e8f0;
+    color: var(--text-primary);
     font: inherit;
     font-size: 0.95rem;
     font-weight: 600;
@@ -270,13 +270,13 @@
 
   .compact-menu-item[data-variant="primary"] {
     margin-top: 4px;
-    background: linear-gradient(135deg, #c8963e 0%, #a87a2c 100%);
-    color: #14171c;
+    background: linear-gradient(135deg, var(--gold-primary) 0%, #a87a2c 100%);
+    color: var(--surface-page);
   }
 
   .compact-menu-item-chevron {
     margin-left: auto;
-    color: #64748b;
+    color: var(--text-dim);
   }
 
   .compact-menu-account {
@@ -287,7 +287,7 @@
 
   .compact-menu-back {
     min-height: 44px;
-    color: #cbd5e1;
+    color: var(--text-secondary);
   }
 
   .compact-display-settings {

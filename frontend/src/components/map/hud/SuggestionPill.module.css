@@ -10,7 +10,7 @@
       2
     );
     transform: translateX(-50%);
-    z-index: 21;
+    z-index: var(--z-map-pill);
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -22,11 +22,11 @@
       var(--map-inset-right, 0px)
     );
     padding: 5px 6px 5px 12px;
-    border: 1px solid #b45309;
-    border-radius: 999px;
+    border: 1px solid var(--amber-deep);
+    border-radius: var(--radius-pill);
     background: rgba(27, 26, 22, 0.95);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-    color: #fde68a;
+    box-shadow: var(--shadow-popover);
+    color: var(--gold-text);
     font-size: 0.78rem;
   }
 
@@ -37,22 +37,22 @@
   }
 
   .label strong {
-    color: #fde68a;
+    color: var(--gold-text);
     font-weight: 700;
   }
 
   .error {
-    color: #fca5a5;
+    color: var(--danger-text);
   }
 
   .take-btn,
   .close-btn {
     flex: none;
     height: 28px;
-    border: 1px solid #b45309;
-    border-radius: 999px;
+    border: 1px solid var(--amber-deep);
+    border-radius: var(--radius-pill);
     background: transparent;
-    color: #fde68a;
+    color: var(--gold-text);
     font: inherit;
     font-weight: 700;
     cursor: pointer;
@@ -60,12 +60,12 @@
 
   .take-btn {
     padding: 0 12px;
-    background: #b45309;
+    background: var(--amber-deep);
     color: #fffbeb;
   }
 
   .take-btn:hover:not(:disabled) {
-    background: #d97706;
+    background: var(--amber-hover);
   }
 
   .take-btn:disabled {
@@ -108,7 +108,7 @@
   }
 
   :global([data-layout="compact"]) .take-btn:hover:not(:disabled) {
-    background: #b45309;
+    background: var(--amber-deep);
   }
 
   :global([data-layout="compact"]) .close-btn {

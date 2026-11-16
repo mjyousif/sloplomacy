@@ -3,7 +3,7 @@
   .card {
     position: relative;
     max-width: 440px;
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
     box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65);
   }
 
@@ -15,10 +15,10 @@
     align-items: center;
     justify-content: center;
     padding: 5px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: 1px solid transparent;
     background: transparent;
-    color: #94a3b8;
+    color: var(--text-muted);
     cursor: pointer;
     transition:
       color 0.15s ease,
@@ -27,9 +27,9 @@
   }
 
   .close:hover {
-    color: #f8fafc;
+    color: var(--text-bright);
     background: rgba(255, 255, 255, 0.06);
-    border-color: #334155;
+    border-color: var(--border-slate);
   }
 }
 
@@ -41,8 +41,8 @@
 
   /* Modal's phone rule sets no hover state, so the wide one is restated here. */
   :global([data-layout="compact"]) .close:hover {
-    color: #f8fafc;
+    color: var(--text-bright);
     background: rgba(255, 255, 255, 0.06);
-    border-color: #334155;
+    border-color: var(--border-slate);
   }
 }

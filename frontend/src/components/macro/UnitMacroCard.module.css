@@ -12,7 +12,7 @@
 
   .unitMacroCard:hover,
   .unitMacroCard.hovered {
-    border-color: #64748b;
+    border-color: var(--text-dim);
     background: #272e3b;
   }
 
@@ -22,11 +22,11 @@
   }
 
   .unitMacroCard.cardWarning {
-    border-left: 4px solid #f59e0b;
+    border-left: 4px solid var(--amber-primary);
   }
 
   .unitMacroCard.cardError {
-    border-left: 4px solid #ef4444;
+    border-left: 4px solid var(--danger-primary);
   }
 
   .unitCardHeader {
@@ -47,30 +47,30 @@
     align-items: center;
     gap: 4px;
     padding: 3px 8px;
-    border-radius: 6px;
-    font-family: "Cinzel", serif;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-display);
     font-size: 0.75rem;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--color-white);
   }
 
   .unitProvTitle {
     font-size: 0.88rem;
     font-weight: 700;
-    color: #f8fafc;
+    color: var(--text-bright);
     display: flex;
     align-items: center;
     gap: 6px;
   }
 
   .unitProvCode {
-    font-family: "JetBrains Mono", monospace;
+    font-family: var(--font-mono);
     font-size: 0.72rem;
     font-weight: 600;
-    color: #94a3b8;
+    color: var(--text-muted);
     background: #1a1e26;
     padding: 1px 5px;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
   }
 
   .unitMiniPill {
@@ -78,29 +78,29 @@
     align-items: center;
     gap: 4px;
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     font-size: 0.68rem;
     font-weight: 700;
   }
 
   .unitMiniPill.confirmed {
     background: rgba(16, 185, 129, 0.16);
-    color: #6ee7b7;
+    color: var(--success-text);
   }
 
   .unitMiniPill.unconfirmed {
     background: rgba(148, 163, 184, 0.15);
-    color: #94a3b8;
+    color: var(--text-muted);
   }
 
   .unitMiniPill.warning {
-    background: rgba(245, 158, 11, 0.2);
-    color: #fbbf24;
+    background: var(--amber-tint);
+    color: var(--amber-text);
   }
 
   .unitMiniPill.error {
     background: rgba(239, 68, 68, 0.22);
-    color: #fca5a5;
+    color: var(--danger-text);
   }
 
   /* Visual Behavior Bar inside Card */
@@ -110,7 +110,7 @@
     gap: 6px;
     padding: 4px 8px;
     background: #191d25;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     margin-bottom: 6px;
     border: 1px solid #2c3342;
     min-width: 0;
@@ -119,11 +119,11 @@
 
   .behaviorVerbTag {
     padding: 1px 6px;
-    border-radius: 4px;
-    font-family: "JetBrains Mono", monospace;
+    border-radius: var(--radius-xs);
+    font-family: var(--font-mono);
     font-size: 0.65rem;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-white);
     letter-spacing: 0.04em;
     flex-shrink: 0;
   }
@@ -131,7 +131,7 @@
   .behaviorTargetText {
     font-size: 0.76rem;
     font-weight: 600;
-    color: #e2e8f0;
+    color: var(--text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -164,7 +164,7 @@
     padding: 2px 5px;
     gap: 3px;
     font-size: 0.68rem;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
     flex-shrink: 0;
   }
 
@@ -173,7 +173,7 @@
     min-width: 0;
     font-size: 0.76rem;
     font-weight: 700;
-    color: #f8fafc;
+    color: var(--text-bright);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -199,7 +199,7 @@
   .unitCompactControls .unitCompactTrigger {
     height: 22px;
     padding: 0 6px;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
     font-size: 0.7rem;
     font-weight: 600;
     gap: 4px;
@@ -232,7 +232,7 @@
   .unitDiagnosticAlert {
     margin-top: 8px;
     padding: 7px 9px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     display: flex;
     align-items: flex-start;
     gap: 7px;
@@ -243,7 +243,7 @@
   .unitDiagnosticAlert.warning {
     background: rgba(245, 158, 11, 0.14);
     border: 1px solid rgba(245, 158, 11, 0.45);
-    color: #fde68a;
+    color: var(--gold-text);
   }
 
   /* A compact row with a warning glows like the warning box above (#271). */
@@ -255,7 +255,7 @@
 
   .unitMacroCard[data-compact="true"][data-status="warning"]:hover,
   .unitMacroCard[data-compact="true"][data-status="warning"].hovered {
-    background: rgba(245, 158, 11, 0.2);
+    background: var(--amber-tint);
     border-color: rgba(245, 158, 11, 0.6);
   }
 
@@ -274,21 +274,21 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
     border: 1px solid rgba(245, 158, 11, 0.45);
     background: rgba(245, 158, 11, 0.12);
-    color: #fbbf24;
+    color: var(--amber-text);
     cursor: pointer;
   }
 
   .unitWarningToggle:hover,
   .unitWarningToggle[data-active="true"] {
     background: rgba(245, 158, 11, 0.28);
-    color: #fde68a;
+    color: var(--gold-text);
   }
 
   .unitWarningToggle:focus-visible {
-    outline: 2px solid #fbbf24;
+    outline: 2px solid var(--amber-text);
     outline-offset: 1px;
   }
 
@@ -299,9 +299,9 @@
   }
 
   .unitDiagnosticAlert.error {
-    background: rgba(239, 68, 68, 0.16);
+    background: var(--danger-tint);
     border: 1px solid rgba(239, 68, 68, 0.5);
-    color: #fecaca;
+    color: var(--danger-text-soft);
   }
 
   .diagIcon {
@@ -312,7 +312,7 @@
   .unitSimResultStrip {
     margin-top: 8px;
     padding: 6px 9px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-size: 0.73rem;
   }
 
