@@ -181,11 +181,12 @@ export const PressSection: React.FC<PressSectionProps> = ({
     return byProvince;
   }, [units]);
 
-  // A suggestion is written for one thread. Picking other countries discards it, so it is
-  // never sent to anyone but the powers it was written for.
+  // A suggestion is written for one thread (and either signed or one-to-one anonymous).
+  // Switching countries or toggling the mask discards it so own-unit orders never leak.
   const draftIsHere =
     draft !== null &&
-    !sendAnonymous &&
+    Boolean(draft.anonymous) === sendAnonymous &&
+    (!sendAnonymous || recipients.length === 1) &&
     draft.members.length === recipients.length &&
     draft.members.every((p) => recipients.includes(p));
   useEffect(() => {
@@ -196,12 +197,12 @@ export const PressSection: React.FC<PressSectionProps> = ({
   const canSuggest =
     suggestTurn !== null &&
     !blocked &&
-    !sendAnonymous &&
+    (!sendAnonymous || recipients.length === 1) &&
     recipients.length > 0 &&
     active.kind === 'thread';
   const startSuggestion = () => {
     if (!draftIsHere && suggestTurn) {
-      suggestionStore.startDraft(recipients, suggestTurn);
+      suggestionStore.startDraft(recipients, suggestTurn, sendAnonymous);
     }
     onProvincePicked?.();
   };

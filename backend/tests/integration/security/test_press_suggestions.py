@@ -189,6 +189,36 @@ def test_suggestion_rules(match):
     assert feed(match, bob_headers(), "GERMANY")["messages"] == []
 
 
+def test_an_anonymous_backchannel_may_suggest_only_the_recipients_units(match):
+    ok = suggest(
+        match,
+        alice_headers(),
+        "FRANCE",
+        [order("GER_A_MUN", target="BUR")],
+        ["GERMANY"],
+        anonymous=True,
+    )
+    assert ok.status_code == 200, ok.text
+    (seen,) = client.get(f"/api/press?game_id={match}&power=GERMANY", headers=bob_headers()).json()[
+        "messages"
+    ]
+    assert seen["sender"] is None
+    assert seen["recipients"] == ["GERMANY"]
+    assert seen["orders"][0]["unit_id"] == "GER_A_MUN"
+
+    # Including the sender's own unit would reveal who sent the backchannel.
+    leaks_sender = suggest(
+        match,
+        alice_headers(),
+        "FRANCE",
+        [order("FRA_A_PAR", target="BUR"), order("GER_A_MUN", target="RUH")],
+        ["GERMANY"],
+        anonymous=True,
+    )
+    assert leaks_sender.status_code == 422
+    assert "FRANCE" in leaks_sender.json()["detail"]
+
+
 def test_moves_can_only_be_suggested_in_a_movement_phase(match):
     GAMES[match].phase = "Retreats"
     refused = suggest(match, alice_headers(), "FRANCE", [order("GER_A_MUN", target="BUR")])

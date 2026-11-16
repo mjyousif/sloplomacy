@@ -10,6 +10,8 @@ export interface SuggestionDraft {
   members: Power[];
   /** The turn it was started in, e.g. "Spring 1901 Movement". It ends when the turn does. */
   turn: string;
+  /** True for an anonymous one-to-one backchannel, where only recipient units may be staged. */
+  anonymous?: boolean;
   /** The suggested orders, by unit id. */
   orders: Record<string, Order>;
 }
@@ -50,8 +52,11 @@ export const suggestionStore = {
   },
 
   /** Starts writing a suggestion to a thread. It starts empty. */
-  startDraft(members: Power[], turn: string): void {
-    set({ draft: { members: [...members], turn, orders: {} }, viewing: null });
+  startDraft(members: Power[], turn: string, anonymous = false): void {
+    set({
+      draft: { members: [...members], turn, anonymous, orders: {} },
+      viewing: null,
+    });
   },
   /** Adds an order to the draft, or replaces the one its unit had. */
   stageOrder(order: Order): void {

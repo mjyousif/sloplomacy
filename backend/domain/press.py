@@ -28,8 +28,9 @@ class PressMessage(BaseModel):
     season: str
     year: int
     phase: str
-    # A suggestion: orders the sender proposes for this turn, for units of the sender and the
-    # recipients. Empty for a plain message. It is only what the sender attached: it is never
+    # A suggestion: orders the sender proposes for this turn. In a signed thread, for units of
+    # the sender and the recipients; in a one-to-one anonymous backchannel, only for units of
+    # the recipient. Empty for a plain message. It is only what the sender attached: it is never
     # read from the game's orders and never written to them.
     orders: list[Order] = Field(default_factory=list)
 
@@ -89,5 +90,5 @@ class PressPostRequest(BaseModel):
     anonymous: bool = False
     # May be empty when `orders` are attached.
     body: str = Field(max_length=MAX_PRESS_BODY_LENGTH * 4)
-    # Suggested orders, for a signed private thread in a Movement phase. See PressMessage.orders.
+    # Suggested orders, for a signed private thread or one-to-one backchannel in a Movement phase.
     orders: list[Order] = Field(default_factory=list)

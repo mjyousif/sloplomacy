@@ -90,24 +90,26 @@ def _suggested_orders(
 ) -> list[Order]:
     """The orders a suggestion will carry, checked and rebuilt from the units they are for.
 
-    A suggestion is a signed message in a private thread, made in a Movement phase, with at most
-    one order for each unit, and only for units of the sender and the recipients. Nothing here
-    reads or writes the game's own orders: the message holds only what the sender attached.
-    Like `POST /api/order`, it checks that the provinces exist, not that the moves are legal.
+    A suggestion is a message in a private thread (signed) or a one-to-one backchannel
+    (anonymous), made in a Movement phase, with at most one order for each unit. Signed threads
+    allow units of the sender and the recipients; anonymous backchannels allow only units of the
+    recipient so the sender is never revealed. Nothing here reads or writes the game's own
+    orders: the message holds only what the sender attached. Like `POST /api/order`, it checks
+    that the provinces exist, not that the moves are legal.
     """
     if not req.orders:
         return []
-    if not recipients or req.anonymous:
+    if not recipients or (req.anonymous and len(recipients) != 1):
         raise HTTPException(
             status_code=422,
-            detail="Moves can only be suggested in a signed private message.",
+            detail="Moves can only be suggested in a signed private message or a one-to-one backchannel.",
         )
     if game.phase != "Movement":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Moves can only be suggested during a Movement phase.",
         )
-    members = {seat, *recipients}
+    members = set(recipients) if req.anonymous else {seat, *recipients}
     units = {u.id: u for u in game.units}
     orders: dict[str, Order] = {}
     for order in req.orders:
@@ -115,10 +117,13 @@ def _suggested_orders(
         if unit is None:
             raise HTTPException(status_code=422, detail=f"There is no unit {order.unit_id}.")
         if unit.power not in members:
-            raise HTTPException(
-                status_code=422,
-                detail=f"{order.unit_id} belongs to {unit.power.value}, who is not in this thread.",
+            detail = (
+                f"{order.unit_id} belongs to {unit.power.value}; anonymous backchannel "
+                "suggestions may only include the recipient's units."
+                if req.anonymous
+                else f"{order.unit_id} belongs to {unit.power.value}, who is not in this thread."
             )
+            raise HTTPException(status_code=422, detail=detail)
         if order.order_type not in SUGGESTABLE_ORDER_TYPES:
             raise HTTPException(
                 status_code=422,
