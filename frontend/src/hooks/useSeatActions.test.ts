@@ -83,7 +83,7 @@ describe('useSeatActions: the Solo Sandbox', () => {
     await act(() => result.current.handleEnterSoloSandbox(click));
     expect(o.confirm).toHaveBeenCalledWith(
       {
-        title: 'Export to Solo Sandbox?',
+        title: 'Open in Local Sandbox?',
         message:
           'Export the current state of "Friday Night" into your Solo Sandbox (overriding your previous draft sandbox). Your submitted match orders stay safe on the server.',
         confirmLabel: 'Export & Switch',

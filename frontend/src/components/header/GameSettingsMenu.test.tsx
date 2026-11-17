@@ -29,7 +29,7 @@ function renderGameSettings(overrides: Partial<GameSettingsMenuProps> = {}) {
 }
 
 describe('GameSettingsMenu', () => {
-  it('shows Game Settings header with country flag beside game name subtext and Export to Solo Sandbox in multiplayer', async () => {
+  it('shows Game Settings header with country flag beside game name subtext and Open in Local Sandbox in multiplayer', async () => {
     const { props } = renderGameSettings();
     const trigger = screen.getByTestId('game-settings-trigger');
     expect(trigger).toHaveTextContent('');
@@ -53,7 +53,7 @@ describe('GameSettingsMenu', () => {
 
     const soloBtn = screen.getByTestId('game-settings-solo-sandbox');
     expect(soloBtn).not.toHaveAttribute('data-active');
-    expect(soloBtn).toHaveTextContent('Export to Solo Sandbox');
+    expect(soloBtn).toHaveTextContent('Open in Local Sandbox');
     expect(
       screen.queryByTestId('game-settings-save-sandbox'),
     ).not.toBeInTheDocument();

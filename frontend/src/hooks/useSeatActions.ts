@@ -175,7 +175,7 @@ export function useSeatActions({
     if (viewMode === 'multiplayer' && activeGameSummary) {
       const confirmLeave = await confirm(
         {
-          title: 'Export to Solo Sandbox?',
+          title: 'Open in Local Sandbox?',
           message: `Export the current state of "${activeGameSummary.name}" into your Solo Sandbox (overriding your previous draft sandbox). Your submitted match orders stay safe on the server.`,
           confirmLabel: 'Export & Switch',
         },

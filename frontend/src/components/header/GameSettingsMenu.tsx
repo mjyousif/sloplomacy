@@ -42,7 +42,7 @@ export interface GameSettingsMenuProps {
 type GameMenuView = 'main' | 'admin';
 
 /**
- * Top-bar "Game Settings" dropdown holding Export to Solo Sandbox (when not already in
+ * Top-bar "Game Settings" dropdown holding Open in Local Sandbox (when not already in
  * Solo Sandbox), Administrator (for the game creator while on a board), and Surrender
  * (in a live multiplayer seat). Trigger displays a flask in Solo Sandbox and a crown in games.
  */
@@ -244,7 +244,7 @@ export function GameSettingsMenu({
                       size={15}
                       className={styles.gameMenuItemIcon}
                     />
-                    <span>Export to Solo Sandbox</span>
+                    <span>Open in Local Sandbox</span>
                   </button>
                 )}
 
