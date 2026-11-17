@@ -115,16 +115,22 @@ describe('TopHeader: brand and navigation', () => {
     expect(screen.queryByTestId('nav-match-pill')).not.toBeInTheDocument();
   });
 
-  it('wires Reset Sandbox... and Return to Previous Game in Solo Sandbox through Game Settings', async () => {
+  it('wires Save Sandbox, Reset Sandbox, and Return to Previous Game in Solo Sandbox through Game Settings', async () => {
+    const onSaveSandbox = vi.fn();
     const onResetSandbox = vi.fn();
     const onReturnToPreviousGame = vi.fn();
     renderHeader({
       viewMode: 'sandbox',
       matchSummary: null,
       isGameCreator: true,
+      onSaveSandbox,
       onResetSandbox,
       onReturnToPreviousGame,
     });
+    await userEvent.click(screen.getByTestId('game-settings-trigger'));
+    await userEvent.click(screen.getByTestId('game-settings-save-sandbox'));
+    expect(onSaveSandbox).toHaveBeenCalledTimes(1);
+
     await userEvent.click(screen.getByTestId('game-settings-trigger'));
     await userEvent.click(screen.getByTestId('game-settings-reset-sandbox'));
     expect(onResetSandbox).toHaveBeenCalledTimes(1);

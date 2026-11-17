@@ -201,8 +201,6 @@ describe('ToolsSidebar wiring', () => {
         'onClearForeignPreMoves',
         () => screen.getByTitle('Discard all foreign pre-moves'),
       ],
-      ['onLoadScenario', () => screen.getByTestId('btn-reset-scenario')],
-      ['onSaveSandboxClick', () => screen.getByTestId('btn-save-sandbox')],
     ];
     for (const [name, find] of buttons) {
       const s = spies();
@@ -293,25 +291,25 @@ describe('ToolsSidebar wiring', () => {
     );
   });
 
-  it('shows the sandbox panel in the mode it is given', () => {
+  it('shows the sandbox panel in the mode it is given without Reset 1901 or Save Sandbox buttons', () => {
     const { rerender } = render(
       <ToolsSidebar {...props({ isMultiplayer: true })} />,
     );
     expect(screen.getByTestId('btn-toggle-sandbox')).toBeInTheDocument();
     expect(screen.queryByTestId('standings-moves-all')).toBeNull();
     expect(screen.queryByTestId('btn-reset-scenario')).toBeNull();
+    expect(screen.queryByTestId('btn-save-sandbox')).toBeNull();
     rerender(
       <ToolsSidebar
         {...props({
-          onSaveSandboxClick: vi.fn(),
           showAllMoves: true,
           onChangeShowAllMoves: vi.fn(),
         })}
       />,
     );
     expect(screen.getByTestId('standings-moves-all')).toBeInTheDocument();
-    expect(screen.getByTestId('btn-reset-scenario')).toBeInTheDocument();
-    expect(screen.getByTestId('btn-save-sandbox')).toBeInTheDocument();
+    expect(screen.queryByTestId('btn-reset-scenario')).toBeNull();
+    expect(screen.queryByTestId('btn-save-sandbox')).toBeNull();
   });
 });
 

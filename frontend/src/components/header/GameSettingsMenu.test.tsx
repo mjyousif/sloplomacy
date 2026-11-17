@@ -50,6 +50,9 @@ describe('GameSettingsMenu', () => {
     expect(soloBtn).not.toHaveAttribute('data-active');
     expect(soloBtn).toHaveTextContent('Export to Solo Sandbox');
     expect(
+      screen.queryByTestId('game-settings-save-sandbox'),
+    ).not.toBeInTheDocument();
+    expect(
       screen.queryByTestId('game-settings-reset-sandbox'),
     ).not.toBeInTheDocument();
 
@@ -89,24 +92,32 @@ describe('GameSettingsMenu', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows Reset Sandbox and Return to Previous Game below Administrator in Solo Sandbox mode when provided', async () => {
+  it('shows Save Sandbox, Reset Sandbox, and Return to Previous Game below Administrator in Solo Sandbox mode when provided', async () => {
+    const onSaveSandbox = vi.fn();
     const onResetSandbox = vi.fn();
     const onReturnToPreviousGame = vi.fn();
     renderGameSettings({
       viewMode: 'sandbox',
       matchSummary: null,
       isGameCreator: true,
+      onSaveSandbox,
       onResetSandbox,
       onReturnToPreviousGame,
     });
     await userEvent.click(screen.getByTestId('game-settings-trigger'));
     const adminBtn = screen.getByTestId('game-settings-admin-settings');
+    const saveBtn = screen.getByTestId('game-settings-save-sandbox');
     const resetBtn = screen.getByTestId('game-settings-reset-sandbox');
     const returnBtn = screen.getByTestId('game-settings-return-previous');
+    expect(saveBtn).toHaveTextContent('Save Sandbox');
     expect(resetBtn).toHaveTextContent('Reset Sandbox');
     expect(returnBtn).toHaveTextContent('Return to Previous Game');
     expect(
-      adminBtn.compareDocumentPosition(resetBtn) &
+      adminBtn.compareDocumentPosition(saveBtn) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      saveBtn.compareDocumentPosition(resetBtn) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
@@ -114,7 +125,12 @@ describe('GameSettingsMenu', () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
 
-    await userEvent.click(resetBtn);
+    await userEvent.click(saveBtn);
+    expect(onSaveSandbox).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('game-settings-panel')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('game-settings-trigger'));
+    await userEvent.click(screen.getByTestId('game-settings-reset-sandbox'));
     expect(onResetSandbox).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('game-settings-panel')).not.toBeInTheDocument();
 

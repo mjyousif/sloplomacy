@@ -5,6 +5,7 @@ import {
   Flag,
   FlaskConical,
   RotateCcw,
+  Save,
   Undo2,
   Wrench,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ export interface GameSettingsMenuProps {
   matchSummary?: MultiplayerGameSummary | null;
   playerPower?: Power | null;
   onEnterSoloSandbox: (event?: React.MouseEvent) => void;
+  onSaveSandbox?: () => void;
   onResetSandbox?: () => void;
   onReturnToPreviousGame?: () => void;
   onSurrenderClick?: () => void;
@@ -48,6 +50,7 @@ export function GameSettingsMenu({
   matchSummary = null,
   playerPower = null,
   onEnterSoloSandbox,
+  onSaveSandbox,
   onResetSandbox,
   onReturnToPreviousGame,
   onSurrenderClick,
@@ -76,6 +79,7 @@ export function GameSettingsMenu({
     !isSoloSandbox && viewMode === 'multiplayer' && Boolean(playerPower);
   const showExportToSandbox = viewMode !== 'lobby' && !isSoloSandbox;
   const showAdmin = viewMode !== 'lobby' && isGameCreator;
+  const showSaveSandbox = isSoloSandbox && Boolean(onSaveSandbox);
   const showResetSandbox = isSoloSandbox && Boolean(onResetSandbox);
   const showReturnPrevious = isSoloSandbox && Boolean(onReturnToPreviousGame);
   const showSurrender =
@@ -231,6 +235,21 @@ export function GameSettingsMenu({
                       size={15}
                       className={styles.gameMenuChevron}
                     />
+                  </button>
+                )}
+
+                {showSaveSandbox && (
+                  <button
+                    type="button"
+                    data-testid="game-settings-save-sandbox"
+                    className={styles.gameMenuItem}
+                    onClick={() => {
+                      closeMenu();
+                      onSaveSandbox?.();
+                    }}
+                  >
+                    <Save size={15} className={styles.gameMenuItemIcon} />
+                    <span>Save Sandbox</span>
                   </button>
                 )}
 

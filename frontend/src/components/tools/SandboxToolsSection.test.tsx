@@ -14,7 +14,6 @@ const props = (
   onToggleSandboxMode: vi.fn(),
   onClearForeignPreMoves: vi.fn(),
   foreignModifiedOrdersCount: 0,
-  onLoadScenario: vi.fn(),
   ...extra,
 });
 
@@ -74,35 +73,9 @@ describe('SandboxToolsSection: foreign moves', () => {
     );
     expect(screen.queryByText(/foreign moves plotted/)).toBeNull();
   });
-});
 
-describe('SandboxToolsSection: scenario', () => {
-  it('resets to the 1901 start and saves, in a solo sandbox', async () => {
-    const onLoadScenario = vi.fn();
-    const onSaveSandboxClick = vi.fn();
-    render(
-      <SandboxToolsSection
-        {...props({ onLoadScenario, onSaveSandboxClick })}
-      />,
-    );
-    await userEvent.click(screen.getByTestId('btn-reset-scenario'));
-    expect(onLoadScenario).toHaveBeenCalledExactlyOnceWith('standard_1901');
-    await userEvent.click(screen.getByTestId('btn-save-sandbox'));
-    expect(onSaveSandboxClick).toHaveBeenCalledTimes(1);
-  });
-
-  it('has no save without a handler', () => {
+  it('does not render Reset 1901 or Save Sandbox buttons inside Hypothetical Mode', () => {
     render(<SandboxToolsSection {...props()} />);
-    expect(screen.getByTestId('btn-reset-scenario')).toBeInTheDocument();
-    expect(screen.queryByTestId('btn-save-sandbox')).toBeNull();
-  });
-
-  it('offers neither in a multiplayer match', () => {
-    render(
-      <SandboxToolsSection
-        {...props({ isMultiplayer: true, onSaveSandboxClick: vi.fn() })}
-      />,
-    );
     expect(screen.queryByTestId('btn-reset-scenario')).toBeNull();
     expect(screen.queryByTestId('btn-save-sandbox')).toBeNull();
   });

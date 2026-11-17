@@ -21,6 +21,7 @@ export interface TopHeaderProps {
   winner: Power | null;
   onBackToLobby: () => void;
   onEnterSoloSandbox: (event?: React.MouseEvent) => void;
+  onSaveSandbox?: () => void;
   onResetSandbox?: () => void;
   onReturnToPreviousGame?: () => void;
   onSurrenderClick?: () => void;
@@ -66,6 +67,7 @@ export function TopHeader({
   winner,
   onBackToLobby,
   onEnterSoloSandbox,
+  onSaveSandbox,
   onResetSandbox,
   onReturnToPreviousGame,
   onSurrenderClick,
@@ -151,6 +153,7 @@ export function TopHeader({
             matchSummary={matchSummary}
             playerPower={playerPower}
             onEnterSoloSandbox={onEnterSoloSandbox}
+            onSaveSandbox={onSaveSandbox}
             onResetSandbox={onResetSandbox}
             onReturnToPreviousGame={onReturnToPreviousGame}
             onSurrenderClick={onSurrenderClick}

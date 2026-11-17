@@ -458,6 +458,7 @@ export function App() {
         handleSignOut={handleSignOut}
         handleBackToLobby={handleBackToLobby}
         handleEnterSoloSandbox={guardedEnterSoloSandbox}
+        onSaveSandbox={handleOpenSaveSandboxModal}
         onResetSandbox={guardedResetSandbox}
         onSwitchToSoloSandbox={guardedSwitchToSoloSandbox}
         onReturnToPreviousGame={guardedReturnToPreviousGame}

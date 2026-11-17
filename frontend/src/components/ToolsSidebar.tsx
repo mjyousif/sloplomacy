@@ -36,8 +36,6 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   onToggleSandboxMode,
   onClearForeignPreMoves,
   foreignModifiedOrdersCount,
-  onLoadScenario,
-  onSaveSandboxClick,
   adminOverrideActive = false,
   variant = 'panel',
   open = false,
@@ -165,9 +163,6 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           onToggleSandboxMode={onToggleSandboxMode}
           onClearForeignPreMoves={onClearForeignPreMoves}
           foreignModifiedOrdersCount={foreignModifiedOrdersCount}
-          onLoadScenario={onLoadScenario}
-          onSaveSandboxClick={onSaveSandboxClick}
-          isMultiplayer={isMultiplayer}
         />
       </div>
 

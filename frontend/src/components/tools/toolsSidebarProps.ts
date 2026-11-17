@@ -35,7 +35,7 @@ export interface ToolsSidebarProps {
   onToggleSandboxMode: () => void;
   onClearForeignPreMoves: () => void;
   foreignModifiedOrdersCount: number;
-  onLoadScenario: (scenarioId: string) => void;
+  onLoadScenario?: (scenarioId: string) => void;
   onSaveSandboxClick?: () => void;
   adminOverrideActive?: boolean;
   /**

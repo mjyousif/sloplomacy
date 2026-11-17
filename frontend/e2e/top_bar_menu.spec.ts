@@ -162,7 +162,9 @@ test.describe('Unified Top Bar Dropdowns', () => {
       await expect(gameTrigger).toHaveAttribute('data-icon', 'flask');
       await expect(gameTrigger).toHaveAttribute('data-solo-sandbox', 'true');
 
-      // Game Settings menu in Solo Sandbox says "Solo Sandbox", omits Export to Solo Sandbox and Surrender, and shows Reset Sandbox and Return to Previous Game below Administrator
+      // Game Settings menu in Solo Sandbox says "Solo Sandbox", omits Export to Solo Sandbox and Surrender, and shows Save Sandbox, Reset Sandbox, and Return to Previous Game below Administrator
+      await expect(page.getByTestId('btn-reset-scenario')).toHaveCount(0);
+      await expect(page.getByTestId('btn-save-sandbox')).toHaveCount(0);
       await gameTrigger.click();
       await expect(page.getByTestId('game-settings-subtitle')).toHaveText(
         'Solo Sandbox',
@@ -171,6 +173,9 @@ test.describe('Unified Top Bar Dropdowns', () => {
         0,
       );
       await expect(page.getByTestId('game-settings-surrender')).toHaveCount(0);
+      await expect(
+        page.getByTestId('game-settings-save-sandbox'),
+      ).toBeVisible();
       await expect(
         page.getByTestId('game-settings-reset-sandbox'),
       ).toBeVisible();
