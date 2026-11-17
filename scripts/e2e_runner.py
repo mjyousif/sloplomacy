@@ -219,6 +219,8 @@ def run_scenario(
             fe_env = os.environ.copy()
             fe_env["VITE_PORT"] = fe_port
             fe_env["VITE_API_TARGET"] = api_url
+            # The specs start signed out (or seed their own user), so skip the dev auto sign-in.
+            fe_env["VITE_DEV_LOGIN"] = "0"
             frontend_proc = subprocess.Popen(
                 [NPM_CMD, "run", "dev", "--", "--host", fe_host, "--port", fe_port, "--strictPort"],
                 cwd=str(FRONTEND_DIR),

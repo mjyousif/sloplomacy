@@ -103,18 +103,20 @@ export async function authedFetch(
 }
 
 /**
- * Signs in a throwaway local player without a form, for testing on a dev machine. It runs
- * only when `VITE_DEV_LOGIN=1` (the launcher's `--dev-login` flag) on the Vite dev server
- * with Supabase not configured, so a production build never has it. It runs once per
- * browser profile: the player is then kept in `localStorage` like a demo sign-in. Each
- * profile (or incognito window) gets its own id, so each is a different player and can
- * hold its own seat. The backend still decides whether to trust the unsigned token
- * (`ENVIRONMENT=development`).
+ * Signs in a throwaway local player without a form, so a local run can host and join
+ * right away. It is on by default, but only on the Vite dev server with Supabase not
+ * configured, so a production build never has it. `VITE_DEV_LOGIN=0` (the launcher's
+ * `--no-dev-login`) turns it off, to test the signed-out experience, and Vitest never
+ * runs it unless a test sets `MODE` itself. It runs once per browser profile: the player
+ * is then kept in `localStorage` like a demo sign-in. Each profile (or incognito window)
+ * gets its own id, so each is a different player and can hold its own seat. The backend
+ * still decides whether to trust the unsigned token (`ENVIRONMENT=development`).
  */
 function devSignIn(): AuthUser | null {
   if (
     !import.meta.env.DEV ||
-    import.meta.env.VITE_DEV_LOGIN !== '1' ||
+    import.meta.env.MODE === 'test' ||
+    import.meta.env.VITE_DEV_LOGIN === '0' ||
     isSupabaseConfigured
   ) {
     return null;
