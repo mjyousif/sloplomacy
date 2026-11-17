@@ -12,13 +12,11 @@ from engine.topology.graph import split_province_code
 from engine.topology.provinces import PROVINCES
 
 
-def _build_tables() -> (
-    tuple[
-        dict[str, frozenset[str]],
-        dict[str, frozenset[str]],
-        dict[str, tuple[str, ...]],
-    ]
-):
+def _build_tables() -> tuple[
+    dict[str, frozenset[str]],
+    dict[str, frozenset[str]],
+    dict[str, tuple[str, ...]],
+]:
     seas_by_coast: dict[str, set[str]] = {}
     coasts_by_sea: dict[str, set[str]] = {}
     neighbors_by_sea: dict[str, tuple[str, ...]] = {}
