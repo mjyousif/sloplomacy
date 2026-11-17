@@ -76,6 +76,10 @@ test.describe('Unified Top Bar Dropdowns', () => {
       const subtitle = page.getByTestId('game-settings-subtitle');
       await expect(subtitle).toContainText(matchName);
       await expect(subtitle.getByTestId('power-flag-france')).toBeVisible();
+      await expect(page.getByTestId('game-settings-type')).toHaveText(
+        'Live game',
+      );
+      await expect(page.getByTestId('game-settings-type-crown')).toBeVisible();
       await expect(page.getByTestId('game-settings-surrender')).toBeVisible();
       await gameTrigger.click();
 
@@ -169,18 +173,22 @@ test.describe('Unified Top Bar Dropdowns', () => {
       await expect(page.getByTestId('game-settings-subtitle')).toHaveText(
         'Solo Sandbox',
       );
-      await expect(
-        page.getByTestId('game-settings-subtitle-flask'),
-      ).toBeVisible();
+      await expect(page.getByTestId('game-settings-type')).toHaveText(
+        'Local sandbox',
+      );
+      await expect(page.getByTestId('game-settings-type-flask')).toBeVisible();
       await expect(page.getByTestId('game-settings-solo-sandbox')).toHaveCount(
         0,
       );
       await expect(page.getByTestId('game-settings-surrender')).toHaveCount(0);
-      await expect(
-        page.getByTestId('game-settings-save-sandbox'),
-      ).toBeVisible();
+      await expect(page.getByTestId('game-settings-save-sandbox')).toHaveText(
+        'Save Sandbox',
+      );
       await expect(
         page.getByTestId('game-settings-reset-sandbox'),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId('game-settings-delete-sandbox'),
       ).toBeVisible();
       await expect(
         page.getByTestId('game-settings-return-previous'),

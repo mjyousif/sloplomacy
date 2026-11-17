@@ -78,9 +78,13 @@
   }
 
   .game-settings-subtitle {
+    margin: 4px 0 2px;
     display: flex;
     align-items: center;
     gap: 7px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-soft);
   }
 
   .game-settings-subtitle-flag {
@@ -88,9 +92,25 @@
     border-radius: 2px;
   }
 
-  .game-settings-subtitle-flask {
+  .game-settings-type {
+    margin: 0 0 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #2c3342;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  .game-settings-type-flask {
     flex: none;
     color: var(--amber-text);
+  }
+
+  .game-settings-type-crown {
+    flex: none;
+    color: var(--gold-text);
   }
 
   .game-menu-list {

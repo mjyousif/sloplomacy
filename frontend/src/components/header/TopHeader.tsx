@@ -23,6 +23,7 @@ export interface TopHeaderProps {
   onEnterSoloSandbox: (event?: React.MouseEvent) => void;
   onSaveSandbox?: () => void;
   onResetSandbox?: () => void;
+  onDeleteSandbox?: (event?: React.MouseEvent) => void;
   onReturnToPreviousGame?: () => void;
   onSurrenderClick?: () => void;
   isSurrendered?: boolean;
@@ -69,6 +70,7 @@ export function TopHeader({
   onEnterSoloSandbox,
   onSaveSandbox,
   onResetSandbox,
+  onDeleteSandbox,
   onReturnToPreviousGame,
   onSurrenderClick,
   isSurrendered = false,
@@ -155,6 +157,7 @@ export function TopHeader({
             onEnterSoloSandbox={onEnterSoloSandbox}
             onSaveSandbox={onSaveSandbox}
             onResetSandbox={onResetSandbox}
+            onDeleteSandbox={onDeleteSandbox}
             onReturnToPreviousGame={onReturnToPreviousGame}
             onSurrenderClick={onSurrenderClick}
             isSurrendered={isSurrendered}

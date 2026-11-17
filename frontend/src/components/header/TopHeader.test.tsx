@@ -65,9 +65,10 @@ describe('TopHeader: brand and navigation', () => {
     expect(screen.getByTestId('game-settings-subtitle')).toHaveTextContent(
       'Solo Sandbox',
     );
-    expect(
-      screen.getByTestId('game-settings-subtitle-flask'),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId('game-settings-type')).toHaveTextContent(
+      'Local sandbox',
+    );
+    expect(screen.getByTestId('game-settings-type-flask')).toBeInTheDocument();
     expect(
       screen.queryByTestId('game-settings-solo-sandbox'),
     ).not.toBeInTheDocument();
@@ -118,9 +119,10 @@ describe('TopHeader: brand and navigation', () => {
     expect(screen.queryByTestId('nav-match-pill')).not.toBeInTheDocument();
   });
 
-  it('wires Save Sandbox, Reset Sandbox, and Return to Previous Game in Solo Sandbox through Game Settings', async () => {
+  it('wires Save Sandbox, Reset Sandbox, Delete Sandbox, and Return to Previous Game in Solo Sandbox through Game Settings', async () => {
     const onSaveSandbox = vi.fn();
     const onResetSandbox = vi.fn();
+    const onDeleteSandbox = vi.fn();
     const onReturnToPreviousGame = vi.fn();
     renderHeader({
       viewMode: 'sandbox',
@@ -128,6 +130,7 @@ describe('TopHeader: brand and navigation', () => {
       isGameCreator: true,
       onSaveSandbox,
       onResetSandbox,
+      onDeleteSandbox,
       onReturnToPreviousGame,
     });
     await userEvent.click(screen.getByTestId('game-settings-trigger'));
@@ -137,6 +140,10 @@ describe('TopHeader: brand and navigation', () => {
     await userEvent.click(screen.getByTestId('game-settings-trigger'));
     await userEvent.click(screen.getByTestId('game-settings-reset-sandbox'));
     expect(onResetSandbox).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(screen.getByTestId('game-settings-trigger'));
+    await userEvent.click(screen.getByTestId('game-settings-delete-sandbox'));
+    expect(onDeleteSandbox).toHaveBeenCalledTimes(1);
 
     await userEvent.click(screen.getByTestId('game-settings-trigger'));
     await userEvent.click(screen.getByTestId('game-settings-return-previous'));

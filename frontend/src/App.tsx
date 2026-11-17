@@ -386,6 +386,12 @@ export function App() {
     setAdminOverrideActive(false);
     await handleLoadScenario('standard_1901');
   };
+  const guardedDeleteSandbox = async (event?: React.MouseEvent) => {
+    if (!(await directEdit.confirmIfDirty('delete this sandbox'))) return;
+    setAdminModalOpen(false);
+    setAdminOverrideActive(false);
+    await seats.handleDeleteSandbox(event);
+  };
   const guardedSwitchToSoloSandbox = async () => {
     if (!(await directEdit.confirmIfDirty('switch to Solo Sandbox'))) return;
     setAdminModalOpen(false);
@@ -460,6 +466,7 @@ export function App() {
         handleEnterSoloSandbox={guardedEnterSoloSandbox}
         onSaveSandbox={handleOpenSaveSandboxModal}
         onResetSandbox={guardedResetSandbox}
+        onDeleteSandbox={guardedDeleteSandbox}
         onSwitchToSoloSandbox={guardedSwitchToSoloSandbox}
         onReturnToPreviousGame={guardedReturnToPreviousGame}
         onSelectGame={guardedSwitchToGame}

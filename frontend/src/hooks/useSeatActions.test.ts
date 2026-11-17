@@ -376,4 +376,46 @@ describe('useSeatActions: creating and joining', () => {
     });
     expect(result.current.previousGame).toBeNull();
   });
+
+  it('opens the delete modal for a saved sandbox and deletes a local draft after confirmation', async () => {
+    const saved = summary({
+      game_id: 'sbx_saved_1',
+      name: 'Saved Study',
+      is_sandbox: true,
+      is_draft: false,
+    });
+    const savedSeats = renderSeats(
+      makeOptions({ viewMode: 'sandbox', activeGameSummary: saved }),
+    );
+    await act(() => savedSeats.result.current.handleDeleteSandbox());
+    expect(savedSeats.result.current.surrenderModalOpen).toBe(true);
+    expect(savedSeats.result.current.surrenderModalGame?.game_id).toBe(
+      'sbx_saved_1',
+    );
+
+    localStorage.setItem(SOLO_SANDBOX_STORAGE_KEY, 'solo_9');
+    supabase.authedFetch.mockResolvedValue(reply(200, { status: 'deleted' }));
+    const draftOpts = makeOptions({
+      viewMode: 'sandbox',
+      activeGameId: 'solo_9',
+      activeGameSummary: summary({
+        game_id: 'solo_9',
+        is_sandbox: true,
+        is_draft: true,
+      }),
+      confirm: vi.fn(async () => true),
+    });
+    const draftSeats = renderSeats(draftOpts);
+    await act(() => draftSeats.result.current.handleDeleteSandbox());
+    expect(sent()).toEqual({
+      url: '/api/games/solo_9',
+      method: 'DELETE',
+      body: undefined,
+    });
+    expect(localStorage.getItem(SOLO_SANDBOX_STORAGE_KEY)).toBeNull();
+    expect(draftOpts.setViewMode).toHaveBeenCalledWith('lobby');
+    expect(draftOpts.triggerToast).toHaveBeenCalledWith(
+      'Deleted local Solo Sandbox.',
+    );
+  });
 });

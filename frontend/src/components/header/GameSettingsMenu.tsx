@@ -6,13 +6,13 @@ import {
   FlaskConical,
   RotateCcw,
   Save,
+  Trash2,
   Undo2,
   Wrench,
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { MultiplayerGameSummary, Power } from '../../types/diplomacy';
-import { cx } from '../../utils/cx';
 import { AdminSettingsOptions } from '../admin/AdminSettingsMenu';
 import { PowerFlag } from '../ui/PowerFlag';
 import displayStyles from './DisplaySettings.module.css';
@@ -25,6 +25,7 @@ export interface GameSettingsMenuProps {
   onEnterSoloSandbox: (event?: React.MouseEvent) => void;
   onSaveSandbox?: () => void;
   onResetSandbox?: () => void;
+  onDeleteSandbox?: (event?: React.MouseEvent) => void;
   onReturnToPreviousGame?: () => void;
   onSurrenderClick?: () => void;
   isSurrendered?: boolean;
@@ -52,6 +53,7 @@ export function GameSettingsMenu({
   onEnterSoloSandbox,
   onSaveSandbox,
   onResetSandbox,
+  onDeleteSandbox,
   onReturnToPreviousGame,
   onSurrenderClick,
   isSurrendered = false,
@@ -76,12 +78,21 @@ export function GameSettingsMenu({
   const subtitle = isDraftSandbox
     ? 'Solo Sandbox'
     : (matchSummary?.name ?? 'Current Game');
+  const gameTypeLabel = isDraftSandbox
+    ? 'Local sandbox'
+    : isSandbox
+      ? 'Saved sandbox'
+      : 'Live game';
+  const saveSandboxLabel = isDraftSandbox
+    ? 'Save Sandbox'
+    : 'Save as New Sandbox';
   const showPowerFlag =
     !isSandbox && viewMode === 'multiplayer' && Boolean(playerPower);
   const showExportToSandbox = viewMode !== 'lobby' && !isSandbox;
   const showAdmin = viewMode !== 'lobby' && isGameCreator;
   const showSaveSandbox = isSandbox && Boolean(onSaveSandbox);
   const showResetSandbox = isSandbox && Boolean(onResetSandbox);
+  const showDeleteSandbox = isSandbox && Boolean(onDeleteSandbox);
   const showReturnPrevious = isSandbox && Boolean(onReturnToPreviousGame);
   const showSurrender =
     viewMode === 'multiplayer' && Boolean(onSurrenderClick) && !isSurrendered;
@@ -178,31 +189,39 @@ export function GameSettingsMenu({
                 Game Settings
               </h2>
               <p
-                className={cx(
-                  displayStyles.displaySettingsNote,
-                  styles.gameSettingsSubtitle,
-                )}
+                className={styles.gameSettingsSubtitle}
                 data-testid="game-settings-subtitle"
+              >
+                {showPowerFlag && playerPower && (
+                  <PowerFlag
+                    power={playerPower}
+                    width={16}
+                    height={11}
+                    className={styles.gameSettingsSubtitleFlag}
+                  />
+                )}
+                <span>{subtitle}</span>
+              </p>
+              <p
+                className={styles.gameSettingsType}
+                data-testid="game-settings-type"
               >
                 {isSandbox ? (
                   <FlaskConical
                     size={13}
-                    className={styles.gameSettingsSubtitleFlask}
-                    data-testid="game-settings-subtitle-flask"
+                    className={styles.gameSettingsTypeFlask}
+                    data-testid="game-settings-type-flask"
                     aria-hidden="true"
                   />
                 ) : (
-                  showPowerFlag &&
-                  playerPower && (
-                    <PowerFlag
-                      power={playerPower}
-                      width={16}
-                      height={11}
-                      className={styles.gameSettingsSubtitleFlag}
-                    />
-                  )
+                  <Crown
+                    size={13}
+                    className={styles.gameSettingsTypeCrown}
+                    data-testid="game-settings-type-crown"
+                    aria-hidden="true"
+                  />
                 )}
-                <span>{subtitle}</span>
+                <span>{gameTypeLabel}</span>
               </p>
 
               <div className={styles.gameMenuList}>
@@ -260,7 +279,7 @@ export function GameSettingsMenu({
                     }}
                   >
                     <Save size={15} className={styles.gameMenuItemIcon} />
-                    <span>Save Sandbox</span>
+                    <span>{saveSandboxLabel}</span>
                   </button>
                 )}
 
@@ -276,6 +295,22 @@ export function GameSettingsMenu({
                   >
                     <RotateCcw size={15} className={styles.gameMenuItemIcon} />
                     <span>Reset Sandbox</span>
+                  </button>
+                )}
+
+                {showDeleteSandbox && (
+                  <button
+                    type="button"
+                    data-testid="game-settings-delete-sandbox"
+                    data-variant="danger"
+                    className={styles.gameMenuItem}
+                    onClick={(event) => {
+                      closeMenu();
+                      onDeleteSandbox?.(event);
+                    }}
+                  >
+                    <Trash2 size={15} className={styles.gameMenuItemIcon} />
+                    <span>Delete Sandbox</span>
                   </button>
                 )}
 

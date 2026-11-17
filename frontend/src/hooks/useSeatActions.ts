@@ -14,6 +14,7 @@ import {
   readStoredSoloSandboxId,
   writeStoredSoloSandboxId,
 } from '../utils/soloSandboxStorage';
+import { confirmAndDeleteLocalSandbox } from './seatActionHelpers';
 import type { AuthModalTab } from './useAuthSession';
 
 const API_BASE = '/api';
@@ -457,6 +458,21 @@ export function useSeatActions({
     );
   };
 
+  const handleDeleteSandbox = async (event?: React.MouseEvent) => {
+    if (activeGameSummary && !activeGameSummary.is_draft) {
+      handleOpenSurrenderModal(activeGameSummary, lockedPower ?? 'FRANCE');
+      return;
+    }
+    if (!requireRealBoard('delete this sandbox')) return;
+    if (!(await confirmAndDeleteLocalSandbox({ activeGameId, confirm, event })))
+      return;
+    setViewMode('lobby');
+    setLockedPower(null);
+    setActiveGameSummary(null);
+    triggerToast('Deleted local Solo Sandbox.');
+    await fetchGamesList();
+  };
+
   return {
     surrenderModalOpen,
     setSurrenderModalOpen,
@@ -468,6 +484,7 @@ export function useSeatActions({
     handleEnterSoloSandbox,
     handleSwitchToSoloSandbox,
     handleReturnToPreviousGame,
+    handleDeleteSandbox,
     handleCreateMultiplayerGame,
     handleJoinOrEnterMultiplayerGame,
     handleOpenSurrenderModal,
