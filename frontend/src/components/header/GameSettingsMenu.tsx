@@ -186,7 +186,9 @@ export function GameSettingsMenu({
             </div>
           ) : (
             <div key="main" className={styles.gameMenuView} data-view="main">
-              <h2 className={displayStyles.displaySettingsTitle}>
+              <h2
+                className={`${displayStyles.displaySettingsTitle} ${styles.gameSettingsTitle}`}
+              >
                 Game Settings
               </h2>
               {subtitle && (
@@ -197,7 +199,7 @@ export function GameSettingsMenu({
                   {showPowerFlag && playerPower && (
                     <PowerFlag
                       power={playerPower}
-                      width={16}
+                      width={15}
                       height={11}
                       className={styles.gameSettingsSubtitleFlag}
                     />

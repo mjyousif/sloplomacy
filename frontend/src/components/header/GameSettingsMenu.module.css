@@ -126,11 +126,16 @@
     border-radius: var(--radius-xs);
   }
 
+  .game-settings-title {
+    padding: 0 11px;
+  }
+
   .game-settings-subtitle {
     margin: 4px 0 6px;
+    padding: 0 11px;
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 10px;
     font-size: 0.72rem;
     font-weight: 600;
     color: var(--text-soft);
@@ -143,22 +148,24 @@
 
   .game-settings-type {
     margin: 4px 0 10px;
-    padding-bottom: 10px;
+    padding: 0 11px 10px;
     border-bottom: 1px solid #2c3342;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 11px;
     font-size: 0.72rem;
     color: var(--text-muted);
   }
 
   .game-settings-type-flask {
     flex: none;
+    margin: 0 1px;
     color: var(--amber-text);
   }
 
   .game-settings-type-crown {
     flex: none;
+    margin: 0 1px;
     color: var(--gold-text);
   }
 
