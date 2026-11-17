@@ -268,3 +268,29 @@ describe('LobbyView my games', () => {
     );
   });
 });
+
+describe('LobbyView dev sign-in shortcut', () => {
+  const KEY = 'diplomacy_1901_local_auth_user';
+  beforeEach(() => localStorage.removeItem(KEY));
+
+  it('signs in a dev player after three clicks on the footer tagline', () => {
+    setup({ user: null });
+    const tagline = screen.getByText(/1901 Tactical Engine/);
+    fireEvent.click(tagline);
+    fireEvent.click(tagline);
+    expect(localStorage.getItem(KEY)).toBeNull();
+    fireEvent.click(tagline);
+    expect(JSON.parse(localStorage.getItem(KEY) ?? '{}').id).toMatch(
+      /^local_dev_/,
+    );
+  });
+
+  it('leaves an already signed-in player alone', () => {
+    setup();
+    const tagline = screen.getByText(/1901 Tactical Engine/);
+    fireEvent.click(tagline);
+    fireEvent.click(tagline);
+    fireEvent.click(tagline);
+    expect(localStorage.getItem(KEY)).toBeNull();
+  });
+});

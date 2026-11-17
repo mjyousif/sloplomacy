@@ -102,6 +102,27 @@ export async function authedFetch(
   return fetch(url, { ...init, headers });
 }
 
+/**
+ * Signs in a throwaway local player without a form, for testing on a dev machine. Does
+ * nothing unless this is the Vite dev server and Supabase is not configured, so a
+ * production build never has it. Each call mints a new id, so every browser profile
+ * (or incognito window) is a different player and can hold its own seat. The backend
+ * still decides whether to trust the unsigned token (`ENVIRONMENT=development`).
+ */
+export function devSignIn(): AuthUser | null {
+  if (!import.meta.env.DEV || isSupabaseConfigured) return null;
+  const tag = Math.random().toString(36).slice(2, 6);
+  const devUser: AuthUser = {
+    id: `local_dev_${tag}`,
+    email: `dev_${tag}@local.test`,
+    displayName: `Dev ${tag}`,
+    isLocalDemo: true,
+    needsUsernameSetup: false,
+  };
+  setLocalStoredUser(devUser);
+  return devUser;
+}
+
 export async function getInitialAuthUser(): Promise<AuthUser | null> {
   if (supabase) {
     const { data } = await supabase.auth.getSession();

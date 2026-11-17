@@ -50,6 +50,8 @@ When Supabase is not configured, the sign-in form creates a local demo account. 
 - `scripts/quickstart.py` sets it in `backend_env()`. `scripts/start.sh`, `scripts/start.bat`, `scripts/dev.sh` and the default path of `scripts/start.ps1` and `scripts/dev.ps1` all run `scripts/quickstart.py`.
 - `scripts/dev.ps1` sets it in the backend window for `-SeparateWindows`, which starts Uvicorn directly.
 
+**Skipping the form.** On the lobby, click the "Sloplomacy • 1901 Tactical Engine" text in the footer three times in quick succession (within 1.5 seconds between clicks) and the app signs in a throwaway local player (`devSignIn` in `frontend/src/lib/supabase.ts`) with no form. Each sign-in gets a new `local_dev_<tag>` id, so a second browser profile or incognito window is a different player and can claim its own seat. It only exists on the Vite dev server (`import.meta.env.DEV`) and only when Supabase is not configured, so a production build leaves it out, and the backend still needs `ENVIRONMENT=development` to accept the token.
+
 A value already in your shell wins. To try the production behaviour locally, run `ENVIRONMENT=production python scripts/quickstart.py`, and a demo sign-in gets a `401`.
 
 > [!WARNING]

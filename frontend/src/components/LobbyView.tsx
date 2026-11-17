@@ -1,5 +1,7 @@
 import type React from 'react';
 import { useState } from 'react';
+import { useTapCount } from '../hooks/useTapCount';
+import { devSignIn } from '../lib/supabase';
 import {
   type AuthUser,
   type MultiplayerGameSummary,
@@ -55,6 +57,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onJoinOrEnterGame,
   onOpenSurrenderModal,
 }) => {
+  // Hidden local-testing shortcut: three quick clicks on the footer tagline sign in a
+  // throwaway dev player (a no-op outside the dev server, see `devSignIn`).
+  const onTagline = useTapCount(() => {
+    if (!user) devSignIn();
+  });
+
   // Host and Join with code open as dialogs from the action row; one at a time.
   const [openDialog, setOpenDialog] = useState<'host' | 'join' | null>(null);
   const closeDialog = () => setOpenDialog(null);
@@ -174,7 +182,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
       {/* FOOTER BAR */}
       <footer className={styles.lobbyFooterBar} data-testid="lobby-footer">
-        <span className={styles.lobbyFooterTagline}>
+        <span className={styles.lobbyFooterTagline} onClick={onTagline}>
           Sloplomacy &bull; 1901 Tactical Engine
         </span>
         <VersionBadge />

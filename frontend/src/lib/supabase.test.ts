@@ -9,6 +9,7 @@ import {
 } from 'vitest';
 import type { AuthUser } from '../types/diplomacy';
 import {
+  devSignIn,
   fetchAccountDisplayPrefs,
   getAuthHeaders,
   getInitialAuthUser,
@@ -82,6 +83,17 @@ describe('supabase auth & local fallback helper', () => {
     await signOutUser();
     const afterSignOut = await getInitialAuthUser();
     expect(afterSignOut).toBeNull();
+  });
+
+  it('devSignIn signs in a fresh local player each time on the dev server', async () => {
+    const a = devSignIn();
+    const b = devSignIn();
+    expect(a?.isLocalDemo).toBe(true);
+    expect(a?.needsUsernameSetup).toBe(false);
+    expect(a?.id).toMatch(/^local_dev_/);
+    expect(a?.id).not.toBe(b?.id);
+    expect((await getInitialAuthUser())?.id).toBe(b?.id);
+    expect((await getAuthHeaders()).Authorization).toMatch(/^Bearer /);
   });
 
   it('supports sign-up with custom display name in local mode', async () => {
