@@ -62,9 +62,9 @@ describe('TopHeader: brand and navigation', () => {
 
     rerender(<TopHeader {...props} viewMode="sandbox" matchSummary={null} />);
     await userEvent.click(screen.getByTestId('game-settings-trigger'));
-    expect(screen.getByTestId('game-settings-subtitle')).toHaveTextContent(
-      'Solo Sandbox',
-    );
+    expect(
+      screen.queryByTestId('game-settings-subtitle'),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId('game-settings-type')).toHaveTextContent(
       'Local sandbox',
     );
@@ -126,7 +126,12 @@ describe('TopHeader: brand and navigation', () => {
     const onReturnToPreviousGame = vi.fn();
     renderHeader({
       viewMode: 'sandbox',
-      matchSummary: null,
+      matchSummary: {
+        game_id: 'sbx_saved_1',
+        name: 'Saved Study',
+        is_sandbox: true,
+        is_draft: false,
+      } as MultiplayerGameSummary,
       isGameCreator: true,
       onSaveSandbox,
       onResetSandbox,

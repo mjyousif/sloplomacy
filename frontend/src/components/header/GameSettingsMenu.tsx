@@ -76,7 +76,7 @@ export function GameSettingsMenu({
   const isDraftSandbox =
     isSandbox && (!matchSummary || Boolean(matchSummary.is_draft));
   const subtitle = isDraftSandbox
-    ? 'Solo Sandbox'
+    ? null
     : (matchSummary?.name ?? 'Current Game');
   const gameTypeLabel = isDraftSandbox
     ? 'Local sandbox'
@@ -92,7 +92,8 @@ export function GameSettingsMenu({
   const showAdmin = viewMode !== 'lobby' && isGameCreator;
   const showSaveSandbox = isSandbox && Boolean(onSaveSandbox);
   const showResetSandbox = isSandbox && Boolean(onResetSandbox);
-  const showDeleteSandbox = isSandbox && Boolean(onDeleteSandbox);
+  const showDeleteSandbox =
+    isSandbox && !isDraftSandbox && Boolean(onDeleteSandbox);
   const showReturnPrevious = isSandbox && Boolean(onReturnToPreviousGame);
   const showSurrender =
     viewMode === 'multiplayer' && Boolean(onSurrenderClick) && !isSurrendered;
@@ -188,20 +189,22 @@ export function GameSettingsMenu({
               <h2 className={displayStyles.displaySettingsTitle}>
                 Game Settings
               </h2>
-              <p
-                className={styles.gameSettingsSubtitle}
-                data-testid="game-settings-subtitle"
-              >
-                {showPowerFlag && playerPower && (
-                  <PowerFlag
-                    power={playerPower}
-                    width={16}
-                    height={11}
-                    className={styles.gameSettingsSubtitleFlag}
-                  />
-                )}
-                <span>{subtitle}</span>
-              </p>
+              {subtitle && (
+                <p
+                  className={styles.gameSettingsSubtitle}
+                  data-testid="game-settings-subtitle"
+                >
+                  {showPowerFlag && playerPower && (
+                    <PowerFlag
+                      power={playerPower}
+                      width={16}
+                      height={11}
+                      className={styles.gameSettingsSubtitleFlag}
+                    />
+                  )}
+                  <span>{subtitle}</span>
+                </p>
+              )}
               <p
                 className={styles.gameSettingsType}
                 data-testid="game-settings-type"

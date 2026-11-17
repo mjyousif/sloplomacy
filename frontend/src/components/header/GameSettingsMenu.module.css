@@ -78,7 +78,7 @@
   }
 
   .game-settings-subtitle {
-    margin: 4px 0 2px;
+    margin: 4px 0 6px;
     display: flex;
     align-items: center;
     gap: 7px;
@@ -93,7 +93,7 @@
   }
 
   .game-settings-type {
-    margin: 0 0 10px;
+    margin: 4px 0 10px;
     padding-bottom: 10px;
     border-bottom: 1px solid #2c3342;
     display: flex;

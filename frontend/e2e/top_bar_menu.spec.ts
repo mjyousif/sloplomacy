@@ -170,9 +170,7 @@ test.describe('Unified Top Bar Dropdowns', () => {
       await expect(page.getByTestId('btn-reset-scenario')).toHaveCount(0);
       await expect(page.getByTestId('btn-save-sandbox')).toHaveCount(0);
       await gameTrigger.click();
-      await expect(page.getByTestId('game-settings-subtitle')).toHaveText(
-        'Solo Sandbox',
-      );
+      await expect(page.getByTestId('game-settings-subtitle')).toHaveCount(0);
       await expect(page.getByTestId('game-settings-type')).toHaveText(
         'Local sandbox',
       );
@@ -189,7 +187,7 @@ test.describe('Unified Top Bar Dropdowns', () => {
       ).toBeVisible();
       await expect(
         page.getByTestId('game-settings-delete-sandbox'),
-      ).toBeVisible();
+      ).toHaveCount(0);
       await expect(
         page.getByTestId('game-settings-return-previous'),
       ).toBeVisible();

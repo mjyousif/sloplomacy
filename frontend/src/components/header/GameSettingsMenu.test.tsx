@@ -66,12 +66,13 @@ describe('GameSettingsMenu', () => {
     expect(screen.queryByTestId('game-settings-panel')).not.toBeInTheDocument();
   });
 
-  it('shows flask icon, Solo Sandbox subtext, and omits Export to Solo Sandbox and Surrender in Solo Sandbox mode', async () => {
+  it('shows flask icon, Local sandbox type without game name, and omits Export to Solo Sandbox, Delete Sandbox, and Surrender in Local Sandbox mode', async () => {
     renderGameSettings({
       viewMode: 'sandbox',
       matchSummary: null,
       isGameCreator: true,
       onSurrenderClick: vi.fn(),
+      onDeleteSandbox: vi.fn(),
     });
     const trigger = screen.getByTestId('game-settings-trigger');
     expect(trigger).toHaveAttribute('data-icon', 'flask');
@@ -80,9 +81,9 @@ describe('GameSettingsMenu', () => {
     expect(
       screen.getByRole('heading', { name: 'Game Settings' }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId('game-settings-subtitle')).toHaveTextContent(
-      'Solo Sandbox',
-    );
+    expect(
+      screen.queryByTestId('game-settings-subtitle'),
+    ).not.toBeInTheDocument();
     const gameType = screen.getByTestId('game-settings-type');
     expect(gameType).toHaveTextContent('Local sandbox');
     expect(
@@ -90,6 +91,9 @@ describe('GameSettingsMenu', () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByTestId('game-settings-solo-sandbox'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('game-settings-delete-sandbox'),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByTestId('game-settings-surrender'),
@@ -155,7 +159,7 @@ describe('GameSettingsMenu', () => {
     expect(screen.queryByTestId('game-settings-panel')).not.toBeInTheDocument();
   });
 
-  it('shows Save Sandbox, Reset Sandbox, Delete Sandbox, and Return to Previous Game below Administrator in local Solo Sandbox', async () => {
+  it('shows Save Sandbox, Reset Sandbox, and Return to Previous Game below Administrator in local Solo Sandbox without Delete Sandbox', async () => {
     const onSaveSandbox = vi.fn();
     const onResetSandbox = vi.fn();
     const onDeleteSandbox = vi.fn();
@@ -173,11 +177,12 @@ describe('GameSettingsMenu', () => {
     const adminBtn = screen.getByTestId('game-settings-admin-settings');
     const saveBtn = screen.getByTestId('game-settings-save-sandbox');
     const resetBtn = screen.getByTestId('game-settings-reset-sandbox');
-    const deleteBtn = screen.getByTestId('game-settings-delete-sandbox');
     const returnBtn = screen.getByTestId('game-settings-return-previous');
     expect(saveBtn).toHaveTextContent('Save Sandbox');
     expect(resetBtn).toHaveTextContent('Reset Sandbox');
-    expect(deleteBtn).toHaveTextContent('Delete Sandbox');
+    expect(
+      screen.queryByTestId('game-settings-delete-sandbox'),
+    ).not.toBeInTheDocument();
     expect(returnBtn).toHaveTextContent('Return to Previous Game');
     expect(
       adminBtn.compareDocumentPosition(saveBtn) &
@@ -188,11 +193,7 @@ describe('GameSettingsMenu', () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      resetBtn.compareDocumentPosition(deleteBtn) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      deleteBtn.compareDocumentPosition(returnBtn) &
+      resetBtn.compareDocumentPosition(returnBtn) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
 
