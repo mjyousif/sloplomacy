@@ -111,7 +111,7 @@ const seaLabels = labels.filter(isSea);
 
 describe('map label typography', () => {
   it('finds every label', () => {
-    expect(labels).toHaveLength(82);
+    expect(labels).toHaveLength(81);
     expect(seaLabels).toHaveLength(19);
   });
 
@@ -140,12 +140,12 @@ describe('map label typography', () => {
     expect([...fonts]).toHaveLength(1);
   });
 
-  it('keeps land names at the standard size, apart from the one under an abbreviation', () => {
+  it('keeps every land name at the standard size', () => {
     const provinceNames = landLabels.filter((label) => label.text.length > 3);
     const unusual = provinceNames
       .filter((label) => label.size !== '16px')
       .map((label) => label.text);
-    expect(unusual).toEqual(['Liverpool']);
+    expect(unusual).toEqual([]);
   });
 
   it('spells out North Africa', () => {
@@ -158,6 +158,12 @@ describe('map label typography', () => {
     const names = labels.map((label) => label.text);
     expect(names).toContain('Livonia');
     expect(names).not.toContain('LVN');
+  });
+
+  it('labels Liverpool by name alone', () => {
+    const names = labels.map((label) => label.text);
+    expect(names).toContain('Liverpool');
+    expect(names).not.toContain('LVP');
   });
 });
 
