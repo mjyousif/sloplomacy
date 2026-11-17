@@ -7,28 +7,23 @@ import type {
   Unit,
 } from '../../../types/diplomacy';
 import {
-  convoyOrder,
   holdOrder,
   moveOrder,
   retreatOrder,
-  supportOrder,
 } from '../../../utils/orderBuilders';
 import {
   canArmyConvoyMoveTo,
-  canPickConvoyArmyAt,
-  canPickConvoyTargetAt,
-  canPickSupportTargetAt,
-  canPickSupportUnitAt,
+  type MapInteractionMode,
+  resolveActiveInteractionState,
+  resolveCoastDispatch,
+  resolveMoveViaConvoy,
+  resolveSupportOrConvoyAuxPick,
+  resolveSupportOrConvoyTargetOrder,
 } from './mapReachabilityHelpers';
 import type { MapGestures } from './useMapGestures';
 import type { MapSelection } from './useMapSelection';
 
-export type MapInteractionMode =
-  | 'MOVE'
-  | 'SUPPORT_PICK_UNIT'
-  | 'SUPPORT_PICK_TARGET'
-  | 'CONVOY_PICK_ARMY'
-  | 'CONVOY_PICK_TARGET';
+export type { MapInteractionMode } from './mapReachabilityHelpers';
 
 export interface PendingCoastChoice {
   target: string;
@@ -123,33 +118,23 @@ export function useMapInteraction({
     setMoveModeChosen(false);
   }
 
-  // A support or convoy opened on the sidebar card (or left unfinished) has no map step of its
-  // own yet, so the map resumes it: the next click picks the unit, then the target.
-  let interactionMode = pickedMode;
-  let pendingAuxOrigin = pickedAuxOrigin;
-  if (
-    pickedMode === 'MOVE' &&
-    !moveModeChosen &&
-    selectedUnit &&
-    selectedOrder &&
-    selectedOrder.unit_id === selectedUnit.id &&
-    (selectedOrder.order_type === 'SUPPORT' ||
-      selectedOrder.order_type === 'CONVOY') &&
-    !selectedOrder.target
-  ) {
-    const isSupport = selectedOrder.order_type === 'SUPPORT';
-    if (selectedOrder.aux_unit_origin) {
-      interactionMode = isSupport
-        ? 'SUPPORT_PICK_TARGET'
-        : 'CONVOY_PICK_TARGET';
-      pendingAuxOrigin = selectedOrder.aux_unit_origin;
-    } else {
-      interactionMode = isSupport ? 'SUPPORT_PICK_UNIT' : 'CONVOY_PICK_ARMY';
-    }
-  }
+  const { interactionMode, pendingAuxOrigin } = resolveActiveInteractionState({
+    pickedMode,
+    moveModeChosen,
+    pickedAuxOrigin,
+    selectedUnit,
+    selectedOrder,
+  });
 
   const clearSelection = () => {
     onSelectUnit(null);
+    setInteractionMode('MOVE');
+    setPendingAuxOrigin(null);
+    setPendingCoastChoice(null);
+  };
+
+  const selectUnitInMoveMode = (unitId: string) => {
+    onSelectUnit(unitId);
     setInteractionMode('MOVE');
     setPendingAuxOrigin(null);
     setPendingCoastChoice(null);
@@ -202,56 +187,34 @@ export function useMapInteraction({
       return;
     }
 
-    // 1. SUPPORT_PICK_UNIT: pick another unit in range to support
-    if (selectedUnit && interactionMode === 'SUPPORT_PICK_UNIT') {
-      if (
-        canPickSupportUnitAt(
-          u.province,
-          selectedUnit,
-          unitsByProv,
-          selectedUnitOptions,
-        )
-      ) {
-        setPendingAuxOrigin(u.province);
-        setInteractionMode('SUPPORT_PICK_TARGET');
-      } else {
-        clearSelection();
-      }
-      return;
-    }
-
-    // 2 & 3. SUPPORT_PICK_TARGET: delegate unit clicks to province validation
+    // 1 & 4. Pick the unit/army for SUPPORT or CONVOY
     if (
       selectedUnit &&
-      interactionMode === 'SUPPORT_PICK_TARGET' &&
-      pendingAuxOrigin
+      (interactionMode === 'SUPPORT_PICK_UNIT' ||
+        interactionMode === 'CONVOY_PICK_ARMY')
     ) {
-      handleProvinceClick(u.province);
-      return;
-    }
-
-    // 4. CONVOY_PICK_ARMY: only a convoyable coastal Army can board
-    if (selectedUnit && interactionMode === 'CONVOY_PICK_ARMY') {
-      if (
-        canPickConvoyArmyAt(
-          u.province,
-          unitsByProv,
-          provinces,
-          selectedUnitOptions,
-        )
-      ) {
+      const nextMode = resolveSupportOrConvoyAuxPick({
+        interactionMode,
+        provId: u.province,
+        selectedUnit,
+        unitsByProv,
+        provinces,
+        selectedUnitOptions,
+      });
+      if (nextMode) {
         setPendingAuxOrigin(u.province);
-        setInteractionMode('CONVOY_PICK_TARGET');
+        setInteractionMode(nextMode);
       } else {
         clearSelection();
       }
       return;
     }
 
-    // 4b. CONVOY_PICK_TARGET: clicking a unit delegates to its province
+    // 2, 3, & 4b. Picking a target unit delegates to province validation
     if (
       selectedUnit &&
-      interactionMode === 'CONVOY_PICK_TARGET' &&
+      (interactionMode === 'SUPPORT_PICK_TARGET' ||
+        interactionMode === 'CONVOY_PICK_TARGET') &&
       pendingAuxOrigin
     ) {
       handleProvinceClick(u.province);
@@ -275,10 +238,7 @@ export function useMapInteraction({
     }
 
     // 7. Select controllable unit
-    onSelectUnit(u.id);
-    setInteractionMode('MOVE');
-    setPendingAuxOrigin(null);
-    setPendingCoastChoice(null);
+    selectUnitInMoveMode(u.id);
   };
 
   const commitMoveOrRetreatOrder = (
@@ -292,11 +252,12 @@ export function useMapInteraction({
       return;
     }
 
-    const isDirect = Boolean(reachableMap[targetProv]);
-    const isActiveConvoy = Boolean(
-      selectedUnitOptions?.active_convoys.includes(targetProv),
+    const viaConvoy = resolveMoveViaConvoy(
+      unit,
+      targetProv,
+      reachableMap,
+      selectedUnitOptions,
     );
-    const viaConvoy = unit.unit_type === 'A' && (isActiveConvoy || !isDirect);
     onUpdateOrder(moveOrder(unit, targetProv, targetCoast, viaConvoy));
     clearSelection();
   };
@@ -306,22 +267,20 @@ export function useMapInteraction({
     provId: string,
     explicitCoast: string | null,
   ) => {
-    const coasts = reachableMap[provId] || [];
-    if (
-      unit.unit_type === 'F' &&
-      explicitCoast &&
-      coasts.includes(explicitCoast)
-    ) {
-      commitMoveOrRetreatOrder(unit, provId, explicitCoast);
+    const decision = resolveCoastDispatch(
+      unit,
+      provId,
+      explicitCoast,
+      reachableMap,
+    );
+    if (decision.kind === 'pick') {
+      setPendingCoastChoice({
+        target: decision.target,
+        coasts: decision.coasts,
+      });
       return;
     }
-    if (unit.unit_type === 'F' && coasts.length > 1) {
-      setPendingCoastChoice({ target: provId, coasts });
-      return;
-    }
-    const singleCoast =
-      unit.unit_type === 'F' && coasts.length === 1 ? coasts[0] : null;
-    commitMoveOrRetreatOrder(unit, provId, singleCoast);
+    commitMoveOrRetreatOrder(unit, provId, decision.coast);
   };
 
   const handleProvinceClick = (
@@ -401,10 +360,7 @@ export function useMapInteraction({
       if (!isReachable && !canConvoyMove) {
         const occupant = unitsByProv[provId];
         if (occupant && canControl(occupant)) {
-          onSelectUnit(occupant.id);
-          setInteractionMode('MOVE');
-          setPendingAuxOrigin(null);
-          setPendingCoastChoice(null);
+          selectUnitInMoveMode(occupant.id);
         } else {
           clearSelection();
         }
@@ -415,58 +371,44 @@ export function useMapInteraction({
       return;
     }
 
-    if (interactionMode === 'SUPPORT_PICK_UNIT') {
-      if (
-        canPickSupportUnitAt(
-          provId,
-          selectedUnit,
-          unitsByProv,
-          selectedUnitOptions,
-        )
-      ) {
+    if (
+      interactionMode === 'SUPPORT_PICK_UNIT' ||
+      interactionMode === 'CONVOY_PICK_ARMY'
+    ) {
+      const nextMode = resolveSupportOrConvoyAuxPick({
+        interactionMode,
+        provId,
+        selectedUnit,
+        unitsByProv,
+        provinces,
+        selectedUnitOptions,
+      });
+      if (nextMode) {
         setPendingAuxOrigin(provId);
-        setInteractionMode('SUPPORT_PICK_TARGET');
+        setInteractionMode(nextMode);
       } else {
         clearSelection();
       }
       return;
     }
 
-    if (interactionMode === 'SUPPORT_PICK_TARGET' && pendingAuxOrigin) {
-      if (
-        canPickSupportTargetAt(provId, pendingAuxOrigin, selectedUnitOptions)
-      ) {
-        onUpdateOrder(supportOrder(selectedUnit, pendingAuxOrigin, provId));
+    if (
+      (interactionMode === 'SUPPORT_PICK_TARGET' ||
+        interactionMode === 'CONVOY_PICK_TARGET') &&
+      pendingAuxOrigin
+    ) {
+      const nextOrder = resolveSupportOrConvoyTargetOrder({
+        interactionMode,
+        provId,
+        pendingAuxOrigin,
+        selectedUnit,
+        provinces,
+        selectedUnitOptions,
+      });
+      if (nextOrder) {
+        onUpdateOrder(nextOrder);
       }
       clearSelection();
-      return;
-    }
-
-    if (interactionMode === 'CONVOY_PICK_ARMY') {
-      if (
-        canPickConvoyArmyAt(provId, unitsByProv, provinces, selectedUnitOptions)
-      ) {
-        setPendingAuxOrigin(provId);
-        setInteractionMode('CONVOY_PICK_TARGET');
-      } else {
-        clearSelection();
-      }
-      return;
-    }
-
-    if (interactionMode === 'CONVOY_PICK_TARGET' && pendingAuxOrigin) {
-      if (
-        canPickConvoyTargetAt(
-          provId,
-          pendingAuxOrigin,
-          provinces,
-          selectedUnitOptions,
-        )
-      ) {
-        onUpdateOrder(convoyOrder(selectedUnit, pendingAuxOrigin, provId));
-      }
-      clearSelection();
-      return;
     }
   };
 

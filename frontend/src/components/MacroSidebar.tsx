@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import {
   type GameParticipant,
   type Order,
@@ -32,11 +32,15 @@ import {
   type HistoryHighlightFocus,
   HistoryTurnPanel,
 } from './macro/HistoryTurnPanel';
+import { MacroOrderSheet } from './macro/MacroOrderSheet';
 import { ClearAllButton, OrderFooter } from './macro/OrderFooter';
 import { HistoryLockBar, PhaseContext, PowerHeader } from './macro/PowerHeader';
 import { UnitOrderList } from './macro/UnitOrderList';
-import { useSheetSelection } from './macro/useSheetSelection';
-import { BottomSheet } from './ui/BottomSheet';
+import {
+  useCompactOrders,
+  usePanelScroll,
+  useSheetSelection,
+} from './macro/useSheetSelection';
 
 export interface MacroSidebarProps {
   provinces: Record<string, ProvinceInfo>;
@@ -241,61 +245,17 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   });
   const { myBlockingIssues, unconfirmedCount } = progress;
   const isSheet = variant === 'sheet';
-  const [localCompactOrders, setLocalCompactOrders] = useState<boolean>(() => {
-    try {
-      return (
-        typeof window !== 'undefined' &&
-        window.localStorage.getItem('sloplomacy_compact_orders') === '1'
-      );
-    } catch {
-      return false;
-    }
+  const { compactOrders, handleToggleCompactOrders } = useCompactOrders({
+    uiSpacing,
+    onToggleUiSpacing,
   });
-  const compactOrders =
-    uiSpacing !== undefined ? uiSpacing === 'compact' : localCompactOrders;
 
-  const handleToggleCompactOrders = () => {
-    if (uiSpacing !== undefined && onToggleUiSpacing) {
-      onToggleUiSpacing();
-      return;
-    }
-    setLocalCompactOrders((prev) => {
-      const next = !prev;
-      try {
-        window.localStorage.setItem(
-          'sloplomacy_compact_orders',
-          next ? '1' : '0',
-        );
-      } catch {
-        // Ignore storage failures in restricted contexts.
-      }
-      return next;
-    });
-  };
-
-  const panelScrollRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (isSheet || collapsed || !selectedUnitId) return;
-    const scroller = panelScrollRef.current;
-    if (!scroller) return;
-    const card = Array.from(
-      scroller.querySelectorAll<HTMLElement>(
-        '[data-unit-id], [data-home-province]',
-      ),
-    ).find(
-      (el) =>
-        el.dataset.unitId === selectedUnitId ||
-        `BUILD_${activePower}_${el.dataset.homeProvince}` === selectedUnitId,
-    );
-    if (!card) return;
-    const scrollerRect = scroller.getBoundingClientRect();
-    const cardRect = card.getBoundingClientRect();
-    if (cardRect.top < scrollerRect.top) {
-      scroller.scrollTop += cardRect.top - scrollerRect.top - 8;
-    } else if (cardRect.bottom > scrollerRect.bottom) {
-      scroller.scrollTop += cardRect.bottom - scrollerRect.bottom + 8;
-    }
-  }, [isSheet, collapsed, selectedUnitId, activePower]);
+  const panelScrollRef = usePanelScroll({
+    isSheet,
+    collapsed,
+    selectedUnitId,
+    activePower,
+  });
 
   const sheetBodyRef = useSheetSelection({
     isSheet,
@@ -458,54 +418,22 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   // and spells out the counts the desktop rail only gives in tooltips.
   if (variant === 'sheet') {
     return (
-      <BottomSheet
-        snap={sheetSnap}
-        onSnapChange={(snap) => onSheetSnapChange?.(snap)}
-        label="Orders"
-        testId="macro-sidebar"
-        peek={
-          <div
-            className={styles.macroSheetPeek}
-            data-testid="macro-sheet-peek"
-            data-history-locked={locked ? 'true' : undefined}
-            style={{ borderLeftColor: powerMeta.color }}
-          >
-            {lockBar}
-            <PowerHeader
-              variant="sheet"
-              activePower={activePower}
-              progress={progress}
-              isSurrendered={isSurrendered}
-              isFinalized={isFinalized}
-              locked={locked}
-            />
-            <div
-              className={styles.macroSheetControls}
-              data-testid="macro-sheet-controls"
-              inert={locked || undefined}
-            >
-              {clearAllButton}
-              {footerActions}
-            </div>
-          </div>
-        }
-      >
-        <div
-          className={styles.macroSheetBody}
-          data-testid="macro-sheet-body"
-          data-history-locked={locked ? 'true' : undefined}
-          ref={sheetBodyRef}
-          inert={locked || isSurrendered || undefined}
-        >
-          {phaseContext}
-          <div
-            className={styles.macroUnitsScrollArea}
-            data-testid="macro-units-scroll-area"
-          >
-            {unitList}
-          </div>
-        </div>
-      </BottomSheet>
+      <MacroOrderSheet
+        sheetSnap={sheetSnap}
+        onSheetSnapChange={onSheetSnapChange}
+        activePower={activePower}
+        powerColor={powerMeta.color}
+        progress={progress}
+        isSurrendered={isSurrendered}
+        isFinalized={isFinalized}
+        locked={locked}
+        lockBar={lockBar}
+        clearAllButton={clearAllButton}
+        footerActions={footerActions}
+        phaseContext={phaseContext}
+        unitList={unitList}
+        sheetBodyRef={sheetBodyRef}
+      />
     );
   }
 

@@ -8,6 +8,11 @@ import { GameWorkspace } from './components/GameWorkspace';
 import { LobbyView } from './components/LobbyView';
 import { useConfirm } from './components/modal/ConfirmModal';
 import { useAdminDirectEdit } from './hooks/useAdminDirectEdit';
+import {
+  createAdminStateUpdater,
+  getInitialViewMode,
+  useAppNavigation,
+} from './hooks/useAppNavigation';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useCompactLayout } from './hooks/useCompactLayout';
 import { useDisplayPrefs } from './hooks/useDisplayPrefs';
@@ -22,69 +27,24 @@ import { useToast } from './hooks/useToast';
 import { useTurnHistory } from './hooks/useTurnHistory';
 import { useTurnNotifications } from './hooks/useTurnNotifications';
 import { useWorkspaceLayout } from './hooks/useWorkspaceLayout';
-import { signOutUser } from './lib/supabase';
-import type {
-  MultiplayerGameSummary,
-  SimulationResult,
-} from './types/diplomacy';
+import type { SimulationResult } from './types/diplomacy';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
-import { myPowerIn } from './utils/heroGame';
 import { DEFAULT_CAMERA } from './utils/mapCameraHelpers';
 import { turnLabel } from './utils/timerHelpers';
 
 export function App() {
   const [viewMode, setViewMode] = useState<'lobby' | 'sandbox' | 'multiplayer'>(
-    () =>
-      typeof window !== 'undefined' &&
-      (new URLSearchParams(window.location.search).get('view') === 'sandbox' ||
-        window.location.hash === '#sandbox')
-        ? 'sandbox'
-        : 'lobby',
+    getInitialViewMode,
   );
   const [simulationResult, setSimulationResult] =
     useState<SimulationResult | null>(null);
-  const {
-    activeGameId,
-    setActiveGameId,
-    activeGameSummary,
-    setActiveGameSummary,
-    lockedPower,
-    setLockedPower,
-    playerPower,
-    gamesList,
-    setGamesList,
-    loadingGames,
-    gameState,
-    setGameState,
-    provinces,
-    setProvinces,
-    loading,
-    setLoading,
-    errorMsg,
-    boardRequestSeq,
-    applyServerState,
-    fetchGame,
-    fetchGamesList,
-    fetchMyGames,
-  } = useGameSession({ viewMode, setSimulationResult });
-  const {
-    authUser,
-    setAuthUser,
-    authModalOpen,
-    setAuthModalOpen,
-    authModalReason,
-    authModalTab,
-    openAuthPrompt,
-    accountModalOpen,
-    setAccountModalOpen,
-    accountModalOnboarding,
-    openAccountModal,
-  } = useAuthSession();
+  const session = useGameSession({ viewMode, setSimulationResult });
+  const auth = useAuthSession();
   const {
     prefs: displayPrefs,
     saveState: displayPrefsSaveState,
     updatePrefs: updateDisplayPrefs,
-  } = useDisplayPrefs(authUser);
+  } = useDisplayPrefs(auth.authUser);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [hoveredUnitId, setHoveredUnitId] = useState<string | null>(null);
   const [highlightedProvinces, setHighlightedProvinces] = useState<string[]>(
@@ -97,7 +57,11 @@ export function App() {
     Math.round(DEFAULT_CAMERA.zoom * 100),
   );
   const isCompact = useCompactLayout();
-  const layout = useWorkspaceLayout({ viewMode, activeGameId, isCompact });
+  const layout = useWorkspaceLayout({
+    viewMode,
+    activeGameId: session.activeGameId,
+    isCompact,
+  });
   const mapRef = useRef<EuropeMapHandle | null>(null);
   const { toastBanner, triggerToast } = useToast();
   const { confirm, confirmModal } = useConfirm();
@@ -105,193 +69,161 @@ export function App() {
     {},
   );
   const turnHistory = useTurnHistory({
-    gameId: activeGameId,
-    liveTurnKey: gameState ? turnLabel(gameState) : '',
-    passcode: matchPasscodes[activeGameId] ?? null,
+    gameId: session.activeGameId,
+    liveTurnKey: session.gameState ? turnLabel(session.gameState) : '',
+    passcode: matchPasscodes[session.activeGameId] ?? null,
     enabled: viewMode !== 'lobby',
   });
   const isGameCreator = checkIsGameCreator(
-    activeGameSummary,
-    authUser,
+    session.activeGameSummary,
+    auth.authUser,
     viewMode,
   );
   const directEditActive = isGameCreator && adminOverrideActive;
-  const handleAdminUpdateState = (st: typeof gameState) => {
-    if (!st) return;
-    applyServerState(st);
-    fetchGamesList();
-  };
+  const handleAdminUpdateState = createAdminStateUpdater(
+    session.applyServerState,
+    session.fetchGamesList,
+  );
   const directEdit = useAdminDirectEdit({
-    activeGameId,
+    activeGameId: session.activeGameId,
     viewMode,
-    lockedPower,
-    gameState,
-    provinces,
+    lockedPower: session.lockedPower,
+    gameState: session.gameState,
+    provinces: session.provinces,
     directEditActive,
     setDirectEditActive: setAdminOverrideActive,
-    authUser,
+    authUser: auth.authUser,
     onUpdateGameState: handleAdminUpdateState,
     showToast: triggerToast,
     confirm,
   });
   // Hypothetical Mode, the scenario reset and saving a sandbox.
-  const {
-    sandboxMode,
-    setSandboxMode,
-    sandboxGameId,
-    setSandboxGameId,
-    sandboxOriginTurn,
-    setSandboxOriginTurn,
-    setHypotheticalMatchTimer,
-    showSimulationOverlay,
-    setShowSimulationOverlay,
-    saveSandboxModalOpen,
-    setSaveSandboxModalOpen,
-    savingSandbox,
-    draftGameId,
-    matchTimer,
-    requireRealBoard,
-    handleOpenSaveSandboxModal,
-    handleSaveSandboxToAccount,
-    handleClearForeignPreMoves,
-    handleToggleSandboxMode,
-    handleLoadScenario,
-  } = useSandboxSession({
-    activeGameId,
-    setActiveGameId,
-    setActiveGameSummary,
-    gameState,
-    playerPower,
-    authUser,
-    openAuthPrompt,
+  const sandbox = useSandboxSession({
+    activeGameId: session.activeGameId,
+    setActiveGameId: session.setActiveGameId,
+    setActiveGameSummary: session.setActiveGameSummary,
+    gameState: session.gameState,
+    playerPower: session.playerPower,
+    authUser: auth.authUser,
+    openAuthPrompt: auth.openAuthPrompt,
     triggerToast,
     goLive: turnHistory.goLive,
-    setLoading,
+    setLoading: session.setLoading,
     setSelectedUnitId,
-    applyServerState,
-    fetchGame,
-    fetchGamesList,
+    applyServerState: session.applyServerState,
+    fetchGame: session.fetchGame,
+    fetchGamesList: session.fetchGamesList,
   });
 
   // In multiplayer Hypothetical Mode, Standings and unit selection can switch the commanded power on the ephemeral branch.
   const activePower = resolvePlayerPower(
     viewMode,
-    lockedPower,
-    gameState?.active_power,
-    sandboxMode,
+    session.lockedPower,
+    session.gameState?.active_power,
+    sandbox.sandboxMode,
   );
 
   // The live socket, the first load and the fallback poll.
   const { wsConnected, handleTimerExpired } = useGameSync({
     viewMode,
-    activeGameId,
-    playerPower,
-    sandboxGameId,
-    sandboxOriginTurn,
-    setSandboxOriginTurn,
-    setSandboxGameId,
-    setSandboxMode,
-    setShowSimulationOverlay,
+    activeGameId: session.activeGameId,
+    playerPower: session.playerPower,
+    sandboxGameId: sandbox.sandboxGameId,
+    sandboxOriginTurn: sandbox.sandboxOriginTurn,
+    setSandboxOriginTurn: sandbox.setSandboxOriginTurn,
+    setSandboxGameId: sandbox.setSandboxGameId,
+    setSandboxMode: sandbox.setSandboxMode,
+    setShowSimulationOverlay: sandbox.setShowSimulationOverlay,
     setSelectedUnitId,
     matchPasscodes,
-    authKey: authUser?.id ?? null,
+    authKey: auth.authUser?.id ?? null,
     triggerToast,
-    setActiveGameSummary,
-    setGameState,
-    setGamesList,
+    setActiveGameSummary: session.setActiveGameSummary,
+    setGameState: session.setGameState,
+    setGamesList: session.setGamesList,
     setSimulationResult,
-    setHypotheticalMatchTimer,
-    applyServerState,
-    fetchGame,
-    fetchGamesList,
-    fetchMyGames,
+    setHypotheticalMatchTimer: sandbox.setHypotheticalMatchTimer,
+    applyServerState: session.applyServerState,
+    fetchGame: session.fetchGame,
+    fetchGamesList: session.fetchGamesList,
+    fetchMyGames: session.fetchMyGames,
   });
 
   useTurnNotifications({
     viewMode,
-    gameState,
-    activeGameSummary,
-    lockedPower,
-    sandboxGameId,
-    hypotheticalMatchTimer: matchTimer,
+    gameState: session.gameState,
+    activeGameSummary: session.activeGameSummary,
+    lockedPower: session.lockedPower,
+    sandboxGameId: sandbox.sandboxGameId,
+    hypotheticalMatchTimer: sandbox.matchTimer,
     soundEnabled: displayPrefs.soundNotifications,
   });
 
   // Leaving the match board by any route closes its private sandbox.
   useSandboxExit({
     viewMode,
-    sandboxGameId,
-    playerPower,
-    setSandboxGameId,
-    setSandboxMode,
-    setShowSimulationOverlay,
+    sandboxGameId: sandbox.sandboxGameId,
+    playerPower: session.playerPower,
+    setSandboxGameId: sandbox.setSandboxGameId,
+    setSandboxMode: sandbox.setSandboxMode,
+    setShowSimulationOverlay: sandbox.setShowSimulationOverlay,
   });
 
   const { gameOverModalOpen, openGameOverModal, closeGameOverModal } =
     useGameOverModal({
       viewMode,
-      activeGameId,
-      gameState,
-      activeGameSummary,
-      authUser,
+      activeGameId: session.activeGameId,
+      gameState: session.gameState,
+      activeGameSummary: session.activeGameSummary,
+      authUser: auth.authUser,
       onSummaryUpdated: (updatedSummary) => {
-        setActiveGameSummary(updatedSummary);
-        void fetchMyGames();
+        session.setActiveGameSummary(updatedSummary);
+        void session.fetchMyGames();
       },
     });
 
   // Orders, finalizing, resolving the turn and the turn clock.
-  const {
-    sanityModalOpen,
-    setSanityModalOpen,
-    sanityModalIssues,
-    handleUpdateOrder,
-    handleClearAllOrders,
-    handleFinalizeClick,
-    handleUnfinalizeClick,
-    postTimerAction,
-    handleAdjudicateTurn,
-  } = useMatchActions({
+  const match = useMatchActions({
     viewMode,
-    activeGameId,
-    lockedPower,
-    gameState,
+    activeGameId: session.activeGameId,
+    lockedPower: session.lockedPower,
+    gameState: session.gameState,
     playerPower: activePower,
     directEditActive,
-    sandboxMode,
-    sandboxGameId,
-    draftGameId,
-    requireRealBoard,
-    setHypotheticalMatchTimer,
+    sandboxMode: sandbox.sandboxMode,
+    sandboxGameId: sandbox.sandboxGameId,
+    draftGameId: sandbox.draftGameId,
+    requireRealBoard: sandbox.requireRealBoard,
+    setHypotheticalMatchTimer: sandbox.setHypotheticalMatchTimer,
     triggerToast,
     setSelectedUnitId,
-    applyServerState,
-    fetchGamesList,
+    applyServerState: session.applyServerState,
+    fetchGamesList: session.fetchGamesList,
   });
 
   const seats = useSeatActions({
     viewMode,
     setViewMode,
-    activeGameId,
-    setActiveGameId,
-    activeGameSummary,
-    setActiveGameSummary,
-    lockedPower,
-    setLockedPower,
-    setProvinces,
-    setLoading,
-    boardRequestSeq,
-    applyServerState,
-    fetchGamesList,
-    authUser,
-    openAuthPrompt,
-    sandboxMode,
-    sandboxGameId,
-    draftGameId,
-    setSandboxGameId,
-    setSandboxMode,
-    setShowSimulationOverlay,
-    requireRealBoard,
+    activeGameId: session.activeGameId,
+    setActiveGameId: session.setActiveGameId,
+    activeGameSummary: session.activeGameSummary,
+    setActiveGameSummary: session.setActiveGameSummary,
+    lockedPower: session.lockedPower,
+    setLockedPower: session.setLockedPower,
+    setProvinces: session.setProvinces,
+    setLoading: session.setLoading,
+    boardRequestSeq: session.boardRequestSeq,
+    applyServerState: session.applyServerState,
+    fetchGamesList: session.fetchGamesList,
+    authUser: auth.authUser,
+    openAuthPrompt: auth.openAuthPrompt,
+    sandboxMode: sandbox.sandboxMode,
+    sandboxGameId: sandbox.sandboxGameId,
+    draftGameId: sandbox.draftGameId,
+    setSandboxGameId: sandbox.setSandboxGameId,
+    setSandboxMode: sandbox.setSandboxMode,
+    setShowSimulationOverlay: sandbox.setShowSimulationOverlay,
+    requireRealBoard: sandbox.requireRealBoard,
     matchPasscodes,
     setMatchPasscodes,
     confirm,
@@ -299,7 +231,30 @@ export function App() {
     setSelectedUnitId,
   });
 
-  if (loading && !gameState) {
+  const nav = useAppNavigation({
+    viewMode,
+    setViewMode,
+    isCompact,
+    isGameCreator,
+    directEditActive,
+    adminModalOpen,
+    setAdminModalOpen,
+    setAdminOverrideActive,
+    authUser: auth.authUser,
+    session,
+    layout,
+    turnHistory,
+    directEdit,
+    sandbox,
+    match,
+    seats,
+    setSelectedUnitId,
+    setHighlightedProvinces,
+    confirm,
+    triggerToast,
+  });
+
+  if (session.loading && !session.gameState) {
     return (
       <div className={styles.loadingScreen}>
         <Compass className="spin-icon" size={38} />
@@ -308,146 +263,18 @@ export function App() {
     );
   }
 
-  if (errorMsg || !gameState) {
+  if (session.errorMsg || !session.gameState) {
     return (
       <div className={styles.errorScreen}>
         <AlertTriangle size={36} />
         <h2>Backend Connection Required</h2>
-        <p>{errorMsg}</p>
-        <button onClick={() => fetchGame()}>Retry Connection</button>
+        <p>{session.errorMsg}</p>
+        <button onClick={() => session.fetchGame()}>Retry Connection</button>
       </div>
     );
   }
 
-  const openAdminTools = async () => {
-    if (!requireRealBoard('use the admin tools')) return;
-    if (!(await directEdit.confirmIfDirty('open Turn and Clock Settings')))
-      return;
-    turnHistory.goLive();
-    setAdminOverrideActive(false);
-    setAdminModalOpen(true);
-    layout.setRightSidebarCollapsed(false);
-    if (isCompact) layout.setSheetSnap('half');
-  };
-  const handleToggleEditBoard = () => {
-    if (!directEditActive) turnHistory.goLive();
-    setAdminModalOpen(false);
-    layout.setRightSidebarCollapsed(false);
-    directEdit.handleToggleDirectEdit();
-  };
-  const adminModeActive = directEditActive || (isGameCreator && adminModalOpen);
-  // Leaves either admin mode; Edit Board asks first if edits are still staged.
-  const handleExitAdmin = async () => {
-    if (directEditActive) await directEdit.handleToggleDirectEdit();
-    setAdminModalOpen(false);
-  };
-
-  const historyTurn = turnHistory.turn;
-  const viewedEntry =
-    turnHistory.viewIndex === null
-      ? null
-      : (turnHistory.entries[turnHistory.viewIndex] ?? null);
-  const showPastTurn = async (index: number | null) => {
-    if (adminModeActive) return;
-    if (
-      index !== null &&
-      !(await directEdit.confirmIfDirty('view a past turn'))
-    )
-      return;
-    if (index !== null) {
-      setSelectedUnitId(null);
-      setHighlightedProvinces([]);
-    }
-    turnHistory.select(index);
-  };
-  const stepPastTurn = async (delta: -1 | 1) => {
-    if (adminModeActive) return;
-    if (!(await directEdit.confirmIfDirty('view a past turn'))) return;
-    setSelectedUnitId(null);
-    setHighlightedProvinces([]);
-    turnHistory.step(delta);
-  };
-  const handleBackToLobby = async () => {
-    if (!(await directEdit.confirmIfDirty('return to the lobby'))) return;
-    seats.rememberCurrentGame();
-    setViewMode('lobby');
-    fetchGamesList();
-  };
-  const guardedEnterSoloSandbox = async (event?: React.MouseEvent) => {
-    if (!(await directEdit.confirmIfDirty('open the Solo Sandbox'))) return;
-    setAdminModalOpen(false);
-    setAdminOverrideActive(false);
-    seats.handleEnterSoloSandbox(event);
-  };
-  const guardedResetSandbox = async (event?: React.MouseEvent) => {
-    if (!(await directEdit.confirmIfDirty('reset the sandbox'))) return;
-    const ok = await confirm(
-      {
-        title: 'Reset Sandbox?',
-        message:
-          'Reset this sandbox to Standard Spring 1901? All current orders and board changes will be lost.',
-        confirmLabel: 'Reset Sandbox',
-      },
-      event,
-    );
-    if (!ok) return;
-    turnHistory.goLive();
-    setAdminModalOpen(false);
-    setAdminOverrideActive(false);
-    await handleLoadScenario('standard_1901');
-  };
-  const guardedDeleteSandbox = async (event?: React.MouseEvent) => {
-    if (!(await directEdit.confirmIfDirty('delete this sandbox'))) return;
-    setAdminModalOpen(false);
-    setAdminOverrideActive(false);
-    await seats.handleDeleteSandbox(event);
-  };
-  const guardedSwitchToSoloSandbox = async () => {
-    if (!(await directEdit.confirmIfDirty('switch to Solo Sandbox'))) return;
-    setAdminModalOpen(false);
-    setAdminOverrideActive(false);
-    await seats.handleSwitchToSoloSandbox();
-  };
-  const guardedSwitchToGame = async (game: MultiplayerGameSummary) => {
-    if (!(await directEdit.confirmIfDirty('switch games'))) return;
-    setAdminModalOpen(false);
-    setAdminOverrideActive(false);
-    const power = myPowerIn(game, authUser) ?? 'FRANCE';
-    await seats.handleJoinOrEnterMultiplayerGame(game.game_id, power);
-  };
-  const guardedReturnToPreviousGame = seats.previousGame
-    ? async () => {
-        if (!(await directEdit.confirmIfDirty('return to the previous game')))
-          return;
-        setAdminModalOpen(false);
-        setAdminOverrideActive(false);
-        await seats.handleReturnToPreviousGame();
-      }
-    : undefined;
-  const handleSignOut = async () => {
-    seats.clearPreviousGame();
-    await signOutUser();
-    if (viewMode === 'multiplayer') setViewMode('lobby');
-    triggerToast('Signed out — now in Guest Mode.');
-  };
-  const boardState = directEdit.effectiveGameState ?? gameState;
-  const handleAdminResolveTurn = async (event?: React.MouseEvent) => {
-    if (!boardState || boardState.winner) return;
-    if (!requireRealBoard('resolve the real turn')) return;
-    const isMp = viewMode === 'multiplayer';
-    const ok = await confirm(
-      {
-        title: 'Force-Resolve Turn?',
-        message: isMp
-          ? `Force-resolve ${boardState.season} ${boardState.year} ${boardState.phase} and advance to the next phase? Other players will be notified of this admin action.`
-          : `Resolve ${boardState.season} ${boardState.year} ${boardState.phase} and advance to the next phase?`,
-        confirmLabel: 'Resolve Turn',
-      },
-      event,
-    );
-    if (!ok) return;
-    await handleAdjudicateTurn();
-  };
+  const boardState = directEdit.effectiveGameState ?? session.gameState;
 
   return (
     <div
@@ -459,57 +286,57 @@ export function App() {
         viewMode={viewMode}
         isCompact={isCompact}
         gameState={boardState}
-        activeGameId={activeGameId}
-        activeGameSummary={activeGameSummary}
-        games={gamesList}
+        activeGameId={session.activeGameId}
+        activeGameSummary={session.activeGameSummary}
+        games={session.gamesList}
         playerPower={activePower}
-        lockedPower={lockedPower}
+        lockedPower={session.lockedPower}
         wsConnected={wsConnected}
         displayPrefs={displayPrefs}
         displayPrefsSaveState={displayPrefsSaveState}
         updateDisplayPrefs={updateDisplayPrefs}
-        authUser={authUser}
-        openAuthPrompt={openAuthPrompt}
-        openAccountModal={openAccountModal}
-        handleSignOut={handleSignOut}
-        handleBackToLobby={handleBackToLobby}
-        handleEnterSoloSandbox={guardedEnterSoloSandbox}
-        onSaveSandbox={handleOpenSaveSandboxModal}
-        onResetSandbox={guardedResetSandbox}
-        onDeleteSandbox={guardedDeleteSandbox}
-        onSwitchToSoloSandbox={guardedSwitchToSoloSandbox}
-        onReturnToPreviousGame={guardedReturnToPreviousGame}
-        onSelectGame={guardedSwitchToGame}
+        authUser={auth.authUser}
+        openAuthPrompt={auth.openAuthPrompt}
+        openAccountModal={auth.openAccountModal}
+        handleSignOut={nav.handleSignOut}
+        handleBackToLobby={nav.handleBackToLobby}
+        handleEnterSoloSandbox={nav.guardedEnterSoloSandbox}
+        onSaveSandbox={sandbox.handleOpenSaveSandboxModal}
+        onResetSandbox={nav.guardedResetSandbox}
+        onDeleteSandbox={nav.guardedDeleteSandbox}
+        onSwitchToSoloSandbox={nav.guardedSwitchToSoloSandbox}
+        onReturnToPreviousGame={nav.guardedReturnToPreviousGame}
+        onSelectGame={nav.guardedSwitchToGame}
         onOpenSurrenderModal={seats.handleOpenSurrenderModal}
-        handleFinalizeClick={handleFinalizeClick}
+        handleFinalizeClick={match.handleFinalizeClick}
         toolsDrawerOpen={layout.toolsDrawerOpen}
         setToolsDrawerOpen={layout.setToolsDrawerOpen}
         toolsToggleRef={layout.toolsToggleRef}
         isGameCreator={isGameCreator}
         directEditActive={directEditActive}
-        openAdminTools={openAdminTools}
-        onToggleDirectEdit={handleToggleEditBoard}
+        openAdminTools={nav.openAdminTools}
+        onToggleDirectEdit={nav.handleToggleEditBoard}
         turnClockOpen={isGameCreator && adminModalOpen}
-        onResolveTurn={handleAdminResolveTurn}
-        onExitAdmin={handleExitAdmin}
+        onResolveTurn={nav.handleAdminResolveTurn}
+        onExitAdmin={nav.handleExitAdmin}
         toastBanner={toastBanner}
         historyEntries={turnHistory.entries}
         historyViewIndex={turnHistory.viewIndex}
-        historyLocked={adminModeActive}
-        onSelectHistoryTurn={showPastTurn}
-        onStepHistoryTurn={stepPastTurn}
+        historyLocked={nav.adminModeActive}
+        onSelectHistoryTurn={nav.showPastTurn}
+        onStepHistoryTurn={nav.stepPastTurn}
         onOpenGameOverModal={openGameOverModal}
       />
 
       {/* VIEW 1: MAIN PAGE / LOBBY */}
       {viewMode === 'lobby' ? (
         <LobbyView
-          user={authUser}
-          games={gamesList}
-          loadingGames={loadingGames}
-          onRefreshGames={fetchGamesList}
-          onEnterSandbox={guardedEnterSoloSandbox}
-          onOpenAuth={openAuthPrompt}
+          user={auth.authUser}
+          games={session.gamesList}
+          loadingGames={session.loadingGames}
+          onRefreshGames={session.fetchGamesList}
+          onEnterSandbox={nav.guardedEnterSoloSandbox}
+          onOpenAuth={auth.openAuthPrompt}
           onCreateGame={seats.handleCreateMultiplayerGame}
           onJoinOrEnterGame={seats.handleJoinOrEnterMultiplayerGame}
           onOpenSurrenderModal={seats.handleOpenSurrenderModal}
@@ -519,10 +346,10 @@ export function App() {
           viewMode={viewMode}
           isCompact={isCompact}
           gameState={boardState}
-          provinces={provinces}
-          activeGameSummary={activeGameSummary}
+          provinces={session.provinces}
+          activeGameSummary={session.activeGameSummary}
           playerPower={activePower}
-          lockedPower={lockedPower}
+          lockedPower={session.lockedPower}
           leftSidebarCollapsed={layout.leftSidebarCollapsed}
           setLeftSidebarCollapsed={layout.setLeftSidebarCollapsed}
           rightSidebarCollapsed={layout.rightSidebarCollapsed}
@@ -533,10 +360,10 @@ export function App() {
           closeToolsDrawer={layout.closeToolsDrawer}
           handleDockedBarChange={layout.handleDockedBarChange}
           turnHistory={turnHistory}
-          historyTurn={historyTurn}
-          viewedEntry={viewedEntry}
-          showPastTurn={showPastTurn}
-          stepPastTurn={stepPastTurn}
+          historyTurn={nav.historyTurn}
+          viewedEntry={nav.viewedEntry}
+          showPastTurn={nav.showPastTurn}
+          stepPastTurn={nav.stepPastTurn}
           mapRef={mapRef}
           zoomPercent={zoomPercent}
           setZoomPercent={setZoomPercent}
@@ -554,52 +381,42 @@ export function App() {
           highlightedProvinces={highlightedProvinces}
           setHighlightedProvinces={setHighlightedProvinces}
           simulationResult={simulationResult}
-          sandboxMode={sandboxMode}
-          sandboxGameId={sandboxGameId}
-          showSimulationOverlay={showSimulationOverlay}
-          setShowSimulationOverlay={setShowSimulationOverlay}
-          matchTimer={matchTimer}
-          handleToggleSandboxMode={handleToggleSandboxMode}
-          handleClearForeignPreMoves={handleClearForeignPreMoves}
-          handleLoadScenario={handleLoadScenario}
-          handleOpenSaveSandboxModal={handleOpenSaveSandboxModal}
+          sandboxMode={sandbox.sandboxMode}
+          sandboxGameId={sandbox.sandboxGameId}
+          showSimulationOverlay={sandbox.showSimulationOverlay}
+          setShowSimulationOverlay={sandbox.setShowSimulationOverlay}
+          matchTimer={sandbox.matchTimer}
+          handleToggleSandboxMode={sandbox.handleToggleSandboxMode}
+          handleClearForeignPreMoves={sandbox.handleClearForeignPreMoves}
+          handleLoadScenario={sandbox.handleLoadScenario}
+          handleOpenSaveSandboxModal={sandbox.handleOpenSaveSandboxModal}
           handleUpdateOrder={
-            directEditActive ? directEdit.stageUnitOrder : handleUpdateOrder
+            directEditActive
+              ? directEdit.stageUnitOrder
+              : match.handleUpdateOrder
           }
-          handleClearAllOrders={handleClearAllOrders}
-          handleFinalizeClick={handleFinalizeClick}
-          handleUnfinalizeClick={handleUnfinalizeClick}
-          handleAdjudicateTurn={handleAdjudicateTurn}
-          postTimerAction={postTimerAction}
+          handleClearAllOrders={match.handleClearAllOrders}
+          handleFinalizeClick={match.handleFinalizeClick}
+          handleUnfinalizeClick={match.handleUnfinalizeClick}
+          handleAdjudicateTurn={match.handleAdjudicateTurn}
+          postTimerAction={match.postTimerAction}
           handleTimerExpired={handleTimerExpired}
           handleSelectPower={seats.handleSelectPower}
           isGameCreator={isGameCreator}
           directEditActive={directEditActive}
-          historyLocked={adminModeActive}
+          historyLocked={nav.adminModeActive}
           directEdit={directEdit}
-          turnClockSettings={
-            isGameCreator && adminModalOpen
-              ? {
-                  isOpen: true,
-                  onClose: () => setAdminModalOpen(false),
-                  gameId: activeGameId,
-                  gameState,
-                  user: authUser,
-                  onStateUpdated: handleAdminUpdateState,
-                  onToast: triggerToast,
-                }
-              : undefined
-          }
+          turnClockSettings={nav.turnClockSettings}
         />
       )}
 
       <AppModals
-        gameState={gameState}
+        gameState={session.gameState}
         playerPower={activePower}
-        sanityModalOpen={sanityModalOpen}
-        setSanityModalOpen={setSanityModalOpen}
-        sanityModalIssues={sanityModalIssues}
-        handleFinalizeClick={handleFinalizeClick}
+        sanityModalOpen={match.sanityModalOpen}
+        setSanityModalOpen={match.setSanityModalOpen}
+        sanityModalIssues={match.sanityModalIssues}
+        handleFinalizeClick={match.handleFinalizeClick}
         setSelectedUnitId={setSelectedUnitId}
         setHighlightedProvinces={setHighlightedProvinces}
         surrenderModalOpen={seats.surrenderModalOpen}
@@ -608,34 +425,34 @@ export function App() {
         surrenderModalPower={seats.surrenderModalPower}
         handleSurrenderPower={seats.handleSurrenderPower}
         handleLeaveGame={seats.handleLeaveGame}
-        saveSandboxModalOpen={saveSandboxModalOpen}
-        setSaveSandboxModalOpen={setSaveSandboxModalOpen}
-        savingSandbox={savingSandbox}
-        handleSaveSandboxToAccount={handleSaveSandboxToAccount}
-        fetchGamesList={fetchGamesList}
+        saveSandboxModalOpen={sandbox.saveSandboxModalOpen}
+        setSaveSandboxModalOpen={sandbox.setSaveSandboxModalOpen}
+        savingSandbox={sandbox.savingSandbox}
+        handleSaveSandboxToAccount={sandbox.handleSaveSandboxToAccount}
+        fetchGamesList={session.fetchGamesList}
         triggerToast={triggerToast}
         unacknowledgedAdminEntries={directEdit.unacknowledgedAdminEntries}
         onAcknowledgeAdminEntries={directEdit.handleAcknowledgeAdminEntries}
         acknowledgingAdminEntries={directEdit.acknowledgingAdminEntries}
-        authUser={authUser}
-        setAuthUser={setAuthUser}
-        authModalOpen={authModalOpen}
-        setAuthModalOpen={setAuthModalOpen}
-        authModalTab={authModalTab}
-        authModalReason={authModalReason}
-        accountModalOpen={accountModalOpen}
-        setAccountModalOpen={setAccountModalOpen}
-        accountModalOnboarding={accountModalOnboarding}
-        handleSignOut={handleSignOut}
+        authUser={auth.authUser}
+        setAuthUser={auth.setAuthUser}
+        authModalOpen={auth.authModalOpen}
+        setAuthModalOpen={auth.setAuthModalOpen}
+        authModalTab={auth.authModalTab}
+        authModalReason={auth.authModalReason}
+        accountModalOpen={auth.accountModalOpen}
+        setAccountModalOpen={auth.setAccountModalOpen}
+        accountModalOnboarding={auth.accountModalOnboarding}
+        handleSignOut={nav.handleSignOut}
         confirmModal={confirmModal}
         viewMode={viewMode}
-        provinces={provinces}
-        activeGameSummary={activeGameSummary}
+        provinces={session.provinces}
+        activeGameSummary={session.activeGameSummary}
         gameOverModalOpen={gameOverModalOpen}
         onCloseGameOverModal={closeGameOverModal}
         onReturnToLobby={() => {
           closeGameOverModal();
-          void handleBackToLobby();
+          void nav.handleBackToLobby();
         }}
       />
     </div>
