@@ -169,6 +169,9 @@ test.describe('Unified Top Bar Dropdowns', () => {
       await expect(page.getByTestId('game-settings-subtitle')).toHaveText(
         'Solo Sandbox',
       );
+      await expect(
+        page.getByTestId('game-settings-subtitle-flask'),
+      ).toBeVisible();
       await expect(page.getByTestId('game-settings-solo-sandbox')).toHaveCount(
         0,
       );

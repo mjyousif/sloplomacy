@@ -70,18 +70,19 @@ export function GameSettingsMenu({
   const toggleRef = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
 
-  const isSoloSandbox =
-    viewMode === 'sandbox' && (!matchSummary || Boolean(matchSummary.is_draft));
-  const subtitle = isSoloSandbox
+  const isSandbox = viewMode === 'sandbox';
+  const isDraftSandbox =
+    isSandbox && (!matchSummary || Boolean(matchSummary.is_draft));
+  const subtitle = isDraftSandbox
     ? 'Solo Sandbox'
     : (matchSummary?.name ?? 'Current Game');
   const showPowerFlag =
-    !isSoloSandbox && viewMode === 'multiplayer' && Boolean(playerPower);
-  const showExportToSandbox = viewMode !== 'lobby' && !isSoloSandbox;
+    !isSandbox && viewMode === 'multiplayer' && Boolean(playerPower);
+  const showExportToSandbox = viewMode !== 'lobby' && !isSandbox;
   const showAdmin = viewMode !== 'lobby' && isGameCreator;
-  const showSaveSandbox = isSoloSandbox && Boolean(onSaveSandbox);
-  const showResetSandbox = isSoloSandbox && Boolean(onResetSandbox);
-  const showReturnPrevious = isSoloSandbox && Boolean(onReturnToPreviousGame);
+  const showSaveSandbox = isSandbox && Boolean(onSaveSandbox);
+  const showResetSandbox = isSandbox && Boolean(onResetSandbox);
+  const showReturnPrevious = isSandbox && Boolean(onReturnToPreviousGame);
   const showSurrender =
     viewMode === 'multiplayer' && Boolean(onSurrenderClick) && !isSurrendered;
   const anyAdminModeActive =
@@ -127,8 +128,8 @@ export function GameSettingsMenu({
         data-testid="game-settings-trigger"
         className={styles.gameSettingsTrigger}
         data-open={open}
-        data-solo-sandbox={isSoloSandbox}
-        data-icon={isSoloSandbox ? 'flask' : 'crown'}
+        data-solo-sandbox={isSandbox}
+        data-icon={isSandbox ? 'flask' : 'crown'}
         data-admin-active={anyAdminModeActive}
         aria-label="Game Settings"
         title="Game Settings"
@@ -136,7 +137,7 @@ export function GameSettingsMenu({
         aria-controls={open ? panelId : undefined}
         onClick={() => (open ? closeMenu() : setOpen(true))}
       >
-        {isSoloSandbox ? <FlaskConical size={15} /> : <Crown size={15} />}
+        {isSandbox ? <FlaskConical size={15} /> : <Crown size={15} />}
       </button>
 
       {open && (
@@ -183,13 +184,23 @@ export function GameSettingsMenu({
                 )}
                 data-testid="game-settings-subtitle"
               >
-                {showPowerFlag && playerPower && (
-                  <PowerFlag
-                    power={playerPower}
-                    width={16}
-                    height={11}
-                    className={styles.gameSettingsSubtitleFlag}
+                {isSandbox ? (
+                  <FlaskConical
+                    size={13}
+                    className={styles.gameSettingsSubtitleFlask}
+                    data-testid="game-settings-subtitle-flask"
+                    aria-hidden="true"
                   />
+                ) : (
+                  showPowerFlag &&
+                  playerPower && (
+                    <PowerFlag
+                      power={playerPower}
+                      width={16}
+                      height={11}
+                      className={styles.gameSettingsSubtitleFlag}
+                    />
+                  )
                 )}
                 <span>{subtitle}</span>
               </p>

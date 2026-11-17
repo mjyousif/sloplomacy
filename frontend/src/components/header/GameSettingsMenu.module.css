@@ -88,6 +88,11 @@
     border-radius: 2px;
   }
 
+  .game-settings-subtitle-flask {
+    flex: none;
+    color: var(--amber-text);
+  }
+
   .game-menu-list {
     display: flex;
     flex-direction: column;

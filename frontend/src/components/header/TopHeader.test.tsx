@@ -66,6 +66,9 @@ describe('TopHeader: brand and navigation', () => {
       'Solo Sandbox',
     );
     expect(
+      screen.getByTestId('game-settings-subtitle-flask'),
+    ).toBeInTheDocument();
+    expect(
       screen.queryByTestId('game-settings-solo-sandbox'),
     ).not.toBeInTheDocument();
   });

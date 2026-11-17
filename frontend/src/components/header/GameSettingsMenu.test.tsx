@@ -79,6 +79,9 @@ describe('GameSettingsMenu', () => {
       'Solo Sandbox',
     );
     expect(
+      screen.getByTestId('game-settings-subtitle-flask'),
+    ).toBeInTheDocument();
+    expect(
       screen.queryByTestId('game-settings-solo-sandbox'),
     ).not.toBeInTheDocument();
     expect(
@@ -90,6 +93,47 @@ describe('GameSettingsMenu', () => {
     expect(
       screen.queryByTestId('game-settings-return-previous'),
     ).not.toBeInTheDocument();
+  });
+
+  it('treats a saved Solo Sandbox identically to a sandbox with its saved name and flask icon', async () => {
+    const onSaveSandbox = vi.fn();
+    const onResetSandbox = vi.fn();
+    renderGameSettings({
+      viewMode: 'sandbox',
+      matchSummary: {
+        game_id: 'sbx_saved_1',
+        name: 'Balkans Study',
+        is_sandbox: true,
+        is_draft: false,
+      } as MultiplayerGameSummary,
+      isGameCreator: true,
+      onSaveSandbox,
+      onResetSandbox,
+    });
+    const trigger = screen.getByTestId('game-settings-trigger');
+    expect(trigger).toHaveAttribute('data-icon', 'flask');
+    expect(trigger).toHaveAttribute('data-solo-sandbox', 'true');
+
+    await userEvent.click(trigger);
+    expect(screen.getByTestId('game-settings-subtitle')).toHaveTextContent(
+      'Balkans Study',
+    );
+    expect(
+      screen.getByTestId('game-settings-subtitle-flask'),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('power-flag-france')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('game-settings-solo-sandbox'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId('game-settings-admin-settings'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId('game-settings-save-sandbox'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId('game-settings-reset-sandbox'),
+    ).toBeInTheDocument();
   });
 
   it('shows Save Sandbox, Reset Sandbox, and Return to Previous Game below Administrator in Solo Sandbox mode when provided', async () => {
