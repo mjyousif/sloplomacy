@@ -84,10 +84,11 @@ describe('supabase auth & local fallback helper', () => {
     expect(afterSignOut).toBeNull();
   });
 
-  it('signs in a dev player on load only when VITE_DEV_LOGIN is set', async () => {
+  it('signs in a dev player on load on the dev server, once per profile', async () => {
+    // Vitest runs with MODE=test, which keeps the dev sign-in off for every other test.
     expect(await getInitialAuthUser()).toBeNull();
 
-    vi.stubEnv('VITE_DEV_LOGIN', '1');
+    vi.stubEnv('MODE', 'development');
     try {
       const first = await getInitialAuthUser();
       expect(first?.isLocalDemo).toBe(true);
@@ -104,10 +105,13 @@ describe('supabase auth & local fallback helper', () => {
     }
   });
 
-  it('does not override a real demo sign-in when VITE_DEV_LOGIN is set', async () => {
-    await signInWithEmailPassword('churchill@uk.gov', 'password123');
-    vi.stubEnv('VITE_DEV_LOGIN', '1');
+  it('stays signed out when VITE_DEV_LOGIN=0, and keeps a real demo sign-in', async () => {
+    vi.stubEnv('MODE', 'development');
+    vi.stubEnv('VITE_DEV_LOGIN', '0');
     try {
+      expect(await getInitialAuthUser()).toBeNull();
+      vi.stubEnv('VITE_DEV_LOGIN', '');
+      await signInWithEmailPassword('churchill@uk.gov', 'password123');
       expect((await getInitialAuthUser())?.email).toBe('churchill@uk.gov');
     } finally {
       vi.unstubAllEnvs();
