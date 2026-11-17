@@ -11,6 +11,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../../types/diplomacy';
+import { ImpassableLand } from './ImpassableLand';
 import styles from './MiniMap.module.css';
 
 export interface MiniMapProps {
@@ -20,14 +21,34 @@ export interface MiniMapProps {
   viewerPower?: Power | null;
   /** Units are left off the thumbnails, where they would be specks. */
   showUnits?: boolean;
+  /**
+   * Lays the board's stripes over land nobody can enter. At a thumbnail's size they would only
+   * blur, so there it keeps the flat colour.
+   */
+  stripedLand?: boolean;
   /** What a screen reader calls the map, e.g. "Board of Concert of Vienna". */
   label: string;
 }
 
-const LAND = ALL_PROVINCE_GEOMETRIES.filter((g) => !(g.id in SEA_SHORT_NAMES));
+const SEAS = ALL_PROVINCE_GEOMETRIES.filter((g) => g.id in SEA_SHORT_NAMES);
+// Switzerland is a province but impassable, so it is drawn with the other impassable land.
+const LAND = ALL_PROVINCE_GEOMETRIES.filter(
+  (g) => !(g.id in SEA_SHORT_NAMES) && g.id !== 'SWI',
+);
 // The compact layout keeps every unit inside its own province (classic puts Clyde's at sea).
 const LAYOUT = getMapLayout('compact');
 const UNIT_SIZE = 15;
+// The board's classic fleet pentagon (`DiscPiece`) at this map's unit size: a point on top,
+// shoulders and a flat base. Armies are circles, so the two read apart without a letter.
+const FLEET_POINTS = [
+  [0, -19],
+  [18, -7],
+  [14, 15],
+  [-14, 15],
+  [-18, -7],
+]
+  .map(([x, y]) => `${(x * UNIT_SIZE) / 17},${(y * UNIT_SIZE) / 17}`)
+  .join(' ');
 const PARCHMENT = '#efd3b0';
 
 /** `amount` of one `#rrggbb` colour laid over another, as the board's tinted fills look. */
@@ -49,12 +70,18 @@ const OWNER_FILL = Object.fromEntries(
 ) as Record<Power, string>;
 
 /**
- * A small, static map of a game: each land province in its owner's colour and a dot per unit.
- * It is a picture, not the board: nothing on it can be clicked, and it ignores the player's
- * piece style.
+ * A small, static map of a game: each land province in its owner's colour, the seas outlined
+ * and a circle (army) or pentagon (fleet) per unit. It is a picture, not the board: nothing on
+ * it can be clicked, and it ignores the player's piece style and marks.
  */
 export const MiniMap: React.FC<MiniMapProps> = memo(
-  ({ board, viewerPower = null, showUnits = true, label }) => {
+  ({
+    board,
+    viewerPower = null,
+    showUnits = true,
+    stripedLand = false,
+    label,
+  }) => {
     const ownership = board?.ownership ?? {};
     return (
       <svg
@@ -65,6 +92,15 @@ export const MiniMap: React.FC<MiniMapProps> = memo(
         data-testid="mini-map"
         data-has-board={board ? 'true' : 'false'}
       >
+        {SEAS.map((geom) => (
+          <path
+            key={geom.id}
+            d={geom.path}
+            className={styles.sea}
+            data-province-id={geom.id}
+            data-sea="true"
+          />
+        ))}
         {LAND.map((geom) => {
           const owner = ownership[geom.id];
           return (
@@ -78,6 +114,7 @@ export const MiniMap: React.FC<MiniMapProps> = memo(
             />
           );
         })}
+        <ImpassableLand striped={stripedLand} />
         {showUnits &&
           board?.units.map((unit) => {
             const at = LAYOUT[unit.province]?.unit;
@@ -91,15 +128,12 @@ export const MiniMap: React.FC<MiniMapProps> = memo(
               'data-mine': mine ? 'true' : undefined,
             };
             const key = `${unit.power}-${unit.unit_type}-${unit.province}`;
-            // Armies are discs and fleets are squares, as on the board's simplest pieces.
+            // Armies are circles and fleets are pentagons, as on the board's tokens.
             return unit.unit_type === 'F' ? (
-              <rect
+              <polygon
                 key={key}
-                x={at.x - UNIT_SIZE}
-                y={at.y - UNIT_SIZE}
-                width={UNIT_SIZE * 2}
-                height={UNIT_SIZE * 2}
-                rx={5}
+                points={FLEET_POINTS}
+                transform={`translate(${at.x}, ${at.y})`}
                 {...shared}
               />
             ) : (
