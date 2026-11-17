@@ -130,9 +130,6 @@ function props(over: Partial<GameWorkspaceProps> = {}): GameWorkspaceProps {
     viewedEntry: null,
     showPastTurn: vi.fn(),
     stepPastTurn: vi.fn(),
-    mapRef: { current: { stepZoom: vi.fn(), resetCamera: vi.fn() } as any },
-    zoomPercent: 120,
-    setZoomPercent: vi.fn(),
     displayPrefs: { pieceStyle: 'classic', unitMark: 'letters' } as any,
     selectedUnitId: 'F1',
     setSelectedUnitId: vi.fn(),
@@ -241,19 +238,6 @@ describe('GameWorkspace: the live turn', () => {
   it("counts other powers' changed orders: any move, or an explicit hold", () => {
     render(<GameWorkspace {...props()} />);
     expect(seen.tools.foreignModifiedOrdersCount).toBe(2);
-  });
-
-  it('wires the zoom buttons to the map camera', () => {
-    const p = props();
-    render(<GameWorkspace {...p} />);
-    seen.tools.onZoomIn();
-    seen.tools.onZoomOut();
-    seen.tools.onResetCamera();
-    const cam = p.mapRef.current as any;
-    expect(cam.stepZoom.mock.calls).toEqual([[0.2], [-0.2]]);
-    expect(cam.resetCamera).toHaveBeenCalledTimes(1);
-    expect(seen.tools.zoomPercent).toBe(120);
-    expect(seen.map.onZoomChange).toBe(p.setZoomPercent);
   });
 
   it('flips the rails and passes directEditActive down', () => {
@@ -437,7 +421,7 @@ describe('GameWorkspace: a past turn', () => {
     const p = props({ historyTurn: PAST });
     const { rerender } = render(<GameWorkspace {...p} />);
     const first = seen.map;
-    rerender(<GameWorkspace {...p} zoomPercent={130} />);
+    rerender(<GameWorkspace {...p} />);
     expect(seen.map.issues).toBe(first.issues);
     expect(seen.map.highlightedProvinces).toBe(first.highlightedProvinces);
   });

@@ -20,7 +20,7 @@ To prevent interface bloat and preserve a clean, focused tactical workspace, adh
 1. **Authoritative Lobby Navigation**: The clickable brand emblem and title (`SLOPLOMACY 1901`) in the top command header is the single authoritative control to return to the match lobby; never add separate "Main Page" or "Home" tab buttons to the header. On phones the ← button at the left of `CompactTopBar` takes this role, because a phone has no tooltip to explain the brand.
 2. **Sidebar Collapse & Rail Ownership**: Sidebar expand and collapse actions belong exclusively on the sidebars themselves (in their headers when expanded, and on their 44px slim rails when collapsed). Do not introduce top navigation header pill buttons to toggle sidebars. Phones are the exception, because they have no rails: ≡ in the phone top bar opens the tools drawer, and the order sheet's own handle raises and lowers it.
 3. **Overlays Keep Clear of the Sidebars**: Anything placed over the map (banners, pills, the turn clock, the coast picker, the floating unit menu) offsets or centres itself with `--map-inset-left` / `--map-inset-right`, never with a width written into its own stylesheet or script. A centred overlay uses `left: calc(50% + (var(--map-inset-left, 0px) - var(--map-inset-right, 0px)) / 2)`.
-4. **Unobstructed Map Canvas**: The interactive SVG European map viewport must remain free of floating camera/zoom overlay boxes. All stepped zooming, percentage readout, and camera reset/fit actions belong in the Left Tools Sidebar (`ToolsSidebar.tsx`), accessible both in full view and via rail icons. The one exception is the phone layout, which has no wheel and no tools rail: there `EuropeMap` shows zoom in, zoom out and "Back to my units" in the map's bottom-right corner. See [Phone camera](map-renderer.md#phone-camera-compact-prop).
+4. **Camera & Zoom Controls on the Map**: The Google-Maps-style floating vertical icon bar (`MapCameraBar.tsx`, bottom-right of the map viewport by default, draggable via its bottom grip handle, clamped within the visible map view, and snapping to nearby corners) holds Fit Map, Zoom In (`+`), and Zoom Out (`-`). On phones (`compact`), `EuropeMap` renders vertical 44px touch buttons (`MapZoomControls.tsx`) in the bottom-right corner instead. The Left Tools Sidebar (`ToolsSidebar.tsx`) and its collapsed rail do not duplicate camera controls.
 4. **Personal Display Settings in the Top Bar**: On desktop, Display Settings lives inside the unified top-bar account dropdown (`AccountDropdownMenu.tsx` -> `Display Settings` -> `DisplaySettingsOptions`), whenever a board is open and for guests too. See [Top Bar Display Settings](#top-bar-display-settings). On phones it sits inside the ⋯ menu instead.
 5. **Tactical Map Legend Purity**: The Tactical Map Legend is strictly a visual guide for map symbology (movement vectors, support reticles, convoy anchors, and warning/dislodgement markers). Never embed rulebook mechanics or geography text footnotes (e.g. dual coasts or impassable terrain); interactive modal dialogs and cartographic text handle these directly.
 
@@ -88,7 +88,7 @@ In the compact layout the game screen is the map, with everything else layered o
 
 ### Tools drawer (`ToolsSidebar variant="drawer"`)
 - ≡ in the top bar opens it over the game area, below the top bar, so ≡ can close it again. Tapping the backdrop or pressing Escape also closes it, and focus goes back to ≡.
-- It shows the same sections as the desktop sidebar except Map View & Camera, because the zoom buttons are on the map. Press is among them, and while the drawer is closed ≡ carries the count of unread press.
+- It shows the same sections as the desktop sidebar. Press is among them, and while the drawer is closed ≡ carries the count of unread press.
 - It stays mounted while closed, and `inert`, so it can slide both ways.
 
 ### Docked unit bar and the map
@@ -117,15 +117,9 @@ The selector sits at the foot of the ≡ drawer with 40px controls and the natio
 
 ## Left Sidebar: Chancellery Tools & Intel (`ToolsSidebar.tsx`)
 
-`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Everything else is in `components/tools/`: `CollapsedRail`, then one component per section below (`MapControlsSection`, `StandingsSection` with `useStandingsSort`, `PressSection` with its pieces in `tools/press/`, `SandboxToolsSection`). Each section takes only the props it reads, typed as a `Pick<>` of `ToolsSidebarProps` (`tools/toolsSidebarProps.ts`). The parent decides which sections show: the zoom section is left out of the drawer, while Administrator controls live in Display Settings (`DisplaySettingsMenu.tsx`).
+`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Everything else is in `components/tools/`: `CollapsedRail`, then one component per section below (`StandingsSection` with `useStandingsSort`, `PressSection` with its pieces in `tools/press/`, `SandboxToolsSection`). Each section takes only the props it reads, typed as a `Pick<>` of `ToolsSidebarProps` (`tools/toolsSidebarProps.ts`). Map camera and zoom controls live on the map itself (`MapCameraBar.tsx` on desktop, `MapZoomControls.tsx` on phones), while Administrator controls live in Display Settings (`DisplaySettingsMenu.tsx`).
 
-### 1. Map View & Camera Controls
-- Rendered via a non-collapsible `CollapsibleSection` to retain uniform visual hierarchy with action controls.
-- **Zoom In (`+`) & Zoom Out (`-`)**: Stepped zooming across the SVG canvas.
-- **Current Zoom Readout**: Real-time percentage indicator (e.g., `90%`).
-- **Fit Map / Reset Camera**: Instantly realigns the camera to the home view: the board framed in the strip between the sidebars (`getWideHomeCamera`, about 90% at 1440×900). On a phone it returns to the phone view instead: the board filling the screen's height around the player's own units.
-
-### 2. Great Powers Diplomatic Standing & Command Selector
+### 1. Great Powers Diplomatic Standing & Command Selector
 - Lists all 7 Great Powers (Austria-Hungary, England, France, Germany, Italy, Russia, Turkey) with their authentic World War I (1901–1918) SVG flags, toggleable sorting (`By Score` vs `Default`), dynamic numeric ranking (1–7), player names in multiplayer, national colors, controlled Supply Centers, and active field units.
 - **Toggleable Standings Sort**:
   - Segmented toggle at the top of the standings list allows commanders to switch between:

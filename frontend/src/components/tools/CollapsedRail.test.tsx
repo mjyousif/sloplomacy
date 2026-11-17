@@ -8,23 +8,18 @@ const props = (
   extra: Partial<CollapsedRailProps> = {},
 ): CollapsedRailProps => ({
   onToggleCollapse: vi.fn(),
-  zoomPercent: 120,
-  onZoomIn: vi.fn(),
-  onZoomOut: vi.fn(),
-  onResetCamera: vi.fn(),
   sandboxMode: false,
   onToggleSandboxMode: vi.fn(),
   ...extra,
 });
 
 describe('CollapsedRail', () => {
-  it('is a labelled rail that shows the zoom level', () => {
+  it('is a labelled rail', () => {
     render(<CollapsedRail {...props()} />);
     expect(screen.getByLabelText('Tools Sidebar Collapsed')).toHaveAttribute(
       'data-testid',
       'tools-sidebar-collapsed',
     );
-    expect(screen.getByTitle('Current Zoom: 120%')).toBeInTheDocument();
   });
 
   it('expands from either end', async () => {
@@ -33,19 +28,6 @@ describe('CollapsedRail', () => {
     await userEvent.click(screen.getByTestId('tools-sidebar-expand-btn'));
     await userEvent.click(screen.getByTitle('Expand Tools'));
     expect(onToggleCollapse).toHaveBeenCalledTimes(2);
-  });
-
-  it('zooms and resets', async () => {
-    const p = props();
-    render(<CollapsedRail {...p} />);
-    await userEvent.click(screen.getByTitle('Zoom In (+)'));
-    await userEvent.click(screen.getByTitle('Zoom Out (-)'));
-    await userEvent.click(screen.getByTitle('Fit Map / Reset Camera'));
-    expect(
-      [p.onZoomIn, p.onZoomOut, p.onResetCamera].map(
-        (f) => (f as ReturnType<typeof vi.fn>).mock.calls.length,
-      ),
-    ).toEqual([1, 1, 1]);
   });
 
   it('toggles Hypothetical Mode and glows while it is on', async () => {

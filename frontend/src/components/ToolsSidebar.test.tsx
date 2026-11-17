@@ -8,10 +8,6 @@ import { ToolsSidebar, type ToolsSidebarProps } from './ToolsSidebar';
 const props = (extra: Partial<ToolsSidebarProps> = {}): ToolsSidebarProps => ({
   collapsed: false,
   onToggleCollapse: vi.fn(),
-  zoomPercent: 100,
-  onZoomIn: vi.fn(),
-  onZoomOut: vi.fn(),
-  onResetCamera: vi.fn(),
   activePower: 'FRANCE',
   onSelectPower: vi.fn(),
   ownership: { PAR: 'FRANCE', LON: 'ENGLAND' },
@@ -27,17 +23,17 @@ const props = (extra: Partial<ToolsSidebarProps> = {}): ToolsSidebarProps => ({
 });
 
 describe('ToolsSidebar panel', () => {
-  it('stacks the sections in order, with the zoom section first', () => {
+  it('stacks the sections in order without map camera controls', () => {
     render(<ToolsSidebar {...props()} />);
     const text = document.body.textContent ?? '';
     const order = [
       'CHANCELLERY TOOLS',
-      'MAP VIEW & CAMERA',
       'COMMAND NATION (SELECT)',
       'HYPOTHETICAL MODE & PRE-MOVES',
     ].map((t) => text.indexOf(t));
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(screen.queryByText('MAP VIEW & CAMERA')).toBeNull();
     expect(screen.queryByTestId('tools-drawer')).toBeNull();
     expect(
       screen.getByLabelText('Chancellery Tools & Intel'),
@@ -79,15 +75,12 @@ describe('ToolsSidebar panel', () => {
       foreignModifiedOrdersCount: 2,
     });
     render(<ToolsSidebar {...p} />);
-    expect(screen.getByText('100%')).toBeInTheDocument();
     expect(screen.getByText('DIPLOMATIC STANDING')).toBeInTheDocument();
     expect(screen.getByTestId('standings-moves-all')).toBeInTheDocument();
     expect(screen.getByTestId('standings-moves-selected')).toBeInTheDocument();
     expect(screen.getByTitle('Civil Disorder')).toBeInTheDocument();
     expect(screen.getByText('2 foreign moves plotted')).toBeInTheDocument();
     expect(screen.queryByText('Plan All 7')).toBeNull();
-    await userEvent.click(screen.getByTitle('Zoom In'));
-    expect(p.onZoomIn).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByTestId('btn-toggle-sandbox'));
     expect(p.onToggleSandboxMode).toHaveBeenCalledTimes(1);
   });
@@ -143,9 +136,6 @@ describe('ToolsSidebar panel', () => {
 function spies() {
   return {
     onToggleCollapse: vi.fn(),
-    onZoomIn: vi.fn(),
-    onZoomOut: vi.fn(),
-    onResetCamera: vi.fn(),
     onSelectPower: vi.fn(),
     onChangeShowAllMoves: vi.fn(),
     onToggleSandboxMode: vi.fn(),
@@ -185,12 +175,6 @@ describe('ToolsSidebar wiring', () => {
         'onToggleCollapse',
         () => screen.getByTestId('tools-sidebar-collapse-btn'),
       ],
-      ['onZoomOut', () => screen.getByTitle('Zoom Out')],
-      ['onZoomIn', () => screen.getByTitle('Zoom In')],
-      [
-        'onResetCamera',
-        () => screen.getByTitle('Reset Map to 100% Default View'),
-      ],
       ['onSelectPower', () => screen.getAllByTestId('power-standing-card')[0]],
       [
         'onChangeShowAllMoves',
@@ -216,9 +200,6 @@ describe('ToolsSidebar wiring', () => {
         'onToggleCollapse',
         () => screen.getByTestId('tools-sidebar-expand-btn'),
       ],
-      ['onZoomIn', () => screen.getByTitle('Zoom In (+)')],
-      ['onZoomOut', () => screen.getByTitle('Zoom Out (-)')],
-      ['onResetCamera', () => screen.getByTitle('Fit Map / Reset Camera')],
       ['onToggleSandboxMode', () => screen.getByTitle(/Hypothetical Mode/)],
     ];
     for (const [name, find] of buttons) {

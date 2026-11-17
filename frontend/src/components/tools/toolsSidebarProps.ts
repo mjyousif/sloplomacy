@@ -10,11 +10,6 @@ import type { PressSectionProps } from './PressSection';
 export interface ToolsSidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
-  // Zoom & Camera
-  zoomPercent: number;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onResetCamera: () => void;
   // Powers & Sovereignty
   activePower: Power;
   onSelectPower: (power: Power) => void;
