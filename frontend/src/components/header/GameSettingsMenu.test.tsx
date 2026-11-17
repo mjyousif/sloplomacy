@@ -29,7 +29,7 @@ function renderGameSettings(overrides: Partial<GameSettingsMenuProps> = {}) {
 }
 
 describe('GameSettingsMenu', () => {
-  it('shows Game Settings header with country flag beside game name subtext and Export to Solo Sandbox... in multiplayer', async () => {
+  it('shows Game Settings header with country flag beside game name subtext and Export to Solo Sandbox in multiplayer', async () => {
     const { props } = renderGameSettings();
     const trigger = screen.getByTestId('game-settings-trigger');
     expect(trigger).toHaveTextContent('');
@@ -48,7 +48,7 @@ describe('GameSettingsMenu', () => {
 
     const soloBtn = screen.getByTestId('game-settings-solo-sandbox');
     expect(soloBtn).not.toHaveAttribute('data-active');
-    expect(soloBtn).toHaveTextContent('Export to Solo Sandbox...');
+    expect(soloBtn).toHaveTextContent('Export to Solo Sandbox');
     expect(
       screen.queryByTestId('game-settings-reset-sandbox'),
     ).not.toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('GameSettingsMenu', () => {
     expect(screen.queryByTestId('game-settings-panel')).not.toBeInTheDocument();
   });
 
-  it('shows flask icon, Solo Sandbox subtext, and omits Export to Solo Sandbox... and Surrender in Solo Sandbox mode', async () => {
+  it('shows flask icon, Solo Sandbox subtext, and omits Export to Solo Sandbox and Surrender in Solo Sandbox mode', async () => {
     renderGameSettings({
       viewMode: 'sandbox',
       matchSummary: null,
@@ -89,7 +89,7 @@ describe('GameSettingsMenu', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows Reset Sandbox... and Return to Previous Game below Administrator in Solo Sandbox mode when provided', async () => {
+  it('shows Reset Sandbox and Return to Previous Game below Administrator in Solo Sandbox mode when provided', async () => {
     const onResetSandbox = vi.fn();
     const onReturnToPreviousGame = vi.fn();
     renderGameSettings({
@@ -103,7 +103,7 @@ describe('GameSettingsMenu', () => {
     const adminBtn = screen.getByTestId('game-settings-admin-settings');
     const resetBtn = screen.getByTestId('game-settings-reset-sandbox');
     const returnBtn = screen.getByTestId('game-settings-return-previous');
-    expect(resetBtn).toHaveTextContent('Reset Sandbox...');
+    expect(resetBtn).toHaveTextContent('Reset Sandbox');
     expect(returnBtn).toHaveTextContent('Return to Previous Game');
     expect(
       adminBtn.compareDocumentPosition(resetBtn) &

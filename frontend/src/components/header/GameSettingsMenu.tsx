@@ -205,7 +205,7 @@ export function GameSettingsMenu({
                       size={15}
                       className={styles.gameMenuItemIcon}
                     />
-                    <span>Export to Solo Sandbox...</span>
+                    <span>Export to Solo Sandbox</span>
                   </button>
                 )}
 
@@ -245,7 +245,7 @@ export function GameSettingsMenu({
                     }}
                   >
                     <RotateCcw size={15} className={styles.gameMenuItemIcon} />
-                    <span>Reset Sandbox...</span>
+                    <span>Reset Sandbox</span>
                   </button>
                 )}
 

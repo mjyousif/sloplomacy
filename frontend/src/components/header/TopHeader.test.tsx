@@ -45,7 +45,7 @@ describe('TopHeader: brand and navigation', () => {
     expect(props.onBackToLobby).toHaveBeenCalledTimes(1);
   });
 
-  it('opens Export to Solo Sandbox... from Game Settings in multiplayer and omits it in Solo Sandbox', async () => {
+  it('opens Export to Solo Sandbox from Game Settings in multiplayer and omits it in Solo Sandbox', async () => {
     const { props, rerender } = renderHeader({
       viewMode: 'multiplayer',
       matchSummary: MATCH,
@@ -55,7 +55,7 @@ describe('TopHeader: brand and navigation', () => {
     expect(subtitle).toHaveTextContent('Friday Night');
     expect(within(subtitle).getByTestId('power-flag-france')).toBeVisible();
     const item = screen.getByTestId('game-settings-solo-sandbox');
-    expect(item).toHaveTextContent('Export to Solo Sandbox...');
+    expect(item).toHaveTextContent('Export to Solo Sandbox');
     expect(item).not.toHaveAttribute('data-active');
     await userEvent.click(item);
     expect(props.onEnterSoloSandbox).toHaveBeenCalledTimes(1);
