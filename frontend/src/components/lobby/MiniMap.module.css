@@ -7,14 +7,39 @@
     background: #b9c3b4;
   }
 
-  .province {
+  /* Borders stay one screen pixel wide at any size, so a thumbnail's coasts and sea lines
+     still show. */
+  .province,
+  .sea {
     stroke: #4a3f33;
-    stroke-width: 2.5;
+    stroke-width: 1px;
+    vector-effect: non-scaling-stroke;
     stroke-linejoin: round;
+  }
+
+  /* The board's sea wash over the sage background; the lines mark the sea territories. */
+  .sea {
+    fill: #9ec5d6;
+    fill-opacity: 0.28;
+    stroke-opacity: 0.6;
   }
 
   /* No `fill` here: each province carries its colour as an attribute (parchment, or its
      owner's tint), which a rule in this sheet would override. */
+
+  /* Land nobody can enter, in a muted stone that no playable province uses. */
+  .impassable {
+    fill: #c8c2ad;
+    stroke: #4a3f33;
+    stroke-width: 1px;
+    vector-effect: non-scaling-stroke;
+    stroke-linejoin: round;
+  }
+
+  /* The stripes sit on a copy of the shape and leave its outline to the one underneath. */
+  .impassable-stripes {
+    stroke: none;
+  }
 
   .unit {
     stroke: #fffaf0;

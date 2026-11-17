@@ -57,6 +57,7 @@ export const FeaturedGameHero: React.FC<FeaturedGameHeroProps> = ({
         <MiniMap
           board={game.board}
           viewerPower={copy.power}
+          stripedLand
           label={`Board of ${game.name}`}
         />
         {!game.board && (

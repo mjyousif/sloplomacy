@@ -94,6 +94,13 @@ test.describe('Scenario: Homepage map hero', () => {
       expect(await heroMap.locator('[data-province-id="SPA"]').getAttribute('data-owner')).toBeNull();
       expect(await heroMap.locator('[data-testid="mini-map-unit"]').count()).toBe(22);
       expect(await heroMap.locator('[data-mine="true"]').count()).toBe(3);
+      // Impassable land (Iceland, Ireland, Switzerland) is drawn apart from neutral provinces.
+      await expect(heroMap.locator('[data-impassable-id="ireland"]').first()).toBeAttached();
+      expect(await heroMap.locator('[data-province-id="SWI"]').count()).toBe(0);
+      // The seas are outlined, and fleets are pentagons while armies are circles.
+      expect(await heroMap.locator('[data-sea="true"]').count()).toBe(19);
+      expect(await heroMap.locator('polygon[data-testid="mini-map-unit"]').count()).toBeGreaterThan(0);
+      expect(await heroMap.locator('circle[data-testid="mini-map-unit"]').count()).toBeGreaterThan(0);
 
       // Both games wait on the host. The one that has resolved a turn takes the hero, and the
       // private campaign nobody has joined yet sits in the strip.
