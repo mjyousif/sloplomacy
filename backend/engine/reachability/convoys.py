@@ -6,9 +6,9 @@ from domain.orders import Order, OrderType
 from engine.reachability.sea_graph import (
     COASTS_BY_SEA,
     SEAS_BY_COAST,
+    build_sea_path_checker,
     coasts_touching,
     connected_seas,
-    has_sea_path_through,
 )
 from engine.topology.provinces import PROVINCES
 from engine.validator.convoys import has_active_convoy_chain
@@ -103,6 +103,17 @@ def fleet_convoy_options(
     own_coasts = COASTS_BY_SEA.get(own_sea, frozenset())
     component = connected_seas({own_sea}, sea_fleets)
     component_coasts = coasts_touching(component)
+    can_reach_via = build_sea_path_checker(own_sea, sea_fleets)
+
+    other_power_convoys = {
+        (o.aux_unit_origin, o.target)
+        for uid, o in orders.items()
+        if uid != fleet.id
+        and o.power == fleet.power
+        and o.order_type == OrderType.CONVOY
+        and o.aux_unit_origin
+        and o.target
+    }
 
     direct_armies: list[str] = []
     chained_armies: list[str] = []
@@ -111,6 +122,7 @@ def fleet_convoy_options(
         (u for u in units if u.unit_type == UnitType.ARMY and not u.is_dislodged),
         key=lambda u: u.province,
     )
+    sorted_component_coasts = sorted(component_coasts)
     for army in armies:
         origin = army.province
         if not _is_coastal(origin) or origin not in component_coasts:
@@ -118,26 +130,31 @@ def fleet_convoy_options(
 
         direct_targets: list[str] = []
         chained_targets: list[str] = []
-        for candidate in sorted(component_coasts - {origin}):
-            if not has_sea_path_through(origin, candidate, own_sea, sea_fleets):
+        origin_touches_own = origin in own_coasts
+        for candidate in sorted_component_coasts:
+            if candidate == origin or not can_reach_via(origin, candidate):
                 continue
-            hypothetical = Order(
-                unit_id=fleet.id,
-                power=fleet.power,
-                unit_type=UnitType.FLEET,
-                origin=own_sea,
-                order_type=OrderType.CONVOY,
-                aux_unit_origin=origin,
-                target=candidate,
-                is_explicit=True,
-            )
-            if has_active_convoy_chain(
-                origin,
-                candidate,
-                units,
-                {**orders, fleet.id: hypothetical},
-                power=fleet.power,
-            ):
+            if (origin, candidate) in other_power_convoys:
+                hypothetical = Order(
+                    unit_id=fleet.id,
+                    power=fleet.power,
+                    unit_type=UnitType.FLEET,
+                    origin=own_sea,
+                    order_type=OrderType.CONVOY,
+                    aux_unit_origin=origin,
+                    target=candidate,
+                    is_explicit=True,
+                )
+                is_direct = has_active_convoy_chain(
+                    origin,
+                    candidate,
+                    units,
+                    {**orders, fleet.id: hypothetical},
+                    power=fleet.power,
+                )
+            else:
+                is_direct = origin_touches_own and candidate in own_coasts
+            if is_direct:
                 direct_targets.append(candidate)
             else:
                 chained_targets.append(candidate)
