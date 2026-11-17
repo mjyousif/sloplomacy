@@ -8,6 +8,7 @@ export interface IconSelectDropdownClassNames {
   trigger?: string;
   leading?: string;
   value?: string;
+  valueText?: string;
   menu?: string;
   option?: string;
 }
@@ -15,6 +16,8 @@ export interface IconSelectDropdownClassNames {
 export interface IconSelectOption<T extends string = string> {
   value: T;
   label: string;
+  /** Optional rich JSX label; falls back to `label` when omitted. */
+  content?: ReactNode;
   icon?: ReactNode;
   testId?: string;
 }
@@ -34,6 +37,8 @@ export interface IconSelectDropdownProps<T extends string = string> {
   disabled?: boolean;
   leadingIcon?: ReactNode;
   hideChevron?: boolean;
+  /** Re-keys the selected text span when the active value/label changes to trigger CSS transitions. */
+  animateValueChange?: boolean;
   classNames?: IconSelectDropdownClassNames;
   onOpenChange?: (open: boolean) => void;
   onHoverOption?: (value: T | null) => void;
@@ -52,6 +57,7 @@ export function IconSelectDropdown<T extends string = string>({
   disabled = false,
   leadingIcon,
   hideChevron = false,
+  animateValueChange = false,
   classNames,
   onOpenChange,
   onHoverOption,
@@ -142,7 +148,16 @@ export function IconSelectDropdown<T extends string = string>({
           {selectedOption ? (
             <>
               {selectedOption.icon}
-              <span>{selectedOption.label}</span>
+              <span
+                key={
+                  animateValueChange
+                    ? `${String(selectedOption.value)}:${selectedOption.label}`
+                    : undefined
+                }
+                className={classNames?.valueText}
+              >
+                {selectedOption.content ?? selectedOption.label}
+              </span>
             </>
           ) : emptyOption ? (
             <span>{emptyOption.label}</span>
@@ -219,7 +234,7 @@ export function IconSelectDropdown<T extends string = string>({
               }}
             >
               {opt.icon}
-              <span>{opt.label}</span>
+              <span>{opt.content ?? opt.label}</span>
             </button>
           ))}
         </div>

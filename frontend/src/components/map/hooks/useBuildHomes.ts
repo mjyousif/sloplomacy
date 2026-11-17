@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
 import type { Order, Power } from '../../../types/diplomacy';
-import { adjustmentOrdersFor } from '../../../utils/historyHelpers';
+import {
+  adjustmentOrdersFor,
+  type HistoryActionType,
+} from '../../../utils/historyHelpers';
 
 export interface UseBuildHomesOptions {
   orders: Record<string, Order>;
@@ -8,10 +11,13 @@ export interface UseBuildHomesOptions {
   activePower: Power;
   canEditAnyPower: boolean;
   historyView: boolean;
-  historyPower: Power | null;
+  historyPowers: readonly Power[];
+  historyActions?: readonly HistoryActionType[];
   isAdjustmentPhase: boolean;
   phase?: string;
 }
+
+const NO_HISTORY_ACTIONS: readonly HistoryActionType[] = [];
 
 /**
  * The winter build slots drawn on the map, by home centre, with the power that builds there:
@@ -23,17 +29,19 @@ export function useBuildHomes({
   activePower,
   canEditAnyPower,
   historyView,
-  historyPower,
+  historyPowers,
+  historyActions = NO_HISTORY_ACTIONS,
   isAdjustmentPhase,
   phase,
 }: UseBuildHomesOptions): Record<string, Power> {
   // Build homes map for Adjustments phase (and Admin history snapshots with spawned units)
   return useMemo(() => {
     const homes: Record<string, Power> = {};
-    // A past winter or Admin snapshot shows the builds that were ordered, by every power (or the chosen one).
+    // A past winter or Admin snapshot shows the builds that were ordered, by selected powers/actions (or all).
     if (historyView) {
       if (isAdjustmentPhase || phase === 'Admin') {
-        for (const o of adjustmentOrdersFor(orders, historyPower)) {
+        const actions = isAdjustmentPhase ? historyActions : NO_HISTORY_ACTIONS;
+        for (const o of adjustmentOrdersFor(orders, historyPowers, actions)) {
           if (o.order_type === 'BUILD') homes[o.origin] = o.power;
         }
       }
@@ -52,7 +60,8 @@ export function useBuildHomes({
     return homes;
   }, [
     historyView,
-    historyPower,
+    historyPowers,
+    historyActions,
     orders,
     isAdjustmentPhase,
     phase,

@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Order, TurnHistoryEntry } from '../types/diplomacy';
 import {
+  ALL_ADJUSTMENT_ACTIONS,
   adjustmentOrdersFor,
+  matchesHistoryActions,
+  matchesHistoryPowers,
   sameTurn,
   shortTurnLabel,
   stepTurn,
+  toggleHistoryAction,
+  toggleHistoryPower,
 } from './historyHelpers';
 
 const entries: TurnHistoryEntry[] = [
@@ -60,15 +65,77 @@ describe('adjustmentOrdersFor', () => {
   } as unknown as Record<string, Order>;
 
   it('keeps builds and disbands, not waived builds', () => {
-    expect(adjustmentOrdersFor(orders, null).map((o) => o.origin)).toEqual([
+    expect(adjustmentOrdersFor(orders, []).map((o) => o.origin)).toEqual([
       'PAR',
       'MUN',
     ]);
   });
 
-  it('filters to one nation', () => {
-    expect(adjustmentOrdersFor(orders, 'GERMANY').map((o) => o.origin)).toEqual(
-      ['MUN'],
+  it('filters to one or multiple nations', () => {
+    expect(
+      adjustmentOrdersFor(orders, ['GERMANY']).map((o) => o.origin),
+    ).toEqual(['MUN']);
+    expect(
+      adjustmentOrdersFor(orders, ['FRANCE', 'GERMANY']).map((o) => o.origin),
+    ).toEqual(['PAR', 'MUN']);
+  });
+});
+
+describe('multi-nation history filters', () => {
+  it('matches every nation when empty and selected nations otherwise', () => {
+    expect(matchesHistoryPowers('FRANCE', [])).toBe(true);
+    expect(matchesHistoryPowers('FRANCE', ['FRANCE', 'GERMANY'])).toBe(true);
+    expect(matchesHistoryPowers('ITALY', ['FRANCE', 'GERMANY'])).toBe(false);
+  });
+
+  it('toggles nations in canonical order and collapses selecting all 7 back to []', () => {
+    let powers = toggleHistoryPower([], 'GERMANY');
+    expect(powers).toEqual(['GERMANY']);
+    powers = toggleHistoryPower(powers, 'FRANCE');
+    expect(powers).toEqual(['FRANCE', 'GERMANY']);
+    powers = toggleHistoryPower(powers, 'GERMANY');
+    expect(powers).toEqual(['FRANCE']);
+    powers = toggleHistoryPower(powers, 'FRANCE');
+    expect(powers).toEqual([]);
+
+    const six = [
+      'AUSTRIA',
+      'ENGLAND',
+      'FRANCE',
+      'GERMANY',
+      'ITALY',
+      'RUSSIA',
+    ] as const;
+    expect(toggleHistoryPower(six, 'TURKEY')).toEqual([]);
+  });
+
+  it('matches and toggles movement action filters', () => {
+    expect(matchesHistoryActions('MOVE', [])).toBe(true);
+    expect(matchesHistoryActions(undefined, ['HOLD'])).toBe(true);
+    expect(matchesHistoryActions('HOLD', ['MOVE', 'SUPPORT'])).toBe(false);
+    expect(matchesHistoryActions('MOVE', ['MOVE', 'SUPPORT'])).toBe(true);
+
+    let actions = toggleHistoryAction([], 'MOVE');
+    expect(actions).toEqual(['MOVE']);
+    actions = toggleHistoryAction(actions, 'HOLD');
+    expect(actions).toEqual(['HOLD', 'MOVE']);
+    actions = toggleHistoryAction(actions, 'SUPPORT');
+    actions = toggleHistoryAction(actions, 'CONVOY');
+    expect(actions).toEqual([]);
+
+    let adjActions = toggleHistoryAction([], 'BUILD', ALL_ADJUSTMENT_ACTIONS);
+    expect(adjActions).toEqual(['BUILD']);
+    adjActions = toggleHistoryAction(
+      adjActions,
+      'DISBAND',
+      ALL_ADJUSTMENT_ACTIONS,
     );
+    expect(adjActions).toEqual(['BUILD', 'DISBAND']);
+    adjActions = toggleHistoryAction(
+      adjActions,
+      'WAIVE',
+      ALL_ADJUSTMENT_ACTIONS,
+    );
+    expect(adjActions).toEqual([]);
   });
 });

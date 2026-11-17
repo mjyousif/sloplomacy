@@ -31,6 +31,7 @@ export interface ToolsSidebarProps {
   onChangeShowAllMoves?: (showAll: boolean) => void;
   // Sandbox & Hypothetical Mode
   sandboxMode: boolean;
+  viewingHistory?: boolean;
   onToggleSandboxMode: () => void;
   onClearForeignPreMoves: () => void;
   foreignModifiedOrdersCount: number;

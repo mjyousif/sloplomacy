@@ -431,11 +431,9 @@ export function App() {
         toastBanner={toastBanner}
         historyEntries={turnHistory.entries}
         historyViewIndex={turnHistory.viewIndex}
-        historyPower={turnHistory.power}
         historyLocked={adminModeActive}
         onSelectHistoryTurn={showPastTurn}
         onStepHistoryTurn={stepPastTurn}
-        onSelectHistoryPower={turnHistory.setPower}
         onOpenGameOverModal={openGameOverModal}
       />
 

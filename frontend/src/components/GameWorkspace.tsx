@@ -34,6 +34,7 @@ import styles from './GameWorkspace.module.css';
 import { PhaseTimerWidget } from './game/PhaseTimerWidget';
 import { MacroSidebar } from './MacroSidebar';
 import type { AdminTurnClockSettings } from './macro/AdminTurnClockSidebar';
+import type { HistoryHighlightFocus } from './macro/HistoryTurnPanel';
 import { SuggestionPill } from './map/hud/SuggestionPill';
 import { ToolsSidebar } from './ToolsSidebar';
 import {
@@ -41,9 +42,10 @@ import {
   TurnHistorySelector,
 } from './tools/TurnHistorySelector';
 
-// Stable empties for a past turn, so the map's memoized layers are not rebuilt every render.
+// Stable empties for a past turn, so memoized layers are not rebuilt every render.
 const NO_ISSUES: ValidationIssue[] = [];
 const NO_PROVINCES: string[] = [];
+const NO_POWERS: Power[] = [];
 
 export interface GameWorkspaceProps {
   viewMode: 'sandbox' | 'multiplayer';
@@ -183,6 +185,26 @@ export function GameWorkspace({
   const viewingHistory = historyTurn !== null;
   const ignore = () => {};
   const [showAllSandboxMoves, setShowAllSandboxMoves] = useState<boolean>(true);
+  const [hoveredHistoryFocus, setHoveredHistoryFocus] =
+    useState<HistoryHighlightFocus | null>(null);
+  const [pinnedHistoryFocus, setPinnedHistoryFocus] =
+    useState<HistoryHighlightFocus | null>(null);
+  const [prevHistoryTurn, setPrevHistoryTurn] = useState(historyTurn);
+  const [prevHistoryPowers, setPrevHistoryPowers] = useState(
+    turnHistory.powers,
+  );
+  if (
+    prevHistoryTurn !== historyTurn ||
+    prevHistoryPowers !== turnHistory.powers
+  ) {
+    setPrevHistoryTurn(historyTurn);
+    setPrevHistoryPowers(turnHistory.powers);
+    setHoveredHistoryFocus(null);
+    setPinnedHistoryFocus(null);
+  }
+  const activeHistoryFocus = viewingHistory
+    ? (hoveredHistoryFocus ?? pinnedHistoryFocus)
+    : null;
   const isMultiplayer = viewMode === 'multiplayer';
   const ownPower = lockedPower ?? playerPower;
   const { selectFromSidebar, selectFromMap, suppressUnitMenu } =
@@ -202,6 +224,14 @@ export function GameWorkspace({
   });
   const suggestionView = suggestion?.mode === 'view';
   const readOnly = viewingHistory || suggestionView;
+  const boardOwnership =
+    historyTurn?.phase === 'Admin' && historyTurn.resolution?.new_ownership
+      ? historyTurn.resolution.new_ownership
+      : (historyTurn?.ownership ?? gameState.ownership);
+  const boardUnits =
+    historyTurn?.phase === 'Admin' && historyTurn.resolution?.new_units
+      ? historyTurn.resolution.new_units
+      : (historyTurn?.units ?? gameState.units);
   return (
     <main
       className={styles.warRoomWorkspace}
@@ -222,11 +252,11 @@ export function GameWorkspace({
               entries={turnHistory.entries}
               viewIndex={turnHistory.viewIndex}
               liveLabel={turnLabel(gameState)}
-              power={turnHistory.power}
+              powers={turnHistory.powers}
               locked={historyLocked}
               onSelect={showPastTurn}
               onStep={stepPastTurn}
-              onSelectPower={turnHistory.setPower}
+              onSelectPowers={turnHistory.setPowers}
               onPickedTurn={closeToolsDrawer}
             />
           ) : undefined
@@ -237,16 +267,21 @@ export function GameWorkspace({
         onResetCamera={() => mapRef.current?.resetCamera()}
         activePower={playerPower}
         onSelectPower={handleSelectPower}
-        ownership={supplyCenterOwners(gameState.ownership, provinces)}
-        units={gameState.units}
-        finalizedPowers={gameState.finalized_powers}
-        surrenderedPowers={gameState.surrendered_powers}
-        issues={gameState.issues}
+        ownership={supplyCenterOwners(boardOwnership, provinces)}
+        units={boardUnits}
+        finalizedPowers={
+          viewingHistory ? NO_POWERS : gameState.finalized_powers
+        }
+        surrenderedPowers={
+          viewingHistory ? NO_POWERS : gameState.surrendered_powers
+        }
+        issues={viewingHistory ? NO_ISSUES : gameState.issues}
         isMultiplayer={isMultiplayer}
         participants={activeGameSummary?.participants}
         showAllMoves={showAllSandboxMoves}
         onChangeShowAllMoves={setShowAllSandboxMoves}
         sandboxMode={sandboxMode}
+        viewingHistory={viewingHistory}
         onToggleSandboxMode={handleToggleSandboxMode}
         onClearForeignPreMoves={handleClearForeignPreMoves}
         foreignModifiedOrdersCount={
@@ -311,9 +346,17 @@ export function GameWorkspace({
         directEditActive={directEditActive}
         directEdit={directEdit}
         selectedUnitId={readOnly ? null : selectedUnitId}
-        hoveredUnitId={readOnly ? null : hoveredUnitId}
+        hoveredUnitId={
+          viewingHistory
+            ? (activeHistoryFocus?.unitId ?? null)
+            : readOnly
+              ? null
+              : hoveredUnitId
+        }
         highlightedProvinces={
-          viewingHistory ? NO_PROVINCES : highlightedProvinces
+          viewingHistory
+            ? (activeHistoryFocus?.provinces ?? NO_PROVINCES)
+            : highlightedProvinces
         }
         issues={viewingHistory || suggestion ? NO_ISSUES : gameState.issues}
         simulationResult={
@@ -329,7 +372,8 @@ export function GameWorkspace({
           readOnly ? ignore : (suggestion?.stage ?? handleUpdateOrder)
         }
         historyView={readOnly}
-        historyPower={turnHistory.power}
+        historyPowers={turnHistory.powers}
+        historyActions={turnHistory.actions}
         phase={historyTurn?.phase ?? gameState.phase}
         season={historyTurn?.season ?? gameState.season}
         builds={historyTurn ? (historyTurn.builds ?? null) : gameState.builds}
@@ -391,6 +435,19 @@ export function GameWorkspace({
         variant={isCompact ? 'sheet' : 'panel'}
         sheetSnap={sheetSnap}
         onSheetSnapChange={setSheetSnap}
+        historyTurn={historyTurn}
+        historyPowers={turnHistory.powers}
+        historyActions={turnHistory.actions}
+        unitMark={displayPrefs.unitMark}
+        selectedHistoryOrderId={pinnedHistoryFocus?.id ?? null}
+        onSelectHistoryPowers={turnHistory.setPowers}
+        onSelectHistoryActions={turnHistory.setActions}
+        onHoverHistoryOrder={setHoveredHistoryFocus}
+        onTogglePinHistoryOrder={(focus) =>
+          setPinnedHistoryFocus((prev) =>
+            prev?.id === focus.id ? null : focus,
+          )
+        }
         historyLabel={
           viewedEntry ? turnLabel(viewedEntry) : (suggestion?.label ?? null)
         }

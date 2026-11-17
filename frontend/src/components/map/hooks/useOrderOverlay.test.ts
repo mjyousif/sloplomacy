@@ -59,7 +59,7 @@ function overlay(opts: Partial<UseOrderOverlayOptions> & { units: Unit[] }) {
       activePower: 'FRANCE',
       canEditAnyPower: false,
       historyView: false,
-      historyPower: null,
+      historyPowers: [],
       isRetreatPhase: false,
       isAdjustmentPhase: false,
       getUnitPoint: (u) => POINTS[u.province],
@@ -147,15 +147,33 @@ describe('useOrderOverlay', () => {
     const past = overlay({
       units: [],
       historyView: true,
-      historyPower: null,
+      historyPowers: [],
     }).isUnitOrderVisible;
     expect([past(A_PAR), past(A_PIC_GER)]).toEqual([true, true]);
     const pastGermany = overlay({
       units: [],
       historyView: true,
-      historyPower: 'GERMANY',
+      historyPowers: ['GERMANY'],
     }).isUnitOrderVisible;
     expect([pastGermany(A_PAR), pastGermany(A_PIC_GER)]).toEqual([false, true]);
+    const pastBoth = overlay({
+      units: [],
+      historyView: true,
+      historyPowers: ['FRANCE', 'GERMANY'],
+    }).isUnitOrderVisible;
+    expect([pastBoth(A_PAR), pastBoth(A_PIC_GER)]).toEqual([true, true]);
+
+    const pastMovesOnly = overlay({
+      units: [],
+      orders: { [A_PAR.id]: orderFor(A_PAR, 'MOVE', { target: 'BUR' }) },
+      historyView: true,
+      historyPowers: [],
+      historyActions: ['MOVE'],
+    }).isUnitOrderVisible;
+    expect([pastMovesOnly(A_PAR), pastMovesOnly(A_PIC_GER)]).toEqual([
+      true,
+      false,
+    ]);
   });
 
   it('counts a support into a move only when the move goes where the support does', () => {

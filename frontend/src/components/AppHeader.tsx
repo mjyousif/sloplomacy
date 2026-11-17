@@ -49,11 +49,9 @@ export interface AppHeaderProps {
   toastBanner: string | null;
   historyEntries?: TurnHistoryEntry[];
   historyViewIndex?: number | null;
-  historyPower?: Power | null;
   historyLocked?: boolean;
   onSelectHistoryTurn?: (index: number | null) => void;
   onStepHistoryTurn?: (delta: -1 | 1) => void;
-  onSelectHistoryPower?: (power: Power | null) => void;
   onOpenGameOverModal?: () => void;
 }
 
@@ -92,11 +90,9 @@ export function AppHeader({
   toastBanner,
   historyEntries,
   historyViewIndex,
-  historyPower,
   historyLocked = false,
   onSelectHistoryTurn,
   onStepHistoryTurn,
-  onSelectHistoryPower,
   onOpenGameOverModal,
 }: AppHeaderProps) {
   const activePowerIssues = gameState.issues.filter(
@@ -177,11 +173,9 @@ export function AppHeader({
           }
           historyEntries={historyEntries}
           historyViewIndex={historyViewIndex}
-          historyPower={historyPower}
           historyLocked={historyLocked}
           onSelectHistoryTurn={onSelectHistoryTurn}
           onStepHistoryTurn={onStepHistoryTurn}
-          onSelectHistoryPower={onSelectHistoryPower}
           onOpenGameOverModal={onOpenGameOverModal}
         />
       )}

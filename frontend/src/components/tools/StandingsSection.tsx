@@ -33,6 +33,7 @@ export type StandingsSectionProps = Pick<
   | 'showAllMoves'
   | 'onChangeShowAllMoves'
   | 'sandboxMode'
+  | 'viewingHistory'
   | 'adminOverrideActive'
   | 'pressPower'
 >;
@@ -50,6 +51,7 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
   showAllMoves,
   onChangeShowAllMoves,
   sandboxMode,
+  viewingHistory = false,
   adminOverrideActive = false,
   pressPower,
 }) => {
@@ -57,7 +59,8 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
     ownership,
     units,
   );
-  const canSwitchPower = !isMultiplayer || Boolean(sandboxMode);
+  const canSwitchPower =
+    (!isMultiplayer || Boolean(sandboxMode)) && !viewingHistory;
 
   // Press: each other country's row has a letter button that picks it as a recipient, with
   // the unread count of the player's one-to-one thread with that country.
@@ -179,9 +182,11 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                   if (canSwitchPower) onSelectPower(pwr);
                 }}
                 title={
-                  canSwitchPower
-                    ? `Click to command ${meta.name}`
-                    : `${meta.name}${playerName ? ` (${playerName})` : ''}: ${isFinal ? 'Orders Finalized' : 'Drafting'}`
+                  viewingHistory
+                    ? `${meta.name}${playerName ? ` (${playerName})` : ''}`
+                    : canSwitchPower
+                      ? `Click to command ${meta.name}`
+                      : `${meta.name}${playerName ? ` (${playerName})` : ''}: ${isFinal ? 'Orders Finalized' : 'Drafting'}`
                 }
                 style={{
                   borderLeftColor: meta.color,

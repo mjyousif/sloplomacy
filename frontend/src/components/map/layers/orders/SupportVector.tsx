@@ -35,10 +35,18 @@ export function SupportVector({
     pieceRingScale,
     arrowScale,
     moveMidpointsByOrigin,
+    selectedUnitId,
+    hoveredUnitId,
+    historyView = false,
     showSimulationOverlay,
     sandboxMode,
     simulationResult,
   } = ctx;
+  const isFocused = unit.id === selectedUnitId || unit.id === hoveredUnitId;
+  const hasHistoryFocus = Boolean(
+    historyView && (hoveredUnitId || selectedUnitId),
+  );
+  const isDimmed = hasHistoryFocus && !isFocused;
   const supporterPt = getUnitPoint(unit);
   const isSupportHold = auxOrigin === target;
   const matchingMoveMid =
@@ -82,6 +90,7 @@ export function SupportVector({
   return (
     <g
       pointerEvents="none"
+      opacity={isDimmed ? 0.22 : 1}
       data-testid="order-arrow"
       data-order-unit={unit.id}
       data-order-type="SUPPORT"
@@ -92,16 +101,16 @@ export function SupportVector({
           <path
             d={projectedMove.path}
             fill="none"
-            stroke="#fef3c7"
-            strokeWidth="6.5"
-            strokeOpacity="0.85"
+            stroke={isFocused && historyView ? '#fde047' : '#fef3c7'}
+            strokeWidth={isFocused && historyView ? '9' : '6.5'}
+            strokeOpacity="0.9"
             strokeLinecap="round"
           />
           <path
             d={projectedMove.path}
             fill="none"
             stroke={strokeColor}
-            strokeWidth="3.5"
+            strokeWidth={isFocused && historyView ? '5' : '3.5'}
             strokeDasharray="6 5"
             strokeLinecap="round"
             markerEnd={projectedMarkerId}
@@ -113,9 +122,9 @@ export function SupportVector({
         y1={supporterPt.y}
         x2={targetPoint.x}
         y2={targetPoint.y}
-        stroke="#ffffff"
-        strokeWidth="6"
-        strokeOpacity="0.7"
+        stroke={isFocused && historyView ? '#fde047' : '#ffffff'}
+        strokeWidth={isFocused && historyView ? '9' : '6'}
+        strokeOpacity={isFocused && historyView ? '0.9' : '0.7'}
         strokeDasharray="8 5"
       />
       <line
@@ -124,7 +133,7 @@ export function SupportVector({
         x2={targetPoint.x}
         y2={targetPoint.y}
         stroke={strokeColor}
-        strokeWidth="3.6"
+        strokeWidth={isFocused && historyView ? '5' : '3.6'}
         strokeDasharray="8 5"
       />
       {projectedMove && drawProjectedMove ? (

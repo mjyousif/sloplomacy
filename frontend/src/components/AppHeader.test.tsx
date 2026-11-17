@@ -132,7 +132,6 @@ describe('AppHeader: the top bar', () => {
     const won = { ...STATE, winner: 'ITALY' } as GameState;
     const onSelectHistoryTurn = vi.fn();
     const onStepHistoryTurn = vi.fn();
-    const onSelectHistoryPower = vi.fn();
     const historyEntries = [
       { index: 0, season: 'Spring', year: 1901, phase: 'Movement' },
     ];
@@ -142,20 +141,16 @@ describe('AppHeader: the top bar', () => {
           gameState: won,
           historyEntries,
           historyViewIndex: 0,
-          historyPower: 'FRANCE',
           onSelectHistoryTurn,
           onStepHistoryTurn,
-          onSelectHistoryPower,
         })}
       />,
     );
     expect(seen.wide.winner).toBe('ITALY');
     expect(seen.wide.historyEntries).toBe(historyEntries);
     expect(seen.wide.historyViewIndex).toBe(0);
-    expect(seen.wide.historyPower).toBe('FRANCE');
     expect(seen.wide.onSelectHistoryTurn).toBe(onSelectHistoryTurn);
     expect(seen.wide.onStepHistoryTurn).toBe(onStepHistoryTurn);
-    expect(seen.wide.onSelectHistoryPower).toBe(onSelectHistoryPower);
     render(<AppHeader {...props({ gameState: won, isCompact: true })} />);
     expect(seen.compact.winner).toBe('ITALY');
   });

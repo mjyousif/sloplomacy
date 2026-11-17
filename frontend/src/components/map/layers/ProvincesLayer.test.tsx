@@ -394,4 +394,22 @@ describe('ProvincesLayer', () => {
     });
     expect(supView.ids('reachable-reticle')).toEqual(['GAS', 'PAR']);
   });
+
+  it('shades changed territories with their pattern URL while keeping highlighted territories solid yellow', () => {
+    const shaded = draw({
+      ownership: { BUR: 'FRANCE', MAR: 'FRANCE' },
+      territoryPatternByProv: { BUR: 'shift-fra-ger', MAR: 'shift-fra-ita' },
+      highlightedProvinces: ['MAR'],
+    });
+    const burPath = shaded.container.querySelector(
+      '[data-testid="province-path"][data-province-id="BUR"]',
+    );
+    const marPath = shaded.container.querySelector(
+      '[data-testid="province-path"][data-province-id="MAR"]',
+    );
+    expect(burPath?.getAttribute('fill')).toBe('url(#shift-fra-ger)');
+    expect(burPath?.getAttribute('data-ownership-changed')).toBe('true');
+    expect(marPath?.getAttribute('fill')).toBe('#facc15');
+    expect(marPath?.getAttribute('data-ownership-changed')).toBe('true');
+  });
 });

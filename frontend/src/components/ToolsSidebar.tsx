@@ -32,6 +32,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   showAllMoves,
   onChangeShowAllMoves,
   sandboxMode,
+  viewingHistory = false,
   onToggleSandboxMode,
   onClearForeignPreMoves,
   foreignModifiedOrdersCount,
@@ -146,6 +147,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           showAllMoves={showAllMoves}
           onChangeShowAllMoves={onChangeShowAllMoves}
           sandboxMode={sandboxMode}
+          viewingHistory={viewingHistory}
           adminOverrideActive={adminOverrideActive}
           pressPower={
             press && !press.gameOver && !press.surrendered

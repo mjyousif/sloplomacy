@@ -36,6 +36,7 @@ interface ProvincesLayerProps {
   hoveredProv: string | null;
   highlightedProvinces: string[];
   issuesByProvince: Record<string, ValidationIssue[]>;
+  territoryPatternByProv?: Record<string, string>;
   onClickProvince: (provId: string, explicitCoast?: string | null) => void;
   onHoverProvince: (provId: string | null) => void;
 }
@@ -60,6 +61,7 @@ export function ProvincesLayer({
   hoveredProv,
   highlightedProvinces,
   issuesByProvince,
+  territoryPatternByProv,
   onClickProvince,
   onHoverProvince,
 }: ProvincesLayerProps) {
@@ -177,6 +179,7 @@ export function ProvincesLayer({
             hasWarning={hasWarning}
             isMoveIncompatible={isMoveIncompatible}
             isMoveCompatible={isMoveCompatible}
+            changePatternId={territoryPatternByProv?.[geom.id]}
             onClickProvince={onClickProvince}
             onHoverProvince={onHoverProvince}
           />

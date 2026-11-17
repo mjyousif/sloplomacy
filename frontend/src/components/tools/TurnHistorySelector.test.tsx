@@ -16,10 +16,10 @@ describe('TurnHistorySelector', () => {
         entries={[]}
         viewIndex={null}
         liveLabel="Spring 1901 Movement"
-        power={null}
+        powers={[]}
         onSelect={vi.fn()}
         onStep={vi.fn()}
-        onSelectPower={vi.fn()}
+        onSelectPowers={vi.fn()}
       />,
     );
     expect(container).toBeEmptyDOMElement();
@@ -32,10 +32,10 @@ describe('TurnHistorySelector', () => {
           entries={ENTRIES}
           viewIndex={1}
           liveLabel="Spring 1901 Movement"
-          power={null}
+          powers={[]}
           onSelect={vi.fn()}
           onStep={vi.fn()}
-          onSelectPower={vi.fn()}
+          onSelectPowers={vi.fn()}
         />
         <TurnHistoryPill
           entry={ENTRIES[1]}
@@ -68,22 +68,35 @@ describe('TurnHistorySelector', () => {
     );
   });
 
-  it('calls onSelect when selecting an entry from the dropdown', () => {
+  it('calls onSelect when selecting an entry from the dropdown and toggles multiple powers', () => {
     const handleSelect = vi.fn();
+    const handleSelectPowers = vi.fn();
     render(
       <TurnHistorySelector
         entries={ENTRIES}
-        viewIndex={null}
+        viewIndex={0}
         liveLabel="Spring 1901 Movement"
-        power={null}
+        powers={['FRANCE']}
         onSelect={handleSelect}
         onStep={vi.fn()}
-        onSelectPower={vi.fn()}
+        onSelectPowers={handleSelectPowers}
       />,
     );
 
     const select = screen.getByTestId('turn-history-select');
     fireEvent.change(select, { target: { value: '1' } });
     expect(handleSelect).toHaveBeenCalledWith(1);
+
+    const germanyChip = screen
+      .getAllByTestId('turn-history-power')
+      .find((el) => el.getAttribute('data-power') === 'GERMANY')!;
+    fireEvent.click(germanyChip);
+    expect(handleSelectPowers).toHaveBeenCalledWith(['FRANCE', 'GERMANY']);
+
+    const allChip = screen
+      .getAllByTestId('turn-history-power')
+      .find((el) => el.getAttribute('data-power') === 'ALL')!;
+    fireEvent.click(allChip);
+    expect(handleSelectPowers).toHaveBeenCalledWith([]);
   });
 });

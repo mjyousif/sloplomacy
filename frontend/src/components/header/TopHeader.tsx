@@ -48,11 +48,9 @@ export interface TopHeaderProps {
   /** Turn history controls unified with the top-bar turn chronicle. */
   historyEntries?: TurnHistoryEntry[];
   historyViewIndex?: number | null;
-  historyPower?: Power | null;
   historyLocked?: boolean;
   onSelectHistoryTurn?: (index: number | null) => void;
   onStepHistoryTurn?: (delta: -1 | 1) => void;
-  onSelectHistoryPower?: (power: Power | null) => void;
   onOpenGameOverModal?: () => void;
 }
 
@@ -85,11 +83,9 @@ export function TopHeader({
   onOpenAccount,
   historyEntries,
   historyViewIndex,
-  historyPower,
   historyLocked = false,
   onSelectHistoryTurn,
   onStepHistoryTurn,
-  onSelectHistoryPower,
   onOpenGameOverModal,
 }: TopHeaderProps) {
   return (
@@ -140,11 +136,9 @@ export function TopHeader({
             turn={turn}
             entries={historyEntries}
             viewIndex={historyViewIndex}
-            power={historyPower}
             locked={historyLocked}
             onSelect={onSelectHistoryTurn}
             onStep={onStepHistoryTurn}
-            onSelectPower={onSelectHistoryPower}
           />
 
           {winner && (

@@ -158,15 +158,15 @@ describe('useTurnHistory', () => {
     expect(result.current.viewIndex).toBe(0);
   });
 
-  it('clears the nation filter on returning to the live turn', async () => {
+  it('clears the nation filters on returning to the live turn', async () => {
     mockHistoryApi([S1901M]);
     const { result } = renderHook(() => useTurnHistory(baseOptions));
     await waitFor(() => expect(result.current.entries).toHaveLength(1));
     act(() => result.current.select(0));
-    act(() => result.current.setPower('FRANCE'));
-    expect(result.current.power).toBe('FRANCE');
+    act(() => result.current.setPowers(['FRANCE', 'GERMANY']));
+    expect(result.current.powers).toEqual(['FRANCE', 'GERMANY']);
     act(() => result.current.goLive());
-    expect(result.current.power).toBeNull();
+    expect(result.current.powers).toEqual([]);
   });
 
   it('keeps looking at the same phase when a new one resolves', async () => {
@@ -211,14 +211,14 @@ describe('useTurnHistory', () => {
     });
     await waitFor(() => expect(result.current.entries).toHaveLength(2));
     act(() => result.current.select(1));
-    act(() => result.current.setPower('ENGLAND'));
+    act(() => result.current.setPowers(['ENGLAND']));
     await waitFor(() => expect(result.current.turn?.index).toBe(1));
 
     api.list = [S1901M];
     rerender({ ...baseOptions, liveTurnKey: 'Fall 1901 Movement' });
     await waitFor(() => expect(result.current.entries).toHaveLength(1));
     expect(result.current.viewIndex).toBeNull();
-    expect(result.current.power).toBeNull();
+    expect(result.current.powers).toEqual([]);
   });
 
   it('goes back to the live turn when a past turn fails to load', async () => {
@@ -238,11 +238,11 @@ describe('useTurnHistory', () => {
     });
     await waitFor(() => expect(result.current.entries).toHaveLength(2));
     act(() => result.current.select(0));
-    act(() => result.current.setPower('ITALY'));
+    act(() => result.current.setPowers(['ITALY']));
 
     rerender({ ...baseOptions, gameId: 'match_2' });
     expect(result.current.viewIndex).toBeNull();
-    expect(result.current.power).toBeNull();
+    expect(result.current.powers).toEqual([]);
     await waitFor(() =>
       expect(api.calls.map((c) => c.url)).toContain(
         '/api/history?game_id=match_2',
@@ -311,5 +311,36 @@ describe('useTurnHistory', () => {
     act(() => result.current.select(1));
     expect(result.current.viewIndex).toBe(1);
     expect(result.current.turn?.index).toBe(1);
+  });
+
+  it('tracks action filters across same-phase turns and clears on phase change or goLive', async () => {
+    mockHistoryApi([S1901M, F1901M, W1901A]);
+    const { result } = renderHook(() => useTurnHistory(baseOptions));
+    await waitFor(() => expect(result.current.entries).toHaveLength(3));
+
+    act(() => {
+      result.current.select(0);
+      result.current.setPowers(['FRANCE']);
+      result.current.setActions(['MOVE', 'SUPPORT']);
+    });
+    expect(result.current.powers).toEqual(['FRANCE']);
+    expect(result.current.actions).toEqual(['MOVE', 'SUPPORT']);
+
+    // Stepping into another Movement turn keeps both powers and actions.
+    act(() => result.current.select(1));
+    expect(result.current.powers).toEqual(['FRANCE']);
+    expect(result.current.actions).toEqual(['MOVE', 'SUPPORT']);
+
+    // Stepping into Adjustments clears Movement actions while keeping powers.
+    act(() => result.current.select(2));
+    expect(result.current.powers).toEqual(['FRANCE']);
+    expect(result.current.actions).toEqual([]);
+
+    act(() => result.current.setActions(['BUILD']));
+    expect(result.current.actions).toEqual(['BUILD']);
+
+    act(() => result.current.goLive());
+    expect(result.current.powers).toEqual([]);
+    expect(result.current.actions).toEqual([]);
   });
 });

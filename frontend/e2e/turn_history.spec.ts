@@ -1,6 +1,6 @@
 // @scenario history
 // @order 7
-// @description Turn history: step through or pick a resolved turn from the unified top-bar turn chronicle, hover to expand nation filters, and go back to live.
+// @description Turn history: step through or pick a resolved turn from the unified top-bar turn chronicle, filter by nations right under Viewing [turn] in the right sidebar, and go back to live.
 import { expect, test } from '@playwright/test';
 import { playBurgundyBounce, ScenarioRecorder } from './helpers';
 
@@ -26,20 +26,20 @@ test.describe('Scenario 07: Turn history', () => {
       ).toHaveCount(0);
       // The unified control sits in the top bar and keeps the left sidebar clear of a history footer.
       await expect(
-        page.locator('[data-testid="tools-sidebar"] [data-testid="turn-history"]'),
+        page.locator(
+          '[data-testid="tools-sidebar"] [data-testid="turn-history"]',
+        ),
       ).toHaveCount(0);
       await expect(
         page.locator('[data-testid="turn-history-select"]'),
       ).toContainText('Fall 1901 Movement');
-      // Hovering must not open the tray, and on the live turn the filter button is disabled.
-      const filterToggle = page.locator(
-        '[data-testid="turn-history-filter-toggle"]',
-      );
-      await selector.hover();
+      // No nation filter control sits in the top bar.
+      await expect(
+        page.locator('[data-testid="turn-history-filter-toggle"]'),
+      ).toHaveCount(0);
       await expect(
         page.locator('[data-testid="turn-history-tray"]'),
-      ).toBeHidden();
-      await expect(filterToggle).toBeDisabled();
+      ).toHaveCount(0);
       // Live: only France's own orders are drawn, and nobody else's.
       await expect(
         page.locator(
@@ -58,7 +58,6 @@ test.describe('Scenario 07: Turn history', () => {
       await expect(
         page.locator('[data-testid="turn-history-select"]'),
       ).toContainText('Spring 1901 Movement');
-      await expect(filterToggle).toBeEnabled();
       expect(await prev.boundingBox()).toEqual(prevBoxLive);
       expect(await pill.boundingBox()).toEqual(pillBoxLive);
       const germanMove = page.locator(
@@ -85,30 +84,134 @@ test.describe('Scenario 07: Turn history', () => {
       await expect(backToLiveTopBtn).toBeVisible();
       await expect(backToLiveTopBtn).toHaveText('');
 
-      // The orders panel is read-only under a bar back to live.
+      // The right sidebar replaces live controls with the resolved past turn's header, Nations/Action filters, and movement log.
+      const historyLockBar = page.locator('[data-testid="history-lock-bar"]');
+      await expect(historyLockBar).toContainText('Spring 1901 Movement');
       await expect(
-        page.locator('[data-testid="history-lock-bar"]'),
-      ).toContainText('Spring 1901 Movement');
+        historyLockBar.locator('[data-testid="history-lock-live-btn"]'),
+      ).toHaveCount(0);
       await expect(
-        page.locator('[data-testid="macro-units-scroll-area"]'),
-      ).toHaveAttribute('inert', '');
+        historyLockBar.locator('[data-testid="history-lock-filter-header"]'),
+      ).toHaveText('Filters');
+      await expect(
+        page.locator('[data-testid="history-lock-filter-note"]'),
+      ).toHaveCount(0);
+      await expect(
+        historyLockBar.locator('[data-testid="turn-history-power"]'),
+      ).toHaveCount(7);
+      await expect(
+        historyLockBar.locator('[data-testid="turn-history-action"]'),
+      ).toHaveCount(4);
+      await expect(
+        historyLockBar.locator('[data-testid="turn-history-clear-powers"]'),
+      ).toBeDisabled();
+      await expect(
+        historyLockBar.locator('[data-testid="turn-history-clear-actions"]'),
+      ).toBeDisabled();
+      await expect(
+        page.locator('[data-testid="btn-toggle-compact-orders"]'),
+      ).toHaveCount(0);
+      const historyList = page.locator('[data-testid="history-orders-list"]');
+      await expect(historyList).toBeVisible();
+      await expect(
+        page.locator('[data-testid="btn-finalize-orders"]'),
+      ).toHaveCount(0);
+      await expect(
+        historyList.locator(
+          '[data-testid="history-power-group"][data-power="GERMANY"]',
+        ),
+      ).toBeVisible();
+      await expect(
+        historyList.locator(
+          '[data-testid="history-power-group"][data-power="ENGLAND"]',
+        ),
+      ).toBeVisible();
       await recorder.recordStep(page, '02_spring_1901_all_nations');
 
-      // 3. Click the filter button and pick a nation chip to show only that nation's orders, then click outside to collapse.
-      await filterToggle.click();
-      await page
-        .locator('[data-testid="turn-history-power"][data-power="GERMANY"]')
-        .click();
+      // Nation cards on the left scoreboard are neither hoverable nor clickable while viewing a past turn.
+      const leftGerCard = page.locator(
+        '[data-testid="tools-sidebar"] [data-testid="power-standing-card"][data-power="GERMANY"]',
+      );
+      await expect(leftGerCard).not.toHaveAttribute('data-clickable', 'true');
+      await leftGerCard.click();
+      await expect(leftGerCard).not.toHaveAttribute('data-selected', 'true');
+
+      // 3. Pick Germany from the nation filter bar directly under Viewing: both map arrows and sidebar log narrow to Germany.
+      const gerChip = historyLockBar.locator(
+        '[data-testid="turn-history-power"][data-power="GERMANY"]',
+      );
+      const engChip = historyLockBar.locator(
+        '[data-testid="turn-history-power"][data-power="ENGLAND"]',
+      );
+      await gerChip.click();
+      await expect(gerChip).toHaveAttribute('data-active', 'true');
       await expect(germanMove).toBeVisible();
       await expect(englishMove).toHaveCount(0);
-      await page.mouse.click(10, 300);
       await expect(
-        page.locator('[data-testid="turn-history-tray"]'),
-      ).toBeHidden();
-      await expect(filterToggle).toContainText('GER');
-      await expect(filterToggle).toHaveAttribute('data-has-filter', 'true');
+        historyList.locator(
+          '[data-testid="history-power-group"][data-power="GERMANY"]',
+        ),
+      ).toBeVisible();
+      await expect(
+        historyList.locator(
+          '[data-testid="history-power-group"][data-power="ENGLAND"]',
+        ),
+      ).toHaveCount(0);
+
+      // Select England too (multi-nation filter): both Germany and England appear on the map and sidebar.
+      await engChip.click();
+      await expect(engChip).toHaveAttribute('data-active', 'true');
+      await expect(germanMove).toBeVisible();
+      await expect(englishMove).toBeVisible();
+      await expect(
+        historyList.locator(
+          '[data-testid="history-power-group"][data-power="ENGLAND"]',
+        ),
+      ).toBeVisible();
+      await expect(
+        historyList.locator(
+          '[data-testid="history-power-group"][data-power="FRANCE"]',
+        ),
+      ).toHaveCount(0);
+      await expect(
+        page.locator('[data-testid="history-lock-filter-note"]'),
+      ).toHaveCount(0);
       expect(await pill.boundingBox()).toEqual(pillBoxLive);
-      await recorder.recordStep(page, '03_germany_only');
+
+      // Clicking a sidebar order pins its highlight on the map and dims unrelated orders.
+      const gerMunichRow = historyList.locator(
+        '[data-testid="history-order-item"][data-order-id="GER_A_MUN"]',
+      );
+      await expect(
+        gerMunichRow.locator('[data-testid="history-order-unit-icon"]'),
+      ).toBeVisible();
+      await gerMunichRow.click();
+      await expect(gerMunichRow).toHaveAttribute('data-selected', 'true');
+      await expect(germanMove).toHaveAttribute('opacity', '1');
+      await expect(englishMove).toHaveAttribute('opacity', '0.22');
+      await recorder.recordStep(page, '03_filtered_nations');
+
+      // Filtering by Actions ("Hold") narrows both the map arrows and the sidebar log, and X clears the row.
+      const holdChip = historyLockBar.locator(
+        '[data-testid="turn-history-action"][data-action="HOLD"]',
+      );
+      const clearActionsBtn = historyLockBar.locator(
+        '[data-testid="turn-history-clear-actions"]',
+      );
+      await holdChip.click();
+      await expect(holdChip).toHaveAttribute('data-active', 'true');
+      await expect(clearActionsBtn).toBeEnabled();
+      await expect(germanMove).toHaveCount(0);
+      await expect(
+        historyList.locator(
+          '[data-testid="history-order-item"][data-order-id="GER_A_BER"]',
+        ),
+      ).toBeVisible();
+      await expect(gerMunichRow).toHaveCount(0);
+      await recorder.recordStep(page, '03b_filtered_hold_action');
+      await clearActionsBtn.click();
+      await expect(clearActionsBtn).toBeDisabled();
+      await expect(germanMove).toBeVisible();
 
       // 4. Entering admin mode (Edit Board) puts the chronicle back to the latest turn and locks the dropdown.
       await page.locator('[data-testid="btn-admin-menu"]').click();
@@ -120,24 +223,21 @@ test.describe('Scenario 07: Turn history', () => {
         page.locator('[data-testid="turn-history-select"]'),
       ).toBeDisabled();
       await expect(prev).toBeDisabled();
-      await expect(filterToggle).toBeDisabled();
       await expect(backToLiveTopBtn).toHaveCount(0);
 
-      // Exit admin mode: turn history unlocks again, still on live (filter stays disabled until a past turn is viewed).
+      // Exit admin mode: turn history unlocks again, still on live.
       await page.locator('[data-testid="btn-admin-menu"]').click();
       await page.locator('[data-testid="btn-exit-admin-mode"]').click();
       await expect(
         page.locator('[data-testid="turn-history-select"]'),
       ).toBeEnabled();
       await expect(prev).toBeEnabled();
-      await expect(filterToggle).toBeDisabled();
 
       // Step back once more and verify the top bar's yellow back-to-live button returns to live.
       await prev.click();
       await expect(
         page.locator('[data-testid="turn-history-select"]'),
       ).toContainText('Spring 1901 Movement');
-      await expect(filterToggle).toBeEnabled();
       await backToLiveTopBtn.click();
       await expect(backToLiveTopBtn).toHaveCount(0);
       await expect(
@@ -147,7 +247,7 @@ test.describe('Scenario 07: Turn history', () => {
         page.locator('[data-testid="turn-history-select"]'),
       ).toContainText('Fall 1901 Movement');
       await expect(germanMove).toHaveCount(0);
-      await expect(filterToggle).toBeDisabled();
+      await expect(leftGerCard).toHaveAttribute('data-clickable', 'true');
       expect(await prev.boundingBox()).toEqual(prevBoxLive);
       expect(await pill.boundingBox()).toEqual(pillBoxLive);
       await recorder.recordStep(page, '04_back_to_live');

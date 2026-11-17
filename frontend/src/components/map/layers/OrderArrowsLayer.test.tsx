@@ -325,6 +325,23 @@ describe('OrderArrowsLayer', () => {
     );
     expect(arrow(F_ENG).querySelector('circle')).toHaveAttribute('r', '26');
   });
+
+  it('highlights the focused order and dims others in historyView', () => {
+    const { arrow } = draw(
+      [A_PAR, A_BUR],
+      {
+        [A_PAR.id]: moveOf(A_PAR, 'PIC'),
+        [A_BUR.id]: moveOf(A_BUR, 'PAR'),
+      },
+      { historyView: true, hoveredUnitId: A_PAR.id },
+    );
+    expect(arrow(A_PAR)).toHaveAttribute('opacity', '1');
+    expect(arrow(A_PAR).querySelectorAll('path')[0]).toHaveAttribute(
+      'stroke',
+      '#fde047',
+    );
+    expect(arrow(A_BUR)).toHaveAttribute('opacity', '0.22');
+  });
 });
 
 describe('ArrowMarkerDefs', () => {

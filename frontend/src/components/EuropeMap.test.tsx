@@ -495,4 +495,45 @@ describe('EuropeMap unit menu', () => {
     expect(badge).toHaveAttribute('data-owner', 'GERMANY');
     expect(badge).toHaveTextContent('OWNER: GERMANY');
   });
+
+  it('defines alternating diagonal stripe patterns and shades changed territories on a past Movement turn', () => {
+    const { container } = render(
+      <MapWithSelection
+        historyView={true}
+        season="Fall"
+        phase="Movement"
+        ownership={{ PAR: 'FRANCE', BRE: 'FRANCE' }}
+        simulationResult={{
+          resolutions: {},
+          summary: [],
+          new_units: [PAR, MAR],
+          new_ownership: { PAR: 'FRANCE', BRE: 'GERMANY' },
+          next_season: 'Winter',
+          next_year: 1901,
+          next_phase: 'Adjustments',
+          builds: null,
+          retreats: null,
+          winner: null,
+        }}
+        showSimulationOverlay={true}
+      />,
+    );
+
+    const patterns = container.querySelectorAll(
+      '[data-testid="territory-shift-pattern"]',
+    );
+    expect(patterns).toHaveLength(1);
+    const patternId = patterns[0].getAttribute('id');
+    expect(patternId).toContain('FRANCE_TO_GERMANY');
+
+    const brePath = container.querySelector(
+      '[data-testid="province-path"][data-province-id="BRE"]',
+    );
+    const parPath = container.querySelector(
+      '[data-testid="province-path"][data-province-id="PAR"]',
+    );
+    expect(brePath?.getAttribute('fill')).toBe(`url(#${patternId})`);
+    expect(brePath?.getAttribute('data-ownership-changed')).toBe('true');
+    expect(parPath?.getAttribute('data-ownership-changed')).toBeNull();
+  });
 });

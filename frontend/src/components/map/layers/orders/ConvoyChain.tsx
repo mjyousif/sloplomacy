@@ -15,27 +15,51 @@ export function ConvoyChain({
   auxOrigin: string;
   ctx: OrderLayerContext;
 }) {
-  const { getUnitPoint, getProvincePoint, issuesByUnit, pieceRingScale } = ctx;
+  const {
+    getUnitPoint,
+    getProvincePoint,
+    issuesByUnit,
+    pieceRingScale,
+    selectedUnitId,
+    hoveredUnitId,
+    historyView = false,
+  } = ctx;
   const fleetPt = getUnitPoint(unit);
   const armyPt = getProvincePoint(auxOrigin);
   const destPt = getProvincePoint(target);
   const hasIssue = Boolean(
     issuesByUnit[unit.id]?.some((i) => i.severity !== 'info'),
   );
+  const isFocused = unit.id === selectedUnitId || unit.id === hoveredUnitId;
+  const hasHistoryFocus = Boolean(
+    historyView && (hoveredUnitId || selectedUnitId),
+  );
+  const isDimmed = hasHistoryFocus && !isFocused;
 
   return (
     <g
       pointerEvents="none"
+      opacity={isDimmed ? 0.22 : 1}
       data-testid="order-arrow"
       data-order-unit={unit.id}
       data-order-type="CONVOY"
       data-order-target={target || ''}
     >
+      {isFocused && historyView && (
+        <path
+          d={`M ${armyPt.x},${armyPt.y} L ${fleetPt.x},${fleetPt.y} L ${destPt.x},${destPt.y}`}
+          fill="none"
+          stroke="#fde047"
+          strokeWidth="8.5"
+          strokeOpacity="0.9"
+          strokeLinecap="round"
+        />
+      )}
       <path
         d={`M ${armyPt.x},${armyPt.y} L ${fleetPt.x},${fleetPt.y} L ${destPt.x},${destPt.y}`}
         fill="none"
         stroke={hasIssue ? '#f59e0b' : '#0284c7'}
-        strokeWidth="4.2"
+        strokeWidth={isFocused && historyView ? '5.2' : '4.2'}
         strokeDasharray="9 6"
       />
       <circle
@@ -43,8 +67,14 @@ export function ConvoyChain({
         cy={fleetPt.y}
         r={26 * pieceRingScale}
         fill="none"
-        stroke={hasIssue ? '#f59e0b' : '#0284c7'}
-        strokeWidth="2.5"
+        stroke={
+          isFocused && historyView
+            ? '#fde047'
+            : hasIssue
+              ? '#f59e0b'
+              : '#0284c7'
+        }
+        strokeWidth={isFocused && historyView ? '3.5' : '2.5'}
         strokeDasharray="5 4"
       />
     </g>

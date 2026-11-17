@@ -176,9 +176,10 @@ Hovering a province brightens a reachable one, and hovering a unit rings it and 
 
 With `historyView` set, `App.tsx` feeds the map a `TurnRecord` from the turn selector instead of the live state: its units, orders, ownership, phase, builds and retreats, and its `resolution` as the `simulationResult`, with `showSimulationOverlay` on.
 
-- `isUnitOrderVisible` draws every power's orders, or only `historyPower`'s when a nation chip is picked, instead of only the player's own.
+- `isUnitOrderVisible` draws every power's orders, or only those matching `historyPowers` (Nations) and `historyActions` (Movement or Adjustment action types), instead of only the player's own.
 - `canEditAnyPower` is false and `controlPower` is `null`, so no unit, build slot or province click selects anything. App also passes no-op handlers and no selection.
-- In an Adjustments phase the build tokens are the builds that were ordered (`adjustmentOrdersFor`), for every power. Waived slots are not drawn.
+- In an Adjustments phase the build tokens are the builds that were ordered (`adjustmentOrdersFor`, filtered by `historyPowers` and `historyActions`), for every power. Waived slots are not drawn.
+- Territories that changed hands between `ownership` and `simulationResult.new_ownership` (respecting `historyPowers` when filtered) are shaded with alternating 45° diagonal SVG `<pattern>` stripes in the previous and next owners' colors (with a neutral parchment band when changing to/from Neutral), unless overridden by a hover/pin yellow highlight.
 - The Hypothetical banner stays hidden.
 - On phones the `TurnHistoryPill` goes into the `overlay` beside the clock.
 

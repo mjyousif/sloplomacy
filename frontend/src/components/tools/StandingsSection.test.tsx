@@ -143,6 +143,22 @@ describe('StandingsSection: choosing a power', () => {
     expect(onSelectPower).toHaveBeenCalledExactlyOnceWith('GERMANY');
   });
 
+  it('disables hover and power switching on nation cards while viewing a past turn', async () => {
+    const onSelectPower = vi.fn();
+    render(
+      <StandingsSection
+        {...base({
+          onSelectPower,
+          viewingHistory: true,
+        })}
+      />,
+    );
+    expect(card('GERMANY')).not.toHaveAttribute('data-clickable');
+    expect(card('GERMANY')).toHaveAttribute('title', 'German Empire');
+    await userEvent.click(card('GERMANY'));
+    expect(onSelectPower).not.toHaveBeenCalled();
+  });
+
   it('shows the Map Moves toggle in sandbox or hypothetical mode and hides it in live multiplayer', async () => {
     const onChangeShowAllMoves = vi.fn();
     const { rerender } = render(

@@ -91,14 +91,117 @@
   /* The orders panel while the map shows a past turn: read-only under a bar back to live. */
   .history-lock-bar {
     display: flex;
-    align-items: center;
-    gap: 6px;
+    flex-direction: column;
+    gap: 10px;
     flex-shrink: 0;
-    padding: 7px 10px;
+    padding: 10px 10px 10px;
     border-bottom: 1px solid #6b5426;
     background: #1b1a16;
     color: var(--amber-primary);
     font-size: 0.72rem;
+  }
+
+  .history-lock-main-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .history-lock-icon,
+  .history-lock-filter-icon {
+    flex-shrink: 0;
+    color: var(--amber-primary);
+  }
+
+  .history-lock-filter-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 2px;
+  }
+
+  .history-lock-filter-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #d6c39a;
+    letter-spacing: 0.02em;
+  }
+
+  .history-lock-filter-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .history-lock-filter-row {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) 22px;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .history-lock-filter-row-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .history-lock-filter-section .history-lock-filter-chips {
+    margin: 0;
+    gap: 3px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+
+  .history-lock-filter-section .history-lock-filter-chip {
+    flex: 0 0 auto;
+    min-width: 33px;
+    height: 23px;
+    padding: 0 6px;
+    font-size: 0.61rem;
+  }
+
+  .history-lock-filter-section .history-lock-action-chip {
+    flex: 0 0 auto;
+    min-width: 0;
+    height: 23px;
+    padding: 0 6px;
+    font-size: 0.61rem;
+  }
+
+  .history-lock-filter-clear-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: var(--radius-xs);
+    border: 1px solid #2d3646;
+    background: #1c222d;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .history-lock-filter-clear-btn:hover:not(:disabled) {
+    background: #293242;
+    border-color: var(--border-slate-strong);
+    color: var(--color-white);
+  }
+
+  .history-lock-filter-clear-btn:disabled {
+    opacity: 0.25;
+    cursor: default;
+  }
+
+  .history-lock-filter-clear-btn:focus-visible {
+    outline: 2px solid var(--info-sky);
+    outline-offset: 1px;
   }
 
   .history-lock-label {
@@ -142,6 +245,19 @@
 
   .history-lock-bar[data-admin-phase="true"] .history-lock-label strong {
     color: #fee2e2;
+  }
+
+  .history-lock-bar[data-admin-phase="true"] .history-lock-icon,
+  .history-lock-bar[data-admin-phase="true"] .history-lock-filter-icon,
+  .history-lock-filter-section[data-admin-phase="true"]
+    .history-lock-filter-icon {
+    color: #f87171;
+  }
+
+  .history-lock-bar[data-admin-phase="true"] .history-lock-filter-header,
+  .history-lock-filter-section[data-admin-phase="true"]
+    .history-lock-filter-header {
+    color: #fca5a5;
   }
 
   .history-lock-bar[data-admin-phase="true"] .history-lock-live-btn {
@@ -197,10 +313,33 @@
   }
 
   :global([data-layout="compact"]) .history-lock-bar {
-    padding: 4px 10px;
+    padding: 8px 10px 9px;
     margin: -2px 0 6px;
     border: 1px solid #6b5426;
     border-radius: var(--radius-md);
+  }
+
+  :global([data-layout="compact"])
+    .history-lock-filter-section
+    .history-lock-filter-chips {
+    margin: 0;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+
+  :global([data-layout="compact"])
+    .history-lock-filter-section
+    .history-lock-filter-chip,
+  :global([data-layout="compact"])
+    .history-lock-filter-section
+    .history-lock-action-chip {
+    height: 30px;
+    font-size: 0.66rem;
+  }
+
+  :global([data-layout="compact"]) .history-lock-filter-clear-btn {
+    width: 28px;
+    height: 28px;
   }
 
   :global([data-layout="compact"]) .history-lock-live-btn {
