@@ -90,7 +90,11 @@ export function CompactTopBarMenu({
       aria-label="Menu"
     >
       {inGame && menuView === 'display' ? (
-        <>
+        <div
+          key="display"
+          className={styles.compactMenuView}
+          data-view="display"
+        >
           <button
             type="button"
             data-testid="compact-menu-display-back"
@@ -107,9 +111,9 @@ export function CompactTopBarMenu({
               onChange={onChangeDisplayPrefs}
             />
           </div>
-        </>
+        </div>
       ) : (
-        <>
+        <div key="main" className={styles.compactMenuView} data-view="main">
           <div className={styles.compactMenuStatus}>
             <span
               className={styles.wsStatusDot}
@@ -300,7 +304,7 @@ export function CompactTopBarMenu({
               </>
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

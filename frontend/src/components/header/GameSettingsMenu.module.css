@@ -60,8 +60,57 @@
     border: 1px solid #3f4859;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
     color: var(--text-primary);
+    transform-origin: top right;
+    animation: gameMenuPopoverEnter 0.14s cubic-bezier(0.16, 1, 0.3, 1);
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  .game-menu-view[data-view="admin"] {
+    animation: gameMenuSlideIn 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .game-menu-view[data-view="main"] {
+    animation: gameMenuFadeIn 0.12s ease-out;
+  }
+
+  @keyframes gameMenuPopoverEnter {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes gameMenuSlideIn {
+    from {
+      opacity: 0;
+      transform: translateX(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes gameMenuFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .game-settings-panel,
+    .game-menu-view[data-view="admin"],
+    .game-menu-view[data-view="main"] {
+      animation: none;
+    }
   }
 
   .game-settings-panel::-webkit-scrollbar {
@@ -82,7 +131,7 @@
     display: flex;
     align-items: center;
     gap: 7px;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 600;
     color: var(--text-soft);
   }

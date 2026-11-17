@@ -148,7 +148,11 @@ export function AccountDropdownMenu({
           aria-label={authUser ? 'Account and settings' : 'Guest menu'}
         >
           {activeView === 'display' ? (
-            <>
+            <div
+              key="display"
+              className={styles.accountMenuView}
+              data-view="display"
+            >
               <button
                 type="button"
                 data-testid="account-menu-back"
@@ -163,9 +167,9 @@ export function AccountDropdownMenu({
                 saveState={displayPrefsSaveState}
                 onChange={onChangeDisplayPrefs}
               />
-            </>
+            </div>
           ) : (
-            <>
+            <div key="main" className={styles.accountMenuView} data-view="main">
               <div
                 className={styles.accountProfileHeader}
                 data-testid="account-menu-profile"
@@ -372,7 +376,7 @@ export function AccountDropdownMenu({
                   <span>Sign In / Register</span>
                 </button>
               )}
-            </>
+            </div>
           )}
         </div>
       )}

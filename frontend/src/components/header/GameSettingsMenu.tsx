@@ -161,7 +161,7 @@ export function GameSettingsMenu({
           aria-label="Game Settings"
         >
           {activeView === 'admin' ? (
-            <>
+            <div key="admin" className={styles.gameMenuView} data-view="admin">
               <button
                 type="button"
                 data-testid="game-settings-back"
@@ -183,9 +183,9 @@ export function GameSettingsMenu({
                   onActionSelected={closeMenu}
                 />
               </div>
-            </>
+            </div>
           ) : (
-            <>
+            <div key="main" className={styles.gameMenuView} data-view="main">
               <h2 className={displayStyles.displaySettingsTitle}>
                 Game Settings
               </h2>
@@ -353,7 +353,7 @@ export function GameSettingsMenu({
                   </>
                 )}
               </div>
-            </>
+            </div>
           )}
         </div>
       )}
