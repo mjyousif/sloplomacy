@@ -156,7 +156,20 @@ def backend_env() -> dict:
     return env
 
 
-def start_services(backend_only=False, frontend_only=False, no_open=False):
+def frontend_env(dev_login: bool) -> dict:
+    """Environment for the Vite dev server.
+
+    `--dev-login` sets VITE_DEV_LOGIN=1, which makes the frontend sign in a throwaway
+    local player on load (see devSignIn in frontend/src/lib/supabase.ts). Vite only reads
+    it on the dev server, never in a production build.
+    """
+    env = os.environ.copy()
+    if dev_login:
+        env["VITE_DEV_LOGIN"] = "1"
+    return env
+
+
+def start_services(backend_only=False, frontend_only=False, no_open=False, dev_login=False):
     procs = []
 
     print_colored("\n=======================================================", Colors.BOLD)
@@ -206,6 +219,7 @@ def start_services(backend_only=False, frontend_only=False, no_open=False):
         p_frontend = subprocess.Popen(
             frontend_cmd,
             cwd=str(FRONTEND_DIR),
+            env=frontend_env(dev_login),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -271,6 +285,11 @@ def main():
     parser.add_argument("--setup-only", action="store_true", help="Only verify and install dependencies")
     parser.add_argument("--test", action="store_true", help="Run backend tests and frontend build check")
     parser.add_argument("--no-open", action="store_true", help="Do not automatically open the browser")
+    parser.add_argument(
+        "--dev-login",
+        action="store_true",
+        help="Sign in a throwaway local player on load, so you can host and join without the sign-in form",
+    )
 
     args = parser.parse_args()
 
@@ -294,6 +313,7 @@ def main():
         backend_only=args.backend_only,
         frontend_only=args.frontend_only,
         no_open=args.no_open,
+        dev_login=args.dev_login,
     )
 
 

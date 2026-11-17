@@ -37,6 +37,7 @@ python scripts/quickstart.py
 
 ### CLI Flags for `quickstart.py`
 - `python scripts/quickstart.py --no-open`: Run servers without launching the web browser.
+- `python scripts/quickstart.py --dev-login`: Sign in a throwaway local player on load. See [Local Demo Sign-In](#local-demo-sign-in).
 - `python scripts/quickstart.py --backend-only`: Start only the FastAPI backend on port `8000`.
 - `python scripts/quickstart.py --frontend-only`: Start only the Vite dev server on port `5173`.
 - `python scripts/quickstart.py --setup-only`: Install Python venv and npm packages without launching servers.
@@ -50,7 +51,7 @@ When Supabase is not configured, the sign-in form creates a local demo account. 
 - `scripts/quickstart.py` sets it in `backend_env()`. `scripts/start.sh`, `scripts/start.bat`, `scripts/dev.sh` and the default path of `scripts/start.ps1` and `scripts/dev.ps1` all run `scripts/quickstart.py`.
 - `scripts/dev.ps1` sets it in the backend window for `-SeparateWindows`, which starts Uvicorn directly.
 
-**Skipping the form.** On the lobby, click the "Sloplomacy • 1901 Tactical Engine" text in the footer three times in quick succession (within 1.5 seconds between clicks) and the app signs in a throwaway local player (`devSignIn` in `frontend/src/lib/supabase.ts`) with no form. Each sign-in gets a new `local_dev_<tag>` id, so a second browser profile or incognito window is a different player and can claim its own seat. It only exists on the Vite dev server (`import.meta.env.DEV`) and only when Supabase is not configured, so a production build leaves it out, and the backend still needs `ENVIRONMENT=development` to accept the token.
+**Skipping the form.** Start the stack with `python scripts/quickstart.py --dev-login` (or `./scripts/dev.sh --dev-login`, `.\scripts\dev.ps1 -DevLogin`) and the app signs in a throwaway local player on load, with no form. The flag sets `VITE_DEV_LOGIN=1` for the Vite process, and `getInitialAuthUser` in `frontend/src/lib/supabase.ts` then creates a `local_dev_<tag>` player the first time a browser profile loads the app. That player is kept in `localStorage` like any demo sign-in, and each profile or incognito window gets its own id, so a second one is a different player and can claim its own seat. It only works on the Vite dev server (`import.meta.env.DEV`) and only when Supabase is not configured, so a production build leaves it out. The backend still needs `ENVIRONMENT=development` to accept the token. If you start Vite by hand, set `VITE_DEV_LOGIN=1` yourself.
 
 A value already in your shell wins. To try the production behaviour locally, run `ENVIRONMENT=production python scripts/quickstart.py`, and a demo sign-in gets a `401`.
 

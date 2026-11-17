@@ -103,14 +103,22 @@ export async function authedFetch(
 }
 
 /**
- * Signs in a throwaway local player without a form, for testing on a dev machine. Does
- * nothing unless this is the Vite dev server and Supabase is not configured, so a
- * production build never has it. Each call mints a new id, so every browser profile
- * (or incognito window) is a different player and can hold its own seat. The backend
- * still decides whether to trust the unsigned token (`ENVIRONMENT=development`).
+ * Signs in a throwaway local player without a form, for testing on a dev machine. It runs
+ * only when `VITE_DEV_LOGIN=1` (the launcher's `--dev-login` flag) on the Vite dev server
+ * with Supabase not configured, so a production build never has it. It runs once per
+ * browser profile: the player is then kept in `localStorage` like a demo sign-in. Each
+ * profile (or incognito window) gets its own id, so each is a different player and can
+ * hold its own seat. The backend still decides whether to trust the unsigned token
+ * (`ENVIRONMENT=development`).
  */
-export function devSignIn(): AuthUser | null {
-  if (!import.meta.env.DEV || isSupabaseConfigured) return null;
+function devSignIn(): AuthUser | null {
+  if (
+    !import.meta.env.DEV ||
+    import.meta.env.VITE_DEV_LOGIN !== '1' ||
+    isSupabaseConfigured
+  ) {
+    return null;
+  }
   const tag = Math.random().toString(36).slice(2, 6);
   const devUser: AuthUser = {
     id: `local_dev_${tag}`,
@@ -131,7 +139,7 @@ export async function getInitialAuthUser(): Promise<AuthUser | null> {
     }
     return null;
   }
-  return getLocalStoredUser();
+  return getLocalStoredUser() ?? devSignIn();
 }
 
 export function subscribeToAuthChanges(callback: AuthListener): () => void {

@@ -9,7 +9,6 @@ import {
 } from 'vitest';
 import type { AuthUser } from '../types/diplomacy';
 import {
-  devSignIn,
   fetchAccountDisplayPrefs,
   getAuthHeaders,
   getInitialAuthUser,
@@ -85,15 +84,34 @@ describe('supabase auth & local fallback helper', () => {
     expect(afterSignOut).toBeNull();
   });
 
-  it('devSignIn signs in a fresh local player each time on the dev server', async () => {
-    const a = devSignIn();
-    const b = devSignIn();
-    expect(a?.isLocalDemo).toBe(true);
-    expect(a?.needsUsernameSetup).toBe(false);
-    expect(a?.id).toMatch(/^local_dev_/);
-    expect(a?.id).not.toBe(b?.id);
-    expect((await getInitialAuthUser())?.id).toBe(b?.id);
-    expect((await getAuthHeaders()).Authorization).toMatch(/^Bearer /);
+  it('signs in a dev player on load only when VITE_DEV_LOGIN is set', async () => {
+    expect(await getInitialAuthUser()).toBeNull();
+
+    vi.stubEnv('VITE_DEV_LOGIN', '1');
+    try {
+      const first = await getInitialAuthUser();
+      expect(first?.isLocalDemo).toBe(true);
+      expect(first?.needsUsernameSetup).toBe(false);
+      expect(first?.id).toMatch(/^local_dev_/);
+      expect((await getAuthHeaders()).Authorization).toMatch(/^Bearer /);
+      // The same profile keeps the same player on the next load...
+      expect((await getInitialAuthUser())?.id).toBe(first?.id);
+      // ...and a fresh profile gets a different one.
+      await signOutUser();
+      expect((await getInitialAuthUser())?.id).not.toBe(first?.id);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('does not override a real demo sign-in when VITE_DEV_LOGIN is set', async () => {
+    await signInWithEmailPassword('churchill@uk.gov', 'password123');
+    vi.stubEnv('VITE_DEV_LOGIN', '1');
+    try {
+      expect((await getInitialAuthUser())?.email).toBe('churchill@uk.gov');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('supports sign-up with custom display name in local mode', async () => {

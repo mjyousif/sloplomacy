@@ -116,6 +116,7 @@ python scripts/quickstart.py
 
 ### Additional Command Line Options
 - `python scripts/quickstart.py --no-open`: Run servers without opening a browser window.
+- `python scripts/quickstart.py --dev-login`: Sign in a throwaway local player on load, so you can host and join without the sign-in form.
 - `python scripts/quickstart.py --backend-only`: Run only the FastAPI backend server.
 - `python scripts/quickstart.py --frontend-only`: Run only the Vite frontend dev server.
 - `python scripts/quickstart.py --setup-only`: Install dependencies without starting servers.
