@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useId } from 'react';
-import { IMPASSABLE_LAND } from './impassableLand';
+import { IMPASSABLE_LAND } from './impassableShapes';
 import styles from './MiniMap.module.css';
 
 function Shapes({ fill, className }: { fill?: string; className?: string }) {
