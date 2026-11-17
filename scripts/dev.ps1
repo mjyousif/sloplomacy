@@ -1,6 +1,7 @@
 param(
     [switch]$SeparateWindows,
     [switch]$NoBrowser,
+    [switch]$DevLogin,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$RemainingArgs
 )
@@ -43,7 +44,9 @@ if ($SeparateWindows) {
     # backend window so it cannot stay behind in the shell that ran this script.
     $BackendEnv = "if (-not `$env:ENVIRONMENT) { `$env:ENVIRONMENT = 'development' }"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$BackendDir'; $BackendEnv; Write-Host 'FastAPI Backend running on http://127.0.0.1:8000' -ForegroundColor Cyan; & '$PythonCmd' -m uvicorn main:app --reload --port 8000"
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$FrontendDir'; Write-Host 'Vite Frontend running on http://localhost:5173' -ForegroundColor Green; npm run dev"
+    # -DevLogin signs in a throwaway local player on load, same as --dev-login in scripts/quickstart.py.
+    $FrontendEnv = if ($DevLogin) { "`$env:VITE_DEV_LOGIN = '1';" } else { "" }
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$FrontendDir'; $FrontendEnv Write-Host 'Vite Frontend running on http://localhost:5173' -ForegroundColor Green; npm run dev"
     
     if (-not $NoBrowser) {
         Start-Sleep -Seconds 2
@@ -56,6 +59,9 @@ if ($SeparateWindows) {
     $extraArgs = @()
     if ($NoBrowser) {
         $extraArgs += "--no-open"
+    }
+    if ($DevLogin) {
+        $extraArgs += "--dev-login"
     }
     if ($RemainingArgs) {
         $extraArgs += $RemainingArgs
