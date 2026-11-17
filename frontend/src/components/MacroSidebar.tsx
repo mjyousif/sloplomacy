@@ -12,7 +12,7 @@ import {
   type UnitMoveOptions,
   type ValidationIssue,
 } from '../types/diplomacy';
-import type { UnitMark } from '../utils/displayPrefs';
+import type { UiSpacing, UnitMark } from '../utils/displayPrefs';
 import type { HistoryActionType } from '../utils/historyHelpers';
 import { getConsensusStatusInfo } from '../utils/orderHelpers';
 import {
@@ -32,11 +32,7 @@ import {
   type HistoryHighlightFocus,
   HistoryTurnPanel,
 } from './macro/HistoryTurnPanel';
-import {
-  ClearAllButton,
-  OrderFooter,
-  SurrenderButton,
-} from './macro/OrderFooter';
+import { ClearAllButton, OrderFooter } from './macro/OrderFooter';
 import { HistoryLockBar, PhaseContext, PowerHeader } from './macro/PowerHeader';
 import { UnitOrderList } from './macro/UnitOrderList';
 import { useSheetSelection } from './macro/useSheetSelection';
@@ -79,7 +75,6 @@ export interface MacroSidebarProps {
   onAdjudicateTurn: () => void;
   onLoadScenario?: (scenarioId: string) => void;
   onSaveSandboxClick?: () => void;
-  onSurrenderClick?: () => void;
   surrenderedPowers?: Power[];
   participants?: Record<string, GameParticipant>;
   lobbyStatus?: string;
@@ -101,6 +96,9 @@ export interface MacroSidebarProps {
   historyActions?: readonly HistoryActionType[];
   /** Unit icon display setting so the history log matches the map's pieces. */
   unitMark?: UnitMark;
+  /** UI spacing preference from Display Settings ('compact' | 'normal'). */
+  uiSpacing?: UiSpacing;
+  onToggleUiSpacing?: () => void;
   selectedHistoryOrderId?: string | null;
   onSelectHistoryPowers?: (powers: Power[]) => void;
   onSelectHistoryActions?: (actions: HistoryActionType[]) => void;
@@ -151,7 +149,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   onFinalizeClick,
   onUnfinalizeClick,
   onAdjudicateTurn,
-  onSurrenderClick,
   participants,
   lobbyStatus,
   collapsed = false,
@@ -163,6 +160,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   historyPowers = [],
   historyActions = [],
   unitMark = 'icons',
+  uiSpacing,
+  onToggleUiSpacing,
   selectedHistoryOrderId = null,
   onSelectHistoryPowers,
   onSelectHistoryActions,
@@ -242,7 +241,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   });
   const { myBlockingIssues, unconfirmedCount } = progress;
   const isSheet = variant === 'sheet';
-  const [compactOrders, setCompactOrders] = useState<boolean>(() => {
+  const [localCompactOrders, setLocalCompactOrders] = useState<boolean>(() => {
     try {
       return (
         typeof window !== 'undefined' &&
@@ -252,9 +251,15 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       return false;
     }
   });
+  const compactOrders =
+    uiSpacing !== undefined ? uiSpacing === 'compact' : localCompactOrders;
 
   const handleToggleCompactOrders = () => {
-    setCompactOrders((prev) => {
+    if (uiSpacing !== undefined && onToggleUiSpacing) {
+      onToggleUiSpacing();
+      return;
+    }
+    setLocalCompactOrders((prev) => {
       const next = !prev;
       try {
         window.localStorage.setItem(
@@ -307,11 +312,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   const clearAllButton = isSurrendered ? null : (
     <ClearAllButton key={season + phase} onClearAllOrders={onClearAllOrders} />
   );
-
-  const surrenderButton =
-    isMultiplayer && onSurrenderClick && !isSurrendered ? (
-      <SurrenderButton onSurrenderClick={onSurrenderClick} />
-    ) : null;
 
   const phaseContext = (
     <PhaseContext
@@ -504,14 +504,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           >
             {unitList}
           </div>
-          {surrenderButton && (
-            <div
-              className={styles.macroSheetSurrender}
-              data-testid="macro-sheet-surrender"
-            >
-              {surrenderButton}
-            </div>
-          )}
         </div>
       </BottomSheet>
     );
@@ -545,10 +537,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         />
 
         {/* Quick Command Bar */}
-        <div className={styles.macroQuickActions}>
-          {clearAllButton}
-          {surrenderButton}
-        </div>
+        {clearAllButton && (
+          <div className={styles.macroQuickActions}>{clearAllButton}</div>
+        )}
 
         {phaseContext}
       </div>

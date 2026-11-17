@@ -174,8 +174,9 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await expect(advancedArmy).toBeVisible();
       await recorder.recordStep(page, '07_fall_1901_adjudicated');
 
-      // 9. Open Turn and Clock Settings from the Administrator menu and revert to Spring 1901 Movement
-      await page.locator('[data-testid="btn-admin-menu"]').click();
+      // 9. Open Turn and Clock Settings from Game Settings -> Administrator and revert to Spring 1901 Movement
+      await page.locator('[data-testid="game-settings-trigger"]').click();
+      await page.locator('[data-testid="game-settings-admin-settings"]').click();
       const openAdminBtn = page.locator('[data-testid="btn-open-admin-console"]');
       await expect(openAdminBtn).toBeVisible();
       await openAdminBtn.click();
@@ -191,7 +192,8 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await rollbackBtn.click({ modifiers: ['Shift'] });
 
       await expect(turnPill).toContainText(/SPRING 1901/i, { timeout: 10000 });
-      await page.locator('[data-testid="btn-admin-menu"]').click();
+      await page.locator('[data-testid="game-settings-trigger"]').click();
+      await page.locator('[data-testid="game-settings-admin-settings"]').click();
       await page.locator('[data-testid="btn-exit-admin-mode"]').click();
       await expect(
         page.locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"][data-province="PAR"]')

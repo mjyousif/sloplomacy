@@ -115,26 +115,10 @@ describe('MacroSidebar panel', () => {
     expect(screen.getByText('Civil Disorder')).toBeInTheDocument();
   });
 
-  it('offers Surrender only in a multiplayer match that handles it', () => {
-    const solo = sidebar({ onSurrenderClick: vi.fn() });
+  it('does not render Surrender inside the right order sidebar', () => {
+    const mp = sidebar({ isMultiplayer: true });
     expect(
-      solo.container.querySelector('[data-testid="btn-surrender-sidebar"]'),
-    ).toBeNull();
-    solo.unmount();
-    const onSurrenderClick = vi.fn();
-    const mp = sidebar({ isMultiplayer: true, onSurrenderClick });
-    fireEvent.click(
-      mp.container.querySelector(
-        '[data-testid="btn-surrender-sidebar"]',
-      ) as HTMLElement,
-    );
-    expect(onSurrenderClick).toHaveBeenCalledTimes(1);
-    mp.unmount();
-    const noHandler = sidebar({ isMultiplayer: true });
-    expect(
-      noHandler.container.querySelector(
-        '[data-testid="btn-surrender-sidebar"]',
-      ),
+      mp.container.querySelector('[data-testid="btn-surrender-sidebar"]'),
     ).toBeNull();
   });
 
@@ -468,18 +452,9 @@ describe('MacroSidebar sheet', () => {
       body.querySelectorAll('[data-testid="unit-macro-card"]'),
     ).toHaveLength(3);
     expect(body).toHaveTextContent('Tap a card or the map');
-  });
-
-  it('puts Surrender at the foot of the body', () => {
-    const { container } = sheet({
-      isMultiplayer: true,
-      onSurrenderClick: vi.fn(),
-    });
     expect(
-      container.querySelector(
-        '[data-testid="macro-sheet-body"] [data-testid="macro-sheet-surrender"] [data-testid="btn-surrender-sidebar"]',
-      ),
-    ).not.toBeNull();
+      container.querySelector('[data-testid="macro-sheet-surrender"]'),
+    ).toBeNull();
   });
 
   it('shows the lock bar in the peek and goes inert for a past turn', () => {

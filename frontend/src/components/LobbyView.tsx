@@ -6,8 +6,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../types/diplomacy';
-import { isVisibleInMyActiveCampaigns } from '../utils/gameOverHelpers';
-import { pickHeroGame, sortMyGames } from '../utils/heroGame';
+import { filterAndSortMyGames, pickHeroGame } from '../utils/heroGame';
 import { VersionBadge } from './header/VersionBadge';
 import styles from './LobbyView.module.css';
 import { CreateCampaignPanel } from './lobby/CreateCampaignPanel';
@@ -81,17 +80,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   };
 
   // The user's active games (including unwitnessed & <24h grace); public games are in the browser
-  const myGames = user
-    ? sortMyGames(
-        games.filter(
-          (g) =>
-            Object.values(g.participants || {}).some(
-              (p) => p.user_id === user.id,
-            ) && isVisibleInMyActiveCampaigns(g, user),
-        ),
-        user,
-      )
-    : [];
+  const myGames = filterAndSortMyGames(games, user);
   // The game that most needs the player takes the top of the page; the rest sit in the strip.
   const heroGame = pickHeroGame(myGames, user);
   const otherGames = myGames.filter((g) => g !== heroGame);

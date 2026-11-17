@@ -1,10 +1,4 @@
-import {
-  Crown,
-  FlaskConical,
-  LogIn,
-  LogOut,
-  User as UserIcon,
-} from 'lucide-react';
+import { Crown } from 'lucide-react';
 import type { DisplayPrefsSaveState } from '../../hooks/useDisplayPrefs';
 import {
   type AuthUser,
@@ -13,11 +7,10 @@ import {
   type Power,
   type TurnHistoryEntry,
 } from '../../types/diplomacy';
-import { cx } from '../../utils/cx';
 import type { DisplayPrefs } from '../../utils/displayPrefs';
-import { AdminSettingsMenu } from '../admin/AdminSettingsMenu';
 import { BrandEmblem } from '../ui/BrandEmblem';
-import { DisplaySettingsMenu } from './DisplaySettingsMenu';
+import { AccountDropdownMenu } from './AccountDropdownMenu';
+import { GameSettingsMenu } from './GameSettingsMenu';
 import styles from './TopHeader.module.css';
 import { TurnChronicle } from './TurnChronicle';
 
@@ -28,8 +21,15 @@ export interface TopHeaderProps {
   winner: Power | null;
   onBackToLobby: () => void;
   onEnterSoloSandbox: (event?: React.MouseEvent) => void;
+  onReturnToPreviousGame?: () => void;
+  onSurrenderClick?: () => void;
+  isSurrendered?: boolean;
   /** The match being played, named with the player's power in multiplayer. */
   matchSummary: MultiplayerGameSummary | null;
+  activeGameId?: string;
+  myGames?: MultiplayerGameSummary[];
+  onSwitchToSoloSandbox?: () => void;
+  onSelectGame?: (game: MultiplayerGameSummary) => void;
   playerPower: Power;
   displayPrefs: DisplayPrefs;
   displayPrefsSaveState: DisplayPrefsSaveState;
@@ -56,8 +56,8 @@ export interface TopHeaderProps {
 
 /**
  * The desktop top bar: brand and navigation on the left, the turn (and the winner, once
- * there is one) in the middle while a board is open, and display settings and account on the right. Phones
- * get `CompactTopBar` instead.
+ * there is one) in the middle while a board is open, and the unified account/settings
+ * dropdown on the right. Phones get `CompactTopBar` instead.
  */
 export function TopHeader({
   viewMode,
@@ -65,7 +65,14 @@ export function TopHeader({
   winner,
   onBackToLobby,
   onEnterSoloSandbox,
+  onReturnToPreviousGame,
+  onSurrenderClick,
+  isSurrendered = false,
   matchSummary,
+  activeGameId,
+  myGames,
+  onSwitchToSoloSandbox,
+  onSelectGame,
   playerPower,
   displayPrefs,
   displayPrefsSaveState,
@@ -101,32 +108,6 @@ export function TopHeader({
           <BrandEmblem />
           <h1 className={styles.brandTitle}>SLOPLOMACY 1901</h1>
         </div>
-
-        {/* Primary Navigation Switcher */}
-        <nav className={styles.topViewNav}>
-          <button
-            type="button"
-            data-testid="nav-tab-sandbox"
-            data-active={viewMode === 'sandbox'}
-            className={styles.navTabBtn}
-            onClick={onEnterSoloSandbox}
-            title="Open standalone 7-power practice laboratory"
-          >
-            <FlaskConical size={14} />
-            <span>Solo Sandbox</span>
-          </button>
-          {viewMode === 'multiplayer' && matchSummary && (
-            <span
-              className={styles.navActiveMatchPill}
-              data-testid="nav-match-pill"
-            >
-              <Crown size={13} />
-              <span>
-                {matchSummary.name} ({POWER_METADATA[playerPower].shortName})
-              </span>
-            </span>
-          )}
-        </nav>
       </div>
 
       {/* Center Board Readout (Only when viewing Map Board) */}
@@ -160,18 +141,18 @@ export function TopHeader({
         </div>
       )}
 
-      {/* Right Header Controls: Board Actions + User Account */}
+      {/* Right Header Controls: Game Settings & Account Menu */}
       <div className={styles.headerRightActions}>
         {viewMode !== 'lobby' && (
-          <DisplaySettingsMenu
-            prefs={displayPrefs}
-            saveState={displayPrefsSaveState}
-            onChange={onChangeDisplayPrefs}
-          />
-        )}
-
-        {viewMode !== 'lobby' && isGameCreator && (
-          <AdminSettingsMenu
+          <GameSettingsMenu
+            viewMode={viewMode}
+            matchSummary={matchSummary}
+            playerPower={playerPower}
+            onEnterSoloSandbox={onEnterSoloSandbox}
+            onReturnToPreviousGame={onReturnToPreviousGame}
+            onSurrenderClick={onSurrenderClick}
+            isSurrendered={isSurrendered}
+            isGameCreator={isGameCreator}
             onOpenAdminTools={onOpenAdminTools}
             adminOverrideActive={adminOverrideActive}
             onToggleAdminOverride={onToggleAdminOverride}
@@ -181,44 +162,21 @@ export function TopHeader({
             onExitAdmin={onExitAdmin}
           />
         )}
-
-        {/* User Authentication Controls */}
-        {authUser ? (
-          <div className={styles.headerUserMenu}>
-            <button
-              type="button"
-              className={cx(styles.headerUserBadge, styles.headerUserBadgeBtn)}
-              onClick={onOpenAccount}
-              title={`Account Settings (${authUser.email})`}
-            >
-              <UserIcon size={13} />
-              <span>{authUser.displayName}</span>
-            </button>
-            <button
-              type="button"
-              className={styles.headerAuthBtn}
-              data-variant="signout"
-              onClick={onSignOut}
-              title="Sign Out"
-            >
-              <LogOut size={14} />
-              <span>Sign Out</span>
-            </button>
-          </div>
-        ) : (
-          <div className={styles.headerUserMenu}>
-            <span className={styles.headerGuestTag}>Guest Mode</span>
-            <button
-              type="button"
-              className={styles.headerAuthBtn}
-              data-variant="signin"
-              onClick={onSignIn}
-            >
-              <LogIn size={14} />
-              <span>Sign In / Register</span>
-            </button>
-          </div>
-        )}
+        <AccountDropdownMenu
+          viewMode={viewMode}
+          activeGameId={activeGameId}
+          activeGameSummary={matchSummary}
+          myGames={myGames}
+          authUser={authUser}
+          onSignIn={onSignIn}
+          onSignOut={onSignOut}
+          onOpenAccount={onOpenAccount}
+          displayPrefs={displayPrefs}
+          displayPrefsSaveState={displayPrefsSaveState}
+          onChangeDisplayPrefs={onChangeDisplayPrefs}
+          onSwitchToSoloSandbox={onSwitchToSoloSandbox}
+          onSelectGame={onSelectGame}
+        />
       </div>
     </header>
   );

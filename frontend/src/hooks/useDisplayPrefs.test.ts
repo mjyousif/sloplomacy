@@ -23,11 +23,13 @@ const ALICE: AuthUser = {
 const FLAGS: DisplayPrefs = {
   pieceStyle: 'flags',
   unitMark: 'nato',
+  uiSpacing: 'normal',
   soundNotifications: true,
 };
 const SEATED: DisplayPrefs = {
   pieceStyle: 'seated',
   unitMark: 'letters',
+  uiSpacing: 'normal',
   soundNotifications: true,
 };
 
@@ -76,6 +78,7 @@ describe('useDisplayPrefs for a guest', () => {
     expect(result.current.prefs).toEqual({
       pieceStyle: DEFAULT_DISPLAY_PREFS.pieceStyle,
       unitMark: 'nato',
+      uiSpacing: DEFAULT_DISPLAY_PREFS.uiSpacing,
       soundNotifications: DEFAULT_DISPLAY_PREFS.soundNotifications,
     });
   });

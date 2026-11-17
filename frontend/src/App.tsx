@@ -23,8 +23,12 @@ import { useTurnHistory } from './hooks/useTurnHistory';
 import { useTurnNotifications } from './hooks/useTurnNotifications';
 import { useWorkspaceLayout } from './hooks/useWorkspaceLayout';
 import { signOutUser } from './lib/supabase';
-import type { SimulationResult } from './types/diplomacy';
+import type {
+  MultiplayerGameSummary,
+  SimulationResult,
+} from './types/diplomacy';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
+import { myPowerIn } from './utils/heroGame';
 import { DEFAULT_CAMERA } from './utils/mapCameraHelpers';
 import { turnLabel } from './utils/timerHelpers';
 
@@ -282,6 +286,7 @@ export function App() {
     authUser,
     openAuthPrompt,
     sandboxMode,
+    sandboxGameId,
     draftGameId,
     setSandboxGameId,
     setSandboxMode,
@@ -364,14 +369,40 @@ export function App() {
   };
   const handleBackToLobby = async () => {
     if (!(await directEdit.confirmIfDirty('return to the lobby'))) return;
+    seats.rememberCurrentGame();
     setViewMode('lobby');
     fetchGamesList();
   };
   const guardedEnterSoloSandbox = async (event?: React.MouseEvent) => {
     if (!(await directEdit.confirmIfDirty('open the Solo Sandbox'))) return;
+    setAdminModalOpen(false);
+    setAdminOverrideActive(false);
     seats.handleEnterSoloSandbox(event);
   };
+  const guardedSwitchToSoloSandbox = async () => {
+    if (!(await directEdit.confirmIfDirty('switch to Solo Sandbox'))) return;
+    setAdminModalOpen(false);
+    setAdminOverrideActive(false);
+    await seats.handleSwitchToSoloSandbox();
+  };
+  const guardedSwitchToGame = async (game: MultiplayerGameSummary) => {
+    if (!(await directEdit.confirmIfDirty('switch games'))) return;
+    setAdminModalOpen(false);
+    setAdminOverrideActive(false);
+    const power = myPowerIn(game, authUser) ?? 'FRANCE';
+    await seats.handleJoinOrEnterMultiplayerGame(game.game_id, power);
+  };
+  const guardedReturnToPreviousGame = seats.previousGame
+    ? async () => {
+        if (!(await directEdit.confirmIfDirty('return to the previous game')))
+          return;
+        setAdminModalOpen(false);
+        setAdminOverrideActive(false);
+        await seats.handleReturnToPreviousGame();
+      }
+    : undefined;
   const handleSignOut = async () => {
+    seats.clearPreviousGame();
     await signOutUser();
     if (viewMode === 'multiplayer') setViewMode('lobby');
     triggerToast('Signed out — now in Guest Mode.');
@@ -399,6 +430,7 @@ export function App() {
     <div
       className={styles.diplomacyAppShell}
       data-layout={isCompact ? 'compact' : 'wide'}
+      data-spacing={displayPrefs.uiSpacing}
     >
       <AppHeader
         viewMode={viewMode}
@@ -406,7 +438,9 @@ export function App() {
         gameState={boardState}
         activeGameId={activeGameId}
         activeGameSummary={activeGameSummary}
+        games={gamesList}
         playerPower={activePower}
+        lockedPower={lockedPower}
         wsConnected={wsConnected}
         displayPrefs={displayPrefs}
         displayPrefsSaveState={displayPrefsSaveState}
@@ -417,6 +451,10 @@ export function App() {
         handleSignOut={handleSignOut}
         handleBackToLobby={handleBackToLobby}
         handleEnterSoloSandbox={guardedEnterSoloSandbox}
+        onSwitchToSoloSandbox={guardedSwitchToSoloSandbox}
+        onReturnToPreviousGame={guardedReturnToPreviousGame}
+        onSelectGame={guardedSwitchToGame}
+        onOpenSurrenderModal={seats.handleOpenSurrenderModal}
         handleFinalizeClick={handleFinalizeClick}
         toolsDrawerOpen={layout.toolsDrawerOpen}
         setToolsDrawerOpen={layout.setToolsDrawerOpen}
@@ -477,6 +515,12 @@ export function App() {
           zoomPercent={zoomPercent}
           setZoomPercent={setZoomPercent}
           displayPrefs={displayPrefs}
+          onToggleUiSpacing={() =>
+            updateDisplayPrefs({
+              uiSpacing:
+                displayPrefs.uiSpacing === 'compact' ? 'normal' : 'compact',
+            })
+          }
           selectedUnitId={selectedUnitId}
           setSelectedUnitId={setSelectedUnitId}
           hoveredUnitId={hoveredUnitId}
@@ -503,7 +547,6 @@ export function App() {
           postTimerAction={postTimerAction}
           handleTimerExpired={handleTimerExpired}
           handleSelectPower={seats.handleSelectPower}
-          handleOpenSurrenderModal={seats.handleOpenSurrenderModal}
           isGameCreator={isGameCreator}
           directEditActive={directEditActive}
           historyLocked={adminModeActive}

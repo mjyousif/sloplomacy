@@ -50,12 +50,19 @@ function mapSupabaseUser(sbUser: any): AuthUser {
     typeof sbUser.user_metadata?.display_name === 'string'
       ? sbUser.user_metadata.display_name.trim()
       : '';
+  const rawFullName =
+    typeof sbUser.user_metadata?.full_name === 'string'
+      ? sbUser.user_metadata.full_name.trim()
+      : typeof sbUser.user_metadata?.name === 'string'
+        ? sbUser.user_metadata.name.trim()
+        : '';
   const needsUsernameSetup = !explicitName;
   return {
     id: sbUser.id,
     user_id: sbUser.id,
     email,
     displayName: explicitName || 'Envoy',
+    ...(rawFullName ? { fullName: rawFullName } : {}),
     isLocalDemo: false,
     needsUsernameSetup,
   };

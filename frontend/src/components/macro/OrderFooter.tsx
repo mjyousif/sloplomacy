@@ -2,7 +2,6 @@ import {
   AlertTriangle,
   Clock,
   Eraser,
-  Flag,
   Lock,
   Play,
   Unlock,
@@ -107,21 +106,6 @@ export const ClearAllButton: React.FC<{
     </div>
   );
 };
-
-/** Surrender, in a multiplayer match whose host has wired it up. */
-export const SurrenderButton: React.FC<{ onSurrenderClick: () => void }> = ({
-  onSurrenderClick,
-}) => (
-  <button
-    type="button"
-    className={cx(styles.quickActionBtn, styles.surrenderBtnSidebar)}
-    data-testid="btn-surrender-sidebar"
-    title="Surrender sovereign command and leave this campaign"
-    onClick={onSurrenderClick}
-  >
-    <Flag size={12} /> Surrender
-  </button>
-);
 
 interface OrderFooterProps {
   powerMeta: PowerMeta;

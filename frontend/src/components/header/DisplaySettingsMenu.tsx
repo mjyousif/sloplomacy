@@ -1,4 +1,10 @@
-import { SlidersHorizontal, Volume2, VolumeX } from 'lucide-react';
+import {
+  LayoutList,
+  Rows3,
+  SlidersHorizontal,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { DisplayPrefsSaveState } from '../../hooks/useDisplayPrefs';
 import {
@@ -6,6 +12,8 @@ import {
   PIECE_STYLE_LABELS,
   PIECE_STYLES,
   type PieceStyle,
+  UI_SPACING_LABELS,
+  UI_SPACINGS,
   UNIT_MARK_LABELS,
   UNIT_MARKS,
   type UnitMark,
@@ -133,6 +141,38 @@ export function DisplaySettingsOptions({
       <p className={styles.displaySettingsNote}>
         These only change what you see.
       </p>
+
+      <fieldset className={styles.displaySettingsGroup}>
+        <legend>Spacing</legend>
+        <div className={styles.displayMarkGrid}>
+          {UI_SPACINGS.map((spacing) => (
+            <label
+              key={spacing}
+              className={styles.displayOption}
+              title={UI_SPACING_LABELS[spacing].description}
+            >
+              <input
+                type="radio"
+                name="display-ui-spacing"
+                checked={prefs.uiSpacing === spacing}
+                onChange={() => onChange({ uiSpacing: spacing })}
+              />
+              <span className={styles.displayOptionCard}>
+                <span className={styles.displayOptionIcon} aria-hidden="true">
+                  {spacing === 'compact' ? (
+                    <Rows3 size={16} />
+                  ) : (
+                    <LayoutList size={16} />
+                  )}
+                </span>
+                <span className={styles.displayOptionName}>
+                  {UI_SPACING_LABELS[spacing].name}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <fieldset className={styles.displaySettingsGroup}>
         <legend>Piece style</legend>

@@ -9,6 +9,7 @@ import {
   type Power,
   type ProvinceInfo,
 } from '../types/diplomacy';
+import { myPowerIn } from '../utils/heroGame';
 import {
   readStoredSoloSandboxId,
   writeStoredSoloSandboxId,
@@ -40,6 +41,7 @@ export interface SeatActionsOptions {
   openAuthPrompt: (reason?: string, tab?: AuthModalTab) => void;
   /** From `useSandboxSession`. */
   sandboxMode?: boolean;
+  sandboxGameId?: string | null;
   draftGameId?: string;
   setSandboxGameId?: Dispatch<SetStateAction<string | null>>;
   setSandboxMode: Dispatch<SetStateAction<boolean>>;
@@ -78,6 +80,7 @@ export function useSeatActions({
   authUser,
   openAuthPrompt,
   sandboxMode = false,
+  sandboxGameId = null,
   draftGameId,
   setSandboxGameId,
   setSandboxMode,
@@ -96,20 +99,32 @@ export function useSeatActions({
   const [surrenderModalPower, setSurrenderModalPower] = useState<Power | null>(
     null,
   );
+  const [previousGame, setPreviousGame] = useState<{
+    summary: MultiplayerGameSummary;
+    power: Power;
+  } | null>(null);
 
-  const handleEnterSoloSandbox = async (event?: React.MouseEvent) => {
-    const isExportingBoard = viewMode !== 'lobby' && Boolean(activeGameId);
-    if (viewMode === 'multiplayer' && activeGameSummary) {
-      const confirmLeave = await confirm(
-        {
-          title: 'Export to Solo Sandbox?',
-          message: `Export the current state of "${activeGameSummary.name}" into your Solo Sandbox (overriding your previous draft sandbox). Your submitted match orders stay safe on the server.`,
-          confirmLabel: 'Export & Switch',
-        },
-        event,
-      );
-      if (!confirmLeave) return;
+  const rememberCurrentGame = () => {
+    if (
+      viewMode !== 'lobby' &&
+      activeGameSummary &&
+      !activeGameSummary.is_draft
+    ) {
+      setPreviousGame({
+        summary: activeGameSummary,
+        power:
+          lockedPower ?? myPowerIn(activeGameSummary, authUser) ?? 'FRANCE',
+      });
     }
+  };
+
+  const clearPreviousGame = () => setPreviousGame(null);
+
+  const openSoloSandbox = async (
+    exportSourceGameId?: string,
+    passcode?: string,
+  ) => {
+    rememberCurrentGame();
     try {
       setLoading(true);
       const storedDraftId = readStoredSoloSandboxId();
@@ -117,13 +132,10 @@ export function useSeatActions({
       if (storedDraftId) {
         params.set('resume_game_id', storedDraftId);
       }
-      if (isExportingBoard) {
-        params.set('source_game_id', draftGameId ?? activeGameId);
+      if (exportSourceGameId) {
+        params.set('source_game_id', exportSourceGameId);
       }
       const query = params.toString() ? `?${params.toString()}` : '';
-      const passcode = isExportingBoard
-        ? matchPasscodes?.[activeGameId]
-        : undefined;
       const res = await authedFetch(`${API_BASE}/games/solo-sandbox${query}`, {
         method: 'POST',
         headers: passcode ? { 'X-Passcode': passcode } : undefined,
@@ -146,7 +158,7 @@ export function useSeatActions({
       setSandboxMode(false);
       setShowSimulationOverlay(false);
       setViewMode('sandbox');
-      if (isExportingBoard) {
+      if (exportSourceGameId) {
         triggerToast('Current game state exported to a new Solo Sandbox.');
       }
     } catch (err: any) {
@@ -155,6 +167,30 @@ export function useSeatActions({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEnterSoloSandbox = async (event?: React.MouseEvent) => {
+    const isExportingBoard = viewMode !== 'lobby' && Boolean(activeGameId);
+    if (viewMode === 'multiplayer' && activeGameSummary) {
+      const confirmLeave = await confirm(
+        {
+          title: 'Export to Solo Sandbox?',
+          message: `Export the current state of "${activeGameSummary.name}" into your Solo Sandbox (overriding your previous draft sandbox). Your submitted match orders stay safe on the server.`,
+          confirmLabel: 'Export & Switch',
+        },
+        event,
+      );
+      if (!confirmLeave) return;
+    }
+    await openSoloSandbox(
+      isExportingBoard ? (draftGameId ?? activeGameId) : undefined,
+      isExportingBoard ? matchPasscodes?.[activeGameId] : undefined,
+    );
+  };
+
+  /** Opens or resumes the personal Solo Sandbox without exporting/overwriting from the current match. */
+  const handleSwitchToSoloSandbox = async () => {
+    await openSoloSandbox();
   };
 
   const handleCreateMultiplayerGame = async (
@@ -240,11 +276,22 @@ export function useSeatActions({
       if (typedPasscode) {
         setMatchPasscodes((prev) => ({ ...prev, [gameId]: typedPasscode }));
       }
+      if (sandboxGameId && gameId !== activeGameId) {
+        authedFetch(
+          `${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(sandboxGameId)}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ power }),
+          },
+        ).catch(() => {});
+      }
       setActiveGameId(gameId);
       setActiveGameSummary(data.summary);
       applyServerState(data.state);
       setProvinces(data.provinces);
       setSelectedUnitId(null);
+      setSandboxGameId?.(null);
       setSandboxMode(false);
       setShowSimulationOverlay(false);
 
@@ -254,6 +301,9 @@ export function useSeatActions({
       } else {
         setLockedPower(power);
         setViewMode('multiplayer');
+      }
+      if (!data.summary?.is_draft) {
+        setPreviousGame(null);
       }
       await fetchGamesList();
     } catch (e) {
@@ -305,6 +355,9 @@ export function useSeatActions({
       }
       const data = await res.json();
       if (leave) {
+        setPreviousGame((prev) =>
+          prev?.summary.game_id === gameId ? null : prev,
+        );
         if (activeGameId === gameId) {
           setViewMode('lobby');
           setLockedPower(null);
@@ -349,6 +402,9 @@ export function useSeatActions({
         triggerToast(err.detail || 'Could not leave match.');
         return;
       }
+      setPreviousGame((prev) =>
+        prev?.summary.game_id === gameId ? null : prev,
+      );
       if (activeGameId === gameId) {
         setViewMode('lobby');
         setLockedPower(null);
@@ -392,12 +448,26 @@ export function useSeatActions({
     }
   };
 
+  const handleReturnToPreviousGame = async () => {
+    if (!previousGame) return;
+    await handleJoinOrEnterMultiplayerGame(
+      previousGame.summary.game_id,
+      previousGame.power,
+      matchPasscodes?.[previousGame.summary.game_id],
+    );
+  };
+
   return {
     surrenderModalOpen,
     setSurrenderModalOpen,
     surrenderModalGame,
     surrenderModalPower,
+    previousGame,
+    rememberCurrentGame,
+    clearPreviousGame,
     handleEnterSoloSandbox,
+    handleSwitchToSoloSandbox,
+    handleReturnToPreviousGame,
     handleCreateMultiplayerGame,
     handleJoinOrEnterMultiplayerGame,
     handleOpenSurrenderModal,

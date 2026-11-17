@@ -121,6 +121,25 @@ describe('useSeatActions: the Solo Sandbox', () => {
     );
   });
 
+  it('switches to solo sandbox without exporting or prompting when handleSwitchToSoloSandbox is called', async () => {
+    localStorage.setItem(SOLO_SANDBOX_STORAGE_KEY, 'solo_saved');
+    supabase.authedFetch.mockResolvedValue(
+      reply(200, { ...solo, summary: { is_draft: true } }),
+    );
+    const o = makeOptions({
+      viewMode: 'multiplayer',
+      activeGameId: 'mp_1',
+      activeGameSummary: summary(),
+    });
+    const { result } = renderSeats(o);
+    await act(() => result.current.handleSwitchToSoloSandbox());
+    expect(o.confirm).not.toHaveBeenCalled();
+    expect(sent().url).toBe(
+      '/api/games/solo-sandbox?resume_game_id=solo_saved',
+    );
+    expect(o.setViewMode).toHaveBeenCalledWith('sandbox');
+  });
+
   it('does not pass source_game_id when launched from the lobby', async () => {
     supabase.authedFetch.mockResolvedValue(
       reply(200, { ...solo, summary: { is_draft: true } }),
@@ -314,5 +333,47 @@ describe('useSeatActions: creating and joining', () => {
       expect(o.triggerToast).toHaveBeenLastCalledWith(msg);
     }
     expect(o.setViewMode).not.toHaveBeenCalled();
+  });
+
+  it('remembers the previous non-draft game when entering Solo Sandbox and returns to it', async () => {
+    supabase.authedFetch
+      .mockResolvedValueOnce(
+        reply(200, {
+          summary: summary({
+            game_id: 'sbx_draft_9',
+            is_sandbox: true,
+            is_draft: true,
+          }),
+          state: { ...STATE, game_id: 'sbx_draft_9' },
+          provinces: PROVINCES,
+        }),
+      )
+      .mockResolvedValueOnce(reply(200, { ...joined, summary: summary() }));
+    const o = makeOptions({
+      viewMode: 'multiplayer',
+      activeGameId: 'mp_1',
+      activeGameSummary: summary({ game_id: 'mp_1', name: 'Vienna' }),
+      lockedPower: 'ITALY',
+      matchPasscodes: { mp_1: 'secret' },
+    });
+    const { result } = renderSeats(o);
+    await act(() => result.current.handleSwitchToSoloSandbox());
+    expect(result.current.previousGame?.summary.game_id).toBe('mp_1');
+    expect(result.current.previousGame?.power).toBe('ITALY');
+
+    supabase.authedFetch.mockClear();
+    await act(() => result.current.handleReturnToPreviousGame());
+    expect(sent()).toEqual({
+      url: '/api/games/mp_1/join',
+      method: 'POST',
+      body: {
+        power: 'ITALY',
+        user_id: 'u1',
+        email: 'u1@example.test',
+        display_name: 'Ada',
+        passcode: 'secret',
+      },
+    });
+    expect(result.current.previousGame).toBeNull();
   });
 });

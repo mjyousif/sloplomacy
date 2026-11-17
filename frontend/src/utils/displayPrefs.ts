@@ -19,9 +19,13 @@ export type PieceStyle = (typeof PIECE_STYLES)[number];
 export const UNIT_MARKS = ['icons', 'vehicles', 'nato', 'letters'] as const;
 export type UnitMark = (typeof UNIT_MARKS)[number];
 
+export const UI_SPACINGS = ['compact', 'normal'] as const;
+export type UiSpacing = (typeof UI_SPACINGS)[number];
+
 export interface DisplayPrefs {
   pieceStyle: PieceStyle;
   unitMark: UnitMark;
+  uiSpacing: UiSpacing;
   soundNotifications: boolean;
 }
 
@@ -29,6 +33,7 @@ export interface DisplayPrefs {
 export const DEFAULT_DISPLAY_PREFS: DisplayPrefs = {
   pieceStyle: 'seated',
   unitMark: 'icons',
+  uiSpacing: 'normal',
   soundNotifications: true,
 };
 
@@ -65,6 +70,20 @@ export const UNIT_MARK_LABELS: Record<UnitMark, string> = {
   letters: 'A and F letters',
 };
 
+export const UI_SPACING_LABELS: Record<
+  UiSpacing,
+  { name: string; description: string }
+> = {
+  compact: {
+    name: 'Compact',
+    description: 'Tighter spacing and one-line order rows.',
+  },
+  normal: {
+    name: 'Normal',
+    description: 'Standard spacing and full order cards.',
+  },
+};
+
 const STORAGE_KEY = 'diplomacy_1901_display_prefs';
 
 const isPieceStyle = (value: unknown): value is PieceStyle =>
@@ -72,6 +91,9 @@ const isPieceStyle = (value: unknown): value is PieceStyle =>
 
 const isUnitMark = (value: unknown): value is UnitMark =>
   UNIT_MARKS.includes(value as UnitMark);
+
+const isUiSpacing = (value: unknown): value is UiSpacing =>
+  UI_SPACINGS.includes(value as UiSpacing);
 
 /** Keeps each valid setting and falls back to the default for anything else. */
 export function sanitizeDisplayPrefs(raw: unknown): DisplayPrefs {
@@ -85,6 +107,9 @@ export function sanitizeDisplayPrefs(raw: unknown): DisplayPrefs {
     unitMark: isUnitMark(candidate.unitMark)
       ? candidate.unitMark
       : DEFAULT_DISPLAY_PREFS.unitMark,
+    uiSpacing: isUiSpacing(candidate.uiSpacing)
+      ? candidate.uiSpacing
+      : DEFAULT_DISPLAY_PREFS.uiSpacing,
     soundNotifications:
       typeof candidate.soundNotifications === 'boolean'
         ? candidate.soundNotifications

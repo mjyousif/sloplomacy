@@ -76,6 +76,7 @@ export interface GameWorkspaceProps {
   zoomPercent: number;
   setZoomPercent: Dispatch<SetStateAction<number>>;
   displayPrefs: DisplayPrefs;
+  onToggleUiSpacing?: () => void;
   selectedUnitId: string | null;
   setSelectedUnitId: Dispatch<SetStateAction<string | null>>;
   hoveredUnitId: string | null;
@@ -106,10 +107,6 @@ export interface GameWorkspaceProps {
   handleTimerExpired: () => void;
   /** From `useSeatActions`. */
   handleSelectPower: (power: Power) => void;
-  handleOpenSurrenderModal: (
-    game: MultiplayerGameSummary,
-    power: Power,
-  ) => void;
   /** The host's tools. */
   isGameCreator: boolean;
   directEditActive: boolean;
@@ -151,6 +148,7 @@ export function GameWorkspace({
   zoomPercent,
   setZoomPercent,
   displayPrefs,
+  onToggleUiSpacing,
   selectedUnitId,
   setSelectedUnitId,
   hoveredUnitId,
@@ -175,7 +173,6 @@ export function GameWorkspace({
   postTimerAction,
   handleTimerExpired,
   handleSelectPower,
-  handleOpenSurrenderModal,
   isGameCreator,
   directEditActive,
   historyLocked = false,
@@ -439,6 +436,8 @@ export function GameWorkspace({
         historyPowers={turnHistory.powers}
         historyActions={turnHistory.actions}
         unitMark={displayPrefs.unitMark}
+        uiSpacing={displayPrefs.uiSpacing}
+        onToggleUiSpacing={onToggleUiSpacing}
         selectedHistoryOrderId={pinnedHistoryFocus?.id ?? null}
         onSelectHistoryPowers={turnHistory.setPowers}
         onSelectHistoryActions={turnHistory.setActions}
@@ -489,11 +488,6 @@ export function GameWorkspace({
         onFinalizeClick={() => handleFinalizeClick(false)}
         onUnfinalizeClick={handleUnfinalizeClick}
         onAdjudicateTurn={handleAdjudicateTurn}
-        onSurrenderClick={() => {
-          if (activeGameSummary && lockedPower) {
-            handleOpenSurrenderModal(activeGameSummary, lockedPower);
-          }
-        }}
       />
     </main>
   );

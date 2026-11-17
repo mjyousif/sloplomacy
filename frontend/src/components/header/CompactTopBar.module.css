@@ -274,6 +274,14 @@
     color: var(--surface-page);
   }
 
+  .compact-menu-item[data-variant="danger"] {
+    color: var(--danger-text);
+  }
+
+  .compact-menu-item[data-variant="danger"]:active {
+    background: rgba(239, 68, 68, 0.16);
+  }
+
   .compact-menu-item-chevron {
     margin-left: auto;
     color: var(--text-dim);
