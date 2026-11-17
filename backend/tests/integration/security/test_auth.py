@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from main import app
 from storage.store import MAX_ACTIVE_GAMES
-from storage.supabase import is_valid_room_code
+from storage.supabase_rows import is_valid_room_code
 from tests.integration.security.helpers import demo_sign_in_headers, load_quickstart, make_jwt
 
 client = TestClient(app)

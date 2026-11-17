@@ -10,13 +10,12 @@ from domain.board import Power
 from domain.game_state import GameParticipant, MultiplayerGameSummary
 from scenarios.presets import build_scenario
 from storage.supabase import (
-    LOBBY_COLUMNS,
     SupabaseUnavailable,
-    build_summary_from_row,
     load_all_summaries_from_db,
     load_game_from_db,
     save_game_to_db,
 )
+from storage.supabase_rows import LOBBY_COLUMNS, build_summary_from_row
 
 
 def test_save_without_history_leaves_the_column_out_of_the_write():

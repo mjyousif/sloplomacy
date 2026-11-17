@@ -22,6 +22,7 @@ from storage.store import (
     persist_game,
 )
 from storage.supabase import SupabaseUnavailable
+from storage.supabase_rows import is_valid_room_code
 
 logger = logging.getLogger("diplomacy.server")
 
@@ -37,7 +38,7 @@ def _is_saved_game(game_id: str) -> bool:
         supabase.is_persistence_enabled()
         and game_id != DEFAULT_GAME_ID
         and game_id not in PRIVATE_SANDBOXES
-        and supabase.is_valid_room_code(game_id)
+        and is_valid_room_code(game_id)
     )
 
 

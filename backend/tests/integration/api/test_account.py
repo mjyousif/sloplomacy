@@ -122,7 +122,7 @@ def test_hydrate_summary_profiles_resolves_registered_names(clean_profiles):
 
 
 def test_serialize_summary_for_db_strips_uuid_display_name(clean_profiles):
-    from storage.supabase import _serialize_summary_for_db, build_summary_from_row
+    from storage.supabase_rows import _serialize_summary_for_db, build_summary_from_row
 
     uid = "11111111-1111-1111-1111-111111111111"
     summary = MultiplayerGameSummary(

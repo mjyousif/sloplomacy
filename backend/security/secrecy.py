@@ -17,7 +17,7 @@ from storage.store import (
     is_multiplayer_match,
     resolve_game,
 )
-from storage.supabase import is_valid_uuid
+from storage.supabase_rows import is_valid_uuid
 
 
 def require_view_access(

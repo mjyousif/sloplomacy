@@ -36,7 +36,7 @@ from storage.store import (
     resolve_game,
     sync_summary,
 )
-from storage.supabase import is_valid_uuid
+from storage.supabase_rows import is_valid_uuid
 from ws.connection_manager import (
     broadcast_game_update,
     broadcast_lobby_update,

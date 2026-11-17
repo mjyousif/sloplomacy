@@ -16,9 +16,8 @@ from storage.supabase import (
     load_all_summaries_from_db,
     load_game_from_db,
     save_game_to_db,
-    to_app_status,
-    to_db_status,
 )
+from storage.supabase_rows import to_app_status, to_db_status
 
 
 def test_persistence_enabled_flag():

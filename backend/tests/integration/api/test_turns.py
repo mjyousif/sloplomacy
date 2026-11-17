@@ -185,6 +185,6 @@ def test_a_live_game_sends_a_preview_and_no_last_resolution():
 
 
 def test_the_preview_is_never_saved():
-    from storage.supabase import DERIVED_STATE_FIELDS
+    from storage.supabase_rows import DERIVED_STATE_FIELDS
 
     assert "preview" in DERIVED_STATE_FIELDS
