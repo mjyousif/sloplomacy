@@ -49,6 +49,9 @@ describe('GameSettingsMenu', () => {
     const soloBtn = screen.getByTestId('game-settings-solo-sandbox');
     expect(soloBtn).not.toHaveAttribute('data-active');
     expect(soloBtn).toHaveTextContent('Export to Solo Sandbox...');
+    expect(
+      screen.queryByTestId('game-settings-reset-sandbox'),
+    ).not.toBeInTheDocument();
 
     await userEvent.click(soloBtn);
     expect(props.onEnterSoloSandbox).toHaveBeenCalledTimes(1);
@@ -86,24 +89,37 @@ describe('GameSettingsMenu', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows Return to Previous Game below Administrator in Solo Sandbox mode when provided', async () => {
+  it('shows Reset Sandbox... and Return to Previous Game below Administrator in Solo Sandbox mode when provided', async () => {
+    const onResetSandbox = vi.fn();
     const onReturnToPreviousGame = vi.fn();
     renderGameSettings({
       viewMode: 'sandbox',
       matchSummary: null,
       isGameCreator: true,
+      onResetSandbox,
       onReturnToPreviousGame,
     });
     await userEvent.click(screen.getByTestId('game-settings-trigger'));
     const adminBtn = screen.getByTestId('game-settings-admin-settings');
+    const resetBtn = screen.getByTestId('game-settings-reset-sandbox');
     const returnBtn = screen.getByTestId('game-settings-return-previous');
+    expect(resetBtn).toHaveTextContent('Reset Sandbox...');
     expect(returnBtn).toHaveTextContent('Return to Previous Game');
     expect(
-      adminBtn.compareDocumentPosition(returnBtn) &
+      adminBtn.compareDocumentPosition(resetBtn) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      resetBtn.compareDocumentPosition(returnBtn) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
 
-    await userEvent.click(returnBtn);
+    await userEvent.click(resetBtn);
+    expect(onResetSandbox).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('game-settings-panel')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('game-settings-trigger'));
+    await userEvent.click(screen.getByTestId('game-settings-return-previous'));
     expect(onReturnToPreviousGame).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('game-settings-panel')).not.toBeInTheDocument();
   });

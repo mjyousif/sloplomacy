@@ -4,6 +4,7 @@ import {
   Crown,
   Flag,
   FlaskConical,
+  RotateCcw,
   Undo2,
   Wrench,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ export interface GameSettingsMenuProps {
   matchSummary?: MultiplayerGameSummary | null;
   playerPower?: Power | null;
   onEnterSoloSandbox: (event?: React.MouseEvent) => void;
+  onResetSandbox?: () => void;
   onReturnToPreviousGame?: () => void;
   onSurrenderClick?: () => void;
   isSurrendered?: boolean;
@@ -46,6 +48,7 @@ export function GameSettingsMenu({
   matchSummary = null,
   playerPower = null,
   onEnterSoloSandbox,
+  onResetSandbox,
   onReturnToPreviousGame,
   onSurrenderClick,
   isSurrendered = false,
@@ -73,6 +76,7 @@ export function GameSettingsMenu({
     !isSoloSandbox && viewMode === 'multiplayer' && Boolean(playerPower);
   const showExportToSandbox = viewMode !== 'lobby' && !isSoloSandbox;
   const showAdmin = viewMode !== 'lobby' && isGameCreator;
+  const showResetSandbox = isSoloSandbox && Boolean(onResetSandbox);
   const showReturnPrevious = isSoloSandbox && Boolean(onReturnToPreviousGame);
   const showSurrender =
     viewMode === 'multiplayer' && Boolean(onSurrenderClick) && !isSurrendered;
@@ -227,6 +231,21 @@ export function GameSettingsMenu({
                       size={15}
                       className={styles.gameMenuChevron}
                     />
+                  </button>
+                )}
+
+                {showResetSandbox && (
+                  <button
+                    type="button"
+                    data-testid="game-settings-reset-sandbox"
+                    className={styles.gameMenuItem}
+                    onClick={() => {
+                      closeMenu();
+                      onResetSandbox?.();
+                    }}
+                  >
+                    <RotateCcw size={15} className={styles.gameMenuItemIcon} />
+                    <span>Reset Sandbox...</span>
                   </button>
                 )}
 

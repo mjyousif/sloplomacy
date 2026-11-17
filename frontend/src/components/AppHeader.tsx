@@ -35,6 +35,7 @@ export interface AppHeaderProps {
   handleSignOut: () => void;
   handleBackToLobby: () => void;
   handleEnterSoloSandbox: (event?: React.MouseEvent) => void;
+  onResetSandbox?: () => void;
   onSwitchToSoloSandbox?: () => void;
   onReturnToPreviousGame?: () => void;
   onSelectGame?: (game: MultiplayerGameSummary) => void;
@@ -85,6 +86,7 @@ export function AppHeader({
   handleSignOut,
   handleBackToLobby,
   handleEnterSoloSandbox,
+  onResetSandbox,
   onSwitchToSoloSandbox,
   onReturnToPreviousGame,
   onSelectGame,
@@ -180,6 +182,7 @@ export function AppHeader({
           winner={gameState.winner ?? null}
           onBackToLobby={handleBackToLobby}
           onEnterSoloSandbox={handleEnterSoloSandbox}
+          onResetSandbox={onResetSandbox}
           onReturnToPreviousGame={onReturnToPreviousGame}
           onSurrenderClick={handleSurrenderClick}
           isSurrendered={isLockedPowerSurrendered}

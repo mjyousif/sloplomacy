@@ -162,7 +162,7 @@ test.describe('Unified Top Bar Dropdowns', () => {
       await expect(gameTrigger).toHaveAttribute('data-icon', 'flask');
       await expect(gameTrigger).toHaveAttribute('data-solo-sandbox', 'true');
 
-      // Game Settings menu in Solo Sandbox says "Solo Sandbox", omits Export to Solo Sandbox... and Surrender, and shows Return to Previous Game below Administrator
+      // Game Settings menu in Solo Sandbox says "Solo Sandbox", omits Export to Solo Sandbox... and Surrender, and shows Reset Sandbox... and Return to Previous Game below Administrator
       await gameTrigger.click();
       await expect(page.getByTestId('game-settings-subtitle')).toHaveText(
         'Solo Sandbox',
@@ -172,13 +172,19 @@ test.describe('Unified Top Bar Dropdowns', () => {
       );
       await expect(page.getByTestId('game-settings-surrender')).toHaveCount(0);
       await expect(
+        page.getByTestId('game-settings-reset-sandbox'),
+      ).toBeVisible();
+      await expect(
         page.getByTestId('game-settings-return-previous'),
       ).toBeVisible();
       await page.getByTestId('game-settings-admin-settings').click();
       await expect(page.getByTestId('admin-settings-panel')).toBeVisible();
       await rec.recordStep(page, '03_admin_settings_open');
       await page.getByTestId('game-settings-back').click();
-      await gameTrigger.click();
+      await page.getByTestId('game-settings-reset-sandbox').click();
+      await expect(page.getByTestId('toast-banner')).toContainText(
+        'Reset to Standard Spring 1901.',
+      );
 
       await rec.recordStep(page, '05_switched_to_solo_sandbox');
 

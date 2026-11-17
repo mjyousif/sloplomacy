@@ -160,6 +160,7 @@ describe('AppHeader: the top bar', () => {
 
   it('wires onSurrenderClick only for a live non-surrendered multiplayer seat and prefers lockedPower for TopHeader flag', () => {
     const onOpenSurrenderModal = vi.fn();
+    const onResetSandbox = vi.fn();
     const onReturnToPreviousGame = vi.fn();
     render(
       <AppHeader
@@ -167,11 +168,13 @@ describe('AppHeader: the top bar', () => {
           playerPower: 'GERMANY',
           lockedPower: 'FRANCE',
           onOpenSurrenderModal,
+          onResetSandbox,
           onReturnToPreviousGame,
         })}
       />,
     );
     expect(seen.wide.playerPower).toBe('FRANCE');
+    expect(seen.wide.onResetSandbox).toBe(onResetSandbox);
     expect(seen.wide.onReturnToPreviousGame).toBe(onReturnToPreviousGame);
     expect(seen.wide.isSurrendered).toBe(false);
     seen.wide.onSurrenderClick();

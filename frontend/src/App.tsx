@@ -379,6 +379,13 @@ export function App() {
     setAdminOverrideActive(false);
     seats.handleEnterSoloSandbox(event);
   };
+  const guardedResetSandbox = async () => {
+    if (!(await directEdit.confirmIfDirty('reset the sandbox'))) return;
+    turnHistory.goLive();
+    setAdminModalOpen(false);
+    setAdminOverrideActive(false);
+    await handleLoadScenario('standard_1901');
+  };
   const guardedSwitchToSoloSandbox = async () => {
     if (!(await directEdit.confirmIfDirty('switch to Solo Sandbox'))) return;
     setAdminModalOpen(false);
@@ -451,6 +458,7 @@ export function App() {
         handleSignOut={handleSignOut}
         handleBackToLobby={handleBackToLobby}
         handleEnterSoloSandbox={guardedEnterSoloSandbox}
+        onResetSandbox={guardedResetSandbox}
         onSwitchToSoloSandbox={guardedSwitchToSoloSandbox}
         onReturnToPreviousGame={guardedReturnToPreviousGame}
         onSelectGame={guardedSwitchToGame}
