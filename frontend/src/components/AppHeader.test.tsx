@@ -23,6 +23,7 @@ const STATE = {
   year: 1901,
   phase: 'Movement',
   winner: null,
+  surrendered_powers: [],
   issues: [
     { power: 'FRANCE', severity: 'error' },
     { power: 'FRANCE', severity: 'warning' },
@@ -83,6 +84,8 @@ describe('AppHeader: the top bar', () => {
     expect(h.playerPower).toBe('FRANCE');
     expect(h.onBackToLobby).toBe(p.handleBackToLobby);
     expect(h.onEnterSoloSandbox).toBe(p.handleEnterSoloSandbox);
+    expect(h.activeGameId).toBe('mp_1');
+    expect(h.myGames).toEqual([]);
     expect(h.onChangeDisplayPrefs).toBe(p.updateDisplayPrefs);
     expect(h.onSignOut).toBe(p.handleSignOut);
     h.onSignIn();
@@ -153,6 +156,48 @@ describe('AppHeader: the top bar', () => {
     expect(seen.wide.onStepHistoryTurn).toBe(onStepHistoryTurn);
     render(<AppHeader {...props({ gameState: won, isCompact: true })} />);
     expect(seen.compact.winner).toBe('ITALY');
+  });
+
+  it('wires onSurrenderClick only for a live non-surrendered multiplayer seat and prefers lockedPower for TopHeader flag', () => {
+    const onOpenSurrenderModal = vi.fn();
+    const onSaveSandbox = vi.fn();
+    const onResetSandbox = vi.fn();
+    const onReturnToPreviousGame = vi.fn();
+    render(
+      <AppHeader
+        {...props({
+          playerPower: 'GERMANY',
+          lockedPower: 'FRANCE',
+          onOpenSurrenderModal,
+          onSaveSandbox,
+          onResetSandbox,
+          onReturnToPreviousGame,
+        })}
+      />,
+    );
+    expect(seen.wide.playerPower).toBe('FRANCE');
+    expect(seen.wide.onSaveSandbox).toBe(onSaveSandbox);
+    expect(seen.wide.onResetSandbox).toBe(onResetSandbox);
+    expect(seen.wide.onReturnToPreviousGame).toBe(onReturnToPreviousGame);
+    expect(seen.wide.isSurrendered).toBe(false);
+    seen.wide.onSurrenderClick();
+    expect(onOpenSurrenderModal).toHaveBeenCalledWith(MATCH, 'FRANCE');
+
+    const surrendered = {
+      ...STATE,
+      surrendered_powers: ['FRANCE'],
+    } as unknown as GameState;
+    render(
+      <AppHeader
+        {...props({
+          gameState: surrendered,
+          lockedPower: 'FRANCE',
+          onOpenSurrenderModal,
+        })}
+      />,
+    );
+    expect(seen.wide.isSurrendered).toBe(true);
+    expect(seen.wide.onSurrenderClick).toBeUndefined();
   });
 });
 

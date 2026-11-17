@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { POWER_METADATA } from '../../types/diplomacy';
 import type { ConsensusStatusInfo } from '../../utils/orderHelpers';
-import { ClearAllButton, OrderFooter, SurrenderButton } from './OrderFooter';
+import { ClearAllButton, OrderFooter } from './OrderFooter';
 
 const CONSENSUS: ConsensusStatusInfo = {
   isWaitingForPlayers: false,
@@ -52,15 +52,6 @@ describe('ClearAllButton', () => {
     fireEvent.click(screen.getByTestId('btn-clear-all-confirm'));
     expect(onClearAllOrders).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('btn-clear-all')).toBeInTheDocument();
-  });
-});
-
-describe('SurrenderButton', () => {
-  it('surrenders on click', () => {
-    const onSurrenderClick = vi.fn();
-    render(<SurrenderButton onSurrenderClick={onSurrenderClick} />);
-    fireEvent.click(screen.getByRole('button', { name: /Surrender/ }));
-    expect(onSurrenderClick).toHaveBeenCalledTimes(1);
   });
 });
 

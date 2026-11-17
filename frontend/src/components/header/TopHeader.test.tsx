@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthUser, MultiplayerGameSummary } from '../../types/diplomacy';
@@ -45,34 +45,114 @@ describe('TopHeader: brand and navigation', () => {
     expect(props.onBackToLobby).toHaveBeenCalledTimes(1);
   });
 
-  it('opens the solo sandbox and marks it while in one', async () => {
-    const { props } = renderHeader();
-    const tab = screen.getByTestId('nav-tab-sandbox');
-    expect(tab).toHaveAttribute('data-active', 'true');
-    await userEvent.click(tab);
+  it('opens Open in Local Sandbox from Game Settings in multiplayer and omits it in Solo Sandbox', async () => {
+    const { props, rerender } = renderHeader({
+      viewMode: 'multiplayer',
+      matchSummary: MATCH,
+    });
+    await userEvent.click(screen.getByTestId('game-settings-trigger'));
+    const subtitle = screen.getByTestId('game-settings-subtitle');
+    expect(subtitle).toHaveTextContent('Friday Night');
+    expect(within(subtitle).getByTestId('power-flag-france')).toBeVisible();
+    const item = screen.getByTestId('game-settings-solo-sandbox');
+    expect(item).toHaveTextContent('Open in Local Sandbox');
+    expect(item).not.toHaveAttribute('data-active');
+    await userEvent.click(item);
     expect(props.onEnterSoloSandbox).toHaveBeenCalledTimes(1);
-  });
 
-  it('leaves the sandbox tab unmarked elsewhere', () => {
-    renderHeader({ viewMode: 'lobby' });
-    expect(screen.getByTestId('nav-tab-sandbox')).toHaveAttribute(
-      'data-active',
-      'false',
+    rerender(<TopHeader {...props} viewMode="sandbox" matchSummary={null} />);
+    await userEvent.click(screen.getByTestId('game-settings-trigger'));
+    expect(
+      screen.queryByTestId('game-settings-subtitle'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('game-settings-type')).toHaveTextContent(
+      'Local sandbox',
     );
+    expect(screen.getByTestId('game-settings-type-flask')).toBeInTheDocument();
+    expect(
+      screen.queryByTestId('game-settings-solo-sandbox'),
+    ).not.toBeInTheDocument();
   });
 
-  it('names the match and the player’s power in multiplayer', () => {
-    renderHeader({ viewMode: 'multiplayer', matchSummary: MATCH });
-    expect(screen.getByText('Friday Night (France)')).toBeInTheDocument();
-  });
+  it('shows a flask icon on Game Settings in Solo Sandbox and a crown icon in a game, with no separate flask indicator', () => {
+    const { rerender, props } = renderHeader({ viewMode: 'sandbox' });
+    expect(
+      screen.queryByTestId('sandbox-mode-indicator'),
+    ).not.toBeInTheDocument();
+    const sandboxBtn = screen.getByTestId('game-settings-trigger');
+    expect(sandboxBtn).toHaveAttribute('data-icon', 'flask');
+    expect(sandboxBtn).toHaveAttribute('data-solo-sandbox', 'true');
 
-  it('names no match outside multiplayer or before it loads', () => {
-    const { rerender, props } = renderHeader({ matchSummary: MATCH });
-    expect(screen.queryByText(/Friday Night/)).not.toBeInTheDocument();
     rerender(
-      <TopHeader {...props} viewMode="multiplayer" matchSummary={null} />,
+      <TopHeader {...props} viewMode="multiplayer" matchSummary={MATCH} />,
     );
+    expect(
+      screen.queryByTestId('sandbox-mode-indicator'),
+    ).not.toBeInTheDocument();
+    const matchBtn = screen.getByTestId('game-settings-trigger');
+    expect(matchBtn).toHaveAttribute('data-icon', 'crown');
+    expect(matchBtn).toHaveAttribute('data-solo-sandbox', 'false');
+
+    rerender(<TopHeader {...props} viewMode="lobby" />);
+    expect(
+      screen.queryByTestId('sandbox-mode-indicator'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides Game Settings in the lobby and shows it on a board', () => {
+    const { rerender, props } = renderHeader({ viewMode: 'lobby' });
+    expect(
+      screen.queryByTestId('game-settings-trigger'),
+    ).not.toBeInTheDocument();
+
+    rerender(<TopHeader {...props} viewMode="sandbox" />);
+    expect(screen.getByTestId('game-settings-trigger')).toBeInTheDocument();
+  });
+
+  it('never renders a separate active-match pill next to the brand', () => {
+    const { rerender, props } = renderHeader({
+      viewMode: 'multiplayer',
+      matchSummary: MATCH,
+    });
     expect(screen.queryByTestId('nav-match-pill')).not.toBeInTheDocument();
+    rerender(<TopHeader {...props} viewMode="sandbox" matchSummary={null} />);
+    expect(screen.queryByTestId('nav-match-pill')).not.toBeInTheDocument();
+  });
+
+  it('wires Save Sandbox, Reset Sandbox, Delete Sandbox, and Return to Previous Game in Solo Sandbox through Game Settings', async () => {
+    const onSaveSandbox = vi.fn();
+    const onResetSandbox = vi.fn();
+    const onDeleteSandbox = vi.fn();
+    const onReturnToPreviousGame = vi.fn();
+    renderHeader({
+      viewMode: 'sandbox',
+      matchSummary: {
+        game_id: 'sbx_saved_1',
+        name: 'Saved Study',
+        is_sandbox: true,
+        is_draft: false,
+      } as MultiplayerGameSummary,
+      isGameCreator: true,
+      onSaveSandbox,
+      onResetSandbox,
+      onDeleteSandbox,
+      onReturnToPreviousGame,
+    });
+    await userEvent.click(screen.getByTestId('game-settings-trigger'));
+    await userEvent.click(screen.getByTestId('game-settings-save-sandbox'));
+    expect(onSaveSandbox).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(screen.getByTestId('game-settings-trigger'));
+    await userEvent.click(screen.getByTestId('game-settings-reset-sandbox'));
+    expect(onResetSandbox).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(screen.getByTestId('game-settings-trigger'));
+    await userEvent.click(screen.getByTestId('game-settings-delete-sandbox'));
+    expect(onDeleteSandbox).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(screen.getByTestId('game-settings-trigger'));
+    await userEvent.click(screen.getByTestId('game-settings-return-previous'));
+    expect(onReturnToPreviousGame).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -139,27 +219,46 @@ describe('TopHeader: the turn and the winner', () => {
   });
 });
 
-describe('TopHeader: display settings and account', () => {
+describe('TopHeader: Game Settings and Account dropdowns', () => {
   it('omits any Live Sync indicator', () => {
     renderHeader();
     expect(screen.queryByText('Live Sync')).not.toBeInTheDocument();
     expect(screen.queryByText('Connecting...')).not.toBeInTheDocument();
   });
 
-  it('includes the display settings menu only outside the lobby', () => {
-    const { rerender, props } = renderHeader();
+  it('places Game Settings to the left of the Account dropdown', () => {
+    renderHeader();
+    const gameBtn = screen.getByTestId('game-settings-trigger');
+    const accountBtn = screen.getByTestId('account-menu-trigger');
     expect(
-      screen.getByRole('button', { name: 'Display settings' }),
-    ).toBeInTheDocument();
-    expect(screen.queryByTestId('btn-admin-menu')).not.toBeInTheDocument();
+      gameBtn.compareDocumentPosition(accountBtn) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 
-    rerender(<TopHeader {...props} viewMode="lobby" />);
+  it('puts display settings inside the Account dropdown only outside the lobby', async () => {
+    const { rerender, props } = renderHeader();
     expect(
       screen.queryByRole('button', { name: 'Display settings' }),
     ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('account-menu-trigger'));
+    expect(
+      screen.getByTestId('account-menu-display-settings'),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('account-menu-display-settings'));
+    expect(
+      screen.getByRole('heading', { name: 'Display settings' }),
+    ).toBeInTheDocument();
+
+    rerender(<TopHeader {...props} viewMode="lobby" />);
+    expect(
+      screen.queryByTestId('account-menu-display-settings'),
+    ).not.toBeInTheDocument();
   });
 
-  it('shows the administrator dropdown next to display settings only for the game creator outside the lobby', async () => {
+  it('shows the Administrator entry inside Game Settings only for the game creator outside the lobby', async () => {
     const onOpenAdminTools = vi.fn();
     const onToggleAdminOverride = vi.fn();
     const onResolveTurn = vi.fn();
@@ -172,39 +271,26 @@ describe('TopHeader: display settings and account', () => {
       onExitAdmin,
     });
 
-    const adminMenuBtn = screen.getByTestId('btn-admin-menu');
-    expect(adminMenuBtn).toBeInTheDocument();
-    await userEvent.click(adminMenuBtn);
+    const trigger = screen.getByTestId('game-settings-trigger');
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByTestId('game-settings-admin-settings'));
     expect(screen.getByTestId('admin-settings-panel')).toBeInTheDocument();
     expect(screen.getByTestId('btn-toggle-direct-edit')).toHaveAttribute(
       'data-active',
       'false',
     );
-    expect(
-      screen
-        .getByTestId('btn-toggle-direct-edit')
-        .querySelector('.lucide-pencil'),
-    ).toBeInTheDocument();
-    expect(
-      screen
-        .getByTestId('btn-open-admin-console')
-        .querySelector('.lucide-clock'),
-    ).toBeInTheDocument();
-    expect(
-      screen
-        .getByTestId('btn-admin-resolve-turn')
-        .querySelector('.lucide-play'),
-    ).toBeInTheDocument();
     expect(screen.queryByTestId('btn-exit-admin-mode')).toBeNull();
 
     await userEvent.click(screen.getByTestId('btn-toggle-direct-edit'));
     expect(onToggleAdminOverride).toHaveBeenCalledTimes(1);
 
-    await userEvent.click(adminMenuBtn);
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByTestId('game-settings-admin-settings'));
     await userEvent.click(screen.getByTestId('btn-open-admin-console'));
     expect(onOpenAdminTools).toHaveBeenCalledTimes(1);
 
-    await userEvent.click(adminMenuBtn);
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByTestId('game-settings-admin-settings'));
     await userEvent.click(screen.getByTestId('btn-admin-resolve-turn'));
     expect(onResolveTurn).toHaveBeenCalledTimes(1);
 
@@ -219,7 +305,8 @@ describe('TopHeader: display settings and account', () => {
         onExitAdmin={onExitAdmin}
       />,
     );
-    await userEvent.click(screen.getByTestId('btn-admin-menu'));
+    await userEvent.click(screen.getByTestId('game-settings-trigger'));
+    await userEvent.click(screen.getByTestId('game-settings-admin-settings'));
     expect(screen.getByTestId('btn-admin-resolve-turn')).toBeDisabled();
 
     rerender(
@@ -249,12 +336,17 @@ describe('TopHeader: display settings and account', () => {
         onExitAdmin={onExitAdmin}
       />,
     );
-    expect(screen.queryByTestId('btn-admin-menu')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('game-settings-trigger'),
+    ).not.toBeInTheDocument();
   });
 
-  it('offers a guest sign-in', async () => {
+  it('offers a guest sign-in inside the icon-only dropdown', async () => {
     const { props } = renderHeader();
-    expect(screen.getByText('Guest Mode')).toBeInTheDocument();
+    const trigger = screen.getByTestId('account-menu-trigger');
+    expect(trigger).toHaveTextContent('');
+    expect(trigger).toHaveAttribute('aria-label', 'Guest menu');
+    await userEvent.click(trigger);
     await userEvent.click(
       screen.getByRole('button', { name: 'Sign In / Register' }),
     );
@@ -262,18 +354,40 @@ describe('TopHeader: display settings and account', () => {
     expect(props.onSignOut).not.toHaveBeenCalled();
   });
 
-  it('names a signed-in player and signs them out', async () => {
+  it('shows the signed-in player details and signs them out from the icon-only dropdown', async () => {
     const onOpenAccount = vi.fn();
     const { props } = renderHeader({ authUser: ALICE, onOpenAccount });
-    expect(screen.getByText('Alice').parentElement).toHaveAttribute(
-      'title',
-      'Account Settings (alice@example.test)',
+    const trigger = screen.getByTestId('account-menu-trigger');
+    expect(trigger).toHaveTextContent('');
+    expect(trigger).toHaveAttribute(
+      'aria-label',
+      'Account and settings menu (Alice)',
     );
-    expect(screen.queryByText('Guest Mode')).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Alice' }));
+    await userEvent.click(trigger);
+    expect(screen.getByTestId('account-menu-email')).toHaveTextContent(
+      'alice@example.test',
+    );
+    expect(
+      screen.queryByTestId('account-menu-edit-username'),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('account-menu-account-settings'));
     expect(onOpenAccount).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(trigger);
     await userEvent.click(screen.getByRole('button', { name: 'Sign Out' }));
     expect(props.onSignOut).toHaveBeenCalledTimes(1);
     expect(props.onSignIn).not.toHaveBeenCalled();
+  });
+
+  it('triggers Surrender from Game Settings in multiplayer', async () => {
+    const onSurrenderClick = vi.fn();
+    renderHeader({
+      viewMode: 'multiplayer',
+      matchSummary: MATCH,
+      onSurrenderClick,
+    });
+    await userEvent.click(screen.getByTestId('game-settings-trigger'));
+    await userEvent.click(screen.getByTestId('game-settings-surrender'));
+    expect(onSurrenderClick).toHaveBeenCalledTimes(1);
   });
 });

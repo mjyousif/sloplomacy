@@ -20,14 +20,12 @@
     color: var(--color-white);
   }
 
-  .surrender-btn-sidebar,
   .clear-all-btn {
     border-color: rgba(239, 68, 68, 0.45);
     color: var(--danger-text);
     background: rgba(239, 68, 68, 0.1);
   }
 
-  .surrender-btn-sidebar:hover,
   .clear-all-btn:hover {
     background: rgba(239, 68, 68, 0.25);
     border-color: var(--danger-primary);

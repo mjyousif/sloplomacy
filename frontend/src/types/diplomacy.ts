@@ -389,6 +389,7 @@ export interface AuthUser {
   user_id?: string;
   email: string;
   displayName: string;
+  fullName?: string;
   isLocalDemo?: boolean;
   needsUsernameSetup?: boolean;
 }

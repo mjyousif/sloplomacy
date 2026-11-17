@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { MultiplayerGameSummary } from '../../types/diplomacy';
 import { DEFAULT_DISPLAY_PREFS } from '../../utils/displayPrefs';
 import { SurrenderModal } from '../game/SurrenderModal';
@@ -146,6 +146,22 @@ describe('CompactTopBar', () => {
     expect(
       screen.queryByTestId('compact-menu-display-settings'),
     ).not.toBeInTheDocument();
+  });
+
+  it('offers Surrender in multiplayer for an active non-surrendered seat', async () => {
+    const onSurrenderClick = vi.fn();
+    render(
+      <CompactTopBar
+        {...makeProps({
+          viewMode: 'multiplayer',
+          onSurrenderClick,
+          isSurrendered: false,
+        })}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    await userEvent.click(screen.getByTestId('compact-menu-surrender'));
+    expect(onSurrenderClick).toHaveBeenCalledTimes(1);
   });
 });
 

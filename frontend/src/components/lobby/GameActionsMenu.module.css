@@ -34,6 +34,25 @@
     background: #181d26;
     border: 1px solid #3c4454;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+    transform-origin: bottom right;
+    animation: gameActionsMenuEnter 0.13s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes gameActionsMenuEnter {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .menu {
+      animation: none;
+    }
   }
 
   .item {

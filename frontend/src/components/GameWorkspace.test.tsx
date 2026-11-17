@@ -158,7 +158,6 @@ function props(over: Partial<GameWorkspaceProps> = {}): GameWorkspaceProps {
     postTimerAction: vi.fn(),
     handleTimerExpired: vi.fn(),
     handleSelectPower: vi.fn(),
-    handleOpenSurrenderModal: vi.fn(),
     isGameCreator: false,
     directEditActive: false,
     ...over,
@@ -277,21 +276,12 @@ describe('GameWorkspace: the live turn', () => {
     expect(seen.map.showAllMoves).toBe(false);
   });
 
-  it('finalizes without forcing, and surrenders only a held seat', () => {
+  it('finalizes without forcing and omits surrender from the order sidebar', () => {
     const p = props();
     render(<GameWorkspace {...p} />);
     seen.macro.onFinalizeClick();
     expect(p.handleFinalizeClick).toHaveBeenCalledWith(false);
-    seen.macro.onSurrenderClick();
-    expect(p.handleOpenSurrenderModal).toHaveBeenCalledWith(
-      p.activeGameSummary,
-      'FRANCE',
-    );
-
-    const noSeat = props({ lockedPower: null });
-    render(<GameWorkspace {...noSeat} />);
-    seen.macro.onSurrenderClick();
-    expect(noSeat.handleOpenSurrenderModal).not.toHaveBeenCalled();
+    expect(seen.macro.onSurrenderClick).toBeUndefined();
   });
 
   it('marks a match as multiplayer, and a sandbox as not', () => {

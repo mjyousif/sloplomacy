@@ -21,7 +21,7 @@ To prevent interface bloat and preserve a clean, focused tactical workspace, adh
 2. **Sidebar Collapse & Rail Ownership**: Sidebar expand and collapse actions belong exclusively on the sidebars themselves (in their headers when expanded, and on their 44px slim rails when collapsed). Do not introduce top navigation header pill buttons to toggle sidebars. Phones are the exception, because they have no rails: ≡ in the phone top bar opens the tools drawer, and the order sheet's own handle raises and lowers it.
 3. **Overlays Keep Clear of the Sidebars**: Anything placed over the map (banners, pills, the turn clock, the coast picker, the floating unit menu) offsets or centres itself with `--map-inset-left` / `--map-inset-right`, never with a width written into its own stylesheet or script. A centred overlay uses `left: calc(50% + (var(--map-inset-left, 0px) - var(--map-inset-right, 0px)) / 2)`.
 4. **Unobstructed Map Canvas**: The interactive SVG European map viewport must remain free of floating camera/zoom overlay boxes. All stepped zooming, percentage readout, and camera reset/fit actions belong in the Left Tools Sidebar (`ToolsSidebar.tsx`), accessible both in full view and via rail icons. The one exception is the phone layout, which has no wheel and no tools rail: there `EuropeMap` shows zoom in, zoom out and "Back to my units" in the map's bottom-right corner. See [Phone camera](map-renderer.md#phone-camera-compact-prop).
-4. **Personal Display Settings in the Top Bar**: The `SlidersHorizontal` icon in the top header's right-hand actions opens `DisplaySettingsMenu.tsx`, whenever a board is open and for guests too. See [Top Bar Display Settings](#top-bar-display-settings). On phones it sits inside the ⋯ menu instead.
+4. **Personal Display Settings in the Top Bar**: On desktop, Display Settings lives inside the unified top-bar account dropdown (`AccountDropdownMenu.tsx` -> `Display Settings` -> `DisplaySettingsOptions`), whenever a board is open and for guests too. See [Top Bar Display Settings](#top-bar-display-settings). On phones it sits inside the ⋯ menu instead.
 5. **Tactical Map Legend Purity**: The Tactical Map Legend is strictly a visual guide for map symbology (movement vectors, support reticles, convoy anchors, and warning/dislodgement markers). Never embed rulebook mechanics or geography text footnotes (e.g. dual coasts or impassable terrain); interactive modal dialogs and cartographic text handle these directly.
 
 
@@ -31,15 +31,16 @@ To prevent interface bloat and preserve a clean, focused tactical workspace, adh
 
 ![The display settings menu open over the map](images/display-settings-menu.jpg)
 
-`DisplaySettingsMenu.tsx` sits between the sync badge and the account controls. It's a popover rather than a modal, so the map stays visible and each change shows live. It closes on an outside click or Escape, and Escape returns focus to the icon.
+`DisplaySettingsOptions` renders inside the unified top-bar dropdown (`AccountDropdownMenu.tsx` on desktop, and the ⋯ menu on phones). It stays in a popover rather than a modal, so the map stays visible and each change shows live. It closes on an outside click or Escape, and Escape returns focus to the dropdown trigger.
 
+- **Spacing**: Compact or Normal UI spacing (tightens sidebar padding and switches order cards and past-turn rows to compact one-line rows).
 - **Piece style**: Classic, Star seat, Compact pieces, Command flags or Name as piece.
 - **Army and fleet marks**: Swords and ship, Tank and warship, NATO symbols, or A and F letters.
 - **Status line**: says where the choice is saved, such as "Saved to your account" or "Saved on this device. Sign in to keep it across devices".
 
 ### Top Bar Administrator Menu (`AdminSettingsMenu.tsx`)
 
-Shown to the game creator (`isGameCreator`) beside `DisplaySettingsMenu` (via the `Wrench` button, `data-testid="btn-admin-menu"`):
+Shown to the game creator (`isGameCreator`) inside the top-bar `Game Settings` dropdown (`GameSettingsMenu.tsx` -> `Administrator` -> `AdminSettingsOptions`):
 
 - **`Edit Board`** (`data-testid="btn-toggle-direct-edit"`): toggles interactive Direct-Edit Mode on the map (`AdminDirectEditSidebar.tsx`).
 - **`Turn and Clock Settings`** (`data-testid="btn-open-admin-console"`): opens `AdminTurnClockSidebar.tsx` in the right sidebar for Revert to Past Turn (`TurnControlTab`), Adjust Game Clock & Season, and Unlock All Power Orders.
@@ -53,12 +54,14 @@ The previews render with the real `MapPiece`, so they always match the map. Thes
 
 On a wide screen the header is `TopHeader.tsx`. `AppHeader.tsx` picks it (or `CompactTopBar` on a phone) and passes it the data and handlers it shows, and it keeps no state of its own:
 
-- **Left**: the brand, which goes back to the lobby, then the Solo Sandbox tab (marked while in the solo sandbox) and, in a multiplayer match, the match name with your power.
+- **Left**: the brand, which goes back to the lobby.
 - **Center**, only on a board: the unified fixed-width turn chronicle and history viewer (`TurnChronicle.tsx`), and the winner once there is one. The top bar shows no order errors or warnings: the order sidebar on the right already lists them on each unit card.
   - The chronicle shows the fixed-width nation filter button (icon-only for All, 3-letter code when 1 nation is picked, count badge when multiple are picked) to the left of the calendar phase `IconSelectDropdown` menu (chevron-free, e.g. `"Spring 1901 Movement"`), followed by `‹` and `›` regardless of whether resolved phases exist yet. While viewing a past turn, a yellow revert-icon button appears beside `›` to jump straight back to live.
   - Before the first phase resolves, the history controls stay disabled and there is no filter tray. While on the latest (live) turn, the nation filter button stays disabled and grayed out; entering an admin mode (Edit Board or Turn and Clock Settings) puts the view back on the latest turn and locks the chronicle controls until admin mode exits.
   - While viewing a past turn, clicking the filter button expands a tray below it labeled `"Filter by nations"` with multi-select nation filter chips (`All`, `AUS` … `TUR`) that toggle one or more nations' orders on both the map and right sidebar log (outlining the filter button in the selected nation's color for 1 nation or gold for multiple). Clicking outside, pressing Escape, or opening the phase dropdown closes the tray so the two menus never overlap.
-- **Right**: only on a board, the [display settings](#top-bar-display-settings) and host admin tools; always, Guest Mode with Sign In / Register, or your name (email in the tooltip) with Sign Out.
+- **Right**: the icon-only top-bar menus:
+  - **`Game Settings` (`GameSettingsMenu.tsx`, shown while on a board)**: renders an amber flask icon in Solo Sandbox mode (draft or saved) or a crown icon in a multiplayer game; opens with a `Game Settings` header, `[flag] game name` (for saved sandboxes and live games; omitted in Local Sandbox mode), and a type line showing `[flask] Local sandbox`, `[flask] Saved sandbox`, or `[crown] Live game`; holds `Open in Local Sandbox` (multiplayer only), `Administrator` (for the game creator, opening `AdminSettingsOptions` with a `Back` button), `Save Sandbox` / `Save as New Sandbox` (Solo Sandbox, opening `SaveSandboxModal`), `Reset Sandbox` (Solo Sandbox, resetting the board to Spring 1901), `Delete Sandbox` (saved sandboxes only), `Return to Previous Game` (Solo Sandbox, when entered after viewing a game), and `Surrender` (for an active non-surrendered multiplayer seat).
+  - **Account & Display (`AccountDropdownMenu.tsx`, user icon)**: opening it shows the player's distinct full name (if set), `@username`, and email at the top in primary font and larger text; followed by `Display Settings` (on a board, opening `DisplaySettingsOptions` with a `Back` button); `Account Settings` (when signed in, opening `AccountModal`); then `Switch Game` with the current game shown inline as subtext (expanding a list of Solo Sandbox and all current games the user is involved in, marking the current game); and `Sign Out` (or `Sign In / Register` for guests) at the bottom.
 
 ---
 
@@ -80,7 +83,7 @@ In the compact layout the game screen is the map, with everything else layered o
 ### Order sheet (`BottomSheet.tsx`, `MacroSidebar variant="sheet"`)
 - **Stops**: peek, half and full (`utils/sheetHelpers.ts`). It starts at peek every time a game opens. Drag the handle and let go to settle on the nearest stop, or flick to go one stop further. A tap or the keyboard steps peek → half → full → peek. It only slides when it moves between stops, never when it is measured or the screen rotates.
 - **Peek**: the power with its unit, supply centre and unconfirmed counts (which the desktop rail only gives in tooltips), the status badge, Clear All Orders, then Finalize and Resolve. In a match, Resolve is the consensus card (the host's force-resolve override lives in the top bar's ⋯ Administrator menu).
-- **Body**: the phase notes, builds and unit cards, then Surrender and the version badge. While the sheet is lowered the body is off screen and `inert`.
+- **Body**: the phase notes, builds and unit cards, and the version badge. While the sheet is lowered the body is off screen and `inert`.
 - **Spacer**: the sheet leaves a spacer as tall as its peek, so the map ends where the peek begins and the phone camera fits the map that is actually visible.
 
 ### Tools drawer (`ToolsSidebar variant="drawer"`)
@@ -159,7 +162,7 @@ Shown under Diplomatic Standing to a seated player of a multiplayer match (never
 - Rendered inside a collapsible `CollapsibleSection` (`defaultOpen={true}`). Displays the `ACTIVE` pill in the header when hypothetical mode is engaged, even when collapsed.
 - **"Enter Hypothetical Mode" / "Exit Mode"**: Toggles isolated ephemeral hypothetical planning (with the Eye icon). In hypothetical mode, you can switch nations, draft moves for any power, and step turns forward (`Step Turn Forward`) to preview outcomes without touching real game state; exiting restores the real board and orders. Re-entering on the same live turn resumes your ephemeral branch, which is automatically cleared when the real turn ends. In a multiplayer match the branch is a private copy: other players cannot see it, it does not show their real orders, and Finalize, Unlock, Surrender and the Admin Console wait until you exit.
 - **Foreign Guesses Counter & Clear**: Displays count of drafted foreign guesses with a one-click "Clear" button.
-- **Scenario Management & Saving**: One-click "Reset 1901" scenario start and "Save Sandbox". Clicking "Save Sandbox" opens `SaveSandboxModal.tsx`, letting the commander specify a custom name (e.g., "Balkans 1901 Tactical Analysis") before promoting their personal draft sandbox in-place to a permanent saved sandbox. Clicking "Solo Sandbox" in the top bar while viewing any game board exports that board's visible state into a new personal draft sandbox (overriding any previous draft sandbox).
+- **Scenario Management & Saving**: Accessed from the top-bar `Game Settings` menu in Solo Sandbox mode (`Save Sandbox` opens `SaveSandboxModal.tsx` to promote a personal draft sandbox to a permanent saved sandbox; `Reset Sandbox` resets the board to Spring 1901). Clicking `Open in Local Sandbox` in `Game Settings` while viewing any active game board exports that board's visible state into a new personal draft sandbox (overriding any previous draft sandbox).
 
 ### 6. Interactive Direct-Edit Mode & Administrator Controls (Game Creator Only)
 - **Top Bar Administrator Menu (`AdminSettingsMenu.tsx`)**: Room creators access `Edit Board`, `Turn and Clock Settings`, and `Resolve Turn` from the `Wrench` button (`btn-admin-menu`) in the top bar (or ⋯ menu on phones). `Resolve Turn` prompts `ConfirmModal` before calling `POST /api/adjudicate` and, in multiplayer matches, records an `AdminActionLogEntry` that triggers `AdminActionWarningModal` for other players.
@@ -192,7 +195,7 @@ Shown under Diplomatic Standing to a seated player of a multiplayer match (never
 | `UnitMacroCard` | One unit: header, status pill (`Incomplete` while a MOVE, SUPPORT or CONVOY has no target yet), behavior bar, then `OrderTypeTabs` and `OrderParameterControls`, issues and the simulation strip |
 | `OrderTypeTabs` | The order-type buttons for the phase (Retreat/Disband, Keep/Disband or Hold/Move/Support/Convoy) |
 | `OrderParameterControls` | The selects for the order's type, in `macro/controls/` (`RetreatControls`, `MoveControls`, `SupportControls`, `ConvoyControls`); each takes only the props it reads |
-| `OrderFooter` (with `ClearAllButton`, `SurrenderButton`) | The Clear All Orders button (with its Yes / Cancel question) and the Surrender button, and the footer: Finalize or Unlock, then Resolve or the consensus card. `OrderFooter` itself is a fragment, because the sheet's CSS styles these buttons as direct children of `.macro-sheet-controls` |
+| `OrderFooter` (with `ClearAllButton`) | The Clear All Orders button (with its Yes / Cancel question) and the footer: Finalize or Unlock, then Resolve or the consensus card. `OrderFooter` itself is a fragment, because the sheet's CSS styles these buttons as direct children of `.macro-sheet-controls` |
 | `CollapsedRail` | The rail's contents. The `<aside>` stays in `MacroSidebar` so collapsing keeps one element and the width transition on `.macro-sidebar` plays |
 | `useSheetSelection` | The sheet's two reactions to the selected unit (highlight its provinces, scroll its card up when the sheet is raised) |
 
@@ -213,7 +216,6 @@ Pieces must not be defined inside `MacroSidebar`: a component defined in a rende
 
 ### 3. Quick Action Toolbar
 - **"Clear All Orders"**: Resets every order of the power to its phase default (units hold, dislodged units disband, build slots blank) and withdraws its finalization via `POST /api/orders/clear-all`. The first click only asks: the button's spot splits in half into **Yes** (left, red, `btn-clear-all-confirm`, clears) and **Cancel** (right, `btn-clear-all-cancel`), inside a `clear-all-confirm` group. Focus moves to Cancel; Cancel, Yes or Escape put the button back. The question never times out, but `MacroSidebar` keys the button by season and phase, so it closes when the turn moves on. The desktop quick-action row and the phone sheet's controls row show the same component (the sheet gives its two buttons the 44px touch height).
-- **"Surrender & Leave"** (Multiplayer): Accessible button to surrender sovereign command and place units in Civil Disorder.
 
 ### 4. Macro Force Orders Roster
 

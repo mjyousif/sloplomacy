@@ -11,6 +11,7 @@ import {
   type TurnHistoryEntry,
 } from '../types/diplomacy';
 import type { DisplayPrefs } from '../utils/displayPrefs';
+import { filterAndSortMyGames } from '../utils/heroGame';
 import styles from './AppHeader.module.css';
 import { CompactTopBar } from './header/CompactTopBar';
 import { TopHeader } from './header/TopHeader';
@@ -21,7 +22,9 @@ export interface AppHeaderProps {
   gameState: GameState;
   activeGameId: string;
   activeGameSummary: MultiplayerGameSummary | null;
+  games?: MultiplayerGameSummary[];
   playerPower: Power;
+  lockedPower?: Power | null;
   wsConnected: boolean;
   displayPrefs: DisplayPrefs;
   displayPrefsSaveState: DisplayPrefsSaveState;
@@ -32,6 +35,13 @@ export interface AppHeaderProps {
   handleSignOut: () => void;
   handleBackToLobby: () => void;
   handleEnterSoloSandbox: (event?: React.MouseEvent) => void;
+  onSaveSandbox?: () => void;
+  onResetSandbox?: (event?: React.MouseEvent) => void;
+  onDeleteSandbox?: (event?: React.MouseEvent) => void;
+  onSwitchToSoloSandbox?: () => void;
+  onReturnToPreviousGame?: () => void;
+  onSelectGame?: (game: MultiplayerGameSummary) => void;
+  onOpenSurrenderModal?: (game: MultiplayerGameSummary, power: Power) => void;
   /** The order check behind the error and warning pills. */
   handleFinalizeClick: (force?: boolean) => void;
   /** The phone's tools drawer, opened from ≡. */
@@ -65,7 +75,9 @@ export function AppHeader({
   gameState,
   activeGameId,
   activeGameSummary,
+  games = [],
   playerPower,
+  lockedPower = null,
   wsConnected,
   displayPrefs,
   displayPrefsSaveState,
@@ -76,6 +88,13 @@ export function AppHeader({
   handleSignOut,
   handleBackToLobby,
   handleEnterSoloSandbox,
+  onSaveSandbox,
+  onResetSandbox,
+  onDeleteSandbox,
+  onSwitchToSoloSandbox,
+  onReturnToPreviousGame,
+  onSelectGame,
+  onOpenSurrenderModal,
   handleFinalizeClick,
   toolsDrawerOpen,
   setToolsDrawerOpen,
@@ -102,6 +121,18 @@ export function AppHeader({
   const activeWarnings = activePowerIssues.filter(
     (i) => i.severity === 'warning',
   );
+  const myGames = filterAndSortMyGames(games, authUser);
+  const isLockedPowerSurrendered = Boolean(
+    lockedPower && gameState.surrendered_powers?.includes(lockedPower),
+  );
+  const handleSurrenderClick =
+    viewMode === 'multiplayer' &&
+    activeGameSummary &&
+    lockedPower &&
+    onOpenSurrenderModal &&
+    !isLockedPowerSurrendered
+      ? () => onOpenSurrenderModal(activeGameSummary, lockedPower)
+      : undefined;
 
   return (
     <>
@@ -125,6 +156,8 @@ export function AppHeader({
               : null
           }
           onEnterSoloSandbox={handleEnterSoloSandbox}
+          onSurrenderClick={handleSurrenderClick}
+          isSurrendered={isLockedPowerSurrendered}
           displayPrefs={displayPrefs}
           displayPrefsSaveState={displayPrefsSaveState}
           onChangeDisplayPrefs={updateDisplayPrefs}
@@ -153,8 +186,18 @@ export function AppHeader({
           winner={gameState.winner ?? null}
           onBackToLobby={handleBackToLobby}
           onEnterSoloSandbox={handleEnterSoloSandbox}
+          onSaveSandbox={onSaveSandbox}
+          onResetSandbox={onResetSandbox}
+          onDeleteSandbox={onDeleteSandbox}
+          onReturnToPreviousGame={onReturnToPreviousGame}
+          onSurrenderClick={handleSurrenderClick}
+          isSurrendered={isLockedPowerSurrendered}
           matchSummary={activeGameSummary}
-          playerPower={playerPower}
+          activeGameId={activeGameId}
+          myGames={myGames}
+          onSwitchToSoloSandbox={onSwitchToSoloSandbox}
+          onSelectGame={onSelectGame}
+          playerPower={lockedPower ?? playerPower}
           displayPrefs={displayPrefs}
           displayPrefsSaveState={displayPrefsSaveState}
           onChangeDisplayPrefs={updateDisplayPrefs}

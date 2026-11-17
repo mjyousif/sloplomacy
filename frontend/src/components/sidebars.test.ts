@@ -337,16 +337,10 @@ describe('MacroSidebar', () => {
       );
     });
 
-    it('moves Surrender into the body in a match', () => {
-      const html = sheet({ isMultiplayer: true, onSurrenderClick: vi.fn() });
-      const peek = html.slice(
-        html.indexOf('bottom-sheet-peek'),
-        html.indexOf('bottom-sheet-body'),
-      );
-      expect(peek).not.toContain('Surrender');
-      expect(html.slice(html.indexOf('bottom-sheet-body'))).toContain(
-        'data-testid="macro-sheet-surrender"',
-      );
+    it('omits Surrender from the order sheet', () => {
+      const html = sheet({ isMultiplayer: true });
+      expect(html).not.toContain('Surrender');
+      expect(html).not.toContain('data-testid="macro-sheet-surrender"');
     });
 
     it('leaves the desktop panel as it was', () => {

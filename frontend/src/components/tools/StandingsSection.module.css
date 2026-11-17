@@ -91,6 +91,14 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   }
 
+  :global([data-spacing="compact"]) .powers-standing-list {
+    gap: 2px;
+  }
+
+  :global([data-spacing="compact"]) .power-standing-card {
+    padding: 3px 7px;
+  }
+
   .power-card-left {
     display: flex;
     align-items: center;

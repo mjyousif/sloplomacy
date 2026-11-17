@@ -92,4 +92,16 @@
   .sidebar-section-content {
     margin-top: 2px;
   }
+
+  :global([data-spacing="compact"]) .sidebar-section {
+    padding: 7px 11px;
+  }
+
+  :global([data-spacing="compact"]) .sidebar-section[data-open="false"] {
+    padding-bottom: 7px;
+  }
+
+  :global([data-spacing="compact"]) .sidebar-section-header {
+    margin-bottom: 4px;
+  }
 }

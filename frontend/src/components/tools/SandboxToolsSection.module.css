@@ -72,10 +72,4 @@
     font-weight: 600;
     cursor: pointer;
   }
-
-  .tools-scenario-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 5px;
-  }
 }

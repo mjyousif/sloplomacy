@@ -83,7 +83,7 @@ describe('useSeatActions: the Solo Sandbox', () => {
     await act(() => result.current.handleEnterSoloSandbox(click));
     expect(o.confirm).toHaveBeenCalledWith(
       {
-        title: 'Export to Solo Sandbox?',
+        title: 'Open in Local Sandbox?',
         message:
           'Export the current state of "Friday Night" into your Solo Sandbox (overriding your previous draft sandbox). Your submitted match orders stay safe on the server.',
         confirmLabel: 'Export & Switch',
@@ -119,6 +119,25 @@ describe('useSeatActions: the Solo Sandbox', () => {
     expect(o.triggerToast).toHaveBeenCalledWith(
       'Current game state exported to a new Solo Sandbox.',
     );
+  });
+
+  it('switches to solo sandbox without exporting or prompting when handleSwitchToSoloSandbox is called', async () => {
+    localStorage.setItem(SOLO_SANDBOX_STORAGE_KEY, 'solo_saved');
+    supabase.authedFetch.mockResolvedValue(
+      reply(200, { ...solo, summary: { is_draft: true } }),
+    );
+    const o = makeOptions({
+      viewMode: 'multiplayer',
+      activeGameId: 'mp_1',
+      activeGameSummary: summary(),
+    });
+    const { result } = renderSeats(o);
+    await act(() => result.current.handleSwitchToSoloSandbox());
+    expect(o.confirm).not.toHaveBeenCalled();
+    expect(sent().url).toBe(
+      '/api/games/solo-sandbox?resume_game_id=solo_saved',
+    );
+    expect(o.setViewMode).toHaveBeenCalledWith('sandbox');
   });
 
   it('does not pass source_game_id when launched from the lobby', async () => {
@@ -314,5 +333,89 @@ describe('useSeatActions: creating and joining', () => {
       expect(o.triggerToast).toHaveBeenLastCalledWith(msg);
     }
     expect(o.setViewMode).not.toHaveBeenCalled();
+  });
+
+  it('remembers the previous non-draft game when entering Solo Sandbox and returns to it', async () => {
+    supabase.authedFetch
+      .mockResolvedValueOnce(
+        reply(200, {
+          summary: summary({
+            game_id: 'sbx_draft_9',
+            is_sandbox: true,
+            is_draft: true,
+          }),
+          state: { ...STATE, game_id: 'sbx_draft_9' },
+          provinces: PROVINCES,
+        }),
+      )
+      .mockResolvedValueOnce(reply(200, { ...joined, summary: summary() }));
+    const o = makeOptions({
+      viewMode: 'multiplayer',
+      activeGameId: 'mp_1',
+      activeGameSummary: summary({ game_id: 'mp_1', name: 'Vienna' }),
+      lockedPower: 'ITALY',
+      matchPasscodes: { mp_1: 'secret' },
+    });
+    const { result } = renderSeats(o);
+    await act(() => result.current.handleSwitchToSoloSandbox());
+    expect(result.current.previousGame?.summary.game_id).toBe('mp_1');
+    expect(result.current.previousGame?.power).toBe('ITALY');
+
+    supabase.authedFetch.mockClear();
+    await act(() => result.current.handleReturnToPreviousGame());
+    expect(sent()).toEqual({
+      url: '/api/games/mp_1/join',
+      method: 'POST',
+      body: {
+        power: 'ITALY',
+        user_id: 'u1',
+        email: 'u1@example.test',
+        display_name: 'Ada',
+        passcode: 'secret',
+      },
+    });
+    expect(result.current.previousGame).toBeNull();
+  });
+
+  it('opens the delete modal for a saved sandbox and deletes a local draft after confirmation', async () => {
+    const saved = summary({
+      game_id: 'sbx_saved_1',
+      name: 'Saved Study',
+      is_sandbox: true,
+      is_draft: false,
+    });
+    const savedSeats = renderSeats(
+      makeOptions({ viewMode: 'sandbox', activeGameSummary: saved }),
+    );
+    await act(() => savedSeats.result.current.handleDeleteSandbox());
+    expect(savedSeats.result.current.surrenderModalOpen).toBe(true);
+    expect(savedSeats.result.current.surrenderModalGame?.game_id).toBe(
+      'sbx_saved_1',
+    );
+
+    localStorage.setItem(SOLO_SANDBOX_STORAGE_KEY, 'solo_9');
+    supabase.authedFetch.mockResolvedValue(reply(200, { status: 'deleted' }));
+    const draftOpts = makeOptions({
+      viewMode: 'sandbox',
+      activeGameId: 'solo_9',
+      activeGameSummary: summary({
+        game_id: 'solo_9',
+        is_sandbox: true,
+        is_draft: true,
+      }),
+      confirm: vi.fn(async () => true),
+    });
+    const draftSeats = renderSeats(draftOpts);
+    await act(() => draftSeats.result.current.handleDeleteSandbox());
+    expect(sent()).toEqual({
+      url: '/api/games/solo_9',
+      method: 'DELETE',
+      body: undefined,
+    });
+    expect(localStorage.getItem(SOLO_SANDBOX_STORAGE_KEY)).toBeNull();
+    expect(draftOpts.setViewMode).toHaveBeenCalledWith('lobby');
+    expect(draftOpts.triggerToast).toHaveBeenCalledWith(
+      'Deleted local Solo Sandbox.',
+    );
   });
 });

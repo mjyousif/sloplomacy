@@ -103,8 +103,12 @@ describe('LobbyView layout', () => {
       'mp_mine',
       'AUSTRIA',
     );
-    // The hero has the only game, so there is no strip.
-    expect(screen.queryByTestId('other-games-strip')).toBeNull();
+    // The hero has the only game, so the strip still offers Open local sandbox.
+    const strip = screen.getByTestId('other-games-strip');
+    await user.click(
+      within(strip).getByRole('button', { name: 'Open local sandbox' }),
+    );
+    expect(props.onEnterSandbox).toHaveBeenCalledTimes(1);
   });
 
   it('shows a guest the lock box and no "my games" for them', () => {

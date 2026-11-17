@@ -1,8 +1,7 @@
-import { Eye, RotateCcw, Save, Trash2 } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import type React from 'react';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import styles from './SandboxToolsSection.module.css';
-import buttonStyles from './ToolsButton.module.css';
 import type { ToolsSidebarProps } from './toolsSidebarProps';
 
 export type SandboxToolsSectionProps = Pick<
@@ -11,9 +10,6 @@ export type SandboxToolsSectionProps = Pick<
   | 'onToggleSandboxMode'
   | 'onClearForeignPreMoves'
   | 'foreignModifiedOrdersCount'
-  | 'onLoadScenario'
-  | 'onSaveSandboxClick'
-  | 'isMultiplayer'
 >;
 
 export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
@@ -21,9 +17,6 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
   onToggleSandboxMode,
   onClearForeignPreMoves,
   foreignModifiedOrdersCount,
-  onLoadScenario,
-  onSaveSandboxClick,
-  isMultiplayer = false,
 }) => {
   return (
     <CollapsibleSection
@@ -74,34 +67,6 @@ export const SandboxToolsSection: React.FC<SandboxToolsSectionProps> = ({
           >
             <Trash2 size={11} /> Clear
           </button>
-        </div>
-      )}
-
-      {/* Scenario Reset & Save */}
-      {!isMultiplayer && (
-        <div className={styles.toolsScenarioActions}>
-          <button
-            type="button"
-            data-testid="btn-reset-scenario"
-            className={buttonStyles.toolsBtn}
-            onClick={() => onLoadScenario('standard_1901')}
-            title="Reset to clean Spring 1901 start"
-          >
-            <RotateCcw size={12} />
-            <span>Reset 1901</span>
-          </button>
-          {onSaveSandboxClick && (
-            <button
-              type="button"
-              data-testid="btn-save-sandbox"
-              className={buttonStyles.toolsBtn}
-              onClick={onSaveSandboxClick}
-              title="Save current board state to your account"
-            >
-              <Save size={12} />
-              <span>Save Sandbox</span>
-            </button>
-          )}
         </div>
       )}
     </CollapsibleSection>

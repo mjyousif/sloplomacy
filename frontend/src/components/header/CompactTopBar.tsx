@@ -2,22 +2,12 @@ import {
   AlertOctagon,
   AlertTriangle,
   ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
   Crown,
-  FlaskConical,
-  LogIn,
-  LogOut,
   Menu,
   MoreHorizontal,
-  Pencil,
-  Play,
   ShieldCheck,
-  SlidersHorizontal,
-  User as UserIcon,
 } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { DisplayPrefsSaveState } from '../../hooks/useDisplayPrefs';
 import {
   type AuthUser,
@@ -32,7 +22,7 @@ import {
 } from '../tools/press/PressUnreadBadge';
 import { BrandEmblem } from '../ui/BrandEmblem';
 import styles from './CompactTopBar.module.css';
-import { DisplaySettingsOptions } from './DisplaySettingsMenu';
+import { CompactTopBarMenu } from './CompactTopBarMenu';
 
 export interface CompactTopBarProps {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -50,6 +40,8 @@ export interface CompactTopBarProps {
   /** "Match name (FRA)" while in a multiplayer match. */
   matchLabel: string | null;
   onEnterSoloSandbox: (event?: React.MouseEvent) => void;
+  onSurrenderClick?: () => void;
+  isSurrendered?: boolean;
   displayPrefs: DisplayPrefs;
   displayPrefsSaveState: DisplayPrefsSaveState;
   onChangeDisplayPrefs: (change: Partial<DisplayPrefs>) => void;
@@ -101,6 +93,8 @@ export function CompactTopBar({
   syncDetail,
   matchLabel,
   onEnterSoloSandbox,
+  onSurrenderClick,
+  isSurrendered = false,
   displayPrefs,
   displayPrefsSaveState,
   onChangeDisplayPrefs,
@@ -128,10 +122,10 @@ export function CompactTopBar({
   const inGame = viewMode !== 'lobby';
   const issueTotal = errorCount + warningCount;
 
-  const closeMenu = () => {
+  const closeMenu = useCallback(() => {
     setMenuOpen(false);
     setMenuView('main');
-  };
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -284,211 +278,35 @@ export function CompactTopBar({
       </button>
 
       {menuOpen && (
-        <div
-          id={menuId}
-          className={styles.compactMenuPanel}
-          data-testid="compact-menu-panel"
-          role="dialog"
-          aria-label="Menu"
-        >
-          {inGame && menuView === 'display' ? (
-            <>
-              <button
-                type="button"
-                data-testid="compact-menu-display-back"
-                className={styles.compactMenuBack}
-                onClick={() => setMenuView('main')}
-              >
-                <ChevronLeft size={18} />
-                <span>Menu</span>
-              </button>
-              <div className={styles.compactDisplaySettings}>
-                <DisplaySettingsOptions
-                  prefs={displayPrefs}
-                  saveState={displayPrefsSaveState}
-                  onChange={onChangeDisplayPrefs}
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className={styles.compactMenuStatus}>
-                <span
-                  className={styles.wsStatusDot}
-                  data-online={wsConnected}
-                  aria-hidden="true"
-                />
-                <div className={styles.compactMenuStatusText}>
-                  <strong>{wsConnected ? 'Live Sync' : 'Connecting…'}</strong>
-                  <span>{syncDetail}</span>
-                </div>
-              </div>
-
-              {matchLabel && (
-                <div className={styles.compactMenuMatch}>
-                  <Crown size={15} />
-                  <span>{matchLabel}</span>
-                </div>
-              )}
-
-              {viewMode !== 'sandbox' && (
-                <button
-                  type="button"
-                  data-testid="compact-menu-solo-sandbox"
-                  className={styles.compactMenuItem}
-                  onClick={(event) => {
-                    closeMenu();
-                    onEnterSoloSandbox(event);
-                  }}
-                >
-                  <FlaskConical size={18} />
-                  <span>Solo Sandbox</span>
-                </button>
-              )}
-
-              {inGame && (
-                <button
-                  type="button"
-                  data-testid="compact-menu-display-settings"
-                  className={styles.compactMenuItem}
-                  onClick={() => setMenuView('display')}
-                >
-                  <SlidersHorizontal size={18} />
-                  <span>Display settings</span>
-                  <ChevronRight
-                    size={18}
-                    className={styles.compactMenuItemChevron}
-                  />
-                </button>
-              )}
-
-              {inGame && isGameCreator && (
-                <>
-                  {onToggleAdminOverride && (
-                    <button
-                      type="button"
-                      data-testid="btn-toggle-direct-edit"
-                      className={styles.compactMenuItem}
-                      onClick={() => {
-                        closeMenu();
-                        if (!adminOverrideActive) onToggleAdminOverride();
-                      }}
-                    >
-                      <Pencil size={18} />
-                      <span>
-                        {adminOverrideActive ? 'Edit Board: ON' : 'Edit Board'}
-                      </span>
-                    </button>
-                  )}
-                  {onOpenAdminTools && (
-                    <button
-                      type="button"
-                      data-testid="btn-open-admin-console"
-                      className={styles.compactMenuItem}
-                      onClick={() => {
-                        closeMenu();
-                        onOpenAdminTools();
-                      }}
-                    >
-                      <Clock size={18} />
-                      <span>
-                        Turn and Clock Settings{turnClockOpen ? ': ON' : ''}
-                      </span>
-                    </button>
-                  )}
-                  {onResolveTurn && (
-                    <button
-                      type="button"
-                      data-testid="btn-admin-resolve-turn"
-                      className={styles.compactMenuItem}
-                      disabled={Boolean(winner)}
-                      onClick={(event) => {
-                        closeMenu();
-                        onResolveTurn(event);
-                      }}
-                    >
-                      <Play size={18} />
-                      <span>Resolve Turn</span>
-                    </button>
-                  )}
-                  {(adminOverrideActive || turnClockOpen) && onExitAdmin && (
-                    <button
-                      type="button"
-                      data-testid="btn-exit-admin-mode"
-                      className={styles.compactMenuItem}
-                      onClick={() => {
-                        closeMenu();
-                        onExitAdmin();
-                      }}
-                    >
-                      <LogOut size={18} />
-                      <span>Exit Admin Mode</span>
-                    </button>
-                  )}
-                </>
-              )}
-
-              <div className={styles.compactMenuAccount}>
-                {authUser ? (
-                  <>
-                    <div className={styles.compactMenuUser}>
-                      <UserIcon size={16} />
-                      <div>
-                        <strong>{authUser.displayName}</strong>
-                        <span>{authUser.email}</span>
-                      </div>
-                    </div>
-                    {onOpenAccount && (
-                      <button
-                        type="button"
-                        className={styles.compactMenuItem}
-                        onClick={() => {
-                          closeMenu();
-                          onOpenAccount();
-                        }}
-                      >
-                        <UserIcon size={18} />
-                        <span>Account &amp; Username</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className={styles.compactMenuItem}
-                      onClick={() => {
-                        closeMenu();
-                        onSignOut();
-                      }}
-                    >
-                      <LogOut size={18} />
-                      <span>Sign Out</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className={styles.compactMenuUser}>
-                      <UserIcon size={16} />
-                      <div>
-                        <strong>Guest Mode</strong>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className={styles.compactMenuItem}
-                      data-variant="primary"
-                      onClick={() => {
-                        closeMenu();
-                        onSignIn();
-                      }}
-                    >
-                      <LogIn size={18} />
-                      <span>Sign In / Register</span>
-                    </button>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+        <CompactTopBarMenu
+          menuId={menuId}
+          viewMode={viewMode}
+          inGame={inGame}
+          winner={winner}
+          wsConnected={wsConnected}
+          syncDetail={syncDetail}
+          matchLabel={matchLabel}
+          menuView={menuView}
+          setMenuView={setMenuView}
+          closeMenu={closeMenu}
+          onEnterSoloSandbox={onEnterSoloSandbox}
+          onSurrenderClick={onSurrenderClick}
+          isSurrendered={isSurrendered}
+          displayPrefs={displayPrefs}
+          displayPrefsSaveState={displayPrefsSaveState}
+          onChangeDisplayPrefs={onChangeDisplayPrefs}
+          isGameCreator={isGameCreator}
+          onOpenAdminTools={onOpenAdminTools}
+          adminOverrideActive={adminOverrideActive}
+          onToggleAdminOverride={onToggleAdminOverride}
+          turnClockOpen={turnClockOpen}
+          onResolveTurn={onResolveTurn}
+          onExitAdmin={onExitAdmin}
+          authUser={authUser}
+          onSignIn={onSignIn}
+          onSignOut={onSignOut}
+          onOpenAccount={onOpenAccount}
+        />
       )}
     </header>
   );

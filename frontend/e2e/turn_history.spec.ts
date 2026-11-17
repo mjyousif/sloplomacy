@@ -214,7 +214,8 @@ test.describe('Scenario 07: Turn history', () => {
       await expect(germanMove).toBeVisible();
 
       // 4. Entering admin mode (Edit Board) puts the chronicle back to the latest turn and locks the dropdown.
-      await page.locator('[data-testid="btn-admin-menu"]').click();
+      await page.locator('[data-testid="game-settings-trigger"]').click();
+      await page.locator('[data-testid="game-settings-admin-settings"]').click();
       await page.locator('[data-testid="btn-toggle-direct-edit"]').click();
       await expect(
         page.locator('[data-testid="turn-history-select"]'),
@@ -226,7 +227,8 @@ test.describe('Scenario 07: Turn history', () => {
       await expect(backToLiveTopBtn).toHaveCount(0);
 
       // Exit admin mode: turn history unlocks again, still on live.
-      await page.locator('[data-testid="btn-admin-menu"]').click();
+      await page.locator('[data-testid="game-settings-trigger"]').click();
+      await page.locator('[data-testid="game-settings-admin-settings"]').click();
       await page.locator('[data-testid="btn-exit-admin-mode"]').click();
       await expect(
         page.locator('[data-testid="turn-history-select"]'),

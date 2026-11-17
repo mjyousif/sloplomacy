@@ -5,7 +5,10 @@ import {
   POWER_METADATA,
   type Power,
 } from '../types/diplomacy';
-import { getCompletedCampaignStatus } from './gameOverHelpers';
+import {
+  getCompletedCampaignStatus,
+  isVisibleInMyActiveCampaigns,
+} from './gameOverHelpers';
 
 /**
  * What one of a player's own games wants from them, most pressing first: orders to give,
@@ -86,6 +89,29 @@ export function pickHeroGame(
   user: AuthUser | null,
 ): MultiplayerGameSummary | null {
   return sortMyGames(games, user).find((g) => !g.is_sandbox) ?? null;
+}
+
+/**
+ * Current games the signed-in user is involved in (seated or saved sandbox), filtered
+ * by post-completion visibility and sorted by urgency.
+ */
+export function filterAndSortMyGames(
+  games: MultiplayerGameSummary[],
+  user: AuthUser | null,
+  nowMs: number = Date.now(),
+): MultiplayerGameSummary[] {
+  if (!user) return [];
+  return sortMyGames(
+    games.filter(
+      (g) =>
+        (Object.values(g.participants || {}).some(
+          (p) => p.user_id === user.id,
+        ) ||
+          (g.is_sandbox && g.creator_id === user.id)) &&
+        isVisibleInMyActiveCampaigns(g, user, nowMs),
+    ),
+    user,
+  );
 }
 
 /**

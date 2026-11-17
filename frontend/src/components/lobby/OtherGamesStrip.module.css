@@ -114,6 +114,33 @@
     background: #303847;
     border-color: #e5b964;
   }
+
+  .sandboxOutline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 160px;
+    padding: 20px 16px;
+    border-radius: var(--radius-xl);
+    background: transparent;
+    border: 1.5px dashed #3c4454;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+      border-color var(--transition-fast),
+      color var(--transition-fast),
+      background var(--transition-fast);
+  }
+
+  .sandboxOutline:hover {
+    border-color: var(--gold-text);
+    color: var(--text-bright);
+    background: rgba(200, 150, 62, 0.06);
+  }
 }
 
 @layer compact {
@@ -130,5 +157,15 @@
   :global([data-layout="compact"]) .enter:hover {
     background: #303847;
     border-color: #e5b964;
+  }
+
+  :global([data-layout="compact"]) .sandboxOutline {
+    min-height: 112px;
+  }
+
+  :global([data-layout="compact"]) .sandboxOutline:hover {
+    border-color: var(--gold-text);
+    color: var(--text-bright);
+    background: rgba(200, 150, 62, 0.06);
   }
 }

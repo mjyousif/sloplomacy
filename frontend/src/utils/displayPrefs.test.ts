@@ -7,6 +7,8 @@ import {
   readStoredDisplayPrefs,
   resolveSignInPrefs,
   sanitizeDisplayPrefs,
+  UI_SPACING_LABELS,
+  UI_SPACINGS,
   UNIT_MARK_LABELS,
   UNIT_MARKS,
   writeStoredDisplayPrefs,
@@ -15,27 +17,35 @@ import {
 const FLAGS_AND_TANKS: DisplayPrefs = {
   pieceStyle: 'flags',
   unitMark: 'vehicles',
+  uiSpacing: 'normal',
   soundNotifications: true,
 };
 const CLASSIC_LETTERS: DisplayPrefs = {
   pieceStyle: 'classic',
   unitMark: 'letters',
+  uiSpacing: 'compact',
   soundNotifications: false,
 };
 
 describe('sanitizeDisplayPrefs', () => {
   it('keeps valid settings', () => {
     expect(sanitizeDisplayPrefs(FLAGS_AND_TANKS)).toEqual(FLAGS_AND_TANKS);
+    expect(sanitizeDisplayPrefs(CLASSIC_LETTERS)).toEqual(CLASSIC_LETTERS);
   });
 
   it('accepts every option the menu offers', () => {
     for (const pieceStyle of PIECE_STYLES) {
       for (const unitMark of UNIT_MARKS) {
-        expect(sanitizeDisplayPrefs({ pieceStyle, unitMark })).toEqual({
-          pieceStyle,
-          unitMark,
-          soundNotifications: true,
-        });
+        for (const uiSpacing of UI_SPACINGS) {
+          expect(
+            sanitizeDisplayPrefs({ pieceStyle, unitMark, uiSpacing }),
+          ).toEqual({
+            pieceStyle,
+            unitMark,
+            uiSpacing,
+            soundNotifications: true,
+          });
+        }
       }
     }
   });
@@ -52,11 +62,13 @@ describe('sanitizeDisplayPrefs', () => {
     ).toEqual({
       pieceStyle: DEFAULT_DISPLAY_PREFS.pieceStyle,
       unitMark: 'vehicles',
+      uiSpacing: DEFAULT_DISPLAY_PREFS.uiSpacing,
       soundNotifications: DEFAULT_DISPLAY_PREFS.soundNotifications,
     });
     expect(sanitizeDisplayPrefs({ pieceStyle: 'flags' })).toEqual({
       pieceStyle: 'flags',
       unitMark: DEFAULT_DISPLAY_PREFS.unitMark,
+      uiSpacing: DEFAULT_DISPLAY_PREFS.uiSpacing,
       soundNotifications: DEFAULT_DISPLAY_PREFS.soundNotifications,
     });
   });
@@ -75,6 +87,9 @@ describe('option labels', () => {
     );
     expect(Object.keys(UNIT_MARK_LABELS).sort()).toEqual(
       [...UNIT_MARKS].sort(),
+    );
+    expect(Object.keys(UI_SPACING_LABELS).sort()).toEqual(
+      [...UI_SPACINGS].sort(),
     );
   });
 });

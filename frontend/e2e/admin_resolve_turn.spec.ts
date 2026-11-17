@@ -115,8 +115,9 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       await expect(alice.getByTestId('btn-creator-override')).toHaveCount(0);
       await rec.recordStep(alice, 'multiplayer_footer_no_override');
 
-      // 2. Host opens Administrator popup and sees Resolve Turn
-      await alice.getByTestId('btn-admin-menu').click();
+      // 2. Host opens Administrator submenu inside Game Settings and sees Resolve Turn
+      await alice.getByTestId('game-settings-trigger').click();
+      await alice.getByTestId('game-settings-admin-settings').click();
       await expect(alice.getByTestId('admin-settings-panel')).toBeVisible();
       await expect(alice.getByTestId('btn-admin-resolve-turn')).toBeVisible();
       await rec.recordStep(alice, 'admin_menu_resolve_turn');

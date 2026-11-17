@@ -18,6 +18,7 @@ export interface OtherGamesStripProps {
   nowMs?: number;
   onEnterGame: (game: MultiplayerGameSummary, power: Power) => void;
   onOpenSurrenderModal: (game: MultiplayerGameSummary, power: Power) => void;
+  onEnterSandbox?: () => void;
 }
 
 /** The rest of a player's games under the hero: a small map, the status and a way back in. */
@@ -27,8 +28,9 @@ export const OtherGamesStrip: React.FC<OtherGamesStripProps> = ({
   nowMs = Date.now(),
   onEnterGame,
   onOpenSurrenderModal,
+  onEnterSandbox,
 }) => {
-  if (games.length === 0) return null;
+  if (games.length === 0 && !onEnterSandbox) return null;
 
   return (
     <section
@@ -93,6 +95,17 @@ export const OtherGamesStrip: React.FC<OtherGamesStripProps> = ({
             </article>
           );
         })}
+        {onEnterSandbox && (
+          <button
+            type="button"
+            className={styles.sandboxOutline}
+            data-testid="open-local-sandbox-card"
+            onClick={onEnterSandbox}
+          >
+            <FlaskConical size={22} aria-hidden="true" />
+            <span>Open local sandbox</span>
+          </button>
+        )}
       </div>
     </section>
   );
