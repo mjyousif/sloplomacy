@@ -134,6 +134,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               games={otherGames}
               onEnterGame={handlePowerSlotClick}
               onOpenSurrenderModal={onOpenSurrenderModal}
+              onEnterSandbox={onEnterSandbox}
             />
           ) : (
             <MyGamesSection user={user} onOpenAuth={onOpenAuth} />

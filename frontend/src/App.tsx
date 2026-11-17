@@ -379,8 +379,18 @@ export function App() {
     setAdminOverrideActive(false);
     seats.handleEnterSoloSandbox(event);
   };
-  const guardedResetSandbox = async () => {
+  const guardedResetSandbox = async (event?: React.MouseEvent) => {
     if (!(await directEdit.confirmIfDirty('reset the sandbox'))) return;
+    const ok = await confirm(
+      {
+        title: 'Reset Sandbox?',
+        message:
+          'Reset this sandbox to Standard Spring 1901? All current orders and board changes will be lost.',
+        confirmLabel: 'Reset Sandbox',
+      },
+      event,
+    );
+    if (!ok) return;
     turnHistory.goLive();
     setAdminModalOpen(false);
     setAdminOverrideActive(false);

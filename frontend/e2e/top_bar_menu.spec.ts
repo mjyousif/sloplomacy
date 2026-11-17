@@ -196,6 +196,11 @@ test.describe('Unified Top Bar Dropdowns', () => {
       await rec.recordStep(page, '03_admin_settings_open');
       await page.getByTestId('game-settings-back').click();
       await page.getByTestId('game-settings-reset-sandbox').click();
+      const resetConfirmDialog = page.getByRole('alertdialog', {
+        name: 'Reset Sandbox?',
+      });
+      await expect(resetConfirmDialog).toBeVisible();
+      await resetConfirmDialog.getByTestId('btn-confirm-modal-confirm').click();
       await expect(page.getByTestId('toast-banner')).toContainText(
         'Reset to Standard Spring 1901.',
       );

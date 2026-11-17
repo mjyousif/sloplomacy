@@ -50,9 +50,18 @@ const card = (name: string) =>
   screen.getByText(name).closest('[data-testid="my-game-card"]') as HTMLElement;
 
 describe('OtherGamesStrip', () => {
-  it('draws nothing when the hero has the only game', () => {
+  it('draws nothing when the hero has the only game and no sandbox launcher is given', () => {
     const { view } = setup({ games: [] });
     expect(view.container).toBeEmptyDOMElement();
+  });
+
+  it('draws the Open local sandbox outline card when onEnterSandbox is provided', () => {
+    const onEnterSandbox = vi.fn();
+    setup({ games: [], onEnterSandbox });
+    const btn = screen.getByTestId('open-local-sandbox-card');
+    expect(btn).toHaveTextContent('Open local sandbox');
+    fireEvent.click(btn);
+    expect(onEnterSandbox).toHaveBeenCalledTimes(1);
   });
 
   it('draws a card per game, in the order given, with its status and turn', () => {

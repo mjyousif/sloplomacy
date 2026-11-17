@@ -24,7 +24,7 @@ export interface GameSettingsMenuProps {
   playerPower?: Power | null;
   onEnterSoloSandbox: (event?: React.MouseEvent) => void;
   onSaveSandbox?: () => void;
-  onResetSandbox?: () => void;
+  onResetSandbox?: (event?: React.MouseEvent) => void;
   onDeleteSandbox?: (event?: React.MouseEvent) => void;
   onReturnToPreviousGame?: () => void;
   onSurrenderClick?: () => void;
@@ -291,9 +291,9 @@ export function GameSettingsMenu({
                     type="button"
                     data-testid="game-settings-reset-sandbox"
                     className={styles.gameMenuItem}
-                    onClick={() => {
+                    onClick={(event) => {
                       closeMenu();
-                      onResetSandbox?.();
+                      onResetSandbox?.(event);
                     }}
                   >
                     <RotateCcw size={15} className={styles.gameMenuItemIcon} />

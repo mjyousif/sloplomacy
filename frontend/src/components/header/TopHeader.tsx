@@ -22,7 +22,7 @@ export interface TopHeaderProps {
   onBackToLobby: () => void;
   onEnterSoloSandbox: (event?: React.MouseEvent) => void;
   onSaveSandbox?: () => void;
-  onResetSandbox?: () => void;
+  onResetSandbox?: (event?: React.MouseEvent) => void;
   onDeleteSandbox?: (event?: React.MouseEvent) => void;
   onReturnToPreviousGame?: () => void;
   onSurrenderClick?: () => void;

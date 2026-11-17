@@ -36,7 +36,7 @@ export interface AppHeaderProps {
   handleBackToLobby: () => void;
   handleEnterSoloSandbox: (event?: React.MouseEvent) => void;
   onSaveSandbox?: () => void;
-  onResetSandbox?: () => void;
+  onResetSandbox?: (event?: React.MouseEvent) => void;
   onDeleteSandbox?: (event?: React.MouseEvent) => void;
   onSwitchToSoloSandbox?: () => void;
   onReturnToPreviousGame?: () => void;
