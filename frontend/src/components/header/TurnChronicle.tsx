@@ -1,18 +1,13 @@
-import { Calendar, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import {
-  POWER_METADATA,
-  type Power,
-  type TurnHistoryEntry,
-} from '../../types/diplomacy';
+import { useId, useMemo, useState } from 'react';
+import type { TurnHistoryEntry } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
 import { turnLabel } from '../../utils/timerHelpers';
 import {
   IconSelectDropdown,
   type IconSelectOption,
 } from '../map/hud/IconSelectDropdown';
-import { PowerFilterChips, powerCode } from '../tools/TurnHistorySelector';
 import historyStyles from '../tools/TurnHistorySelector.module.css';
 import styles from './TurnChronicle.module.css';
 
@@ -50,33 +45,25 @@ export interface TurnChronicleProps {
   entries?: TurnHistoryEntry[];
   /** Currently viewed past turn index, or null for the live turn. */
   viewIndex?: number | null;
-  /** Nation filter active on a past turn, or null for all nations. */
-  power?: Power | null;
   /** Locks turn navigation (for example, while an admin mode is active). */
   locked?: boolean;
   onSelect?: (index: number | null) => void;
   onStep?: (delta: -1 | 1) => void;
-  onSelectPower?: (power: Power | null) => void;
 }
 
 /**
  * Unified desktop top-bar turn display and turn-history viewer.
- * Fixed width in all states; uses `IconSelectDropdown` for phase selection and
- * expands downward when clicking the nation filter button.
+ * Places step arrows to the left of the fixed-width dropdown and shows an
+ * adjacent Back to live icon button to the right when viewing a resolved turn.
  */
 export const TurnChronicle: React.FC<TurnChronicleProps> = ({
   turn,
   entries = [],
   viewIndex = null,
-  power = null,
   locked = false,
   onSelect,
   onStep,
-  onSelectPower,
 }) => {
-  const [trayOpen, setTrayOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const trayId = useId();
   const selectId = useId();
 
   const hasHistory = entries.length > 0;
@@ -85,64 +72,59 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
     hasHistory && viewIndex !== null ? (entries[viewIndex] ?? null) : null;
   const viewingPast = viewedEntry !== null;
   const viewingAdmin = viewedEntry?.phase === 'Admin';
-  const filterDisabled = controlsDisabled || !viewingPast;
-  const expanded = !filterDisabled && trayOpen;
-  const activeFilterColor =
-    viewingPast && power ? POWER_METADATA[power].fillColor : null;
-
-  useEffect(() => {
-    if (filterDisabled) setTrayOpen(false);
-  }, [filterDisabled]);
-
-  useEffect(() => {
-    if (!trayOpen) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setTrayOpen(false);
-      }
-    };
-    document.addEventListener('pointerdown', handlePointerDown);
-    return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [trayOpen]);
 
   const liveLabel = turnLabel(turn);
+  const renderTurnContent = (season: string, year: number, phase: string) => (
+    <>
+      <span>
+        {season} {year}
+      </span>{' '}
+      <span className={styles.turnPhaseLabel} data-testid="turn-phase-label">
+        {phase === 'Admin' ? '— Admin Edit' : phase}
+      </span>
+    </>
+  );
+  const currentKey =
+    viewIndex === null ? `live:${liveLabel}` : `past:${viewIndex}`;
+  const currentPos = viewIndex ?? entries.length;
+  const [turnTransition, setTurnTransition] = useState<{
+    key: string;
+    pos: number;
+    dir: 'back' | 'forward' | null;
+  }>({ key: currentKey, pos: currentPos, dir: null });
+
+  if (currentKey !== turnTransition.key) {
+    setTurnTransition({
+      key: currentKey,
+      pos: currentPos,
+      dir: currentPos < turnTransition.pos ? 'back' : 'forward',
+    });
+  }
 
   const options = useMemo<IconSelectOption<string>[]>(
     () => [
       {
         value: LIVE_VALUE,
         label: liveLabel,
+        content: renderTurnContent(turn.season, turn.year, turn.phase),
         testId: 'turn-history-option-live',
       },
       ...[...entries].reverse().map((entry) => ({
         value: String(entry.index),
         label: turnLabel(entry),
+        content: renderTurnContent(entry.season, entry.year, entry.phase),
         testId: `turn-history-option-${entry.index}`,
       })),
     ],
-    [entries, liveLabel],
+    [entries, liveLabel, turn.season, turn.year, turn.phase],
   );
 
   return (
     <div
-      ref={rootRef}
       className={styles.turnChronicleHistory}
       data-testid="turn-history"
-      data-expanded={expanded ? 'true' : undefined}
       data-viewing-past={viewingPast ? 'true' : undefined}
-      onBlur={(e) => {
-        if (
-          e.relatedTarget instanceof Node &&
-          !e.currentTarget.contains(e.relatedTarget)
-        ) {
-          setTrayOpen(false);
-        }
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') {
-          setTrayOpen(false);
-        }
-      }}
+      data-turn-dir={turnTransition.dir ?? undefined}
     >
       <div
         className={styles.turnChroniclePill}
@@ -150,74 +132,6 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
         data-viewing-past={viewingPast ? 'true' : undefined}
         data-admin-phase={viewingAdmin ? 'true' : undefined}
       >
-        <button
-          type="button"
-          className={styles.turnChronicleFilterBtn}
-          data-testid="turn-history-filter-toggle"
-          data-has-filter={activeFilterColor ? 'true' : undefined}
-          disabled={filterDisabled}
-          aria-label={
-            viewingPast && power
-              ? `Nation filter: ${POWER_METADATA[power].shortName}`
-              : 'Filter by nation'
-          }
-          aria-expanded={expanded}
-          aria-controls={expanded ? trayId : undefined}
-          title={
-            locked
-              ? 'Locked while in admin mode'
-              : viewingPast
-                ? 'Filter by nation'
-                : 'Select a past turn to filter by nation'
-          }
-          style={
-            activeFilterColor
-              ? ({
-                  '--chip-color': activeFilterColor,
-                  borderColor: activeFilterColor,
-                } as React.CSSProperties)
-              : undefined
-          }
-          onClick={() => {
-            if (!filterDisabled) setTrayOpen((open) => !open);
-          }}
-        >
-          <Filter size={viewingPast && power ? 10 : 13} />
-          {viewingPast && power && (
-            <span className={styles.turnChronicleFilterCode}>
-              {powerCode(power)}
-            </span>
-          )}
-        </button>
-
-        <div className={styles.turnChronicleSelectWrap}>
-          <IconSelectDropdown<string>
-            id={selectId}
-            testId="turn-history-select"
-            value={viewIndex === null ? LIVE_VALUE : String(viewIndex)}
-            options={options}
-            title={locked ? 'Locked while in admin mode' : undefined}
-            disabled={controlsDisabled}
-            leadingIcon={<Calendar size={14} className={styles.turnCalIcon} />}
-            hideChevron
-            classNames={{
-              trigger: styles.dropdownTrigger,
-              leading: styles.dropdownLeading,
-              value: styles.dropdownValue,
-              menu: styles.dropdownMenu,
-              option: styles.dropdownOption,
-            }}
-            onOpenChange={(open) => {
-              if (open) setTrayOpen(false);
-            }}
-            onChange={(val) => {
-              if (val !== null) {
-                onSelect?.(val === LIVE_VALUE ? null : Number(val));
-              }
-            }}
-          />
-        </div>
-
         <button
           type="button"
           className={cx(historyStyles.turnHistoryStep, styles.chronicleStep)}
@@ -241,6 +155,33 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
         >
           <ChevronRight size={16} />
         </button>
+
+        <div className={styles.turnChronicleSelectWrap}>
+          <IconSelectDropdown<string>
+            id={selectId}
+            testId="turn-history-select"
+            value={viewIndex === null ? LIVE_VALUE : String(viewIndex)}
+            options={options}
+            title={locked ? 'Locked while in admin mode' : undefined}
+            disabled={controlsDisabled}
+            leadingIcon={<Calendar size={14} className={styles.turnCalIcon} />}
+            hideChevron
+            animateValueChange
+            classNames={{
+              trigger: styles.dropdownTrigger,
+              leading: styles.dropdownLeading,
+              value: styles.dropdownValue,
+              valueText: styles.dropdownValueText,
+              menu: styles.dropdownMenu,
+              option: styles.dropdownOption,
+            }}
+            onChange={(val) => {
+              if (val !== null) {
+                onSelect?.(val === LIVE_VALUE ? null : Number(val));
+              }
+            }}
+          />
+        </div>
       </div>
 
       {viewingPast && (
@@ -255,33 +196,6 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
         >
           <BackToLiveIcon size={16} />
         </button>
-      )}
-
-      {hasHistory && (
-        <div
-          id={trayId}
-          className={styles.turnHistoryTrayWrap}
-          data-testid="turn-history-tray"
-          data-open={expanded ? 'true' : undefined}
-          inert={!expanded}
-        >
-          <div
-            className={styles.turnHistoryTray}
-            data-viewing-past={viewingPast ? 'true' : undefined}
-            data-admin-phase={viewingAdmin ? 'true' : undefined}
-          >
-            <div className={styles.turnHistoryTrayHeader}>
-              <span>Filter by nation</span>
-            </div>
-            <PowerFilterChips
-              power={power}
-              disabled={!viewingPast}
-              onSelectPower={(nextPower) => onSelectPower?.(nextPower)}
-              className={styles.trayPowers}
-              chipClassName={styles.trayChip}
-            />
-          </div>
-        </div>
       )}
     </div>
   );

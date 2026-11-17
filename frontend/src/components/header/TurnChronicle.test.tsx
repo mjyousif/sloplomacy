@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { TurnHistoryEntry } from '../../types/diplomacy';
@@ -15,10 +15,8 @@ function renderChronicle(overrides: Partial<TurnChronicleProps> = {}) {
     turn: { season: 'Fall', year: 1901, phase: 'Movement' },
     entries: ENTRIES,
     viewIndex: null,
-    power: null,
     onSelect: vi.fn(),
     onStep: vi.fn(),
-    onSelectPower: vi.fn(),
     ...overrides,
   };
   const view = render(<TurnChronicle {...props} />);
@@ -33,88 +31,53 @@ describe('TurnChronicle', () => {
     });
     const pill = screen.getByTestId('turn-chronicle-pill');
     expect(pill).toHaveTextContent('Spring 1901 Movement');
+    expect(screen.getByTestId('turn-phase-label')).toHaveTextContent(
+      'Movement',
+    );
     expect(screen.getByTestId('turn-history-prev')).toBeDisabled();
     expect(screen.getByTestId('turn-history-next')).toBeDisabled();
     expect(screen.getByTestId('turn-history-select')).toBeDisabled();
-    expect(screen.getByTestId('turn-history-filter-toggle')).toBeDisabled();
-    expect(screen.getByTestId('turn-history-filter-toggle')).toHaveTextContent(
-      '',
-    );
+    expect(screen.queryByTestId('turn-history-filter-toggle')).toBeNull();
     expect(screen.queryByTestId('turn-history-tray')).toBeNull();
   });
 
-  it('disables the filter button on the live turn and toggles the country filter tray on past turns', async () => {
-    const user = userEvent.setup();
-    const { container, props, rerender } = renderChronicle();
-
-    const tray = screen.getByTestId('turn-history-tray');
-    expect(tray).not.toHaveAttribute('data-open', 'true');
-    expect(tray).toHaveAttribute('inert');
-    const history = screen.getByTestId('turn-history');
-
-    await user.hover(history);
-    expect(tray).not.toHaveAttribute('data-open', 'true');
-    expect(tray).toHaveAttribute('inert');
-
-    const toggle = screen.getByTestId('turn-history-filter-toggle');
-    expect(toggle).toBeDisabled();
-    expect(toggle).toHaveAttribute(
-      'title',
-      'Select a past turn to filter by nation',
-    );
-    await user.click(toggle);
-    expect(tray).not.toHaveAttribute('data-open', 'true');
-
-    rerender(<TurnChronicle {...props} viewIndex={0} />);
-    expect(toggle).toBeEnabled();
-    expect(toggle).toHaveAttribute('title', 'Filter by nation');
-
-    await user.click(toggle);
-    expect(tray).toHaveAttribute('data-open', 'true');
-    expect(tray).not.toHaveAttribute('inert');
-    expect(screen.getByText('Filter by nation')).toBeInTheDocument();
-    const allChip = screen
-      .getAllByTestId('turn-history-power')
-      .find((el) => el.getAttribute('data-power') === 'ALL');
-    expect(allChip).toBeEnabled();
-
-    await user.click(toggle);
-    expect(tray).not.toHaveAttribute('data-open', 'true');
-    expect(tray).toHaveAttribute('inert');
-
-    await user.click(toggle);
-    expect(tray).toHaveAttribute('data-open', 'true');
-    fireEvent.pointerDown(container.ownerDocument.body);
-    expect(tray).not.toHaveAttribute('data-open', 'true');
-    expect(tray).toHaveAttribute('inert');
-
-    await user.click(toggle);
-    expect(tray).toHaveAttribute('data-open', 'true');
-    rerender(<TurnChronicle {...props} viewIndex={null} />);
-    expect(toggle).toBeDisabled();
-    expect(tray).not.toHaveAttribute('data-open', 'true');
-    expect(tray).toHaveAttribute('inert');
-  });
-
-  it('steps turns, selects from IconSelectDropdown without overlapping the tray, and returns to live', async () => {
+  it('steps turns, selects from IconSelectDropdown, and returns to live', async () => {
     const user = userEvent.setup();
     const { props, rerender } = renderChronicle();
-    const tray = screen.getByTestId('turn-history-tray');
 
-    await user.click(screen.getByTestId('turn-history-prev'));
+    const prev = screen.getByTestId('turn-history-prev');
+    const next = screen.getByTestId('turn-history-next');
+    const select = screen.getByTestId('turn-history-select');
+
+    // Prev/next buttons sit to the left of the turn dropdown inside the chronicle pill.
+    expect(
+      prev.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      next.compareDocumentPosition(select) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByTestId('turn-history')).not.toHaveAttribute(
+      'data-turn-dir',
+    );
+
+    await user.click(prev);
     expect(props.onStep).toHaveBeenCalledWith(-1);
 
-    expect(screen.getByTestId('turn-history-next')).toBeDisabled();
+    expect(next).toBeDisabled();
     expect(screen.queryByTestId('turn-history-live')).toBeNull();
     expect(screen.getByTestId('turn-chronicle-pill')).not.toHaveTextContent(
       /\bLIVE\b/i,
     );
 
-    await user.click(screen.getByTestId('turn-history-select'));
+    await user.click(select);
     await user.click(screen.getByTestId('turn-history-option-0'));
     expect(props.onSelect).toHaveBeenCalledWith(0);
 
     rerender(<TurnChronicle {...props} viewIndex={1} />);
+    expect(screen.getByTestId('turn-history')).toHaveAttribute(
+      'data-turn-dir',
+      'back',
+    );
     expect(screen.getByTestId('turn-chronicle-pill')).toHaveAttribute(
       'data-viewing-past',
       'true',
@@ -127,99 +90,41 @@ describe('TurnChronicle', () => {
       'data-admin-phase',
       'true',
     );
-    expect(screen.getByTestId('turn-history-select')).toHaveTextContent(
-      'Spring 1901 — Admin Edit',
-    );
-    expect(screen.getByTestId('turn-history-next')).toBeEnabled();
-
-    await user.click(screen.getByTestId('turn-history-filter-toggle'));
-    expect(tray).toHaveAttribute('data-open', 'true');
-
-    await user.click(screen.getByTestId('turn-history-select'));
-    expect(tray).not.toHaveAttribute('data-open', 'true');
-    expect(tray).toHaveAttribute('inert');
+    expect(select).toHaveTextContent('Spring 1901 — Admin Edit');
+    expect(next).toBeEnabled();
 
     const liveBtn = screen.getByTestId('turn-history-live');
+    expect(
+      select.compareDocumentPosition(liveBtn) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(liveBtn).toHaveAttribute('aria-label', 'Back to live');
     expect(liveBtn).toHaveTextContent('');
     await user.click(liveBtn);
     expect(props.onSelect).toHaveBeenCalledWith(null);
 
-    await user.click(screen.getByTestId('turn-history-next'));
+    rerender(<TurnChronicle {...props} viewIndex={null} />);
+    expect(screen.getByTestId('turn-history')).toHaveAttribute(
+      'data-turn-dir',
+      'forward',
+    );
+
+    rerender(<TurnChronicle {...props} viewIndex={1} />);
+    await user.click(next);
     expect(props.onStep).toHaveBeenCalledWith(1);
 
-    await user.click(screen.getByTestId('turn-history-select'));
+    await user.click(select);
     await user.click(screen.getByTestId('turn-history-option-live'));
     expect(props.onSelect).toHaveBeenCalledWith(null);
   });
 
-  it('enables country filter chips on a past turn and outlines the filter button in that nation’s color', async () => {
-    const user = userEvent.setup();
-    const { props, rerender } = renderChronicle({ viewIndex: 0 });
-    expect(screen.getByTestId('turn-chronicle-pill')).not.toHaveAttribute(
-      'data-admin-phase',
-    );
-
-    await user.click(screen.getByTestId('turn-history-filter-toggle'));
-    expect(screen.getByText('Filter by nation')).toBeInTheDocument();
-
-    const germanyChip = screen
-      .getAllByTestId('turn-history-power')
-      .find((el) => el.getAttribute('data-power') === 'GERMANY')!;
-    expect(germanyChip).toBeEnabled();
-
-    await user.click(germanyChip);
-    expect(props.onSelectPower).toHaveBeenCalledWith('GERMANY');
-
-    rerender(<TurnChronicle {...props} viewIndex={0} power="GERMANY" />);
-    const toggle = screen.getByTestId('turn-history-filter-toggle');
-    expect(toggle).toHaveTextContent('GER');
-    expect(toggle).toHaveAttribute('data-has-filter', 'true');
-    expect(toggle).toHaveStyle({ borderColor: '#6f7785' });
-
-    await user.click(
-      screen
-        .getAllByTestId('turn-history-power')
-        .find((el) => el.getAttribute('data-power') === 'GERMANY')!,
-    );
-    expect(props.onSelectPower).toHaveBeenCalledWith(null);
-  });
-
-  it('closes the tray when pressing Escape', async () => {
-    const user = userEvent.setup();
-    renderChronicle({ viewIndex: 0 });
-    const history = screen.getByTestId('turn-history');
-    const tray = screen.getByTestId('turn-history-tray');
-
-    await user.click(screen.getByTestId('turn-history-filter-toggle'));
-    expect(tray).toHaveAttribute('data-open', 'true');
-
-    fireEvent.keyDown(history, { key: 'Escape' });
-    expect(tray).not.toHaveAttribute('data-open', 'true');
-    expect(tray).toHaveAttribute('inert');
-  });
-
-  it('locks the dropdown, steps and filter tray while locked is true', async () => {
-    const user = userEvent.setup();
-    const { props, rerender } = renderChronicle({ viewIndex: 0 });
-    expect(screen.getByTestId('turn-chronicle-pill')).not.toHaveAttribute(
-      'data-admin-phase',
-    );
-    const tray = screen.getByTestId('turn-history-tray');
-
-    await user.click(screen.getByTestId('turn-history-filter-toggle'));
-    expect(tray).toHaveAttribute('data-open', 'true');
-
-    rerender(<TurnChronicle {...props} viewIndex={0} locked />);
-
-    expect(tray).not.toHaveAttribute('data-open', 'true');
-    expect(tray).toHaveAttribute('inert');
+  it('locks the dropdown and step arrows while locked is true', () => {
+    renderChronicle({ viewIndex: 0, locked: true });
     expect(screen.getByTestId('turn-history-select')).toBeDisabled();
     expect(screen.getByTestId('turn-history-select')).toHaveAttribute(
       'title',
       'Locked while in admin mode',
     );
-    expect(screen.getByTestId('turn-history-filter-toggle')).toBeDisabled();
     expect(screen.getByTestId('turn-history-prev')).toBeDisabled();
     expect(screen.getByTestId('turn-history-next')).toBeDisabled();
   });

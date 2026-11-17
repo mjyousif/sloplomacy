@@ -16,6 +16,7 @@ import type {
 } from '../types/diplomacy';
 import type { StagedChangeEntry } from '../utils/adminHelpers';
 import type { PieceStyle, UnitMark } from '../utils/displayPrefs';
+import type { HistoryActionType } from '../utils/historyHelpers';
 import { getActiveOrderButton } from '../utils/orderHelpers';
 import styles from './EuropeMap.module.css';
 import { useEuropeMap } from './map/hooks/useEuropeMap';
@@ -36,6 +37,7 @@ import {
   StaticForegroundLayer,
 } from './map/layers/StaticLayers';
 import { SupplyCentersLayer } from './map/layers/SupplyCentersLayer';
+import { TerritoryShiftPatternDefs } from './map/layers/TerritoryShiftPatternDefs';
 import { UnitsLayer } from './map/layers/UnitsLayer';
 
 export interface EuropeMapHandle {
@@ -123,8 +125,10 @@ export interface EuropeMapProps {
    * nothing can be selected or edited, and the hypothetical banner stays hidden.
    */
   historyView?: boolean;
-  /** History only: draw just this power's orders. Null draws everyone's. */
-  historyPower?: Power | null;
+  /** History only: draw only these powers' orders. Empty or omitted draws everyone's. */
+  historyPowers?: readonly Power[];
+  /** History only (Movement phase): draw only these action types. Empty draws all types. */
+  historyActions?: readonly HistoryActionType[];
   /** A move suggestion from press is on the map in place of the player's orders. */
   suggestion?: SuggestionMapMode | null;
 }
@@ -148,6 +152,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       orders,
       ownership,
       displayOwnership,
+      territoryPatterns,
+      territoryPatternByProv,
       activePower,
       sandboxMode,
       directEditActive,
@@ -168,7 +174,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       unitMark,
       compact,
       historyView,
-      historyPower,
+      historyPowers = [],
       unitsByProv,
       containerRef,
       svgRef,
@@ -320,6 +326,8 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
             <StaticDefsLayer />
 
             <ArrowMarkerDefs />
+
+            <TerritoryShiftPatternDefs patterns={territoryPatterns} />
           </defs>
 
           <g
@@ -358,6 +366,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
               hoveredProv={hoveredProv}
               highlightedProvinces={highlightedProvinces}
               issuesByProvince={issuesByProvince}
+              territoryPatternByProv={territoryPatternByProv}
               onClickProvince={
                 directEditActive && directEdit
                   ? handleDirectEditClickProvince
@@ -448,7 +457,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
                   beforeOwnership={ownership}
                   afterOwnership={simulationResult.new_ownership}
                   provinces={provinces}
-                  historyPower={historyPower ?? null}
+                  historyPowers={historyPowers}
                   occupiedProvinces={
                     new Set([
                       ...Object.keys(unitsByProv),

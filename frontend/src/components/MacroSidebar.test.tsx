@@ -13,6 +13,7 @@ import {
   participantsFor,
 } from '../test/macroFixtures';
 import { orderFor, unitAt } from '../test/mapFixtures';
+import type { TurnRecord } from '../types/diplomacy';
 import { MacroSidebar, type MacroSidebarProps } from './MacroSidebar';
 
 const fns = () => ({
@@ -296,6 +297,51 @@ describe('MacroSidebar panel', () => {
       );
       expect(container.querySelector('[inert]')).toBeNull();
       expect(screen.queryByTestId('history-lock-bar')).toBeNull();
+    });
+
+    it('replaces grayed-out live controls with the past turn log when historyTurn is provided', () => {
+      const turn = {
+        index: 0,
+        season: 'Spring',
+        year: 1901,
+        phase: 'Movement',
+        ownership: {},
+        units: [A_PAR],
+        orders: {
+          [A_PAR.id]: {
+            unit_id: A_PAR.id,
+            power: 'FRANCE',
+            unit_type: 'A',
+            origin: 'PAR',
+            order_type: 'HOLD',
+            via_convoy: false,
+            is_explicit: true,
+          },
+        },
+        resolution: {
+          summary: [],
+          new_units: [],
+          new_ownership: {},
+          resolutions: {},
+        },
+      } as unknown as TurnRecord;
+      const { container } = sidebar({
+        historyTurn: turn,
+        historyLabel: 'Spring 1901 Movement',
+        historyPowers: ['FRANCE'],
+      });
+      expect(container.querySelector('aside')).toHaveAttribute(
+        'data-history-view',
+        'true',
+      );
+      expect(container.querySelector('aside')).not.toHaveAttribute(
+        'data-history-locked',
+      );
+      expect(container.querySelector('[inert]')).toBeNull();
+      expect(screen.getByTestId('history-orders-list')).toBeInTheDocument();
+      expect(screen.queryByTestId('active-power-banner')).toBeNull();
+      expect(screen.queryByTestId('btn-clear-all')).toBeNull();
+      expect(screen.queryByTestId('macro-footer-actions')).toBeNull();
     });
   });
 

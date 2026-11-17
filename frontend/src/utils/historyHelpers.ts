@@ -1,4 +1,9 @@
-import type { Order, Power, TurnHistoryEntry } from '../types/diplomacy';
+import {
+  ALL_POWERS,
+  type Order,
+  type Power,
+  type TurnHistoryEntry,
+} from '../types/diplomacy';
 
 type TurnLike = Pick<TurnHistoryEntry, 'season' | 'year' | 'phase'>;
 
@@ -30,14 +35,87 @@ export function stepTurn(
   return next >= entries.length ? null : next;
 }
 
-/** A past turn's build and disband orders for one power, or for all of them. */
+export type HistoryMovementActionType = 'HOLD' | 'SUPPORT' | 'CONVOY' | 'MOVE';
+export type HistoryAdjustmentActionType = 'BUILD' | 'DISBAND' | 'WAIVE';
+export type HistoryActionType =
+  | HistoryMovementActionType
+  | HistoryAdjustmentActionType;
+
+export const ALL_HISTORY_ACTIONS: readonly HistoryMovementActionType[] = [
+  'HOLD',
+  'SUPPORT',
+  'CONVOY',
+  'MOVE',
+];
+
+export const ALL_ADJUSTMENT_ACTIONS: readonly HistoryAdjustmentActionType[] = [
+  'BUILD',
+  'DISBAND',
+  'WAIVE',
+];
+
+function toggleFilterItem<T>(
+  selected: readonly T[],
+  item: T,
+  allItems: readonly T[],
+): T[] {
+  const nextSet = new Set(selected);
+  if (nextSet.has(item)) {
+    nextSet.delete(item);
+  } else {
+    nextSet.add(item);
+  }
+  if (nextSet.size === 0 || nextSet.size === allItems.length) {
+    return [];
+  }
+  return allItems.filter((candidate) => nextSet.has(candidate));
+}
+
+/** Empty `selectedPowers` means every nation is visible. */
+export function matchesHistoryPowers(
+  power: Power,
+  selectedPowers: readonly Power[],
+): boolean {
+  return selectedPowers.length === 0 || selectedPowers.includes(power);
+}
+
+/** Toggle a nation in/out of the active history filter, ordered canonically. */
+export function toggleHistoryPower(
+  selectedPowers: readonly Power[],
+  power: Power,
+): Power[] {
+  return toggleFilterItem(selectedPowers, power, ALL_POWERS);
+}
+
+/** Empty `selectedActions` means every movement action type is visible. */
+export function matchesHistoryActions(
+  orderType: Order['order_type'] | undefined,
+  selectedActions: readonly HistoryActionType[],
+): boolean {
+  if (selectedActions.length === 0) return true;
+  const effective = orderType ?? 'HOLD';
+  return selectedActions.includes(effective as HistoryActionType);
+}
+
+/** Toggle an action in/out of the active history filter, ordered canonically for the current phase. */
+export function toggleHistoryAction(
+  selectedActions: readonly HistoryActionType[],
+  action: HistoryActionType,
+  availableActions: readonly HistoryActionType[] = ALL_HISTORY_ACTIONS,
+): HistoryActionType[] {
+  return toggleFilterItem(selectedActions, action, availableActions);
+}
+
+/** A past turn's build and disband orders for selected nations and actions, or for all of them. */
 export function adjustmentOrdersFor(
   orders: Record<string, Order>,
-  power: Power | null,
+  powers: readonly Power[],
+  actions: readonly HistoryActionType[] = [],
 ): Order[] {
   return Object.values(orders).filter(
     (o) =>
       (o.order_type === 'BUILD' || o.order_type === 'DISBAND') &&
-      (power === null || o.power === power),
+      matchesHistoryPowers(o.power, powers) &&
+      matchesHistoryActions(o.order_type, actions),
   );
 }

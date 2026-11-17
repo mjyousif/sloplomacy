@@ -7,10 +7,13 @@ import {
   type Power,
   type ProvinceInfo,
   type SimulationResult,
+  type TurnRecord,
   type Unit,
   type UnitMoveOptions,
   type ValidationIssue,
 } from '../types/diplomacy';
+import type { UnitMark } from '../utils/displayPrefs';
+import type { HistoryActionType } from '../utils/historyHelpers';
 import { getConsensusStatusInfo } from '../utils/orderHelpers';
 import {
   computeOrderProgress,
@@ -25,6 +28,10 @@ import {
   AdminTurnClockSidebar,
 } from './macro/AdminTurnClockSidebar';
 import { CollapsedRail } from './macro/CollapsedRail';
+import {
+  type HistoryHighlightFocus,
+  HistoryTurnPanel,
+} from './macro/HistoryTurnPanel';
 import {
   ClearAllButton,
   OrderFooter,
@@ -86,9 +93,22 @@ export interface MacroSidebarProps {
   variant?: 'panel' | 'sheet';
   sheetSnap?: SheetSnap;
   onSheetSnapChange?: (snap: SheetSnap) => void;
+  /** Set when inspecting a resolved past turn record; replaces live controls with the turn log. */
+  historyTurn?: TurnRecord | null;
+  /** Selected nation filters for the past turn log. Empty shows all nations. */
+  historyPowers?: readonly Power[];
+  /** Selected movement action filters for a past Movement turn. Empty shows all actions. */
+  historyActions?: readonly HistoryActionType[];
+  /** Unit icon display setting so the history log matches the map's pieces. */
+  unitMark?: UnitMark;
+  selectedHistoryOrderId?: string | null;
+  onSelectHistoryPowers?: (powers: Power[]) => void;
+  onSelectHistoryActions?: (actions: HistoryActionType[]) => void;
+  onHoverHistoryOrder?: (focus: HistoryHighlightFocus | null) => void;
+  onTogglePinHistoryOrder?: (focus: HistoryHighlightFocus) => void;
   /**
-   * Set while the map shows a past turn, e.g. "Fall 1901 Movement". The orders are dimmed and
-   * inert under a bar that leads back to the live turn, so nothing is edited out of sight.
+   * Set while the map shows a past turn or move suggestion. For move suggestions (no
+   * `historyTurn`), the live orders stay dimmed and inert under a bar back to live.
    */
   historyLabel?: string | null;
   /** True when the viewed history entry is an admin board edit. */
@@ -139,6 +159,15 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   variant = 'panel',
   sheetSnap = 'peek',
   onSheetSnapChange,
+  historyTurn = null,
+  historyPowers = [],
+  historyActions = [],
+  unitMark = 'icons',
+  selectedHistoryOrderId = null,
+  onSelectHistoryPowers,
+  onSelectHistoryActions,
+  onHoverHistoryOrder,
+  onTogglePinHistoryOrder,
   historyLabel = null,
   historyIsAdmin = false,
   onReturnToLive,
@@ -382,6 +411,49 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     );
   }
 
+  // Collapsed Rail View (Desktop only; phone uses BottomSheet peek/snap)
+  if (collapsed && variant !== 'sheet') {
+    return (
+      <aside
+        className={styles.macroSidebar}
+        data-collapsed="true"
+        data-testid="macro-sidebar-collapsed"
+        aria-label="Tactical Orders Collapsed"
+      >
+        <CollapsedRail
+          activePower={activePower}
+          progress={progress}
+          onToggleCollapse={onToggleCollapse}
+        />
+      </aside>
+    );
+  }
+
+  if (historyTurn) {
+    return (
+      <HistoryTurnPanel
+        variant={variant}
+        sheetSnap={sheetSnap}
+        onSheetSnapChange={onSheetSnapChange}
+        onToggleCollapse={onToggleCollapse}
+        historyTurn={historyTurn}
+        historyLabel={historyLabel ?? ''}
+        historyIsAdmin={historyIsAdmin}
+        historyPowers={historyPowers}
+        historyActions={historyActions}
+        unitMark={unitMark}
+        provinces={provinces}
+        selectedOrderId={selectedHistoryOrderId}
+        compactOrders={compactOrders}
+        onToggleCompactOrders={handleToggleCompactOrders}
+        onSelectHistoryPowers={onSelectHistoryPowers}
+        onSelectHistoryActions={onSelectHistoryActions}
+        onHoverOrder={onHoverHistoryOrder}
+        onTogglePinOrder={onTogglePinHistoryOrder}
+      />
+    );
+  }
+
   // Phone: the same pieces in a pull-up sheet. The peek holds what a player needs every turn,
   // and spells out the counts the desktop rail only gives in tooltips.
   if (variant === 'sheet') {
@@ -442,24 +514,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
           )}
         </div>
       </BottomSheet>
-    );
-  }
-
-  // Collapsed Rail View
-  if (collapsed) {
-    return (
-      <aside
-        className={styles.macroSidebar}
-        data-collapsed="true"
-        data-testid="macro-sidebar-collapsed"
-        aria-label="Tactical Orders Collapsed"
-      >
-        <CollapsedRail
-          activePower={activePower}
-          progress={progress}
-          onToggleCollapse={onToggleCollapse}
-        />
-      </aside>
     );
   }
 

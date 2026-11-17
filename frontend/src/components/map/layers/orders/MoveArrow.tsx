@@ -31,6 +31,7 @@ export function MoveArrow({
     supportCountByUnitId,
     selectedUnitId,
     hoveredUnitId,
+    historyView = false,
     showSimulationOverlay,
     sandboxMode,
     simulationResult,
@@ -49,6 +50,10 @@ export function MoveArrow({
   const supCount = supportCountByUnitId[unit.id] || 0;
   const isSelectedOrHovered =
     unit.id === selectedUnitId || unit.id === hoveredUnitId;
+  const hasHistoryFocus = Boolean(
+    historyView && (hoveredUnitId || selectedUnitId),
+  );
+  const isDimmed = hasHistoryFocus && !isSelectedOrHovered;
 
   const simActive = showSimulationOverlay || sandboxMode;
   const simRes = simActive ? simulationResult?.resolutions[unit.id] : null;
@@ -86,13 +91,17 @@ export function MoveArrow({
     }
   }
 
-  const strokeWidth = 4.5 + supCount * 1.8 + (isSelectedOrHovered ? 1.2 : 0);
+  const strokeWidth =
+    4.5 +
+    supCount * 1.8 +
+    (isSelectedOrHovered ? (historyView ? 2.2 : 1.2) : 0);
   const meta = POWER_METADATA[unit.power];
   const ghostPiece = describePiece(target, order.target_coast, false);
 
   return (
     <g
       pointerEvents="none"
+      opacity={isDimmed ? 0.22 : 1}
       data-testid="order-arrow"
       data-order-unit={unit.id}
       data-order-type={order.order_type}
@@ -101,9 +110,11 @@ export function MoveArrow({
       <path
         d={path}
         fill="none"
-        stroke="#fef3c7"
-        strokeWidth={strokeWidth + 3.5}
-        strokeOpacity="0.9"
+        stroke={isSelectedOrHovered && historyView ? '#fde047' : '#fef3c7'}
+        strokeWidth={
+          strokeWidth + (isSelectedOrHovered && historyView ? 6.5 : 3.5)
+        }
+        strokeOpacity={isSelectedOrHovered && historyView ? '0.95' : '0.9'}
         strokeLinecap="round"
       />
       <path

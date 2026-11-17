@@ -1,9 +1,11 @@
 import {
   AlertTriangle,
+  Filter,
   Flag,
   History,
   Lock,
   PanelRightClose,
+  X,
 } from 'lucide-react';
 import type React from 'react';
 import {
@@ -11,7 +13,16 @@ import {
   type Power,
   type ValidationIssue,
 } from '../../types/diplomacy';
+import {
+  ALL_ADJUSTMENT_ACTIONS,
+  ALL_HISTORY_ACTIONS,
+  type HistoryActionType,
+} from '../../utils/historyHelpers';
 import type { OrderProgress } from '../../utils/orderProgress';
+import {
+  ActionFilterChips,
+  PowerFilterChips,
+} from '../tools/TurnHistorySelector';
 import { PowerFlag } from '../ui/PowerFlag';
 import chromeStyles from '../ui/SidebarChrome.module.css';
 import styles from './PowerHeader.module.css';
@@ -113,29 +124,177 @@ export const PhaseContext: React.FC<{
   );
 };
 
-/** The bar over a past turn's orders that leads back to the live turn. */
+function actionsForTurn(
+  phase?: string,
+  season?: string,
+): readonly HistoryActionType[] | null {
+  if (phase === 'Admin') return null;
+  if (phase === 'Adjustments' || season === 'Winter') {
+    return ALL_ADJUSTMENT_ACTIONS;
+  }
+  if (phase === 'Movement') {
+    return ALL_HISTORY_ACTIONS;
+  }
+  return null;
+}
+
+/** Nation + phase-action filter block shared under "Viewing [turn]". */
+export const HistoryFilterSection: React.FC<{
+  historyPhase?: string;
+  historySeason?: string;
+  historyIsAdmin?: boolean;
+  historyPowers?: readonly Power[];
+  historyActions?: readonly HistoryActionType[];
+  onSelectHistoryPowers: (powers: Power[]) => void;
+  onSelectHistoryActions?: (actions: HistoryActionType[]) => void;
+}> = ({
+  historyPhase,
+  historySeason,
+  historyIsAdmin = false,
+  historyPowers = [],
+  historyActions = [],
+  onSelectHistoryPowers,
+  onSelectHistoryActions,
+}) => {
+  const availableActions = actionsForTurn(historyPhase, historySeason);
+  return (
+    <div
+      className={styles.historyLockFilterSection}
+      data-admin-phase={historyIsAdmin ? 'true' : undefined}
+    >
+      <div
+        className={styles.historyLockFilterHeader}
+        data-testid="history-lock-filter-header"
+      >
+        <Filter
+          size={12}
+          className={styles.historyLockFilterIcon}
+          aria-hidden="true"
+        />
+        <span>Filters</span>
+      </div>
+      <div className={styles.historyLockFilterRows}>
+        <div className={styles.historyLockFilterRow}>
+          <span className={styles.historyLockFilterRowLabel}>Nations</span>
+          <PowerFilterChips
+            powers={historyPowers}
+            disabled={false}
+            showAllChip={false}
+            onSelectPowers={onSelectHistoryPowers}
+            className={styles.historyLockFilterChips}
+            chipClassName={styles.historyLockFilterChip}
+          />
+          <button
+            type="button"
+            className={styles.historyLockFilterClearBtn}
+            data-testid="turn-history-clear-powers"
+            disabled={historyPowers.length === 0}
+            aria-label="Clear nation filters"
+            title="Clear nation filters"
+            onClick={() => onSelectHistoryPowers([])}
+          >
+            <X size={12} />
+          </button>
+        </div>
+        {onSelectHistoryActions && availableActions && (
+          <div className={styles.historyLockFilterRow}>
+            <span className={styles.historyLockFilterRowLabel}>Actions</span>
+            <ActionFilterChips
+              actions={historyActions}
+              availableActions={availableActions}
+              onSelectActions={onSelectHistoryActions}
+              className={styles.historyLockFilterChips}
+              chipClassName={styles.historyLockActionChip}
+            />
+            <button
+              type="button"
+              className={styles.historyLockFilterClearBtn}
+              data-testid="turn-history-clear-actions"
+              disabled={historyActions.length === 0}
+              aria-label="Clear action filters"
+              title="Clear action filters"
+              onClick={() => onSelectHistoryActions([])}
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/** The bar over a past turn's orders or live suggestion preview, with optional filters or Back to live button. */
 export const HistoryLockBar: React.FC<{
   historyLabel: string;
+  historyPhase?: string;
+  historySeason?: string;
   historyIsAdmin?: boolean;
+  historyPowers?: readonly Power[];
+  historyActions?: readonly HistoryActionType[];
+  onSelectHistoryPowers?: (powers: Power[]) => void;
+  onSelectHistoryActions?: (actions: HistoryActionType[]) => void;
   onReturnToLive?: () => void;
-}> = ({ historyLabel, historyIsAdmin = false, onReturnToLive }) => (
+  onToggleCollapse?: () => void;
+}> = ({
+  historyLabel,
+  historyPhase,
+  historySeason,
+  historyIsAdmin = false,
+  historyPowers = [],
+  historyActions = [],
+  onSelectHistoryPowers,
+  onSelectHistoryActions,
+  onReturnToLive,
+  onToggleCollapse,
+}) => (
   <div
     className={styles.historyLockBar}
     data-testid="history-lock-bar"
     data-admin-phase={historyIsAdmin ? 'true' : undefined}
   >
-    <History size={13} aria-hidden="true" />
-    <span className={styles.historyLockLabel}>
-      Viewing <strong>{historyLabel}</strong>
-    </span>
-    <button
-      type="button"
-      className={styles.historyLockLiveBtn}
-      data-testid="history-lock-live-btn"
-      onClick={onReturnToLive}
-    >
-      Back to live
-    </button>
+    <div className={styles.historyLockMainRow}>
+      <History
+        size={13}
+        className={styles.historyLockIcon}
+        aria-hidden="true"
+      />
+      <span className={styles.historyLockLabel}>
+        Viewing <strong>{historyLabel}</strong>
+      </span>
+      {onReturnToLive && (
+        <button
+          type="button"
+          className={styles.historyLockLiveBtn}
+          data-testid="history-lock-live-btn"
+          onClick={onReturnToLive}
+        >
+          Back to live
+        </button>
+      )}
+      {onToggleCollapse && (
+        <button
+          type="button"
+          data-testid="macro-sidebar-collapse-btn"
+          className={chromeStyles.sidebarCollapseToggleBtn}
+          onClick={onToggleCollapse}
+          title="Collapse Turn Log"
+        >
+          <PanelRightClose size={15} />
+        </button>
+      )}
+    </div>
+    {onSelectHistoryPowers && (
+      <HistoryFilterSection
+        historyPhase={historyPhase}
+        historySeason={historySeason}
+        historyIsAdmin={historyIsAdmin}
+        historyPowers={historyPowers}
+        historyActions={historyActions}
+        onSelectHistoryPowers={onSelectHistoryPowers}
+        onSelectHistoryActions={onSelectHistoryActions}
+      />
+    )}
   </div>
 );
 

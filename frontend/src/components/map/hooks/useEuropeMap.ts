@@ -1,7 +1,8 @@
 import type React from 'react';
 import { useEffect, useImperativeHandle, useRef, useState } from 'react';
-import type { Unit } from '../../../types/diplomacy';
+import type { Power, Unit } from '../../../types/diplomacy';
 import { canPlaceUnitTypeInProvince } from '../../../utils/adminHelpers';
+import type { HistoryActionType } from '../../../utils/historyHelpers';
 import type { EuropeMapHandle, EuropeMapProps } from '../../EuropeMap';
 import type { OrderLayerContext } from '../layers/orders/orderLayerContext';
 import type { UnitLayerContext } from '../layers/units/unitLayerContext';
@@ -12,6 +13,7 @@ import { useMapInteraction } from './useMapInteraction';
 import { useMapSelection } from './useMapSelection';
 import { useOrderOverlay } from './useOrderOverlay';
 import { usePieceGeometry } from './usePieceGeometry';
+import { useTerritoryShiftPatterns } from './useTerritoryShiftPatterns';
 import { useTouchHitRadius } from './useTouchHitRadius';
 import { useUnitMenuPlacement } from './useUnitMenuPlacement';
 
@@ -19,6 +21,9 @@ import { useUnitMenuPlacement } from './useUnitMenuPlacement';
  * The map's view model: every hook EuropeMap uses, wired together in one place, with the
  * props' defaults applied. EuropeMap only lays out what this returns.
  */
+const NO_HISTORY_POWERS: readonly Power[] = [];
+const NO_HISTORY_ACTIONS: readonly HistoryActionType[] = [];
+
 export function useEuropeMap(
   {
     provinces,
@@ -54,7 +59,8 @@ export function useEuropeMap(
     compact = false,
     onDockedBarChange,
     historyView = false,
-    historyPower = null,
+    historyPowers = NO_HISTORY_POWERS,
+    historyActions = NO_HISTORY_ACTIONS,
     suggestion = null,
   }: EuropeMapProps,
   ref: React.ForwardedRef<EuropeMapHandle>,
@@ -139,7 +145,11 @@ export function useEuropeMap(
     canEditAnyPower,
     showAllMoves,
     historyView,
-    historyPower,
+    historyPowers,
+    historyActions:
+      phase === 'Movement' || isAdjustmentPhase
+        ? historyActions
+        : NO_HISTORY_ACTIONS,
     isRetreatPhase,
     isAdjustmentPhase,
     getUnitPoint,
@@ -160,7 +170,8 @@ export function useEuropeMap(
     activePower,
     canEditAnyPower,
     historyView,
-    historyPower,
+    historyPowers,
+    historyActions,
     isAdjustmentPhase,
     phase,
   });
@@ -352,6 +363,7 @@ export function useEuropeMap(
     arrowScale,
     selectedUnitId,
     hoveredUnitId,
+    historyView,
     showSimulationOverlay,
     sandboxMode,
     simulationResult,
@@ -361,6 +373,16 @@ export function useEuropeMap(
     historyView && phase === 'Admin' && simulationResult?.new_ownership
       ? simulationResult.new_ownership
       : ownership;
+
+  const { territoryPatterns, territoryPatternByProv } =
+    useTerritoryShiftPatterns({
+      historyView,
+      phase,
+      ownership,
+      simulationResult,
+      provinces,
+      historyPowers,
+    });
 
   const unitLayerContext: UnitLayerContext = {
     orders,
@@ -398,6 +420,8 @@ export function useEuropeMap(
     orders,
     ownership,
     displayOwnership,
+    territoryPatterns,
+    territoryPatternByProv,
     activePower,
     sandboxMode,
     directEditActive,
@@ -418,7 +442,7 @@ export function useEuropeMap(
     unitMark,
     compact,
     historyView,
-    historyPower,
+    historyPowers,
     unitsByProv,
     containerRef,
     svgRef,

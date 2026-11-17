@@ -35,6 +35,7 @@ export interface OrderLayerContext {
   arrowScale: number;
   selectedUnitId: string | null;
   hoveredUnitId: string | null;
+  historyView?: boolean;
   showSimulationOverlay: boolean;
   sandboxMode: boolean;
   simulationResult: SimulationResult | null;

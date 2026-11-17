@@ -73,7 +73,11 @@ export function UnitToken({
   );
   const isInteractive = isControllable || isTargetableWhileSelected;
   const isSelected = Boolean(selectedUnit && unit.id === selectedUnit.id);
-  const isHovered = unit.id === hoveredUnitId && isInteractive;
+  const isHistoryFocused = Boolean(
+    controlPower === null && unit.id === hoveredUnitId,
+  );
+  const isHovered =
+    unit.id === hoveredUnitId && (isInteractive || controlPower === null);
   // An order still being filled in raises no warning until the player moves off the unit.
   const unitIssues =
     isUnitOrderVisible(unit) && !(isSelected && isOrderIncomplete(order))
@@ -153,11 +157,15 @@ export function UnitToken({
       {(isSelected || isHovered) && (
         <PieceOutline
           frame={frame}
-          radius={27}
-          fill="rgba(245, 158, 11, 0.22)"
-          stroke="#f59e0b"
-          strokeWidth="3.5"
-          strokeDasharray={isSelected ? undefined : '5 3'}
+          radius={isHistoryFocused ? 29 : 27}
+          fill={
+            isHistoryFocused
+              ? 'rgba(250, 204, 21, 0.34)'
+              : 'rgba(245, 158, 11, 0.22)'
+          }
+          stroke={isHistoryFocused ? '#fde047' : '#f59e0b'}
+          strokeWidth={isHistoryFocused ? '4' : '3.5'}
+          strokeDasharray={isSelected || isHistoryFocused ? undefined : '5 3'}
         />
       )}
 

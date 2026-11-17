@@ -112,7 +112,7 @@ describe('PhaseContext', () => {
 });
 
 describe('HistoryLockBar', () => {
-  it('names the turn and leads back to live', () => {
+  it('names the turn and leads back to live without filter chips when onSelectHistoryPowers is omitted', () => {
     const onReturnToLive = vi.fn();
     render(
       <HistoryLockBar
@@ -123,8 +123,98 @@ describe('HistoryLockBar', () => {
     expect(screen.getByTestId('history-lock-bar')).toHaveTextContent(
       'Viewing Fall 1901 Movement',
     );
+    expect(screen.queryByTestId('turn-history-power')).toBeNull();
     fireEvent.click(screen.getByTestId('history-lock-live-btn'));
     expect(onReturnToLive).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders Filters header with Nations and Actions rows, no All chips, and right-side X clear buttons', () => {
+    const onSelectHistoryPowers = vi.fn();
+    const onSelectHistoryActions = vi.fn();
+    render(
+      <HistoryLockBar
+        historyLabel="Spring 1901 Movement"
+        historyPhase="Movement"
+        historyPowers={['GERMANY']}
+        historyActions={['MOVE']}
+        onSelectHistoryPowers={onSelectHistoryPowers}
+        onSelectHistoryActions={onSelectHistoryActions}
+      />,
+    );
+    expect(screen.queryByTestId('history-lock-live-btn')).toBeNull();
+    expect(screen.queryByTestId('history-lock-filter-note')).toBeNull();
+    expect(screen.getByTestId('history-lock-filter-header')).toHaveTextContent(
+      'Filters',
+    );
+    expect(screen.getByText('Nations')).toBeInTheDocument();
+    expect(screen.getByText('Actions')).toBeInTheDocument();
+
+    const chips = screen.getAllByTestId('turn-history-power');
+    expect(chips).toHaveLength(7);
+    expect(chips.some((el) => el.dataset.power === 'ALL')).toBe(false);
+    const gerChip = chips.find((el) => el.dataset.power === 'GERMANY')!;
+    const engChip = chips.find((el) => el.dataset.power === 'ENGLAND')!;
+    expect(gerChip).toHaveAttribute('data-active', 'true');
+    expect(engChip).not.toHaveAttribute('data-active');
+
+    fireEvent.click(engChip);
+    expect(onSelectHistoryPowers).toHaveBeenCalledWith(['ENGLAND', 'GERMANY']);
+
+    const clearPowers = screen.getByTestId('turn-history-clear-powers');
+    expect(clearPowers).toBeEnabled();
+    fireEvent.click(clearPowers);
+    expect(onSelectHistoryPowers).toHaveBeenCalledWith([]);
+
+    const actionChips = screen.getAllByTestId('turn-history-action');
+    expect(actionChips).toHaveLength(4);
+    expect(actionChips.some((el) => el.dataset.action === 'ALL')).toBe(false);
+    const moveChip = actionChips.find((el) => el.dataset.action === 'MOVE')!;
+    const holdChip = actionChips.find((el) => el.dataset.action === 'HOLD')!;
+    expect(moveChip).toHaveAttribute('data-active', 'true');
+    expect(holdChip).not.toHaveAttribute('data-active');
+    expect(holdChip.querySelector('svg')).not.toBeNull();
+
+    fireEvent.click(holdChip);
+    expect(onSelectHistoryActions).toHaveBeenCalledWith(['HOLD', 'MOVE']);
+
+    const clearActions = screen.getByTestId('turn-history-clear-actions');
+    expect(clearActions).toBeEnabled();
+    fireEvent.click(clearActions);
+    expect(onSelectHistoryActions).toHaveBeenCalledWith([]);
+  });
+
+  it('renders Build, Disband, and Waive action filters in Adjustments phase', () => {
+    const onSelectHistoryActions = vi.fn();
+    render(
+      <HistoryLockBar
+        historyLabel="Winter 1901 Adjustments"
+        historyPhase="Adjustments"
+        historySeason="Winter"
+        historyPowers={[]}
+        historyActions={['BUILD']}
+        onSelectHistoryPowers={vi.fn()}
+        onSelectHistoryActions={onSelectHistoryActions}
+      />,
+    );
+
+    const actionChips = screen.getAllByTestId('turn-history-action');
+    expect(actionChips.map((el) => el.dataset.action)).toEqual([
+      'BUILD',
+      'DISBAND',
+      'WAIVE',
+    ]);
+    const buildChip = actionChips.find((el) => el.dataset.action === 'BUILD')!;
+    const disbandChip = actionChips.find(
+      (el) => el.dataset.action === 'DISBAND',
+    )!;
+    expect(buildChip).toHaveAttribute('data-active', 'true');
+    expect(disbandChip.querySelector('svg')).not.toBeNull();
+
+    fireEvent.click(disbandChip);
+    expect(onSelectHistoryActions).toHaveBeenCalledWith(['BUILD', 'DISBAND']);
+
+    fireEvent.click(screen.getByTestId('turn-history-clear-actions'));
+    expect(onSelectHistoryActions).toHaveBeenCalledWith([]);
   });
 });
 

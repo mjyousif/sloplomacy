@@ -93,10 +93,12 @@ function history(over: Partial<TurnHistory> = {}): TurnHistory {
     entries: [ENTRY],
     viewIndex: null,
     turn: null,
-    power: null,
+    powers: [],
+    actions: [],
     select: vi.fn(),
     step: vi.fn(),
-    setPower: vi.fn(),
+    setPowers: vi.fn(),
+    setActions: vi.fn(),
     goLive: vi.fn(),
     ...over,
   };
@@ -380,9 +382,65 @@ describe('GameWorkspace: a past turn', () => {
     expect(p.setSelectedUnitId).not.toHaveBeenCalled();
     expect(p.setHoveredUnitId).not.toHaveBeenCalled();
     expect(p.handleUpdateOrder).not.toHaveBeenCalled();
-    // The sidebar still shows the live orders.
+    // The right sidebar still shows the live orders; the left scoreboard tracks the past turn.
     expect(seen.macro.units).toBe(LIVE.units);
     expect(seen.macro.selectedUnitId).toBe('F1');
+    expect(seen.tools.units).toBe(PAST.units);
+    expect(seen.tools.ownership).toEqual({});
+    expect(seen.tools.viewingHistory).toBe(true);
+    expect(seen.tools.finalizedPowers).toEqual([]);
+    expect(seen.tools.surrenderedPowers).toEqual([]);
+    expect(seen.tools.issues).toEqual([]);
+  });
+
+  it('syncs the left standings scoreboard SC counts, units, and ranks to the viewed turn', () => {
+    const provinces = {
+      PAR: { is_supply_center: true },
+      MUN: { is_supply_center: true },
+      BEL: { is_supply_center: true },
+    } as any;
+    const p = props({
+      provinces,
+      historyTurn: {
+        ...PAST,
+        ownership: { MUN: 'GERMANY', BEL: 'GERMANY' },
+        units: [{ id: 'G_M', power: 'GERMANY' } as any],
+      },
+    });
+    const { rerender } = render(<GameWorkspace {...p} />);
+    expect(seen.tools.ownership).toEqual({ MUN: 'GERMANY', BEL: 'GERMANY' });
+    expect(seen.tools.units).toEqual([{ id: 'G_M', power: 'GERMANY' }]);
+    expect(seen.tools.finalizedPowers).toEqual([]);
+    expect(seen.tools.issues).toEqual([]);
+
+    // Admin history snapshots use the post-edit ownership and units on the scoreboard.
+    rerender(
+      <GameWorkspace
+        {...props({
+          provinces,
+          historyTurn: {
+            ...PAST,
+            phase: 'Admin',
+            resolution: {
+              resolutions: {},
+              summary: [],
+              new_units: [{ id: 'F_B', power: 'FRANCE' } as any],
+              new_ownership: { PAR: 'FRANCE', BEL: 'FRANCE' },
+            } as any,
+          },
+        })}
+      />,
+    );
+    expect(seen.tools.ownership).toEqual({ PAR: 'FRANCE', BEL: 'FRANCE' });
+    expect(seen.tools.units).toEqual([{ id: 'F_B', power: 'FRANCE' }]);
+
+    // Returning to live restores live SC counts, units, finalized marks, and issues.
+    rerender(<GameWorkspace {...props({ provinces, historyTurn: null })} />);
+    expect(seen.tools.viewingHistory).toBe(false);
+    expect(seen.tools.ownership).toEqual({ PAR: 'FRANCE' });
+    expect(seen.tools.units).toBe(LIVE.units);
+    expect(seen.tools.finalizedPowers).toBe(LIVE.finalized_powers);
+    expect(seen.tools.issues).toBe(LIVE.issues);
   });
 
   it('keeps the same empties across renders, so memoized layers hold', () => {
@@ -402,23 +460,25 @@ describe('GameWorkspace: a past turn', () => {
   });
 
   it('wires the turn selector and the phone pill', () => {
-    const th = history({ viewIndex: 0, power: 'ITALY' });
+    const th = history({ viewIndex: 0, powers: ['ITALY', 'FRANCE'] });
     const p = props({ isCompact: true, turnHistory: th, viewedEntry: ENTRY });
     const { getByText } = render(<GameWorkspace {...p} />);
     expect(seen.selector.entries).toBe(th.entries);
     expect(seen.selector.viewIndex).toBe(0);
     expect(seen.selector.liveLabel).toBe('Fall 1902 Movement');
-    expect(seen.selector.power).toBe('ITALY');
+    expect(seen.selector.powers).toEqual(['ITALY', 'FRANCE']);
     expect(seen.selector.onSelect).toBe(p.showPastTurn);
     expect(seen.selector.onStep).toBe(p.stepPastTurn);
-    expect(seen.selector.onSelectPower).toBe(th.setPower);
-    expect(seen.map.historyPower).toBe('ITALY');
+    expect(seen.selector.onSelectPowers).toBe(th.setPowers);
+    expect(seen.map.historyPowers).toEqual(['ITALY', 'FRANCE']);
     expect(getByText('pill')).toBeInTheDocument();
     expect(seen.pill.entry).toBe(ENTRY);
     expect(seen.pill.isOldest).toBe(true);
     expect(seen.pill.onStep).toBe(p.stepPastTurn);
     expect(seen.pill.onGoLive).toBe(th.goLive);
     expect(seen.macro.historyLabel).toBe('Spring 1901 Movement');
+    expect(seen.macro.historyPowers).toEqual(['ITALY', 'FRANCE']);
+    expect(seen.macro.onSelectHistoryPowers).toBe(th.setPowers);
     expect(seen.macro.onReturnToLive).toBe(th.goLive);
   });
 

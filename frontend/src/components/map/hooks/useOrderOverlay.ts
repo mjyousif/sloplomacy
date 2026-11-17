@@ -10,6 +10,11 @@ import type {
   Unit,
   ValidationIssue,
 } from '../../../types/diplomacy';
+import {
+  type HistoryActionType,
+  matchesHistoryActions,
+  matchesHistoryPowers,
+} from '../../../utils/historyHelpers';
 import { canUnitSupportInto } from '../../../utils/orderHelpers';
 import { computeQuadraticCurve } from '../utils/curveGeometry';
 
@@ -24,7 +29,8 @@ export interface UseOrderOverlayOptions {
   /** Optional override for live order visibility: true draws every power, false draws only activePower. */
   showAllMoves?: boolean;
   historyView: boolean;
-  historyPower: Power | null;
+  historyPowers: readonly Power[];
+  historyActions?: readonly HistoryActionType[];
   isRetreatPhase: boolean;
   isAdjustmentPhase: boolean;
   getUnitPoint: (unit: Unit) => Point;
@@ -49,6 +55,8 @@ export interface OrderOverlay {
   moveMidpointsByOrigin: Record<string, Point>;
 }
 
+const NO_HISTORY_ACTIONS: readonly HistoryActionType[] = [];
+
 /** What the order arrows and unit badges need to know about the orders on the board. */
 export function useOrderOverlay({
   units,
@@ -60,7 +68,8 @@ export function useOrderOverlay({
   canEditAnyPower,
   showAllMoves,
   historyView,
-  historyPower,
+  historyPowers,
+  historyActions = NO_HISTORY_ACTIONS,
   isRetreatPhase,
   isAdjustmentPhase,
   getUnitPoint,
@@ -97,14 +106,17 @@ export function useOrderOverlay({
       visibleUnitIds
         ? visibleUnitIds.has(u.id)
         : historyView
-          ? historyPower === null || u.power === historyPower
+          ? matchesHistoryPowers(u.power, historyPowers) &&
+            matchesHistoryActions(orders[u.id]?.order_type, historyActions)
           : showAllMoves !== undefined
             ? showAllMoves || u.power === activePower
             : canEditAnyPower || u.power === activePower,
     [
       visibleUnitIds,
       historyView,
-      historyPower,
+      historyPowers,
+      historyActions,
+      orders,
       showAllMoves,
       canEditAnyPower,
       activePower,

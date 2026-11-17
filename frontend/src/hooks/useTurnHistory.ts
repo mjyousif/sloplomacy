@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAuthHeaders } from '../lib/supabase';
 import type { Power, TurnHistoryEntry, TurnRecord } from '../types/diplomacy';
-import { sameTurn, stepTurn } from '../utils/historyHelpers';
+import {
+  type HistoryActionType,
+  sameTurn,
+  stepTurn,
+} from '../utils/historyHelpers';
 
 const API_BASE = '/api';
 
@@ -22,11 +26,14 @@ export interface TurnHistory {
   viewIndex: number | null;
   /** The record for `viewIndex` once it has arrived. */
   turn: TurnRecord | null;
-  /** The nation chip: only this power's orders are drawn. Null draws everyone's. */
-  power: Power | null;
+  /** The selected nation filters: only these powers' orders are drawn. Empty draws everyone's. */
+  powers: Power[];
+  /** The selected movement action filters. Empty draws all movement types. */
+  actions: HistoryActionType[];
   select: (index: number | null) => void;
   step: (delta: -1 | 1) => void;
-  setPower: (power: Power | null) => void;
+  setPowers: (powers: Power[]) => void;
+  setActions: (actions: HistoryActionType[]) => void;
   goLive: () => void;
 }
 
@@ -59,7 +66,8 @@ export function useTurnHistory({
   const [entries, setEntries] = useState<TurnHistoryEntry[]>([]);
   const [viewIndex, setViewIndex] = useState<number | null>(null);
   const [turn, setTurn] = useState<TurnRecord | null>(null);
-  const [power, setPower] = useState<Power | null>(null);
+  const [powers, setPowers] = useState<Power[]>([]);
+  const [actions, setActions] = useState<HistoryActionType[]>([]);
   const cache = useRef(new Map<number, TurnRecord>());
   // The entry being looked at, so it can be found again in a refetched list.
   const viewedRef = useRef<TurnHistoryEntry | null>(null);
@@ -69,16 +77,23 @@ export function useTurnHistory({
       setViewIndex(index);
       viewedRef.current = index === null ? null : (entries[index] ?? null);
       if (index === null) {
-        setPower(null);
+        setPowers([]);
+        setActions([]);
         setTurn(null);
       } else {
+        const prevPhase =
+          viewIndex === null ? null : (entries[viewIndex]?.phase ?? null);
+        const nextPhase = entries[index]?.phase ?? null;
+        if (prevPhase !== nextPhase) {
+          setActions([]);
+        }
         const cached = cache.current.get(index);
         if (cached) {
           setTurn(cached);
         }
       }
     },
-    [entries],
+    [entries, viewIndex],
   );
 
   const goLive = useCallback(() => select(null), [select]);
@@ -91,7 +106,8 @@ export function useTurnHistory({
   // Another game, or coming back from the lobby, always opens on the live turn.
   useEffect(() => {
     setViewIndex(null);
-    setPower(null);
+    setPowers([]);
+    setActions([]);
     setTurn(null);
     setEntries([]);
     viewedRef.current = null;
@@ -114,7 +130,8 @@ export function useTurnHistory({
           setViewIndex(found ? found.index : null);
           viewedRef.current = found ?? null;
           if (!found) {
-            setPower(null);
+            setPowers([]);
+            setActions([]);
             setTurn(null);
           }
         }
@@ -162,10 +179,12 @@ export function useTurnHistory({
     entries,
     viewIndex,
     turn: activeTurn,
-    power,
+    powers,
+    actions,
     select,
     step,
-    setPower,
+    setPowers,
+    setActions,
     goLive,
   };
 }

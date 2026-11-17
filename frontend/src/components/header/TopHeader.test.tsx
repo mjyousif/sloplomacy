@@ -106,17 +106,14 @@ describe('TopHeader: the turn and the winner', () => {
   it('shows unified turn history controls when resolved turns exist', async () => {
     const onStepHistoryTurn = vi.fn();
     const onSelectHistoryTurn = vi.fn();
-    const onSelectHistoryPower = vi.fn();
     renderHeader({
       turn: { season: 'Fall', year: 1901, phase: 'Movement' },
       historyEntries: [
         { index: 0, season: 'Spring', year: 1901, phase: 'Movement' },
       ],
       historyViewIndex: 0,
-      historyPower: 'FRANCE',
       onStepHistoryTurn,
       onSelectHistoryTurn,
-      onSelectHistoryPower,
     });
     expect(screen.getByTestId('turn-history')).toBeInTheDocument();
     expect(screen.getByTestId('turn-chronicle-pill')).toHaveAttribute(
@@ -139,7 +136,6 @@ describe('TopHeader: the turn and the winner', () => {
     });
     expect(screen.getByTestId('turn-history-select')).toBeDisabled();
     expect(screen.getByTestId('turn-history-prev')).toBeDisabled();
-    expect(screen.getByTestId('turn-history-filter-toggle')).toBeDisabled();
   });
 });
 

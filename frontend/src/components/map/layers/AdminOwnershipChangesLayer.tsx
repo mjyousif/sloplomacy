@@ -10,7 +10,7 @@ interface AdminOwnershipChangesLayerProps {
   beforeOwnership: Record<string, Power>;
   afterOwnership: Record<string, Power>;
   provinces: Record<string, ProvinceInfo>;
-  historyPower: Power | null;
+  historyPowers: readonly Power[];
   occupiedProvinces: Set<string>;
   getProvincePoint: PieceGeometry['getProvincePoint'];
   describePiece: PieceGeometry['describePiece'];
@@ -25,7 +25,7 @@ export function AdminOwnershipChangesLayer({
   beforeOwnership,
   afterOwnership,
   provinces,
-  historyPower,
+  historyPowers,
   occupiedProvinces,
   getProvincePoint,
   describePiece,
@@ -39,9 +39,9 @@ export function AdminOwnershipChangesLayer({
     const next = afterOwnership[prov] ?? null;
     if (prev === next) return false;
     if (
-      historyPower !== null &&
-      prev !== historyPower &&
-      next !== historyPower
+      historyPowers.length > 0 &&
+      !(prev && historyPowers.includes(prev)) &&
+      !(next && historyPowers.includes(next))
     ) {
       return false;
     }

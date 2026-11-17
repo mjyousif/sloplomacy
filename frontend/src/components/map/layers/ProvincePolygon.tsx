@@ -21,6 +21,8 @@ export interface ProvincePolygonProps {
   hasWarning: boolean;
   isMoveIncompatible?: boolean;
   isMoveCompatible?: boolean;
+  /** SVG <pattern> id for alternating pre/post ownership stripes on past turns. */
+  changePatternId?: string;
   onClickProvince: (provId: string, explicitCoast?: string | null) => void;
   onHoverProvince: (provId: string | null) => void;
 }
@@ -41,6 +43,7 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
     hasWarning,
     isMoveIncompatible = false,
     isMoveCompatible = false,
+    changePatternId,
     onClickProvince,
     onHoverProvince,
   }) => {
@@ -83,6 +86,9 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
       if (isHighlighted) {
         fill = '#facc15';
         fillOpacity = 0.58;
+      } else if (changePatternId) {
+        fill = `url(#${changePatternId})`;
+        fillOpacity = isHovered ? 1 : 0.92;
       } else if (isBlueReachable && isHovered) {
         fill = '#0ea5e9';
         fillOpacity = 0.54;
@@ -144,6 +150,7 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
           data-testid="province-path"
           data-province-id={geom.id}
           data-reachable-color={isReachable ? reachableColor : undefined}
+          data-ownership-changed={changePatternId ? 'true' : undefined}
           onClick={() => onClickProvince(geom.id)}
           onPointerEnter={(e) => {
             if (e.pointerType !== 'touch') onHoverProvince(geom.id);

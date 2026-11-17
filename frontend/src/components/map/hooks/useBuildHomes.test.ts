@@ -20,7 +20,7 @@ const homes = (opts: Partial<UseBuildHomesOptions>) =>
       activePower: 'FRANCE',
       canEditAnyPower: false,
       historyView: false,
-      historyPower: null,
+      historyPowers: [],
       isAdjustmentPhase: true,
       ...opts,
     }),
@@ -67,8 +67,29 @@ describe('useBuildHomes', () => {
       KIE: 'GERMANY',
     });
     expect(
-      homes({ historyView: true, orders, historyPower: 'GERMANY' }),
+      homes({ historyView: true, orders, historyPowers: ['GERMANY'] }),
     ).toEqual({ KIE: 'GERMANY' });
+    expect(
+      homes({
+        historyView: true,
+        orders,
+        historyPowers: ['FRANCE', 'GERMANY'],
+      }),
+    ).toEqual({ PAR: 'FRANCE', KIE: 'GERMANY' });
+    expect(
+      homes({
+        historyView: true,
+        orders,
+        historyActions: ['DISBAND'],
+      }),
+    ).toEqual({});
+    expect(
+      homes({
+        historyView: true,
+        orders,
+        historyActions: ['BUILD'],
+      }),
+    ).toEqual({ PAR: 'FRANCE', KIE: 'GERMANY' });
     expect(
       homes({ historyView: true, orders, isAdjustmentPhase: false }),
     ).toEqual({});
