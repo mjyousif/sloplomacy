@@ -412,4 +412,47 @@ describe('ProvincesLayer', () => {
     expect(marPath?.getAttribute('fill')).toBe('#facc15');
     expect(marPath?.getAttribute('data-ownership-changed')).toBe('true');
   });
+
+  it('forwards clicks and hovers on sea-island hit paths to EAS and BAL (#319, #320)', () => {
+    const onClickProvince = vi.fn();
+    const onHoverProvince = vi.fn();
+    const view = draw({
+      provinces: {
+        ...FRANCE_PROVINCES,
+        EAS: {
+          id: 'EAS',
+          name: 'Eastern Mediterranean',
+          type: 'SEA',
+          is_supply_center: false,
+          home_power: null,
+          coasts: [],
+          army_adj: [],
+          fleet_adj: {},
+        },
+        BAL: {
+          id: 'BAL',
+          name: 'Baltic Sea',
+          type: 'SEA',
+          is_supply_center: false,
+          home_power: null,
+          coasts: [],
+          army_adj: [],
+          fleet_adj: {},
+        },
+      },
+      onClickProvince,
+      onHoverProvince,
+    });
+
+    for (const id of ['EAS', 'BAL'] as const) {
+      const hit = view.container.querySelector(
+        `[data-testid="province-hit-path"][data-province-id="${id}"]`,
+      );
+      expect(hit).not.toBeNull();
+      fireEvent.click(hit!);
+      expect(onClickProvince).toHaveBeenCalledWith(id);
+      fireEvent.pointerEnter(hit!, { pointerType: 'mouse' });
+      expect(onHoverProvince).toHaveBeenCalledWith(id);
+    }
+  });
 });

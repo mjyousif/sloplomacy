@@ -327,6 +327,17 @@ export function AdminDirectEditSidebar({
         style={{ borderLeft: '4px solid #b91c1c' }}
       >
         <div className={adminSidebarStyles.adminSidebarHeaderRow}>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              className={chromeStyles.sidebarCollapseToggleBtn}
+              onClick={onToggleCollapse}
+              title="Collapse Right Sidebar"
+              aria-label="Collapse Right Sidebar"
+            >
+              <PanelRightClose size={15} />
+            </button>
+          )}
           <div
             className={adminSidebarStyles.adminSidebarTitle}
             data-testid="admin-sidebar-title"
@@ -341,17 +352,6 @@ export function AdminDirectEditSidebar({
               </span>
             </div>
           </div>
-          {onToggleCollapse && (
-            <button
-              type="button"
-              className={chromeStyles.sidebarCollapseToggleBtn}
-              onClick={onToggleCollapse}
-              title="Collapse Right Sidebar"
-              aria-label="Collapse Right Sidebar"
-            >
-              <PanelRightClose size={15} />
-            </button>
-          )}
         </div>
         {stagedActionsRow}
         {stagedChangesDrawer}

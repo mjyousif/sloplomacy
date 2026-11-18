@@ -184,3 +184,22 @@ describe('Helgoland Bight border', () => {
     expect(EUROPE_PROVINCE_GEOMETRY.NTH.path).toContain(point);
   });
 });
+
+describe('Sea island hit areas and Barents Sea island backing', () => {
+  it('gives EAS and BAL clickable hitPath geometry for Cyprus and Gotland (#319, #320)', () => {
+    expect(EUROPE_PROVINCE_GEOMETRY.EAS.hitPath).toContain(
+      '1308.6342,1257.8786',
+    );
+    expect(EUROPE_PROVINCE_GEOMETRY.BAL.hitPath).toContain(
+      '811.56952,561.80647',
+    );
+  });
+
+  it('backs the Barents Sea island (Path-28) with the landmass color (#312)', () => {
+    const idx = AUTHENTIC_FOREGROUND_SVG.indexOf('id="Path-28"');
+    expect(idx).toBeGreaterThan(-1);
+    const before = AUTHENTIC_FOREGROUND_SVG.slice(Math.max(0, idx - 2000), idx);
+    expect(before).toContain('fill:#f4d7b5');
+    expect(before).toContain('1167.1749,33.532907');
+  });
+});
