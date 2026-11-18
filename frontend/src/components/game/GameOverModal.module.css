@@ -228,6 +228,11 @@
     gap: 12px;
   }
 
+  :global([data-layout="compact"]) .game-over-close-btn {
+    width: 44px;
+    height: 44px;
+  }
+
   :global([data-layout="compact"]) .game-over-tabs {
     width: 100%;
     display: grid;

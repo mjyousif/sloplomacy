@@ -205,7 +205,10 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
         </span>
       </button>
     ) : (
-      <div className={styles.mpResolutionControls}>
+      <div
+        className={styles.mpResolutionControls}
+        data-testid="mp-resolution-controls"
+      >
         <div
           className={styles.mpConsensusStatusCard}
           data-testid="mp-consensus-status-card"

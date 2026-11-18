@@ -124,3 +124,36 @@
     color: var(--danger-text-soft);
   }
 }
+
+@layer compact {
+  :global([data-layout="compact"]) .admin-tile-inspector {
+    margin-bottom: 140px;
+  }
+
+  :global([data-layout="compact"]) .admin-inspector-card-header button {
+    gap: 4px;
+    min-height: 38px;
+    padding: 0 10px;
+    border: 1px solid #3f4859;
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  :global([data-layout="compact"])
+    .admin-inspector-unit-actions-row
+    .admin-inspector-action-btn,
+  :global([data-layout="compact"])
+    .admin-inspector-unit-actions-row
+    .admin-inspector-destroy-btn {
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: 0.78rem;
+  }
+
+  :global([data-layout="compact"]) .admin-inspector-controls-grid button {
+    min-height: 40px;
+    font-size: 0.85rem;
+  }
+}

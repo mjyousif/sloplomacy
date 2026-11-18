@@ -106,3 +106,17 @@
     font-weight: 700;
   }
 }
+
+@layer compact {
+  :global([data-layout="compact"]) .icon-select-dropdown-trigger {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+
+  :global([data-layout="compact"]) .icon-select-dropdown-option {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+}

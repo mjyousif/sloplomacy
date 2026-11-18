@@ -348,3 +348,40 @@
     color: #fecdd3;
   }
 }
+
+@layer compact {
+  :global([data-layout="compact"]) .unitCompactRow {
+    height: auto;
+    min-height: 40px;
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  :global([data-layout="compact"]) .unitCompactControls {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  :global([data-layout="compact"]) .unitCompactTargetPlaceholder {
+    display: none;
+  }
+
+  :global([data-layout="compact"])
+    .unitCompactControls
+    select[data-compact="true"] {
+    flex: 1 1 120px;
+    width: auto;
+    height: 36px;
+    min-height: 36px;
+    line-height: 1.25;
+    padding: 0 8px;
+    font-size: 16px;
+    border-radius: var(--radius-sm);
+  }
+
+  :global([data-layout="compact"]) .unitWarningToggle {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+  }
+}

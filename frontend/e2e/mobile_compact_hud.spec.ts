@@ -91,6 +91,22 @@ test.describe('Scenario 06: Phone game screen', () => {
       await expect(page.getByRole('group', { name: 'Map zoom' })).toHaveCount(1);
       await recorder.recordStep(page, '04_tools_drawer_open');
 
+      // Opening ⋯ while ≡ is open must render the menu above the drawer, not underneath it.
+      await menuToggle.tap();
+      const drawerMenuPanel = page.locator('[data-testid="compact-menu-panel"]');
+      await expect(drawerMenuPanel).toBeVisible();
+      const menuOnTop = await drawerMenuPanel.evaluate((el) => {
+        const rect = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(
+          rect.left + rect.width / 2,
+          rect.top + Math.min(24, rect.height / 2),
+        );
+        return Boolean(hit && (hit === el || el.contains(hit)));
+      });
+      expect(menuOnTop).toBe(true);
+      await menuToggle.tap();
+      await expect(drawerMenuPanel).toHaveCount(0);
+
       // Tapping the backdrop beside it closes it and hands focus back to ≡.
       await page.touchscreen.tap(375, 500);
       await expect(drawerLayer).not.toHaveAttribute('data-open', 'true');
@@ -100,6 +116,28 @@ test.describe('Scenario 06: Phone game screen', () => {
       await page.locator('[data-testid="bottom-sheet-handle"]').tap();
       await expect.poll(() => sheetSnap(page)).toBe('half');
       await recorder.recordStep(page, '05_sheet_raised_to_half');
+
+      // Tapping an order-type tab inside the raised sheet keeps the sheet open for inline editing
+      // and renders a dark-styled native <select> of touch height.
+      const brestCard = page.locator('[data-testid="unit-macro-card"][data-unit-id="FRA_F_BRE"]');
+      await brestCard.locator('[data-testid="btn-order-type-HOLD"]').tap();
+      expect(await sheetSnap(page)).toBe('half');
+      await brestCard.locator('[data-testid="btn-order-type-MOVE"]').tap();
+      expect(await sheetSnap(page)).toBe('half');
+      const brestTarget = brestCard.locator('[data-testid="select-order-target"]');
+      await expect(brestTarget).toBeVisible();
+      const brestSelectMetrics = await brestTarget.evaluate((el) => {
+        const style = getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        return { bg: style.backgroundColor, height: rect.height };
+      });
+      expect(brestSelectMetrics.height).toBeGreaterThanOrEqual(36);
+      expect(brestSelectMetrics.bg).not.toBe('rgb(255, 255, 255)');
+      expect(brestSelectMetrics.bg).not.toBe('rgba(0, 0, 0, 0)');
+      await brestTarget.selectOption('PIC');
+      await expect(brestCard.locator('[data-testid="behavior-target-text"]')).toContainText('Picardy');
+      await brestTarget.selectOption('MAO');
+      expect(await sheetSnap(page)).toBe('half');
 
       const parisCard = page.locator('[data-testid="unit-macro-card"][data-unit-id="FRA_A_PAR"]');
       // The header, not the order controls inside the card, which keep their own taps.
@@ -133,6 +171,36 @@ test.describe('Scenario 06: Phone game screen', () => {
       await expect(page.locator('[data-testid="compact-issue-badge"]')).toHaveCount(0);
       await expect(page.locator('[data-testid="compact-issue-clean"]')).toBeVisible();
       await recorder.recordStep(page, '07_paris_to_picardy_by_tap');
+
+      // 6b. Verify Compact spacing in Display Settings renders cleanly inside the raised sheet.
+      await menuToggle.tap();
+      await page.locator('[data-testid="compact-menu-display-settings"]').tap();
+      const spacingFieldset = page
+        .locator('[data-testid="compact-menu-panel"] fieldset')
+        .filter({ hasText: 'Spacing' });
+      await spacingFieldset.locator('label', { hasText: 'Compact' }).tap();
+      await page.locator('[data-testid="compact-menu-display-back"]').tap();
+      await menuToggle.tap();
+      await expect(page.locator('[data-testid="compact-menu-panel"]')).toHaveCount(0);
+
+      await page.locator('[data-testid="bottom-sheet-handle"]').tap();
+      await expect.poll(() => sheetSnap(page)).toBe('half');
+      await expect(page.locator('[data-testid="unit-compact-row"]')).toHaveCount(3);
+      await brestCard.locator('[data-testid="btn-order-type-MOVE"]').tap();
+      const compactTarget = brestCard.locator('[data-testid="select-order-target"]');
+      await expect(compactTarget).toBeVisible();
+      await expect(compactTarget).toHaveAttribute('data-compact', 'true');
+      const compactSelectBox = await compactTarget.boundingBox();
+      expect(compactSelectBox?.height).toBeGreaterThanOrEqual(34);
+      await expectNoSidewaysScroll(page);
+      await recorder.recordStep(page, '07b_compact_orders_sheet');
+      await brestCard.locator('[data-testid="btn-order-type-HOLD"]').tap();
+
+      await menuToggle.tap();
+      await page.locator('[data-testid="compact-menu-display-settings"]').tap();
+      await spacingFieldset.locator('label', { hasText: 'Normal' }).tap();
+      await page.locator('[data-testid="compact-menu-display-back"]').tap();
+      await menuToggle.tap();
 
       // 7. Back to the lobby.
       await page.locator('[data-testid="compact-back-lobby-btn"]').tap();
@@ -264,12 +332,27 @@ test.describe('Scenario 06: Phone game screen', () => {
       );
       await recorder.recordStep(page, '02_past_turn_with_map_pill');
 
+      // Raise the sheet on the past turn to inspect the Nation/Action filter rows and order log.
+      await page.locator('[data-testid="bottom-sheet-handle"]').tap();
+      await expect.poll(() => sheetSnap(page)).toBe('half');
+      await expect(
+        page.locator('[data-testid="turn-history-clear-powers"]'),
+      ).toBeVisible();
+      await expect(
+        page.locator('[data-testid="turn-history-clear-actions"]'),
+      ).toBeVisible();
+      await expect(
+        page.locator('[data-testid="history-orders-section"]'),
+      ).toBeVisible();
+      await expectNoSidewaysScroll(page);
+      await recorder.recordStep(page, '03_past_turn_sheet_raised');
+
       await page.locator('[data-testid="turn-history-pill-live"]').tap();
       await expect(pill).toHaveCount(0);
       await expect(
         page.locator('[data-testid="history-lock-bar"]'),
       ).toHaveCount(0);
-      await recorder.recordStep(page, '03_back_to_live');
+      await recorder.recordStep(page, '04_back_to_live');
 
       recorder.finalize('PASSED');
     } catch (err) {

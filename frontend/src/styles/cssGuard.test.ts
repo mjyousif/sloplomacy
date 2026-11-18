@@ -100,4 +100,32 @@ describe('stylesheets', () => {
       true,
     );
   });
+
+  it('never targets a hashed CSS module class with :global(.class)', () => {
+    // CSS Modules hash class names, so :global(.some-module-class) silently fails to match.
+    // Only classes genuinely defined in styles/*.css may appear inside :global(.class).
+    const globalClasses = new Set(
+      paths
+        .filter((path) => isStyles(path) && path !== './index.css')
+        .flatMap((path) =>
+          Array.from(
+            stripComments(sheets[path]).matchAll(
+              /\.([a-zA-Z_-][a-zA-Z0-9_-]*)/g,
+            ),
+            (m) => m[1],
+          ),
+        ),
+    );
+    const invalid = paths.filter(isModule).flatMap((path) =>
+      Array.from(
+        stripComments(sheets[path]).matchAll(/:global\(([^)]+)\)/g),
+        (m) => m[1],
+      ).flatMap((inner) =>
+        Array.from(inner.matchAll(/\.([a-zA-Z_-][a-zA-Z0-9_-]*)/g), (m) => m[1])
+          .filter((cls) => !globalClasses.has(cls))
+          .map((cls) => `${path}: :global(.${cls})`),
+      ),
+    );
+    expect(invalid).toEqual([]);
+  });
 });

@@ -219,6 +219,10 @@
 }
 
 @layer compact {
+  :global([data-layout="compact"]) .admin-tab-panel {
+    padding-bottom: 120px;
+  }
+
   :global([data-layout="compact"]) .admin-form-grid-3 {
     grid-template-columns: 1fr;
   }
@@ -227,12 +231,18 @@
     flex-wrap: wrap;
   }
 
-  /* The Turn & Clock sidebar's fields are 0.78rem on a phone, because wide's
-     `.admin-turn-clock-sidebar-body .admin-form-group input` used to beat the 16px rule on
-     specificity. Cascade layers would make them 16px, so this keeps them as they were.
-     That leaves the iOS zoom-on-focus problem for these fields, which should be fixed on its own. */
-  :global([data-layout="compact"]) .admin-form-group input,
-  :global([data-layout="compact"]) .admin-form-group select {
-    font-size: 0.78rem;
+  :global([data-layout="compact"]) .admin-secondary-btn {
+    min-height: 44px;
+    font-size: 0.88rem;
+  }
+
+  :global([data-layout="compact"]) .admin-year-stepper-btns {
+    width: 38px;
+  }
+
+  :global([data-layout="compact"]) button.admin-select-trigger {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 0.88rem;
   }
 }
