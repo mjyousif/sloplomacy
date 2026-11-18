@@ -1,0 +1,105 @@
+@layer components {
+  .map-camera-bar {
+    position: absolute;
+    z-index: var(--z-sidebar);
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    border-radius: var(--radius-pill);
+    background: rgba(18, 22, 29, 0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-slate);
+    box-shadow: var(--shadow-popover);
+    color: var(--text-primary);
+    user-select: none;
+  }
+
+  .map-camera-bar[data-corner="top-left"] {
+    top: 14px;
+    left: calc(14px + var(--map-inset-left, 0px));
+  }
+
+  .map-camera-bar[data-corner="top-right"] {
+    top: 14px;
+    right: calc(14px + var(--map-inset-right, 0px));
+  }
+
+  .map-camera-bar[data-corner="bottom-left"] {
+    bottom: 14px;
+    left: calc(14px + var(--map-inset-left, 0px));
+  }
+
+  .map-camera-bar[data-corner="bottom-right"] {
+    bottom: 14px;
+    right: calc(14px + var(--map-inset-right, 0px));
+  }
+
+  .map-camera-bar[data-dragging="true"] {
+    opacity: 0.94;
+    border-color: var(--border-slate-strong);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65);
+  }
+
+  .drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 4px;
+    color: var(--text-dim);
+    cursor: grab;
+    touch-action: none;
+    transition: var(--transition-fast);
+  }
+
+  .drag-handle:hover {
+    color: var(--text-muted);
+  }
+
+  .map-camera-bar[data-dragging="true"] .drag-handle {
+    cursor: grabbing;
+    color: var(--text-secondary);
+  }
+
+  .camera-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .camera-btn:hover {
+    background: var(--surface-raised);
+    color: var(--text-bright);
+  }
+
+  .camera-btn:active {
+    background: var(--border-slate);
+  }
+
+  .camera-btn:focus-visible {
+    outline: 2px solid var(--info-sky);
+    outline-offset: 1px;
+  }
+
+  .separator {
+    width: 16px;
+    height: 1px;
+    background: var(--border-slate);
+    margin: 3px 0;
+    flex-shrink: 0;
+  }
+
+  .fit-btn {
+    color: var(--text-secondary);
+  }
+}

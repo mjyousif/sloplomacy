@@ -22,6 +22,7 @@ import styles from './EuropeMap.module.css';
 import { useEuropeMap } from './map/hooks/useEuropeMap';
 import { BuildMenu } from './map/hud/BuildMenu';
 import { CoastPicker } from './map/hud/CoastPicker';
+import { MapCameraBar } from './map/hud/MapCameraBar';
 import { MapZoomControls } from './map/hud/MapZoomControls';
 import { SimulationBanner } from './map/hud/SimulationBanner';
 import { UnitMenu } from './map/hud/UnitMenu';
@@ -187,6 +188,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       occupiedProvinces,
       cameraRef,
       zoomAboutCentre,
+      stepZoom,
       resetCamera,
       gestures,
       dragMovedRef,
@@ -471,12 +473,20 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
           </g>
         </svg>
 
-        {/* Phones have no wheel and the tools rail is out of reach, so zoom lives on the map. */}
-        {compact && (
+        {/* Desktop: Google-Maps-style draggable zoom & camera bar overlaid on the map.
+            Phones have no wheel and use 44px touch buttons instead. */}
+        {compact ? (
           <MapZoomControls
             onZoomIn={() => zoomAboutCentre(cameraRef.current.zoom * 1.5)}
             onZoomOut={() => zoomAboutCentre(cameraRef.current.zoom / 1.5)}
             onReset={resetCamera}
+          />
+        ) : (
+          <MapCameraBar
+            containerRef={containerRef}
+            onZoomIn={() => stepZoom(0.4)}
+            onZoomOut={() => stepZoom(-0.4)}
+            onResetCamera={resetCamera}
           />
         )}
       </div>

@@ -1,9 +1,4 @@
-import {
-  type Dispatch,
-  type RefObject,
-  type SetStateAction,
-  useState,
-} from 'react';
+import { type Dispatch, type SetStateAction, useState } from 'react';
 import { usePressSync } from '../hooks/usePress';
 import { useSidebarSelection } from '../hooks/useSidebarSelection';
 import { useSuggestionBoard } from '../hooks/useSuggestion';
@@ -25,11 +20,7 @@ import type { DisplayPrefs } from '../utils/displayPrefs';
 import { supplyCenterOwners } from '../utils/powerHelpers';
 import type { SheetSnap } from '../utils/sheetHelpers';
 import { turnLabel } from '../utils/timerHelpers';
-import {
-  type DirectEditMapHandlers,
-  EuropeMap,
-  type EuropeMapHandle,
-} from './EuropeMap';
+import { type DirectEditMapHandlers, EuropeMap } from './EuropeMap';
 import styles from './GameWorkspace.module.css';
 import { PhaseTimerWidget } from './game/PhaseTimerWidget';
 import { MacroSidebar } from './MacroSidebar';
@@ -72,9 +63,6 @@ export interface GameWorkspaceProps {
   viewedEntry: TurnHistoryEntry | null;
   showPastTurn: (index: number | null) => void;
   stepPastTurn: (delta: -1 | 1) => void;
-  mapRef: RefObject<EuropeMapHandle | null>;
-  zoomPercent: number;
-  setZoomPercent: Dispatch<SetStateAction<number>>;
   displayPrefs: DisplayPrefs;
   onToggleUiSpacing?: () => void;
   selectedUnitId: string | null;
@@ -144,9 +132,6 @@ export function GameWorkspace({
   viewedEntry,
   showPastTurn,
   stepPastTurn,
-  mapRef,
-  zoomPercent,
-  setZoomPercent,
   displayPrefs,
   onToggleUiSpacing,
   selectedUnitId,
@@ -258,10 +243,6 @@ export function GameWorkspace({
             />
           ) : undefined
         }
-        zoomPercent={zoomPercent}
-        onZoomIn={() => mapRef.current?.stepZoom(0.2)}
-        onZoomOut={() => mapRef.current?.stepZoom(-0.2)}
-        onResetCamera={() => mapRef.current?.resetCamera()}
         activePower={playerPower}
         onSelectPower={handleSelectPower}
         ownership={supplyCenterOwners(boardOwnership, provinces)}
@@ -323,8 +304,6 @@ export function GameWorkspace({
 
       {/* CENTER: Europe Map */}
       <EuropeMap
-        ref={mapRef}
-        onZoomChange={setZoomPercent}
         compact={isCompact}
         onDockedBarChange={handleDockedBarChange}
         pieceStyle={displayPrefs.pieceStyle}

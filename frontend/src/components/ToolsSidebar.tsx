@@ -4,7 +4,6 @@ import { useEffect, useRef } from 'react';
 import { cx } from '../utils/cx';
 import styles from './ToolsSidebar.module.css';
 import { CollapsedRail } from './tools/CollapsedRail';
-import { MapControlsSection } from './tools/MapControlsSection';
 import { PressSection } from './tools/PressSection';
 import { SandboxToolsSection } from './tools/SandboxToolsSection';
 import { StandingsSection } from './tools/StandingsSection';
@@ -16,10 +15,6 @@ export type { ToolsSidebarProps };
 export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   collapsed,
   onToggleCollapse,
-  zoomPercent,
-  onZoomIn,
-  onZoomOut,
-  onResetCamera,
   activePower,
   onSelectPower,
   ownership,
@@ -62,10 +57,6 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
     return (
       <CollapsedRail
         onToggleCollapse={onToggleCollapse}
-        zoomPercent={zoomPercent}
-        onZoomIn={onZoomIn}
-        onZoomOut={onZoomOut}
-        onResetCamera={onResetCamera}
         sandboxMode={sandboxMode}
         onToggleSandboxMode={onToggleSandboxMode}
       />
@@ -120,18 +111,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
       </div>
 
       <div className={styles.toolsSidebarContent}>
-        {/* 2. CAMERA & MAP CONTROLS */}
-        {/* Phones zoom with the buttons on the map instead. */}
-        {!isDrawer && (
-          <MapControlsSection
-            zoomPercent={zoomPercent}
-            onZoomIn={onZoomIn}
-            onZoomOut={onZoomOut}
-            onResetCamera={onResetCamera}
-          />
-        )}
-
-        {/* 3. GREAT POWERS STANDING & SELECTION */}
+        {/* GREAT POWERS STANDING & SELECTION */}
         <StandingsSection
           activePower={activePower}
           onSelectPower={onSelectPower}

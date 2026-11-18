@@ -455,6 +455,7 @@ export function useEuropeMap(
     occupiedProvinces,
     cameraRef,
     zoomAboutCentre,
+    stepZoom,
     resetCamera,
     gestures,
     dragMovedRef,

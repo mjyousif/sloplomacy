@@ -87,10 +87,6 @@ describe('ToolsSidebar', () => {
   const baseToolsProps: ToolsSidebarProps = {
     collapsed: false,
     onToggleCollapse: vi.fn(),
-    zoomPercent: 100,
-    onZoomIn: vi.fn(),
-    onZoomOut: vi.fn(),
-    onResetCamera: vi.fn(),
     activePower: 'FRANCE',
     onSelectPower: vi.fn(),
     ownership: mockOwnership,
@@ -112,19 +108,16 @@ describe('ToolsSidebar', () => {
     );
     expect(html).toContain('aria-label="Tools Sidebar Collapsed"');
     expect(html).toContain('tools-sidebar-collapsed');
-    expect(html).toContain('Zoom In');
-    expect(html).toContain('Zoom Out');
     expect(html).not.toContain('CHANCELLERY TOOLS');
   });
 
-  it('renders expanded tools layout with zoom, powers and sandbox (no legend or subtitle)', () => {
+  it('renders expanded tools layout with powers and sandbox (no zoom, legend, or subtitle)', () => {
     const html = renderToString(
       React.createElement(ToolsSidebar, baseToolsProps),
     );
     expect(html).toContain('CHANCELLERY TOOLS');
     expect(html).not.toContain('Intel, Camera');
-    expect(html).toContain('MAP VIEW &amp; CAMERA');
-    expect(html).toContain('100%');
+    expect(html).not.toContain('MAP VIEW &amp; CAMERA');
     expect(html).not.toContain('TACTICAL MAP LEGEND');
     expect(html).toContain('COMMAND NATION (SELECT)');
     expect(html).toContain('France');
@@ -249,12 +242,12 @@ describe('ToolsSidebar', () => {
       );
     });
 
-    it('leaves the desktop panel as it was', () => {
+    it('leaves the desktop panel without map camera controls', () => {
       const html = renderToString(
         React.createElement(ToolsSidebar, baseToolsProps),
       );
       expect(html).not.toContain('data-testid="tools-drawer"');
-      expect(html).toContain('MAP VIEW &amp; CAMERA');
+      expect(html).not.toContain('MAP VIEW &amp; CAMERA');
     });
   });
 });
@@ -523,10 +516,6 @@ describe('MacroSidebar', () => {
       React.createElement(ToolsSidebar, {
         collapsed: false,
         onToggleCollapse: vi.fn(),
-        zoomPercent: 100,
-        onZoomIn: vi.fn(),
-        onZoomOut: vi.fn(),
-        onResetCamera: vi.fn(),
         activePower: 'FRANCE',
         onSelectPower: vi.fn(),
         ownership: mockOwnership,

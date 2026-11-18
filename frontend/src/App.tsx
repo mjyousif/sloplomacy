@@ -1,9 +1,8 @@
 import { AlertTriangle, Compass } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import styles from './App.module.css';
 import { AppHeader } from './components/AppHeader';
 import { AppModals } from './components/AppModals';
-import type { EuropeMapHandle } from './components/EuropeMap';
 import { GameWorkspace } from './components/GameWorkspace';
 import { LobbyView } from './components/LobbyView';
 import { useConfirm } from './components/modal/ConfirmModal';
@@ -29,7 +28,6 @@ import type {
 } from './types/diplomacy';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
 import { myPowerIn } from './utils/heroGame';
-import { DEFAULT_CAMERA } from './utils/mapCameraHelpers';
 import { turnLabel } from './utils/timerHelpers';
 
 export function App() {
@@ -93,12 +91,8 @@ export function App() {
   const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
   const [adminOverrideActive, setAdminOverrideActive] =
     useState<boolean>(false);
-  const [zoomPercent, setZoomPercent] = useState<number>(() =>
-    Math.round(DEFAULT_CAMERA.zoom * 100),
-  );
   const isCompact = useCompactLayout();
   const layout = useWorkspaceLayout({ viewMode, activeGameId, isCompact });
-  const mapRef = useRef<EuropeMapHandle | null>(null);
   const { toastBanner, triggerToast } = useToast();
   const { confirm, confirmModal } = useConfirm();
   const [matchPasscodes, setMatchPasscodes] = useState<Record<string, string>>(
@@ -537,9 +531,6 @@ export function App() {
           viewedEntry={viewedEntry}
           showPastTurn={showPastTurn}
           stepPastTurn={stepPastTurn}
-          mapRef={mapRef}
-          zoomPercent={zoomPercent}
-          setZoomPercent={setZoomPercent}
           displayPrefs={displayPrefs}
           onToggleUiSpacing={() =>
             updateDisplayPrefs({
