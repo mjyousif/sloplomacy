@@ -40,7 +40,6 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   variant = 'panel',
   open = false,
   onClose,
-  historyFooter,
   press,
 }) => {
   const isDrawer = variant === 'drawer';
@@ -165,8 +164,6 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           foreignModifiedOrdersCount={foreignModifiedOrdersCount}
         />
       </div>
-
-      {historyFooter}
     </aside>
   );
 

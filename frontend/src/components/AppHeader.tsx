@@ -2,19 +2,18 @@ import { CheckCircle2 } from 'lucide-react';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import type { AuthModalTab } from '../hooks/useAuthSession';
 import type { DisplayPrefsSaveState } from '../hooks/useDisplayPrefs';
-import {
-  type AuthUser,
-  type GameState,
-  type MultiplayerGameSummary,
-  POWER_METADATA,
-  type Power,
-  type TurnHistoryEntry,
+import type {
+  AuthUser,
+  GameState,
+  MultiplayerGameSummary,
+  Power,
+  TurnHistoryEntry,
 } from '../types/diplomacy';
 import type { DisplayPrefs } from '../utils/displayPrefs';
 import { filterAndSortMyGames } from '../utils/heroGame';
 import styles from './AppHeader.module.css';
 import { CompactTopBar } from './header/CompactTopBar';
-import { TopHeader } from './header/TopHeader';
+import { TopHeader, type TopHeaderProps } from './header/TopHeader';
 
 export interface AppHeaderProps {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -25,7 +24,6 @@ export interface AppHeaderProps {
   games?: MultiplayerGameSummary[];
   playerPower: Power;
   lockedPower?: Power | null;
-  wsConnected: boolean;
   displayPrefs: DisplayPrefs;
   displayPrefsSaveState: DisplayPrefsSaveState;
   updateDisplayPrefs: (change: Partial<DisplayPrefs>) => void;
@@ -42,8 +40,6 @@ export interface AppHeaderProps {
   onReturnToPreviousGame?: () => void;
   onSelectGame?: (game: MultiplayerGameSummary) => void;
   onOpenSurrenderModal?: (game: MultiplayerGameSummary, power: Power) => void;
-  /** The order check behind the error and warning pills. */
-  handleFinalizeClick: (force?: boolean) => void;
   /** The phone's tools drawer, opened from ≡. */
   toolsDrawerOpen: boolean;
   setToolsDrawerOpen: Dispatch<SetStateAction<boolean>>;
@@ -66,8 +62,8 @@ export interface AppHeaderProps {
 }
 
 /**
- * Everything above the board: the top bar (a one-row bar with a ⋯ menu on a phone), the
- * Direct-Edit banner while the host has it on, and the toast.
+ * Everything above the board: the top bar (a unified bar sharing `TurnChronicle`,
+ * `GameSettingsMenu`, and `AccountDropdownMenu` across desktop and phone), and the toast.
  */
 export function AppHeader({
   viewMode,
@@ -78,7 +74,6 @@ export function AppHeader({
   games = [],
   playerPower,
   lockedPower = null,
-  wsConnected,
   displayPrefs,
   displayPrefsSaveState,
   updateDisplayPrefs,
@@ -95,7 +90,6 @@ export function AppHeader({
   onReturnToPreviousGame,
   onSelectGame,
   onOpenSurrenderModal,
-  handleFinalizeClick,
   toolsDrawerOpen,
   setToolsDrawerOpen,
   toolsToggleRef,
@@ -114,13 +108,6 @@ export function AppHeader({
   onStepHistoryTurn,
   onOpenGameOverModal,
 }: AppHeaderProps) {
-  const activePowerIssues = gameState.issues.filter(
-    (i) => i.power === playerPower,
-  );
-  const activeErrors = activePowerIssues.filter((i) => i.severity === 'error');
-  const activeWarnings = activePowerIssues.filter(
-    (i) => i.severity === 'warning',
-  );
   const myGames = filterAndSortMyGames(games, authUser);
   const isLockedPowerSurrendered = Boolean(
     lockedPower && gameState.surrendered_powers?.includes(lockedPower),
@@ -134,93 +121,57 @@ export function AppHeader({
       ? () => onOpenSurrenderModal(activeGameSummary, lockedPower)
       : undefined;
 
+  const headerProps: TopHeaderProps = {
+    viewMode,
+    turn: gameState,
+    winner: gameState.winner ?? null,
+    onBackToLobby: handleBackToLobby,
+    onEnterSoloSandbox: handleEnterSoloSandbox,
+    onSaveSandbox,
+    onResetSandbox,
+    onDeleteSandbox,
+    onReturnToPreviousGame,
+    onSurrenderClick: handleSurrenderClick,
+    isSurrendered: isLockedPowerSurrendered,
+    matchSummary: activeGameSummary,
+    activeGameId,
+    myGames,
+    onSwitchToSoloSandbox,
+    onSelectGame,
+    playerPower: lockedPower ?? playerPower,
+    displayPrefs,
+    displayPrefsSaveState,
+    onChangeDisplayPrefs: updateDisplayPrefs,
+    isGameCreator,
+    onOpenAdminTools: openAdminTools,
+    adminOverrideActive: directEditActive,
+    onToggleAdminOverride: onToggleDirectEdit,
+    turnClockOpen,
+    onResolveTurn,
+    onExitAdmin,
+    authUser,
+    onSignIn: () => openAuthPrompt(undefined, 'signin'),
+    onSignOut: handleSignOut,
+    onOpenAccount: openAccountModal ? () => openAccountModal(false) : undefined,
+    historyEntries,
+    historyViewIndex,
+    historyLocked,
+    onSelectHistoryTurn,
+    onStepHistoryTurn,
+    onOpenGameOverModal,
+  };
+
   return (
     <>
-      {/* TOP COMMAND HEADER BAR (phones get a one-row bar with a ⋯ menu) */}
       {isCompact ? (
         <CompactTopBar
-          viewMode={viewMode}
-          turn={viewMode === 'lobby' ? null : gameState}
-          winner={gameState.winner ?? null}
-          errorCount={activeErrors.length}
-          warningCount={activeWarnings.length}
-          onOpenOrderCheck={() => handleFinalizeClick(false)}
-          onBackToLobby={handleBackToLobby}
-          wsConnected={wsConnected}
-          syncDetail={
-            viewMode === 'lobby' ? 'Lobby feed' : `Game ${activeGameId}`
-          }
-          matchLabel={
-            viewMode === 'multiplayer' && activeGameSummary
-              ? `${activeGameSummary.name} (${POWER_METADATA[playerPower].shortName})`
-              : null
-          }
-          onEnterSoloSandbox={handleEnterSoloSandbox}
-          onSurrenderClick={handleSurrenderClick}
-          isSurrendered={isLockedPowerSurrendered}
-          displayPrefs={displayPrefs}
-          displayPrefsSaveState={displayPrefsSaveState}
-          onChangeDisplayPrefs={updateDisplayPrefs}
-          isGameCreator={isGameCreator}
-          onOpenAdminTools={openAdminTools}
-          adminOverrideActive={directEditActive}
-          onToggleAdminOverride={onToggleDirectEdit}
-          turnClockOpen={turnClockOpen}
-          onResolveTurn={onResolveTurn}
-          onExitAdmin={onExitAdmin}
-          authUser={authUser}
-          onSignIn={() => openAuthPrompt(undefined, 'signin')}
-          onSignOut={handleSignOut}
-          onOpenAccount={
-            openAccountModal ? () => openAccountModal(false) : undefined
-          }
+          {...headerProps}
           toolsOpen={toolsDrawerOpen}
           onToggleTools={() => setToolsDrawerOpen((open) => !open)}
           toolsToggleRef={toolsToggleRef}
-          onOpenGameOverModal={onOpenGameOverModal}
         />
       ) : (
-        <TopHeader
-          viewMode={viewMode}
-          turn={gameState}
-          winner={gameState.winner ?? null}
-          onBackToLobby={handleBackToLobby}
-          onEnterSoloSandbox={handleEnterSoloSandbox}
-          onSaveSandbox={onSaveSandbox}
-          onResetSandbox={onResetSandbox}
-          onDeleteSandbox={onDeleteSandbox}
-          onReturnToPreviousGame={onReturnToPreviousGame}
-          onSurrenderClick={handleSurrenderClick}
-          isSurrendered={isLockedPowerSurrendered}
-          matchSummary={activeGameSummary}
-          activeGameId={activeGameId}
-          myGames={myGames}
-          onSwitchToSoloSandbox={onSwitchToSoloSandbox}
-          onSelectGame={onSelectGame}
-          playerPower={lockedPower ?? playerPower}
-          displayPrefs={displayPrefs}
-          displayPrefsSaveState={displayPrefsSaveState}
-          onChangeDisplayPrefs={updateDisplayPrefs}
-          isGameCreator={isGameCreator}
-          onOpenAdminTools={openAdminTools}
-          adminOverrideActive={directEditActive}
-          onToggleAdminOverride={onToggleDirectEdit}
-          turnClockOpen={turnClockOpen}
-          onResolveTurn={onResolveTurn}
-          onExitAdmin={onExitAdmin}
-          authUser={authUser}
-          onSignIn={() => openAuthPrompt(undefined, 'signin')}
-          onSignOut={handleSignOut}
-          onOpenAccount={
-            openAccountModal ? () => openAccountModal(false) : undefined
-          }
-          historyEntries={historyEntries}
-          historyViewIndex={historyViewIndex}
-          historyLocked={historyLocked}
-          onSelectHistoryTurn={onSelectHistoryTurn}
-          onStepHistoryTurn={onStepHistoryTurn}
-          onOpenGameOverModal={onOpenGameOverModal}
-        />
+        <TopHeader {...headerProps} />
       )}
 
       {/* TOAST NOTIFICATION */}

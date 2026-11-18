@@ -437,3 +437,71 @@
     color: var(--color-white);
   }
 }
+
+@layer compact {
+  :global([data-layout="compact"]) .account-menu {
+    position: static;
+  }
+
+  :global([data-layout="compact"]) .account-menu-trigger {
+    width: 38px;
+    height: 40px;
+    border-radius: var(--radius-lg);
+  }
+
+  :global([data-layout="compact"]) .account-menu-panel {
+    top: calc(100% + 6px);
+    right: 8px;
+    width: min(340px, calc(100vw - 16px));
+    max-height: calc(
+      100dvh -
+      76px -
+      env(safe-area-inset-top) -
+      env(safe-area-inset-bottom)
+    );
+    overscroll-behavior: contain;
+    padding: 14px;
+    border-radius: var(--radius-xl);
+  }
+
+  :global([data-layout="compact"]) .account-profile-name {
+    font-size: 1.12rem;
+  }
+
+  :global([data-layout="compact"]) .account-profile-username {
+    font-size: 0.98rem;
+  }
+
+  :global([data-layout="compact"]) .account-profile-email {
+    font-size: 0.9rem;
+  }
+
+  :global([data-layout="compact"]) .menu-item,
+  :global([data-layout="compact"]) .signout-btn,
+  :global([data-layout="compact"]) .signin-btn,
+  :global([data-layout="compact"]) .subview-back-btn {
+    min-height: 44px;
+    font-size: 0.88rem;
+  }
+
+  :global([data-layout="compact"]) .menu-item-subtext {
+    font-size: 0.78rem;
+  }
+
+  :global([data-layout="compact"]) .change-game-list {
+    max-height: 260px;
+  }
+
+  :global([data-layout="compact"]) .change-game-item {
+    min-height: 46px;
+    padding: 8px 10px;
+  }
+
+  :global([data-layout="compact"]) .change-game-name {
+    font-size: 0.86rem;
+  }
+
+  :global([data-layout="compact"]) .change-game-meta {
+    font-size: 0.76rem;
+  }
+}

@@ -1,6 +1,6 @@
 // @scenario mobile
 // @order 6
-// @description Phone (390x844, touch): full-width map, order sheet, ≡ tools drawer, docked unit bar, card-to-map selection, a move by tap, a winter build, a past turn from the drawer, the lobby's Host and Join dialogs, and back to the lobby.
+// @description Phone (390x844, touch): full-width map, order sheet, ≡ tools drawer, unified top bar (TurnChronicle, GameSettingsMenu, AccountDropdownMenu), docked unit bar, card-to-map selection, a move by tap, a winter build, past-turn history from the top bar, the lobby's Host and Join dialogs, and back to the lobby.
 import { test, expect, Page } from '@playwright/test';
 import { ScenarioRecorder, playBurgundyBounce, seedScenario } from './helpers';
 
@@ -38,8 +38,10 @@ test.describe('Scenario 06: Phone game screen', () => {
 
       await expect(page.locator('[data-layout]')).toHaveAttribute('data-layout', 'compact');
       await expect(page.locator('[data-testid="compact-top-bar"]')).toBeVisible();
-      // Two lines on screen, but it still reads as one label.
-      await expect(page.locator('[data-testid="compact-turn-text"]')).toContainText('Spring 1901 · Movement');
+      // Unified TurnChronicle sits inline in the phone top bar.
+      const topTurnSelect = page.locator('[data-testid="turn-history-select"]');
+      await expect(topTurnSelect).toContainText('Spring 1901');
+      await expect(topTurnSelect).toContainText('Movement');
 
       // The map spans the screen: no sidebar rails on a phone.
       await expect(
@@ -52,50 +54,61 @@ test.describe('Scenario 06: Phone game screen', () => {
       expect(mapBox!.width).toBeGreaterThanOrEqual(380);
       await expectNoSidewaysScroll(page);
 
-      // The order sheet starts lowered, showing the controls a player needs every turn.
+      // The order sheet starts lowered, showing the controls a player needs every turn,
+      // and the StatusBadge reports the warning in the sheet peek.
       expect(await sheetSnap(page)).toBe('peek');
+      await expect(page.locator('[data-testid="status-badge"]')).toContainText('1 Issue');
       await expect(page.locator('[data-testid="btn-clear-all"]')).toBeVisible();
       await expect(page.locator('[data-testid="btn-finalize-orders"]')).toBeVisible();
       await expect(page.locator('[data-testid="btn-adjudicate-phase"]')).toBeVisible();
       await expect(page.locator('[data-testid="macro-sheet-counts"]')).toContainText('3 units');
       await recorder.recordStep(page, '01_phone_board_with_sheet_at_peek');
 
-      // 2. The problem badge opens the order check.
-      const issueBadge = page.locator('[data-testid="compact-issue-badge"]');
-      await expect(issueBadge).toContainText('1');
-      await issueBadge.tap();
+      // 2. Finalizing with a warning opens the order check modal.
+      await page.locator('[data-testid="btn-finalize-orders"]').tap();
       const sanityModal = page.locator('[data-testid="sanity-check-modal"]');
       await expect(sanityModal).toBeVisible({ timeout: 5000 });
-      await recorder.recordStep(page, '02_order_check_from_badge');
+      await recorder.recordStep(page, '02_order_check_from_finalize');
       await page.locator('[data-testid="btn-sanity-back"]').tap();
       await expect(sanityModal).toHaveCount(0);
 
-      // 3. The ⋯ menu and its display settings.
-      const menuToggle = page.locator('[data-testid="compact-menu-toggle"]');
-      await menuToggle.tap();
-      await expect(page.locator('[data-testid="compact-menu-panel"]')).toBeVisible();
-      await page.locator('[data-testid="compact-menu-display-settings"]').tap();
-      await expect(page.locator('[data-testid="compact-menu-display-back"]')).toBeVisible();
+      // 3. The shared AccountDropdownMenu (Switch Game & Display Settings) and GameSettingsMenu (Sandbox controls).
+      const accountTrigger = page.locator('[data-testid="account-menu-trigger"]');
+      await accountTrigger.tap();
+      await expect(page.locator('[data-testid="account-menu-panel"]')).toBeVisible();
+      await expect(page.locator('[data-testid="account-menu-change-game"]')).toBeVisible();
+      await page.locator('[data-testid="account-menu-display-settings"]').tap();
+      await expect(page.locator('[data-testid="account-menu-back"]')).toBeVisible();
       await recorder.recordStep(page, '03_menu_display_settings');
-      await page.locator('[data-testid="compact-menu-display-back"]').tap();
-      await menuToggle.tap();
-      await expect(page.locator('[data-testid="compact-menu-panel"]')).toHaveCount(0);
+      await page.locator('[data-testid="account-menu-back"]').tap();
+      await accountTrigger.tap();
+      await expect(page.locator('[data-testid="account-menu-panel"]')).toHaveCount(0);
 
-      // 4. ≡ opens the tools drawer. It has no zoom section, since the zoom buttons are on the map.
+      const gameSettingsTrigger = page.locator('[data-testid="game-settings-trigger"]');
+      await gameSettingsTrigger.tap();
+      await expect(page.locator('[data-testid="game-settings-panel"]')).toBeVisible();
+      await expect(page.locator('[data-testid="game-settings-save-sandbox"]')).toBeVisible();
+      await expect(page.locator('[data-testid="game-settings-reset-sandbox"]')).toBeVisible();
+      await recorder.recordStep(page, '03b_game_settings_sandbox');
+      await gameSettingsTrigger.tap();
+      await expect(page.locator('[data-testid="game-settings-panel"]')).toHaveCount(0);
+
+      // 4. ≡ opens the tools drawer. It has no zoom section and no duplicate turn history footer.
       const toolsToggle = page.locator('[data-testid="compact-tools-toggle"]');
       await toolsToggle.tap();
       const drawerLayer = page.locator('[data-testid="tools-drawer-layer"]');
       await expect(drawerLayer).toHaveAttribute('data-open', 'true');
       await expect(page.locator('[data-testid="tools-drawer"]')).toBeVisible();
       await expect(page.locator('[data-testid="tools-drawer"] [data-testid="tools-zoom-toolbar"]')).toHaveCount(0);
+      await expect(page.locator('[data-testid="tools-drawer"] [data-testid="turn-history"]')).toHaveCount(0);
       await expect(page.getByRole('group', { name: 'Map zoom' })).toHaveCount(1);
       await recorder.recordStep(page, '04_tools_drawer_open');
 
-      // Opening ⋯ while ≡ is open must render the menu above the drawer, not underneath it.
-      await menuToggle.tap();
-      const drawerMenuPanel = page.locator('[data-testid="compact-menu-panel"]');
-      await expect(drawerMenuPanel).toBeVisible();
-      const menuOnTop = await drawerMenuPanel.evaluate((el) => {
+      // Opening the account menu while ≡ is open must render the popover above the drawer, not underneath it.
+      await accountTrigger.tap();
+      const drawerAccountPanel = page.locator('[data-testid="account-menu-panel"]');
+      await expect(drawerAccountPanel).toBeVisible();
+      const menuOnTop = await drawerAccountPanel.evaluate((el) => {
         const rect = el.getBoundingClientRect();
         const hit = document.elementFromPoint(
           rect.left + rect.width / 2,
@@ -104,8 +117,8 @@ test.describe('Scenario 06: Phone game screen', () => {
         return Boolean(hit && (hit === el || el.contains(hit)));
       });
       expect(menuOnTop).toBe(true);
-      await menuToggle.tap();
-      await expect(drawerMenuPanel).toHaveCount(0);
+      await accountTrigger.tap();
+      await expect(drawerAccountPanel).toHaveCount(0);
 
       // Tapping the backdrop beside it closes it and hands focus back to ≡.
       await page.touchscreen.tap(375, 500);
@@ -167,21 +180,20 @@ test.describe('Scenario 06: Phone game screen', () => {
       await expect(
         parisCard.locator('[data-testid="behavior-target-text"]'),
       ).toContainText('Picardy');
-      // No problems left: the tappable count gives way to a plain check.
-      await expect(page.locator('[data-testid="compact-issue-badge"]')).toHaveCount(0);
-      await expect(page.locator('[data-testid="compact-issue-clean"]')).toBeVisible();
+      // No problems left: the sheet StatusBadge returns to Drafting.
+      await expect(page.locator('[data-testid="status-badge"]')).toContainText('Drafting');
       await recorder.recordStep(page, '07_paris_to_picardy_by_tap');
 
       // 6b. Verify Compact spacing in Display Settings renders cleanly inside the raised sheet.
-      await menuToggle.tap();
-      await page.locator('[data-testid="compact-menu-display-settings"]').tap();
+      await accountTrigger.tap();
+      await page.locator('[data-testid="account-menu-display-settings"]').tap();
       const spacingFieldset = page
-        .locator('[data-testid="compact-menu-panel"] fieldset')
+        .locator('[data-testid="account-menu-panel"] fieldset')
         .filter({ hasText: 'Spacing' });
       await spacingFieldset.locator('label', { hasText: 'Compact' }).tap();
-      await page.locator('[data-testid="compact-menu-display-back"]').tap();
-      await menuToggle.tap();
-      await expect(page.locator('[data-testid="compact-menu-panel"]')).toHaveCount(0);
+      await page.locator('[data-testid="account-menu-back"]').tap();
+      await accountTrigger.tap();
+      await expect(page.locator('[data-testid="account-menu-panel"]')).toHaveCount(0);
 
       await page.locator('[data-testid="bottom-sheet-handle"]').tap();
       await expect.poll(() => sheetSnap(page)).toBe('half');
@@ -196,11 +208,11 @@ test.describe('Scenario 06: Phone game screen', () => {
       await recorder.recordStep(page, '07b_compact_orders_sheet');
       await brestCard.locator('[data-testid="btn-order-type-HOLD"]').tap();
 
-      await menuToggle.tap();
-      await page.locator('[data-testid="compact-menu-display-settings"]').tap();
+      await accountTrigger.tap();
+      await page.locator('[data-testid="account-menu-display-settings"]').tap();
       await spacingFieldset.locator('label', { hasText: 'Normal' }).tap();
-      await page.locator('[data-testid="compact-menu-display-back"]').tap();
-      await menuToggle.tap();
+      await page.locator('[data-testid="account-menu-back"]').tap();
+      await accountTrigger.tap();
 
       // 7. Back to the lobby.
       await page.locator('[data-testid="compact-back-lobby-btn"]').tap();
@@ -255,7 +267,9 @@ test.describe('Scenario 06: Phone game screen', () => {
       await seedScenario('winter_adjustments_demo', 'proto_1901', 'FRANCE');
       await page.goto('/?view=sandbox');
       await page.waitForSelector('[data-testid="build-token"]', { timeout: 15000 });
-      await expect(page.locator('[data-testid="compact-turn-text"]')).toContainText('Winter 1901 · Adjustments');
+      const turnSelect = page.locator('[data-testid="turn-history-select"]');
+      await expect(turnSelect).toContainText('Winter 1901');
+      await expect(turnSelect).toContainText('Adjustments');
       await expectNoSidewaysScroll(page);
 
       // Tap the open home centre in Paris on the map.
@@ -285,7 +299,7 @@ test.describe('Scenario 06: Phone game screen', () => {
     }
   });
 
-  test('looks back at a past turn from the tools drawer', async ({ page }) => {
+  test('looks back at a past turn from the top-bar chronicle', async ({ page }) => {
     const recorder = new ScenarioRecorder('mobile_turn_history');
     recorder.attachListeners(page);
 
@@ -296,23 +310,27 @@ test.describe('Scenario 06: Phone game screen', () => {
         timeout: 15000,
       });
 
-      // The selector sits at the foot of the ≡ drawer.
-      await page.locator('[data-testid="compact-tools-toggle"]').tap();
-      await expect(page.locator('[data-testid="tools-drawer-layer"]')).toHaveAttribute('data-open', 'true');
+      // The unified turn chronicle sits in the phone top bar; the drawer has no duplicate selector.
+      const topBarChronicle = page.locator('[data-testid="compact-top-bar"] [data-testid="turn-history"]');
+      await expect(topBarChronicle).toBeVisible();
       await expect(
-        page.locator(
-          '[data-testid="tools-drawer"] [data-testid="turn-history"]',
-        ),
-      ).toBeVisible();
-      await recorder.recordStep(page, '01_history_in_drawer');
+        page.locator('[data-testid="tools-drawer"] [data-testid="turn-history"]'),
+      ).toHaveCount(0);
 
-      // Picking a turn closes the drawer and puts a pill on the map to step or go back.
-      await page
-        .locator('[data-testid="turn-history-select"]')
-        .selectOption('0');
-      await expect(page.locator('[data-testid="tools-drawer-layer"]')).not.toHaveAttribute('data-open', 'true');
-      const pill = page.locator('[data-testid="turn-history-pill"]');
-      await expect(pill).toContainText('S1901 M');
+      // Open the top-bar turn dropdown and pick Spring 1901 Movement.
+      await topBarChronicle.locator('[data-testid="turn-history-select"]').tap();
+      const optionZero = page.locator('[data-testid="turn-history-option-0"]');
+      await expect(optionZero).toBeVisible();
+      await expectNoSidewaysScroll(page);
+      await recorder.recordStep(page, '01_history_dropdown_in_topbar');
+      await optionZero.tap();
+
+      await expect(page.locator('[data-testid="turn-history-pill"]')).toHaveCount(0);
+      await expect(
+        page.locator('[data-testid="turn-chronicle-pill"]'),
+      ).toHaveAttribute('data-viewing-past', 'true');
+      const liveBtn = page.locator('[data-testid="turn-history-live"]');
+      await expect(liveBtn).toBeVisible();
       await expect(
         page.locator(
           '[data-testid="order-arrow"][data-order-unit="GER_A_MUN"]',
@@ -330,7 +348,7 @@ test.describe('Scenario 06: Phone game screen', () => {
       await expect(page.locator('[data-testid="unit-docked-bar"]')).toHaveCount(
         0,
       );
-      await recorder.recordStep(page, '02_past_turn_with_map_pill');
+      await recorder.recordStep(page, '02_past_turn_with_topbar_chronicle');
 
       // Raise the sheet on the past turn to inspect the Nation/Action filter rows and order log.
       await page.locator('[data-testid="bottom-sheet-handle"]').tap();
@@ -347,11 +365,14 @@ test.describe('Scenario 06: Phone game screen', () => {
       await expectNoSidewaysScroll(page);
       await recorder.recordStep(page, '03_past_turn_sheet_raised');
 
-      await page.locator('[data-testid="turn-history-pill-live"]').tap();
-      await expect(pill).toHaveCount(0);
+      await liveBtn.tap();
+      await expect(liveBtn).toHaveCount(0);
       await expect(
         page.locator('[data-testid="history-lock-bar"]'),
       ).toHaveCount(0);
+      await expect(
+        topBarChronicle.locator('[data-testid="turn-history-select"]'),
+      ).toContainText('Fall 1901');
       await recorder.recordStep(page, '04_back_to_live');
 
       recorder.finalize('PASSED');

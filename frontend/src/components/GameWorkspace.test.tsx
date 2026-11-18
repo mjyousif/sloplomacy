@@ -36,16 +36,6 @@ vi.mock('./game/PhaseTimerWidget', () => ({
     return <i>timer</i>;
   },
 }));
-vi.mock('./tools/TurnHistorySelector', () => ({
-  TurnHistorySelector: (p: any) => {
-    seen.selector = p;
-    return null;
-  },
-  TurnHistoryPill: (p: any) => {
-    seen.pill = p;
-    return <b>pill</b>;
-  },
-}));
 
 const LIVE = {
   season: 'Fall',
@@ -128,8 +118,6 @@ function props(over: Partial<GameWorkspaceProps> = {}): GameWorkspaceProps {
     turnHistory: history(),
     historyTurn: null,
     viewedEntry: null,
-    showPastTurn: vi.fn(),
-    stepPastTurn: vi.fn(),
     mapRef: { current: { stepZoom: vi.fn(), resetCamera: vi.fn() } as any },
     zoomPercent: 120,
     setZoomPercent: vi.fn(),
@@ -198,7 +186,7 @@ describe('GameWorkspace: the live turn', () => {
     expect(seen.tools.variant).toBe('drawer');
     expect(seen.macro.variant).toBe('sheet');
     expect(seen.map.compact).toBe(true);
-    expect(seen.selector.onPickedTurn).toBe(p.closeToolsDrawer);
+    expect(seen.tools.historyFooter).toBeUndefined();
   });
 
   it('draws the live board with the selection and its issues', () => {
@@ -449,39 +437,22 @@ describe('GameWorkspace: a past turn', () => {
     expect(seen.map.retreats).toBe(turn.retreats);
   });
 
-  it('wires the turn selector and the phone pill', () => {
+  it('passes history state down to MacroSidebar and EuropeMap without rendering a drawer footer or map pill', () => {
     const th = history({ viewIndex: 0, powers: ['ITALY', 'FRANCE'] });
     const p = props({ isCompact: true, turnHistory: th, viewedEntry: ENTRY });
-    const { getByText } = render(<GameWorkspace {...p} />);
-    expect(seen.selector.entries).toBe(th.entries);
-    expect(seen.selector.viewIndex).toBe(0);
-    expect(seen.selector.liveLabel).toBe('Fall 1902 Movement');
-    expect(seen.selector.powers).toEqual(['ITALY', 'FRANCE']);
-    expect(seen.selector.onSelect).toBe(p.showPastTurn);
-    expect(seen.selector.onStep).toBe(p.stepPastTurn);
-    expect(seen.selector.onSelectPowers).toBe(th.setPowers);
+    const { queryByTestId } = render(<GameWorkspace {...p} />);
+    expect(queryByTestId('turn-history')).toBeNull();
+    expect(queryByTestId('turn-history-pill')).toBeNull();
+    expect(seen.tools.historyFooter).toBeUndefined();
     expect(seen.map.historyPowers).toEqual(['ITALY', 'FRANCE']);
-    expect(getByText('pill')).toBeInTheDocument();
-    expect(seen.pill.entry).toBe(ENTRY);
-    expect(seen.pill.isOldest).toBe(true);
-    expect(seen.pill.onStep).toBe(p.stepPastTurn);
-    expect(seen.pill.onGoLive).toBe(th.goLive);
     expect(seen.macro.historyLabel).toBe('Spring 1901 Movement');
     expect(seen.macro.historyPowers).toEqual(['ITALY', 'FRANCE']);
     expect(seen.macro.onSelectHistoryPowers).toBe(th.setPowers);
     expect(seen.macro.onReturnToLive).toBe(th.goLive);
   });
 
-  it('shows no pill or left-drawer selector on desktop, and no pill on the live turn', () => {
-    const desk = props({ viewedEntry: ENTRY });
-    const a = render(<GameWorkspace {...desk} />);
-    expect(a.queryByText('pill')).toBeNull();
-    expect(seen.tools.historyFooter).toBeUndefined();
-    expect(seen.selector).toBeUndefined();
-    a.unmount();
-    const live = props({ isCompact: true });
-    const b = render(<GameWorkspace {...live} />);
-    expect(b.queryByText('pill')).toBeNull();
+  it('has no history label on the live turn', () => {
+    render(<GameWorkspace {...props({ isCompact: true })} />);
     expect(seen.macro.historyLabel).toBeNull();
   });
 });

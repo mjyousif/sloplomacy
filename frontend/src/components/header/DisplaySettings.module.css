@@ -190,3 +190,18 @@
     color: var(--danger-text-soft);
   }
 }
+
+@layer compact {
+  :global([data-layout="compact"]) .display-option-card {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+
+  :global([data-layout="compact"]) .display-option-name {
+    font-size: 0.84rem;
+  }
+
+  :global([data-layout="compact"]) .display-option-description {
+    font-size: 0.76rem;
+  }
+}

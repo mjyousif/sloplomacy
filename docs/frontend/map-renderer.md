@@ -182,7 +182,6 @@ With `historyView` set, `App.tsx` feeds the map a `TurnRecord` from the turn sel
 - In an Adjustments phase the build tokens are the builds that were ordered (`adjustmentOrdersFor`, filtered by `historyPowers` and `historyActions`), for every power. Waived slots are not drawn.
 - Territories that changed hands between `ownership` and `simulationResult.new_ownership` (respecting `historyPowers` when filtered) are shaded with alternating 45° diagonal SVG `<pattern>` stripes in the previous and next owners' colors (with a neutral parchment band when changing to/from Neutral), unless overridden by a hover/pin yellow highlight.
 - The Hypothetical banner stays hidden.
-- On phones the `TurnHistoryPill` goes into the `overlay` beside the clock.
 
 ## Move Suggestions (`suggestion`)
 
