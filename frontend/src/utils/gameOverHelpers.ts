@@ -1,10 +1,12 @@
 import {
   ALL_POWERS,
   type AuthUser,
+  type CampaignStatsResponse,
   type GameParticipant,
   type GameState,
   type MultiplayerGameSummary,
   type Power,
+  type PowerStats,
   type ProvinceInfo,
 } from '../types/diplomacy';
 
@@ -118,4 +120,92 @@ export function getSupplyCenterCounts(
   return ALL_POWERS.map((power) => ({ power, count: counts[power] })).sort(
     (a, b) => b.count - a.count,
   );
+}
+
+function emptyMatrix(): Record<Power, Record<Power, number>> {
+  const matrix = {} as Record<Power, Record<Power, number>>;
+  for (const row of ALL_POWERS) {
+    const inner = {} as Record<Power, number>;
+    for (const col of ALL_POWERS) {
+      inner[col] = 0;
+    }
+    matrix[row] = inner;
+  }
+  return matrix;
+}
+
+/**
+ * Build a baseline `CampaignStatsResponse` synchronously from public board state so the War
+ * Ledger renders immediately before `/api/history/stats` resolves (or in offline unit tests).
+ */
+export function buildFallbackCampaignStats(
+  gameState: GameState,
+  provinces: Record<string, ProvinceInfo>,
+  summary: MultiplayerGameSummary | null,
+): CampaignStatsResponse {
+  const standings = getSupplyCenterCounts(gameState, provinces);
+  const scByPower = {} as Record<Power, number>;
+  for (const entry of standings) {
+    scByPower[entry.power] = entry.count;
+  }
+
+  const activeUnitPowers = new Set(
+    (gameState.units || []).filter((u) => !u.is_dislodged).map((u) => u.power),
+  );
+  const surrenderedSet = new Set(gameState.surrendered_powers || []);
+  const playerNames = new Map<Power, string>();
+  for (const part of Object.values(summary?.participants || {})) {
+    if (part?.power && part.display_name) {
+      playerNames.set(part.power, part.display_name);
+    }
+  }
+
+  const powers = {} as Record<Power, PowerStats>;
+  for (const power of ALL_POWERS) {
+    const currentScs = scByPower[power] ?? 0;
+    powers[power] = {
+      power,
+      player_name: playerNames.get(power) ?? null,
+      is_eliminated: currentScs === 0 && !activeUnitPowers.has(power),
+      is_surrendered: surrenderedSet.has(power),
+      current_scs: currentScs,
+      peak_scs: currentScs,
+      scs_captured: 0,
+      scs_lost: 0,
+      units_built: 0,
+      armies_built: 0,
+      fleets_built: 0,
+      units_disbanded: 0,
+      units_destroyed: 0,
+      enemies_dislodged: 0,
+      builds_waived: 0,
+      foreign_supports_given: 0,
+      foreign_supports_effective: 0,
+      foreign_supports_received: 0,
+      foreign_convoys: 0,
+      convoys_executed: 0,
+      supports_cut: 0,
+      moves_succeeded: 0,
+      moves_bounced: 0,
+      move_success_rate: 0,
+      self_bounces: 0,
+    };
+  }
+
+  return {
+    game_id: gameState.game_id,
+    turns_resolved: 0,
+    powers,
+    sc_timeline: [
+      {
+        label: `${gameState.season} ${gameState.year}`,
+        season: gameState.season,
+        year: gameState.year,
+        counts: scByPower,
+      },
+    ],
+    support_matrix: emptyMatrix(),
+    attack_matrix: emptyMatrix(),
+    awards: [],
+  };
 }

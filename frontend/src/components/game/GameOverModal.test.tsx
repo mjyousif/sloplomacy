@@ -4,10 +4,14 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type {
   AuthUser,
+  CampaignStatsResponse,
   GameState,
   MultiplayerGameSummary,
+  Power,
+  PowerStats,
   ProvinceInfo,
 } from '../../types/diplomacy';
+import { ALL_POWERS } from '../../types/diplomacy';
 import { GameOverModal } from './GameOverModal';
 
 const PROVINCES = {
@@ -147,5 +151,108 @@ describe('GameOverModal', () => {
       screen.getByText('France Claims Continental Hegemony'),
     ).toBeVisible();
     expect(screen.getByText('Inspect Final Board')).toBeVisible();
+  });
+
+  it('switches between War Ledger tabs and renders campaign awards', async () => {
+    const user = userEvent.setup();
+    const powers = {} as Record<Power, PowerStats>;
+    const emptyMatrix = {} as Record<Power, Record<Power, number>>;
+    for (const p of ALL_POWERS) {
+      powers[p] = {
+        power: p,
+        player_name: p === 'FRANCE' ? 'Alice' : null,
+        is_eliminated: false,
+        is_surrendered: false,
+        current_scs: p === 'FRANCE' ? 18 : 2,
+        peak_scs: p === 'FRANCE' ? 18 : 4,
+        scs_captured: p === 'FRANCE' ? 15 : 0,
+        scs_lost: 0,
+        units_built: p === 'FRANCE' ? 6 : 1,
+        armies_built: p === 'FRANCE' ? 4 : 1,
+        fleets_built: p === 'FRANCE' ? 2 : 0,
+        units_disbanded: 0,
+        units_destroyed: 0,
+        enemies_dislodged: p === 'FRANCE' ? 5 : 0,
+        builds_waived: 0,
+        foreign_supports_given: p === 'ENGLAND' ? 3 : 0,
+        foreign_supports_effective: p === 'ENGLAND' ? 2 : 0,
+        foreign_supports_received: p === 'FRANCE' ? 3 : 0,
+        foreign_convoys: 0,
+        convoys_executed: 0,
+        supports_cut: 0,
+        moves_succeeded: 10,
+        moves_bounced: 2,
+        move_success_rate: 83.3,
+        self_bounces: 0,
+      };
+      emptyMatrix[p] = Object.fromEntries(
+        ALL_POWERS.map((q) => [q, 0]),
+      ) as Record<Power, number>;
+    }
+    emptyMatrix.ENGLAND.FRANCE = 3;
+
+    const initialStats: CampaignStatsResponse = {
+      game_id: 'mp_1',
+      turns_resolved: 9,
+      powers,
+      sc_timeline: [
+        {
+          label: 'Spring 1901',
+          season: 'Spring',
+          year: 1901,
+          counts: Object.fromEntries(ALL_POWERS.map((p) => [p, 3])) as Record<
+            Power,
+            number
+          >,
+        },
+        {
+          label: 'Fall 1908',
+          season: 'Fall',
+          year: 1908,
+          counts: Object.fromEntries(
+            ALL_POWERS.map((p) => [p, p === 'FRANCE' ? 18 : 2]),
+          ) as Record<Power, number>,
+        },
+      ],
+      support_matrix: emptyMatrix,
+      attack_matrix: emptyMatrix,
+      awards: [
+        {
+          id: 'kingmaker',
+          title: 'Kingmaker',
+          subtitle: 'Most Foreign Supports Given',
+          power: 'ENGLAND',
+          value: '3 supports',
+          count: 3,
+        },
+      ],
+    };
+
+    render(
+      <GameOverModal
+        isOpen
+        gameState={WON_STATE}
+        provinces={PROVINCES}
+        summary={SUMMARY}
+        authUser={null}
+        viewMode="multiplayer"
+        onInspectBoard={vi.fn()}
+        onReturnToLobby={vi.fn()}
+        initialStats={initialStats}
+      />,
+    );
+
+    expect(screen.getByTestId('campaign-award-kingmaker')).toBeVisible();
+    expect(screen.getByText('9 resolved phases')).toBeVisible();
+    expect(screen.getByTestId('stats-overview-table')).toBeVisible();
+
+    await user.click(screen.getByTestId('game-over-tab-timeline'));
+    expect(screen.getByTestId('sc-timeline-chart')).toBeVisible();
+
+    await user.click(screen.getByTestId('game-over-tab-diplomacy'));
+    expect(screen.getByTestId('diplomatic-support-matrix')).toBeVisible();
+    expect(screen.getByTestId('matrix-cell-england-france')).toHaveTextContent(
+      '3',
+    );
   });
 });

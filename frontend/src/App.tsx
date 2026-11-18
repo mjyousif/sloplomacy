@@ -631,6 +631,7 @@ export function App() {
         viewMode={viewMode}
         provinces={provinces}
         activeGameSummary={activeGameSummary}
+        gamePasscode={matchPasscodes[activeGameId] ?? null}
         gameOverModalOpen={gameOverModalOpen}
         onCloseGameOverModal={closeGameOverModal}
         onReturnToLobby={() => {

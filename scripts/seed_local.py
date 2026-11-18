@@ -8,8 +8,11 @@ Examples:
     # Seed into Supabase directly (reads SUPABASE_URL & SUPABASE_SERVICE_ROLE_KEY from env or .env)
     python scripts/seed_local.py --target supabase --game-id solo_all_pieces
 
-    # Seed any built-in scenario preset
-    python scripts/seed_local.py --preset spring_retreats_demo --game-id local_retreats
+    # Seed any built-in scenario preset (e.g., 1 turn away from victory for Game Over / War Ledger)
+    python scripts/seed_local.py --preset one_turn_from_win
+
+    # Seed into Supabase directly (reads SUPABASE_URL & SUPABASE_SERVICE_ROLE_KEY from env or .env)
+    python scripts/seed_local.py --target supabase --preset one_turn_from_win --game-id solo_endgame
 
     # Run only the in-process engine benchmark without a running server
     python scripts/seed_local.py --target none --benchmark
@@ -19,10 +22,12 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import json
 import os
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -32,7 +37,7 @@ BACKEND_DIR = REPO_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from domain.board import Power, ProvinceType, Unit, UnitType  # noqa: E402
+from domain.board import Power, UnitType  # noqa: E402
 from domain.game_state import GameState, MultiplayerGameSummary  # noqa: E402
 from domain.orders import Order, OrderType  # noqa: E402
 from engine.order_utils import (  # noqa: E402
@@ -42,8 +47,12 @@ from engine.order_utils import (  # noqa: E402
     refresh_diagnostics_and_simulation,
     validate_orders,
 )
-from engine.topology.provinces import PROVINCES  # noqa: E402
-from scenarios.presets import SCENARIO_IDS, build_scenario  # noqa: E402
+from scenarios.presets import (  # noqa: E402
+    SCENARIO_IDS,
+    build_all_pieces_units,
+    build_scenario,
+    build_scenario_history,
+)
 from storage import supabase  # noqa: E402
 
 POWERS = list(Power)
@@ -65,50 +74,6 @@ def _load_dotenv_if_present() -> None:
                 os.environ[key] = val
 
 
-def build_all_pieces_units() -> list[Unit]:
-    """Build 75 units (36 fleets, 39 armies) across all 75 passable provinces."""
-    passable = [prov for prov in PROVINCES.values() if prov.type != ProvinceType.IMPASSABLE]
-    seas = [p for p in passable if p.type == ProvinceType.SEA]
-    coasts = [p for p in passable if p.type == ProvinceType.COAST]
-    lands = [p for p in passable if p.type == ProvinceType.LAND]
-
-    # Put fleets on all 19 sea zones + first 17 coastal provinces (36 fleets total),
-    # and armies on the remaining coastal + inland provinces (39 armies total).
-    fleet_provs = seas + coasts[:17]
-    army_provs = coasts[17:] + lands
-
-    units: list[Unit] = []
-    idx = 0
-    for prov in fleet_provs:
-        power = POWERS[idx % len(POWERS)]
-        coast = prov.coasts[0] if prov.coasts else None
-        units.append(
-            Unit(
-                id=f"{power.value[:3]}_F_{prov.id}",
-                power=power,
-                unit_type=UnitType.FLEET,
-                province=prov.id,
-                coast=coast,
-            )
-        )
-        idx += 1
-
-    for prov in army_provs:
-        power = POWERS[idx % len(POWERS)]
-        units.append(
-            Unit(
-                id=f"{power.value[:3]}_A_{prov.id}",
-                power=power,
-                unit_type=UnitType.ARMY,
-                province=prov.id,
-                coast=None,
-            )
-        )
-        idx += 1
-
-    return units
-
-
 def build_game_state(preset: str, game_id: str) -> GameState:
     """Construct the GameState for the requested preset."""
     if preset == "all_pieces":
@@ -125,6 +90,110 @@ def build_game_state(preset: str, game_id: str) -> GameState:
         raise ValueError(f"Unknown preset '{preset}'. Available: {available}")
 
     return build_scenario(preset, game_id=game_id)
+
+
+def _dev_auth_headers(user_id: str, email: str) -> dict[str, str]:
+    header = (
+        base64.urlsafe_b64encode(json.dumps({"alg": "none", "typ": "JWT"}).encode())
+        .rstrip(b"=")
+        .decode()
+    )
+    payload = (
+        base64.urlsafe_b64encode(json.dumps({"sub": user_id, "email": email}).encode())
+        .rstrip(b"=")
+        .decode()
+    )
+    return {"Authorization": f"Bearer {header}.{payload}."}
+
+
+def _seed_one_turn_from_win_lobby(client: httpx.Client, base: str, state: GameState) -> str:
+    """Create a public lobby match 1 turn from victory with pre-resolved turn history."""
+    host_headers = _dev_auth_headers("bot_sultan", "sultan@diplomacy.local")
+    create_resp = client.post(
+        f"{base}/api/games",
+        json={
+            "name": "Final Push to 18 SCs (1 Turn from Victory)",
+            "creator_power": "TURKEY",
+            "user_id": "bot_sultan",
+            "email": "sultan@diplomacy.local",
+            "display_name": "Sultan Mehmed",
+        },
+        headers=host_headers,
+    )
+    if create_resp.status_code != 200:
+        raise RuntimeError(
+            f"POST /api/games failed ({create_resp.status_code}): {create_resp.text}"
+        )
+    mp_gid = create_resp.json()["game_id"]
+
+    for snap in build_scenario_history("one_turn_from_win", mp_gid):
+        for ord_obj in snap.orders.values():
+            if not ord_obj.is_explicit:
+                continue
+            ord_resp = client.post(
+                f"{base}/api/order",
+                params={"game_id": mp_gid},
+                json={"order": ord_obj.model_dump(mode="json")},
+                headers=host_headers,
+            )
+            if ord_resp.status_code != 200:
+                raise RuntimeError(
+                    f"POST /api/order failed ({ord_resp.status_code}): {ord_resp.text}"
+                )
+        adj_resp = client.post(
+            f"{base}/api/adjudicate",
+            params={"game_id": mp_gid},
+            headers=host_headers,
+        )
+        if adj_resp.status_code != 200:
+            raise RuntimeError(
+                f"POST /api/adjudicate failed ({adj_resp.status_code}): {adj_resp.text}"
+            )
+
+    turn_resp = client.post(
+        f"{base}/api/admin/set-turn",
+        params={"game_id": mp_gid},
+        json={"season": state.season, "year": state.year, "phase": state.phase},
+        headers=host_headers,
+    )
+    if turn_resp.status_code != 200:
+        raise RuntimeError(
+            f"POST /api/admin/set-turn failed ({turn_resp.status_code}): {turn_resp.text}"
+        )
+    turn_state = turn_resp.json()
+
+    edit_resp = client.post(
+        f"{base}/api/admin/board-edit",
+        params={"game_id": mp_gid},
+        json={
+            "expected_revision": turn_state["state_revision"],
+            "expected_season": turn_state["season"],
+            "expected_year": turn_state["year"],
+            "expected_phase": turn_state["phase"],
+            "units": [u.model_dump(mode="json") for u in state.units],
+            "ownership": {k: v.value for k, v in state.ownership.items()},
+            "orders": {k: v.model_dump(mode="json") for k, v in state.orders.items()},
+            "summary_lines": [
+                "Seeded 17-SC endgame board via scripts/seed_local.py (one_turn_from_win)"
+            ],
+        },
+        headers=host_headers,
+    )
+    if edit_resp.status_code != 200:
+        raise RuntimeError(
+            f"POST /api/admin/board-edit failed ({edit_resp.status_code}): {edit_resp.text}"
+        )
+
+    fin_resp = client.post(
+        f"{base}/api/finalize",
+        params={"game_id": mp_gid},
+        json={"power": "TURKEY", "force": True},
+        headers=host_headers,
+    )
+    if fin_resp.status_code != 200:
+        raise RuntimeError(f"POST /api/finalize failed ({fin_resp.status_code}): {fin_resp.text}")
+
+    return mp_gid
 
 
 def seed_api(base_url: str, game_id: str, preset: str, state: GameState) -> None:
@@ -164,6 +233,21 @@ def seed_api(base_url: str, game_id: str, preset: str, state: GameState) -> None
                     f"POST /api/admin/board-edit failed ({edit_resp.status_code}): {edit_resp.text}"
                 )
 
+        if preset == "one_turn_from_win":
+            if game_id != "proto_1901":
+                proto_resp = client.post(
+                    f"{base}/api/test/seed",
+                    json={"scenario_id": "one_turn_from_win", "game_id": "proto_1901"},
+                )
+                if proto_resp.status_code != 200:
+                    raise RuntimeError(
+                        f"POST /api/test/seed proto_1901 failed ({proto_resp.status_code}): {proto_resp.text}"
+                    )
+            mp_gid = _seed_one_turn_from_win_lobby(client, base, state)
+            print(
+                f"[api] Seeded public lobby '{mp_gid}' ('Final Push to 18 SCs (1 Turn from Victory)' — claim FRANCE & Finalize to win)"
+            )
+
     print(f"[api] Seeded '{preset}' ({len(state.units)} units) as game_id='{game_id}' at {base}")
 
 
@@ -180,14 +264,15 @@ async def seed_supabase(game_id: str, preset: str, state: GameState) -> None:
         phase=state.phase,
         season=state.season,
         year=state.year,
-        is_sandbox=True,
+        created_at=datetime.now(timezone.utc).isoformat(),
+        is_sandbox=not game_id.startswith("mp_"),
         is_private=False,
     )
     ok = await supabase.save_game_to_db(
         game_id=game_id,
         state=state,
         summary=summary,
-        history=[],
+        history=build_scenario_history(preset, game_id),
     )
     if not ok:
         raise RuntimeError(f"Failed to save game_id='{game_id}' to Supabase.")
@@ -284,12 +369,12 @@ def main() -> int:
     parser.add_argument(
         "--preset",
         default="all_pieces",
-        help="Board preset: 'all_pieces' (75 units, default) or any SCENARIO_IDS key.",
+        help="Board preset: 'all_pieces' (75 units, default), 'one_turn_from_win', or any SCENARIO_IDS key.",
     )
     parser.add_argument(
         "--game-id",
-        default="local_all_pieces",
-        help="Target game_id / room_code (default: local_all_pieces).",
+        default=None,
+        help="Target game_id / room_code (defaults to 'local_all_pieces', 'proto_1901' for one_turn_from_win, or 'local_<preset>').",
     )
     parser.add_argument(
         "--target",
@@ -314,6 +399,13 @@ def main() -> int:
         help="Number of POST /api/order calls for --benchmark (default: 3).",
     )
     args = parser.parse_args()
+    if args.game_id is None:
+        if args.preset == "all_pieces":
+            args.game_id = "local_all_pieces"
+        elif args.preset == "one_turn_from_win":
+            args.game_id = "proto_1901"
+        else:
+            args.game_id = f"local_{args.preset}"
 
     _load_dotenv_if_present()
     state = build_game_state(args.preset, args.game_id)

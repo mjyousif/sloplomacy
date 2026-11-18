@@ -8,12 +8,19 @@ from engine.order_utils import (
     refresh_diagnostics_and_simulation,
 )
 from engine.topology.provinces import get_initial_1901_units, get_initial_ownership
+from scenarios.dev_campaigns import (
+    build_all_pieces_units,
+    build_one_turn_from_win_history,
+    build_one_turn_from_win_scenario,
+    seed_dev_games,
+)
 
 SCENARIO_IDS = {
     "standard_1901",
     "tactical_blunders_demo",
     "spring_retreats_demo",
     "winter_adjustments_demo",
+    "one_turn_from_win",
 }
 FIRST_YEAR = 1901
 PHASES_BY_SEASON = {
@@ -149,6 +156,9 @@ def build_scenario(
         orders = create_default_orders(units, phase)
         default_power = Power.FRANCE
 
+    elif scenario_id == "one_turn_from_win":
+        return build_one_turn_from_win_scenario(active_power, game_id)
+
     resolved_power = active_power if active_power is not None else default_power
 
     game = GameState(
@@ -170,6 +180,25 @@ def build_scenario(
     )
     refresh_diagnostics_and_simulation(game)
     return game
+
+
+def build_scenario_history(scenario_id: str, game_id: str = "proto_1901") -> list[GameState]:
+    """Return pre-resolved history snapshots for scenarios that simulate mid/late campaigns."""
+    if scenario_id != "one_turn_from_win":
+        return []
+    return build_one_turn_from_win_history(game_id)
+
+
+__all__ = [
+    "FIRST_YEAR",
+    "PHASES_BY_SEASON",
+    "SCENARIO_IDS",
+    "build_all_pieces_units",
+    "build_scenario",
+    "build_scenario_history",
+    "seed_dev_games",
+    "seed_initial_multiplayer_lobbies",
+]
 
 
 def seed_initial_multiplayer_lobbies() -> None:

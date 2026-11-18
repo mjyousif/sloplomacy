@@ -78,3 +78,33 @@ def test_turn_history_follows_a_rollback():
 
 def test_turn_history_of_an_unknown_game_is_not_found():
     assert client.get("/api/history?game_id=ghost_game_9999").status_code == 404
+    assert client.get("/api/history/stats?game_id=ghost_game_9999").status_code == 404
+
+
+def test_history_stats_aggregates_resolved_turns_and_ignores_live_orders():
+    game_id = _seated_game()
+    _bounce_in_burgundy(game_id)
+    _finalize(game_id, "FRANCE")
+    _finalize(game_id, "GERMANY")
+    assert GAMES[game_id].season == "Fall"
+
+    # Submit a live Fall order that has NOT resolved yet.
+    assert (
+        client.post(
+            f"/api/order?game_id={game_id}",
+            json={"order": _order_payload(target="PIC")},
+            headers=_auth_headers(),
+        ).status_code
+        == 200
+    )
+
+    res = client.get(f"/api/history/stats?game_id={game_id}")
+    assert res.status_code == 200
+    stats = res.json()
+    assert stats["game_id"] == game_id
+    assert stats["turns_resolved"] == 1
+    assert stats["powers"]["FRANCE"]["moves_bounced"] == 1
+    assert stats["powers"]["FRANCE"]["moves_succeeded"] == 0
+    assert stats["powers"]["GERMANY"]["moves_bounced"] == 1
+    assert stats["powers"]["GERMANY"]["player_name"] == "Bob"
+    assert len(stats["sc_timeline"]) == 2

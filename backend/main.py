@@ -35,6 +35,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from scenarios.presets import seed_dev_games
 from security.secrecy import saved_sandbox_guard
 from storage import supabase
 from storage.store import GAME_SUMMARIES, PROFILE_NAMES, hydrate_summary_profiles
@@ -57,6 +58,11 @@ async def lifespan(app: FastAPI):
             logger.info("Loaded %d game summaries from Supabase on startup.", len(summaries))
         except Exception as ex:
             logger.warning("Could not synchronize games on startup: %s", ex)
+    if (
+        os.getenv("ENVIRONMENT", "").lower() == "development"
+        and os.getenv("SEED_DEV_GAMES", "1") != "0"
+    ):
+        await seed_dev_games()
     yield
 
 

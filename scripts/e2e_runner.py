@@ -200,6 +200,7 @@ def run_scenario(
             backend_env = os.environ.copy()
             if not backend_env.get("ENVIRONMENT"):
                 backend_env["ENVIRONMENT"] = "development"
+            backend_env.setdefault("SEED_DEV_GAMES", "0")
             backend_proc = subprocess.Popen(
                 backend_cmd,
                 cwd=str(BACKEND_DIR),

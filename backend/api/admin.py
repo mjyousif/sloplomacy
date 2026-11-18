@@ -28,7 +28,7 @@ from engine.order_utils import (
 )
 from engine.phase_timer import start_phase_clock
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
-from scenarios.presets import SCENARIO_IDS, build_scenario
+from scenarios.presets import SCENARIO_IDS, build_scenario, build_scenario_history
 from security.auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
 from security.secrecy import verify_admin_access
 from storage import supabase
@@ -95,7 +95,7 @@ async def seed_test_scenario(req: SeedScenarioRequest):
     if gid not in GAMES:
         check_game_capacity()
     clear_ephemeral_sandboxes_for(gid)
-    GAME_HISTORY[gid] = []
+    GAME_HISTORY[gid] = build_scenario_history(req.scenario_id, gid)
     HISTORY_UNSAVED.add(gid)
     GAMES[gid] = build_scenario(req.scenario_id, req.active_power, gid)
     sync_summary(gid)
