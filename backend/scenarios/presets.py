@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from domain.board import Power, Unit, UnitType
+from domain.board import Power, ProvinceType, Unit, UnitType
 from domain.game_state import GameParticipant, GameState, MultiplayerGameSummary
 from domain.orders import Order, OrderType
 from engine.adjudicator.resolver import adjudicate_turn
@@ -8,7 +8,7 @@ from engine.order_utils import (
     create_default_orders,
     refresh_diagnostics_and_simulation,
 )
-from engine.topology.provinces import get_initial_1901_units, get_initial_ownership
+from engine.topology.provinces import PROVINCES, get_initial_1901_units, get_initial_ownership
 
 SCENARIO_IDS = {
     "standard_1901",
@@ -418,6 +418,134 @@ def build_scenario_history(scenario_id: str, game_id: str = "proto_1901") -> lis
     )
 
     return [snap0, snap1, snap2, snap3]
+
+
+def build_all_pieces_units() -> list[Unit]:
+    """Build 75 units (36 fleets, 39 armies) across all 75 passable provinces."""
+    passable = [prov for prov in PROVINCES.values() if prov.type != ProvinceType.IMPASSABLE]
+    seas = [p for p in passable if p.type == ProvinceType.SEA]
+    coasts = [p for p in passable if p.type == ProvinceType.COAST]
+    lands = [p for p in passable if p.type == ProvinceType.LAND]
+
+    fleet_provs = seas + coasts[:17]
+    army_provs = coasts[17:] + lands
+    powers = list(Power)
+
+    units: list[Unit] = []
+    idx = 0
+    for prov in fleet_provs:
+        power = powers[idx % len(powers)]
+        coast = prov.coasts[0] if prov.coasts else None
+        units.append(
+            Unit(
+                id=f"{power.value[:3]}_F_{prov.id}",
+                power=power,
+                unit_type=UnitType.FLEET,
+                province=prov.id,
+                coast=coast,
+            )
+        )
+        idx += 1
+
+    for prov in army_provs:
+        power = powers[idx % len(powers)]
+        units.append(
+            Unit(
+                id=f"{power.value[:3]}_A_{prov.id}",
+                power=power,
+                unit_type=UnitType.ARMY,
+                province=prov.id,
+                coast=None,
+            )
+        )
+        idx += 1
+
+    return units
+
+
+async def seed_dev_games() -> None:
+    """Ensure local dev starts with both 'one_turn_from_win' and 'all_pieces' in RAM/DB."""
+    from storage.store import (
+        GAME_HISTORY,
+        GAME_SUMMARIES,
+        GAMES,
+        HISTORY_UNSAVED,
+        SANDBOX_CHECKPOINTS,
+        UNSAVED_GAMES,
+        persist_game,
+    )
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    if "dev_one_turn_win" not in GAME_SUMMARIES and "dev_one_turn_win" not in GAMES:
+        gid = "dev_one_turn_win"
+        state = build_scenario("one_turn_from_win", Power.FRANCE, gid)
+        state.finalized_powers = [Power.TURKEY]
+        GAMES[gid] = state
+        SANDBOX_CHECKPOINTS[gid] = None
+        GAME_HISTORY[gid] = build_scenario_history("one_turn_from_win", gid)
+        GAME_SUMMARIES[gid] = MultiplayerGameSummary(
+            game_id=gid,
+            name="Final Push to 18 SCs (1 Turn from Victory)",
+            status="waiting",
+            season=state.season,
+            year=state.year,
+            phase=state.phase,
+            created_by="sultan@diplomacy.local",
+            creator_id="bot_sultan",
+            created_at=now_iso,
+            participants={
+                "TURKEY": GameParticipant(
+                    user_id="bot_sultan",
+                    email="sultan@diplomacy.local",
+                    display_name="Sultan Mehmed",
+                    power=Power.TURKEY,
+                    joined_at=now_iso,
+                )
+            },
+            finalized_powers=list(state.finalized_powers),
+            is_sandbox=False,
+        )
+        UNSAVED_GAMES.add(gid)
+        HISTORY_UNSAVED.add(gid)
+        await persist_game(gid)
+
+    if "dev_all_pieces" not in GAME_SUMMARIES and "dev_all_pieces" not in GAMES:
+        gid = "dev_all_pieces"
+        state = build_scenario("standard_1901", Power.FRANCE, gid)
+        units = build_all_pieces_units()
+        state.units = units
+        state.orders = create_default_orders(units, state.phase)
+        state.scenario_id = "all_pieces"
+        refresh_diagnostics_and_simulation(state)
+        GAMES[gid] = state
+        SANDBOX_CHECKPOINTS[gid] = None
+        GAME_HISTORY[gid] = []
+        GAME_SUMMARIES[gid] = MultiplayerGameSummary(
+            game_id=gid,
+            name="All 75 Units Stress Board",
+            status="waiting",
+            season=state.season,
+            year=state.year,
+            phase=state.phase,
+            created_by="cartographer@diplomacy.local",
+            creator_id="bot_cartographer",
+            created_at=now_iso,
+            participants={
+                "AUSTRIA": GameParticipant(
+                    user_id="bot_cartographer",
+                    email="cartographer@diplomacy.local",
+                    display_name="Chief Cartographer",
+                    power=Power.AUSTRIA,
+                    joined_at=now_iso,
+                )
+            },
+            finalized_powers=[],
+            is_sandbox=False,
+        )
+        UNSAVED_GAMES.add(gid)
+        HISTORY_UNSAVED.add(gid)
+        await persist_game(gid)
 
 
 def seed_initial_multiplayer_lobbies() -> None:

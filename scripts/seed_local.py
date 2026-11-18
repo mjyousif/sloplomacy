@@ -37,7 +37,7 @@ BACKEND_DIR = REPO_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from domain.board import Power, ProvinceType, Unit, UnitType  # noqa: E402
+from domain.board import Power, UnitType  # noqa: E402
 from domain.game_state import GameState, MultiplayerGameSummary  # noqa: E402
 from domain.orders import Order, OrderType  # noqa: E402
 from engine.order_utils import (  # noqa: E402
@@ -47,8 +47,12 @@ from engine.order_utils import (  # noqa: E402
     refresh_diagnostics_and_simulation,
     validate_orders,
 )
-from engine.topology.provinces import PROVINCES  # noqa: E402
-from scenarios.presets import SCENARIO_IDS, build_scenario, build_scenario_history  # noqa: E402
+from scenarios.presets import (  # noqa: E402
+    SCENARIO_IDS,
+    build_all_pieces_units,
+    build_scenario,
+    build_scenario_history,
+)
 from storage import supabase  # noqa: E402
 
 POWERS = list(Power)
@@ -68,50 +72,6 @@ def _load_dotenv_if_present() -> None:
             val = val.strip().strip('"').strip("'")
             if key and key not in os.environ:
                 os.environ[key] = val
-
-
-def build_all_pieces_units() -> list[Unit]:
-    """Build 75 units (36 fleets, 39 armies) across all 75 passable provinces."""
-    passable = [prov for prov in PROVINCES.values() if prov.type != ProvinceType.IMPASSABLE]
-    seas = [p for p in passable if p.type == ProvinceType.SEA]
-    coasts = [p for p in passable if p.type == ProvinceType.COAST]
-    lands = [p for p in passable if p.type == ProvinceType.LAND]
-
-    # Put fleets on all 19 sea zones + first 17 coastal provinces (36 fleets total),
-    # and armies on the remaining coastal + inland provinces (39 armies total).
-    fleet_provs = seas + coasts[:17]
-    army_provs = coasts[17:] + lands
-
-    units: list[Unit] = []
-    idx = 0
-    for prov in fleet_provs:
-        power = POWERS[idx % len(POWERS)]
-        coast = prov.coasts[0] if prov.coasts else None
-        units.append(
-            Unit(
-                id=f"{power.value[:3]}_F_{prov.id}",
-                power=power,
-                unit_type=UnitType.FLEET,
-                province=prov.id,
-                coast=coast,
-            )
-        )
-        idx += 1
-
-    for prov in army_provs:
-        power = POWERS[idx % len(POWERS)]
-        units.append(
-            Unit(
-                id=f"{power.value[:3]}_A_{prov.id}",
-                power=power,
-                unit_type=UnitType.ARMY,
-                province=prov.id,
-                coast=None,
-            )
-        )
-        idx += 1
-
-    return units
 
 
 def build_game_state(preset: str, game_id: str) -> GameState:
