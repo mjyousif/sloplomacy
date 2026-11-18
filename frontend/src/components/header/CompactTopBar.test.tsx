@@ -4,16 +4,32 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import type { MultiplayerGameSummary } from '../../types/diplomacy';
+import type { AuthUser, MultiplayerGameSummary } from '../../types/diplomacy';
 import { DEFAULT_DISPLAY_PREFS } from '../../utils/displayPrefs';
 import { SurrenderModal } from '../game/SurrenderModal';
-import {
-  CompactTopBar,
-  type CompactTopBarProps,
-  describeIssueCount,
-} from './CompactTopBar';
+import { CompactTopBar, type CompactTopBarProps } from './CompactTopBar';
 
 const noop = () => {};
+
+const ALICE: AuthUser = {
+  id: 'user-alice',
+  email: 'alice@example.test',
+  displayName: 'Alice',
+};
+
+const MATCH: MultiplayerGameSummary = {
+  game_id: 'mp_1',
+  name: 'Phone Test',
+  status: 'active',
+  season: 'Spring',
+  year: 1901,
+  phase: 'Movement',
+  created_by: 'alice@example.test',
+  created_at: '2026-11-07T00:00:00Z',
+  participants: {},
+  finalized_powers: [],
+  is_sandbox: false,
+};
 
 function makeProps(
   overrides: Partial<CompactTopBarProps> = {},
@@ -22,214 +38,243 @@ function makeProps(
     viewMode: 'sandbox',
     turn: { season: 'Spring', year: 1901, phase: 'Movement' },
     winner: null,
-    errorCount: 0,
-    warningCount: 0,
-    onOpenOrderCheck: noop,
-    onBackToLobby: noop,
-    wsConnected: true,
-    syncDetail: 'Game proto_1901',
-    matchLabel: null,
-    onEnterSoloSandbox: noop,
+    onBackToLobby: vi.fn(),
+    onEnterSoloSandbox: vi.fn(),
+    matchSummary: null,
+    playerPower: 'FRANCE',
     displayPrefs: DEFAULT_DISPLAY_PREFS,
     displayPrefsSaveState: 'device',
-    onChangeDisplayPrefs: noop,
+    onChangeDisplayPrefs: vi.fn(),
     authUser: null,
-    onSignIn: noop,
-    onSignOut: noop,
+    onSignIn: vi.fn(),
+    onSignOut: vi.fn(),
     ...overrides,
   };
 }
 
-function renderBar(overrides: Partial<CompactTopBarProps> = {}): string {
-  return renderToString(
-    React.createElement(CompactTopBar, makeProps(overrides)),
-  );
-}
-
-describe('describeIssueCount', () => {
-  it('names errors and warnings with the right plurals', () => {
-    expect(describeIssueCount(2, 1)).toBe('2 errors, 1 warning');
-    expect(describeIssueCount(1, 0)).toBe('1 error');
-    expect(describeIssueCount(0, 3)).toBe('3 warnings');
-    expect(describeIssueCount(0, 0)).toBe('No problems with your orders');
-  });
-});
-
 describe('CompactTopBar', () => {
-  it('shows the brand and the menu in the lobby, with no turn or problem count', () => {
-    const html = renderBar({ viewMode: 'lobby', turn: null });
-    expect(html).toContain('Sloplomacy');
-    expect(html).toContain('aria-label="Menu"');
-    expect(html).not.toContain('Back to lobby');
-    expect(html).not.toContain('data-testid="compact-turn-text"');
-    expect(html).not.toContain('data-testid="compact-issue-');
-  });
-
-  it('shows the way back, the turn and a tappable problem count in a game', () => {
-    const html = renderBar({ errorCount: 1, warningCount: 2 });
-    expect(html).toContain('aria-label="Back to lobby"');
-    // Two lines: the season and year above the phase, with a separator that only screen readers see.
-    expect(html).toContain(
-      'data-testid="compact-turn-season">Spring<!-- --> <!-- -->1901</span>',
-    );
-    expect(html).toContain('data-testid="compact-turn-sep"> · </span>');
-    expect(html).toContain('data-testid="compact-turn-phase">Movement</span>');
-    expect(html).toMatch(
-      /<button(?=[^>]*data-testid="compact-issue-badge")(?=[^>]*data-status="errors")/,
-    );
-    expect(html).toContain('1 error, 2 warnings. Open the order check.');
-    expect(html).toContain('<span>3</span>');
-  });
-
-  it('uses the warning colour when there are only warnings', () => {
-    expect(renderBar({ warningCount: 1 })).toMatch(
-      /<button(?=[^>]*data-testid="compact-issue-badge")(?=[^>]*data-status="warnings")/,
-    );
-  });
-
-  it('shows a plain check, not a button, when the orders are clean', () => {
-    const html = renderBar();
-    expect(html).toMatch(
-      /<span(?=[^>]*data-testid="compact-issue-clean")(?=[^>]*data-status="clean")/,
-    );
-    expect(html).not.toMatch(/<button[^>]*data-testid="compact-issue-badge"/);
-  });
-
-  it('shows the winner instead of the problem count once the game is over', () => {
-    const html = renderBar({ winner: 'FRANCE', errorCount: 2 });
-    expect(html).toContain('France<!-- --> wins');
-    expect(html).not.toContain('data-testid="compact-issue-');
-  });
-
-  it('marks the menu button while live sync is reconnecting', () => {
-    const html = renderBar({ wsConnected: false });
-    expect(html).toContain('Menu (live sync is reconnecting)');
-    expect(html).toContain('data-testid="compact-menu-alert-dot"');
-    expect(renderBar()).not.toContain('data-testid="compact-menu-alert-dot"');
-  });
-
-  it('offers ≡ for the tools drawer in a game, but not in the lobby', () => {
-    const inGame = renderBar({ onToggleTools: noop });
-    expect(inGame).toContain('data-testid="compact-tools-toggle"');
-    expect(inGame).toContain('aria-label="Tools"');
-    expect(renderBar({ onToggleTools: noop, toolsOpen: true })).toContain(
-      'aria-label="Close tools"',
-    );
+  it('shows the brand and AccountDropdownMenu in the lobby, without game navigation or GameSettingsMenu', () => {
+    render(<CompactTopBar {...makeProps({ viewMode: 'lobby' })} />);
+    expect(screen.getByTestId('compact-brand')).toHaveTextContent('Sloplomacy');
+    expect(screen.getByTestId('account-menu-trigger')).toBeInTheDocument();
     expect(
-      renderBar({ viewMode: 'lobby', turn: null, onToggleTools: noop }),
-    ).not.toContain('compact-tools-toggle');
-  });
-
-  it('starts with the menu closed', () => {
-    const html = renderBar();
-    expect(html).toContain('aria-expanded="false"');
-    expect(html).not.toContain('compact-menu-panel');
-  });
-
-  it('shows Display settings in the menu only outside the lobby', async () => {
-    const { rerender } = render(<CompactTopBar {...makeProps()} />);
-
-    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
-    expect(
-      screen.getByTestId('compact-menu-display-settings'),
-    ).toBeInTheDocument();
-
-    await userEvent.click(screen.getByTestId('compact-menu-display-settings'));
-    expect(screen.getByTestId('compact-menu-display-back')).toBeInTheDocument();
-
-    rerender(
-      <CompactTopBar {...makeProps({ viewMode: 'lobby', turn: null })} />,
-    );
-    expect(
-      screen.queryByTestId('compact-menu-display-back'),
+      screen.queryByTestId('compact-back-lobby-btn'),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByTestId('compact-menu-display-settings'),
+      screen.queryByTestId('compact-tools-toggle'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('turn-chronicle-pill')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('game-settings-trigger'),
     ).not.toBeInTheDocument();
   });
 
-  it('offers Surrender in multiplayer for an active non-surrendered seat', async () => {
-    const onSurrenderClick = vi.fn();
-    render(
+  it('shows ←, ≡, TurnChronicle, GameSettingsMenu, and AccountDropdownMenu in a game', async () => {
+    const onToggleTools = vi.fn();
+    const onSelectHistoryTurn = vi.fn();
+    const { rerender, ...view } = render(
       <CompactTopBar
         {...makeProps({
-          viewMode: 'multiplayer',
-          onSurrenderClick,
-          isSurrendered: false,
+          onToggleTools,
+          toolsOpen: false,
+          historyEntries: [
+            { index: 0, season: 'Spring', year: 1901, phase: 'Movement' },
+          ],
+          turn: { season: 'Fall', year: 1901, phase: 'Movement' },
+          onSelectHistoryTurn,
         })}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
-    await userEvent.click(screen.getByTestId('compact-menu-surrender'));
-    expect(onSurrenderClick).toHaveBeenCalledTimes(1);
+
+    const toolsToggle = screen.getByTestId('compact-tools-toggle');
+    expect(toolsToggle).toHaveAttribute('aria-label', 'Tools');
+    await userEvent.click(toolsToggle);
+    expect(onToggleTools).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(screen.getByTestId('compact-back-lobby-btn'));
+    expect(screen.getByTestId('compact-back-lobby-btn')).toHaveAttribute(
+      'aria-label',
+      'Back to lobby',
+    );
+
+    expect(screen.getByTestId('turn-chronicle-pill')).toHaveTextContent(
+      'Fall 1901 Movement',
+    );
+    await userEvent.click(screen.getByTestId('turn-history-select'));
+    await userEvent.click(screen.getByTestId('turn-history-option-0'));
+    expect(onSelectHistoryTurn).toHaveBeenCalledWith(0);
+
+    expect(screen.getByTestId('game-settings-trigger')).toBeInTheDocument();
+    expect(screen.getByTestId('account-menu-trigger')).toBeInTheDocument();
+
+    rerender(
+      <CompactTopBar
+        {...makeProps({
+          onToggleTools,
+          toolsOpen: true,
+        })}
+      />,
+    );
+    expect(screen.getByTestId('compact-tools-toggle')).toHaveAttribute(
+      'aria-label',
+      'Close tools',
+    );
+    view.unmount();
   });
 
-  it('highlights the menu button when Edit Board or Turn & Clock is active, and toggles Edit Board off', async () => {
+  it('wires sandbox and multiplayer GameSettingsMenu actions (flask/crown, save/reset/delete/return/surrender, administrator + red badge)', async () => {
+    const onSaveSandbox = vi.fn();
+    const onResetSandbox = vi.fn();
+    const onDeleteSandbox = vi.fn();
+    const onReturnToPreviousGame = vi.fn();
+    const onSurrenderClick = vi.fn();
     const onToggleAdminOverride = vi.fn();
+
     const { rerender } = render(
       <CompactTopBar
         {...makeProps({
-          viewMode: 'multiplayer',
+          viewMode: 'sandbox',
+          matchSummary: {
+            ...MATCH,
+            game_id: 'sbx_saved_1',
+            name: 'Balkans Study',
+            is_sandbox: true,
+            is_draft: false,
+          },
           isGameCreator: true,
-          adminOverrideActive: false,
-          turnClockOpen: false,
+          onSaveSandbox,
+          onResetSandbox,
+          onDeleteSandbox,
+          onReturnToPreviousGame,
           onToggleAdminOverride,
         })}
       />,
     );
-    const toggle = screen.getByTestId('compact-menu-toggle');
-    expect(toggle).not.toHaveAttribute('data-admin-active');
+
+    const trigger = screen.getByTestId('game-settings-trigger');
+    expect(trigger).toHaveAttribute('data-icon', 'flask');
+    expect(trigger).toHaveAttribute('data-admin-active', 'false');
+
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByTestId('game-settings-save-sandbox'));
+    expect(onSaveSandbox).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByTestId('game-settings-reset-sandbox'));
+    expect(onResetSandbox).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByTestId('game-settings-delete-sandbox'));
+    expect(onDeleteSandbox).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByTestId('game-settings-return-previous'));
+    expect(onReturnToPreviousGame).toHaveBeenCalledTimes(1);
 
     rerender(
       <CompactTopBar
         {...makeProps({
           viewMode: 'multiplayer',
-          isGameCreator: true,
-          adminOverrideActive: false,
-          turnClockOpen: true,
-          onToggleAdminOverride,
-        })}
-      />,
-    );
-    expect(toggle).toHaveAttribute('data-admin-active', 'true');
-
-    rerender(
-      <CompactTopBar
-        {...makeProps({
-          viewMode: 'multiplayer',
+          matchSummary: MATCH,
           isGameCreator: true,
           adminOverrideActive: true,
-          turnClockOpen: false,
+          onSurrenderClick,
+          isSurrendered: false,
           onToggleAdminOverride,
         })}
       />,
     );
-    expect(toggle).toHaveAttribute('data-admin-active', 'true');
+    expect(trigger).toHaveAttribute('data-icon', 'crown');
+    expect(trigger).toHaveAttribute('data-admin-active', 'true');
 
-    await userEvent.click(toggle);
-    const directEditItem = screen.getByTestId('btn-toggle-direct-edit');
-    expect(directEditItem).toHaveTextContent('Edit Board: ON');
-    await userEvent.click(directEditItem);
-    expect(onToggleAdminOverride).toHaveBeenCalledTimes(1);
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByTestId('game-settings-admin-settings'));
+    expect(screen.getByTestId('btn-toggle-direct-edit')).toHaveAttribute(
+      'data-active',
+      'true',
+    );
+    await userEvent.click(screen.getByTestId('game-settings-back'));
+    await userEvent.click(screen.getByTestId('game-settings-surrender'));
+    expect(onSurrenderClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('wires AccountDropdownMenu Display Settings (outside lobby), Switch Game, and Sign In/Out', async () => {
+    const onSignIn = vi.fn();
+    const onSignOut = vi.fn();
+    const onSwitchToSoloSandbox = vi.fn();
+    const onSelectGame = vi.fn();
+    const { rerender } = render(
+      <CompactTopBar
+        {...makeProps({
+          viewMode: 'lobby',
+          onSignIn,
+          onSignOut,
+          onSwitchToSoloSandbox,
+          onSelectGame,
+        })}
+      />,
+    );
+
+    const trigger = screen.getByTestId('account-menu-trigger');
+    await userEvent.click(trigger);
+    expect(
+      screen.queryByTestId('account-menu-display-settings'),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('account-menu-signin'));
+    expect(onSignIn).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <CompactTopBar
+        {...makeProps({
+          viewMode: 'multiplayer',
+          activeGameId: 'mp_1',
+          matchSummary: MATCH,
+          myGames: [MATCH],
+          authUser: ALICE,
+          onSignIn,
+          onSignOut,
+          onSwitchToSoloSandbox,
+          onSelectGame,
+        })}
+      />,
+    );
+
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByTestId('account-menu-display-settings'));
+    expect(screen.getByTestId('account-menu-back')).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('account-menu-back'));
+
+    await userEvent.click(screen.getByTestId('account-menu-change-game'));
+    await userEvent.click(screen.getByTestId('change-game-item-solo'));
+    expect(onSwitchToSoloSandbox).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByTestId('account-menu-signout'));
+    expect(onSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the winner badge when won and opens GameOverModal on click', async () => {
+    const onOpenGameOverModal = vi.fn();
+    render(
+      <CompactTopBar
+        {...makeProps({
+          winner: 'FRANCE',
+          onOpenGameOverModal,
+        })}
+      />,
+    );
+    const pill = screen.getByTestId('game-over-pill');
+    expect(pill).toHaveAttribute(
+      'aria-label',
+      'France wins. View campaign summary.',
+    );
+    await userEvent.click(pill);
+    expect(onOpenGameOverModal).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('SurrenderModal on a phone', () => {
-  const game: MultiplayerGameSummary = {
-    game_id: 'mp_1',
-    name: 'Phone Test',
-    status: 'active',
-    season: 'Spring',
-    year: 1901,
-    phase: 'Movement',
-    created_by: 'host@example.test',
-    created_at: '2026-11-07T00:00:00Z',
-    participants: {},
-    finalized_powers: [],
-    is_sandbox: false,
-  };
-
-  const render = (summary: MultiplayerGameSummary) =>
+  const renderModal = (summary: MultiplayerGameSummary) =>
     renderToString(
       React.createElement(SurrenderModal, {
         isOpen: true,
@@ -242,7 +287,7 @@ describe('SurrenderModal on a phone', () => {
     );
 
   it('spells out the difference between the two surrender buttons in an active match', () => {
-    const html = render(game);
+    const html = renderModal(MATCH);
     expect(html).toContain('data-testid="surrender-choice-note"');
     expect(html).toMatch(
       /<p(?=[^>]*class="[^"]*compact-only")(?=[^>]*data-testid="surrender-choice-note")/,
@@ -251,7 +296,7 @@ describe('SurrenderModal on a phone', () => {
   });
 
   it('has no such note before the match starts', () => {
-    expect(render({ ...game, status: 'waiting' })).not.toContain(
+    expect(renderModal({ ...MATCH, status: 'waiting' })).not.toContain(
       'data-testid="surrender-choice-note"',
     );
   });

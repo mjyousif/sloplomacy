@@ -1,4 +1,3 @@
-import type React from 'react';
 import type {
   GameParticipant,
   Power,
@@ -55,6 +54,4 @@ export interface ToolsSidebarProps {
   pressPower?: Power;
   /** Press (chat) for a seated player of a multiplayer match. Left out, there is no section. */
   press?: Omit<PressSectionProps, 'visible'>;
-  /** The turn selector, pinned below the scrolling sections (not shown on the collapsed rail). */
-  historyFooter?: React.ReactNode;
 }

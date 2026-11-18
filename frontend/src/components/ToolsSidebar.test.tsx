@@ -120,23 +120,6 @@ describe('ToolsSidebar panel', () => {
     );
     expect(screen.getByTitle('1 issues')).toBeInTheDocument();
   });
-
-  it('pins the history footer below the sections', () => {
-    render(
-      <ToolsSidebar {...props({ historyFooter: <footer>turns</footer> })} />,
-    );
-    const aside = screen.getByLabelText('Chancellery Tools & Intel');
-    expect(aside.lastElementChild).toHaveTextContent('turns');
-  });
-
-  it('does not show its footer on the collapsed rail', () => {
-    render(
-      <ToolsSidebar
-        {...props({ collapsed: true, historyFooter: <footer>turns</footer> })}
-      />,
-    );
-    expect(screen.queryByText('turns')).toBeNull();
-  });
 });
 
 /** Every callback is its own spy, so a swapped pair of same-typed handlers shows up here. */

@@ -37,10 +37,6 @@ import type { AdminTurnClockSettings } from './macro/AdminTurnClockSidebar';
 import type { HistoryHighlightFocus } from './macro/HistoryTurnPanel';
 import { SuggestionPill } from './map/hud/SuggestionPill';
 import { ToolsSidebar } from './ToolsSidebar';
-import {
-  TurnHistoryPill,
-  TurnHistorySelector,
-} from './tools/TurnHistorySelector';
 
 // Stable empties for a past turn, so memoized layers are not rebuilt every render.
 const NO_ISSUES: ValidationIssue[] = [];
@@ -70,8 +66,6 @@ export interface GameWorkspaceProps {
   turnHistory: TurnHistory;
   historyTurn: TurnRecord | null;
   viewedEntry: TurnHistoryEntry | null;
-  showPastTurn: (index: number | null) => void;
-  stepPastTurn: (delta: -1 | 1) => void;
   mapRef: RefObject<EuropeMapHandle | null>;
   zoomPercent: number;
   setZoomPercent: Dispatch<SetStateAction<number>>;
@@ -110,7 +104,6 @@ export interface GameWorkspaceProps {
   /** The host's tools. */
   isGameCreator: boolean;
   directEditActive: boolean;
-  historyLocked?: boolean;
   directEdit?: DirectEditMapHandlers;
   turnClockSettings?: AdminTurnClockSettings;
 }
@@ -142,8 +135,6 @@ export function GameWorkspace({
   turnHistory,
   historyTurn,
   viewedEntry,
-  showPastTurn,
-  stepPastTurn,
   mapRef,
   zoomPercent,
   setZoomPercent,
@@ -175,7 +166,6 @@ export function GameWorkspace({
   handleSelectPower,
   isGameCreator,
   directEditActive,
-  historyLocked = false,
   directEdit,
   turnClockSettings,
 }: GameWorkspaceProps) {
@@ -243,21 +233,6 @@ export function GameWorkspace({
         variant={isCompact ? 'drawer' : 'panel'}
         open={toolsDrawerOpen}
         onClose={closeToolsDrawer}
-        historyFooter={
-          isCompact ? (
-            <TurnHistorySelector
-              entries={turnHistory.entries}
-              viewIndex={turnHistory.viewIndex}
-              liveLabel={turnLabel(gameState)}
-              powers={turnHistory.powers}
-              locked={historyLocked}
-              onSelect={showPastTurn}
-              onStep={stepPastTurn}
-              onSelectPowers={turnHistory.setPowers}
-              onPickedTurn={closeToolsDrawer}
-            />
-          ) : undefined
-        }
         zoomPercent={zoomPercent}
         onZoomIn={() => mapRef.current?.stepZoom(0.2)}
         onZoomOut={() => mapRef.current?.stepZoom(-0.2)}
@@ -411,14 +386,6 @@ export function GameWorkspace({
               <SuggestionPill
                 suggestion={suggestion}
                 onClose={suggestionStore.clear}
-              />
-            )}
-            {isCompact && viewedEntry && (
-              <TurnHistoryPill
-                entry={viewedEntry}
-                isOldest={turnHistory.viewIndex === 0}
-                onStep={stepPastTurn}
-                onGoLive={turnHistory.goLive}
               />
             )}
           </>

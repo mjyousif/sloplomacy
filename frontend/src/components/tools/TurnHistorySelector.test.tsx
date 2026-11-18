@@ -1,102 +1,98 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { TurnHistoryEntry } from '../../types/diplomacy';
-import { TurnHistoryPill, TurnHistorySelector } from './TurnHistorySelector';
+import {
+  ActionFilterChips,
+  PowerFilterChips,
+  powerCode,
+} from './TurnHistorySelector';
 
-const ENTRIES: TurnHistoryEntry[] = [
-  { index: 0, season: 'Spring', year: 1901, phase: 'Movement' },
-  { index: 1, season: 'Spring', year: 1901, phase: 'Admin' },
-];
-
-describe('TurnHistorySelector', () => {
-  it('renders nothing when history entries are empty', () => {
-    const { container } = render(
-      <TurnHistorySelector
-        entries={[]}
-        viewIndex={null}
-        liveLabel="Spring 1901 Movement"
-        powers={[]}
-        onSelect={vi.fn()}
-        onStep={vi.fn()}
-        onSelectPowers={vi.fn()}
-      />,
-    );
-    expect(container).toBeEmptyDOMElement();
+describe('powerCode', () => {
+  it('abbreviates power names to three-letter uppercase codes', () => {
+    expect(powerCode('FRANCE')).toBe('FRA');
+    expect(powerCode('AUSTRIA')).toBe('AUS');
+    expect(powerCode('TURKEY')).toBe('TUR');
   });
+});
 
-  it('formats Admin phases as Admin Edit in the select dropdown and mobile pill', () => {
+describe('PowerFilterChips', () => {
+  it('renders all 7 powers and toggles selections or resets with All', () => {
+    const onSelectPowers = vi.fn();
     render(
-      <>
-        <TurnHistorySelector
-          entries={ENTRIES}
-          viewIndex={1}
-          liveLabel="Spring 1901 Movement"
-          powers={[]}
-          onSelect={vi.fn()}
-          onStep={vi.fn()}
-          onSelectPowers={vi.fn()}
-        />
-        <TurnHistoryPill
-          entry={ENTRIES[1]}
-          isOldest={false}
-          onStep={vi.fn()}
-          onGoLive={vi.fn()}
-        />
-      </>,
-    );
-
-    // Dropdown contains both the live label and past turns
-    const select = screen.getByTestId('turn-history-select');
-    expect(select).toBeInTheDocument();
-
-    const options = screen.getAllByRole('option');
-    expect(options.map((o) => o.textContent)).toContain(
-      'Spring 1901 — Admin Edit',
-    );
-    expect(options.map((o) => o.textContent)).toContain('Spring 1901 Movement');
-
-    // Phone pill displays compact shortTurnLabel and marks Admin phase
-    expect(screen.getByText('S1901 Adm')).toBeInTheDocument();
-    expect(screen.getByTestId('turn-history')).toHaveAttribute(
-      'data-admin-phase',
-      'true',
-    );
-    expect(screen.getByTestId('turn-history-pill')).toHaveAttribute(
-      'data-admin-phase',
-      'true',
-    );
-  });
-
-  it('calls onSelect when selecting an entry from the dropdown and toggles multiple powers', () => {
-    const handleSelect = vi.fn();
-    const handleSelectPowers = vi.fn();
-    render(
-      <TurnHistorySelector
-        entries={ENTRIES}
-        viewIndex={0}
-        liveLabel="Spring 1901 Movement"
+      <PowerFilterChips
         powers={['FRANCE']}
-        onSelect={handleSelect}
-        onStep={vi.fn()}
-        onSelectPowers={handleSelectPowers}
+        disabled={false}
+        onSelectPowers={onSelectPowers}
       />,
     );
 
-    const select = screen.getByTestId('turn-history-select');
-    fireEvent.change(select, { target: { value: '1' } });
-    expect(handleSelect).toHaveBeenCalledWith(1);
+    const chips = screen.getAllByTestId('turn-history-power');
+    expect(chips).toHaveLength(8);
+    expect(chips[0]).toHaveAttribute('data-power', 'ALL');
 
-    const germanyChip = screen
-      .getAllByTestId('turn-history-power')
-      .find((el) => el.getAttribute('data-power') === 'GERMANY')!;
+    const germanyChip = chips.find(
+      (el) => el.getAttribute('data-power') === 'GERMANY',
+    )!;
     fireEvent.click(germanyChip);
-    expect(handleSelectPowers).toHaveBeenCalledWith(['FRANCE', 'GERMANY']);
+    expect(onSelectPowers).toHaveBeenCalledWith(['FRANCE', 'GERMANY']);
 
-    const allChip = screen
-      .getAllByTestId('turn-history-power')
-      .find((el) => el.getAttribute('data-power') === 'ALL')!;
-    fireEvent.click(allChip);
-    expect(handleSelectPowers).toHaveBeenCalledWith([]);
+    fireEvent.click(chips[0]);
+    expect(onSelectPowers).toHaveBeenCalledWith([]);
+  });
+
+  it('can omit the leading All chip and respect disabled state', () => {
+    const onSelectPowers = vi.fn();
+    render(
+      <PowerFilterChips
+        powers={[]}
+        disabled={true}
+        showAllChip={false}
+        onSelectPowers={onSelectPowers}
+      />,
+    );
+
+    const chips = screen.getAllByTestId('turn-history-power');
+    expect(chips).toHaveLength(7);
+    expect(screen.getByRole('group', { name: 'Nations shown' })).toBeDisabled();
+  });
+});
+
+describe('ActionFilterChips', () => {
+  it('renders Movement and Adjustments action chips and toggles selected actions', () => {
+    const onSelectActions = vi.fn();
+    const { rerender } = render(
+      <ActionFilterChips
+        actions={['HOLD']}
+        onSelectActions={onSelectActions}
+      />,
+    );
+
+    const moveChips = screen.getAllByTestId('turn-history-action');
+    expect(moveChips).toHaveLength(4);
+    expect(moveChips.map((el) => el.getAttribute('data-action'))).toEqual([
+      'HOLD',
+      'SUPPORT',
+      'CONVOY',
+      'MOVE',
+    ]);
+
+    const moveChip = moveChips.find(
+      (el) => el.getAttribute('data-action') === 'MOVE',
+    )!;
+    fireEvent.click(moveChip);
+    expect(onSelectActions).toHaveBeenCalledWith(['HOLD', 'MOVE']);
+
+    rerender(
+      <ActionFilterChips
+        actions={[]}
+        availableActions={['BUILD', 'DISBAND', 'WAIVE']}
+        onSelectActions={onSelectActions}
+      />,
+    );
+    expect(
+      screen
+        .getAllByTestId('turn-history-action')
+        .map((el) => el.getAttribute('data-action')),
+    ).toEqual(['BUILD', 'DISBAND', 'WAIVE']);
   });
 });
