@@ -95,8 +95,8 @@
 
   :global([data-layout="compact"])
     :global([data-map-viewport]):has(
-      :global(.phase-timer-pill),
-      :global(.phase-timer-widget)
+      [data-testid="phase-timer-pill"],
+      [data-testid="phase-timer-widget"]
     )
     .suggestion-pill {
     top: 58px;

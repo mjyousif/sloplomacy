@@ -129,7 +129,10 @@
 
   :global([data-layout="compact"])
     .macro-sheet-controls
-    > [data-testid="btn-confirm-all"] {
+    > [data-testid="btn-clear-all"],
+  :global([data-layout="compact"])
+    .macro-sheet-controls
+    > [data-testid="clear-all-confirm"] {
     flex: 0 0 auto;
     font-size: 0.82rem;
   }

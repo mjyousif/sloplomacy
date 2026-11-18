@@ -148,7 +148,8 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
     if (useNativeSelect) {
       return (
         <select
-          className="unit-compact-select"
+          className={styles.compactNativeSelect}
+          data-compact="true"
           data-testid="select-order-target"
           value={selectValue}
           onChange={(e) => handleTargetChange(e.target.value)}

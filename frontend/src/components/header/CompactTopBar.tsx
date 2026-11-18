@@ -262,6 +262,9 @@ export function CompactTopBar({
         data-testid="compact-menu-toggle"
         className={styles.compactBarIconBtn}
         data-open={menuOpen}
+        data-admin-active={
+          adminOverrideActive || turnClockOpen ? 'true' : undefined
+        }
         aria-label={wsConnected ? 'Menu' : 'Menu (live sync is reconnecting)'}
         aria-expanded={menuOpen}
         aria-controls={menuOpen ? menuId : undefined}

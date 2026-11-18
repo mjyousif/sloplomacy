@@ -189,3 +189,19 @@
     color: var(--text-muted);
   }
 }
+
+@layer compact {
+  :global([data-layout="compact"]) .admin-sidebar-actions-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  :global([data-layout="compact"]) .admin-staged-count,
+  :global([data-layout="compact"]) .admin-apply-btn,
+  :global([data-layout="compact"]) .admin-exit-btn,
+  :global([data-layout="compact"]) .admin-staged-undo-btn {
+    min-height: 38px;
+    padding: 0 12px;
+    font-size: 0.8rem;
+  }
+}

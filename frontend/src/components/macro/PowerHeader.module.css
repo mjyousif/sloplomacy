@@ -319,12 +319,22 @@
     border-radius: var(--radius-md);
   }
 
+  :global([data-layout="compact"]) .history-lock-filter-row {
+    grid-template-columns: 48px minmax(0, 1fr) 28px;
+    align-items: start;
+  }
+
+  :global([data-layout="compact"]) .history-lock-filter-row-label {
+    line-height: 32px;
+  }
+
   :global([data-layout="compact"])
     .history-lock-filter-section
     .history-lock-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
     margin: 0;
     gap: 4px;
-    flex-wrap: nowrap;
   }
 
   :global([data-layout="compact"])
@@ -333,13 +343,16 @@
   :global([data-layout="compact"])
     .history-lock-filter-section
     .history-lock-action-chip {
-    height: 30px;
-    font-size: 0.66rem;
+    min-width: 36px;
+    height: 32px;
+    padding: 0 8px;
+    font-size: 0.7rem;
   }
 
   :global([data-layout="compact"]) .history-lock-filter-clear-btn {
     width: 28px;
     height: 28px;
+    margin-top: 2px;
   }
 
   :global([data-layout="compact"]) .history-lock-live-btn {

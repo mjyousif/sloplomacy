@@ -163,6 +163,55 @@ describe('CompactTopBar', () => {
     await userEvent.click(screen.getByTestId('compact-menu-surrender'));
     expect(onSurrenderClick).toHaveBeenCalledTimes(1);
   });
+
+  it('highlights the menu button when Edit Board or Turn & Clock is active, and toggles Edit Board off', async () => {
+    const onToggleAdminOverride = vi.fn();
+    const { rerender } = render(
+      <CompactTopBar
+        {...makeProps({
+          viewMode: 'multiplayer',
+          isGameCreator: true,
+          adminOverrideActive: false,
+          turnClockOpen: false,
+          onToggleAdminOverride,
+        })}
+      />,
+    );
+    const toggle = screen.getByTestId('compact-menu-toggle');
+    expect(toggle).not.toHaveAttribute('data-admin-active');
+
+    rerender(
+      <CompactTopBar
+        {...makeProps({
+          viewMode: 'multiplayer',
+          isGameCreator: true,
+          adminOverrideActive: false,
+          turnClockOpen: true,
+          onToggleAdminOverride,
+        })}
+      />,
+    );
+    expect(toggle).toHaveAttribute('data-admin-active', 'true');
+
+    rerender(
+      <CompactTopBar
+        {...makeProps({
+          viewMode: 'multiplayer',
+          isGameCreator: true,
+          adminOverrideActive: true,
+          turnClockOpen: false,
+          onToggleAdminOverride,
+        })}
+      />,
+    );
+    expect(toggle).toHaveAttribute('data-admin-active', 'true');
+
+    await userEvent.click(toggle);
+    const directEditItem = screen.getByTestId('btn-toggle-direct-edit');
+    expect(directEditItem).toHaveTextContent('Edit Board: ON');
+    await userEvent.click(directEditItem);
+    expect(onToggleAdminOverride).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('SurrenderModal on a phone', () => {

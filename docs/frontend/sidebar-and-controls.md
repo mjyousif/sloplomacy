@@ -93,6 +93,7 @@ In the compact layout the game screen is the map, with everything else layered o
 
 ### Docked unit bar and the map
 - Selecting a unit or a build slot, on the map or by tapping a card's header, opens one full-width bar at the bottom of the map. It holds the unit's order buttons (44px), a Cancel button and the current step ("Tap a green province to Move"). The coast picker takes its place while it is open. It can't be dragged.
+- Tapping order-type tabs (`Hold`, `Move`, `Support`, `Convoy`, etc.) inside the open sheet keeps the sheet open so players can finish drafting orders inline with native `<select>` pickers without the sheet dropping to `peek`.
 - While the bar is up the sheet drops to its peek, so the bar and the provinces to tap stay in view (`onDockedBarChange`).
 - The camera pans just enough to keep what was selected clear of the bar (`keepPointInView`). It only does this when the selection changes, so a pan afterwards is left alone.
 - The selected card lights up its provinces, the way hovering a card does on desktop. Raising the sheet while a unit is selected brings its card to the top of the list.

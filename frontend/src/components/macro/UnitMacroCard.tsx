@@ -55,6 +55,8 @@ export interface UnitMacroCardProps {
   buildCount: number;
   compact?: boolean;
   useNativeSelect?: boolean;
+  /** Desktop selects the unit when an order tab is picked; the phone sheet keeps the sheet open. */
+  selectOnOrderTypeChange?: boolean;
   onSelectUnit: (id: string | null) => void;
   onHoverUnit: (id: string | null) => void;
   onHighlightProvinces: (provs: string[]) => void;
@@ -86,15 +88,17 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
   buildCount,
   compact = false,
   useNativeSelect = false,
+  selectOnOrderTypeChange = true,
   onSelectUnit,
   onHoverUnit,
   onHighlightProvinces,
   onUpdateOrder,
   handleOrderTypeChange: changeOrderType,
 }) => {
-  // Picking an order type on a card also picks the unit, never toggling it off.
+  // Picking an order type on a desktop card also picks the unit, never toggling it off.
+  // On a phone sheet, order controls stay inside the open sheet instead of dropping to the docked bar.
   const handleOrderTypeChange = (u: Unit, type: OrderType) => {
-    if (!isSelected) onSelectUnit(u.id);
+    if (selectOnOrderTypeChange && !isSelected) onSelectUnit(u.id);
     changeOrderType(u, type);
   };
 

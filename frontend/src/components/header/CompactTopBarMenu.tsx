@@ -173,7 +173,7 @@ export function CompactTopBarMenu({
                   className={styles.compactMenuItem}
                   onClick={() => {
                     closeMenu();
-                    if (!adminOverrideActive) onToggleAdminOverride();
+                    onToggleAdminOverride();
                   }}
                 >
                   <Pencil size={18} />

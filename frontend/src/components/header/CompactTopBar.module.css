@@ -24,7 +24,7 @@
 @layer compact {
   .compact-top-bar {
     position: relative;
-    z-index: 40;
+    z-index: 50;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -54,6 +54,12 @@
   .compact-bar-icon-btn:active,
   .compact-bar-icon-btn[data-open="true"] {
     background: #262c38;
+  }
+
+  .compact-bar-icon-btn[data-admin-active="true"] {
+    border: 1px solid var(--danger-primary);
+    background: rgba(185, 28, 28, 0.32);
+    color: var(--danger-text-soft);
   }
 
   .compact-brand {
@@ -179,7 +185,7 @@
     position: absolute;
     top: calc(100% + 6px);
     right: 8px;
-    z-index: 50;
+    z-index: var(--z-header-popover);
     width: min(340px, calc(100vw - 16px));
     max-height: calc(
       100dvh -

@@ -842,3 +842,44 @@ describe('MacroSidebar: auto-scroll and compact orders', () => {
     window.localStorage.removeItem('sloplomacy_compact_orders');
   });
 });
+
+describe('MacroSidebar phone direct-edit sheet', () => {
+  it('drops the phone sheet to peek when relocatingUnitId becomes active', () => {
+    const onSheetSnapChange = vi.fn();
+    const directEditBase = {
+      inspectedProvince: 'BRE',
+      setInspectedProvince: vi.fn(),
+      relocatingUnitId: null as string | null,
+      setRelocatingUnitId: vi.fn(),
+      onStageRelocateUnit: vi.fn(() => true),
+      onStageSpawnOrUpdateUnit: vi.fn(() => true),
+      onStageDestroyUnit: vi.fn(),
+      onStageOwnership: vi.fn(),
+      onStageUnitOrder: vi.fn(),
+    };
+
+    const { rerender } = render(
+      <MacroSidebar
+        {...baseProps()}
+        variant="sheet"
+        sheetSnap="half"
+        onSheetSnapChange={onSheetSnapChange}
+        directEditActive
+        directEdit={directEditBase}
+      />,
+    );
+    expect(onSheetSnapChange).not.toHaveBeenCalled();
+
+    rerender(
+      <MacroSidebar
+        {...baseProps()}
+        variant="sheet"
+        sheetSnap="half"
+        onSheetSnapChange={onSheetSnapChange}
+        directEditActive
+        directEdit={{ ...directEditBase, relocatingUnitId: A_BRE.id }}
+      />,
+    );
+    expect(onSheetSnapChange).toHaveBeenCalledWith('peek');
+  });
+});

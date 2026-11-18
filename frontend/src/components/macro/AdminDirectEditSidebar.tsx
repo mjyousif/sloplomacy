@@ -211,6 +211,20 @@ export function AdminDirectEditSidebar({
     onSheetSnapChange,
   ]);
 
+  // Lower the phone sheet to peek when starting unit relocation so the map destination can be tapped
+  const prevRelocatingRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      variant === 'sheet' &&
+      directEdit.relocatingUnitId &&
+      directEdit.relocatingUnitId !== prevRelocatingRef.current &&
+      sheetSnap !== 'peek'
+    ) {
+      onSheetSnapChange?.('peek');
+    }
+    prevRelocatingRef.current = directEdit.relocatingUnitId;
+  }, [directEdit.relocatingUnitId, variant, sheetSnap, onSheetSnapChange]);
+
   const inspectorContent = inspectedProvince ? (
     <AdminTileInspector
       key={inspectedProvince}
