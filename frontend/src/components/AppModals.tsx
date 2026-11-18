@@ -67,6 +67,7 @@ export interface AppModalsProps {
   viewMode?: 'lobby' | 'sandbox' | 'multiplayer';
   provinces?: Record<string, ProvinceInfo>;
   activeGameSummary?: MultiplayerGameSummary | null;
+  gamePasscode?: string | null;
   gameOverModalOpen?: boolean;
   onCloseGameOverModal?: () => void;
   onReturnToLobby?: () => void;
@@ -114,6 +115,7 @@ export function AppModals({
   viewMode = 'lobby',
   provinces = {},
   activeGameSummary = null,
+  gamePasscode = null,
   gameOverModalOpen = false,
   onCloseGameOverModal,
   onReturnToLobby,
@@ -195,6 +197,7 @@ export function AppModals({
           viewMode={viewMode}
           onInspectBoard={onCloseGameOverModal}
           onReturnToLobby={onReturnToLobby}
+          passcode={gamePasscode}
         />
       )}
       <AccountModal

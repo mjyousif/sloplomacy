@@ -27,6 +27,7 @@ frontend/
     │   ├── admin/               # AdminSettingsMenu, TurnControlTab, and AdminActionWarningModal
     │   ├── auth/                # Sign-in / sign-up modal and account settings modal
     │   ├── game/                # PhaseTimerWidget and match-lifecycle modals (surrender, game over, sanity check)
+    │   ├── stats/               # Tabbed War Ledger & Campaign Statistics views (table, awards, SC timeline SVG, diplomatic matrix) embedded in GameOverModal
     │   ├── modal/               # Generic modal primitives (Modal, ConfirmModal, PromptDialog styles)
     │   └── pieces/              # Map piece geometry, outlines, marks, and styles/ (classic, seated, compact, flag, nameplate)
     ├── data/                    # Static SVG map paths (europeMapGeometry), piece placements (mapLayouts), text metrics

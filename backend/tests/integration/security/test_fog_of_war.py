@@ -235,6 +235,11 @@ def test_turn_history_never_shows_the_current_turns_orders():
         assert client.get(f"/api/history/1?game_id={gid}", headers=headers).status_code == 404
         french_targets = {o["target"] for o in past["orders"].values() if o["power"] == "FRANCE"}
         assert "MUN" not in french_targets
+        # Stats endpoint counts only the resolved Spring move, never Alice's live Fall plan.
+        stats = client.get(f"/api/history/stats?game_id={gid}", headers=headers).json()
+        assert stats["turns_resolved"] == 1
+        assert stats["powers"]["FRANCE"]["moves_succeeded"] == 1
+        assert stats["attack_matrix"]["FRANCE"]["GERMANY"] == 0
 
 
 def test_turn_history_of_a_private_sandbox_is_never_served():
@@ -250,13 +255,21 @@ def test_turn_history_of_a_private_sandbox_is_never_served():
         assert (
             client.get(f"/api/history/0?game_id={sandbox_id}", headers=headers).status_code == 404
         )
+        assert (
+            client.get(f"/api/history/stats?game_id={sandbox_id}", headers=headers).status_code
+            == 404
+        )
 
 
 def test_turn_history_of_a_private_match_needs_the_passcode():
     gid = secret_plan_match(private=True)
     client.post(f"/api/adjudicate?game_id={gid}", headers=alice_headers())
 
-    for path in (f"/api/history?game_id={gid}", f"/api/history/0?game_id={gid}"):
+    for path in (
+        f"/api/history?game_id={gid}",
+        f"/api/history/0?game_id={gid}",
+        f"/api/history/stats?game_id={gid}",
+    ):
         assert client.get(path).status_code == 403
         assert client.get(f"{path}&passcode=wrong").status_code == 403
         assert client.get(f"{path}&passcode=Secret1901").status_code == 200

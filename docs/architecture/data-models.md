@@ -382,3 +382,14 @@ interface WebSocketLobbyUpdate {
   games: MultiplayerGameSummary[];
 }
 ```
+
+---
+
+## Campaign Statistics & War Ledger Schemas (`backend/domain/stats.py`)
+
+Returned by `GET /api/history/stats` and rendered inside `GameOverModal` (`components/stats/`):
+
+- `PowerStats`: Per-power ledger (`power`, `player_name`, `is_eliminated`, `is_surrendered`, `current_scs`, `peak_scs`, `scs_captured`, `scs_lost`, `units_built`, `armies_built`, `fleets_built`, `units_disbanded`, `units_destroyed`, `enemies_dislodged`, `builds_waived`, `foreign_supports_given`, `foreign_supports_effective`, `foreign_supports_received`, `foreign_convoys`, `convoys_executed`, `supports_cut`, `moves_succeeded`, `moves_bounced`, `move_success_rate`, `self_bounces`).
+- `SCTimelinePoint`: Checkpoint `{ label, season, year, counts: Record<Power, number> }`.
+- `CampaignAward`: End-of-campaign superlative `{ id, title, subtitle, power, value, count }`.
+- `CampaignStatsResponse`: Top-level payload `{ game_id, turns_resolved, powers, sc_timeline, support_matrix, attack_matrix, awards }`.

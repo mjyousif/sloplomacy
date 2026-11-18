@@ -119,11 +119,29 @@ test.describe('Scenario: Game Over Modal & Final Board Inspection', () => {
       await expect(adjudicateBtn).toBeVisible();
       await adjudicateBtn.dblclick();
 
-      // 3. GameOverModal appears automatically
+      // 3. GameOverModal appears automatically with the tabbed War Ledger
       const modal = page.locator('[data-testid="game-over-modal"]');
       await expect(modal).toBeVisible({ timeout: 10000 });
       await expect(modal).toContainText('France Claims Continental Hegemony');
+      const overviewTable = modal.locator('[data-testid="stats-overview-table"]');
+      await expect(overviewTable).toBeVisible();
+      await expect(
+        overviewTable.locator('[data-testid="stats-row-france"]'),
+      ).toContainText('18');
       await recorder.recordStep(page, '01_game_over_modal_open');
+
+      // 3b. Switch through War Ledger tabs (SC Timeline & Diplomatic Matrix)
+      await modal.locator('[data-testid="game-over-tab-timeline"]').click();
+      await expect(
+        modal.locator('[data-testid="sc-timeline-chart"]'),
+      ).toBeVisible();
+      await recorder.recordStep(page, '02_war_ledger_timeline');
+
+      await modal.locator('[data-testid="game-over-tab-diplomacy"]').click();
+      await expect(
+        modal.locator('[data-testid="diplomatic-support-matrix"]'),
+      ).toBeVisible();
+      await recorder.recordStep(page, '03_war_ledger_diplomacy');
 
       // 4. Click "Inspect Final Board" to close modal and inspect read-only board
       const inspectBtn = page.locator('[data-testid="game-over-inspect-btn"]');
@@ -133,12 +151,12 @@ test.describe('Scenario: Game Over Modal & Final Board Inspection', () => {
       const winnerPill = page.locator('[data-testid="game-over-pill"]');
       await expect(winnerPill).toBeVisible();
       await expect(winnerPill).toContainText('FRANCE WINS');
-      await recorder.recordStep(page, '02_inspect_final_board');
+      await recorder.recordStep(page, '04_inspect_final_board');
 
       // 5. Re-open modal from top-bar winner pill
       await winnerPill.click();
       await expect(modal).toBeVisible({ timeout: 5000 });
-      await recorder.recordStep(page, '03_reopened_from_pill');
+      await recorder.recordStep(page, '05_reopened_from_pill');
 
       recorder.finalize('PASSED');
     } catch (err) {
