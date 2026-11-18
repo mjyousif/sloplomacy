@@ -254,6 +254,17 @@ export const HistoryLockBar: React.FC<{
     data-admin-phase={historyIsAdmin ? 'true' : undefined}
   >
     <div className={styles.historyLockMainRow}>
+      {onToggleCollapse && (
+        <button
+          type="button"
+          data-testid="macro-sidebar-collapse-btn"
+          className={chromeStyles.sidebarCollapseToggleBtn}
+          onClick={onToggleCollapse}
+          title="Collapse Turn Log"
+        >
+          <PanelRightClose size={15} />
+        </button>
+      )}
       <History
         size={13}
         className={styles.historyLockIcon}
@@ -270,17 +281,6 @@ export const HistoryLockBar: React.FC<{
           onClick={onReturnToLive}
         >
           Back to live
-        </button>
-      )}
-      {onToggleCollapse && (
-        <button
-          type="button"
-          data-testid="macro-sidebar-collapse-btn"
-          className={chromeStyles.sidebarCollapseToggleBtn}
-          onClick={onToggleCollapse}
-          title="Collapse Turn Log"
-        >
-          <PanelRightClose size={15} />
         </button>
       )}
     </div>
@@ -366,6 +366,17 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
 
   return (
     <div className={styles.powerBannerTop}>
+      {onToggleCollapse && (
+        <button
+          type="button"
+          data-testid="macro-sidebar-collapse-btn"
+          className={chromeStyles.sidebarCollapseToggleBtn}
+          onClick={onToggleCollapse}
+          title="Collapse Tactical Orders"
+        >
+          <PanelRightClose size={15} />
+        </button>
+      )}
       <div className={styles.powerBannerMainCol}>
         <div
           className={styles.powerBannerTitle}
@@ -385,21 +396,7 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
         </div>
       </div>
 
-      <div className={styles.powerBannerActionsRight}>
-        {statusBadge}
-
-        {onToggleCollapse && (
-          <button
-            type="button"
-            data-testid="macro-sidebar-collapse-btn"
-            className={chromeStyles.sidebarCollapseToggleBtn}
-            onClick={onToggleCollapse}
-            title="Collapse Tactical Orders"
-          >
-            <PanelRightClose size={15} />
-          </button>
-        )}
-      </div>
+      <div className={styles.powerBannerActionsRight}>{statusBadge}</div>
     </div>
   );
 };

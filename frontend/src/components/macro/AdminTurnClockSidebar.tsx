@@ -342,12 +342,6 @@ export function AdminTurnClockSidebar({
         style={{ borderLeft: '4px solid #b91c1c' }}
       >
         <div className={adminSidebarStyles.adminSidebarHeaderRow}>
-          <div className={adminSidebarStyles.adminSidebarTitle}>
-            <Wrench size={16} className={adminSidebarStyles.adminSidebarIcon} />
-            <h2 className={adminSidebarStyles.adminSidebarHeading}>
-              Turn and Clock Settings
-            </h2>
-          </div>
           {onToggleCollapse && (
             <button
               type="button"
@@ -359,6 +353,12 @@ export function AdminTurnClockSidebar({
               <PanelRightClose size={15} />
             </button>
           )}
+          <div className={adminSidebarStyles.adminSidebarTitle}>
+            <Wrench size={16} className={adminSidebarStyles.adminSidebarIcon} />
+            <h2 className={adminSidebarStyles.adminSidebarHeading}>
+              Turn and Clock Settings
+            </h2>
+          </div>
         </div>
       </div>
 

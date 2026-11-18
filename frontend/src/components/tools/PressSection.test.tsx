@@ -374,6 +374,13 @@ describe('PressSection', () => {
     expect(screen.getByTestId('press-input')).toBeDisabled();
     expect(destination()).toContain('You surrendered');
   });
+
+  it('uses only the country name as the hover title on private thread flag tabs (#317)', () => {
+    render(<PressSection {...base({ power: 'FRANCE' })} />);
+    fill([msg(1, 'ITALY', 'Ciao', ['FRANCE', 'ITALY'])]);
+    const italyTab = tab(threadKey(['FRANCE', 'ITALY']));
+    expect(italyTab).toHaveAttribute('title', 'Italy');
+  });
 });
 
 describe('PressSection: move suggestions', () => {

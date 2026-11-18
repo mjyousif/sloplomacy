@@ -16,7 +16,10 @@ import {
   matchesHistoryPowers,
 } from '../../../utils/historyHelpers';
 import { canUnitSupportInto } from '../../../utils/orderHelpers';
-import { computeQuadraticCurve } from '../utils/curveGeometry';
+import {
+  computeQuadraticCurve,
+  resolveMoveTargetPoint,
+} from '../utils/curveGeometry';
 
 export interface UseOrderOverlayOptions {
   units: Unit[];
@@ -176,7 +179,11 @@ export function useOrderOverlay({
         EUROPE_PROVINCE_GEOMETRY[o.target]
       ) {
         const p1 = getUnitPoint(u);
-        const p2 = getProvincePoint(o.target, o.target_coast);
+        const p2 = resolveMoveTargetPoint(
+          u.province,
+          o.target,
+          getProvincePoint(o.target, o.target_coast),
+        );
         const { mid } = computeQuadraticCurve(p1, p2, 0.14, arrowScale);
         midpoints[u.province] = mid;
       }

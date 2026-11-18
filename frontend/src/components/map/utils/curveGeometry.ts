@@ -1,5 +1,17 @@
 import type { Point } from '../../../data/europeMapGeometry';
 
+/** Override target point for very short hops where the standard unit center leaves the arrow hidden. */
+export function resolveMoveTargetPoint(
+  fromProv: string,
+  targetProv: string,
+  defaultPoint: Point,
+): Point {
+  if (fromProv === 'BEL' && targetProv === 'HOL') {
+    return { x: 544, y: 720 };
+  }
+  return defaultPoint;
+}
+
 export function computeQuadraticCurve(
   p1: Point,
   p2: Point,

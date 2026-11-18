@@ -159,6 +159,30 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
             if (e.pointerType !== 'touch') onHoverProvince(null);
           }}
         />
+        {geom.hitPath && (
+          <path
+            d={geom.hitPath}
+            fill="transparent"
+            stroke="none"
+            className={styles.provinceInteractivePath}
+            style={
+              isMoveIncompatible
+                ? { cursor: 'not-allowed' }
+                : isMoveCompatible
+                  ? { cursor: 'pointer' }
+                  : undefined
+            }
+            data-testid="province-hit-path"
+            data-province-id={geom.id}
+            onClick={() => onClickProvince(geom.id)}
+            onPointerEnter={(e) => {
+              if (e.pointerType !== 'touch') onHoverProvince(geom.id);
+            }}
+            onPointerLeave={(e) => {
+              if (e.pointerType !== 'touch') onHoverProvince(null);
+            }}
+          />
+        )}
 
         {/* Split-coast interactive sub-polygons for Fleets */}
         {showFleetCoasts &&
