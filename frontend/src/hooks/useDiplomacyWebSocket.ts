@@ -26,6 +26,10 @@ export function resolveWebSocketPath(
   if (viewMode === 'lobby') {
     return '/ws/lobby';
   }
+  if (viewMode === 'sandbox') {
+    // Solo sandboxes receive all state updates synchronously from HTTP POST responses.
+    return null;
+  }
   if (activeGameId) {
     const params = new URLSearchParams();
     // The server waits for an `auth` message first, which says who is connecting. A browser
