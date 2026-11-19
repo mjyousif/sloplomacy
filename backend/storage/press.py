@@ -69,11 +69,8 @@ async def load_press_from_db(
     url = f"{_press_url(game_id)}&select=press"
     headers = supabase.get_headers()
     try:
-        if client:
-            resp = await client.get(url, headers=headers, timeout=10.0)
-        else:
-            async with httpx.AsyncClient() as c:
-                resp = await c.get(url, headers=headers, timeout=10.0)
+        c = client or supabase.get_http_client()
+        resp = await c.get(url, headers=headers, timeout=10.0)
     except Exception as ex:
         raise SupabaseUnavailable(str(ex)) from ex
 
@@ -108,11 +105,8 @@ async def save_press_to_db(
     headers["Prefer"] = "return=representation"
     url = f"{_press_url(game_id)}&select=room_code"
     try:
-        if client:
-            resp = await client.patch(url, headers=headers, json=payload, timeout=10.0)
-        else:
-            async with httpx.AsyncClient() as c:
-                resp = await c.patch(url, headers=headers, json=payload, timeout=10.0)
+        c = client or supabase.get_http_client()
+        resp = await c.patch(url, headers=headers, json=payload, timeout=10.0)
     except Exception as ex:
         logger.warning("Supabase exception saving press for '%s': %s", game_id, ex)
         return False

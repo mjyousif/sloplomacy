@@ -2,6 +2,7 @@
 import { act, render, renderHook, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { suggestionStore } from '../lib/suggestionStore';
 import type {
   GameState,
   Order,
@@ -488,5 +489,89 @@ describe('useMatchActions: the turn clock', () => {
       ['The clock did not accept that.'],
     ]);
     expect(o.applyServerState).not.toHaveBeenCalled();
+  });
+});
+
+describe('useMatchActions: optimistic order callbacks', () => {
+  it('calls beginOptimisticOrder before fetch finishes and settles on 200', async () => {
+    let resolveFetch!: (r: Response) => void;
+    supabase.authedFetch.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+    const beginOptimisticOrder = vi.fn(() => 42);
+    const settleOptimisticOrder = vi.fn();
+    const o = makeOptions({
+      draftGameId: 'sbx_9',
+      beginOptimisticOrder,
+      settleOptimisticOrder,
+    });
+    const { result } = renderActions(o);
+
+    let pending!: Promise<void>;
+    act(() => {
+      pending = result.current.handleUpdateOrder(frenchMove);
+    });
+    expect(beginOptimisticOrder).toHaveBeenCalledWith('sbx_9', frenchMove);
+    expect(settleOptimisticOrder).not.toHaveBeenCalled();
+
+    const next = state({ state_revision: 2 });
+    await act(async () => {
+      resolveFetch(reply(200, next));
+      await pending;
+    });
+    expect(settleOptimisticOrder).toHaveBeenCalledWith(42, next);
+  });
+
+  it('settles optimistic order without state on HTTP error or network failure', async () => {
+    const beginOptimisticOrder = vi.fn(() => 7);
+    const settleOptimisticOrder = vi.fn();
+    const o = makeOptions({ beginOptimisticOrder, settleOptimisticOrder });
+    const { result } = renderActions(o);
+
+    supabase.authedFetch.mockResolvedValueOnce(
+      reply(409, { detail: 'Too late.' }),
+    );
+    await act(() => result.current.handleUpdateOrder(frenchMove));
+    expect(settleOptimisticOrder).toHaveBeenCalledWith(7);
+    expect(o.triggerToast).toHaveBeenCalledWith('Too late.');
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabase.authedFetch.mockRejectedValueOnce(new Error('offline'));
+    await act(() => result.current.handleUpdateOrder(frenchMove));
+    expect(settleOptimisticOrder).toHaveBeenCalledTimes(2);
+    expect(settleOptimisticOrder).toHaveBeenLastCalledWith(7);
+    spy.mockRestore();
+  });
+
+  it('skips optimistic update when a foreign multiplayer order is refused', async () => {
+    const beginOptimisticOrder = vi.fn(() => 1);
+    const o = makeOptions({ beginOptimisticOrder });
+    const { result } = renderActions(o);
+    await act(() => result.current.handleUpdateOrder(germanMove));
+    expect(beginOptimisticOrder).not.toHaveBeenCalled();
+  });
+
+  it('clears pending orders before applying clear-all or adopted suggestion state', async () => {
+    const clearPendingOrders = vi.fn();
+    const o = makeOptions({ clearPendingOrders });
+    const { result } = renderActions(o);
+
+    const cleared = state({ state_revision: 3 });
+    supabase.authedFetch.mockResolvedValueOnce(reply(200, cleared));
+    await act(() => result.current.handleClearAllOrders());
+    expect(clearPendingOrders).toHaveBeenCalledTimes(1);
+    expect(o.applyServerState).toHaveBeenCalledWith(cleared);
+
+    const adopted = state({ state_revision: 4 });
+    supabase.authedFetch.mockResolvedValueOnce(reply(200, adopted));
+    await act(async () => {
+      const err = await suggestionStore.adopt([frenchMove]);
+      expect(err).toBeNull();
+    });
+    expect(clearPendingOrders).toHaveBeenCalledTimes(2);
+    expect(o.applyServerState).toHaveBeenCalledWith(adopted);
   });
 });

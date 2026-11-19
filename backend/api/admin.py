@@ -97,7 +97,10 @@ async def seed_test_scenario(req: SeedScenarioRequest):
     clear_ephemeral_sandboxes_for(gid)
     GAME_HISTORY[gid] = build_scenario_history(req.scenario_id, gid)
     HISTORY_UNSAVED.add(gid)
-    GAMES[gid] = build_scenario(req.scenario_id, req.active_power, gid)
+    new_game = build_scenario(req.scenario_id, req.active_power, gid)
+    if gid in GAMES:
+        new_game.state_revision = GAMES[gid].state_revision + 1
+    GAMES[gid] = new_game
     sync_summary(gid)
     if gid in GAME_SUMMARIES:
         await persist_game(gid)

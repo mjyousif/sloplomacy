@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import logging
@@ -13,6 +14,38 @@ from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
 
 logger = logging.getLogger("diplomacy.database")
+
+_HTTP_CLIENT: httpx.AsyncClient | None = None
+_HTTP_CLIENT_LOOP: asyncio.AbstractEventLoop | None = None
+
+
+def get_http_client() -> httpx.AsyncClient:
+    """Return a shared pooled AsyncClient bound to the current running event loop."""
+    global _HTTP_CLIENT, _HTTP_CLIENT_LOOP
+    loop = asyncio.get_running_loop()
+    if _HTTP_CLIENT is None or _HTTP_CLIENT.is_closed or _HTTP_CLIENT_LOOP is not loop:
+        _HTTP_CLIENT = httpx.AsyncClient(
+            timeout=10.0,
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+        )
+        _HTTP_CLIENT_LOOP = loop
+    return _HTTP_CLIENT
+
+
+async def close_http_client() -> None:
+    """Close the shared Supabase HTTP client (called on app shutdown)."""
+    global _HTTP_CLIENT, _HTTP_CLIENT_LOOP
+    client = _HTTP_CLIENT
+    loop = _HTTP_CLIENT_LOOP
+    _HTTP_CLIENT = None
+    _HTTP_CLIENT_LOOP = None
+    if client is not None and not client.is_closed:
+        try:
+            if loop is asyncio.get_running_loop():
+                await client.aclose()
+        except RuntimeError:
+            pass
+
 
 ROOM_CODE_REGEX = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 
@@ -239,11 +272,8 @@ async def load_game_from_db(
     headers = get_headers()
 
     try:
-        if client:
-            resp = await client.get(url, headers=headers, timeout=10.0)
-        else:
-            async with httpx.AsyncClient() as c:
-                resp = await c.get(url, headers=headers, timeout=10.0)
+        c = client or get_http_client()
+        resp = await c.get(url, headers=headers, timeout=10.0)
 
         if resp.status_code != 200:
             raise SupabaseUnavailable(f"HTTP {resp.status_code} {resp.text}")
@@ -311,10 +341,8 @@ async def load_all_summaries_from_db(
 
     async def read_rows(columns: str) -> httpx.Response:
         url = f"{get_supabase_url()}/rest/v1/multiplayer_games?select={columns}"
-        if client:
-            return await client.get(url, headers=headers, timeout=10.0)
-        async with httpx.AsyncClient() as c:
-            return await c.get(url, headers=headers, timeout=10.0)
+        c = client or get_http_client()
+        return await c.get(url, headers=headers, timeout=10.0)
 
     try:
         resp = await read_rows(LOBBY_COLUMNS)
@@ -406,11 +434,8 @@ async def save_game_to_db(
         payload["host_user_id"] = summary.creator_id
 
     try:
-        if client:
-            resp = await client.post(url, headers=headers, json=payload, timeout=10.0)
-        else:
-            async with httpx.AsyncClient() as c:
-                resp = await c.post(url, headers=headers, json=payload, timeout=10.0)
+        c = client or get_http_client()
+        resp = await c.post(url, headers=headers, json=payload, timeout=10.0)
 
         if resp.status_code in (200, 201, 204):
             logger.debug("Successfully saved game '%s' to Supabase.", game_id)
@@ -444,11 +469,8 @@ async def delete_game_from_db(
     headers = get_headers()
 
     try:
-        if client:
-            resp = await client.delete(url, headers=headers, timeout=10.0)
-        else:
-            async with httpx.AsyncClient() as c:
-                resp = await c.delete(url, headers=headers, timeout=10.0)
+        c = client or get_http_client()
+        resp = await c.delete(url, headers=headers, timeout=10.0)
 
         if resp.status_code in (200, 204):
             logger.debug("Deleted game '%s' from Supabase.", game_id)
@@ -475,11 +497,8 @@ async def load_profile_names_from_db(
     headers = get_headers()
 
     try:
-        if client:
-            resp = await client.get(url, headers=headers, timeout=10.0)
-        else:
-            async with httpx.AsyncClient() as c:
-                resp = await c.get(url, headers=headers, timeout=10.0)
+        c = client or get_http_client()
+        resp = await c.get(url, headers=headers, timeout=10.0)
 
         if resp.status_code != 200:
             logger.warning("Supabase profiles read failed: HTTP %d %s", resp.status_code, resp.text)
@@ -523,11 +542,8 @@ async def upsert_profile_display_name(
     }
 
     try:
-        if client:
-            resp = await client.post(url, headers=headers, json=payload, timeout=10.0)
-        else:
-            async with httpx.AsyncClient() as c:
-                resp = await c.post(url, headers=headers, json=payload, timeout=10.0)
+        c = client or get_http_client()
+        resp = await c.post(url, headers=headers, json=payload, timeout=10.0)
 
         if resp.status_code in (200, 201, 204):
             return True

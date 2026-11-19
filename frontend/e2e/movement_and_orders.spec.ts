@@ -81,8 +81,11 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await expect(burPath).toHaveAttribute('stroke', '#eab308');
       await recorder.recordStep(page, '04c_destination_hover_preview');
       await burOption.click();
-      await expect(burPath).not.toHaveAttribute('stroke', '#eab308');
       await expect(orderArrow).toBeVisible();
+      // With optimistic updates, the card hover immediately highlights origin and target;
+      // moving off the card confirms the highlight clears cleanly.
+      await page.mouse.move(0, 0);
+      await expect(burPath).not.toHaveAttribute('stroke', '#eab308');
 
       // 6. Order French Army in Marseilles (FRA_A_MAR) to SUPPORT A PAR -> BUR and verify SUPPORT arrow
       const marCard = page.locator('[data-testid="unit-macro-card"][data-unit-id="FRA_A_MAR"]');

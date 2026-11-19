@@ -115,6 +115,7 @@ async def enter_sandbox_mode(
     if branch is not None and branch[0] == origin_turn:
         branch_state = branch[1].model_copy(deep=True)
         branch_state.active_power = req.power
+        branch_state.state_revision = max(branch_state.state_revision, game.state_revision) + 1
         GAMES[gid] = branch_state
         GAME_HISTORY[gid] = [snap.model_copy(deep=True) for snap in branch[2]]
         game = branch_state
@@ -161,6 +162,7 @@ async def exit_sandbox_mode(
         )
         restored = checkpoint.model_copy(deep=True)
         restored.active_power = req.power
+        restored.state_revision = max(restored.state_revision, game.state_revision) + 1
         GAMES[gid] = restored
         game = restored
         SANDBOX_CHECKPOINTS[gid] = None
@@ -290,7 +292,9 @@ async def load_scenario(
     GAME_HISTORY[gid] = []
     HISTORY_UNSAVED.add(gid)
     power = req.active_power or current.active_power
-    GAMES[gid] = build_scenario(req.scenario_id, power, gid)
+    new_game = build_scenario(req.scenario_id, power, gid)
+    new_game.state_revision = current.state_revision + 1
+    GAMES[gid] = new_game
     sync_summary(gid)
     await persist_game(gid)
     await broadcast_game_update(gid, GAMES[gid])
