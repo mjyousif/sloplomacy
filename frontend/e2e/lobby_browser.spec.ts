@@ -201,10 +201,27 @@ test.describe('Scenario: Lobby game browser', () => {
       await recorder.recordStep(bob, '04_full_games');
       await clearFilters(bob);
 
-      // 5. A guest on a phone has the lobby open on the same game.
+      // 5. A guest on a phone has the lobby open on the same game, with Guest Hero above the fold
+      //    and browser filters collapsed behind a Filters toggle until tapped.
       guest = await openLobby(browser, null, true);
       recorder.attachListeners(guest);
       await expect(guest.locator('[data-layout="compact"]')).toHaveCount(1);
+      const guestHeroBox = await guest.getByTestId('lobby-hero').boundingBox();
+      const guestBrowserBox = await guest.getByTestId('game-browser').boundingBox();
+      expect(guestHeroBox && guestBrowserBox && guestHeroBox.y < guestBrowserBox.y).toBe(true);
+
+      const filtersToggle = guest.getByTestId('browser-filters-toggle');
+      await expect(filtersToggle).toBeVisible();
+      await expect(filtersToggle).toHaveAttribute('aria-expanded', 'false');
+      await expect(guest.getByTestId('browser-filters-body')).toBeHidden();
+      await filtersToggle.tap();
+      await expect(guest.getByTestId('browser-filters-body')).toBeVisible();
+      await guest.getByTitle('Italy must be unclaimed').tap();
+      await filtersToggle.tap();
+      await expect(filtersToggle).toHaveText(/Filters \(1\)/);
+      await guest.getByTestId('browser-filters-quick-clear').tap();
+      await expect(filtersToggle).toHaveText('Filters');
+
       await expect(seat(guest, open, 'ITALY')).toHaveAttribute(
         'data-seat',
         'free',

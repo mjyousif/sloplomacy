@@ -141,20 +141,38 @@
 
 @layer compact {
   :global([data-layout="compact"]) .lobby-hero {
-    order: 2;
+    order: 0;
+    flex-shrink: 0;
     width: 100%;
     margin: 0;
     grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 18px 16px;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  :global([data-layout="compact"]) .lobby-badge-row {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
   }
 
   :global([data-layout="compact"]) .lobby-hero-title {
-    font-size: 1.5rem;
+    font-size: 1.38rem;
+    margin-bottom: 6px;
+  }
+
+  :global([data-layout="compact"]) .lobby-hero-subtitle {
+    font-size: 0.84rem;
+    line-height: 1.45;
+    margin-bottom: 12px;
+  }
+
+  :global([data-layout="compact"]) .lobby-hero-actions {
+    gap: 8px;
   }
 
   :global([data-layout="compact"]) .lobby-mode-comparison {
-    grid-template-columns: 1fr;
+    display: none;
   }
 
   :global([data-layout="compact"]) .lobby-primary-cta,
@@ -168,6 +186,7 @@
   }
 
   :global([data-layout="compact"]) .lobby-era-pill {
-    font-size: 0.75rem;
+    padding: 3px 8px;
+    font-size: 0.66rem;
   }
 }

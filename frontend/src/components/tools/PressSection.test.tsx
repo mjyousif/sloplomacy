@@ -7,6 +7,7 @@ import { suggestionStore } from '../../lib/suggestionStore';
 import type { Power, PressMessage, ProvinceInfo } from '../../types/diplomacy';
 import { threadKey } from '../../utils/pressHelpers';
 import { PressSection, type PressSectionProps } from './PressSection';
+import { MobilePressSheet } from './press/MobilePressSheet';
 
 const authedFetch = vi.hoisted(() => vi.fn());
 vi.mock('../../lib/supabase', () => ({ authedFetch }));
@@ -465,5 +466,89 @@ describe('PressSection: move suggestions', () => {
     await tick('ENGLAND');
     await waitFor(() => expect(suggestionStore.getState().draft).toBeNull());
     expect(screen.queryByTestId('press-suggestion-draft')).toBeNull();
+  });
+});
+
+describe('PressSection sheet and MobilePressSheet', () => {
+  it('renders inline recipient chips without a collapsible header when variant="sheet"', async () => {
+    render(
+      <PressSection
+        {...base({
+          variant: 'sheet',
+          participants: {
+            FRANCE: {
+              user_id: 'u1',
+              email: 'f@example.com',
+              display_name: 'France',
+              power: 'FRANCE',
+              joined_at: '2026-11-01T00:00:00Z',
+            },
+            GERMANY: {
+              user_id: 'u2',
+              email: 'g@example.com',
+              display_name: 'Germany',
+              power: 'GERMANY',
+              joined_at: '2026-11-01T00:00:00Z',
+            },
+          },
+        })}
+      />,
+    );
+    fill([msg(1, 'GERMANY', 'DM one', ['FRANCE'])]);
+
+    expect(screen.queryByTestId('sidebar-section-toggle')).toBeNull();
+    expect(screen.getByTestId('press-section')).toHaveAttribute(
+      'data-press-sheet',
+      'true',
+    );
+    const bar = screen.getByTestId('press-recipient-bar');
+    expect(bar).toBeInTheDocument();
+    expect(within(bar).getByTestId('press-recipient-ITALY')).toBeDisabled();
+    const germanyChip = within(bar).getByTestId('press-recipient-GERMANY');
+    expect(
+      within(germanyChip).getByTestId('press-pick-unread'),
+    ).toHaveTextContent('1');
+
+    await userEvent.click(germanyChip);
+    expect(destination()).toBe('Private to Germany.');
+    await userEvent.click(within(bar).getByTestId('press-recipient-public'));
+    expect(destination()).toBe('To everyone, in the public box.');
+  });
+
+  it('keeps MobilePressSheet inert and unread while closed, and focuses + reads when open', async () => {
+    const onClose = vi.fn();
+    const onHighlightProvinces = vi.fn();
+    const { rerender } = render(
+      <MobilePressSheet
+        open={false}
+        onClose={onClose}
+        press={base({ onHighlightProvinces })}
+      />,
+    );
+    fill([msg(1, 'GERMANY', 'Hold BUR')]);
+
+    const layer = screen.getByTestId('mobile-press-sheet');
+    expect(layer).toHaveAttribute('inert');
+    expect(pressStore.getState().lastRead).toEqual({});
+
+    rerender(
+      <MobilePressSheet
+        open={true}
+        onClose={onClose}
+        press={base({ onHighlightProvinces })}
+      />,
+    );
+    expect(layer).not.toHaveAttribute('inert');
+    expect(screen.getByTestId('press-sheet-close-btn')).toHaveFocus();
+    await waitFor(() =>
+      expect(pressStore.getState().lastRead).toEqual({ public: 1 }),
+    );
+
+    await userEvent.click(screen.getByTestId('press-province-link'));
+    expect(onHighlightProvinces).toHaveBeenCalledWith(['BUR']);
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    await userEvent.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(2);
   });
 });

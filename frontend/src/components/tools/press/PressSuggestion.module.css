@@ -230,7 +230,8 @@
   }
 
   :global([data-layout="compact"]) .suggest-btn {
-    width: 44px;
+    width: 42px;
+    min-height: 44px;
   }
 
   :global([data-layout="compact"]) .suggest-btn:hover {

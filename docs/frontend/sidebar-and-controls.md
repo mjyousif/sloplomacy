@@ -68,7 +68,7 @@ On a wide screen the header is `TopHeader.tsx`. `AppHeader.tsx` picks it (or `Co
 
 In the compact layout (see [Responsive & Layout Specifications](styling-and-themes.md#responsive--layout-specifications)) the header becomes one `52px` row reusing the shared top-bar pieces:
 
-- **Left**: in a game, a `←` button back to the lobby, then `≡`, which opens the [tools drawer](#phone-game-screen) (and carries the unread press badge when the drawer is closed). In the lobby, the brand.
+- **Left**: in a game, a `←` button back to the lobby, then `≡`, which opens the [tools drawer](#phone-game-screen). In the lobby, the brand.
 - **Center**, in a game: the shared `TurnChronicle.tsx` in a two-line compact layout (`Spring 1901` over `Movement`), keeping step arrows, the dropdown turn picker, and the Back to live button inline without a duplicate map pill. Once someone has won, an icon-only gold `Crown` button (`data-testid="game-over-pill"`) sits beside it to reopen `GameOverModal`.
 - **Right**: the shared `GameSettingsMenu` (when on a board, including Solo Sandbox actions, `Open in Local Sandbox`, `Administrator` with red active indicator, and `Surrender`) and `AccountDropdownMenu` (Profile, `Display Settings`, `Account Settings`, `Switch Game`, Sign In / Sign Out). Order problem counts stay on the sheet peek's `StatusBadge` and finalization check, matching desktop.
 
@@ -78,16 +78,16 @@ In the compact layout (see [Responsive & Layout Specifications](styling-and-them
 
 In the compact layout the game screen is the map, with everything else layered over it. Both sidebars reuse their desktop pieces through a `variant` prop rather than being copied.
 
-### Order sheet (`BottomSheet.tsx`, `MacroSidebar variant="sheet"`)
+### Order sheet (`BottomSheet.tsx`, `MacroSheet.tsx`)
 - **Stops**: peek, half and full (`utils/sheetHelpers.ts`). It starts at peek every time a game opens. Drag the handle and let go to settle on the nearest stop, or flick to go one stop further. A tap or the keyboard steps peek → half → full → peek. It only slides when it moves between stops, never when it is measured or the screen rotates.
-- **Peek**: the power with its unit, supply centre and unconfirmed counts (which the desktop rail only gives in tooltips), the status badge, Clear All Orders, then Finalize and Resolve. In a match, Resolve is the consensus card (the host's force-resolve override lives in the top bar's `Game Settings` -> `Administrator` menu).
-- **Body**: the phase notes, builds and unit cards, and the version badge. While the sheet is lowered the body is off screen and `inert`.
+- **Peek**: the active power (with a 1-tap `SheetPowerSwitcher` across all 7 powers in Solo Sandbox or Multiplayer Hypothetical Mode), unit/SC/unconfirmed counts, `StatusBadge`, and a single action row holding `Finalize` + `Resolve` (solo) or `Press` with unread badge (`mobile-press-toggle`, multiplayer).
+- **Body**: `PhaseContext`, the multiplayer consensus card (`MultiplayerConsensusCard`), the `Clear All Orders` utility bar (`macro-sheet-utility-bar`), and the builds and unit cards. While the sheet is lowered the body is off screen and `inert`.
 - **Spacer**: the sheet leaves a spacer as tall as its peek, so the map ends where the peek begins and the phone camera fits the map that is actually visible.
 
-### Tools drawer (`ToolsSidebar variant="drawer"`)
-- ≡ in the top bar opens it over the game area, below the top bar, so ≡ can close it again. Tapping the backdrop or pressing Escape also closes it, and focus goes back to ≡.
-- It shows the same sections as the desktop sidebar except Map View & Camera, because the zoom buttons are on the map. Press is among them, and while the drawer is closed ≡ carries the count of unread press.
-- It stays mounted while closed, and `inert`, so it can slide both ways.
+### Tools drawer (`ToolsSidebar variant="drawer"`) & Dedicated Press Sheet (`MobilePressSheet.tsx`)
+- ≡ in the top bar opens the Tools drawer over the game area, below the top bar, so ≡ can close it again. Tapping the backdrop or pressing Escape also closes it, and focus goes back to ≡.
+- It shows the same Standings and Sandbox sections as the desktop sidebar (omitting Map View & Camera because zoom buttons sit on the map). In a match with Press, it shows a full-width `Open Press & Diplomacy` launcher button (and tapping any power's envelope in Standings opens Press directly to that thread) instead of cramming Press inside the 320px drawer.
+- `MobilePressSheet.tsx` opens full-width and full-height (`dvh`-aware for on-screen keyboards) from either the sheet peek's `Press` button or the drawer, rendering `PressSection variant="sheet"` with inline `PressRecipientBar` chips (`[Public]` + each power with unread badges), horizontally scrolling channel tabs, expanded message history, and composer. Both overlays stay mounted while closed (`inert`) so animations and drafts persist.
 
 ### Docked unit bar and the map
 - Selecting a unit or a build slot, on the map or by tapping a card's header, opens one full-width bar at the bottom of the map. It holds the unit's order buttons (44px), a Cancel button and the current step ("Tap a green province to Move"). The coast picker takes its place while it is open. It can't be dragged.
@@ -97,7 +97,7 @@ In the compact layout the game screen is the map, with everything else layered o
 - The selected card lights up its provinces, the way hovering a card does on desktop. Raising the sheet while a unit is selected brings its card to the top of the list.
 
 ### Turn history
-Turn history uses the same `TurnChronicle.tsx` control in `CompactTopBar` (with full-width dropdown items styled in `@layer compact`). The order sheet shows the same `"Viewing …"` bar and `Nations` / `Actions` filters as desktop (`HistoryTurnPanel.tsx` / `HistoryLockBar`), and nothing on the map can be picked up while viewing a past turn.
+Turn history uses the same `TurnChronicle.tsx` control in `CompactTopBar` (with full-width dropdown items styled in `@layer compact`). The order sheet shows the `"Viewing …"` bar (`HistoryLockBar`) in the peek, `Nations` / `Actions` filters in the sheet body (`HistoryTurnPanel.tsx`), and nothing on the map can be picked up while viewing a past turn. Tapping any past-turn order or territorial change row inside the sheet pins it on the map and drops the sheet back to `peek`, showing a compact summary bar (`HistoryPeekSelection`) with a clear (`×`) button so players can inspect the highlighted move on the unobstructed map.
 
 ### Turn clock
 `PhaseTimerWidget` gets `compact`. It starts as a pill at the top of the map that says what the clock is doing ("14:05", "Vote · 0:42", "Paused · 1/3 ready", "Start the clock"). Tapping it opens the full widget, which has a button to fold it back. An amber dot on the pill means the real clock is running behind Hypothetical Mode.

@@ -88,6 +88,15 @@ export function hasActiveFilters(filters: BrowseFilters): boolean {
   return browseQuery(filters, 1) !== browseQuery(DEFAULT_BROWSE_FILTERS, 1);
 }
 
+/** Number of active filter dimensions for compact filter-toggle labels. */
+export function activeFilterCount(filters: BrowseFilters): number {
+  let count = 0;
+  if (filters.seats !== DEFAULT_BROWSE_FILTERS.seats) count += 1;
+  count += filters.countries.length;
+  if (filters.turnOp !== null && filters.year !== null) count += 1;
+  return count;
+}
+
 export function pageCount(total: number, pageSize = BROWSE_PAGE_SIZE): number {
   return Math.max(1, Math.ceil(total / pageSize));
 }

@@ -96,7 +96,7 @@ async function openAs(
   const page = await context.newPage();
   await page.goto('/');
   const row = page
-    .locator('[data-testid="my-game-row"]')
+    .locator('[data-testid="featured-game-hero"], [data-testid="my-game-row"]')
     .filter({ hasText: matchName });
   await row.getByRole('button', { name: /^Resume as/ }).click();
   await page.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
@@ -390,7 +390,7 @@ test.describe('Scenario: Press between three players', () => {
     }
   });
 
-  test('phone: unread badge on the tools button and Press in the drawer', async ({
+  test('phone: unread badge on Press button, full-width Press sheet and inline recipients', async ({
     browser,
   }) => {
     const recorder = new ScenarioRecorder('press_phone');
@@ -401,38 +401,43 @@ test.describe('Scenario: Press between three players', () => {
       recorder.attachListeners(alice);
       await expect(alice.locator('[data-layout]')).toHaveAttribute('data-layout', 'compact');
 
-      // A message arrives while the drawer is closed: the ≡ button shows it, unread.
+      // A message arrives while the sheet is closed: the Press button in the peek shows it.
       await api(BOB, `/api/press?game_id=${gameId}`, {
         power: 'GERMANY',
         recipients: [],
         anonymous: false,
         body: 'Germany proposes peace in the west. Hands off Burgundy.',
       });
-      const toolsButton = alice.locator('[data-testid="compact-tools-toggle"]');
-      await expect(toolsButton.locator('[data-testid="press-unread-badge"]')).toHaveText('1');
-      await recorder.recordStep(alice, 'phone_unread_badge_on_tools_button');
+      const pressBtn = alice.locator('[data-testid="mobile-press-toggle"]');
+      await expect(pressBtn.locator('[data-testid="press-unread-badge"]')).toHaveText('1');
+      await expect(alice.locator('[data-testid="compact-tools-toggle"] [data-testid="press-unread-badge"]')).toHaveCount(0);
+      await recorder.recordStep(alice, 'phone_unread_badge_on_press_button');
 
-      // Opening the drawer shows the section; once it is on screen the message is read.
-      await toolsButton.click();
-      const section = alice.locator('[data-testid="press-section"]');
-      await section.scrollIntoViewIfNeeded();
+      // Opening Press opens a full-width sheet with inline recipients; reading clears the badge.
+      await pressBtn.tap();
+      const pressSheet = alice.locator('[data-testid="mobile-press-sheet"]');
+      await expect(pressSheet).toHaveAttribute('data-open', 'true');
       await expect(messages(alice)).toHaveCount(1);
-      await expect(alice.locator('[data-testid="press-unread-total"]')).toHaveCount(0);
-      await recorder.recordStep(alice, 'phone_press_in_tools_drawer');
+      await expect(pressBtn.locator('[data-testid="press-unread-badge"]')).toHaveCount(0);
+      const sheetBox = await pressSheet.boundingBox();
+      const inputBox = await alice.locator('[data-testid="press-input"]:visible').boundingBox();
+      expect(sheetBox?.width).toBeGreaterThanOrEqual(380);
+      expect(inputBox?.width).toBeGreaterThanOrEqual(220);
+      await recorder.recordStep(alice, 'phone_press_full_width_sheet');
 
-      // Germany's letter button is big enough for a finger, and lights when tapped.
-      const toGermany = alice.locator('[data-testid="press-recipient-GERMANY"]:visible');
-      await toGermany.scrollIntoViewIfNeeded();
-      const box = await toGermany.boundingBox();
-      expect(box?.height).toBeGreaterThanOrEqual(32);
+      // Germany's inline recipient chip is finger-sized and opens Private to Germany directly.
+      const toGermany = alice.locator('[data-testid="press-recipient-bar"] [data-testid="press-recipient-GERMANY"]');
+      const chipBox = await toGermany.boundingBox();
+      expect(chipBox?.height).toBeGreaterThanOrEqual(32);
       await toGermany.tap();
       await expect(toGermany).toHaveAttribute('aria-pressed', 'true');
       await expect(alice.locator('[data-testid="press-destination"]:visible')).toHaveText(
         'Private to Germany.',
       );
-      await recorder.recordStep(alice, 'phone_letter_button_lit_on_standings');
-      await toGermany.tap();
-      await section.scrollIntoViewIfNeeded();
+      await recorder.recordStep(alice, 'phone_inline_recipient_lit');
+
+      await alice.locator('[data-testid="press-recipient-public"]').tap();
+      await expect(alice.locator('[data-testid="press-recipient-public"]')).toHaveAttribute('aria-pressed', 'true');
 
       // The page never scrolls sideways.
       const widths = await alice.evaluate(() => ({
@@ -441,15 +446,23 @@ test.describe('Scenario: Press between three players', () => {
       }));
       expect(widths.scroll).toBe(widths.inner);
 
-      // Tapping a province closes the drawer and lights the province on the map.
+      // Tapping a province closes the Press sheet and lights the province on the map.
       await alice
         .locator('[data-testid="press-province-link"][data-province="BUR"]')
         .tap();
-      await expect(alice.locator('[data-testid="tools-drawer-layer"]')).not.toHaveAttribute(
-        'data-open',
-        'true',
-      );
+      await expect(pressSheet).not.toHaveAttribute('data-open', 'true');
       await recorder.recordStep(alice, 'phone_province_tap_shows_map');
+
+      // Opening the Tools drawer shows the drawer Press launcher, and Standings envelopes launch Press.
+      await alice.locator('[data-testid="compact-tools-toggle"]').tap();
+      await expect(alice.locator('[data-testid="tools-drawer"] [data-testid="drawer-open-press-btn"]')).toBeVisible();
+      await expect(alice.locator('[data-testid="tools-drawer"] [data-testid="press-section"]')).toHaveCount(0);
+      const drawerGermany = alice.locator('[data-testid="tools-drawer"] [data-testid="press-recipient-GERMANY"]');
+      await drawerGermany.scrollIntoViewIfNeeded();
+      await drawerGermany.tap();
+      await expect(alice.locator('[data-testid="tools-drawer-layer"]')).not.toHaveAttribute('data-open', 'true');
+      await expect(pressSheet).toHaveAttribute('data-open', 'true');
+      await expect(alice.locator('[data-testid="press-destination"]:visible')).toHaveText('Private to Germany.');
 
       recorder.finalize('PASSED');
     } catch (error) {

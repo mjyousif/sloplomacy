@@ -1,11 +1,6 @@
 import { ArrowLeft, Crown, Menu } from 'lucide-react';
 import type React from 'react';
 import { POWER_METADATA } from '../../types/diplomacy';
-import { cx } from '../../utils/cx';
-import {
-  PressUnreadBadge,
-  pressBadgeAnchor,
-} from '../tools/press/PressUnreadBadge';
 import { BrandEmblem } from '../ui/BrandEmblem';
 import { AccountDropdownMenu } from './AccountDropdownMenu';
 import styles from './CompactTopBar.module.css';
@@ -88,14 +83,13 @@ export function CompactTopBar({
               ref={toolsToggleRef}
               type="button"
               data-testid="compact-tools-toggle"
-              className={cx(styles.compactBarIconBtn, pressBadgeAnchor)}
+              className={styles.compactBarIconBtn}
               data-open={toolsOpen}
               onClick={onToggleTools}
               aria-label={toolsOpen ? 'Close tools' : 'Tools'}
               aria-expanded={toolsOpen}
             >
               <Menu size={20} />
-              {!toolsOpen && <PressUnreadBadge />}
             </button>
           )}
 

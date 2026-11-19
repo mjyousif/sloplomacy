@@ -88,18 +88,15 @@
 
 @layer compact {
   :global([data-layout="compact"]) .suggestion-pill {
-    top: 10px;
+    position: static;
+    top: auto;
+    left: auto;
+    transform: none;
+    max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
     border-radius: 18px;
     font-size: 0.82rem;
-  }
-
-  :global([data-layout="compact"])
-    :global([data-map-viewport]):has(
-      [data-testid="phase-timer-pill"],
-      [data-testid="phase-timer-widget"]
-    )
-    .suggestion-pill {
-    top: 58px;
   }
 
   :global([data-layout="compact"]) .take-btn,

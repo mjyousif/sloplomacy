@@ -1,4 +1,4 @@
-import { PanelLeftClose, Sliders, X } from 'lucide-react';
+import { MessagesSquare, PanelLeftClose, Sliders, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef } from 'react';
 import { cx } from '../utils/cx';
@@ -6,6 +6,10 @@ import styles from './ToolsSidebar.module.css';
 import { CollapsedRail } from './tools/CollapsedRail';
 import { MapControlsSection } from './tools/MapControlsSection';
 import { PressSection } from './tools/PressSection';
+import {
+  PressUnreadBadge,
+  pressBadgeAnchor,
+} from './tools/press/PressUnreadBadge';
 import { SandboxToolsSection } from './tools/SandboxToolsSection';
 import { StandingsSection } from './tools/StandingsSection';
 import type { ToolsSidebarProps } from './tools/toolsSidebarProps';
@@ -41,6 +45,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   open = false,
   onClose,
   press,
+  onOpenPress,
 }) => {
   const isDrawer = variant === 'drawer';
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -151,10 +156,27 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
               ? press.power
               : undefined
           }
+          onPressPick={isDrawer ? onOpenPress : undefined}
         />
 
-        {/* 5. PRESS: PUBLIC BOX AND PRIVATE THREADS */}
-        {press && <PressSection {...press} visible={!isDrawer || open} />}
+        {/* 5. PRESS: full panel on desktop, dedicated full-width launcher in phone drawer */}
+        {press &&
+          (isDrawer && onOpenPress ? (
+            <div className={styles.drawerOpenPressSection}>
+              <button
+                type="button"
+                className={cx(styles.drawerOpenPressBtn, pressBadgeAnchor)}
+                data-testid="drawer-open-press-btn"
+                onClick={onOpenPress}
+              >
+                <MessagesSquare size={15} aria-hidden="true" />
+                <span>Open Press &amp; Diplomacy</span>
+                <PressUnreadBadge />
+              </button>
+            </div>
+          ) : (
+            <PressSection {...press} visible={!isDrawer || open} />
+          ))}
 
         {/* 6. HYPOTHETICAL MODE & PRE-MOVES */}
         <SandboxToolsSection

@@ -409,19 +409,15 @@ describe('MacroSidebar Clear All confirmation', () => {
     expect(screen.queryByTestId('clear-all-confirm')).toBeNull();
   });
 
-  it("takes the button's place in the phone sheet", () => {
-    const { container } = sidebar({ variant: 'sheet' });
+  it('moves Clear All into the sheet utility bar and keeps inline confirmation intact', () => {
+    const { container } = sidebar({ variant: 'sheet', sheetSnap: 'half' });
     fireEvent.click(screen.getByTestId('btn-clear-all'));
-    const controls = container.querySelector(
-      '[data-testid="macro-sheet-controls"]',
+    const utilityBar = container.querySelector(
+      '[data-testid="macro-sheet-utility-bar"]',
     ) as HTMLElement;
     expect(
-      Array.from(controls.children).map((c) => c.getAttribute('data-testid')),
-    ).toEqual([
-      'clear-all-confirm',
-      'btn-finalize-orders',
-      'btn-adjudicate-phase',
-    ]);
+      Array.from(utilityBar.children).map((c) => c.getAttribute('data-testid')),
+    ).toEqual(['clear-all-confirm']);
   });
 });
 
@@ -431,7 +427,7 @@ describe('MacroSidebar sheet', () => {
   const sheet = (over: Partial<MacroSidebarProps> = {}) =>
     sidebar({ variant: 'sheet', ...over });
 
-  it('shows the power, Clear All and the footer at the peek, the cards in the body', () => {
+  it('keeps the slim peek focused on primary actions and puts Clear All + cards in the body', () => {
     const { container } = sheet();
     const peek = container.querySelector(
       '[data-testid="macro-sheet-peek"]',
@@ -444,10 +440,15 @@ describe('MacroSidebar sheet', () => {
     ) as HTMLElement;
     expect(
       Array.from(controls.children).map((c) => c.getAttribute('data-testid')),
-    ).toEqual(['btn-clear-all', 'btn-finalize-orders', 'btn-adjudicate-phase']);
+    ).toEqual(['btn-finalize-orders', 'btn-adjudicate-phase']);
+    expect(peek.querySelector('[data-testid="btn-clear-all"]')).toBeNull();
     const body = container.querySelector(
       '[data-testid="macro-sheet-body"]',
     ) as HTMLElement;
+    expect(
+      body.querySelector('[data-testid="macro-sheet-utility-bar"]'),
+    ).not.toBeNull();
+    expect(body.querySelector('[data-testid="btn-clear-all"]')).not.toBeNull();
     expect(
       body.querySelectorAll('[data-testid="unit-macro-card"]'),
     ).toHaveLength(3);
@@ -457,8 +458,103 @@ describe('MacroSidebar sheet', () => {
     ).toBeNull();
   });
 
-  it('shows the lock bar in the peek and goes inert for a past turn', () => {
-    const { container } = sheet({ historyLabel: 'Fall 1901 Movement' });
+  it('moves the multiplayer consensus card to the sheet body and puts Press in the peek bar', () => {
+    const onOpenPress = vi.fn();
+    const { container } = sheet({
+      isMultiplayer: true,
+      lobbyStatus: 'active',
+      participants: participantsFor(['FRANCE', 'ENGLAND']),
+      onOpenPress,
+    });
+    const peek = container.querySelector(
+      '[data-testid="macro-sheet-peek"]',
+    ) as HTMLElement;
+    const body = container.querySelector(
+      '[data-testid="macro-sheet-body"]',
+    ) as HTMLElement;
+    expect(
+      peek.querySelector('[data-testid="mp-resolution-controls"]'),
+    ).toBeNull();
+    const pressBtn = screen.getByTestId('mobile-press-toggle');
+    expect(peek).toContainElement(pressBtn);
+    fireEvent.click(pressBtn);
+    expect(onOpenPress).toHaveBeenCalledTimes(1);
+    expect(
+      body.querySelector('[data-testid="mp-resolution-controls"]'),
+    ).not.toBeNull();
+  });
+
+  it('offers 1-tap 7-power switcher in the peek in solo sandbox and hypothetical mode only', () => {
+    const onSelectPower = vi.fn();
+    const { rerender } = render(
+      <MacroSidebar
+        {...baseProps()}
+        variant="sheet"
+        onSelectPower={onSelectPower}
+        finalizedPowers={['GERMANY']}
+      />,
+    );
+    const trigger = screen.getByTestId('sheet-power-switcher-trigger');
+    fireEvent.click(trigger);
+    const popover = screen.getByTestId('sheet-power-switcher-popover');
+    expect(
+      popover.querySelectorAll('[data-testid^="sheet-power-option-"]'),
+    ).toHaveLength(7);
+    expect(screen.getByTestId('sheet-power-option-FRANCE')).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    fireEvent.click(screen.getByTestId('sheet-power-option-GERMANY'));
+    expect(onSelectPower).toHaveBeenCalledWith('GERMANY');
+    expect(
+      screen.queryByTestId('sheet-power-switcher-popover'),
+    ).not.toBeInTheDocument();
+
+    // Open and close with Escape.
+    fireEvent.click(screen.getByTestId('sheet-power-switcher-trigger'));
+    fireEvent.keyDown(screen.getByTestId('sheet-power-switcher-popover'), {
+      key: 'Escape',
+    });
+    expect(
+      screen.queryByTestId('sheet-power-switcher-popover'),
+    ).not.toBeInTheDocument();
+
+    // Hypothetical mode in multiplayer still allows switching powers...
+    rerender(
+      <MacroSidebar
+        {...baseProps()}
+        variant="sheet"
+        isMultiplayer={true}
+        sandboxMode={true}
+        onSelectPower={onSelectPower}
+      />,
+    );
+    expect(
+      screen.getByTestId('sheet-power-switcher-trigger'),
+    ).toBeInTheDocument();
+
+    // ...whereas live non-hypothetical multiplayer hides it.
+    rerender(
+      <MacroSidebar
+        {...baseProps()}
+        variant="sheet"
+        isMultiplayer={true}
+        sandboxMode={false}
+        onSelectPower={onSelectPower}
+      />,
+    );
+    expect(
+      screen.queryByTestId('sheet-power-switcher-trigger'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows the lock bar in the peek and goes inert for a past turn (except Press)', () => {
+    const onOpenPress = vi.fn();
+    const { container } = sheet({
+      isMultiplayer: true,
+      historyLabel: 'Fall 1901 Movement',
+      onOpenPress,
+    });
     const peek = container.querySelector(
       '[data-testid="macro-sheet-peek"]',
     ) as HTMLElement;
@@ -476,6 +572,10 @@ describe('MacroSidebar sheet', () => {
     expect(
       container.querySelector('[data-testid="macro-sheet-body"]'),
     ).toHaveAttribute('inert');
+    const pressBtn = screen.getByTestId('mobile-press-toggle');
+    expect(pressBtn).not.toHaveAttribute('inert');
+    fireEvent.click(pressBtn);
+    expect(onOpenPress).toHaveBeenCalledTimes(1);
   });
 
   it("lights up the selected unit's provinces, as a finger has no hover", () => {

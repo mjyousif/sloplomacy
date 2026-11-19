@@ -12,6 +12,14 @@ import { GameWorkspace, type GameWorkspaceProps } from './GameWorkspace';
 
 // Each child records the props it was last given, so the tests read the wiring directly.
 const seen = vi.hoisted(() => ({}) as Record<string, any>);
+const authedFetchMock = vi.hoisted(() =>
+  vi.fn(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ power: 'FRANCE', revealed: false, messages: [] }),
+  })),
+);
+vi.mock('../lib/supabase', () => ({ authedFetch: authedFetchMock }));
 vi.mock('./ToolsSidebar', () => ({
   ToolsSidebar: (p: any) => {
     seen.tools = p;
@@ -454,5 +462,38 @@ describe('GameWorkspace: a past turn', () => {
   it('has no history label on the live turn', () => {
     render(<GameWorkspace {...props({ isCompact: true })} />);
     expect(seen.macro.historyLabel).toBeNull();
+  });
+
+  it('wires 1-tap power switching and dedicated MobilePressSheet on compact multiplayer', () => {
+    const closeToolsDrawer = vi.fn();
+    const p = props({
+      isCompact: true,
+      toolsDrawerOpen: true,
+      closeToolsDrawer,
+      activeGameSummary: {
+        game_id: 'mp_1',
+        status: 'active',
+        is_sandbox: false,
+        participants: {},
+      } as unknown as MultiplayerGameSummary,
+    });
+    const { getByTestId, rerender } = render(<GameWorkspace {...p} />);
+
+    expect(seen.macro.onSelectPower).toBe(p.handleSelectPower);
+    expect(typeof seen.macro.onOpenPress).toBe('function');
+    expect(typeof seen.tools.onOpenPress).toBe('function');
+    expect(seen.macro.pressToggleRef).toBeDefined();
+
+    const pressSheet = getByTestId('mobile-press-sheet');
+    expect(pressSheet).toHaveAttribute('inert');
+
+    act(() => seen.tools.onOpenPress());
+    expect(closeToolsDrawer).toHaveBeenCalledTimes(1);
+    expect(pressSheet).toHaveAttribute('data-open', 'true');
+    expect(pressSheet).not.toHaveAttribute('inert');
+
+    rerender(<GameWorkspace {...p} toolsDrawerOpen={false} />);
+    rerender(<GameWorkspace {...p} toolsDrawerOpen={true} />);
+    expect(pressSheet).not.toHaveAttribute('data-open');
   });
 });

@@ -52,15 +52,15 @@
 }
 
 @layer compact {
-  /* Hypothetical Mode's banner, kept to a short strip at the top of the map. When the turn clock
-     is showing, the banner moves below it so the two never overlap. */
+  /* Hypothetical Mode's banner stacks inside `.map-top-overlays` cleanly on phones. */
   :global([data-layout="compact"]) .simulation-map-banner {
-    top: 10px;
-    /* Centred with auto margins, so it can use the map's full width instead of half of it. */
-    left: 10px;
-    right: 10px;
+    position: static;
+    top: auto;
+    left: auto;
+    right: auto;
     width: fit-content;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
     transform: none;
     flex-wrap: wrap;
     justify-content: center;
@@ -73,14 +73,5 @@
 
   :global([data-layout="compact"]) .simulation-map-banner button {
     min-height: 36px;
-  }
-
-  :global([data-layout="compact"])
-    :global([data-map-viewport]):has(
-      [data-testid="phase-timer-pill"],
-      [data-testid="phase-timer-widget"]
-    )
-    .simulation-map-banner {
-    top: 58px;
   }
 }

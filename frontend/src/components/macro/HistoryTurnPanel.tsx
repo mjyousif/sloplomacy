@@ -14,6 +14,7 @@ import {
   buildHistoryTurnLog,
   type HistoryOrderEntry,
   type HistoryPhaseKind,
+  type HistoryTurnLog,
 } from '../../utils/historyTurnLog';
 import type { SheetSnap } from '../../utils/sheetHelpers';
 import macroStyles from '../MacroSidebar.module.css';
@@ -21,6 +22,10 @@ import { getPieceFrame, MapPiece } from '../MapPiece';
 import { BottomSheet } from '../ui/BottomSheet';
 import { PowerFlag } from '../ui/PowerFlag';
 import { HistoryOwnershipSection } from './HistoryOwnershipSection';
+import {
+  HistoryPeekSelection,
+  resolvePinnedHistorySelection,
+} from './HistoryPeekSelection';
 import styles from './HistoryTurnPanel.module.css';
 import { HistoryFilterSection, HistoryLockBar } from './PowerHeader';
 import unitOrderListStyles from './UnitOrderList.module.css';
@@ -83,10 +88,8 @@ function compactOrderDetail(entry: HistoryOrderEntry): string | null {
 }
 
 const HistoryOrdersContent: React.FC<{
-  turn: TurnRecord;
-  provinces: Record<string, ProvinceInfo>;
-  historyPowers: readonly Power[];
-  historyActions: readonly HistoryActionType[];
+  log: HistoryTurnLog;
+  filtered: boolean;
   unitMark: UnitMark;
   selectedOrderId: string | null;
   compact: boolean;
@@ -96,10 +99,8 @@ const HistoryOrdersContent: React.FC<{
   onHoverOrder?: (focus: HistoryHighlightFocus | null) => void;
   onTogglePinOrder?: (focus: HistoryHighlightFocus) => void;
 }> = ({
-  turn,
-  provinces,
-  historyPowers,
-  historyActions,
+  log,
+  filtered,
   unitMark,
   selectedOrderId,
   compact,
@@ -109,15 +110,6 @@ const HistoryOrdersContent: React.FC<{
   onHoverOrder,
   onTogglePinOrder,
 }) => {
-  const log = useMemo(
-    () => buildHistoryTurnLog(turn, provinces, historyPowers, historyActions),
-    [turn, provinces, historyPowers, historyActions],
-  );
-  const filtered =
-    historyPowers.length > 0 ||
-    ((log.phaseKind === 'Movement' || log.phaseKind === 'Adjustments') &&
-      historyActions.length > 0);
-
   if (log.totalCount === 0) {
     return (
       <div className={styles.historyEmptyState} data-testid="history-empty">
@@ -340,6 +332,20 @@ export const HistoryTurnPanel: React.FC<HistoryTurnPanelProps> = ({
 }) => {
   const isSheet = variant === 'sheet';
   const compact = !isSheet && compactOrders;
+  const log = useMemo(
+    () =>
+      buildHistoryTurnLog(
+        historyTurn,
+        provinces,
+        historyPowers,
+        historyActions,
+      ),
+    [historyTurn, provinces, historyPowers, historyActions],
+  );
+  const filtered =
+    historyPowers.length > 0 ||
+    ((log.phaseKind === 'Movement' || log.phaseKind === 'Adjustments') &&
+      historyActions.length > 0);
   const densityToggle =
     SHOW_COMPACT_TOGGLE && !isSheet && onToggleCompactOrders ? (
       <button
@@ -360,6 +366,17 @@ export const HistoryTurnPanel: React.FC<HistoryTurnPanelProps> = ({
     ) : null;
 
   if (isSheet) {
+    const {
+      selectedOrder,
+      selectedOwnership,
+      clearFocus: clearSelectedFocus,
+    } = resolvePinnedHistorySelection(log, selectedOrderId);
+    const handleSheetTogglePin = (focus: HistoryHighlightFocus) => {
+      const pinningNew = selectedOrderId !== focus.id;
+      onTogglePinOrder?.(focus);
+      if (pinningNew) onSheetSnapChange?.('peek');
+    };
+
     return (
       <BottomSheet
         snap={sheetSnap}
@@ -375,6 +392,14 @@ export const HistoryTurnPanel: React.FC<HistoryTurnPanelProps> = ({
             <HistoryLockBar
               historyLabel={historyLabel}
               historyIsAdmin={historyIsAdmin}
+            />
+            <HistoryPeekSelection
+              selectedOrder={selectedOrder}
+              selectedOwnership={selectedOwnership}
+              onExpand={() => onSheetSnapChange?.('half')}
+              onClear={() => {
+                if (clearSelectedFocus) onTogglePinOrder?.(clearSelectedFocus);
+              }}
             />
           </div>
         }
@@ -393,10 +418,8 @@ export const HistoryTurnPanel: React.FC<HistoryTurnPanelProps> = ({
             onSelectHistoryActions={(next) => onSelectHistoryActions?.(next)}
           />
           <HistoryOrdersContent
-            turn={historyTurn}
-            provinces={provinces}
-            historyPowers={historyPowers}
-            historyActions={historyActions}
+            log={log}
+            filtered={filtered}
             unitMark={unitMark}
             selectedOrderId={selectedOrderId}
             compact={false}
@@ -404,7 +427,7 @@ export const HistoryTurnPanel: React.FC<HistoryTurnPanelProps> = ({
             onSelectHistoryPowers={onSelectHistoryPowers}
             onSelectHistoryActions={onSelectHistoryActions}
             onHoverOrder={onHoverOrder}
-            onTogglePinOrder={onTogglePinOrder}
+            onTogglePinOrder={handleSheetTogglePin}
           />
         </div>
       </BottomSheet>
@@ -440,10 +463,8 @@ export const HistoryTurnPanel: React.FC<HistoryTurnPanelProps> = ({
           data-testid="history-orders-list"
         >
           <HistoryOrdersContent
-            turn={historyTurn}
-            provinces={provinces}
-            historyPowers={historyPowers}
-            historyActions={historyActions}
+            log={log}
+            filtered={filtered}
             unitMark={unitMark}
             selectedOrderId={selectedOrderId}
             compact={compact}

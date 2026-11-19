@@ -249,6 +249,26 @@ describe('ToolsSidebar', () => {
       );
     });
 
+    it('shows the drawer Press launcher button instead of the cramped Press section when onOpenPress is passed', () => {
+      const html = drawer({
+        open: true,
+        onOpenPress: vi.fn(),
+        press: {
+          gameId: 'mp_1',
+          power: 'FRANCE',
+          gameOver: false,
+          surrendered: false,
+          provinces: mockProvinces,
+          units: mockUnits,
+          turn: 'Spring 1901 Movement',
+          suggestTurn: 'Spring 1901 Movement',
+          onHighlightProvinces: vi.fn(),
+        },
+      });
+      expect(html).toContain('data-testid="drawer-open-press-btn"');
+      expect(html).not.toContain('data-testid="press-section"');
+    });
+
     it('leaves the desktop panel as it was', () => {
       const html = renderToString(
         React.createElement(ToolsSidebar, baseToolsProps),
@@ -278,6 +298,7 @@ describe('MacroSidebar', () => {
     isMultiplayer: false,
     isGameCreator: false,
     gameOver: false,
+    onSelectPower: vi.fn(),
     onSelectUnit: vi.fn(),
     onHoverUnit: vi.fn(),
     onHighlightProvinces: vi.fn(),
@@ -302,21 +323,42 @@ describe('MacroSidebar', () => {
         }),
       );
 
-    it('puts the power, its counts, Clear All, Finalize and Resolve in the peek', () => {
+    it('puts the slim power switcher trigger, Finalize and Resolve in the peek, and Clear All in the body', () => {
       const html = sheet({});
       const peek = html.slice(
         html.indexOf('bottom-sheet-peek'),
         html.indexOf('bottom-sheet-body'),
       );
+      const body = html.slice(html.indexOf('bottom-sheet-body'));
       expect(peek).toContain('France');
       // The desktop rail only gives the unconfirmed count in a tooltip. React's text
       // separators move whenever the JSX is re-wrapped, so compare the text without them.
       expect(peek.replace(/<!-- -->/g, '')).toContain(
         '2 units · 2 SCs · 1 unconfirmed',
       );
-      expect(peek).toContain('data-testid="btn-clear-all"');
+      expect(peek).toContain('data-testid="sheet-power-switcher-trigger"');
       expect(peek).toContain('data-testid="btn-finalize-orders"');
       expect(peek).toContain('data-testid="btn-adjudicate-phase"');
+      expect(peek).not.toContain('data-testid="btn-clear-all"');
+      expect(body).toContain('data-testid="macro-sheet-utility-bar"');
+      expect(body).toContain('data-testid="btn-clear-all"');
+    });
+
+    it('keeps the consensus card out of the multiplayer peek and shows a Press launcher instead', () => {
+      const html = sheet({
+        isMultiplayer: true,
+        lobbyStatus: 'active',
+        onOpenPress: vi.fn(),
+      });
+      const peek = html.slice(
+        html.indexOf('bottom-sheet-peek'),
+        html.indexOf('bottom-sheet-body'),
+      );
+      const body = html.slice(html.indexOf('bottom-sheet-body'));
+      expect(peek).not.toContain('data-testid="sheet-power-switcher-trigger"');
+      expect(peek).not.toContain('data-testid="mp-resolution-controls"');
+      expect(peek).toContain('data-testid="mobile-press-toggle"');
+      expect(body).toContain('data-testid="mp-resolution-controls"');
     });
 
     it('keeps the unit cards in the body, and never shows a rail', () => {

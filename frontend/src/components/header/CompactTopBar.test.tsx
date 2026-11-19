@@ -88,6 +88,9 @@ describe('CompactTopBar', () => {
 
     const toolsToggle = screen.getByTestId('compact-tools-toggle');
     expect(toolsToggle).toHaveAttribute('aria-label', 'Tools');
+    expect(
+      toolsToggle.querySelector('[data-testid="press-unread-badge"]'),
+    ).toBeNull();
     await userEvent.click(toolsToggle);
     expect(onToggleTools).toHaveBeenCalledTimes(1);
 

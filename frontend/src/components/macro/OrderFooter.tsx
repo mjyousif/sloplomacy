@@ -107,6 +107,34 @@ export const ClearAllButton: React.FC<{
   );
 };
 
+/** Multiplayer resolution / consensus progress card. */
+export const MultiplayerConsensusCard: React.FC<{
+  consensusInfo: ConsensusStatusInfo;
+}> = ({ consensusInfo }) => (
+  <div
+    className={styles.mpResolutionControls}
+    data-testid="mp-resolution-controls"
+  >
+    <div
+      className={styles.mpConsensusStatusCard}
+      data-testid="mp-consensus-status-card"
+      data-waiting={consensusInfo.isWaitingForPlayers ? 'true' : undefined}
+    >
+      <div className={styles.mpConsensusHeader}>
+        {consensusInfo.isWaitingForPlayers ? (
+          <Users size={14} className={styles.consensusIcon} />
+        ) : (
+          <Clock size={13} className={styles.consensusIcon} />
+        )}
+        <span data-testid="consensus-title">{consensusInfo.title}</span>
+      </div>
+      <div className={styles.mpConsensusDesc} data-testid="mp-consensus-desc">
+        {consensusInfo.description}
+      </div>
+    </div>
+  </div>
+);
+
 interface OrderFooterProps {
   powerMeta: PowerMeta;
   isFinalized: boolean;
@@ -119,6 +147,10 @@ interface OrderFooterProps {
   isAdjustmentPhase: boolean;
   isRetreatPhase: boolean;
   consensusInfo: ConsensusStatusInfo;
+  /** Desktop renders the consensus card right after Finalize; phone sheet moves it into the body. */
+  showConsensusCard?: boolean;
+  /** Phone sheet peek uses shorter button labels to fit on one row. */
+  compactLabels?: boolean;
   onFinalizeClick: () => void;
   onUnfinalizeClick: () => void;
   onAdjudicateTurn: () => void;
@@ -139,97 +171,84 @@ export const OrderFooter: React.FC<OrderFooterProps> = ({
   isAdjustmentPhase,
   isRetreatPhase,
   consensusInfo,
+  showConsensusCard = true,
+  compactLabels = false,
   onFinalizeClick,
   onUnfinalizeClick,
   onAdjudicateTurn,
-}) => (
-  <>
-    {!isFinalized ? (
-      <button
-        type="button"
-        data-testid="btn-finalize-orders"
-        disabled={isSurrendered}
-        data-warning={blockingIssueCount > 0 ? 'true' : undefined}
-        className={styles.finalizePrimaryBtn}
-        onClick={onFinalizeClick}
-      >
-        {blockingIssueCount > 0 ? (
-          <>
-            <AlertTriangle size={15} />
-            <span>
-              Finalize {powerMeta.shortName} ({blockingIssueCount} Warning
-              {blockingIssueCount > 1 ? 's' : ''})
-            </span>
-          </>
-        ) : (
-          <>
-            <Lock size={15} />
-            <span>
-              Finalize {powerMeta.shortName} Orders
-              {unconfirmedCount > 0 ? ` (${unconfirmedCount} Unconfirmed)` : ''}
-            </span>
-          </>
-        )}
-      </button>
-    ) : (
-      <button
-        type="button"
-        data-testid="btn-unfinalize-orders"
-        disabled={isSurrendered}
-        className={styles.unfinalizeBtn}
-        onClick={onUnfinalizeClick}
-      >
-        <Unlock size={15} />
-        <span>Orders Finalized — Click to Unlock</span>
-      </button>
-    )}
+}) => {
+  const warningText = compactLabels
+    ? `Finalize (${blockingIssueCount} Warning${blockingIssueCount > 1 ? 's' : ''})`
+    : `Finalize ${powerMeta.shortName} (${blockingIssueCount} Warning${blockingIssueCount > 1 ? 's' : ''})`;
+  const finalizeText = compactLabels
+    ? `Finalize${unconfirmedCount > 0 ? ` (${unconfirmedCount})` : ' Orders'}`
+    : `Finalize ${powerMeta.shortName} Orders${unconfirmedCount > 0 ? ` (${unconfirmedCount} Unconfirmed)` : ''}`;
+  const unfinalizeText = compactLabels
+    ? 'Finalized · Unlock'
+    : 'Orders Finalized — Click to Unlock';
+  const resolveText = gameOver
+    ? 'Game Over'
+    : compactLabels
+      ? 'Resolve'
+      : isAdjustmentPhase
+        ? 'Resolve Adjustments & Advance'
+        : isRetreatPhase
+          ? 'Resolve Retreats & Advance'
+          : 'Resolve Phase';
 
-    {!isMultiplayer ? (
-      <button
-        type="button"
-        data-testid="btn-adjudicate-phase"
-        className={styles.adjudicateTurnBtn}
-        title="Execute turn adjudication and advance to the next season"
-        onClick={onAdjudicateTurn}
-        disabled={gameOver}
-      >
-        <Play size={14} />
-        <span>
-          {gameOver
-            ? 'Game Over'
-            : isAdjustmentPhase
-              ? 'Resolve Adjustments & Advance'
-              : isRetreatPhase
-                ? 'Resolve Retreats & Advance'
-                : 'Resolve Phase'}
-        </span>
-      </button>
-    ) : (
-      <div
-        className={styles.mpResolutionControls}
-        data-testid="mp-resolution-controls"
-      >
-        <div
-          className={styles.mpConsensusStatusCard}
-          data-testid="mp-consensus-status-card"
-          data-waiting={consensusInfo.isWaitingForPlayers ? 'true' : undefined}
+  return (
+    <>
+      {!isFinalized ? (
+        <button
+          type="button"
+          data-testid="btn-finalize-orders"
+          disabled={isSurrendered}
+          data-warning={blockingIssueCount > 0 ? 'true' : undefined}
+          className={styles.finalizePrimaryBtn}
+          onClick={onFinalizeClick}
         >
-          <div className={styles.mpConsensusHeader}>
-            {consensusInfo.isWaitingForPlayers ? (
-              <Users size={14} className={styles.consensusIcon} />
-            ) : (
-              <Clock size={13} className={styles.consensusIcon} />
-            )}
-            <span data-testid="consensus-title">{consensusInfo.title}</span>
-          </div>
-          <div
-            className={styles.mpConsensusDesc}
-            data-testid="mp-consensus-desc"
-          >
-            {consensusInfo.description}
-          </div>
-        </div>
-      </div>
-    )}
-  </>
-);
+          {blockingIssueCount > 0 ? (
+            <>
+              <AlertTriangle size={15} />
+              <span>{warningText}</span>
+            </>
+          ) : (
+            <>
+              <Lock size={15} />
+              <span>{finalizeText}</span>
+            </>
+          )}
+        </button>
+      ) : (
+        <button
+          type="button"
+          data-testid="btn-unfinalize-orders"
+          disabled={isSurrendered}
+          className={styles.unfinalizeBtn}
+          onClick={onUnfinalizeClick}
+        >
+          <Unlock size={15} />
+          <span>{unfinalizeText}</span>
+        </button>
+      )}
+
+      {!isMultiplayer ? (
+        <button
+          type="button"
+          data-testid="btn-adjudicate-phase"
+          className={styles.adjudicateTurnBtn}
+          title="Execute turn adjudication and advance to the next season"
+          onClick={onAdjudicateTurn}
+          disabled={gameOver}
+        >
+          <Play size={14} />
+          <span>{resolveText}</span>
+        </button>
+      ) : (
+        showConsensusCard && (
+          <MultiplayerConsensusCard consensusInfo={consensusInfo} />
+        )
+      )}
+    </>
+  );
+};

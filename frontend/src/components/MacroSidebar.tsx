@@ -32,11 +32,10 @@ import {
   type HistoryHighlightFocus,
   HistoryTurnPanel,
 } from './macro/HistoryTurnPanel';
+import { MacroSheet } from './macro/MacroSheet';
 import { ClearAllButton, OrderFooter } from './macro/OrderFooter';
 import { HistoryLockBar, PhaseContext, PowerHeader } from './macro/PowerHeader';
 import { UnitOrderList } from './macro/UnitOrderList';
-import { useSheetSelection } from './macro/useSheetSelection';
-import { BottomSheet } from './ui/BottomSheet';
 
 export interface MacroSidebarProps {
   provinces: Record<string, ProvinceInfo>;
@@ -117,6 +116,10 @@ export interface MacroSidebarProps {
   directEdit?: DirectEditMapHandlers;
   /** Repurposes the right sidebar into the Turn and Clock Settings panel. */
   turnClockSettings?: AdminTurnClockSettings;
+  /** Phone sheet only: opens the full-width Press sheet from the peek bar. */
+  onOpenPress?: () => void;
+  /** Ref for the phone Press button so closing the Press sheet restores focus to it. */
+  pressToggleRef?: React.Ref<HTMLButtonElement>;
 }
 
 export const MacroSidebar: React.FC<MacroSidebarProps> = ({
@@ -141,6 +144,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   isMultiplayer = false,
   isGameCreator = false,
   gameOver = false,
+  onSelectPower,
   onSelectUnit,
   onHoverUnit,
   onHighlightProvinces,
@@ -173,6 +177,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   directEditActive = false,
   directEdit,
   turnClockSettings,
+  onOpenPress,
+  pressToggleRef,
 }) => {
   const powerMeta = POWER_METADATA[activePower];
   const isFinalized = finalizedPowers.includes(activePower);
@@ -296,16 +302,6 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       scroller.scrollTop += cardRect.bottom - scrollerRect.bottom + 8;
     }
   }, [isSheet, collapsed, selectedUnitId, activePower]);
-
-  const sheetBodyRef = useSheetSelection({
-    isSheet,
-    sheetSnap,
-    selectedUnitId,
-    activePower,
-    units,
-    orders,
-    onHighlightProvinces,
-  });
 
   // The pieces of the expanded panel. The desktop panel and the phone sheet arrange the same
   // pieces differently, so neither copies the other.
@@ -454,58 +450,43 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     );
   }
 
-  // Phone: the same pieces in a pull-up sheet. The peek holds what a player needs every turn,
-  // and spells out the counts the desktop rail only gives in tooltips.
+  // Phone: slim pull-up sheet with 1-tap switcher, Finalize, and Resolve / Press in the peek;
+  // consensus details, Clear All, and unit cards inside the raised body.
   if (variant === 'sheet') {
+    const canSwitchPower =
+      (!isMultiplayer || sandboxMode) && !locked && Boolean(onSelectPower);
     return (
-      <BottomSheet
-        snap={sheetSnap}
-        onSnapChange={(snap) => onSheetSnapChange?.(snap)}
-        label="Orders"
-        testId="macro-sidebar"
-        peek={
-          <div
-            className={styles.macroSheetPeek}
-            data-testid="macro-sheet-peek"
-            data-history-locked={locked ? 'true' : undefined}
-            style={{ borderLeftColor: powerMeta.color }}
-          >
-            {lockBar}
-            <PowerHeader
-              variant="sheet"
-              activePower={activePower}
-              progress={progress}
-              isSurrendered={isSurrendered}
-              isFinalized={isFinalized}
-              locked={locked}
-            />
-            <div
-              className={styles.macroSheetControls}
-              data-testid="macro-sheet-controls"
-              inert={locked || undefined}
-            >
-              {clearAllButton}
-              {footerActions}
-            </div>
-          </div>
-        }
-      >
-        <div
-          className={styles.macroSheetBody}
-          data-testid="macro-sheet-body"
-          data-history-locked={locked ? 'true' : undefined}
-          ref={sheetBodyRef}
-          inert={locked || isSurrendered || undefined}
-        >
-          {phaseContext}
-          <div
-            className={styles.macroUnitsScrollArea}
-            data-testid="macro-units-scroll-area"
-          >
-            {unitList}
-          </div>
-        </div>
-      </BottomSheet>
+      <MacroSheet
+        sheetSnap={sheetSnap}
+        onSheetSnapChange={onSheetSnapChange}
+        activePower={activePower}
+        powerMeta={powerMeta}
+        finalizedPowers={finalizedPowers}
+        units={units}
+        orders={orders}
+        selectedUnitId={selectedUnitId}
+        progress={progress}
+        isSurrendered={isSurrendered}
+        isFinalized={isFinalized}
+        isMultiplayer={isMultiplayer}
+        gameOver={gameOver}
+        isAdjustmentPhase={isAdjustmentPhase}
+        isRetreatPhase={isRetreatPhase}
+        consensusInfo={consensusInfo}
+        locked={locked}
+        lockBar={lockBar}
+        clearAllButton={clearAllButton}
+        phaseContext={phaseContext}
+        unitList={unitList}
+        canSwitchPower={canSwitchPower}
+        onSelectPower={onSelectPower}
+        onHighlightProvinces={onHighlightProvinces}
+        onFinalizeClick={onFinalizeClick}
+        onUnfinalizeClick={onUnfinalizeClick}
+        onAdjudicateTurn={onAdjudicateTurn}
+        onOpenPress={onOpenPress}
+        pressToggleRef={pressToggleRef}
+      />
     );
   }
 
