@@ -11,7 +11,9 @@ from domain.game_state import MultiplayerGameSummary
 from scenarios.presets import build_scenario
 from storage.supabase import (
     SupabaseUnavailable,
+    close_http_client,
     delete_game_from_db,
+    get_http_client,
     is_persistence_enabled,
     load_all_summaries_from_db,
     load_game_from_db,
@@ -292,3 +294,27 @@ def test_database_failures_are_not_reported_as_empty_results():
             assert await load_all_summaries_from_db(client=empty) == {}
 
     asyncio.run(run_test())
+
+
+def test_http_client_is_pooled_per_event_loop_and_closed_cleanly():
+    async def acquire():
+        c1 = get_http_client()
+        c2 = get_http_client()
+        assert c1 is c2
+        assert not c1.is_closed
+        return c1
+
+    first = asyncio.run(acquire())
+    # A new event loop gets a fresh pooled client instead of reusing a closed-loop client.
+    second = asyncio.run(acquire())
+    assert second is not first
+
+    async def acquire_and_close():
+        c = get_http_client()
+        await close_http_client()
+        assert c.is_closed
+        recreated = get_http_client()
+        assert recreated is not c
+        await close_http_client()
+
+    asyncio.run(acquire_and_close())

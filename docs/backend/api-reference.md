@@ -454,7 +454,7 @@ Any `target_coast` on an army's order is ignored, because only fleets use coasts
 
 Send the optional `turn` (for example `"Spring 1901 Movement"`) to have the order refused with `409` if that turn has already resolved.
 
-Submits or modifies a single military instruction. Automatically triggers validation and non-destructive simulation preview.
+Submits or modifies a single military instruction. Automatically triggers validation and non-destructive simulation preview. For order-drafting endpoints (`/api/order`, `/api/orders/batch`, `/api/orders/clear-all`, `/api/orders/confirm-all`), WebSocket broadcasts and Supabase persistence run in `BackgroundTasks` after the HTTP response is sent.
 
 #### Request (`SingleOrderUpdateRequest`):
 ```json

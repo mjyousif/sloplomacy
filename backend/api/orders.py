@@ -14,7 +14,7 @@ from engine.order_utils import (
     validate_build_slot,
     validate_order_references,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
     sanitize_game_state_for_viewer,
@@ -51,6 +51,7 @@ def reject_if_surrendered(game: GameState, power: Power) -> None:
 )
 async def update_single_order(
     req: SingleOrderUpdateRequest,
+    background_tasks: BackgroundTasks,
     game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
@@ -144,9 +145,10 @@ async def update_single_order(
     game.state_revision += 1
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
-    await persist_game(game.game_id)
-    await broadcast_game_update(game.game_id, game)
-    return sanitize_game_state_for_viewer(game, target_power)
+    viewer_state = sanitize_game_state_for_viewer(game, target_power)
+    background_tasks.add_task(broadcast_game_update, game.game_id, game)
+    background_tasks.add_task(persist_game, game.game_id)
+    return viewer_state
 
 
 @router.post(
@@ -157,6 +159,7 @@ async def update_single_order(
 )
 async def update_batch_orders(
     req: OrderSubmissionRequest,
+    background_tasks: BackgroundTasks,
     game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
@@ -203,10 +206,11 @@ async def update_batch_orders(
     game.state_revision += 1
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
-    await persist_game(game.game_id)
-    await broadcast_game_update(game.game_id, game)
-    await broadcast_lobby_update()
-    return sanitize_game_state_for_viewer(game, req.power)
+    viewer_state = sanitize_game_state_for_viewer(game, req.power)
+    background_tasks.add_task(broadcast_game_update, game.game_id, game)
+    background_tasks.add_task(broadcast_lobby_update)
+    background_tasks.add_task(persist_game, game.game_id)
+    return viewer_state
 
 
 @router.post(
@@ -218,6 +222,7 @@ async def update_batch_orders(
 )
 async def clear_all_power_orders(
     req: SetPowerRequest,
+    background_tasks: BackgroundTasks,
     game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
@@ -238,10 +243,11 @@ async def clear_all_power_orders(
     game.state_revision += 1
     refresh_diagnostics_and_simulation(game)
     sync_summary(game.game_id)
-    await persist_game(game.game_id)
-    await broadcast_game_update(game.game_id, game)
-    await broadcast_lobby_update()
-    return sanitize_game_state_for_viewer(game, req.power)
+    viewer_state = sanitize_game_state_for_viewer(game, req.power)
+    background_tasks.add_task(broadcast_game_update, game.game_id, game)
+    background_tasks.add_task(broadcast_lobby_update)
+    background_tasks.add_task(persist_game, game.game_id)
+    return viewer_state
 
 
 @router.post(
@@ -252,6 +258,7 @@ async def clear_all_power_orders(
 )
 async def confirm_all_power_orders(
     req: SetPowerRequest,
+    background_tasks: BackgroundTasks,
     game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
@@ -264,6 +271,7 @@ async def confirm_all_power_orders(
             ord_obj.is_explicit = True
     game.state_revision += 1
     refresh_diagnostics_and_simulation(game)
-    await persist_game(game.game_id)
-    await broadcast_game_update(game.game_id, game)
-    return sanitize_game_state_for_viewer(game, req.power)
+    viewer_state = sanitize_game_state_for_viewer(game, req.power)
+    background_tasks.add_task(broadcast_game_update, game.game_id, game)
+    background_tasks.add_task(persist_game, game.game_id)
+    return viewer_state

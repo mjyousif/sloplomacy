@@ -63,6 +63,9 @@ export function App() {
     errorMsg,
     boardRequestSeq,
     applyServerState,
+    beginOptimisticOrder,
+    settleOptimisticOrder,
+    clearPendingOrders,
     fetchGame,
     fetchGamesList,
     fetchMyGames,
@@ -266,6 +269,9 @@ export function App() {
     triggerToast,
     setSelectedUnitId,
     applyServerState,
+    beginOptimisticOrder,
+    settleOptimisticOrder,
+    clearPendingOrders,
     fetchGamesList,
   });
 
