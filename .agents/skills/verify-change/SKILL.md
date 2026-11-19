@@ -18,6 +18,7 @@ In a fresh worktree run `npm ci` in `frontend/` (and `pip install -r backend/req
 | `frontend/src/**` | `cd frontend; npm run lint; npx tsc --noEmit; npm test; npm run build` (run `npm run format` first after scripted/bulk edits, since Windows defaults to `CRLF`) |
 | `EuropeMap.tsx`, sidebars, modals, any `*.module.css`, `MapPiece.tsx`, phase-flow UI | The relevant E2E scenario (below) |
 | `supabase/migrations/**` | Read the `supabase` and `supabase-postgres-best-practices` skills, then see "Migrations" |
+| `backend/telemetry.py`, `scripts/sync_gcp_monitoring.py`, `terraform/monitoring.tf`, `terraform/dashboards.tf` | Run `python -m pytest backend/tests/unit/test_telemetry.py -v` and `python scripts/sync_gcp_monitoring.py --project test --dry-run`, and keep `docs/guides/observability-and-dashboards.md` updated |
 | `scripts/`, `Dockerfile`, `terraform/`, `.github/` | Re-read the matching section of `docs/guides/google-cloud-deployment.md` and run the script's dry or help mode if it has one |
 
 `scripts/test.ps1` / `scripts/test.sh` run pytest, vitest, and the build in one go (`-E2E` / `--e2e` adds the browser scenarios).

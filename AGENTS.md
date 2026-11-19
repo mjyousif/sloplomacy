@@ -121,6 +121,15 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   terraform plan -var="project_id=<gcp-project-id>"
   terraform apply -var="project_id=<gcp-project-id>"
   ```
+- **Sync Cloud Logging Metrics & Monitoring Dashboards**:
+  ```bash
+  python scripts/sync_gcp_monitoring.py --project "<gcp-project-id>" --dry-run
+  python scripts/sync_gcp_monitoring.py --project "<gcp-project-id>"
+  ```
+- **Inspect Live Endpoint Telemetry (`gcloud logging read`)**:
+  ```bash
+  gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="diplomacy-1901" AND jsonPayload.event_type="api_request"' --project="<gcp-project-id>" --limit=20 --format="table(timestamp,jsonPayload.route_key,jsonPayload.status_code,jsonPayload.latency_ms)"
+  ```
 
 ---
 
@@ -308,6 +317,12 @@ The game cycles through three standard phases per year:
 - **Invariant**: A move suggestion (`PressMessage.orders`) holds only what its sender attached. The server never fills it from `game.orders` and never writes it into them, so sending one changes no `GameState`, and it goes only where its message goes: a signed private thread, in a Movement phase, for units of the sender and the recipients. A recipient follows it by sending their own units through `POST /api/orders/batch`, which refuses any unit that is not theirs. On the client the draft and a viewed suggestion live in `suggestionStore` and are swapped onto the map like a past turn, never into `gameState.orders`.
 - **Invariant**: On the client, a conversation is marked read only while its message list is really on screen. `pressStore` drops press for any match or seat but the one on screen.
 
+### 11. Telemetry & Observability (`backend/telemetry.py`)
+- Production observability uses zero-dependency `stdout` JSON logs ingested out-of-band by Cloud Run's logging agent and turned into Cloud Monitoring metrics and dashboards (see [docs/guides/observability-and-dashboards.md](docs/guides/observability-and-dashboards.md)).
+- **Invariant**: `TelemetryMiddleware` must stay pure ASGI (never `BaseHTTPMiddleware` / `@app.middleware("http")`), so `BackgroundTasks` on order endpoints do not block HTTP keep-alive connections.
+- **Invariant**: Never emit dynamic IDs (`game_id`, `user_id`, raw paths, query strings) as metric labels. `resolve_route_template` maps matched `/api/*` routes to parameterized FastAPI templates and collapses unrouted paths to `/api/_unmatched`.
+- **Invariant**: Keep `scripts/sync_gcp_monitoring.py` aligned with `terraform/monitoring.tf` and `terraform/dashboards.tf`, verified by `backend/tests/unit/test_telemetry.py`.
+
 ---
 
 ## 5. Agent Workflow & Development Rules
@@ -322,6 +337,7 @@ The game cycles through three standard phases per year:
   - **Validator Rules Changed**: Update issue tables and code listings in [docs/backend/validator.md](docs/backend/validator.md).
   - **Frontend Components, Layout, or State Changed**: Update [docs/frontend/README.md](docs/frontend/README.md), [docs/frontend/sidebar-and-controls.md](docs/frontend/sidebar-and-controls.md), [docs/frontend/map-renderer.md](docs/frontend/map-renderer.md), and [docs/frontend/state-management.md](docs/frontend/state-management.md).
   - **Infrastructure & Deployment Pipeline Changed**: Update [docs/guides/google-cloud-deployment.md](docs/guides/google-cloud-deployment.md).
+  - **Telemetry, Log-Based Metrics, or Dashboards Changed**: Update [docs/guides/observability-and-dashboards.md](docs/guides/observability-and-dashboards.md).
   - **Developer Tools or Test Harness Changed**: Update [docs/guides/development.md](docs/guides/development.md) and [docs/backend/README.md](docs/backend/README.md).
   - **Top-Level Navigation**: Ensure newly added documents are indexed in both [README.md](README.md) and [docs/README.md](docs/README.md).
 
