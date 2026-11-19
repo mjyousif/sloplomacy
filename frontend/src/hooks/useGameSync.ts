@@ -21,6 +21,9 @@ import { useDiplomacyWebSocket } from './useDiplomacyWebSocket';
 
 const API_BASE = '/api';
 
+export const FALLBACK_POLL_MS = 4000;
+export const IDLE_POLL_MS = 60_000;
+
 export interface GameSyncOptions {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
   activeGameId: string;
@@ -161,16 +164,19 @@ export function useGameSync({
     [activeGameId, fetchMyGames],
   );
 
-  const { isConnected: wsConnected, sendRefresh: sendWsRefresh } =
-    useDiplomacyWebSocket({
-      activeGameId,
-      viewMode,
-      power: playerPower,
-      passcode: activeGameId ? (matchPasscodes[activeGameId] ?? null) : null,
-      authKey,
-      onGameUpdate: handleWsGameUpdate,
-      onLobbyUpdate: handleWsLobbyUpdate,
-    });
+  const {
+    isConnected: wsConnected,
+    isIdleDisconnected,
+    sendRefresh: sendWsRefresh,
+  } = useDiplomacyWebSocket({
+    activeGameId,
+    viewMode,
+    power: playerPower,
+    passcode: activeGameId ? (matchPasscodes[activeGameId] ?? null) : null,
+    authKey,
+    onGameUpdate: handleWsGameUpdate,
+    onLobbyUpdate: handleWsLobbyUpdate,
+  });
 
   // The auth user is loaded and followed by useAuthSession.
   useEffect(() => {
@@ -231,7 +237,10 @@ export function useGameSync({
       }
     };
 
-    const interval = setInterval(pollState, 4000);
+    const interval = setInterval(
+      pollState,
+      isIdleDisconnected ? IDLE_POLL_MS : FALLBACK_POLL_MS,
+    );
 
     const handleVisibilityChange = () => {
       if (typeof document !== 'undefined' && !document.hidden && !abandoned) {
@@ -253,7 +262,14 @@ export function useGameSync({
         );
       }
     };
-  }, [viewMode, activeGameId, sandboxGameId, wsConnected, playerPower]);
+  }, [
+    viewMode,
+    activeGameId,
+    sandboxGameId,
+    wsConnected,
+    isIdleDisconnected,
+    playerPower,
+  ]);
 
   return { wsConnected, handleTimerExpired };
 }

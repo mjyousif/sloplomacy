@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDiplomacyWebSocket } from './useDiplomacyWebSocket';
 
@@ -57,6 +57,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -128,5 +129,49 @@ describe('useDiplomacyWebSocket connection', () => {
     await new Promise((r) => setTimeout(r, 10));
     expect(FakeSocket.instances).toHaveLength(1);
     expect(FakeSocket.instances[0].closedWith).toBeNull();
+  });
+
+  it('closes the socket after 5 minutes of no user activity and reconnects on activity', async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() =>
+      useDiplomacyWebSocket({ ...options, authKey: 'user-alice' }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.isConnected).toBe(true);
+    expect(result.current.isIdleDisconnected).toBe(false);
+
+    // User activity at 3 minutes resets the 5-minute idle timer.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3 * 60 * 1000);
+      window.dispatchEvent(new Event('pointerdown'));
+      await vi.advanceTimersByTimeAsync(3 * 60 * 1000);
+    });
+    expect(result.current.isConnected).toBe(true);
+    expect(FakeSocket.instances[0].closedWith).toBeNull();
+
+    // 2 more minutes (5 total since pointerdown) triggers idle disconnect without auto-reconnect.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2 * 60 * 1000 + 1);
+    });
+    expect(FakeSocket.instances[0].closedWith).toBe(1000);
+    expect(result.current.isConnected).toBe(false);
+    expect(result.current.isIdleDisconnected).toBe(true);
+
+    // No automatic reconnect while still idle.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(FakeSocket.instances).toHaveLength(1);
+
+    // Next user activity reconnects immediately and clears isIdleDisconnected.
+    await act(async () => {
+      window.dispatchEvent(new Event('keydown'));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(FakeSocket.instances).toHaveLength(2);
+    expect(result.current.isConnected).toBe(true);
+    expect(result.current.isIdleDisconnected).toBe(false);
   });
 });

@@ -9,7 +9,7 @@ import type {
   WebSocketGameUpdate,
 } from '../types/diplomacy';
 import { SOLO_SANDBOX_STORAGE_KEY } from '../utils/soloSandboxStorage';
-import { type GameSyncOptions, useGameSync } from './useGameSync';
+import { type GameSyncOptions, IDLE_POLL_MS, useGameSync } from './useGameSync';
 
 const supabase = vi.hoisted(() => ({ getAuthHeaders: vi.fn() }));
 vi.mock('../lib/supabase', () => supabase);
@@ -17,6 +17,7 @@ vi.mock('../lib/supabase', () => supabase);
 /** The socket hook, replaced so a test can deliver messages and pick whether it is up. */
 const socket = vi.hoisted(() => ({
   connected: false,
+  idleDisconnected: false,
   sendRefresh: vi.fn(),
   options: null as any,
   useDiplomacyWebSocket: vi.fn(),
@@ -83,11 +84,16 @@ beforeEach(() => {
   localStorage.clear();
   board = null;
   socket.connected = false;
+  socket.idleDisconnected = false;
   socket.sendRefresh = vi.fn();
   socket.useDiplomacyWebSocket.mockReset();
   socket.useDiplomacyWebSocket.mockImplementation((o: unknown) => {
     socket.options = o;
-    return { isConnected: socket.connected, sendRefresh: socket.sendRefresh };
+    return {
+      isConnected: socket.connected,
+      isIdleDisconnected: socket.idleDisconnected,
+      sendRefresh: socket.sendRefresh,
+    };
   });
   supabase.getAuthHeaders.mockReset();
   supabase.getAuthHeaders.mockResolvedValue({ Authorization: 'Bearer t' });
@@ -337,6 +343,15 @@ describe('useGameSync: the fallback poll', () => {
     expect(opts.setActiveGameSummary).toHaveBeenCalledWith(SUMMARY);
     await tick();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('slows fallback polling to once a minute when idle-disconnected', async () => {
+    socket.idleDisconnected = true;
+    renderSync();
+    await tick(IDLE_POLL_MS - 1);
+    expect(fetchMock).not.toHaveBeenCalled();
+    await tick(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('does not poll while the socket is up, in a sandbox or in the lobby', async () => {
