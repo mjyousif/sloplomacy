@@ -225,20 +225,24 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
         data-testid="map-viewport-container"
         data-map-viewport=""
       >
-        {/* Live Hypothetical / Simulation Active Banner */}
-        {(showSimulationOverlay || sandboxMode) &&
-          simulationResult &&
-          !historyView && (
-            <SimulationBanner
-              compact={compact}
-              sandboxMode={sandboxMode}
-              showSimulationOverlay={showSimulationOverlay}
-              onAdjudicateTurn={onAdjudicateTurn}
-              onClearSimulationOverlay={onClearSimulationOverlay}
-            />
-          )}
+        {/* Top map overlays: desktop keeps independent absolute positioning via display: contents;
+            phone stacks them cleanly inside a single flex column so active overlays never collide. */}
+        <div className={styles.mapTopOverlays} data-testid="map-top-overlays">
+          {overlay}
 
-        {overlay}
+          {/* Live Hypothetical / Simulation Active Banner */}
+          {(showSimulationOverlay || sandboxMode) &&
+            simulationResult &&
+            !historyView && (
+              <SimulationBanner
+                compact={compact}
+                sandboxMode={sandboxMode}
+                showSimulationOverlay={showSimulationOverlay}
+                onAdjudicateTurn={onAdjudicateTurn}
+                onClearSimulationOverlay={onClearSimulationOverlay}
+              />
+            )}
+        </div>
 
         {/* Coast Disambiguation Popup */}
         {!directEditActive && selectedUnit && pendingCoastChoice && (

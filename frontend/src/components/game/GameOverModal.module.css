@@ -1,6 +1,10 @@
 @layer components {
   .game-over-modal-card {
-    max-width: 560px;
+    max-width: 920px;
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
     background: var(--surface-card-alt);
     color: var(--text-soft);
     border: 1.5px solid var(--gold-primary);
@@ -10,6 +14,19 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .game-over-modal-card::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .game-over-modal-card::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .game-over-modal-card::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--radius-pill);
   }
 
   .game-over-modal-card[data-victory="true"] {
@@ -97,53 +114,59 @@
     color: var(--text-bright);
   }
 
-  .game-over-standings {
-    background: var(--surface-panel);
-    border: 1px solid #2e3543;
-    border-radius: var(--radius-lg);
-    padding: 12px 14px;
+  .game-over-ledger {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
   }
 
-  .game-over-standings-label {
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-muted);
-  }
-
-  .game-over-standings-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(122px, 1fr));
-    gap: 6px;
-  }
-
-  .game-over-standing-chip {
+  .game-over-ledger-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .game-over-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-slate);
+    background: var(--surface-deep);
+    flex-wrap: wrap;
+  }
+
+  .game-over-tab-btn {
+    display: inline-flex;
+    align-items: center;
     gap: 6px;
-    padding: 6px 9px;
-    border-radius: 7px;
-    border: 1px solid #2e3543;
-    background: #1e2430;
-    font-size: 0.8rem;
-  }
-
-  .game-over-standing-chip[data-winner="true"] {
+    padding: 6px 12px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.78rem;
     font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-fast);
   }
 
-  .game-over-standing-name {
-    flex: 1;
-    color: var(--text-primary);
+  .game-over-tab-btn:hover {
+    color: var(--text-soft);
   }
 
-  .game-over-standing-count {
-    font-weight: 800;
-    color: var(--text-bright);
+  .game-over-tab-btn[data-active="true"] {
+    background: var(--surface-raised);
+    color: var(--gold-text);
+  }
+
+  .game-over-ledger-meta {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    font-weight: 600;
   }
 
   .game-over-actions {
@@ -196,5 +219,41 @@
   .game-over-secondary-btn:hover {
     background: #2c3547;
     border-color: var(--text-dim);
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .game-over-modal-card {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  :global([data-layout="compact"]) .game-over-close-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  :global([data-layout="compact"]) .game-over-tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  :global([data-layout="compact"]) .game-over-tab-btn {
+    justify-content: center;
+    min-height: 38px;
+    padding: 6px 8px;
+    font-size: 0.72rem;
+    text-align: center;
+  }
+
+  :global([data-layout="compact"]) .game-over-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  :global([data-layout="compact"]) .game-over-primary-btn,
+  :global([data-layout="compact"]) .game-over-secondary-btn {
+    min-height: 44px;
   }
 }

@@ -87,7 +87,9 @@ async function openAs(
   const page = await context.newPage();
   await page.goto('/');
   const row = page
-    .locator('[data-testid="my-game-row"]')
+    .locator(
+      '[data-testid="featured-game-hero"], [data-testid="my-game-row"]',
+    )
     .filter({ hasText: matchName });
   await row.getByRole('button', { name: /^Resume as/ }).click();
   await page.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
@@ -153,10 +155,14 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
         bob.getByTestId('admin-action-warning-modal'),
       ).toHaveCount(0);
 
-      // 6. Phone top bar menu also exposes Resolve Turn for the host
+      // 6. Phone top bar Game Settings -> Administrator also exposes Resolve Turn for the host
       const alicePhone = await openAs(browser, ALICE, matchName, true);
       rec.attachListeners(alicePhone);
-      await alicePhone.getByTestId('compact-menu-toggle').click();
+      await alicePhone.getByTestId('game-settings-trigger').click();
+      await alicePhone.getByTestId('game-settings-admin-settings').click();
+      await expect(
+        alicePhone.getByTestId('admin-settings-panel'),
+      ).toBeVisible();
       await expect(
         alicePhone.getByTestId('btn-admin-resolve-turn'),
       ).toBeVisible();

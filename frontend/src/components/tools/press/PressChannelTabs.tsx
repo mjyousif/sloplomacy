@@ -4,7 +4,7 @@ import type { Power } from '../../../types/diplomacy';
 import type { PressChannel } from '../../../utils/pressHelpers';
 import { PowerFlag } from '../../ui/PowerFlag';
 import styles from '../PressSection.module.css';
-import { channelLabel } from './pressLabels';
+import { channelLabel, listPowers } from './pressLabels';
 
 export interface PressChannelTabsProps {
   channels: PressChannel[];
@@ -26,6 +26,7 @@ export const PressChannelTabs: React.FC<PressChannelTabsProps> = ({
       const shown = channel.members.includes(viewer)
         ? channel.members.filter((p) => p !== viewer)
         : channel.members;
+      const title = channel.kind === 'thread' ? listPowers(shown) : label;
       return (
         <button
           key={channel.key}
@@ -39,7 +40,7 @@ export const PressChannelTabs: React.FC<PressChannelTabsProps> = ({
           aria-label={
             channel.unread ? `${label}, ${channel.unread} unread` : label
           }
-          title={label}
+          title={title}
           onClick={() => onSelect(channel.key)}
         >
           {channel.kind === 'public' && (

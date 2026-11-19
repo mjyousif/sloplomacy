@@ -1,17 +1,31 @@
-import { useMemo, useRef, useState } from 'react';
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { getAuthHeaders } from '../lib/supabase';
 import type {
   GameState,
   MultiplayerGameSummary,
+  Order,
   Power,
   ProvinceInfo,
   SimulationResult,
 } from '../types/diplomacy';
 import { resolvePlayerPower } from '../utils/adminHelpers';
 import {
+  isStaleServerState,
+  type PendingOrder,
+  rebasePendingOrders,
+} from '../utils/optimisticOrders';
+import {
   readStoredSoloSandboxId,
   writeStoredSoloSandboxId,
 } from '../utils/soloSandboxStorage';
+import { turnLabel } from '../utils/timerHelpers';
 
 const API_BASE = '/api';
 
@@ -49,7 +63,10 @@ export function useGameSession({
   );
 
   // Board & Tactical Engine State
-  const [gameState, setGameState] = useState<GameState | null>(null);
+  const [gameState, setRawGameState] = useState<GameState | null>(null);
+  const serverStateRef = useRef<GameState | null>(null);
+  const pendingOrdersRef = useRef<PendingOrder[]>([]);
+  const pendingOrderSeqRef = useRef(0);
   const [provinces, setProvinces] = useState<Record<string, ProvinceInfo>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -60,11 +77,99 @@ export function useGameSession({
     gameState?.active_power,
   );
 
+  const prunePendingFor = (st: GameState): PendingOrder[] => {
+    const turn = turnLabel(st);
+    return pendingOrdersRef.current.filter(
+      (p) => p.gameId === st.game_id && p.turn === turn,
+    );
+  };
+
+  const setGameState: Dispatch<SetStateAction<GameState | null>> = useCallback(
+    (next) => {
+      setRawGameState((prev) => {
+        const resolved = typeof next === 'function' ? next(prev) : next;
+        if (!resolved) {
+          serverStateRef.current = null;
+          pendingOrdersRef.current = [];
+          return null;
+        }
+        if (
+          typeof next === 'function' &&
+          isStaleServerState(serverStateRef.current, resolved)
+        ) {
+          return prev;
+        }
+        serverStateRef.current = resolved;
+        pendingOrdersRef.current = prunePendingFor(resolved);
+        return rebasePendingOrders(resolved, pendingOrdersRef.current);
+      });
+    },
+    [],
+  );
+
   const applyServerState = (st: GameState) => {
-    setGameState(st);
+    serverStateRef.current = st;
+    pendingOrdersRef.current = prunePendingFor(st);
+    setRawGameState(rebasePendingOrders(st, pendingOrdersRef.current));
     if (st.preview) {
       setSimulationResult(st.preview);
     }
+  };
+
+  const beginOptimisticOrder = (
+    gameId: string,
+    order: Order,
+  ): number | null => {
+    const base = serverStateRef.current;
+    if (!base || base.game_id !== gameId) return null;
+    const seq = ++pendingOrderSeqRef.current;
+    pendingOrdersRef.current = [
+      ...pendingOrdersRef.current,
+      { seq, gameId, turn: turnLabel(base), order },
+    ];
+    setRawGameState(rebasePendingOrders(base, pendingOrdersRef.current));
+    return seq;
+  };
+
+  const settleOptimisticOrder = (
+    seq: number | null,
+    serverState?: GameState,
+  ) => {
+    const wasPending =
+      seq !== null && pendingOrdersRef.current.some((p) => p.seq === seq);
+    if (seq !== null) {
+      pendingOrdersRef.current = pendingOrdersRef.current.filter(
+        (p) => p.seq !== seq,
+      );
+    }
+    if (serverState) {
+      if (
+        serverStateRef.current &&
+        serverStateRef.current.game_id !== serverState.game_id
+      ) {
+        return;
+      }
+      if (isStaleServerState(serverStateRef.current, serverState)) {
+        if (serverStateRef.current) {
+          setRawGameState(
+            rebasePendingOrders(
+              serverStateRef.current,
+              pendingOrdersRef.current,
+            ),
+          );
+        }
+        return;
+      }
+      applyServerState(serverState);
+    } else if (wasPending && serverStateRef.current) {
+      setRawGameState(
+        rebasePendingOrders(serverStateRef.current, pendingOrdersRef.current),
+      );
+    }
+  };
+
+  const clearPendingOrders = () => {
+    pendingOrdersRef.current = [];
   };
 
   /** The signed-in player's own games. A guest has none, and a failed read keeps the last list. */
@@ -177,6 +282,9 @@ export function useGameSession({
     errorMsg,
     boardRequestSeq,
     applyServerState,
+    beginOptimisticOrder,
+    settleOptimisticOrder,
+    clearPendingOrders,
     fetchGame,
     fetchGamesList,
   };

@@ -276,7 +276,7 @@ export const PowerFlag: React.FC<PowerFlagProps> = ({
       }}
       {...rest}
     >
-      <title>{flagTitle}</title>
+      {title ? <title>{title}</title> : null}
       {renderFlagContent()}
     </svg>
   );

@@ -13,6 +13,7 @@ import { FRANCE_PROVINCES } from '../test/mapFixtures';
 import type {
   GameState,
   MultiplayerGameSummary,
+  Order,
   SimulationResult,
 } from '../types/diplomacy';
 import { SOLO_SANDBOX_STORAGE_KEY } from '../utils/soloSandboxStorage';
@@ -402,5 +403,196 @@ describe('useGameSession: fetchGame', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(SOLO_SANDBOX_STORAGE_KEY)).toBe('solo_mine');
     expect(result.current.errorMsg).toBe('Backend returned 404');
+  });
+});
+
+const order = (over: Partial<Order> = {}): Order => ({
+  unit_id: 'FRA_A_PAR',
+  power: 'FRANCE',
+  unit_type: 'A',
+  origin: 'PAR',
+  origin_coast: null,
+  order_type: 'HOLD',
+  target: null,
+  target_coast: null,
+  aux_unit_origin: null,
+  via_convoy: false,
+  is_explicit: true,
+  ...over,
+});
+
+describe('useGameSession: optimistic order lifecycle & stale revision guards', () => {
+  it('applies an optimistic order immediately, settles with server state, and rolls back on failure', () => {
+    const { result } = renderSession();
+    const initial = state({
+      game_id: 'mp_1',
+      state_revision: 1,
+      orders: { FRA_A_PAR: order({ is_explicit: false }) },
+    });
+    act(() => result.current.applyServerState(initial));
+
+    let seq: number | null = null;
+    act(() => {
+      seq = result.current.beginOptimisticOrder(
+        'mp_1',
+        order({ order_type: 'MOVE', target: 'BUR' }),
+      );
+    });
+    expect(seq).not.toBeNull();
+    expect(result.current.gameState?.orders.FRA_A_PAR.target).toBe('BUR');
+
+    // Rejection rolls back to last authoritative server state.
+    act(() => result.current.settleOptimisticOrder(seq));
+    expect(result.current.gameState?.orders.FRA_A_PAR.target).toBeNull();
+
+    // Success settles with server state.
+    act(() => {
+      seq = result.current.beginOptimisticOrder(
+        'mp_1',
+        order({ order_type: 'MOVE', target: 'PIC' }),
+      );
+    });
+    const next = state({
+      game_id: 'mp_1',
+      state_revision: 2,
+      orders: { FRA_A_PAR: order({ order_type: 'MOVE', target: 'PIC' }) },
+      preview: RESOLUTION,
+    });
+    act(() => result.current.settleOptimisticOrder(seq, next));
+    expect(result.current.gameState).toBe(next);
+    expect(setSimulationResult).toHaveBeenCalledWith(RESOLUTION);
+  });
+
+  it('keeps newer in-flight unit order visible when an earlier order request settles', () => {
+    const { result } = renderSession();
+    act(() =>
+      result.current.applyServerState(
+        state({
+          game_id: 'mp_1',
+          state_revision: 1,
+          orders: {
+            FRA_A_PAR: order({ is_explicit: false }),
+            FRA_A_MAR: order({
+              unit_id: 'FRA_A_MAR',
+              origin: 'MAR',
+              is_explicit: false,
+            }),
+          },
+        }),
+      ),
+    );
+
+    let seq1: number | null = null;
+    let seq2: number | null = null;
+    act(() => {
+      seq1 = result.current.beginOptimisticOrder(
+        'mp_1',
+        order({ unit_id: 'FRA_A_PAR', order_type: 'MOVE', target: 'BUR' }),
+      );
+      seq2 = result.current.beginOptimisticOrder(
+        'mp_1',
+        order({
+          unit_id: 'FRA_A_MAR',
+          origin: 'MAR',
+          order_type: 'MOVE',
+          target: 'PIE',
+        }),
+      );
+    });
+
+    // Server reply for seq1 doesn't have seq2 yet, but seq2 must remain visible via rebase.
+    const reply1 = state({
+      game_id: 'mp_1',
+      state_revision: 2,
+      orders: {
+        FRA_A_PAR: order({ order_type: 'MOVE', target: 'BUR' }),
+        FRA_A_MAR: order({
+          unit_id: 'FRA_A_MAR',
+          origin: 'MAR',
+          is_explicit: false,
+        }),
+      },
+    });
+    act(() => result.current.settleOptimisticOrder(seq1, reply1));
+    expect(result.current.gameState?.orders.FRA_A_PAR.target).toBe('BUR');
+    expect(result.current.gameState?.orders.FRA_A_MAR.target).toBe('PIE');
+
+    const reply2 = state({
+      game_id: 'mp_1',
+      state_revision: 3,
+      orders: {
+        FRA_A_PAR: order({ order_type: 'MOVE', target: 'BUR' }),
+        FRA_A_MAR: order({
+          unit_id: 'FRA_A_MAR',
+          origin: 'MAR',
+          order_type: 'MOVE',
+          target: 'PIE',
+        }),
+      },
+    });
+    act(() => result.current.settleOptimisticOrder(seq2, reply2));
+    expect(result.current.gameState).toBe(reply2);
+  });
+
+  it('ignores out-of-order stale HTTP and WebSocket revisions and clears pending orders on turn advance or game switch', () => {
+    const { result } = renderSession();
+    const rev3 = state({
+      game_id: 'mp_1',
+      state_revision: 3,
+      orders: { FRA_A_PAR: order({ order_type: 'MOVE', target: 'PIC' }) },
+    });
+    act(() => result.current.applyServerState(rev3));
+
+    // Stale WS functional update (rev 2) is ignored.
+    act(() =>
+      result.current.setGameState(() =>
+        state({
+          game_id: 'mp_1',
+          state_revision: 2,
+          orders: { FRA_A_PAR: order({ order_type: 'MOVE', target: 'BUR' }) },
+        }),
+      ),
+    );
+    expect(result.current.gameState?.state_revision).toBe(3);
+    expect(result.current.gameState?.orders.FRA_A_PAR.target).toBe('PIC');
+
+    // Stale HTTP settle (rev 2) is ignored while remaining pending order stays rebased.
+    let seq: number | null = null;
+    act(() => {
+      seq = result.current.beginOptimisticOrder(
+        'mp_1',
+        order({ order_type: 'MOVE', target: 'GAS' }),
+      );
+    });
+    act(() =>
+      result.current.settleOptimisticOrder(
+        null,
+        state({
+          game_id: 'mp_1',
+          state_revision: 2,
+          orders: { FRA_A_PAR: order({ order_type: 'MOVE', target: 'BUR' }) },
+        }),
+      ),
+    );
+    expect(result.current.gameState?.orders.FRA_A_PAR.target).toBe('GAS');
+
+    // Turn advance prunes old pending orders from the prior turn.
+    const fallTurn = state({
+      game_id: 'mp_1',
+      season: 'Fall',
+      state_revision: 4,
+      orders: { FRA_A_PAR: order({ is_explicit: false }) },
+    });
+    act(() => result.current.applyServerState(fallTurn));
+    expect(result.current.gameState).toBe(fallTurn);
+
+    // Late settle from a different game is ignored after switching games.
+    act(() =>
+      result.current.applyServerState(
+        state({ game_id: 'mp_2', state_revision: 1 }),
+      ),
+    );
+    act(() => result.current.settleOptimisticOrder(seq, rev3));
+    expect(result.current.gameState?.game_id).toBe('mp_2');
   });
 });

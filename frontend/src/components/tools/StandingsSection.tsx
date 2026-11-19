@@ -36,7 +36,10 @@ export type StandingsSectionProps = Pick<
   | 'viewingHistory'
   | 'adminOverrideActive'
   | 'pressPower'
->;
+> & {
+  /** Phone drawer only: clicking a country envelope ensures it is selected and opens Press. */
+  onPressPick?: () => void;
+};
 
 export const StandingsSection: React.FC<StandingsSectionProps> = ({
   activePower,
@@ -54,6 +57,7 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
   viewingHistory = false,
   adminOverrideActive = false,
   pressPower,
+  onPressPick,
 }) => {
   const { sortMode, setSortMode, displayedPowers } = useStandingsSort(
     ownership,
@@ -282,6 +286,7 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                         unread={
                           unreadByThread[threadKey([pressPower, pwr])] ?? 0
                         }
+                        onPressPick={onPressPick}
                       />
                     ))}
                 </div>
@@ -302,12 +307,15 @@ const PressPickButton: React.FC<{
   /** Nobody holds the seat, so there is nobody to write to. */
   vacant: boolean;
   unread: number;
-}> = ({ power, name, picked, vacant, unread }) => {
+  onPressPick?: () => void;
+}> = ({ power, name, picked, vacant, unread, onPressPick }) => {
   const label = vacant
     ? `${name} has no player to write to`
-    : picked
-      ? `Stop sending privately to ${name}`
-      : `Send privately to ${name}`;
+    : onPressPick
+      ? `Write to ${name}`
+      : picked
+        ? `Stop sending privately to ${name}`
+        : `Send privately to ${name}`;
   return (
     <button
       type="button"
@@ -321,6 +329,11 @@ const PressPickButton: React.FC<{
       onClick={(e) => {
         // The row itself selects a power in the sandbox.
         e.stopPropagation();
+        if (onPressPick) {
+          if (!picked) pressStore.toggleRecipient(power);
+          onPressPick();
+          return;
+        }
         pressStore.toggleRecipient(power);
       }}
     >

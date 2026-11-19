@@ -138,6 +138,11 @@ describe('OrderFooter', () => {
       ).not.toHaveAttribute('data-waiting');
     });
 
+    it('tags the multiplayer resolution wrapper with data-testid', () => {
+      footer({ isMultiplayer: true });
+      expect(screen.getByTestId('mp-resolution-controls')).toBeInTheDocument();
+    });
+
     it('marks the card as waiting when the match is waiting for players', () => {
       footer({
         isMultiplayer: true,

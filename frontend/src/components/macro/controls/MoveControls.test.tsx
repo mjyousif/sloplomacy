@@ -171,4 +171,24 @@ describe('MoveControls', () => {
     const { select } = controls({ order: holdOrder(A_BRE) });
     expect(select.value).toBe('');
   });
+
+  it('uses CSS-module class and data-compact attribute on compact native select', () => {
+    render(
+      <MoveControls
+        unit={A_BRE}
+        order={moveOrder(A_BRE, 'PAR', null, false)}
+        provinces={MACRO_PROVINCES}
+        reachable={REACHABLE}
+        unitOptions={OPTIONS_A_BRE}
+        compact
+        useNativeSelect
+        onUpdateOrder={vi.fn()}
+      />,
+    );
+    const select = screen.getByTestId(
+      'select-order-target',
+    ) as HTMLSelectElement;
+    expect(select).not.toHaveClass('unit-compact-select');
+    expect(select).toHaveAttribute('data-compact', 'true');
+  });
 });

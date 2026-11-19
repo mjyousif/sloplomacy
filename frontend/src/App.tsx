@@ -63,6 +63,9 @@ export function App() {
     errorMsg,
     boardRequestSeq,
     applyServerState,
+    beginOptimisticOrder,
+    settleOptimisticOrder,
+    clearPendingOrders,
     fetchGame,
     fetchGamesList,
     fetchMyGames,
@@ -182,7 +185,7 @@ export function App() {
   );
 
   // The live socket, the first load and the fallback poll.
-  const { wsConnected, handleTimerExpired } = useGameSync({
+  const { handleTimerExpired } = useGameSync({
     viewMode,
     activeGameId,
     playerPower,
@@ -266,6 +269,9 @@ export function App() {
     triggerToast,
     setSelectedUnitId,
     applyServerState,
+    beginOptimisticOrder,
+    settleOptimisticOrder,
+    clearPendingOrders,
     fetchGamesList,
   });
 
@@ -464,7 +470,6 @@ export function App() {
         games={gamesList}
         playerPower={activePower}
         lockedPower={lockedPower}
-        wsConnected={wsConnected}
         displayPrefs={displayPrefs}
         displayPrefsSaveState={displayPrefsSaveState}
         updateDisplayPrefs={updateDisplayPrefs}
@@ -481,7 +486,6 @@ export function App() {
         onReturnToPreviousGame={guardedReturnToPreviousGame}
         onSelectGame={guardedSwitchToGame}
         onOpenSurrenderModal={seats.handleOpenSurrenderModal}
-        handleFinalizeClick={handleFinalizeClick}
         toolsDrawerOpen={layout.toolsDrawerOpen}
         setToolsDrawerOpen={layout.setToolsDrawerOpen}
         toolsToggleRef={layout.toolsToggleRef}
@@ -535,8 +539,6 @@ export function App() {
           turnHistory={turnHistory}
           historyTurn={historyTurn}
           viewedEntry={viewedEntry}
-          showPastTurn={showPastTurn}
-          stepPastTurn={stepPastTurn}
           mapRef={mapRef}
           zoomPercent={zoomPercent}
           setZoomPercent={setZoomPercent}
@@ -575,7 +577,6 @@ export function App() {
           handleSelectPower={seats.handleSelectPower}
           isGameCreator={isGameCreator}
           directEditActive={directEditActive}
-          historyLocked={adminModeActive}
           directEdit={directEdit}
           turnClockSettings={
             isGameCreator && adminModalOpen
@@ -631,6 +632,7 @@ export function App() {
         viewMode={viewMode}
         provinces={provinces}
         activeGameSummary={activeGameSummary}
+        gamePasscode={matchPasscodes[activeGameId] ?? null}
         gameOverModalOpen={gameOverModalOpen}
         onCloseGameOverModal={closeGameOverModal}
         onReturnToLobby={() => {

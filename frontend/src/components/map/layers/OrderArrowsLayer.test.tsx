@@ -11,6 +11,7 @@ import type {
   ValidationIssue,
 } from '../../../types/diplomacy';
 import { getPieceFrame } from '../../MapPiece';
+import { resolveMoveTargetPoint } from '../utils/curveGeometry';
 import { ArrowMarkerDefs } from './ArrowMarkerDefs';
 import { OrderArrowsLayer } from './OrderArrowsLayer';
 import type { OrderLayerContext } from './orders/orderLayerContext';
@@ -363,5 +364,18 @@ describe('ArrowMarkerDefs', () => {
       'arrow-sim-bounce',
       'arrow-support',
     ]);
+  });
+});
+
+describe('resolveMoveTargetPoint', () => {
+  it('aims BEL -> HOL under the second "l" of Holland while leaving other moves unchanged (#309)', () => {
+    expect(resolveMoveTargetPoint('BEL', 'HOL', { x: 546, y: 742 })).toEqual({
+      x: 544,
+      y: 720,
+    });
+    expect(resolveMoveTargetPoint('KIE', 'HOL', { x: 546, y: 742 })).toEqual({
+      x: 546,
+      y: 742,
+    });
   });
 });

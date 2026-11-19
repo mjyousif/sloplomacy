@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import logging
@@ -15,6 +16,38 @@ from domain.game_state import GameState, MultiplayerGameSummary
 from telemetry import record_supabase_query
 
 logger = logging.getLogger("diplomacy.database")
+
+_HTTP_CLIENT: httpx.AsyncClient | None = None
+_HTTP_CLIENT_LOOP: asyncio.AbstractEventLoop | None = None
+
+
+def get_http_client() -> httpx.AsyncClient:
+    """Return a shared pooled AsyncClient bound to the current running event loop."""
+    global _HTTP_CLIENT, _HTTP_CLIENT_LOOP
+    loop = asyncio.get_running_loop()
+    if _HTTP_CLIENT is None or _HTTP_CLIENT.is_closed or _HTTP_CLIENT_LOOP is not loop:
+        _HTTP_CLIENT = httpx.AsyncClient(
+            timeout=10.0,
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+        )
+        _HTTP_CLIENT_LOOP = loop
+    return _HTTP_CLIENT
+
+
+async def close_http_client() -> None:
+    """Close the shared Supabase HTTP client (called on app shutdown)."""
+    global _HTTP_CLIENT, _HTTP_CLIENT_LOOP
+    client = _HTTP_CLIENT
+    loop = _HTTP_CLIENT_LOOP
+    _HTTP_CLIENT = None
+    _HTTP_CLIENT_LOOP = None
+    if client is not None and not client.is_closed:
+        try:
+            if loop is asyncio.get_running_loop():
+                await client.aclose()
+        except RuntimeError:
+            pass
+
 
 ROOM_CODE_REGEX = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 
@@ -67,10 +100,7 @@ _REJECTED_KEYS_LOGGED: set = set()
 
 
 def _key_role(key: str) -> str | None:
-    """
-    The Postgres role a Supabase API key acts as, or None if it can't be told from the key.
-    New keys say so in their prefix. Legacy keys are JWTs with a `role` claim.
-    """
+    """Return the Postgres role for a Supabase API key (prefix or JWT `role` claim)."""
     if key.startswith("sb_publishable_"):
         return "anon"
     if key.startswith("sb_secret_"):
@@ -95,13 +125,7 @@ def _log_rejected_key_once(reason: str, message: str) -> None:
 
 
 def get_supabase_key() -> str:
-    """
-    The service role key, or "" if there isn't one.
-
-    Games are saved only with the service role key, never the anon key. RLS on multiplayer_games
-    allows only service_role, so with the anon key every read succeeds with zero rows: the lobby
-    sync would then take every saved game for deleted and drop it.
-    """
+    """Return the service_role key or "" (never the anon key, which RLS gives zero rows)."""
     key = (
         os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY") or ""
     ).strip()
@@ -166,10 +190,8 @@ async def _execute_http(
     kwargs: dict[str, Any] = {"headers": headers, "timeout": 10.0}
     if json_payload is not None:
         kwargs["json"] = json_payload
-    if client:
-        return await getattr(client, method)(url, **kwargs)
-    async with httpx.AsyncClient() as c:
-        return await getattr(c, method)(url, **kwargs)
+    c = client or get_http_client()
+    return await getattr(c, method)(url, **kwargs)
 
 
 async def _execute_write_op(
@@ -249,11 +271,7 @@ def build_summary_from_row(row: dict[str, Any]) -> MultiplayerGameSummary:
 async def load_game_from_db(
     game_id: str, client: httpx.AsyncClient | None = None
 ) -> tuple[GameState, MultiplayerGameSummary | None, list[GameState], str | None] | None:
-    """
-    Load a game from Supabase PostgreSQL by room_code.
-    Returns (state, summary, history, passcode), or None if Supabase has no such game.
-    Raises SupabaseUnavailable if the read fails, which says nothing about whether the game exists.
-    """
+    """Load game tuple from Supabase by room_code, or None; raise SupabaseUnavailable on error."""
     if not is_persistence_enabled() or not is_valid_room_code(game_id):
         return None
 
@@ -276,7 +294,6 @@ async def load_game_from_db(
         raw_gs = row.get("game_state", {})
         packed = isinstance(raw_gs, dict) and "state" in raw_gs
         state_data = raw_gs["state"] if packed else raw_gs
-        summary_data = (raw_gs.get("summary") if packed else None) or row.get("summary")
         history_data = row.get("history") or (raw_gs.get("history") if packed else None) or []
         passcode = (raw_gs.get("passcode") if packed else None) or row.get("passcode")
 
@@ -284,14 +301,7 @@ async def load_game_from_db(
         if row.get("state_revision") is not None:
             state.state_revision = max(state.state_revision, int(row["state_revision"]))
 
-        summary: MultiplayerGameSummary | None = None
-        if isinstance(summary_data, dict) and summary_data:
-            try:
-                summary = MultiplayerGameSummary.model_validate(summary_data)
-            except Exception as ex:
-                logger.warning("Failed to validate summary for %s: %s", game_id, ex)
-        if not summary:
-            summary = build_summary_from_row(row)
+        summary = build_summary_from_row(row)
 
         history: list[GameState] = []
         if isinstance(history_data, list):
@@ -313,10 +323,7 @@ async def load_game_from_db(
 async def load_all_summaries_from_db(
     client: httpx.AsyncClient | None = None,
 ) -> dict[str, MultiplayerGameSummary]:
-    """
-    Fetch all games from Supabase to warm up or synchronize lobby listings.
-    Raises SupabaseUnavailable if the read fails: an empty result always means Supabase has no games.
-    """
+    """Fetch all game summaries from Supabase; raise SupabaseUnavailable on error."""
     if not is_persistence_enabled():
         return {}
 

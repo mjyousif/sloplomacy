@@ -2,13 +2,11 @@ import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import type React from 'react';
 import { useId, useMemo, useState } from 'react';
 import type { TurnHistoryEntry } from '../../types/diplomacy';
-import { cx } from '../../utils/cx';
 import { turnLabel } from '../../utils/timerHelpers';
 import {
   IconSelectDropdown,
   type IconSelectOption,
 } from '../map/hud/IconSelectDropdown';
-import historyStyles from '../tools/TurnHistorySelector.module.css';
 import styles from './TurnChronicle.module.css';
 
 const LIVE_VALUE = 'live';
@@ -134,7 +132,7 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
       >
         <button
           type="button"
-          className={cx(historyStyles.turnHistoryStep, styles.chronicleStep)}
+          className={styles.chronicleStep}
           data-testid="turn-history-prev"
           onClick={() => onStep?.(-1)}
           disabled={controlsDisabled || viewIndex === 0}
@@ -146,7 +144,7 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
 
         <button
           type="button"
-          className={cx(historyStyles.turnHistoryStep, styles.chronicleStep)}
+          className={styles.chronicleStep}
           data-testid="turn-history-next"
           onClick={() => onStep?.(1)}
           disabled={controlsDisabled || !viewingPast}
@@ -168,6 +166,7 @@ export const TurnChronicle: React.FC<TurnChronicleProps> = ({
             hideChevron
             animateValueChange
             classNames={{
+              root: styles.dropdownRoot,
               trigger: styles.dropdownTrigger,
               leading: styles.dropdownLeading,
               value: styles.dropdownValue,

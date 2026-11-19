@@ -62,3 +62,29 @@
     color: var(--color-white);
   }
 }
+
+@layer compact {
+  :global([data-layout="compact"]) .order-tab-btn {
+    min-height: 40px;
+    padding: 6px 8px;
+    font-size: 0.76rem;
+  }
+
+  :global([data-layout="compact"]) .order-tab-btn[data-compact="true"] {
+    flex: 0 0 36px;
+    width: 36px;
+    min-height: 36px;
+    height: 36px;
+    padding: 0;
+    font-size: 0.8rem;
+  }
+
+  :global([data-layout="compact"])
+    .order-tab-btn[data-compact="true"][data-compact-label="true"] {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 36px;
+    height: auto;
+    padding: 0 10px;
+  }
+}

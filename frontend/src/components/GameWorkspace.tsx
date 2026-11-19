@@ -37,10 +37,11 @@ import type { AdminTurnClockSettings } from './macro/AdminTurnClockSidebar';
 import type { HistoryHighlightFocus } from './macro/HistoryTurnPanel';
 import { SuggestionPill } from './map/hud/SuggestionPill';
 import { ToolsSidebar } from './ToolsSidebar';
+import type { PressSectionProps } from './tools/PressSection';
 import {
-  TurnHistoryPill,
-  TurnHistorySelector,
-} from './tools/TurnHistorySelector';
+  MobilePressSheet,
+  useMobilePressSheet,
+} from './tools/press/MobilePressSheet';
 
 // Stable empties for a past turn, so memoized layers are not rebuilt every render.
 const NO_ISSUES: ValidationIssue[] = [];
@@ -70,8 +71,6 @@ export interface GameWorkspaceProps {
   turnHistory: TurnHistory;
   historyTurn: TurnRecord | null;
   viewedEntry: TurnHistoryEntry | null;
-  showPastTurn: (index: number | null) => void;
-  stepPastTurn: (delta: -1 | 1) => void;
   mapRef: RefObject<EuropeMapHandle | null>;
   zoomPercent: number;
   setZoomPercent: Dispatch<SetStateAction<number>>;
@@ -110,7 +109,6 @@ export interface GameWorkspaceProps {
   /** The host's tools. */
   isGameCreator: boolean;
   directEditActive: boolean;
-  historyLocked?: boolean;
   directEdit?: DirectEditMapHandlers;
   turnClockSettings?: AdminTurnClockSettings;
 }
@@ -142,8 +140,6 @@ export function GameWorkspace({
   turnHistory,
   historyTurn,
   viewedEntry,
-  showPastTurn,
-  stepPastTurn,
   mapRef,
   zoomPercent,
   setZoomPercent,
@@ -175,7 +171,6 @@ export function GameWorkspace({
   handleSelectPower,
   isGameCreator,
   directEditActive,
-  historyLocked = false,
   directEdit,
   turnClockSettings,
 }: GameWorkspaceProps) {
@@ -212,6 +207,13 @@ export function GameWorkspace({
     viewMode === 'multiplayer' && lockedPower && !activeGameSummary?.is_sandbox
       ? (activeGameSummary?.game_id ?? null)
       : null;
+  const { pressToggleRef, pressSheetOpen, openPressSheet, closePressSheet } =
+    useMobilePressSheet({
+      isCompact,
+      pressGameId,
+      toolsDrawerOpen,
+      closeToolsDrawer,
+    });
   const gameOver = Boolean(gameState.winner);
   usePressSync({ gameId: pressGameId, power: lockedPower, gameOver });
   const suggestion = useSuggestionBoard({
@@ -229,6 +231,34 @@ export function GameWorkspace({
     historyTurn?.phase === 'Admin' && historyTurn.resolution?.new_units
       ? historyTurn.resolution.new_units
       : (historyTurn?.units ?? gameState.units);
+  const pressProps: Omit<PressSectionProps, 'visible' | 'variant'> | undefined =
+    pressGameId && lockedPower
+      ? {
+          gameId: pressGameId,
+          power: lockedPower,
+          gameOver,
+          surrendered: (gameState.surrendered_powers ?? []).includes(
+            lockedPower,
+          ),
+          provinces,
+          units: gameState.units,
+          participants: activeGameSummary?.participants,
+          turn: turnLabel(gameState),
+          // Moves can be suggested, shown and taken while the live Movement turn is on
+          // the board.
+          suggestTurn:
+            gameState.phase === 'Movement' &&
+            !gameOver &&
+            !sandboxMode &&
+            !directEditActive &&
+            !viewingHistory
+              ? turnLabel(gameState)
+              : null,
+          onHighlightProvinces: setHighlightedProvinces,
+          onProvincePicked: isCompact ? closePressSheet : undefined,
+        }
+      : undefined;
+
   return (
     <main
       className={styles.warRoomWorkspace}
@@ -243,21 +273,6 @@ export function GameWorkspace({
         variant={isCompact ? 'drawer' : 'panel'}
         open={toolsDrawerOpen}
         onClose={closeToolsDrawer}
-        historyFooter={
-          isCompact ? (
-            <TurnHistorySelector
-              entries={turnHistory.entries}
-              viewIndex={turnHistory.viewIndex}
-              liveLabel={turnLabel(gameState)}
-              powers={turnHistory.powers}
-              locked={historyLocked}
-              onSelect={showPastTurn}
-              onStep={stepPastTurn}
-              onSelectPowers={turnHistory.setPowers}
-              onPickedTurn={closeToolsDrawer}
-            />
-          ) : undefined
-        }
         zoomPercent={zoomPercent}
         onZoomIn={() => mapRef.current?.stepZoom(0.2)}
         onZoomOut={() => mapRef.current?.stepZoom(-0.2)}
@@ -292,33 +307,8 @@ export function GameWorkspace({
         onLoadScenario={handleLoadScenario}
         onSaveSandboxClick={handleOpenSaveSandboxModal}
         adminOverrideActive={directEditActive}
-        press={
-          pressGameId && lockedPower
-            ? {
-                gameId: pressGameId,
-                power: lockedPower,
-                gameOver,
-                surrendered: (gameState.surrendered_powers ?? []).includes(
-                  lockedPower,
-                ),
-                provinces,
-                units: gameState.units,
-                turn: turnLabel(gameState),
-                // Moves can be suggested, shown and taken while the live Movement turn is on
-                // the board.
-                suggestTurn:
-                  gameState.phase === 'Movement' &&
-                  !gameOver &&
-                  !sandboxMode &&
-                  !directEditActive &&
-                  !viewingHistory
-                    ? turnLabel(gameState)
-                    : null,
-                onHighlightProvinces: setHighlightedProvinces,
-                onProvincePicked: isCompact ? closeToolsDrawer : undefined,
-              }
-            : undefined
-        }
+        press={pressProps}
+        onOpenPress={isCompact && pressProps ? openPressSheet : undefined}
       />
 
       {/* CENTER: Europe Map */}
@@ -413,14 +403,6 @@ export function GameWorkspace({
                 onClose={suggestionStore.clear}
               />
             )}
-            {isCompact && viewedEntry && (
-              <TurnHistoryPill
-                entry={viewedEntry}
-                isOldest={turnHistory.viewIndex === 0}
-                onStep={stepPastTurn}
-                onGoLive={turnHistory.goLive}
-              />
-            )}
           </>
         }
       />
@@ -481,6 +463,9 @@ export function GameWorkspace({
         participants={activeGameSummary?.participants}
         lobbyStatus={activeGameSummary?.status}
         onSelectUnit={selectFromSidebar}
+        onSelectPower={handleSelectPower}
+        onOpenPress={isCompact && pressProps ? openPressSheet : undefined}
+        pressToggleRef={pressToggleRef}
         onHoverUnit={setHoveredUnitId}
         onHighlightProvinces={setHighlightedProvinces}
         onUpdateOrder={handleUpdateOrder}
@@ -489,6 +474,14 @@ export function GameWorkspace({
         onUnfinalizeClick={handleUnfinalizeClick}
         onAdjudicateTurn={handleAdjudicateTurn}
       />
+
+      {isCompact && pressProps && (
+        <MobilePressSheet
+          open={pressSheetOpen}
+          onClose={closePressSheet}
+          press={pressProps}
+        />
+      )}
     </main>
   );
 }

@@ -211,6 +211,20 @@ export function AdminDirectEditSidebar({
     onSheetSnapChange,
   ]);
 
+  // Lower the phone sheet to peek when starting unit relocation so the map destination can be tapped
+  const prevRelocatingRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      variant === 'sheet' &&
+      directEdit.relocatingUnitId &&
+      directEdit.relocatingUnitId !== prevRelocatingRef.current &&
+      sheetSnap !== 'peek'
+    ) {
+      onSheetSnapChange?.('peek');
+    }
+    prevRelocatingRef.current = directEdit.relocatingUnitId;
+  }, [directEdit.relocatingUnitId, variant, sheetSnap, onSheetSnapChange]);
+
   const inspectorContent = inspectedProvince ? (
     <AdminTileInspector
       key={inspectedProvince}
@@ -327,6 +341,17 @@ export function AdminDirectEditSidebar({
         style={{ borderLeft: '4px solid #b91c1c' }}
       >
         <div className={adminSidebarStyles.adminSidebarHeaderRow}>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              className={chromeStyles.sidebarCollapseToggleBtn}
+              onClick={onToggleCollapse}
+              title="Collapse Right Sidebar"
+              aria-label="Collapse Right Sidebar"
+            >
+              <PanelRightClose size={15} />
+            </button>
+          )}
           <div
             className={adminSidebarStyles.adminSidebarTitle}
             data-testid="admin-sidebar-title"
@@ -341,17 +366,6 @@ export function AdminDirectEditSidebar({
               </span>
             </div>
           </div>
-          {onToggleCollapse && (
-            <button
-              type="button"
-              className={chromeStyles.sidebarCollapseToggleBtn}
-              onClick={onToggleCollapse}
-              title="Collapse Right Sidebar"
-              aria-label="Collapse Right Sidebar"
-            >
-              <PanelRightClose size={15} />
-            </button>
-          )}
         </div>
         {stagedActionsRow}
         {stagedChangesDrawer}

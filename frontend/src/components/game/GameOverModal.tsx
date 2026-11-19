@@ -1,7 +1,9 @@
-import { Crown, Eye, Home, X } from 'lucide-react';
+import { BarChart3, Crown, Eye, Handshake, Home, Table, X } from 'lucide-react';
 import type React from 'react';
+import { useState } from 'react';
 import {
   type AuthUser,
+  type CampaignStatsResponse,
   type GameState,
   type MultiplayerGameSummary,
   POWER_METADATA,
@@ -13,6 +15,11 @@ import {
   getSupplyCenterCounts,
 } from '../../utils/gameOverHelpers';
 import { Modal } from '../modal/Modal';
+import { CampaignAwardsRow } from '../stats/CampaignAwardsRow';
+import { DiplomaticSupportMatrix } from '../stats/DiplomaticSupportMatrix';
+import { StatsOverviewTable } from '../stats/StatsOverviewTable';
+import { SupplyCenterTimelineChart } from '../stats/SupplyCenterTimelineChart';
+import { useCampaignStats } from '../stats/useCampaignStats';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './GameOverModal.module.css';
 
@@ -25,7 +32,11 @@ export interface GameOverModalProps {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
   onInspectBoard: () => void;
   onReturnToLobby: () => void;
+  initialStats?: CampaignStatsResponse | null;
+  passcode?: string | null;
 }
+
+type WarLedgerTab = 'overview' | 'timeline' | 'diplomacy';
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
   isOpen,
@@ -36,8 +47,20 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   viewMode,
   onInspectBoard,
   onReturnToLobby,
+  initialStats = null,
+  passcode = null,
 }) => {
+  const [activeTab, setActiveTab] = useState<WarLedgerTab>('overview');
   const winner = gameState.winner;
+  const { stats, loading } = useCampaignStats(
+    gameState,
+    provinces,
+    summary,
+    isOpen && Boolean(winner),
+    initialStats,
+    passcode,
+  );
+
   if (!isOpen || !winner) return null;
 
   const winnerMeta = POWER_METADATA[winner];
@@ -75,7 +98,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   return (
     <Modal
       scrim="raised"
-      phone="none"
+      phone="scroll"
       onBackdropClick={onInspectBoard}
       cardClassName={styles.gameOverModalCard}
       backdropProps={{ 'data-testid': 'game-over-modal-backdrop' }}
@@ -146,36 +169,76 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         )}
       </p>
 
-      <div className={styles.gameOverStandings}>
-        <div className={styles.gameOverStandingsLabel}>
-          Final Supply Center Standings
+      <CampaignAwardsRow awards={stats.awards} />
+
+      <div className={styles.gameOverLedger}>
+        <div className={styles.gameOverLedgerHeader}>
+          <div
+            className={styles.gameOverTabs}
+            role="tablist"
+            aria-label="Campaign War Ledger views"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'overview'}
+              data-active={String(activeTab === 'overview')}
+              data-testid="game-over-tab-overview"
+              className={styles.gameOverTabBtn}
+              onClick={() => setActiveTab('overview')}
+            >
+              <Table size={14} aria-hidden="true" />
+              <span>War Ledger & Standings</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'timeline'}
+              data-active={String(activeTab === 'timeline')}
+              data-testid="game-over-tab-timeline"
+              className={styles.gameOverTabBtn}
+              onClick={() => setActiveTab('timeline')}
+            >
+              <BarChart3 size={14} aria-hidden="true" />
+              <span>SC Timeline</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'diplomacy'}
+              data-active={String(activeTab === 'diplomacy')}
+              data-testid="game-over-tab-diplomacy"
+              className={styles.gameOverTabBtn}
+              onClick={() => setActiveTab('diplomacy')}
+            >
+              <Handshake size={14} aria-hidden="true" />
+              <span>Diplomatic Matrix</span>
+            </button>
+          </div>
+          <span className={styles.gameOverLedgerMeta}>
+            {loading
+              ? 'Compiling war ledger…'
+              : `${stats.turns_resolved} resolved ${stats.turns_resolved === 1 ? 'phase' : 'phases'}`}
+          </span>
         </div>
-        <div className={styles.gameOverStandingsGrid}>
-          {standings.map(({ power, count }) => {
-            const meta = POWER_METADATA[power];
-            const isWinner = power === winner;
-            return (
-              <div
-                key={power}
-                className={styles.gameOverStandingChip}
-                data-winner={isWinner}
-                style={
-                  isWinner
-                    ? {
-                        borderColor: meta.color,
-                        backgroundColor: meta.lightBg,
-                      }
-                    : undefined
-                }
-              >
-                <PowerFlag power={power} width={16} height={11} />
-                <span className={styles.gameOverStandingName}>
-                  {meta.shortName}
-                </span>
-                <span className={styles.gameOverStandingCount}>{count}</span>
-              </div>
-            );
-          })}
+
+        <div role="tabpanel" aria-busy={loading}>
+          {activeTab === 'overview' && (
+            <StatsOverviewTable powers={stats.powers} winner={winner} />
+          )}
+          {activeTab === 'timeline' && (
+            <SupplyCenterTimelineChart
+              timeline={stats.sc_timeline}
+              winner={winner}
+            />
+          )}
+          {activeTab === 'diplomacy' && (
+            <DiplomaticSupportMatrix
+              powers={stats.powers}
+              supportMatrix={stats.support_matrix}
+              attackMatrix={stats.attack_matrix}
+            />
+          )}
         </div>
       </div>
 

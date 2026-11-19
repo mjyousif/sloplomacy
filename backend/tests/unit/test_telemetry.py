@@ -16,10 +16,9 @@ from engine.adjudicator.resolver import adjudicate_turn
 from fastapi.testclient import TestClient
 from main import app
 from scenarios.presets import build_scenario
-from starlette.requests import Request
 from storage.press import load_press_from_db, save_press_to_db
 from storage.supabase import SupabaseUnavailable, load_game_from_db, save_game_to_db
-from telemetry import emit_telemetry, telemetry_middleware
+from telemetry import TelemetryMiddleware, emit_telemetry
 
 client = TestClient(app)
 
@@ -85,14 +84,20 @@ def test_api_middleware_handles_unhandled_exceptions(caplog: pytest.LogCaptureFi
         "headers": [],
         "route": SimpleNamespace(path="/api/order"),
     }
-    request = Request(scope)
 
-    async def boom(_req):
+    async def boom_app(_scope, _receive, _send):
         raise RuntimeError("boom")
 
+    async def noop_receive():
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def noop_send(_message):
+        return None
+
+    middleware = TelemetryMiddleware(boom_app)
     with caplog.at_level(logging.INFO, logger="diplomacy.telemetry"):
         with pytest.raises(RuntimeError, match="boom"):
-            asyncio.run(telemetry_middleware(request, boom))
+            asyncio.run(middleware(scope, noop_receive, noop_send))
 
     events = _telemetry_events(caplog, "api_request")
     assert len(events) == 1

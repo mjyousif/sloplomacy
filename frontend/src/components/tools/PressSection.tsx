@@ -5,7 +5,12 @@ import { sendPress, usePressState } from '../../hooks/usePress';
 import { finishedOrders, useSuggestionState } from '../../hooks/useSuggestion';
 import { pressStore } from '../../lib/pressStore';
 import { suggestionStore } from '../../lib/suggestionStore';
-import type { Power, ProvinceInfo, Unit } from '../../types/diplomacy';
+import type {
+  GameParticipant,
+  Power,
+  ProvinceInfo,
+  Unit,
+} from '../../types/diplomacy';
 import {
   BACKCHANNEL,
   buildChannels,
@@ -17,6 +22,7 @@ import styles from './PressSection.module.css';
 import { PressChannelTabs } from './press/PressChannelTabs';
 import { PressComposer } from './press/PressComposer';
 import { PressMessageList } from './press/PressMessageList';
+import { PressRecipientBar } from './press/PressRecipientBar';
 import { PressSuggestionDraft } from './press/PressSuggestionDraft';
 import { channelLabel, listPowers } from './press/pressLabels';
 
@@ -32,6 +38,8 @@ export interface PressSectionProps {
   provinces: Record<string, ProvinceInfo>;
   /** The units on the live board, which name the units a move suggestion is for. */
   units: Unit[];
+  /** Match seats so the mobile recipient strip can disable unclaimed countries. */
+  participants?: Record<string, GameParticipant>;
   /** The turn being played, e.g. "Spring 1901 Movement". */
   turn: string;
   /**
@@ -40,10 +48,12 @@ export interface PressSectionProps {
    */
   suggestTurn: string | null;
   onHighlightProvinces: (ids: string[]) => void;
-  /** A province link was picked (the phone closes the drawer to show the map). */
+  /** A province link was picked (the phone closes the drawer or sheet to show the map). */
   onProvincePicked?: () => void;
-  /** False while the section cannot be seen (a closed drawer), so nothing is marked read. */
+  /** False while the section cannot be seen (a closed drawer or sheet), so nothing is marked read. */
   visible?: boolean;
+  /** 'section' sits inside the sidebar's collapsible box; 'sheet' fills the phone Press sheet. */
+  variant?: 'section' | 'sheet';
 }
 
 const EMPTY_TEXT: Record<string, string> = {
@@ -69,11 +79,13 @@ export const PressSection: React.FC<PressSectionProps> = ({
   surrendered,
   provinces,
   units,
+  participants,
   turn,
   suggestTurn,
   onHighlightProvinces,
   onProvincePicked,
   visible = true,
+  variant = 'section',
 }) => {
   const press = usePressState();
   const { draft, viewing } = useSuggestionState();
@@ -111,6 +123,14 @@ export const PressSection: React.FC<PressSectionProps> = ({
   );
   const active = channels.find((c) => c.key === activeKey) ?? channels[0];
   const unread = channels.reduce((sum, c) => sum + c.unread, 0);
+  const unreadByThread = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const channel of channels) {
+      counts[channel.key] = channel.unread;
+    }
+    return counts;
+  }, [channels]);
+  const isSheet = variant === 'sheet';
 
   // Only what the player can actually see counts as read: the list may be scrolled out of
   // the sidebar's view, and the section or the drawer may be closed.
@@ -232,6 +252,93 @@ export const PressSection: React.FC<PressSectionProps> = ({
     }
   };
 
+  const pressContent = (
+    <div
+      className={styles.press}
+      data-testid="press-section"
+      data-press-sheet={isSheet ? 'true' : undefined}
+    >
+      {isSheet && !gameOver && !surrendered && (
+        <PressRecipientBar
+          viewer={power}
+          recipients={recipients}
+          participants={participants}
+          unreadByThread={unreadByThread}
+          onSelectPublic={() => selectChannel(PUBLIC_CHANNEL)}
+          onTogglePower={(targetPower) =>
+            pressStore.toggleRecipient(targetPower)
+          }
+        />
+      )}
+      <PressChannelTabs
+        channels={channels}
+        activeKey={active.key}
+        viewer={power}
+        onSelect={selectChannel}
+      />
+      <p className={styles.channelCaption} data-testid="press-channel-caption">
+        {channelLabel(active, power)}
+        {gameOver && active.key !== PUBLIC_CHANNEL && ' (revealed)'}
+      </p>
+      <PressMessageList
+        listRef={listRef}
+        messages={active.messages}
+        viewer={power}
+        provinces={provinces}
+        emptyText={
+          press.status === 'loading'
+            ? 'Reading the dispatches…'
+            : press.status === 'error'
+              ? 'Press could not be loaded. It will be tried again.'
+              : (EMPTY_TEXT[active.key] ??
+                'No messages yet. Only the powers in this thread read it.')
+        }
+        onHighlightProvinces={onHighlightProvinces}
+        onProvincePicked={onProvincePicked}
+        suggestions={{
+          unitsByProvince,
+          turn,
+          boardFree: suggestTurn !== null,
+          viewingId: viewing?.id ?? null,
+        }}
+      />
+      <PressComposer
+        plainOnly={gameOver || surrendered}
+        draft={text}
+        onDraftChange={setText}
+        anonymous={sendAnonymous}
+        onAnonymousChange={changeAnonymous}
+        destination={destination}
+        blocked={blocked}
+        sending={sending}
+        error={error}
+        onSend={handleSend}
+        suggest={
+          canSuggest || draftIsHere
+            ? {
+                active: draftIsHere,
+                count: sendable.length,
+                incomplete: sendable.length < draftOrders.length,
+                onStart: startSuggestion,
+                attachment: (
+                  <PressSuggestionDraft
+                    orders={draftOrders}
+                    viewer={power}
+                    provinces={provinces}
+                    unitsByProvince={unitsByProvince}
+                    onRemove={suggestionStore.removeOrder}
+                    onDiscard={suggestionStore.clear}
+                  />
+                ),
+              }
+            : undefined
+        }
+      />
+    </div>
+  );
+
+  if (isSheet) return pressContent;
+
   return (
     <CollapsibleSection
       title="PRESS"
@@ -250,75 +357,7 @@ export const PressSection: React.FC<PressSectionProps> = ({
         ) : undefined
       }
     >
-      <div className={styles.press} data-testid="press-section">
-        <PressChannelTabs
-          channels={channels}
-          activeKey={active.key}
-          viewer={power}
-          onSelect={selectChannel}
-        />
-        <p
-          className={styles.channelCaption}
-          data-testid="press-channel-caption"
-        >
-          {channelLabel(active, power)}
-          {gameOver && active.key !== PUBLIC_CHANNEL && ' (revealed)'}
-        </p>
-        <PressMessageList
-          listRef={listRef}
-          messages={active.messages}
-          viewer={power}
-          provinces={provinces}
-          emptyText={
-            press.status === 'loading'
-              ? 'Reading the dispatches…'
-              : press.status === 'error'
-                ? 'Press could not be loaded. It will be tried again.'
-                : (EMPTY_TEXT[active.key] ??
-                  'No messages yet. Only the powers in this thread read it.')
-          }
-          onHighlightProvinces={onHighlightProvinces}
-          onProvincePicked={onProvincePicked}
-          suggestions={{
-            unitsByProvince,
-            turn,
-            boardFree: suggestTurn !== null,
-            viewingId: viewing?.id ?? null,
-          }}
-        />
-        <PressComposer
-          plainOnly={gameOver || surrendered}
-          draft={text}
-          onDraftChange={setText}
-          anonymous={sendAnonymous}
-          onAnonymousChange={changeAnonymous}
-          destination={destination}
-          blocked={blocked}
-          sending={sending}
-          error={error}
-          onSend={handleSend}
-          suggest={
-            canSuggest || draftIsHere
-              ? {
-                  active: draftIsHere,
-                  count: sendable.length,
-                  incomplete: sendable.length < draftOrders.length,
-                  onStart: startSuggestion,
-                  attachment: (
-                    <PressSuggestionDraft
-                      orders={draftOrders}
-                      viewer={power}
-                      provinces={provinces}
-                      unitsByProvince={unitsByProvince}
-                      onRemove={suggestionStore.removeOrder}
-                      onDiscard={suggestionStore.clear}
-                    />
-                  ),
-                }
-              : undefined
-          }
-        />
-      </div>
+      {pressContent}
     </CollapsibleSection>
   );
 };

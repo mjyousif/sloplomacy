@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { LobbyGameRow, MultiplayerGameSummary } from '../types/diplomacy';
 import {
+  activeFilterCount,
   browseQuery,
   DEFAULT_BROWSE_FILTERS,
   hasActiveFilters,
@@ -70,6 +71,22 @@ describe('hasActiveFilters', () => {
     expect(hasActiveFilters({ ...DEFAULT_BROWSE_FILTERS, seats: 'all' })).toBe(
       true,
     );
+  });
+
+  it('counts active filter dimensions cleanly', () => {
+    expect(activeFilterCount(DEFAULT_BROWSE_FILTERS)).toBe(0);
+    expect(
+      activeFilterCount({ ...DEFAULT_BROWSE_FILTERS, turnOp: 'after' }),
+    ).toBe(0);
+    expect(
+      activeFilterCount({
+        seats: 'full',
+        countries: ['FRANCE', 'ITALY'],
+        turnOp: 'after',
+        season: 'Fall',
+        year: 1903,
+      }),
+    ).toBe(4);
   });
 });
 

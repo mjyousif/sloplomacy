@@ -215,6 +215,18 @@ describe('UnitMacroCard pointer behaviour', () => {
     expect(handleOrderTypeChange).toHaveBeenCalledWith(A_BRE, 'SUPPORT');
     expect(onSelectUnit).not.toHaveBeenCalled();
   });
+
+  it('skips selecting the unit on order-type click when selectOnOrderTypeChange is false, while card click still selects', () => {
+    const { root, onSelectUnit, handleOrderTypeChange } = card({
+      selectOnOrderTypeChange: false,
+    });
+    fireEvent.click(screen.getByTestId('btn-order-type-MOVE'));
+    expect(handleOrderTypeChange).toHaveBeenCalledWith(A_BRE, 'MOVE');
+    expect(onSelectUnit).not.toHaveBeenCalled();
+    fireEvent.click(root);
+    expect(onSelectUnit).toHaveBeenCalledTimes(1);
+    expect(onSelectUnit).toHaveBeenCalledWith(A_BRE.id);
+  });
 });
 
 describe('UnitMacroCard order controls', () => {

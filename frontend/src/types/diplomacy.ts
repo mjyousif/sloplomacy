@@ -516,3 +516,57 @@ export interface SeedScenarioRequest {
   game_id?: string | null;
   active_power?: Power | null;
 }
+
+export interface PowerStats {
+  power: Power;
+  player_name: string | null;
+  is_eliminated: boolean;
+  is_surrendered: boolean;
+  current_scs: number;
+  peak_scs: number;
+  scs_captured: number;
+  scs_lost: number;
+  units_built: number;
+  armies_built: number;
+  fleets_built: number;
+  units_disbanded: number;
+  units_destroyed: number;
+  enemies_dislodged: number;
+  builds_waived: number;
+  foreign_supports_given: number;
+  foreign_supports_effective: number;
+  foreign_supports_received: number;
+  foreign_convoys: number;
+  convoys_executed: number;
+  supports_cut: number;
+  moves_succeeded: number;
+  moves_bounced: number;
+  move_success_rate: number;
+  self_bounces: number;
+}
+
+export interface SCTimelinePoint {
+  label: string;
+  season: string;
+  year: number;
+  counts: Record<Power, number>;
+}
+
+export interface CampaignAward {
+  id: string;
+  title: string;
+  subtitle: string;
+  power: Power;
+  value: string;
+  count: number;
+}
+
+export interface CampaignStatsResponse {
+  game_id: string;
+  turns_resolved: number;
+  powers: Record<Power, PowerStats>;
+  sc_timeline: SCTimelinePoint[];
+  support_matrix: Record<Power, Record<Power, number>>;
+  attack_matrix: Record<Power, Record<Power, number>>;
+  awards: CampaignAward[];
+}

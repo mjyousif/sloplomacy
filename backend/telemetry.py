@@ -7,8 +7,6 @@ import sys
 import time
 from typing import Any
 
-from fastapi import Request
-
 telemetry_logger = logging.getLogger("diplomacy.telemetry")
 
 
@@ -39,9 +37,10 @@ def emit_telemetry(
     return payload
 
 
-def resolve_route_template(request: Request) -> str:
+def resolve_route_template(request_or_scope: Any) -> str:
     """Return the normalized FastAPI route template for /api/* requests."""
-    route = request.scope.get("route")
+    scope = getattr(request_or_scope, "scope", request_or_scope)
+    route = scope.get("route") if isinstance(scope, dict) else None
     route_path = getattr(route, "path", None)
     if isinstance(route_path, str) and (route_path == "/api" or route_path.startswith("/api/")):
         return route_path
@@ -62,49 +61,63 @@ def severity_for_status(status_code: int) -> str:
     return "INFO"
 
 
-async def telemetry_middleware(request: Request, call_next):
-    """Time /api/* HTTP requests and emit structured per-endpoint telemetry."""
-    path = request.url.path
-    if path != "/api" and not path.startswith("/api/"):
-        return await call_next(request)
+class TelemetryMiddleware:
+    """Pure ASGI middleware timing /api/* HTTP requests without blocking keep-alive."""
 
-    start = time.perf_counter()
-    method = request.method.upper()
-    try:
-        response = await call_next(request)
-    except Exception:
-        latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
-        endpoint = resolve_route_template(request)
-        emit_telemetry(
-            "ERROR",
-            "api_request",
-            f"{method} {endpoint} -> 500 ({latency_ms:.2f}ms)",
-            route_key=f"{method} {endpoint}",
-            endpoint=endpoint,
-            method=method,
-            status_code=500,
-            status_class="5xx",
-            latency_ms=latency_ms,
-        )
-        raise
+    def __init__(self, app: Any) -> None:
+        self.app = app
 
-    latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
-    endpoint = resolve_route_template(request)
-    status_code = int(response.status_code)
-    status_class = status_class_for(status_code)
-    severity = severity_for_status(status_code)
-    emit_telemetry(
-        severity,
-        "api_request",
-        f"{method} {endpoint} -> {status_code} ({latency_ms:.2f}ms)",
-        route_key=f"{method} {endpoint}",
-        endpoint=endpoint,
-        method=method,
-        status_code=status_code,
-        status_class=status_class,
-        latency_ms=latency_ms,
-    )
-    return response
+    async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path", "")
+        if path != "/api" and not path.startswith("/api/"):
+            await self.app(scope, receive, send)
+            return
+
+        start = time.perf_counter()
+        method = str(scope.get("method", "GET")).upper()
+        status_code = 500
+        emitted = False
+
+        def emit_request(code: int) -> None:
+            latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
+            endpoint = resolve_route_template(scope)
+            emit_telemetry(
+                severity_for_status(code),
+                "api_request",
+                f"{method} {endpoint} -> {code} ({latency_ms:.2f}ms)",
+                route_key=f"{method} {endpoint}",
+                endpoint=endpoint,
+                method=method,
+                status_code=code,
+                status_class=status_class_for(code),
+                latency_ms=latency_ms,
+            )
+
+        async def send_with_telemetry(message: dict[str, Any]) -> None:
+            nonlocal status_code, emitted
+            msg_type = message.get("type")
+            if msg_type == "http.response.start":
+                status_code = int(message.get("status", 500))
+            elif (
+                msg_type == "http.response.body"
+                and not message.get("more_body", False)
+                and not emitted
+            ):
+                emitted = True
+                emit_request(status_code)
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_with_telemetry)
+        except Exception:
+            if not emitted:
+                emitted = True
+                emit_request(500)
+            raise
 
 
 def record_engine_adjudication(

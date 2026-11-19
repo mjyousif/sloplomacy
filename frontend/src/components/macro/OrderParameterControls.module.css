@@ -104,4 +104,44 @@
     overflow: hidden;
     white-space: nowrap;
   }
+
+  .compactNativeSelect {
+    width: 100%;
+    min-width: 0;
+    height: 22px;
+    line-height: 20px;
+    padding: 0 5px;
+    border-radius: var(--radius-xs);
+    border: 1px solid #353f52;
+    background: #191d25;
+    color: var(--text-primary);
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .compactNativeSelect:focus {
+    outline: none;
+    border-color: #eab308;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .orderParamInline {
+    gap: 6px;
+  }
+
+  :global([data-layout="compact"]) .orderParamInline select,
+  :global([data-layout="compact"]) .compactNativeSelect,
+  :global([data-layout="compact"]) .orderParamRow select {
+    height: 40px;
+    min-height: 40px;
+    line-height: 1.25;
+    padding: 0 8px;
+    font-size: 16px;
+    border-radius: var(--radius-sm);
+  }
 }

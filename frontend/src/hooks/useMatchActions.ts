@@ -39,13 +39,17 @@ export interface MatchActionsOptions {
   setSelectedUnitId: Dispatch<SetStateAction<string | null>>;
   /** From `useGameSession`. */
   applyServerState: (st: GameState) => void;
+  beginOptimisticOrder?: (gameId: string, order: Order) => number | null;
+  settleOptimisticOrder?: (seq: number | null, serverState?: GameState) => void;
+  clearPendingOrders?: () => void;
   fetchGamesList: () => Promise<void>;
 }
 
 /**
  * What a player does in a match: send an order, confirm every order, finalize (through the
  * Sanity Check modal when the orders have problems) and unlock again, resolve the turn, and
- * the turn clock's buttons. Every order goes straight to the server, which sends the board back.
+ * the turn clock's buttons. Orders update optimistically on the client while the server
+ * validates, persists, and returns the authoritative board.
  */
 export function useMatchActions({
   viewMode,
@@ -62,6 +66,9 @@ export function useMatchActions({
   triggerToast,
   setSelectedUnitId,
   applyServerState,
+  beginOptimisticOrder,
+  settleOptimisticOrder,
+  clearPendingOrders,
   fetchGamesList,
 }: MatchActionsOptions) {
   // Sanity Check Modal State
@@ -84,9 +91,11 @@ export function useMatchActions({
       );
       return;
     }
+    const targetGameId = draftGameId;
+    const optimisticSeq = beginOptimisticOrder?.(targetGameId, order) ?? null;
     try {
       const res = await authedFetch(
-        `${API_BASE}/order?game_id=${encodeURIComponent(draftGameId)}`,
+        `${API_BASE}/order?game_id=${encodeURIComponent(targetGameId)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -98,12 +107,18 @@ export function useMatchActions({
       );
       if (res.ok) {
         const st: GameState = await res.json();
-        applyServerState(st);
+        if (settleOptimisticOrder) {
+          settleOptimisticOrder(optimisticSeq, st);
+        } else {
+          applyServerState(st);
+        }
       } else {
+        settleOptimisticOrder?.(optimisticSeq);
         const err = await res.json().catch(() => ({}));
         triggerToast(err.detail || 'That order was not accepted.');
       }
     } catch (e) {
+      settleOptimisticOrder?.(optimisticSeq);
       console.error(e);
     }
   };
@@ -133,6 +148,7 @@ export function useMatchActions({
         const err = await res.json().catch(() => ({}));
         return err.detail || 'Those orders were not accepted.';
       }
+      clearPendingOrders?.();
       applyServerState(await res.json());
       setSelectedUnitId(null);
       triggerToast(
@@ -164,6 +180,7 @@ export function useMatchActions({
       );
       if (res.ok) {
         const st: GameState = await res.json();
+        clearPendingOrders?.();
         applyServerState(st);
         setSelectedUnitId(null);
         triggerToast(

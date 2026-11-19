@@ -21,12 +21,13 @@ frontend/
     │   ├── header/              # Desktop/compact top bars, display settings menu, turn chronicle, version badge
     │   ├── ui/                  # Shared UI primitives (BottomSheet, CollapsibleSection, BrandEmblem, PowerFlag, chrome/form styles)
     │   ├── map/                 # Interactive SVG board: hooks/, hud/, layers/ (orders/, units/), and curve geometry
-    │   ├── tools/               # Left ToolsSidebar sections (incl. PressSection and press/), TurnHistorySelector, SaveSandboxModal, and collapsed rail
+    │   ├── tools/               # Left ToolsSidebar sections (incl. PressSection and press/), filter chips (TurnHistorySelector), SaveSandboxModal, and collapsed rail
     │   ├── macro/               # Right MacroSidebar order sheet, controls/, admin sidebars, and build slots
     │   ├── lobby/               # Map hero and strip of the player's games (MiniMap), public game browser (filters, rows, pager, useLobbyBrowse), Host/Join buttons and their form dialogs, power picker
     │   ├── admin/               # AdminSettingsMenu, TurnControlTab, and AdminActionWarningModal
     │   ├── auth/                # Sign-in / sign-up modal and account settings modal
     │   ├── game/                # PhaseTimerWidget and match-lifecycle modals (surrender, game over, sanity check)
+    │   ├── stats/               # Tabbed War Ledger & Campaign Statistics views (table, awards, SC timeline SVG, diplomatic matrix) embedded in GameOverModal
     │   ├── modal/               # Generic modal primitives (Modal, ConfirmModal, PromptDialog styles)
     │   └── pieces/              # Map piece geometry, outlines, marks, and styles/ (classic, seated, compact, flag, nameplate)
     ├── data/                    # Static SVG map paths (europeMapGeometry), piece placements (mapLayouts), text metrics

@@ -24,15 +24,22 @@ const STATE = {
   phase: 'Movement',
   winner: null,
   surrendered_powers: [],
-  issues: [
-    { power: 'FRANCE', severity: 'error' },
-    { power: 'FRANCE', severity: 'warning' },
-    { power: 'FRANCE', severity: 'warning' },
-    { power: 'GERMANY', severity: 'error' },
-    { power: 'FRANCE', severity: 'info' },
-  ],
+  issues: [],
 } as unknown as GameState;
-const MATCH = { name: 'Friday Night' } as MultiplayerGameSummary;
+const MATCH = {
+  game_id: 'mp_1',
+  name: 'Friday Night',
+  status: 'active',
+  participants: {
+    FRANCE: {
+      user_id: 'user-alice',
+      email: 'alice@example.test',
+      display_name: 'Alice',
+      power: 'FRANCE',
+      joined_at: '2026-11-01T00:00:00Z',
+    },
+  },
+} as unknown as MultiplayerGameSummary;
 
 function props(over: Partial<AppHeaderProps> = {}): AppHeaderProps {
   return {
@@ -42,7 +49,6 @@ function props(over: Partial<AppHeaderProps> = {}): AppHeaderProps {
     activeGameId: 'mp_1',
     activeGameSummary: MATCH,
     playerPower: 'FRANCE',
-    wsConnected: true,
     displayPrefs: { pieceStyle: 'classic', unitMark: 'letters' } as any,
     displayPrefsSaveState: 'device',
     updateDisplayPrefs: vi.fn(),
@@ -51,7 +57,6 @@ function props(over: Partial<AppHeaderProps> = {}): AppHeaderProps {
     handleSignOut: vi.fn(),
     handleBackToLobby: vi.fn(),
     handleEnterSoloSandbox: vi.fn(),
-    handleFinalizeClick: vi.fn(),
     toolsDrawerOpen: false,
     setToolsDrawerOpen: vi.fn(),
     toolsToggleRef: { current: null },
@@ -68,7 +73,7 @@ beforeEach(() => {
 });
 
 describe('AppHeader: the top bar', () => {
-  it('gives the desktop header the board but not the order problems, which its order sidebar shows', () => {
+  it('gives the desktop header the shared board, history, and menu props', () => {
     const p = props();
     render(<AppHeader {...p} />);
     expect(screen.getByText('top header')).toBeInTheDocument();
@@ -77,9 +82,6 @@ describe('AppHeader: the top bar', () => {
     expect(h.viewMode).toBe('multiplayer');
     expect(h.turn).toBe(STATE);
     expect(h.winner).toBeNull();
-    expect(h.errorCount).toBeUndefined();
-    expect(h.warningCount).toBeUndefined();
-    expect(h.onOpenOrderCheck).toBeUndefined();
     expect(h.matchSummary).toBe(MATCH);
     expect(h.playerPower).toBe('FRANCE');
     expect(h.onBackToLobby).toBe(p.handleBackToLobby);
@@ -92,17 +94,61 @@ describe('AppHeader: the top bar', () => {
     expect(p.openAuthPrompt).toHaveBeenCalledWith(undefined, 'signin');
   });
 
-  it("gives a phone the one-row bar, with the player's own problems, the match label and the tools toggle", () => {
-    const p = props({ isCompact: true, toolsDrawerOpen: true });
+  it('gives the phone header the exact same shared header props plus the drawer toggle', () => {
+    const onSaveSandbox = vi.fn();
+    const onResetSandbox = vi.fn();
+    const onDeleteSandbox = vi.fn();
+    const onReturnToPreviousGame = vi.fn();
+    const onSwitchToSoloSandbox = vi.fn();
+    const onSelectGame = vi.fn();
+    const onSelectHistoryTurn = vi.fn();
+    const onStepHistoryTurn = vi.fn();
+    const historyEntries = [
+      { index: 0, season: 'Spring', year: 1901, phase: 'Movement' },
+    ];
+    const p = props({
+      isCompact: true,
+      toolsDrawerOpen: true,
+      playerPower: 'GERMANY',
+      lockedPower: 'FRANCE',
+      authUser: {
+        id: 'user-alice',
+        email: 'alice@example.test',
+        displayName: 'Alice',
+      },
+      games: [MATCH],
+      onSaveSandbox,
+      onResetSandbox,
+      onDeleteSandbox,
+      onReturnToPreviousGame,
+      onSwitchToSoloSandbox,
+      onSelectGame,
+      historyEntries,
+      historyViewIndex: 0,
+      historyLocked: true,
+      onSelectHistoryTurn,
+      onStepHistoryTurn,
+    });
     render(<AppHeader {...p} />);
     expect(screen.getByText('compact bar')).toBeInTheDocument();
     expect(seen.wide).toBeUndefined();
     const c = seen.compact;
     expect(c.turn).toBe(STATE);
-    expect(c.errorCount).toBe(1);
-    expect(c.warningCount).toBe(2);
-    expect(c.syncDetail).toBe('Game mp_1');
-    expect(c.matchLabel).toBe('Friday Night (France)');
+    expect(c.matchSummary).toBe(MATCH);
+    expect(c.activeGameId).toBe('mp_1');
+    expect(c.myGames).toEqual([MATCH]);
+    expect(c.playerPower).toBe('FRANCE');
+    expect(c.onSaveSandbox).toBe(onSaveSandbox);
+    expect(c.onResetSandbox).toBe(onResetSandbox);
+    expect(c.onDeleteSandbox).toBe(onDeleteSandbox);
+    expect(c.onReturnToPreviousGame).toBe(onReturnToPreviousGame);
+    expect(c.onSwitchToSoloSandbox).toBe(onSwitchToSoloSandbox);
+    expect(c.onSelectGame).toBe(onSelectGame);
+    expect(c.historyEntries).toBe(historyEntries);
+    expect(c.historyViewIndex).toBe(0);
+    expect(c.historyLocked).toBe(true);
+    expect(c.onSelectHistoryTurn).toBe(onSelectHistoryTurn);
+    expect(c.onStepHistoryTurn).toBe(onStepHistoryTurn);
     expect(c.toolsOpen).toBe(true);
     expect(c.toolsToggleRef).toBe(p.toolsToggleRef);
     c.onToggleTools();
@@ -111,27 +157,11 @@ describe('AppHeader: the top bar', () => {
     ) => boolean;
     expect(update(false)).toBe(true);
     expect(update(true)).toBe(false);
-    c.onOpenOrderCheck();
-    expect(p.handleFinalizeClick).toHaveBeenCalledWith(false);
     c.onSignIn();
     expect(p.openAuthPrompt).toHaveBeenCalledWith(undefined, 'signin');
   });
 
-  it('shows the phone no turn and no match name in the lobby or a sandbox', () => {
-    render(<AppHeader {...props({ isCompact: true, viewMode: 'lobby' })} />);
-    expect(seen.compact.turn).toBeNull();
-    expect(seen.compact.syncDetail).toBe('Lobby feed');
-    expect(seen.compact.matchLabel).toBeNull();
-    render(<AppHeader {...props({ isCompact: true, viewMode: 'sandbox' })} />);
-    expect(seen.compact.turn).toBe(STATE);
-    expect(seen.compact.matchLabel).toBeNull();
-    render(
-      <AppHeader {...props({ isCompact: true, activeGameSummary: null })} />,
-    );
-    expect(seen.compact.matchLabel).toBeNull();
-  });
-
-  it('passes the winner and turn history props on', () => {
+  it('passes the winner and turn history props to both desktop and phone headers', () => {
     const won = { ...STATE, winner: 'ITALY' } as GameState;
     const onSelectHistoryTurn = vi.fn();
     const onStepHistoryTurn = vi.fn();
@@ -154,31 +184,38 @@ describe('AppHeader: the top bar', () => {
     expect(seen.wide.historyViewIndex).toBe(0);
     expect(seen.wide.onSelectHistoryTurn).toBe(onSelectHistoryTurn);
     expect(seen.wide.onStepHistoryTurn).toBe(onStepHistoryTurn);
-    render(<AppHeader {...props({ gameState: won, isCompact: true })} />);
+
+    render(
+      <AppHeader
+        {...props({
+          gameState: won,
+          isCompact: true,
+          historyEntries,
+          historyViewIndex: 0,
+          onSelectHistoryTurn,
+          onStepHistoryTurn,
+        })}
+      />,
+    );
     expect(seen.compact.winner).toBe('ITALY');
+    expect(seen.compact.historyEntries).toBe(historyEntries);
+    expect(seen.compact.historyViewIndex).toBe(0);
+    expect(seen.compact.onSelectHistoryTurn).toBe(onSelectHistoryTurn);
+    expect(seen.compact.onStepHistoryTurn).toBe(onStepHistoryTurn);
   });
 
-  it('wires onSurrenderClick only for a live non-surrendered multiplayer seat and prefers lockedPower for TopHeader flag', () => {
+  it('wires onSurrenderClick only for a live non-surrendered multiplayer seat and prefers lockedPower for flag', () => {
     const onOpenSurrenderModal = vi.fn();
-    const onSaveSandbox = vi.fn();
-    const onResetSandbox = vi.fn();
-    const onReturnToPreviousGame = vi.fn();
     render(
       <AppHeader
         {...props({
           playerPower: 'GERMANY',
           lockedPower: 'FRANCE',
           onOpenSurrenderModal,
-          onSaveSandbox,
-          onResetSandbox,
-          onReturnToPreviousGame,
         })}
       />,
     );
     expect(seen.wide.playerPower).toBe('FRANCE');
-    expect(seen.wide.onSaveSandbox).toBe(onSaveSandbox);
-    expect(seen.wide.onResetSandbox).toBe(onResetSandbox);
-    expect(seen.wide.onReturnToPreviousGame).toBe(onReturnToPreviousGame);
     expect(seen.wide.isSurrendered).toBe(false);
     seen.wide.onSurrenderClick();
     expect(onOpenSurrenderModal).toHaveBeenCalledWith(MATCH, 'FRANCE');

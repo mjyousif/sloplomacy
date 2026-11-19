@@ -169,7 +169,7 @@ Hovering a province brightens a reachable one, and hovering a unit rings it and 
 
 ## Map Overlay
 
-`EuropeMap` renders its `overlay` prop inside the map viewport, outside the SVG, so panning and zooming do not move it and it does not trigger them. `App.tsx` uses it to place `PhaseTimerWidget` over the bottom left of the map, where it stays visible with both sidebars collapsed. Toasts are centered at the bottom of the window to keep clear of it.
+`EuropeMap` renders its `overlay` prop and `SimulationBanner` inside `.map-top-overlays` (`data-testid="map-top-overlays"`), outside the SVG, so panning and zooming do not move them and they do not trigger map gestures. On wide viewports `.map-top-overlays` uses `display: contents` so `PhaseTimerWidget`, `SimulationBanner`, and `SuggestionPill` keep their independent positions (`App.tsx` / `GameWorkspace.tsx` place `PhaseTimerWidget` at bottom-left, banners top-center). On compact phones `.map-top-overlays` becomes a flex column at the top of the map so multiple active overlays stack cleanly with 8px gaps without colliding. Toasts are centered at the bottom of the window to keep clear of it.
 
 ---
 
@@ -182,7 +182,6 @@ With `historyView` set, `App.tsx` feeds the map a `TurnRecord` from the turn sel
 - In an Adjustments phase the build tokens are the builds that were ordered (`adjustmentOrdersFor`, filtered by `historyPowers` and `historyActions`), for every power. Waived slots are not drawn.
 - Territories that changed hands between `ownership` and `simulationResult.new_ownership` (respecting `historyPowers` when filtered) are shaded with alternating 45° diagonal SVG `<pattern>` stripes in the previous and next owners' colors (with a neutral parchment band when changing to/from Neutral), unless overridden by a hover/pin yellow highlight.
 - The Hypothetical banner stays hidden.
-- On phones the `TurnHistoryPill` goes into the `overlay` beside the clock.
 
 ## Move Suggestions (`suggestion`)
 

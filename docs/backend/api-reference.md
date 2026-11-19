@@ -44,6 +44,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | Method | Endpoint | Description | Request Body | Response Model |
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/history` | List the game's resolved phases, oldest first (up to the last 30) | *None* | `List[TurnHistoryEntry]` |
+| `GET` | `/api/history/stats` | Per-power tactical, diplomatic, and logistics War Ledger derived strictly from resolved history | *None* | `CampaignStatsResponse` |
 | `GET` | `/api/press` | The press (chat) the caller's seat may read, oldest first; `?after=<seq>` for newer messages only | *None* | `PressFeed` |
 | `POST` | `/api/press` | Send press from the caller's seat to the public box or a private thread, signed or anonymous | `PressPostRequest` | `PressMessageView` |
 | `GET` | `/api/history/{index}` | One resolved phase as it began, with every power's orders and how each resolved | *None* | `TurnRecord` |
@@ -453,7 +454,7 @@ Any `target_coast` on an army's order is ignored, because only fleets use coasts
 
 Send the optional `turn` (for example `"Spring 1901 Movement"`) to have the order refused with `409` if that turn has already resolved.
 
-Submits or modifies a single military instruction. Automatically triggers validation and non-destructive simulation preview.
+Submits or modifies a single military instruction. Automatically triggers validation and non-destructive simulation preview. For order-drafting endpoints (`/api/order`, `/api/orders/batch`, `/api/orders/clear-all`, `/api/orders/confirm-all`), WebSocket broadcasts and Supabase persistence run in `BackgroundTasks` after the HTTP response is sent.
 
 #### Request (`SingleOrderUpdateRequest`):
 ```json
@@ -576,6 +577,64 @@ Returns one resolved phase from `GET /api/history`, as the board stood when it b
     "summary": [...],
     ...
   }
+}
+```
+
+### `GET /api/history/stats`
+Computes and returns the Campaign Statistics & War Ledger (`CampaignStatsResponse`) for a match using only resolved snapshots in `GAME_HISTORY` and public board ownership/unit counts on the current state.
+
+- **Query Parameters**: `game_id` *(optional)*, `passcode` *(optional)*. Header `X-Passcode` and `Authorization: Bearer <token>` work identically to `GET /api/history`.
+- **Access & Secrecy**: Enforces `require_view_access` (private matches require passcode or seated membership; private sandboxes `sbx_...` return `404`; saved sandboxes are restricted to their owner via `saved_sandbox_guard`). **Never reads or exposes live unresolved turn orders** (`current_state.orders`, `preview`, `issues`, or `unit_options`).
+
+#### Response (`CampaignStatsResponse`):
+```json
+{
+  "game_id": "mp_abc123",
+  "turns_resolved": 14,
+  "powers": {
+    "FRANCE": {
+      "power": "FRANCE",
+      "player_name": "Alice",
+      "is_eliminated": false,
+      "is_surrendered": false,
+      "current_scs": 18,
+      "peak_scs": 18,
+      "scs_captured": 15,
+      "scs_lost": 0,
+      "units_built": 6,
+      "armies_built": 4,
+      "fleets_built": 2,
+      "units_disbanded": 0,
+      "units_destroyed": 1,
+      "enemies_dislodged": 5,
+      "builds_waived": 0,
+      "foreign_supports_given": 2,
+      "foreign_supports_effective": 2,
+      "foreign_supports_received": 4,
+      "foreign_convoys": 1,
+      "convoys_executed": 2,
+      "supports_cut": 3,
+      "moves_succeeded": 24,
+      "moves_bounced": 6,
+      "move_success_rate": 80.0,
+      "self_bounces": 0
+    }
+  },
+  "sc_timeline": [
+    { "label": "Spring 1901", "season": "Spring", "year": 1901, "counts": { "FRANCE": 3, ... } }
+  ],
+  "support_matrix": { "ENGLAND": { "FRANCE": 4, ... } },
+  "attack_matrix": { "FRANCE": { "GERMANY": 5, ... } },
+  "awards": [
+    {
+      "id": "iron_chancellor",
+      "title": "Iron Chancellor",
+      "subtitle": "Most Enemy Units Dislodged",
+      "power": "FRANCE",
+      "value": "5 dislodged",
+      "count": 5
+    }
+  ]
 }
 ```
 

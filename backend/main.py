@@ -30,15 +30,22 @@ from api import (
     websocket,
 )
 from engine.order_utils import resolve_static_path
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from scenarios.presets import seed_dev_games
 from security.secrecy import saved_sandbox_guard
 from storage import supabase
-from storage.store import GAME_SUMMARIES, PROFILE_NAMES, hydrate_summary_profiles
-from telemetry import telemetry_middleware
+from storage.store import (
+    GAME_SUMMARIES,
+    PROFILE_NAMES,
+    UNSAVED_GAMES,
+    hydrate_summary_profiles,
+    persist_game,
+)
+from telemetry import TelemetryMiddleware
 
 logger = logging.getLogger("diplomacy.api")
 
@@ -58,7 +65,20 @@ async def lifespan(app: FastAPI):
             logger.info("Loaded %d game summaries from Supabase on startup.", len(summaries))
         except Exception as ex:
             logger.warning("Could not synchronize games on startup: %s", ex)
-    yield
+    if (
+        os.getenv("ENVIRONMENT", "").lower() == "development"
+        and os.getenv("SEED_DEV_GAMES", "1") != "0"
+    ):
+        await seed_dev_games()
+    try:
+        yield
+    finally:
+        for gid in list(UNSAVED_GAMES):
+            try:
+                await persist_game(gid)
+            except Exception as ex:
+                logger.warning("Could not flush unsaved game '%s' on shutdown: %s", gid, ex)
+        await supabase.close_http_client()
 
 
 app = FastAPI(
@@ -96,18 +116,37 @@ else:
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
-@app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    """Defense-in-depth HTTP security headers."""
-    response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
-    return response
+_SECURITY_HEADERS: tuple[tuple[bytes, bytes], ...] = (
+    (b"x-content-type-options", b"nosniff"),
+    (b"x-frame-options", b"DENY"),
+    (b"referrer-policy", b"strict-origin-when-cross-origin"),
+    (b"permissions-policy", b"geolocation=(), camera=(), microphone=()"),
+)
 
 
-app.middleware("http")(telemetry_middleware)
+class SecurityHeadersMiddleware:
+    """Defense-in-depth HTTP security headers (pure ASGI so BackgroundTasks don't block keep-alive)."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.extend(_SECURITY_HEADERS)
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(TelemetryMiddleware)
 
 
 # Include modular domain routers

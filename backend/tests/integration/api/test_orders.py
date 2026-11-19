@@ -1,6 +1,15 @@
 """Order submission: single orders, batches, confirm-all, build slots, and orders that name nothing real."""
 
+import asyncio
+import socket
+import threading
+import time
+from unittest.mock import patch
+
+import httpx
 import pytest
+import uvicorn
+from api import orders as orders_api
 from domain.orders import OrderType
 from fastapi.testclient import TestClient
 from main import app
@@ -11,6 +20,7 @@ from tests.integration.api.helpers import (
     _order_payload,
     _place_unit,
 )
+from tests.integration.security.helpers import ALICE_ID, BOB_ID, alice_headers, make_jwt
 
 client = TestClient(app)
 
@@ -319,3 +329,101 @@ def test_a_coast_on_an_army_order_is_ignored():
     assert [(u.province, u.coast) for u in GAMES[game_id].units if u.id == "FRA_A_MAR"] == [
         ("SPA", None)
     ]
+
+
+def test_order_response_includes_security_headers():
+    game_id = _new_game()
+    res = client.post(f"/api/order?game_id={game_id}", json={"order": _order_payload()})
+    assert res.status_code == 200
+    assert res.headers["X-Content-Type-Options"] == "nosniff"
+    assert res.headers["X-Frame-Options"] == "DENY"
+    assert res.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+    assert res.headers["Permissions-Policy"] == "geolocation=(), camera=(), microphone=()"
+
+
+def test_order_returns_before_background_persist_and_does_not_stall_keepalive():
+    game_id = _new_game()
+    persist_started = threading.Event()
+    persist_finished = threading.Event()
+
+    async def slow_persist(gid: str) -> None:
+        persist_started.set()
+        await asyncio.sleep(0.35)
+        persist_finished.set()
+
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+
+    try:
+        deadline = time.monotonic() + 5.0
+        while not server.started and time.monotonic() < deadline:
+            time.sleep(0.02)
+
+        with (
+            patch.object(orders_api, "persist_game", side_effect=slow_persist),
+            httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=5.0) as http,
+        ):
+            t0 = time.perf_counter()
+            r1 = http.post(f"/api/order?game_id={game_id}", json={"order": _order_payload()})
+            t1 = time.perf_counter()
+            # Second request reuses the keep-alive socket while slow_persist is still sleeping.
+            r2 = http.post(
+                f"/api/order?game_id={game_id}",
+                json={"order": _order_payload(target="PIC")},
+            )
+            t2 = time.perf_counter()
+
+        assert r1.status_code == 200
+        assert r2.status_code == 200
+        assert r1.headers["x-content-type-options"] == "nosniff"
+        assert (t1 - t0) < 0.25
+        assert (t2 - t1) < 0.25
+        assert persist_started.wait(timeout=2.0)
+        assert persist_finished.wait(timeout=2.0)
+    finally:
+        server.should_exit = True
+        thread.join(timeout=5.0)
+
+
+def test_two_player_order_background_broadcast_preserves_fog_of_war():
+    created = client.post(
+        "/api/games",
+        json={
+            "name": "Bg Broadcast FoW",
+            "creator_power": "FRANCE",
+            "user_id": ALICE_ID,
+            "email": "alice@test.com",
+        },
+        headers=alice_headers(),
+    )
+    gid = created.json()["game_id"]
+    client.post(
+        f"/api/games/{gid}/join",
+        json={"power": "GERMANY", "user_id": BOB_ID, "email": "bob@test.com"},
+        headers={"Authorization": f"Bearer {make_jwt(BOB_ID, 'bob@test.com')}"},
+    )
+
+    with client.websocket_connect(f"/ws/games/{gid}?handshake=1&power=GERMANY") as bob_ws:
+        bob_ws.send_json({"type": "auth", "token": make_jwt(BOB_ID, "bob@test.com")})
+        initial = bob_ws.receive_json()
+        assert initial["type"] == "game_update"
+
+        res = client.post(
+            f"/api/order?game_id={gid}",
+            json={"order": _order_payload()},
+            headers=alice_headers(),
+        )
+        assert res.status_code == 200
+        assert res.json()["orders"]["FRA_A_PAR"]["order_type"] == "MOVE"
+        assert res.json()["orders"]["FRA_A_PAR"]["target"] == "BUR"
+
+        bob_push = bob_ws.receive_json()
+        assert bob_push["type"] == "game_update"
+        assert bob_push["state"]["orders"]["FRA_A_PAR"]["order_type"] == "HOLD"
+        assert bob_push["state"]["orders"]["FRA_A_PAR"]["target"] is None

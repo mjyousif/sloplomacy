@@ -275,37 +275,89 @@
   :global([data-layout="compact"]) .macro-sheet-status-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 
   :global([data-layout="compact"]) .macro-sheet-status-row .power-crest-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
+    flex-shrink: 0;
   }
 
   :global([data-layout="compact"]) .macro-sheet-power {
     display: flex;
     flex: 1;
     flex-direction: column;
+    align-items: flex-start;
     min-width: 0;
+  }
+
+  :global([data-layout="compact"]) .power-switcher-trigger {
+    flex: 1;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    min-height: 36px;
+    padding: 2px 8px 2px 4px;
+    margin-left: -4px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.04);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  :global([data-layout="compact"]) .power-switcher-title-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+  }
+
+  :global([data-layout="compact"]) .power-switcher-trigger:active,
+  :global([data-layout="compact"])
+    .power-switcher-trigger[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  :global([data-layout="compact"]) .power-switcher-trigger:focus-visible {
+    outline: 2px solid var(--info-sky);
+    outline-offset: 1px;
+  }
+
+  :global([data-layout="compact"]) .power-switcher-chevron {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    transition: transform 0.15s ease;
+  }
+
+  :global([data-layout="compact"]) .power-switcher-chevron[data-open="true"] {
+    transform: rotate(180deg);
   }
 
   :global([data-layout="compact"]) .macro-sheet-power .power-name-text {
     font-family: var(--font-display);
-    font-size: 1rem;
+    font-size: 0.94rem;
     font-weight: 800;
+    line-height: 1.15;
     color: #f8eed9;
   }
 
   :global([data-layout="compact"]) .macro-sheet-counts {
-    font-size: 0.8rem;
+    font-size: 0.74rem;
+    line-height: 1.2;
     color: var(--text-muted);
   }
 
   :global([data-layout="compact"]) .macro-sheet-status-row .status-badge {
-    font-size: 0.78rem;
+    padding: 3px 8px;
+    font-size: 0.72rem;
   }
 
   :global([data-layout="compact"]) .macro-phase-context-box {
@@ -319,12 +371,22 @@
     border-radius: var(--radius-md);
   }
 
+  :global([data-layout="compact"]) .history-lock-filter-row {
+    grid-template-columns: 48px minmax(0, 1fr) 28px;
+    align-items: start;
+  }
+
+  :global([data-layout="compact"]) .history-lock-filter-row-label {
+    line-height: 32px;
+  }
+
   :global([data-layout="compact"])
     .history-lock-filter-section
     .history-lock-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
     margin: 0;
     gap: 4px;
-    flex-wrap: nowrap;
   }
 
   :global([data-layout="compact"])
@@ -333,13 +395,16 @@
   :global([data-layout="compact"])
     .history-lock-filter-section
     .history-lock-action-chip {
-    height: 30px;
-    font-size: 0.66rem;
+    min-width: 36px;
+    height: 32px;
+    padding: 0 8px;
+    font-size: 0.7rem;
   }
 
   :global([data-layout="compact"]) .history-lock-filter-clear-btn {
     width: 28px;
     height: 28px;
+    margin-top: 2px;
   }
 
   :global([data-layout="compact"]) .history-lock-live-btn {

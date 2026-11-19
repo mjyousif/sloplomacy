@@ -4,7 +4,10 @@ import {
   type Unit,
 } from '../../../../types/diplomacy';
 import { MapPiece, PieceOutline } from '../../../MapPiece';
-import { computeQuadraticCurve } from '../../utils/curveGeometry';
+import {
+  computeQuadraticCurve,
+  resolveMoveTargetPoint,
+} from '../../utils/curveGeometry';
 import type { OrderLayerContext } from './orderLayerContext';
 
 /**
@@ -41,7 +44,11 @@ export function MoveArrow({
     provinces,
   } = ctx;
   const p1 = getUnitPoint(unit);
-  const p2 = getProvincePoint(target, order.target_coast);
+  const p2 = resolveMoveTargetPoint(
+    unit.province,
+    target,
+    getProvincePoint(target, order.target_coast),
+  );
   const { path, mid } = computeQuadraticCurve(p1, p2, 0.14, arrowScale);
 
   const unitIssues = issuesByUnit[unit.id] || [];

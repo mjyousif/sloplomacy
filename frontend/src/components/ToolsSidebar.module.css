@@ -158,4 +158,30 @@
     width: 44px;
     height: 44px;
   }
+
+  :global([data-layout="compact"]) .drawer-open-press-section {
+    padding: 10px 14px;
+    border-bottom: 1px solid #262d3a;
+  }
+
+  :global([data-layout="compact"]) .drawer-open-press-btn {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid #3a475c;
+    background: #212836;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  :global([data-layout="compact"]) .drawer-open-press-btn:active {
+    background: #2b3446;
+  }
 }
