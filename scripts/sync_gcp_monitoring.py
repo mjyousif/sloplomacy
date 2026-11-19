@@ -142,13 +142,13 @@ def _tile(
 
 
 def _rate(flt: str, *grp: str, plot: str = "LINE", leg: str | None = None) -> dict[str, Any]:
-    groups = [f'metric.label."{g}"' for g in grp]
+    groups = [f"metric.label.{g}" for g in grp]
     legend = leg if leg is not None else (f"${{metric.label.{grp[0]}}}" if grp else "")
     return _ds(flt, "ALIGN_RATE", "REDUCE_SUM", groups, plot, legend)
 
 
 def _pct(flt: str, p: int, *grp: str, leg: str | None = None) -> dict[str, Any]:
-    groups = [f'metric.label."{g}"' for g in grp]
+    groups = [f"metric.label.{g}" for g in grp]
     legend = leg if leg is not None else (f"${{metric.label.{grp[0]}}}" if grp else f"p{p}")
     return _ds(flt, "ALIGN_DELTA", f"REDUCE_PERCENTILE_{p}", groups, "LINE", legend)
 
@@ -236,7 +236,7 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
                     m("run.googleapis.com/container/instance_count"),
                     "ALIGN_MEAN",
                     "REDUCE_SUM",
-                    ['metric.label."state"'],
+                    ["metric.label.state"],
                     "STACKED_AREA",
                     "${metric.label.state}",
                 )
@@ -318,7 +318,7 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
                     eng_l,
                     "ALIGN_COUNT",
                     "REDUCE_SUM",
-                    ['metric.label."phase"'],
+                    ["metric.label.phase"],
                     "STACKED_BAR",
                     "${metric.label.phase}",
                 )

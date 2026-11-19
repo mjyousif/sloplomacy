@@ -22,7 +22,7 @@ locals {
     {
       x = 0, y = 0, w = 6, h = 4
       title = "Overall API Request Rate by Status Class (RPS)", y_label = "Requests / sec"
-      datasets = [{ filter = local.m_api_count, aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.\"status_class\""], plot = "STACKED_BAR", legend = "$${metric.label.status_class}" }]
+      datasets = [{ filter = local.m_api_count, aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.status_class"], plot = "STACKED_BAR", legend = "$${metric.label.status_class}" }]
     },
     {
       x = 6, y = 0, w = 6, h = 4
@@ -36,32 +36,32 @@ locals {
     {
       x = 0, y = 4, w = 6, h = 5
       title = "p95 Latency by Endpoint", y_label = "Latency (ms)"
-      datasets = [{ filter = local.m_api_latency, aligner = "ALIGN_DELTA", reducer = "REDUCE_PERCENTILE_95", group_by = ["metric.label.\"route_key\""], plot = "LINE", legend = "$${metric.label.route_key}" }]
+      datasets = [{ filter = local.m_api_latency, aligner = "ALIGN_DELTA", reducer = "REDUCE_PERCENTILE_95", group_by = ["metric.label.route_key"], plot = "LINE", legend = "$${metric.label.route_key}" }]
     },
     {
       x = 6, y = 4, w = 6, h = 5
       title = "p50 Median Latency by Endpoint", y_label = "Latency (ms)"
-      datasets = [{ filter = local.m_api_latency, aligner = "ALIGN_DELTA", reducer = "REDUCE_PERCENTILE_50", group_by = ["metric.label.\"route_key\""], plot = "LINE", legend = "$${metric.label.route_key}" }]
+      datasets = [{ filter = local.m_api_latency, aligner = "ALIGN_DELTA", reducer = "REDUCE_PERCENTILE_50", group_by = ["metric.label.route_key"], plot = "LINE", legend = "$${metric.label.route_key}" }]
     },
     {
       x = 0, y = 9, w = 6, h = 5
       title = "p99 Tail Latency by Endpoint", y_label = "Latency (ms)"
-      datasets = [{ filter = local.m_api_latency, aligner = "ALIGN_DELTA", reducer = "REDUCE_PERCENTILE_99", group_by = ["metric.label.\"route_key\""], plot = "LINE", legend = "$${metric.label.route_key}" }]
+      datasets = [{ filter = local.m_api_latency, aligner = "ALIGN_DELTA", reducer = "REDUCE_PERCENTILE_99", group_by = ["metric.label.route_key"], plot = "LINE", legend = "$${metric.label.route_key}" }]
     },
     {
       x = 6, y = 9, w = 6, h = 5
       title = "Request Rate (RPS) by Endpoint", y_label = "Requests / sec"
-      datasets = [{ filter = local.m_api_count, aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.\"route_key\""], plot = "LINE", legend = "$${metric.label.route_key}" }]
+      datasets = [{ filter = local.m_api_count, aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.route_key"], plot = "LINE", legend = "$${metric.label.route_key}" }]
     },
     {
       x = 0, y = 14, w = 6, h = 4
       title = "4xx & 5xx Error Rate by Endpoint", y_label = "Errors / sec"
-      datasets = [{ filter = "${local.m_api_count} metric.label.\"status_class\"=monitoring.regex.full_match(\"4xx|5xx\")", aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.\"route_key\"", "metric.label.\"status_class\""], plot = "STACKED_BAR", legend = "$${metric.label.route_key} ($${metric.label.status_class})" }]
+      datasets = [{ filter = "${local.m_api_count} metric.label.\"status_class\"=monitoring.regex.full_match(\"4xx|5xx\")", aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.route_key", "metric.label.status_class"], plot = "STACKED_BAR", legend = "$${metric.label.route_key} ($${metric.label.status_class})" }]
     },
     {
       x = 6, y = 14, w = 6, h = 4
       title = "API Traffic by HTTP Method", y_label = "Requests / sec"
-      datasets = [{ filter = local.m_api_count, aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.\"method\""], plot = "STACKED_AREA", legend = "$${metric.label.method}" }]
+      datasets = [{ filter = local.m_api_count, aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.method"], plot = "STACKED_AREA", legend = "$${metric.label.method}" }]
     },
   ]
 
@@ -69,7 +69,7 @@ locals {
     {
       x = 0, y = 0, w = 6, h = 4
       title = "Container Instance Count (Active vs Idle)", y_label = "Instances"
-      datasets = [{ filter = local.m_run_instances, aligner = "ALIGN_MEAN", reducer = "REDUCE_SUM", group_by = ["metric.label.\"state\""], plot = "STACKED_AREA", legend = "$${metric.label.state}" }]
+      datasets = [{ filter = local.m_run_instances, aligner = "ALIGN_MEAN", reducer = "REDUCE_SUM", group_by = ["metric.label.state"], plot = "STACKED_AREA", legend = "$${metric.label.state}" }]
     },
     {
       x = 6, y = 0, w = 6, h = 4
@@ -109,7 +109,7 @@ locals {
     {
       x = 6, y = 8, w = 6, h = 4
       title = "Cloud Run Total Requests by Response Code Class (All Traffic)", y_label = "Requests / sec"
-      datasets = [{ filter = local.m_run_requests, aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.\"response_code_class\""], plot = "STACKED_BAR", legend = "$${metric.label.response_code_class}" }]
+      datasets = [{ filter = local.m_run_requests, aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.response_code_class"], plot = "STACKED_BAR", legend = "$${metric.label.response_code_class}" }]
     },
     {
       x = 0, y = 12, w = 6, h = 4
@@ -130,32 +130,32 @@ locals {
     {
       x = 0, y = 0, w = 6, h = 4
       title = "DATC Adjudication p95 Latency by Phase", y_label = "Latency (ms)"
-      datasets = [{ filter = local.m_engine_latency, aligner = "ALIGN_DELTA", reducer = "REDUCE_PERCENTILE_95", group_by = ["metric.label.\"phase\""], plot = "LINE", legend = "$${metric.label.phase} (p95)" }]
+      datasets = [{ filter = local.m_engine_latency, aligner = "ALIGN_DELTA", reducer = "REDUCE_PERCENTILE_95", group_by = ["metric.label.phase"], plot = "LINE", legend = "$${metric.label.phase} (p95)" }]
     },
     {
       x = 6, y = 0, w = 6, h = 4
       title = "DATC Adjudication Calls by Phase (per minute)", y_label = "Adjudications / min"
-      datasets = [{ filter = local.m_engine_latency, aligner = "ALIGN_COUNT", reducer = "REDUCE_SUM", group_by = ["metric.label.\"phase\""], plot = "STACKED_BAR", legend = "$${metric.label.phase}" }]
+      datasets = [{ filter = local.m_engine_latency, aligner = "ALIGN_COUNT", reducer = "REDUCE_SUM", group_by = ["metric.label.phase"], plot = "STACKED_BAR", legend = "$${metric.label.phase}" }]
     },
     {
       x = 0, y = 4, w = 6, h = 4
       title = "Supabase Query p95 Latency by Operation", y_label = "Latency (ms)"
-      datasets = [{ filter = local.m_supa_latency, aligner = "ALIGN_DELTA", reducer = "REDUCE_PERCENTILE_95", group_by = ["metric.label.\"operation\""], plot = "LINE", legend = "$${metric.label.operation}" }]
+      datasets = [{ filter = local.m_supa_latency, aligner = "ALIGN_DELTA", reducer = "REDUCE_PERCENTILE_95", group_by = ["metric.label.operation"], plot = "LINE", legend = "$${metric.label.operation}" }]
     },
     {
       x = 6, y = 4, w = 6, h = 4
       title = "Supabase Query p50 Median Latency by Operation", y_label = "Latency (ms)"
-      datasets = [{ filter = local.m_supa_latency, aligner = "ALIGN_DELTA", reducer = "REDUCE_PERCENTILE_50", group_by = ["metric.label.\"operation\""], plot = "LINE", legend = "$${metric.label.operation}" }]
+      datasets = [{ filter = local.m_supa_latency, aligner = "ALIGN_DELTA", reducer = "REDUCE_PERCENTILE_50", group_by = ["metric.label.operation"], plot = "LINE", legend = "$${metric.label.operation}" }]
     },
     {
       x = 0, y = 8, w = 6, h = 4
       title = "Supabase Query Rate by Operation & Outcome", y_label = "Queries / sec"
-      datasets = [{ filter = local.m_supa_count, aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.\"operation\"", "metric.label.\"outcome\""], plot = "STACKED_BAR", legend = "$${metric.label.operation} ($${metric.label.outcome})" }]
+      datasets = [{ filter = local.m_supa_count, aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.operation", "metric.label.outcome"], plot = "STACKED_BAR", legend = "$${metric.label.operation} ($${metric.label.outcome})" }]
     },
     {
       x = 6, y = 8, w = 6, h = 4
       title = "Supabase Persistence Errors by Operation", y_label = "Errors / sec"
-      datasets = [{ filter = "${local.m_supa_count} metric.label.\"outcome\"=\"error\"", aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.\"operation\""], plot = "STACKED_BAR", legend = "$${metric.label.operation}" }]
+      datasets = [{ filter = "${local.m_supa_count} metric.label.\"outcome\"=\"error\"", aligner = "ALIGN_RATE", reducer = "REDUCE_SUM", group_by = ["metric.label.operation"], plot = "STACKED_BAR", legend = "$${metric.label.operation}" }]
     },
   ]
 

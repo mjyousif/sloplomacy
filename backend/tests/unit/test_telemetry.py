@@ -275,6 +275,8 @@ def test_terraform_monitoring_and_dashboards_match_telemetry_schema():
 
     # Verify HCL escaping for Cloud Monitoring legend templates (${...} must be escaped as $${...})
     assert "$${metric.label.route_key}" in dashboards_tf
+    assert 'group_by = ["metric.label.\\"' not in dashboards_tf
+    assert '"metric.label.route_key"' in dashboards_tf
     assert "run.googleapis.com/container/instance_count" in dashboards_tf
     assert "run.googleapis.com/container/startup_latencies" in dashboards_tf
 
@@ -295,6 +297,14 @@ def test_sync_gcp_monitoring_script_matches_schema():
     dashboards = build_dashboards("diplomacy-1901")
     assert len(dashboards) == 3
     assert [len(d["mosaicLayout"]["tiles"]) for d in dashboards] == [8, 8, 6]
+    for dash in dashboards:
+        for tile in dash["mosaicLayout"]["tiles"]:
+            for ds in tile["widget"]["xyChart"]["dataSets"]:
+                for field in ds["timeSeriesQuery"]["timeSeriesFilter"]["aggregation"][
+                    "groupByFields"
+                ]:
+                    assert field.startswith("metric.label.")
+                    assert '"' not in field
     serialized = json.dumps(dashboards)
     for name in metric_names:
         assert f"logging.googleapis.com/user/{name}" in serialized
