@@ -106,7 +106,13 @@ def build_log_metrics(service_name: str) -> list[dict[str, Any]]:
 
 
 def _ds(
-    flt: str, aligner: str, reducer: str, group_by: list[str], plot: str, legend: str
+    flt: str,
+    aligner: str,
+    reducer: str,
+    group_by: list[str],
+    plot: str,
+    legend: str,
+    period: str = "60s",
 ) -> dict[str, Any]:
     return {
         "plotType": plot,
@@ -115,7 +121,7 @@ def _ds(
             "timeSeriesFilter": {
                 "filter": flt,
                 "aggregation": {
-                    "alignmentPeriod": "60s",
+                    "alignmentPeriod": period,
                     "perSeriesAligner": aligner,
                     "crossSeriesReducer": reducer,
                     "groupByFields": group_by,
@@ -141,20 +147,26 @@ def _tile(
     }
 
 
-def _rate(flt: str, *grp: str, plot: str = "LINE", leg: str | None = None) -> dict[str, Any]:
-    groups = [f'metric.label."{g}"' for g in grp]
-    legend = leg if leg is not None else (f"${{metric.label.{grp[0]}}}" if grp else "")
-    return _ds(flt, "ALIGN_RATE", "REDUCE_SUM", groups, plot, legend)
+def _rate(
+    flt: str, *grp: str, plot: str = "LINE", leg: str | None = None, period: str = "60s"
+) -> dict[str, Any]:
+    groups = [f"metric.label.{g}" for g in grp]
+    legend = leg if leg is not None else (f"${{metric.labels.{grp[0]}}}" if grp else "")
+    return _ds(flt, "ALIGN_RATE", "REDUCE_SUM", groups, plot, legend, period=period)
 
 
-def _pct(flt: str, p: int, *grp: str, leg: str | None = None) -> dict[str, Any]:
-    groups = [f'metric.label."{g}"' for g in grp]
-    legend = leg if leg is not None else (f"${{metric.label.{grp[0]}}}" if grp else f"p{p}")
-    return _ds(flt, "ALIGN_DELTA", f"REDUCE_PERCENTILE_{p}", groups, "LINE", legend)
+def _pct(
+    flt: str, p: int, *grp: str, leg: str | None = None, period: str = "60s"
+) -> dict[str, Any]:
+    groups = [f"metric.label.{g}" for g in grp]
+    legend = leg if leg is not None else (f"${{metric.labels.{grp[0]}}}" if grp else f"p{p}")
+    return _ds(flt, "ALIGN_DELTA", f"REDUCE_PERCENTILE_{p}", groups, "LINE", legend, period=period)
 
 
-def _pcts(flt: str, ps: tuple[int, ...] = (50, 95, 99)) -> list[dict[str, Any]]:
-    return [_pct(flt, p) for p in ps]
+def _pcts(
+    flt: str, ps: tuple[int, ...] = (50, 95, 99), period: str = "60s"
+) -> list[dict[str, Any]]:
+    return [_pct(flt, p, period=period) for p in ps]
 
 
 def build_dashboards(service_name: str) -> list[dict[str, Any]]:
@@ -185,7 +197,10 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
             _pcts(api_l),
         ),
         _tile(
-            (0, 4, 6, 5), "p95 Latency by Endpoint", "Latency (ms)", [_pct(api_l, 95, "route_key")]
+            (0, 4, 6, 5),
+            "p95 Latency by Endpoint",
+            "Latency (ms)",
+            [_pct(api_l, 95, "route_key")],
         ),
         _tile(
             (6, 4, 6, 5),
@@ -203,7 +218,7 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
             (6, 9, 6, 5),
             "Request Rate (RPS) by Endpoint",
             "Requests / sec",
-            [_rate(api_c, "route_key")],
+            [_rate(api_c, "route_key", plot="STACKED_BAR")],
         ),
         _tile(
             (0, 14, 6, 4),
@@ -215,7 +230,7 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
                     "route_key",
                     "status_class",
                     plot="STACKED_BAR",
-                    leg="${metric.label.route_key} (${metric.label.status_class})",
+                    leg="${metric.labels.route_key} (${metric.labels.status_class})",
                 )
             ],
         ),
@@ -236,9 +251,9 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
                     m("run.googleapis.com/container/instance_count"),
                     "ALIGN_MEAN",
                     "REDUCE_SUM",
-                    ['metric.label."state"'],
+                    ["metric.label.state"],
                     "STACKED_AREA",
-                    "${metric.label.state}",
+                    "${metric.labels.state}",
                 )
             ],
         ),
@@ -283,6 +298,7 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
             [
                 _rate(
                     m("run.googleapis.com/container/billable_instance_time"),
+                    plot="STACKED_BAR",
                     leg="Billable instance-s / s",
                 )
             ],
@@ -307,7 +323,7 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
             (0, 0, 6, 4),
             "DATC Adjudication p95 Latency by Phase",
             "Latency (ms)",
-            [_pct(eng_l, 95, "phase", leg="${metric.label.phase} (p95)")],
+            [_pct(eng_l, 95, "phase", leg="${metric.labels.phase} (p95)")],
         ),
         _tile(
             (6, 0, 6, 4),
@@ -318,9 +334,9 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
                     eng_l,
                     "ALIGN_COUNT",
                     "REDUCE_SUM",
-                    ['metric.label."phase"'],
+                    ["metric.label.phase"],
                     "STACKED_BAR",
-                    "${metric.label.phase}",
+                    "${metric.labels.phase}",
                 )
             ],
         ),
@@ -346,7 +362,7 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
                     "operation",
                     "outcome",
                     plot="STACKED_BAR",
-                    leg="${metric.label.operation} (${metric.label.outcome})",
+                    leg="${metric.labels.operation} (${metric.labels.outcome})",
                 )
             ],
         ),

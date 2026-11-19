@@ -155,6 +155,7 @@ Comprehensive technical architecture, API references, and guides are organized u
   - [Agent & Contributor Operational Guide](AGENTS.md)
   - [Development & Testing Guide](docs/guides/development.md)
   - [Google Cloud Serverless Deployment Blueprint](docs/guides/google-cloud-deployment.md)
+  - [Observability, Cloud Monitoring Dashboards & Telemetry Guide](docs/guides/observability-and-dashboards.md)
   - [Standard 1901 Diplomacy Rulebook Reference](docs/guides/rulebook-reference.md)
 
 ---

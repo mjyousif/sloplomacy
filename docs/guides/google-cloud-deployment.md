@@ -159,3 +159,5 @@ Both the automated CI/CD deploy job (`.github/workflows/ci.yml`), manual deploy 
   1. **Sloplomacy — API Endpoint Performance**: p50/p95/p99 latency, RPS, and 4xx/5xx error rates broken down by `route_key` and HTTP method.
   2. **Sloplomacy — Cloud Run Infrastructure & Scale-to-Zero**: Active/idle instance counts, cold-start startup latency, CPU/memory utilization, max request concurrency (HTTP + WebSockets), billable instance time, and network egress/ingress.
   3. **Sloplomacy — Game Engine & Supabase Persistence**: DATC adjudication latency and throughput by phase, plus Supabase query latency, throughput, and error rates by operation.
+
+See the [Observability, Cloud Monitoring Dashboards & Telemetry Maintenance Guide](observability-and-dashboards.md) for live Console URLs, full event schemas, performance baselines, `gcloud logging read` triage recipes, and telemetry invariants.

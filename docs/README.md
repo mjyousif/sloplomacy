@@ -27,9 +27,10 @@ docs/
 │   ├── sidebar-and-controls.md    # MacroSidebar, unit order cards & SanityCheckModal
 │   └── styling-and-themes.md      # Cartographic design system, power palettes & typography
 └── guides/
-    ├── development.md             # Setup, local workflows, testing & troubleshooting
-    ├── google-cloud-deployment.md # GCP Cloud Run + Supabase scale-to-zero serverless deployment
-    └── rulebook-reference.md      # Standard 1901 Diplomacy rules mapped to engine behavior
+    ├── development.md                 # Setup, local workflows, testing & troubleshooting
+    ├── google-cloud-deployment.md     # GCP Cloud Run + Supabase scale-to-zero serverless deployment
+    ├── observability-and-dashboards.md # Cloud Monitoring dashboards, telemetry schemas & triage playbook
+    └── rulebook-reference.md          # Standard 1901 Diplomacy rules mapped to engine behavior
 ```
 
 ---
@@ -58,6 +59,8 @@ docs/
 
 ### 4. Guides & References
 - [Developer Setup & Testing Guide](guides/development.md): Quickstart commands, running `pytest`, Vite building, and debugging recipes.
+- [Google Cloud Serverless Deployment Blueprint](guides/google-cloud-deployment.md): Cloud Run scale-to-zero hosting, Terraform IaC, and GitHub Actions CI/CD.
+- [Observability, Dashboards & Telemetry Maintenance Guide](guides/observability-and-dashboards.md): Live Cloud Monitoring dashboards, structured JSON telemetry schemas, baselines, and CLI triage recipes.
 - [Diplomacy 1901 Rulebook Reference](guides/rulebook-reference.md): Exact correspondence between classic 1901 rules and software implementation.
 
 ---
