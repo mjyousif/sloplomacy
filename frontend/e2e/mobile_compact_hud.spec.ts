@@ -54,15 +54,43 @@ test.describe('Scenario 06: Phone game screen', () => {
       expect(mapBox!.width).toBeGreaterThanOrEqual(380);
       await expectNoSidewaysScroll(page);
 
-      // The order sheet starts lowered, showing the controls a player needs every turn,
-      // and the StatusBadge reports the warning in the sheet peek.
+      // The order sheet starts lowered with a slim single-row primary peek (<= 135px), keeping
+      // Finalize and Resolve side-by-side while Clear All Orders sits inside the raised body.
       expect(await sheetSnap(page)).toBe('peek');
       await expect(page.locator('[data-testid="status-badge"]')).toContainText('1 Issue');
-      await expect(page.locator('[data-testid="btn-clear-all"]')).toBeVisible();
+      await expect(page.locator('[data-testid="btn-clear-all"]')).toHaveCount(1);
+      await expect(page.locator('[data-testid="macro-sheet-peek"] [data-testid="btn-clear-all"]')).toHaveCount(0);
       await expect(page.locator('[data-testid="btn-finalize-orders"]')).toBeVisible();
       await expect(page.locator('[data-testid="btn-adjudicate-phase"]')).toBeVisible();
       await expect(page.locator('[data-testid="macro-sheet-counts"]')).toContainText('3 units');
+
+      const peekMetrics = await page.evaluate(() => {
+        const sheet = document.querySelector('[data-testid="macro-sidebar"]')!.getBoundingClientRect();
+        const fin = document.querySelector('[data-testid="btn-finalize-orders"]')!.getBoundingClientRect();
+        const res = document.querySelector('[data-testid="btn-adjudicate-phase"]')!.getBoundingClientRect();
+        return {
+          visibleHeight: Math.round(window.innerHeight - sheet.top),
+          sameRow: Math.abs(fin.top - res.top) < 8,
+        };
+      });
+      expect(peekMetrics.visibleHeight).toBeLessThanOrEqual(135);
+      expect(peekMetrics.sameRow).toBe(true);
       await recorder.recordStep(page, '01_phone_board_with_sheet_at_peek');
+
+      // 1b. 1-tap Sandbox Power Switcher directly inside the peek without opening the Tools drawer.
+      const switcherTrigger = page.locator('[data-testid="sheet-power-switcher-trigger"]');
+      await switcherTrigger.tap();
+      const switcherPopover = page.locator('[data-testid="sheet-power-switcher-popover"]');
+      await expect(switcherPopover).toBeVisible();
+      await expect(switcherPopover.locator('[data-testid^="sheet-power-option-"]')).toHaveCount(7);
+      await expectNoSidewaysScroll(page);
+      await recorder.recordStep(page, '01b_power_switcher_open');
+      await page.locator('[data-testid="sheet-power-option-GERMANY"]').tap();
+      await expect(switcherPopover).toHaveCount(0);
+      await expect(page.locator('[data-testid="power-name-text"]')).toHaveText('Germany');
+      await switcherTrigger.tap();
+      await page.locator('[data-testid="sheet-power-option-FRANCE"]').tap();
+      await expect(page.locator('[data-testid="power-name-text"]')).toHaveText('France');
 
       // 2. Finalizing with a warning opens the order check modal.
       await page.locator('[data-testid="btn-finalize-orders"]').tap();
@@ -125,9 +153,11 @@ test.describe('Scenario 06: Phone game screen', () => {
       await expect(drawerLayer).not.toHaveAttribute('data-open', 'true');
       await expect(toolsToggle).toBeFocused();
 
-      // 5. Raise the sheet with its handle, then pick Paris from its card.
+      // 5. Raise the sheet with its handle, confirm Clear All lives inside the body utility bar,
+      //    then pick Paris from its card.
       await page.locator('[data-testid="bottom-sheet-handle"]').tap();
       await expect.poll(() => sheetSnap(page)).toBe('half');
+      await expect(page.locator('[data-testid="macro-sheet-utility-bar"] [data-testid="btn-clear-all"]')).toBeVisible();
       await recorder.recordStep(page, '05_sheet_raised_to_half');
 
       // Tapping an order-type tab inside the raised sheet keeps the sheet open for inline editing
@@ -214,10 +244,23 @@ test.describe('Scenario 06: Phone game screen', () => {
       await page.locator('[data-testid="account-menu-back"]').tap();
       await accountTrigger.tap();
 
-      // 7. Back to the lobby.
+      // 7. Back to the lobby: Guest Hero renders above the fold and above the public game browser.
       await page.locator('[data-testid="compact-back-lobby-btn"]').tap();
-      await page.waitForSelector('[data-testid="btn-enter-sandbox"]', { timeout: 15000 });
+      const enterSandboxBtn = page.locator('[data-testid="btn-enter-sandbox"]');
+      await expect(enterSandboxBtn).toBeVisible({ timeout: 15000 });
       await expect(page.locator('[data-testid="compact-brand"]')).toContainText(/Sloplomacy/i);
+      const guestLayout = await page.evaluate(() => {
+        const hero = document.querySelector('[data-testid="lobby-hero"]')!.getBoundingClientRect();
+        const browser = document.querySelector('[data-testid="game-browser"]')!.getBoundingClientRect();
+        const cta = document.querySelector('[data-testid="btn-enter-sandbox"]')!.getBoundingClientRect();
+        return {
+          heroAboveBrowser: hero.top < browser.top,
+          ctaBottom: cta.bottom,
+          innerHeight: window.innerHeight,
+        };
+      });
+      expect(guestLayout.heroAboveBrowser).toBe(true);
+      expect(guestLayout.ctaBottom).toBeLessThanOrEqual(guestLayout.innerHeight);
       await expectNoSidewaysScroll(page);
       await recorder.recordStep(page, '08_lobby_returned');
 
@@ -365,6 +408,16 @@ test.describe('Scenario 06: Phone game screen', () => {
       await expectNoSidewaysScroll(page);
       await recorder.recordStep(page, '03_past_turn_sheet_raised');
 
+      // Tapping an order row pins it on the map and drops the sheet to peek with a compact summary.
+      await page.locator('[data-testid="history-order-item"]').first().tap();
+      await expect.poll(() => sheetSnap(page)).toBe('peek');
+      const peekPin = page.locator('[data-testid="history-peek-selection"]');
+      await expect(peekPin).toBeVisible();
+      await expectNoSidewaysScroll(page);
+      await recorder.recordStep(page, '03b_past_turn_order_pinned_peek');
+      await page.locator('[data-testid="history-peek-clear-pin"]').tap();
+      await expect(peekPin).toHaveCount(0);
+
       await liveBtn.tap();
       await expect(liveBtn).toHaveCount(0);
       await expect(
@@ -379,6 +432,52 @@ test.describe('Scenario 06: Phone game screen', () => {
     } catch (err) {
       recorder.finalize('FAILED');
       throw err;
+    }
+  });
+});
+
+test.describe('Scenario 06b: Tablet workspace auto-collapse', () => {
+  test('collapses left sidebar at 1024x768 and both sidebars at 820x1180', async ({ browser }) => {
+    const recorder = new ScenarioRecorder('tablet_workspace');
+    const landscapeCtx = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+    const portraitCtx = await browser.newContext({ viewport: { width: 820, height: 1180 } });
+
+    try {
+      await seedScenario('standard_1901', 'proto_1901', 'FRANCE');
+
+      const landscape = await landscapeCtx.newPage();
+      recorder.attachListeners(landscape);
+      await landscape.goto('/?view=sandbox');
+      await landscape.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
+      await expect(landscape.locator('[data-layout]')).toHaveAttribute('data-layout', 'wide');
+      await expect(landscape.locator('[data-testid="game-workspace"]')).toHaveAttribute('data-left-collapsed', 'true');
+      await expect(landscape.locator('[data-testid="tools-sidebar-collapsed"]')).toBeVisible();
+      await expect(landscape.locator('[data-testid="macro-sidebar"]')).toHaveAttribute('data-expanded', 'true');
+      await expectNoSidewaysScroll(landscape);
+      await recorder.recordStep(landscape, '01_tablet_1024x768_left_collapsed');
+
+      const portrait = await portraitCtx.newPage();
+      recorder.attachListeners(portrait);
+      await portrait.goto('/?view=sandbox');
+      await portrait.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
+      await expect(portrait.locator('[data-layout]')).toHaveAttribute('data-layout', 'wide');
+      const portraitWorkspace = portrait.locator('[data-testid="game-workspace"]');
+      await expect(portraitWorkspace).toHaveAttribute('data-left-collapsed', 'true');
+      await expect(portraitWorkspace).toHaveAttribute('data-right-collapsed', 'true');
+      await expect(portrait.locator('[data-testid="tools-sidebar-collapsed"]')).toBeVisible();
+      await expect(portrait.locator('[data-testid="macro-sidebar-collapsed"]')).toBeVisible();
+      const mapBox = await portrait.locator('[data-testid="map-viewport-container"]').boundingBox();
+      expect(mapBox && mapBox.width >= 720).toBe(true);
+      await expectNoSidewaysScroll(portrait);
+      await recorder.recordStep(portrait, '02_tablet_820x1180_both_collapsed');
+
+      recorder.finalize('PASSED');
+    } catch (err) {
+      recorder.finalize('FAILED');
+      throw err;
+    } finally {
+      await landscapeCtx.close();
+      await portraitCtx.close();
     }
   });
 });

@@ -53,5 +53,7 @@ export interface ToolsSidebarProps {
    */
   pressPower?: Power;
   /** Press (chat) for a seated player of a multiplayer match. Left out, there is no section. */
-  press?: Omit<PressSectionProps, 'visible'>;
+  press?: Omit<PressSectionProps, 'visible' | 'variant'>;
+  /** Phone drawer only: launches the dedicated full-width Press sheet. */
+  onOpenPress?: () => void;
 }

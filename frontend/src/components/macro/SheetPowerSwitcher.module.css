@@ -1,0 +1,53 @@
+@layer compact {
+  :global([data-layout="compact"]) .switcher-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 8px;
+    padding: 6px;
+    border-radius: var(--radius-md);
+    background: #11151c;
+    border: 1px solid #2b3342;
+  }
+
+  :global([data-layout="compact"]) .switcher-option {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 44px;
+    min-width: 0;
+    padding: 4px 2px;
+    border-radius: var(--radius-sm);
+    border: 1px solid #28303e;
+    background: #1c222d;
+    color: var(--text-muted);
+    font-size: 0.62rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  :global([data-layout="compact"]) .switcher-option[data-active="true"] {
+    color: var(--text-bright);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  }
+
+  :global([data-layout="compact"]) .switcher-option:focus-visible {
+    outline: 2px solid var(--info-sky);
+    outline-offset: 1px;
+  }
+
+  :global([data-layout="compact"]) .switcher-code {
+    letter-spacing: 0.03em;
+    line-height: 1;
+  }
+
+  :global([data-layout="compact"]) .switcher-done {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    color: var(--success-text);
+  }
+}

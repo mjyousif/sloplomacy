@@ -514,6 +514,62 @@ describe('HistoryTurnPanel', () => {
     ).not.toHaveTextContent('Hold');
     expect(container.querySelector('[inert]')).toBeNull();
     expect(screen.getAllByTestId('history-order-item')).toHaveLength(2);
+    expect(screen.queryByTestId('history-peek-selection')).toBeNull();
+  });
+
+  it('auto-drops to peek when pinning an order in sheet mode, summarizes it in the peek, and unpins it', () => {
+    const onSheetSnapChange = vi.fn();
+    const onTogglePinOrder = vi.fn();
+    const { rerender } = render(
+      <HistoryTurnPanel
+        variant="sheet"
+        sheetSnap="half"
+        onSheetSnapChange={onSheetSnapChange}
+        historyTurn={MOVEMENT_TURN}
+        historyLabel="Spring 1901 Movement"
+        historyPowers={[]}
+        provinces={PROVINCES}
+        selectedOrderId={null}
+        onTogglePinOrder={onTogglePinOrder}
+      />,
+    );
+
+    const munRow = screen
+      .getAllByTestId('history-order-item')
+      .find((el) => el.dataset.orderId === 'GER_A_MUN')!;
+    fireEvent.click(munRow);
+    expect(onTogglePinOrder).toHaveBeenCalledWith({
+      id: 'GER_A_MUN',
+      unitId: 'GER_A_MUN',
+      provinces: ['MUN', 'BUR'],
+    });
+    expect(onSheetSnapChange).toHaveBeenCalledWith('peek');
+
+    rerender(
+      <HistoryTurnPanel
+        variant="sheet"
+        sheetSnap="peek"
+        onSheetSnapChange={onSheetSnapChange}
+        historyTurn={MOVEMENT_TURN}
+        historyLabel="Spring 1901 Movement"
+        historyPowers={[]}
+        provinces={PROVINCES}
+        selectedOrderId="GER_A_MUN"
+        onTogglePinOrder={onTogglePinOrder}
+      />,
+    );
+    const summary = screen.getByTestId('history-peek-selection');
+    expect(summary).toHaveTextContent('Munich');
+    expect(summary).toHaveTextContent('Bounced');
+    fireEvent.click(screen.getByRole('button', { name: 'Open turn log' }));
+    expect(onSheetSnapChange).toHaveBeenLastCalledWith('half');
+
+    fireEvent.click(screen.getByTestId('history-peek-clear-pin'));
+    expect(onTogglePinOrder).toHaveBeenLastCalledWith({
+      id: 'GER_A_MUN',
+      unitId: 'GER_A_MUN',
+      provinces: ['MUN', 'BUR'],
+    });
   });
 
   it('filters Winter Adjustments orders by Build, Disband, and Waive actions', () => {

@@ -1,0 +1,83 @@
+@layer compact {
+  :global([data-layout="compact"]) .macro-sheet-action-bar {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-controls {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-controls > button {
+    min-height: 40px;
+    padding: 8px 10px;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  :global([data-layout="compact"])
+    .macro-sheet-controls
+    > [data-testid="btn-finalize-orders"],
+  :global([data-layout="compact"])
+    .macro-sheet-controls
+    > [data-testid="btn-unfinalize-orders"] {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 0.78rem;
+  }
+
+  :global([data-layout="compact"])
+    .macro-sheet-controls
+    > [data-testid="btn-adjudicate-phase"] {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    font-size: 0.78rem;
+  }
+
+  :global([data-layout="compact"]) .mobile-press-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid #3a475c;
+    background: #232a37;
+    color: var(--text-primary);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  :global([data-layout="compact"]) .mobile-press-btn:active {
+    background: #2e384a;
+  }
+
+  :global([data-layout="compact"]) .mobile-press-btn:focus-visible {
+    outline: 2px solid var(--info-sky);
+    outline-offset: 1px;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-consensus-wrap {
+    padding: 10px 12px 0;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-utility-bar {
+    display: flex;
+    padding: 10px 12px 2px;
+  }
+
+  :global([data-layout="compact"]) .macro-sheet-utility-bar button {
+    min-height: 40px;
+    font-size: 0.78rem;
+  }
+}

@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  ChevronDown,
   Filter,
   Flag,
   History,
@@ -308,6 +309,10 @@ interface PowerHeaderProps {
   /** The past-turn lock: the sheet's row goes inert with the rest of its peek. */
   locked: boolean;
   onToggleCollapse?: () => void;
+  /** Phone sheet only: true when tapping the power opens the 1-tap 7-power switcher. */
+  canSwitchPower?: boolean;
+  powerSwitcherOpen?: boolean;
+  onTogglePowerSwitcher?: () => void;
 }
 
 /** Which power the player commands, its units and supply centers, and its status. */
@@ -319,6 +324,9 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
   isFinalized,
   locked,
   onToggleCollapse,
+  canSwitchPower = false,
+  powerSwitcherOpen = false,
+  onTogglePowerSwitcher,
 }) => {
   const powerMeta = POWER_METADATA[activePower];
   const {
@@ -337,28 +345,72 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
   );
 
   if (variant === 'sheet') {
+    const countsText = `${myActiveFieldUnits.length} units · ${scCountByPower[activePower]} SCs${
+      unconfirmedCount > 0 ? ` · ${unconfirmedCount} unconfirmed` : ''
+    }`;
     return (
       <div
         className={styles.macroSheetStatusRow}
         data-testid="macro-sheet-status-row"
         inert={locked || undefined}
       >
-        <span className={styles.powerCrestIcon}>
-          <PowerFlag power={activePower} width={24} height={16} />
-        </span>
-        <div className={styles.macroSheetPower}>
-          <span className={styles.powerNameText} data-testid="power-name-text">
-            {powerMeta.shortName}
-          </span>
-          <span
-            className={styles.macroSheetCounts}
-            data-testid="macro-sheet-counts"
+        {canSwitchPower && onTogglePowerSwitcher ? (
+          <button
+            type="button"
+            className={styles.powerSwitcherTrigger}
+            data-testid="sheet-power-switcher-trigger"
+            aria-expanded={Boolean(powerSwitcherOpen)}
+            aria-haspopup="listbox"
+            aria-label={`Switch nation (current: ${powerMeta.shortName})`}
+            onClick={onTogglePowerSwitcher}
           >
-            {myActiveFieldUnits.length} units · {scCountByPower[activePower]}{' '}
-            SCs
-            {unconfirmedCount > 0 ? ` · ${unconfirmedCount} unconfirmed` : ''}
-          </span>
-        </div>
+            <span className={styles.powerCrestIcon}>
+              <PowerFlag power={activePower} width={22} height={15} />
+            </span>
+            <span className={styles.macroSheetPower}>
+              <span className={styles.powerSwitcherTitleRow}>
+                <span
+                  className={styles.powerNameText}
+                  data-testid="power-name-text"
+                >
+                  {powerMeta.shortName}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={styles.powerSwitcherChevron}
+                  data-open={powerSwitcherOpen ? 'true' : undefined}
+                  aria-hidden="true"
+                />
+              </span>
+              <span
+                className={styles.macroSheetCounts}
+                data-testid="macro-sheet-counts"
+              >
+                {countsText}
+              </span>
+            </span>
+          </button>
+        ) : (
+          <>
+            <span className={styles.powerCrestIcon}>
+              <PowerFlag power={activePower} width={24} height={16} />
+            </span>
+            <div className={styles.macroSheetPower}>
+              <span
+                className={styles.powerNameText}
+                data-testid="power-name-text"
+              >
+                {powerMeta.shortName}
+              </span>
+              <span
+                className={styles.macroSheetCounts}
+                data-testid="macro-sheet-counts"
+              >
+                {countsText}
+              </span>
+            </div>
+          </>
+        )}
         {statusBadge}
       </div>
     );

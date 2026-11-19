@@ -396,7 +396,38 @@
 
   :global([data-layout="compact"]) .send-btn,
   :global([data-layout="compact"]) .anonymous-btn {
-    width: 44px;
+    width: 42px;
+    min-height: 44px;
+  }
+
+  :global([data-layout="compact"]) .press[data-press-sheet="true"] {
+    flex: 1;
+    min-height: 0;
+    gap: 8px;
+  }
+
+  :global([data-layout="compact"])
+    .press[data-press-sheet="true"]
+    .channel-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 0;
+    padding-bottom: 2px;
+  }
+
+  :global([data-layout="compact"])
+    .press[data-press-sheet="true"]
+    .message-list {
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
+    padding: 8px;
+    gap: 6px;
+  }
+
+  :global([data-layout="compact"]) .press[data-press-sheet="true"] .composer {
+    flex-shrink: 0;
   }
 
   :global([data-layout="compact"]) .message-body {

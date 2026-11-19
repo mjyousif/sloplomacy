@@ -536,4 +536,33 @@ describe('EuropeMap unit menu', () => {
     expect(brePath?.getAttribute('data-ownership-changed')).toBe('true');
     expect(parPath?.getAttribute('data-ownership-changed')).toBeNull();
   });
+
+  it('wraps overlay and SimulationBanner inside a single map-top-overlays container', () => {
+    const { container } = render(
+      <MapWithSelection
+        compact={true}
+        sandboxMode={true}
+        simulationResult={{
+          resolutions: {},
+          summary: [],
+          new_units: [PAR, MAR],
+          new_ownership: { PAR: 'FRANCE', BRE: 'FRANCE' },
+          next_season: 'Fall',
+          next_year: 1901,
+          next_phase: 'Movement',
+          builds: null,
+          retreats: null,
+          winner: null,
+        }}
+        overlay={<div data-testid="test-timer-pill">Timer</div>}
+      />,
+    );
+
+    const stack = container.querySelector('[data-testid="map-top-overlays"]');
+    expect(stack).not.toBeNull();
+    expect(
+      stack?.querySelector('[data-testid="test-timer-pill"]'),
+    ).not.toBeNull();
+    expect(stack?.textContent).toContain('HYPOTHETICAL');
+  });
 });

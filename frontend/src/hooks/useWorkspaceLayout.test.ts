@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  NARROW_DESKTOP_QUERY,
+  TABLET_COLLAPSED_QUERY,
   useWorkspaceLayout,
   type WorkspaceLayoutOptions,
 } from './useWorkspaceLayout';
@@ -124,5 +126,94 @@ describe('useWorkspaceLayout: phone sheet and drawer', () => {
     rerender({ ...GAME });
     expect(result.current.sheetSnap).toBe('full');
     expect(result.current.toolsDrawerOpen).toBe(true);
+  });
+});
+
+function stubViewportQueries(initial: Record<string, boolean>) {
+  const listeners = new Map<string, Set<() => void>>();
+  const state = { ...initial };
+  const queries = new Map<string, MediaQueryList>();
+
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((query: string) => {
+      let entry = queries.get(query);
+      if (!entry) {
+        const set = new Set<() => void>();
+        listeners.set(query, set);
+        entry = {
+          get matches() {
+            return Boolean(state[query]);
+          },
+          media: query,
+          onchange: null,
+          addEventListener: (_: string, cb: () => void) => set.add(cb),
+          removeEventListener: (_: string, cb: () => void) => set.delete(cb),
+          addListener: (cb: () => void) => set.add(cb),
+          removeListener: (cb: () => void) => set.delete(cb),
+          dispatchEvent: () => true,
+        } as unknown as MediaQueryList;
+        queries.set(query, entry);
+      }
+      return entry;
+    }),
+  );
+
+  return {
+    setMatch(query: string, matches: boolean) {
+      state[query] = matches;
+      for (const cb of listeners.get(query) ?? []) cb();
+    },
+    listenerCount(query: string) {
+      return listeners.get(query)?.size ?? 0;
+    },
+  };
+}
+
+describe('useWorkspaceLayout: tablet and narrow-desktop viewports', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('starts with both sidebars open at wide desktop (>= 1200px)', () => {
+    stubViewportQueries({
+      [NARROW_DESKTOP_QUERY]: false,
+      [TABLET_COLLAPSED_QUERY]: false,
+    });
+    const { result } = renderLayout({ ...GAME, isCompact: false });
+    expect(result.current.leftSidebarCollapsed).toBe(false);
+    expect(result.current.rightSidebarCollapsed).toBe(false);
+  });
+
+  it('collapses the left sidebar on 960px-1199px viewports', () => {
+    stubViewportQueries({
+      [NARROW_DESKTOP_QUERY]: true,
+      [TABLET_COLLAPSED_QUERY]: false,
+    });
+    const { result } = renderLayout({ ...GAME, isCompact: false });
+    expect(result.current.leftSidebarCollapsed).toBe(true);
+    expect(result.current.rightSidebarCollapsed).toBe(false);
+  });
+
+  it('collapses both sidebars below 960px and updates when crossing breakpoints', () => {
+    const media = stubViewportQueries({
+      [NARROW_DESKTOP_QUERY]: true,
+      [TABLET_COLLAPSED_QUERY]: true,
+    });
+    const { result, unmount } = renderLayout({ ...GAME, isCompact: false });
+    expect(result.current.leftSidebarCollapsed).toBe(true);
+    expect(result.current.rightSidebarCollapsed).toBe(true);
+
+    act(() => media.setMatch(TABLET_COLLAPSED_QUERY, false));
+    expect(result.current.leftSidebarCollapsed).toBe(true);
+    expect(result.current.rightSidebarCollapsed).toBe(false);
+
+    act(() => media.setMatch(NARROW_DESKTOP_QUERY, false));
+    expect(result.current.leftSidebarCollapsed).toBe(false);
+    expect(result.current.rightSidebarCollapsed).toBe(false);
+
+    unmount();
+    expect(media.listenerCount(NARROW_DESKTOP_QUERY)).toBe(0);
+    expect(media.listenerCount(TABLET_COLLAPSED_QUERY)).toBe(0);
   });
 });

@@ -86,4 +86,28 @@ describe('GameBrowserFilters', () => {
     expect(last()).toEqual(DEFAULT_BROWSE_FILTERS);
     expect(screen.getByLabelText('Turn year')).toHaveValue(null);
   });
+
+  it('supports compact collapsible toggle with active count and quick Clear', async () => {
+    const user = userEvent.setup();
+    renderFilters();
+    const toggle = screen.getByTestId('browser-filters-toggle');
+    const body = screen.getByTestId('browser-filters-body');
+
+    expect(toggle).toHaveTextContent('Filters');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(body).not.toHaveAttribute('data-open');
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(body).toHaveAttribute('data-open', 'true');
+
+    await user.click(screen.getByTitle('Italy must be unclaimed'));
+    await user.click(screen.getByRole('button', { name: 'Full' }));
+    expect(toggle).toHaveTextContent('Filters (2)');
+
+    await user.click(toggle);
+    expect(body).not.toHaveAttribute('data-open');
+    await user.click(screen.getByTestId('browser-filters-quick-clear'));
+    expect(toggle).toHaveTextContent('Filters');
+  });
 });
