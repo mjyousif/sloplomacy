@@ -6,6 +6,7 @@ never touches the board, so neither can overwrite the other with an older copy.
 """
 
 import logging
+import time
 from typing import Any
 from urllib.parse import quote
 
@@ -22,6 +23,7 @@ from storage.store import (
     persist_game,
 )
 from storage.supabase import SupabaseUnavailable
+from telemetry import record_supabase_query
 
 logger = logging.getLogger("diplomacy.server")
 
@@ -68,6 +70,7 @@ async def load_press_from_db(
     """
     url = f"{_press_url(game_id)}&select=press"
     headers = supabase.get_headers()
+    start_time = time.perf_counter()
     try:
         if client:
             resp = await client.get(url, headers=headers, timeout=10.0)
@@ -75,18 +78,24 @@ async def load_press_from_db(
             async with httpx.AsyncClient() as c:
                 resp = await c.get(url, headers=headers, timeout=10.0)
     except Exception as ex:
+        record_supabase_query("load_press", "error", 0, (time.perf_counter() - start_time) * 1000.0)
         raise SupabaseUnavailable(str(ex)) from ex
 
+    elapsed_ms = (time.perf_counter() - start_time) * 1000.0
     if resp.status_code == 400:
         # The column does not exist (the migration has not run), so nothing is saved to lose.
+        record_supabase_query("load_press", "error", resp.status_code, elapsed_ms)
         _log_missing_column(resp.text)
         return []
     if resp.status_code != 200:
+        record_supabase_query("load_press", "error", resp.status_code, elapsed_ms)
         raise SupabaseUnavailable(f"HTTP {resp.status_code} {resp.text}")
     rows = resp.json()
     if not isinstance(rows, list):
+        record_supabase_query("load_press", "error", resp.status_code, elapsed_ms)
         raise SupabaseUnavailable(f"Unexpected response: {rows!r}")
     if not rows or not isinstance(rows[0].get("press"), list):
+        record_supabase_query("load_press", "ok", resp.status_code, elapsed_ms)
         return []
 
     messages: list[PressMessage] = []
@@ -95,6 +104,7 @@ async def load_press_from_db(
             messages.append(PressMessage.model_validate(raw))
         except Exception as ex:
             logger.debug("Skipping unparseable press message for %s: %s", game_id, ex)
+    record_supabase_query("load_press", "ok", resp.status_code, elapsed_ms)
     return messages
 
 
@@ -107,6 +117,7 @@ async def save_press_to_db(
     # Ask for the row back: an update that matches no row also answers 2xx.
     headers["Prefer"] = "return=representation"
     url = f"{_press_url(game_id)}&select=room_code"
+    start_time = time.perf_counter()
     try:
         if client:
             resp = await client.patch(url, headers=headers, json=payload, timeout=10.0)
@@ -114,20 +125,29 @@ async def save_press_to_db(
             async with httpx.AsyncClient() as c:
                 resp = await c.patch(url, headers=headers, json=payload, timeout=10.0)
     except Exception as ex:
+        record_supabase_query("save_press", "error", 0, (time.perf_counter() - start_time) * 1000.0)
         logger.warning("Supabase exception saving press for '%s': %s", game_id, ex)
         return False
 
+    elapsed_ms = (time.perf_counter() - start_time) * 1000.0
     if resp.status_code == 400:
+        record_supabase_query("save_press", "error", resp.status_code, elapsed_ms)
         _log_missing_column(resp.text)
         return False
     if resp.status_code not in (200, 201):
+        record_supabase_query("save_press", "error", resp.status_code, elapsed_ms)
         logger.warning(
             "Supabase press save failed for '%s': HTTP %d %s", game_id, resp.status_code, resp.text
         )
         return False
     try:
-        return bool(resp.json())
+        saved = bool(resp.json())
+        record_supabase_query(
+            "save_press", "ok" if saved else "not_found", resp.status_code, elapsed_ms
+        )
+        return saved
     except ValueError:
+        record_supabase_query("save_press", "error", resp.status_code, elapsed_ms)
         return False
 
 

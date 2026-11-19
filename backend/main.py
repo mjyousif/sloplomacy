@@ -38,6 +38,7 @@ from fastapi.staticfiles import StaticFiles
 from security.secrecy import saved_sandbox_guard
 from storage import supabase
 from storage.store import GAME_SUMMARIES, PROFILE_NAMES, hydrate_summary_profiles
+from telemetry import telemetry_middleware
 
 logger = logging.getLogger("diplomacy.api")
 
@@ -104,6 +105,9 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
     return response
+
+
+app.middleware("http")(telemetry_middleware)
 
 
 # Include modular domain routers

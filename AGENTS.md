@@ -182,6 +182,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
 - **Security & Authorization (`backend/security/`)**: JWT verification and auth dependencies (`auth.py`) viewer state secrecy sanitization (`secrecy.py`), and who may read a press message and see its author (`press.py`).
 - **Scenarios & Presets (`backend/scenarios/`)**: Scenario definitions and match presets (`presets.py`).
 - **Real-Time WebSockets (`backend/ws/`)**: Thread-safe WebSocket connection manager and broadcast dispatch (`connection_manager.py`).
+- **Telemetry (`backend/telemetry.py`)**: Zero-dependency structured JSON emitter and `/api/*` timing middleware (`telemetry_middleware`, normalizing parameterized FastAPI route templates) feeding Cloud Logging log-based metrics provisioned in `terraform/monitoring.tf` and `terraform/dashboards.tf`.
 - **Test Harness (`backend/tests/`)**: `unit/` tests one module at a time and mirrors the package it covers (`tests/unit/engine/adjudicator/test_movement.py`); `integration/` drives the app through HTTP and the game socket (`tests/integration/api/`). Every test file passes on its own.
 
 ### Frontend Packages (`frontend/src/`)

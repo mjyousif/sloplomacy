@@ -9,6 +9,7 @@ The backend service is located in the `backend/` directory. It is built with **F
 ```
 backend/
 ├── main.py                  # FastAPI app instance, CORS/security headers, router inclusion
+├── telemetry.py             # Structured JSON telemetry emitter & /api/* endpoint timing middleware
 ├── api/                     # Domain-partitioned FastAPI routers (games, lobby, seats, orders, turns, sandbox, admin, history, press, websocket)
 ├── domain/                  # Core Pydantic domain models & schemas (board, orders, issues, game state, press, request/WS DTOs)
 ├── engine/                  # Authoritative rules & simulation engine (phase timer, tactical AI, order/default helpers)
