@@ -14,6 +14,11 @@ All dashboards and log-based metrics are synchronized automatically on every pus
 | **Cloud Run Infrastructure & Scale-to-Zero** | [Open in GCP Console](https://console.cloud.google.com/monitoring/dashboards/builder/6db49d5e-0062-46e2-93a4-0196681e6e8c?project=diplomacy-1901-prod) | Active vs. idle instance counts, cold-start latency, container CPU & memory utilization, max concurrent requests (HTTP + WebSockets), billable instance time, and network I/O. |
 | **Game Engine & Supabase Persistence** | [Open in GCP Console](https://console.cloud.google.com/monitoring/dashboards/builder/e48fe868-ae7d-4d3e-9f8f-cff991ac46f6?project=diplomacy-1901-prod) | Pure DATC adjudication latency & call rate by phase, plus Supabase PostgREST query p50/p95 latency, throughput by outcome, and error rate by operation. |
 
+### How to Read the Dashboards
+- **Zoom the time picker to match activity**: Because the app runs scale-to-zero, traffic comes in gameplay bursts. Use the top-right time selector (`15m` or `30m` for live playtesting, `6h` / `1d` / `7d` for multi-session trends) so bursty activity fills the chart instead of sitting at the right edge.
+- **Rolling windows & bars**: Per-endpoint, DATC engine, and Supabase latency percentile charts align over 5-minute (`300s`) windows so sparse bursts connect into readable curves, while request rate and billable instance time charts render as `STACKED_BAR` columns so isolated 1-minute bursts remain clearly visible.
+- **Isolate a route**: Click any route (`POST /api/order`, `GET /api/games/mine`, etc.) in a chart legend to focus on that single endpoint's line or bar.
+
 ---
 
 ## 2. Why Zero-Dependency `stdout` JSON + Log-Based Metrics
@@ -119,4 +124,5 @@ gcloud logging read \
    python -m pytest backend/tests/unit/test_telemetry.py -v
    python scripts/sync_gcp_monitoring.py --project diplomacy-1901-prod --dry-run
    ```
-4. **Never log PII or secrets**: Telemetry payloads must never include JWTs, passcodes, emails, display names, or hidden multiplayer orders.
+4. **Never quote label keys in `groupByFields`**: In Google Cloud Monitoring `aggregation.groupByFields`, field paths must be unquoted (`metric.label.route_key`, **never** `metric.label."route_key"`). Inner double quotes prevent `crossSeriesReducer` from matching the label, stripping all labels and causing chart legends to render internal widget UUIDs. (By contrast, filter strings in `timeSeriesFilter.filter` *do* quote label keys: `metric.label."outcome"="error"`.)
+5. **Never log PII or secrets**: Telemetry payloads must never include JWTs, passcodes, emails, display names, or hidden multiplayer orders.

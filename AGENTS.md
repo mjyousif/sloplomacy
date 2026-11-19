@@ -321,6 +321,7 @@ The game cycles through three standard phases per year:
 - Production observability uses zero-dependency `stdout` JSON logs ingested out-of-band by Cloud Run's logging agent and turned into Cloud Monitoring metrics and dashboards (see [docs/guides/observability-and-dashboards.md](docs/guides/observability-and-dashboards.md)).
 - **Invariant**: `TelemetryMiddleware` must stay pure ASGI (never `BaseHTTPMiddleware` / `@app.middleware("http")`), so `BackgroundTasks` on order endpoints do not block HTTP keep-alive connections.
 - **Invariant**: Never emit dynamic IDs (`game_id`, `user_id`, raw paths, query strings) as metric labels. `resolve_route_template` maps matched `/api/*` routes to parameterized FastAPI templates and collapses unrouted paths to `/api/_unmatched`.
+- **Invariant**: In Cloud Monitoring `aggregation.groupByFields`, always write unquoted field paths (`metric.label.route_key`, never `metric.label."route_key"`). Inner quotes strip metric labels during cross-series reduction and make dashboard legends display raw dataset UUIDs.
 - **Invariant**: Keep `scripts/sync_gcp_monitoring.py` aligned with `terraform/monitoring.tf` and `terraform/dashboards.tf`, verified by `backend/tests/unit/test_telemetry.py`.
 
 ---
