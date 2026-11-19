@@ -1,5 +1,6 @@
 """Resolve one phase with the DATC-compliant `diplomacy` engine."""
 
+import time
 from collections import defaultdict
 from typing import Any
 
@@ -14,6 +15,7 @@ from engine.adjudicator.territory import claim_occupied_territory, supply_center
 from engine.adjudicator.translator import parse_diplomacy_phase, to_diplomacy_phase_code
 from engine.topology.graph import split_province_code
 from engine.topology.provinces import PROVINCES
+from telemetry import record_engine_adjudication
 
 
 def create_diplomacy_game(
@@ -95,6 +97,7 @@ def adjudicate_turn(
       Fall movements (and Fall retreats) update ownership before the Winter adjustment phase.
     - Supports Retreats (RETREAT / DISBAND) and Winter Adjustments (BUILD / DISBAND / WAIVE).
     """
+    start_time = time.perf_counter()
     game = create_diplomacy_game(units, ownership, season, year, phase, retreats=retreats)
     phase_code = to_diplomacy_phase_code(season, year, phase)
 
@@ -191,6 +194,13 @@ def adjudicate_turn(
     game_state_data = game.get_state()
     builds_data = None if game.is_game_done else game_state_data.get("builds")
     retreats_data = None if game.is_game_done else game_state_data.get("retreats")
+
+    record_engine_adjudication(
+        phase=phase,
+        unit_count=len(units),
+        order_count=len(orders),
+        latency_ms=(time.perf_counter() - start_time) * 1000.0,
+    )
 
     return SimulationResult(
         resolutions=ctx.resolutions,

@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -12,6 +13,7 @@ from urllib.parse import quote
 import httpx
 from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
+from telemetry import record_supabase_query
 
 logger = logging.getLogger("diplomacy.database")
 
@@ -56,9 +58,7 @@ DERIVED_STATE_FIELDS = {"unit_options", "preview"}
 
 def is_valid_room_code(code: str | None) -> bool:
     """Verify that a game_id / room_code conforms to safe alphanumeric syntax."""
-    if not code:
-        return False
-    return bool(ROOM_CODE_REGEX.match(code))
+    return bool(code and ROOM_CODE_REGEX.match(code))
 
 
 class SupabaseUnavailable(Exception):
@@ -80,7 +80,6 @@ APP_TO_DB_STATUS = {
     "lobby": "lobby",
     "in_progress": "in_progress",
 }
-
 DB_TO_APP_STATUS = {
     "lobby": "waiting",
     "in_progress": "active",
@@ -101,10 +100,7 @@ _REJECTED_KEYS_LOGGED: set = set()
 
 
 def _key_role(key: str) -> str | None:
-    """
-    The Postgres role a Supabase API key acts as, or None if it can't be told from the key.
-    New keys say so in their prefix. Legacy keys are JWTs with a `role` claim.
-    """
+    """Return the Postgres role for a Supabase API key (prefix or JWT `role` claim)."""
     if key.startswith("sb_publishable_"):
         return "anon"
     if key.startswith("sb_secret_"):
@@ -129,13 +125,7 @@ def _log_rejected_key_once(reason: str, message: str) -> None:
 
 
 def get_supabase_key() -> str:
-    """
-    The service role key, or "" if there isn't one.
-
-    Games are saved only with the service role key, never the anon key. RLS on multiplayer_games
-    allows only service_role, so with the anon key every read succeeds with zero rows: the lobby
-    sync would then take every saved game for deleted and drop it.
-    """
+    """Return the service_role key or "" (never the anon key, which RLS gives zero rows)."""
     key = (
         os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY") or ""
     ).strip()
@@ -167,13 +157,8 @@ def get_supabase_key() -> str:
 
 
 def is_persistence_enabled() -> bool:
-    url = get_supabase_url()
-    key = get_supabase_key()
-    if not url or not key:
-        return False
-    if "your-project-ref" in url or "your-supabase" in url:
-        return False
-    return True
+    url, key = get_supabase_url(), get_supabase_key()
+    return bool(url and key and "your-project-ref" not in url and "your-supabase" not in url)
 
 
 def is_valid_uuid(val: str | None) -> bool:
@@ -188,11 +173,52 @@ def is_valid_uuid(val: str | None) -> bool:
 
 def get_headers() -> dict[str, str]:
     key = get_supabase_key()
-    return {
-        "apikey": key,
-        "Authorization": f"Bearer {key}",
-        "Content-Type": "application/json",
-    }
+    return {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+
+
+def _elapsed_ms(start_time: float) -> float:
+    return (time.perf_counter() - start_time) * 1000.0
+
+
+async def _execute_http(
+    method: str,
+    url: str,
+    headers: dict[str, str],
+    client: httpx.AsyncClient | None = None,
+    json_payload: Any = None,
+) -> httpx.Response:
+    kwargs: dict[str, Any] = {"headers": headers, "timeout": 10.0}
+    if json_payload is not None:
+        kwargs["json"] = json_payload
+    c = client or get_http_client()
+    return await getattr(c, method)(url, **kwargs)
+
+
+async def _execute_write_op(
+    operation: str,
+    method: str,
+    url: str,
+    headers: dict[str, str],
+    ok_codes: tuple[int, ...],
+    label: str,
+    client: httpx.AsyncClient | None = None,
+    json_payload: Any = None,
+) -> bool:
+    """Execute a Supabase write/delete HTTP request and record telemetry."""
+    start = time.perf_counter()
+    try:
+        resp = await _execute_http(method, url, headers, client=client, json_payload=json_payload)
+        if resp.status_code in ok_codes:
+            record_supabase_query(operation, "ok", resp.status_code, _elapsed_ms(start))
+            logger.debug("Supabase %s succeeded.", label)
+            return True
+        record_supabase_query(operation, "error", resp.status_code, _elapsed_ms(start))
+        logger.warning("Supabase %s failed: HTTP %d %s", label, resp.status_code, resp.text)
+        return False
+    except Exception as ex:
+        record_supabase_query(operation, "error", 0, _elapsed_ms(start))
+        logger.warning("Supabase exception during %s: %s", label, ex)
+        return False
 
 
 def to_db_status(app_status: str) -> str:
@@ -205,26 +231,15 @@ def to_app_status(db_status: str) -> str:
 
 def build_summary_from_row(row: dict[str, Any]) -> MultiplayerGameSummary:
     room_code = row.get("room_code", "")
-    raw_state_blob = row.get("game_state") or {}
+    raw_blob = row.get("game_state") or {}
+    packed = raw_blob.get("summary") if isinstance(raw_blob, dict) else None
+    for candidate in (packed, row.get("summary")):
+        if isinstance(candidate, dict) and candidate:
+            try:
+                return MultiplayerGameSummary.model_validate(candidate)
+            except Exception as ex:
+                logger.debug("Could not deserialize summary for %s: %s", room_code, ex)
 
-    # 1. If full summary was packed in game_state, deserialize it
-    if isinstance(raw_state_blob, dict) and raw_state_blob.get("summary"):
-        try:
-            return MultiplayerGameSummary.model_validate(raw_state_blob["summary"])
-        except Exception as ex:
-            logger.debug("Could not deserialize packed summary for %s: %s", room_code, ex)
-
-    # 2. If row has dedicated summary column
-    if row.get("summary") and isinstance(row["summary"], dict) and row["summary"]:
-        try:
-            return MultiplayerGameSummary.model_validate(row["summary"])
-        except Exception as ex:
-            logger.debug("Could not deserialize row.summary for %s: %s", room_code, ex)
-
-    # 3. Fallback: construct summary from top-level columns
-    raw_status = row.get("status", "lobby")
-    app_status = to_app_status(raw_status)
-    created_at = row.get("created_at") or datetime.now(timezone.utc).isoformat()
     raw_winner = row.get("winner")
     parsed_winner: Power | None = None
     if raw_winner:
@@ -235,7 +250,7 @@ def build_summary_from_row(row: dict[str, Any]) -> MultiplayerGameSummary:
     return MultiplayerGameSummary(
         game_id=room_code,
         name=row.get("name") or f"Match {room_code}",
-        status=app_status,
+        status=to_app_status(row.get("status", "lobby")),
         winner=parsed_winner,
         completed_at=row.get("completed_at"),
         season=row.get("season", "Spring"),
@@ -243,7 +258,7 @@ def build_summary_from_row(row: dict[str, Any]) -> MultiplayerGameSummary:
         phase=row.get("phase", "Movement"),
         created_by="",
         creator_id=str(row.get("host_user_id")) if row.get("host_user_id") else None,
-        created_at=created_at,
+        created_at=row.get("created_at") or datetime.now(timezone.utc).isoformat(),
         participants={},
         finalized_powers=[],
         is_sandbox=bool(row.get("is_sandbox", False)),
@@ -254,62 +269,39 @@ def build_summary_from_row(row: dict[str, Any]) -> MultiplayerGameSummary:
 
 
 async def load_game_from_db(
-    game_id: str,
-    client: httpx.AsyncClient | None = None,
+    game_id: str, client: httpx.AsyncClient | None = None
 ) -> tuple[GameState, MultiplayerGameSummary | None, list[GameState], str | None] | None:
-    """
-    Load a game from Supabase PostgreSQL by room_code.
-    Returns (state, summary, history, passcode), or None if Supabase has no such game.
-    Raises SupabaseUnavailable if the read fails, which says nothing about whether the game exists.
-    """
-    if not is_persistence_enabled():
-        return None
-    if not is_valid_room_code(game_id):
+    """Load game tuple from Supabase by room_code, or None; raise SupabaseUnavailable on error."""
+    if not is_persistence_enabled() or not is_valid_room_code(game_id):
         return None
 
-    safe_gid = quote(game_id, safe="")
-    url = f"{get_supabase_url()}/rest/v1/multiplayer_games?room_code=eq.{safe_gid}&select=*"
-    headers = get_headers()
+    url = f"{get_supabase_url()}/rest/v1/multiplayer_games?room_code=eq.{quote(game_id, safe='')}&select=*"
+    start, status_code = time.perf_counter(), 0
 
     try:
-        c = client or get_http_client()
-        resp = await c.get(url, headers=headers, timeout=10.0)
-
+        resp = await _execute_http("get", url, get_headers(), client=client)
+        status_code = resp.status_code
         if resp.status_code != 200:
             raise SupabaseUnavailable(f"HTTP {resp.status_code} {resp.text}")
-
         rows = resp.json()
         if not isinstance(rows, list):
             raise SupabaseUnavailable(f"Unexpected response: {rows!r}")
         if not rows:
+            record_supabase_query("load_game", "not_found", status_code, _elapsed_ms(start))
             return None
 
         row = rows[0]
-        raw_game_state = row.get("game_state", {})
-
-        if isinstance(raw_game_state, dict) and "state" in raw_game_state:
-            state_data = raw_game_state["state"]
-            summary_data = raw_game_state.get("summary") or row.get("summary")
-            history_data = row.get("history") or raw_game_state.get("history") or []
-            passcode = raw_game_state.get("passcode") or row.get("passcode")
-        else:
-            state_data = raw_game_state
-            summary_data = row.get("summary")
-            history_data = row.get("history") or []
-            passcode = row.get("passcode")
+        raw_gs = row.get("game_state", {})
+        packed = isinstance(raw_gs, dict) and "state" in raw_gs
+        state_data = raw_gs["state"] if packed else raw_gs
+        history_data = row.get("history") or (raw_gs.get("history") if packed else None) or []
+        passcode = (raw_gs.get("passcode") if packed else None) or row.get("passcode")
 
         state = GameState.model_validate(state_data)
         if row.get("state_revision") is not None:
             state.state_revision = max(state.state_revision, int(row["state_revision"]))
 
-        summary: MultiplayerGameSummary | None = None
-        if summary_data and isinstance(summary_data, dict):
-            try:
-                summary = MultiplayerGameSummary.model_validate(summary_data)
-            except Exception as ex:
-                logger.warning("Failed to validate summary for %s: %s", game_id, ex)
-        if not summary:
-            summary = build_summary_from_row(row)
+        summary = build_summary_from_row(row)
 
         history: list[GameState] = []
         if isinstance(history_data, list):
@@ -319,9 +311,11 @@ async def load_game_from_db(
                 except Exception as ex:
                     logger.debug("Skipping unparseable history entry for %s: %s", game_id, ex)
 
+        record_supabase_query("load_game", "ok", status_code, _elapsed_ms(start))
         return (state, summary, history, passcode)
 
     except Exception as ex:
+        record_supabase_query("load_game", "error", status_code, _elapsed_ms(start))
         logger.warning("Supabase exception loading game '%s': %s", game_id, ex)
         raise SupabaseUnavailable(str(ex)) from ex
 
@@ -329,31 +323,24 @@ async def load_game_from_db(
 async def load_all_summaries_from_db(
     client: httpx.AsyncClient | None = None,
 ) -> dict[str, MultiplayerGameSummary]:
-    """
-    Fetch all games from Supabase to warm up or synchronize lobby listings.
-    Raises SupabaseUnavailable if the read fails: an empty result always means Supabase has no games.
-    """
+    """Fetch all game summaries from Supabase; raise SupabaseUnavailable on error."""
     if not is_persistence_enabled():
         return {}
 
-    headers = get_headers()
-    summaries: dict[str, MultiplayerGameSummary] = {}
+    headers, summaries = get_headers(), {}
+    start, status_code = time.perf_counter(), 0
 
-    async def read_rows(columns: str) -> httpx.Response:
-        url = f"{get_supabase_url()}/rest/v1/multiplayer_games?select={columns}"
-        c = client or get_http_client()
-        return await c.get(url, headers=headers, timeout=10.0)
-
+    base_url = f"{get_supabase_url()}/rest/v1/multiplayer_games?select="
     try:
-        resp = await read_rows(LOBBY_COLUMNS)
+        resp = await _execute_http("get", f"{base_url}{LOBBY_COLUMNS}", headers, client=client)
+        status_code = resp.status_code
         if resp.status_code == 400:
             # A slow lobby is better than an empty one if Supabase refuses the narrower query.
             logger.warning("Supabase refused the lobby columns, reading whole rows: %s", resp.text)
-            resp = await read_rows("*")
-
+            resp = await _execute_http("get", f"{base_url}*", headers, client=client)
+            status_code = resp.status_code
         if resp.status_code != 200:
             raise SupabaseUnavailable(f"HTTP {resp.status_code} {resp.text}")
-
         rows = resp.json()
         if not isinstance(rows, list):
             raise SupabaseUnavailable(f"Unexpected response: {rows!r}")
@@ -361,9 +348,11 @@ async def load_all_summaries_from_db(
             room_code = row.get("room_code")
             if room_code and room_code not in ("proto_1901", "default"):
                 summaries[room_code] = build_summary_from_row(row)
+        record_supabase_query("load_summaries", "ok", status_code, _elapsed_ms(start))
         return summaries
 
     except Exception as ex:
+        record_supabase_query("load_summaries", "error", status_code, _elapsed_ms(start))
         logger.warning("Supabase exception loading summaries: %s", ex)
         raise SupabaseUnavailable(str(ex)) from ex
 
@@ -389,168 +378,119 @@ async def save_game_to_db(
     passcode: str | None = None,
     client: httpx.AsyncClient | None = None,
 ) -> bool:
-    """
-    Persist game state, metadata, and history into Supabase PostgreSQL.
-    Uses PostgREST upsert on room_code, so with history=None the saved history stays as it is.
-    """
-    if not is_persistence_enabled():
-        return False
-    if game_id in ("proto_1901", "default"):
-        return False
-    if not is_valid_room_code(game_id):
+    """Persist game state, metadata, and history into Supabase (upsert on room_code)."""
+    if (
+        not is_persistence_enabled()
+        or game_id in ("proto_1901", "default")
+        or not is_valid_room_code(game_id)
+    ):
         return False
 
     url = f"{get_supabase_url()}/rest/v1/multiplayer_games?on_conflict=room_code"
-    headers = get_headers()
-    headers["Prefer"] = "resolution=merge-duplicates,return=minimal"
-
-    now_iso = datetime.now(timezone.utc).isoformat()
-    app_status = summary.status if summary else "waiting"
-    db_status = to_db_status(app_status)
-
+    headers = {**get_headers(), "Prefer": "resolution=merge-duplicates,return=minimal"}
+    serialized_summary = _serialize_summary_for_db(summary) if summary else None
     payload: dict[str, Any] = {
         "room_code": game_id,
         "name": (summary.name if summary and summary.name else f"Match {game_id}").strip(),
-        "status": db_status,
+        "status": to_db_status(summary.status if summary else "waiting"),
         "winner": state.winner.value if state.winner else None,
         "completed_at": summary.completed_at if summary else None,
         "phase": state.phase,
         "season": state.season,
         "year": state.year,
-        "summary": _serialize_summary_for_db(summary) if summary else None,
+        "summary": serialized_summary,
         "game_state": {
             "state": state.model_dump(mode="json", exclude=DERIVED_STATE_FIELDS),
-            "summary": _serialize_summary_for_db(summary) if summary else None,
+            "summary": serialized_summary,
             "passcode": passcode,
         },
-        "updated_at": now_iso,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     if history is not None:
         payload["history"] = [
             h.model_dump(mode="json", exclude=DERIVED_STATE_FIELDS) for h in history
         ]
-
     if summary and is_valid_uuid(summary.creator_id):
         payload["host_user_id"] = summary.creator_id
 
-    try:
-        c = client or get_http_client()
-        resp = await c.post(url, headers=headers, json=payload, timeout=10.0)
-
-        if resp.status_code in (200, 201, 204):
-            logger.debug("Successfully saved game '%s' to Supabase.", game_id)
-            return True
-
-        logger.warning(
-            "Supabase save failed for '%s': HTTP %d %s",
-            game_id,
-            resp.status_code,
-            resp.text,
-        )
-        return False
-
-    except Exception as ex:
-        logger.warning("Supabase exception saving game '%s': %s", game_id, ex)
-        return False
+    return await _execute_write_op(
+        "save_game",
+        "post",
+        url,
+        headers,
+        (200, 201, 204),
+        f"save for '{game_id}'",
+        client=client,
+        json_payload=payload,
+    )
 
 
-async def delete_game_from_db(
-    game_id: str,
-    client: httpx.AsyncClient | None = None,
-) -> bool:
+async def delete_game_from_db(game_id: str, client: httpx.AsyncClient | None = None) -> bool:
     """Delete a game room from Supabase PostgreSQL."""
-    if not is_persistence_enabled():
+    if not is_persistence_enabled() or not is_valid_room_code(game_id):
         return False
-    if not is_valid_room_code(game_id):
-        return False
-
-    safe_gid = quote(game_id, safe="")
-    url = f"{get_supabase_url()}/rest/v1/multiplayer_games?room_code=eq.{safe_gid}"
-    headers = get_headers()
-
-    try:
-        c = client or get_http_client()
-        resp = await c.delete(url, headers=headers, timeout=10.0)
-
-        if resp.status_code in (200, 204):
-            logger.debug("Deleted game '%s' from Supabase.", game_id)
-            return True
-
-        logger.warning(
-            "Supabase delete failed for '%s': HTTP %d %s", game_id, resp.status_code, resp.text
-        )
-        return False
-
-    except Exception as ex:
-        logger.warning("Supabase exception deleting game '%s': %s", game_id, ex)
-        return False
+    url = f"{get_supabase_url()}/rest/v1/multiplayer_games?room_code=eq.{quote(game_id, safe='')}"
+    return await _execute_write_op(
+        "delete_game",
+        "delete",
+        url,
+        get_headers(),
+        (200, 204),
+        f"delete for '{game_id}'",
+        client=client,
+    )
 
 
-async def load_profile_names_from_db(
-    client: httpx.AsyncClient | None = None,
-) -> dict[str, str]:
+async def load_profile_names_from_db(client: httpx.AsyncClient | None = None) -> dict[str, str]:
     """Load user_id -> display_name mappings from public.profiles."""
     if not is_persistence_enabled():
         return {}
 
     url = f"{get_supabase_url()}/rest/v1/profiles?select=id,display_name"
-    headers = get_headers()
-
+    start = time.perf_counter()
     try:
-        c = client or get_http_client()
-        resp = await c.get(url, headers=headers, timeout=10.0)
-
+        resp = await _execute_http("get", url, get_headers(), client=client)
         if resp.status_code != 200:
+            record_supabase_query("load_profiles", "error", resp.status_code, _elapsed_ms(start))
             logger.warning("Supabase profiles read failed: HTTP %d %s", resp.status_code, resp.text)
             return {}
-
         rows = resp.json()
         if not isinstance(rows, list):
+            record_supabase_query("load_profiles", "error", resp.status_code, _elapsed_ms(start))
             return {}
-
-        profiles: dict[str, str] = {}
-        for row in rows:
-            uid = row.get("id")
-            name = (row.get("display_name") or "").strip()
-            if uid and name:
-                profiles[str(uid)] = name
+        profiles = {
+            str(r["id"]): (r.get("display_name") or "").strip()
+            for r in rows
+            if r.get("id") and (r.get("display_name") or "").strip()
+        }
+        record_supabase_query("load_profiles", "ok", resp.status_code, _elapsed_ms(start))
         return profiles
-
     except Exception as ex:
+        record_supabase_query("load_profiles", "error", 0, _elapsed_ms(start))
         logger.warning("Supabase exception loading profiles: %s", ex)
         return {}
 
 
 async def upsert_profile_display_name(
-    user_id: str,
-    display_name: str,
-    client: httpx.AsyncClient | None = None,
+    user_id: str, display_name: str, client: httpx.AsyncClient | None = None
 ) -> bool:
     """Persist a user's display_name into public.profiles."""
     if not is_persistence_enabled() or not is_valid_uuid(user_id):
         return False
-
     url = f"{get_supabase_url()}/rest/v1/profiles?on_conflict=id"
-    headers = {
-        **get_headers(),
-        "Prefer": "resolution=merge-duplicates,return=minimal",
-    }
+    headers = {**get_headers(), "Prefer": "resolution=merge-duplicates,return=minimal"}
     payload = {
         "id": user_id,
         "display_name": display_name,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
-
-    try:
-        c = client or get_http_client()
-        resp = await c.post(url, headers=headers, json=payload, timeout=10.0)
-
-        if resp.status_code in (200, 201, 204):
-            return True
-
-        logger.warning("Supabase profile upsert failed: HTTP %d %s", resp.status_code, resp.text)
-        return False
-
-    except Exception as ex:
-        logger.warning("Supabase exception upserting profile: %s", ex)
-        return False
+    return await _execute_write_op(
+        "upsert_profile",
+        "post",
+        url,
+        headers,
+        (200, 201, 204),
+        "profile upsert",
+        client=client,
+        json_payload=payload,
+    )

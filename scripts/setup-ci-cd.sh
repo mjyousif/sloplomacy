@@ -20,8 +20,8 @@ echo "[✓] Target GCP Project: $PROJECT_ID"
 
 # 2. Enable Required APIs & Prepare Artifact Registry
 echo ""
-echo "--> Enabling required APIs (Cloud Run, Cloud Build, Artifact Registry, IAM)..."
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com iam.googleapis.com --project "$PROJECT_ID"
+echo "--> Enabling required APIs (Cloud Run, Cloud Build, Artifact Registry, IAM, Logging, Monitoring)..."
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com iam.googleapis.com logging.googleapis.com monitoring.googleapis.com --project "$PROJECT_ID"
 
 echo "--> Ensuring Artifact Registry repository 'diplomacy-repo' exists..."
 if ! gcloud artifacts repositories describe diplomacy-repo --location="us-central1" --project="$PROJECT_ID" &>/dev/null; then
@@ -58,6 +58,9 @@ ROLES=(
   "roles/cloudbuild.builds.editor"
   "roles/storage.admin"
   "roles/artifactregistry.writer"
+  "roles/logging.configWriter"
+  "roles/monitoring.editor"
+  "roles/serviceusage.serviceUsageAdmin"
 )
 
 for ROLE in "${ROLES[@]}"; do

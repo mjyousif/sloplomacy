@@ -26,6 +26,18 @@ resource "google_project_service" "artifact_registry" {
   disable_dependent_services = false
 }
 
+resource "google_project_service" "logging" {
+  service                    = "logging.googleapis.com"
+  disable_on_destroy         = false
+  disable_dependent_services = false
+}
+
+resource "google_project_service" "monitoring" {
+  service                    = "monitoring.googleapis.com"
+  disable_on_destroy         = false
+  disable_dependent_services = false
+}
+
 # 2. Artifact Registry Docker Repository with automated cleanup policies to prevent storage billing creep
 resource "google_artifact_registry_repository" "app_repo" {
   depends_on    = [google_project_service.artifact_registry]

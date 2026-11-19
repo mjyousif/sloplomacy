@@ -60,7 +60,7 @@ if [ -n "$ENV_VARS" ]; then
 fi
 
 echo "--> Enabling Google Cloud APIs..."
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project "$PROJECT_ID"
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com logging.googleapis.com monitoring.googleapis.com --project "$PROJECT_ID"
 
 echo "--> Ensuring Artifact Registry repository '$ARTIFACT_REPO' exists..."
 if ! gcloud artifacts repositories describe "$ARTIFACT_REPO" --location="$REGION" --project="$PROJECT_ID" &>/dev/null; then
@@ -96,6 +96,9 @@ gcloud run deploy "$SERVICE_NAME" \
   --port 8080 \
   --timeout 3600 \
   ${ENV_FLAGS[@]+"${ENV_FLAGS[@]}"}
+
+echo "--> Syncing Cloud Logging metrics and Monitoring dashboards..."
+python3 "$REPO_ROOT/scripts/sync_gcp_monitoring.py" --project "$PROJECT_ID" --service "$SERVICE_NAME"
 
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format "value(status.url)")
 

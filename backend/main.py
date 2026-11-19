@@ -45,6 +45,7 @@ from storage.store import (
     hydrate_summary_profiles,
     persist_game,
 )
+from telemetry import TelemetryMiddleware
 
 logger = logging.getLogger("diplomacy.api")
 
@@ -145,6 +146,7 @@ class SecurityHeadersMiddleware:
 
 
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(TelemetryMiddleware)
 
 
 # Include modular domain routers

@@ -96,6 +96,8 @@ gcloud services enable `
     run.googleapis.com `
     cloudbuild.googleapis.com `
     artifactregistry.googleapis.com `
+    logging.googleapis.com `
+    monitoring.googleapis.com `
     --project $ProjectId
 
 # 4. Build Container Image with Google Cloud Build (Artifact Registry)
@@ -188,7 +190,12 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# 6. Retrieve Service URL
+# 6. Sync Cloud Logging metrics and Monitoring dashboards
+Write-Host ""
+Write-Host "--> Syncing Cloud Logging metrics and Monitoring dashboards..." -ForegroundColor Cyan
+python (Join-Path $RepoRoot "scripts\sync_gcp_monitoring.py") --project $ProjectId --service $ServiceName
+
+# 7. Retrieve Service URL
 $ServiceUrl = (gcloud run services describe $ServiceName --region $Region --project $ProjectId --format "value(status.url)").Trim()
 
 Write-Host ""

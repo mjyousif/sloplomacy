@@ -87,11 +87,13 @@ terraform apply -var="project_id=your-gcp-project-id"
 ```
 
 ### Terraform Manifests:
-- [`terraform/main.tf`](../../terraform/main.tf): Enables Cloud APIs, provisions an Artifact Registry Docker repository with automated cleanup policies (keeping recent 5 versions and deleting untagged layers), and configures the Cloud Run v2 service with scale-to-zero, one instance, startup CPU boost, a 3600 s request timeout and persistence settings.
+- [`terraform/main.tf`](../../terraform/main.tf): Enables Cloud APIs (`run.googleapis.com`, `artifactregistry.googleapis.com`, `logging.googleapis.com`, `monitoring.googleapis.com`), provisions an Artifact Registry Docker repository with automated cleanup policies (keeping recent 5 versions and deleting untagged layers), and configures the Cloud Run v2 service with scale-to-zero, one instance, startup CPU boost, a 3600 s request timeout and persistence settings.
   - The image defaults to `${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_repository_id}/${var.service_name}:latest`, matching the CI workflow and `scripts/deploy.*`. Set `container_image` if deploying a custom tag.
   - Terraform owns the service's whole environment list: a variable set by hand in the console is removed on the next `terraform apply`. `PORT` is not set, because Cloud Run reserves it. `SUPABASE_KEY` is the service role key only.
+- [`terraform/monitoring.tf`](../../terraform/monitoring.tf): Provisions 5 Google Cloud Log-Based Metrics (`google_logging_metric`) extracting structured JSON fields emitted by [`backend/telemetry.py`](../../backend/telemetry.py).
+- [`terraform/dashboards.tf`](../../terraform/dashboards.tf): Provisions 3 Google Cloud Monitoring Dashboards (`google_monitoring_dashboard`) for API Endpoint Performance, Cloud Run Infrastructure & Scale-to-Zero Health, and Game Engine & Supabase Persistence.
 - [`terraform/variables.tf`](../../terraform/variables.tf): Configurable parameters (`project_id`, `region`, `service_name`, container image, Supabase URL, anon key, service role key, JWT secret).
-- [`terraform/outputs.tf`](../../terraform/outputs.tf): Emits the live Cloud Run service URL and Artifact Registry endpoint.
+- [`terraform/outputs.tf`](../../terraform/outputs.tf): Emits the live Cloud Run service URL, Artifact Registry endpoint, and provisioned Cloud Monitoring Dashboard resource IDs.
 
 ---
 
@@ -105,7 +107,8 @@ The repository features an automated GitHub Actions pipeline in [`.github/workfl
 3. **Migrations**: When `DATABASE_URL` (or `SUPABASE_DB_URL`) is set, runs every migration with `psql -v ON_ERROR_STOP=1 --single-transaction`. A failing migration rolls back the whole run and stops the deploy. Without the secret the step is skipped.
 4. **Direct Docker Build & Artifact Registry**: Builds the multi-stage container directly on GitHub Actions runners with Docker Buildx and GitHub Actions layer caching (`type=gha`), pushing directly to GCP Artifact Registry without consuming Google Cloud Build minutes or Cloud Storage staging quotas.
 5. **Cloud Run Deployment**: Deploys a new revision to Google Cloud Run with `--update-env-vars`, `--cpu-throttling`, and `--cpu-boost`.
-6. **Summary**: Posts the verified public live URL to the GitHub Actions job summary.
+6. **Monitoring Sync**: Runs [`scripts/sync_gcp_monitoring.py`](../../scripts/sync_gcp_monitoring.py) to idempotently create/update the 5 Cloud Logging log-based metrics and 3 Cloud Monitoring dashboards, posting direct Console links into the GitHub Actions job summary.
+7. **Summary**: Posts the verified public live URL to the GitHub Actions job summary.
    - **Production Endpoint**: [https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app](https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app)
 
 ### One-Time CI/CD Setup:
@@ -134,3 +137,25 @@ The root [`Dockerfile`](../../Dockerfile) uses a multi-stage build:
 2. **Stage 2 (FastAPI Runner)**: Python 3.11-slim installs `backend/requirements-runtime.txt` (no test tools), copies the backend packages (`main.py`, `api/`, `engine/`, `storage/`, `security/`, etc.), mounts the compiled React bundle into `./static`, and launches Uvicorn on `${PORT}`.
 
 The test suite (`backend/tests/`) is left out of the image by [`.dockerignore`](../../.dockerignore).
+
+---
+
+## 7. Cloud Monitoring Dashboards & Endpoint Observability
+
+Because Cloud Run's built-in `run.googleapis.com/request_latencies` metric aggregates across the entire service and mixes `/api/*` calls with static assets and long-lived WebSocket connections, [`backend/telemetry.py`](../../backend/telemetry.py) emits single-line structured JSON logs to `stdout` when running in Cloud Run (`K_SERVICE` set, or `ENABLE_GCP_TELEMETRY=1`).
+
+### Structured Telemetry Events (`jsonPayload.event_type`)
+1. **`api_request`** (`TelemetryMiddleware` on `/api/*` routes): Records `route_key` (e.g. `POST /api/games/{game_id}/join`), parameterized `endpoint`, `method`, `status_code`, `status_class` (`2xx`/`4xx`/`5xx`), and `latency_ms`. Unmatched `/api/*` paths collapse to `/api/_unmatched` to avoid label cardinality explosion.
+2. **`engine_adjudicate`** (`adjudicate_turn` in [`backend/engine/adjudicator/resolver.py`](../../backend/engine/adjudicator/resolver.py)): Records `phase` (`Movement`, `Retreats`, `Adjustments`), `unit_count`, `order_count`, and `latency_ms`.
+3. **`supabase_query`** ([`backend/storage/supabase.py`](../../backend/storage/supabase.py) and [`backend/storage/press.py`](../../backend/storage/press.py)): Records `operation` (`load_game`, `save_game`, `load_summaries`, `delete_game`, `load_profiles`, `upsert_profile`, `load_press`, `save_press`), `outcome` (`ok`, `not_found`, `error`), `status_code`, and `latency_ms`.
+
+### Provisioned Log-Based Metrics & Dashboards
+Both the automated CI/CD deploy job (`.github/workflows/ci.yml`), manual deploy scripts (`scripts/deploy.*` via [`scripts/sync_gcp_monitoring.py`](../../scripts/sync_gcp_monitoring.py)), and `terraform apply` keep these resources in sync automatically:
+- **5 Log-Based Metrics (`terraform/monitoring.tf` & `scripts/sync_gcp_monitoring.py`)**:
+  - `${service_name}_api_request_count` & `${service_name}_api_request_latency_ms`
+  - `${service_name}_engine_adjudicate_latency_ms`
+  - `${service_name}_supabase_query_count` & `${service_name}_supabase_query_latency_ms`
+- **3 Cloud Monitoring Dashboards (`terraform/dashboards.tf` & `scripts/sync_gcp_monitoring.py`)**:
+  1. **Sloplomacy — API Endpoint Performance**: p50/p95/p99 latency, RPS, and 4xx/5xx error rates broken down by `route_key` and HTTP method.
+  2. **Sloplomacy — Cloud Run Infrastructure & Scale-to-Zero**: Active/idle instance counts, cold-start startup latency, CPU/memory utilization, max request concurrency (HTTP + WebSockets), billable instance time, and network egress/ingress.
+  3. **Sloplomacy — Game Engine & Supabase Persistence**: DATC adjudication latency and throughput by phase, plus Supabase query latency, throughput, and error rates by operation.
