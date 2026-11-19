@@ -16,7 +16,7 @@ All dashboards and log-based metrics are synchronized automatically on every pus
 
 ### How to Read the Dashboards
 - **Zoom the time picker to match activity**: Because the app runs scale-to-zero, traffic comes in gameplay bursts. Use the top-right time selector (`15m` or `30m` for live playtesting, `6h` / `1d` / `7d` for multi-session trends) so bursty activity fills the chart instead of sitting at the right edge.
-- **Rolling windows & bars**: Per-endpoint, DATC engine, and Supabase latency percentile charts align over 5-minute (`300s`) windows so sparse bursts connect into readable curves, while request rate and billable instance time charts render as `STACKED_BAR` columns so isolated 1-minute bursts remain clearly visible.
+- **Per-minute resolution & bars**: All tiles align over `60s` windows so zoomed-in 5–15 minute views plot per-minute points, while request rate and billable instance time charts render as `STACKED_BAR` columns so isolated 1-minute bursts remain clearly visible.
 - **Isolate a route**: Click any route (`POST /api/order`, `GET /api/games/mine`, etc.) in a chart legend to focus on that single endpoint's line or bar.
 
 ---
@@ -124,5 +124,8 @@ gcloud logging read \
    python -m pytest backend/tests/unit/test_telemetry.py -v
    python scripts/sync_gcp_monitoring.py --project diplomacy-1901-prod --dry-run
    ```
-4. **Never quote label keys in `groupByFields`**: In Google Cloud Monitoring `aggregation.groupByFields`, field paths must be unquoted (`metric.label.route_key`, **never** `metric.label."route_key"`). Inner double quotes prevent `crossSeriesReducer` from matching the label, stripping all labels and causing chart legends to render internal widget UUIDs. (By contrast, filter strings in `timeSeriesFilter.filter` *do* quote label keys: `metric.label."outcome"="error"`.)
+4. **Follow Cloud Monitoring's singular vs. plural label rules**:
+   - In `timeSeriesFilter.filter`: quote label keys with singular `metric.label."<key>"` (e.g., `metric.label."outcome"="error"`).
+   - In `aggregation.groupByFields`: use **unquoted** singular `metric.label.<key>` (never `metric.label."<key>"`, which prevents `crossSeriesReducer` from matching the label).
+   - In `xyChart.dataSets[].legendTemplate`: use **plural** `${metric.labels.<key>}` (never singular `${metric.label.<key>}`, which evaluates as undefined and causes the UI to render raw dataset UUIDs in chart legends).
 5. **Never log PII or secrets**: Telemetry payloads must never include JWTs, passcodes, emails, display names, or hidden multiplayer orders.

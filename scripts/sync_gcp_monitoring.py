@@ -151,7 +151,7 @@ def _rate(
     flt: str, *grp: str, plot: str = "LINE", leg: str | None = None, period: str = "60s"
 ) -> dict[str, Any]:
     groups = [f"metric.label.{g}" for g in grp]
-    legend = leg if leg is not None else (f"${{metric.label.{grp[0]}}}" if grp else "")
+    legend = leg if leg is not None else (f"${{metric.labels.{grp[0]}}}" if grp else "")
     return _ds(flt, "ALIGN_RATE", "REDUCE_SUM", groups, plot, legend, period=period)
 
 
@@ -159,7 +159,7 @@ def _pct(
     flt: str, p: int, *grp: str, leg: str | None = None, period: str = "60s"
 ) -> dict[str, Any]:
     groups = [f"metric.label.{g}" for g in grp]
-    legend = leg if leg is not None else (f"${{metric.label.{grp[0]}}}" if grp else f"p{p}")
+    legend = leg if leg is not None else (f"${{metric.labels.{grp[0]}}}" if grp else f"p{p}")
     return _ds(flt, "ALIGN_DELTA", f"REDUCE_PERCENTILE_{p}", groups, "LINE", legend, period=period)
 
 
@@ -194,25 +194,25 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
             (6, 0, 6, 4),
             "Overall API Latency Percentiles (p50 / p95 / p99)",
             "Latency (ms)",
-            _pcts(api_l, period="300s"),
+            _pcts(api_l),
         ),
         _tile(
             (0, 4, 6, 5),
             "p95 Latency by Endpoint",
             "Latency (ms)",
-            [_pct(api_l, 95, "route_key", period="300s")],
+            [_pct(api_l, 95, "route_key")],
         ),
         _tile(
             (6, 4, 6, 5),
             "p50 Median Latency by Endpoint",
             "Latency (ms)",
-            [_pct(api_l, 50, "route_key", period="300s")],
+            [_pct(api_l, 50, "route_key")],
         ),
         _tile(
             (0, 9, 6, 5),
             "p99 Tail Latency by Endpoint",
             "Latency (ms)",
-            [_pct(api_l, 99, "route_key", period="300s")],
+            [_pct(api_l, 99, "route_key")],
         ),
         _tile(
             (6, 9, 6, 5),
@@ -230,7 +230,7 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
                     "route_key",
                     "status_class",
                     plot="STACKED_BAR",
-                    leg="${metric.label.route_key} (${metric.label.status_class})",
+                    leg="${metric.labels.route_key} (${metric.labels.status_class})",
                 )
             ],
         ),
@@ -253,7 +253,7 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
                     "REDUCE_SUM",
                     ["metric.label.state"],
                     "STACKED_AREA",
-                    "${metric.label.state}",
+                    "${metric.labels.state}",
                 )
             ],
         ),
@@ -323,7 +323,7 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
             (0, 0, 6, 4),
             "DATC Adjudication p95 Latency by Phase",
             "Latency (ms)",
-            [_pct(eng_l, 95, "phase", leg="${metric.label.phase} (p95)", period="300s")],
+            [_pct(eng_l, 95, "phase", leg="${metric.labels.phase} (p95)")],
         ),
         _tile(
             (6, 0, 6, 4),
@@ -336,7 +336,7 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
                     "REDUCE_SUM",
                     ["metric.label.phase"],
                     "STACKED_BAR",
-                    "${metric.label.phase}",
+                    "${metric.labels.phase}",
                 )
             ],
         ),
@@ -344,13 +344,13 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
             (0, 4, 6, 4),
             "Supabase Query p95 Latency by Operation",
             "Latency (ms)",
-            [_pct(sup_l, 95, "operation", period="300s")],
+            [_pct(sup_l, 95, "operation")],
         ),
         _tile(
             (6, 4, 6, 4),
             "Supabase Query p50 Median Latency by Operation",
             "Latency (ms)",
-            [_pct(sup_l, 50, "operation", period="300s")],
+            [_pct(sup_l, 50, "operation")],
         ),
         _tile(
             (0, 8, 6, 4),
@@ -362,7 +362,7 @@ def build_dashboards(service_name: str) -> list[dict[str, Any]]:
                     "operation",
                     "outcome",
                     plot="STACKED_BAR",
-                    leg="${metric.label.operation} (${metric.label.outcome})",
+                    leg="${metric.labels.operation} (${metric.labels.outcome})",
                 )
             ],
         ),

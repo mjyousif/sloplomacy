@@ -273,8 +273,9 @@ def test_terraform_monitoring_and_dashboards_match_telemetry_schema():
     for dash_res in ("api_endpoint_performance", "cloud_run_infrastructure", "engine_and_supabase"):
         assert f'resource "google_monitoring_dashboard" "{dash_res}"' in dashboards_tf
 
-    # Verify HCL escaping for Cloud Monitoring legend templates (${...} must be escaped as $${...})
-    assert "$${metric.label.route_key}" in dashboards_tf
+    # Verify HCL escaping and plural metric.labels.* syntax in legend templates
+    assert "$${metric.labels.route_key}" in dashboards_tf
+    assert "$${metric.label." not in dashboards_tf
     assert 'group_by = ["metric.label.\\"' not in dashboards_tf
     assert '"metric.label.route_key"' in dashboards_tf
     assert "run.googleapis.com/container/instance_count" in dashboards_tf
@@ -300,6 +301,7 @@ def test_sync_gcp_monitoring_script_matches_schema():
     for dash in dashboards:
         for tile in dash["mosaicLayout"]["tiles"]:
             for ds in tile["widget"]["xyChart"]["dataSets"]:
+                assert "${metric.label." not in ds["legendTemplate"]
                 for field in ds["timeSeriesQuery"]["timeSeriesFilter"]["aggregation"][
                     "groupByFields"
                 ]:
@@ -308,5 +310,6 @@ def test_sync_gcp_monitoring_script_matches_schema():
     serialized = json.dumps(dashboards)
     for name in metric_names:
         assert f"logging.googleapis.com/user/{name}" in serialized
-    assert "${metric.label.route_key}" in serialized
+    assert "${metric.labels.route_key}" in serialized
+    assert "${metric.label." not in serialized
     assert "$${" not in serialized
