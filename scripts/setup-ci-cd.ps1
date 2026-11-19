@@ -43,8 +43,8 @@ Write-Host "[OK] Target GCP Project: $ProjectId" -ForegroundColor Green
 
 # 2. Enable Required APIs
 Write-Host ""
-Write-Host "--> Enabling required APIs (Cloud Run, Cloud Build, Artifact Registry, IAM)..." -ForegroundColor Cyan
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com iam.googleapis.com --project $ProjectId
+Write-Host "--> Enabling required APIs (Cloud Run, Cloud Build, Artifact Registry, IAM, Logging, Monitoring)..." -ForegroundColor Cyan
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com iam.googleapis.com logging.googleapis.com monitoring.googleapis.com --project $ProjectId
 
 Write-Host ""
 Write-Host "--> Ensuring Artifact Registry repository 'diplomacy-repo' exists..." -ForegroundColor Cyan
@@ -85,7 +85,10 @@ $roles = @(
     "roles/iam.serviceAccountUser",
     "roles/cloudbuild.builds.editor",
     "roles/storage.admin",
-    "roles/artifactregistry.writer"
+    "roles/artifactregistry.writer",
+    "roles/logging.configWriter",
+    "roles/monitoring.editor",
+    "roles/serviceusage.serviceUsageAdmin"
 )
 
 foreach ($role in $roles) {

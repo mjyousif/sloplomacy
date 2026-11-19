@@ -304,3 +304,11 @@ jobs:
           echo "- **Public URL:** [$SERVICE_URL]($SERVICE_URL)" >> $GITHUB_STEP_SUMMARY
           echo "- **Image Tag:** \`$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
           echo "Live URL: $SERVICE_URL"
+
+      - name: Sync Cloud Logging Metrics & Monitoring Dashboards
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          SERVICE_NAME: ${{ secrets.GCP_SERVICE_NAME || 'diplomacy-1901' }}
+        run: |
+          gcloud services enable logging.googleapis.com monitoring.googleapis.com --project "$PROJECT_ID" || true
+          python3 scripts/sync_gcp_monitoring.py --project "$PROJECT_ID" --service "$SERVICE_NAME"

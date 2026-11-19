@@ -277,3 +277,26 @@ def test_terraform_monitoring_and_dashboards_match_telemetry_schema():
     assert "$${metric.label.route_key}" in dashboards_tf
     assert "run.googleapis.com/container/instance_count" in dashboards_tf
     assert "run.googleapis.com/container/startup_latencies" in dashboards_tf
+
+
+def test_sync_gcp_monitoring_script_matches_schema():
+    from scripts.sync_gcp_monitoring import build_dashboards, build_log_metrics
+
+    metrics = build_log_metrics("diplomacy-1901")
+    metric_names = {m["name"] for m in metrics}
+    assert metric_names == {
+        "diplomacy-1901_api_request_count",
+        "diplomacy-1901_api_request_latency_ms",
+        "diplomacy-1901_engine_adjudicate_latency_ms",
+        "diplomacy-1901_supabase_query_count",
+        "diplomacy-1901_supabase_query_latency_ms",
+    }
+
+    dashboards = build_dashboards("diplomacy-1901")
+    assert len(dashboards) == 3
+    assert [len(d["mosaicLayout"]["tiles"]) for d in dashboards] == [8, 8, 6]
+    serialized = json.dumps(dashboards)
+    for name in metric_names:
+        assert f"logging.googleapis.com/user/{name}" in serialized
+    assert "${metric.label.route_key}" in serialized
+    assert "$${" not in serialized
