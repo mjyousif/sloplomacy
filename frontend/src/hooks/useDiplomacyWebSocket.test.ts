@@ -24,10 +24,9 @@ describe('useDiplomacyWebSocket helpers', () => {
       );
     });
 
-    it('returns /ws/games/{id} when viewMode is sandbox', () => {
-      expect(resolveWebSocketPath('sandbox', 'proto_1901')).toBe(
-        '/ws/games/proto_1901?handshake=1',
-      );
+    it('returns null when viewMode is sandbox', () => {
+      expect(resolveWebSocketPath('sandbox', 'proto_1901')).toBeNull();
+      expect(resolveWebSocketPath('sandbox', 'solo_1234')).toBeNull();
     });
 
     it('returns null when activeGameId is null in match modes', () => {
