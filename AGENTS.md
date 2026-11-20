@@ -333,17 +333,20 @@ The game cycles through three standard phases per year:
 
 ### 1. Mandatory Documentation Freshness Check
 **Agents and contributors must actively inspect and maintain repository documentation.** Never leave documentation outdated when modifying code or discovering existing discrepancies.
-- **Before Completing Tasks**: Check whether any changed APIs, models, components, phases, or deployment scripts affect existing docs.
+- **Documentation Philosophy**: Document **systems, features, and cross-component interactions** (with Mermaid diagrams and invariants)—never file-by-file or helper-by-helper inventories. Every doc under `docs/` must include a `## Contents` table of contents linking its `##` sections.
+- **Before Completing Tasks**: Check whether any changed features, APIs, models, architecture invariants, or deployment scripts affect existing docs.
 - **Documentation Checklist**:
+  - **User-Facing Feature Added/Changed**: Update or add the matching high-level doc in `docs/features/` and index it in [docs/README.md](docs/README.md).
+  - **Runtime, Persistence, Secrecy, or Auth Invariant Changed**: Update the matching cross-cutting doc in `docs/architecture/` ([runtime-and-infrastructure.md](docs/architecture/runtime-and-infrastructure.md), [consistency-and-persistence.md](docs/architecture/consistency-and-persistence.md), [secrecy-and-authorization.md](docs/architecture/secrecy-and-authorization.md), [identity-and-auth.md](docs/architecture/identity-and-auth.md)).
   - **API Endpoints Changed/Added**: Update both the Endpoint Summary table and detailed endpoint sections in [docs/backend/api-reference.md](docs/backend/api-reference.md).
   - **Data Models / Schemas Changed**: Update Pydantic and TypeScript definitions in [docs/architecture/data-models.md](docs/architecture/data-models.md).
   - **Adjudication or Rule Mechanics Changed**: Update [docs/backend/adjudicator.md](docs/backend/adjudicator.md) and [docs/guides/rulebook-reference.md](docs/guides/rulebook-reference.md).
   - **Validator Rules Changed**: Update issue tables and code listings in [docs/backend/validator.md](docs/backend/validator.md).
-  - **Frontend Components, Layout, or State Changed**: Update [docs/frontend/README.md](docs/frontend/README.md), [docs/frontend/sidebar-and-controls.md](docs/frontend/sidebar-and-controls.md), [docs/frontend/map-renderer.md](docs/frontend/map-renderer.md), and [docs/frontend/state-management.md](docs/frontend/state-management.md).
-  - **Infrastructure & Deployment Pipeline Changed**: Update [docs/guides/google-cloud-deployment.md](docs/guides/google-cloud-deployment.md).
+  - **Frontend Layout, Map Interaction, or State Flow Changed**: Update the behavioral/interaction sections of [docs/frontend/sidebar-and-controls.md](docs/frontend/sidebar-and-controls.md), [docs/frontend/map-renderer.md](docs/frontend/map-renderer.md), or [docs/frontend/state-management.md](docs/frontend/state-management.md) (update [docs/frontend/README.md](docs/frontend/README.md) only when top-level structure changes).
+  - **Infrastructure & Deployment Pipeline Changed**: Update [docs/guides/google-cloud-deployment.md](docs/guides/google-cloud-deployment.md) and [docs/architecture/runtime-and-infrastructure.md](docs/architecture/runtime-and-infrastructure.md).
   - **Telemetry, Log-Based Metrics, or Dashboards Changed**: Update [docs/guides/observability-and-dashboards.md](docs/guides/observability-and-dashboards.md).
   - **Developer Tools or Test Harness Changed**: Update [docs/guides/development.md](docs/guides/development.md) and [docs/backend/README.md](docs/backend/README.md).
-  - **Top-Level Navigation**: Ensure newly added documents are indexed in both [README.md](README.md) and [docs/README.md](docs/README.md).
+  - **Top-Level Navigation**: Ensure newly added documents are indexed in [docs/README.md](docs/README.md) (and [README.md](README.md) if applicable).
 
 ### 2. Monolith Prevention & File Size Guardrails
 To prevent files from growing into unmaintainable monoliths, agents and contributors must observe these modular architectural rules:

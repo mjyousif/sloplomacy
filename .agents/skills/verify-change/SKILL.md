@@ -56,10 +56,13 @@ Then evaluate the screenshots. The E2E suite exists so that **you** read them. A
 Don't commit `artifacts/`.
 ## 3. Documentation and contracts (always)
 
-Walk the checklist in AGENTS.md section 5.1 against `git diff --stat`. The ones people forget:
+Walk the checklist in AGENTS.md section 5.1 against `git diff --stat`. Docs describe **systems, features, and cross-component interactions** (with Mermaid diagrams and invariants)—never file-by-file or helper-by-helper inventories.
 
+- New or changed user-facing feature (or user-visible behavior change) → update or add the matching doc in `docs/features/` and index it in `docs/README.md`.
+- Changes to runtime/infra, persistence/concurrency, secrecy, or auth → update the matching doc in `docs/architecture/` (`runtime-and-infrastructure.md`, `consistency-and-persistence.md`, `secrecy-and-authorization.md`, `identity-and-auth.md`).
 - New or changed endpoint → both the summary table and the detail section of `docs/backend/api-reference.md`.
-- New file, component, or package → verify package boundaries in `AGENTS.md` section 3 and update `docs/frontend/README.md` or `docs/backend/README.md` if applicable.
+- Package boundary or top-level directory change → verify package boundaries in `AGENTS.md` section 3 and update `docs/frontend/README.md` or `docs/backend/README.md` (do not add per-helper file lists).
+- Any created or edited doc in `docs/` → keep its `## Contents` table of contents and relative links up to date.
 - File size & modularity: ensure no touched file grew into an unmaintainable monolith (> 500 lines). Follow `.agents/skills/codebase-modularity/SKILL.md` and decompose when necessary.
 - Test counts: don't hardcode a new number in prose. A new `test_*.py` goes where the layout in `docs/backend/README.md` (Running Backend Tests) puts it; there is no list of suites to update. Run it on its own once to make sure it doesn't lean on tests that happen to run before it.
 - A new invariant you had to learn the hard way belongs in AGENTS.md section 4, one bold **Invariant** line.

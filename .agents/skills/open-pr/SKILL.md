@@ -59,5 +59,5 @@ Squash merging rewrites history, so a branch that was cut from another open PR c
 
 - Push to `main`, force-push over a reviewed branch without saying so, or disable checks.
 - Push new work onto a branch whose PR is already `MERGED` or `CLOSED`.
-- Leave docs out of the PR. The docs checklist in AGENTS.md section 5.1 is part of the change.
+- Leave docs out of the PR. The docs checklist in `AGENTS.md` section 5.1 and `.agents/skills/verify-change/SKILL.md` section 3 is part of the change—confirm `docs/features/` and `docs/architecture/` reflect any new feature or invariant, and every touched doc has an up-to-date `## Contents` TOC.
 - Bundle unrelated fixes. Small single-topic PRs were reviewed and merged fastest.
