@@ -153,7 +153,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           adminOverrideActive={adminOverrideActive}
           pressPower={
             press && !press.gameOver && !press.surrendered
-              ? press.power
+              ? (press.power ?? undefined)
               : undefined
           }
           onPressPick={isDrawer ? onOpenPress : undefined}
@@ -179,12 +179,14 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           ))}
 
         {/* 6. HYPOTHETICAL MODE & PRE-MOVES */}
-        <SandboxToolsSection
-          sandboxMode={sandboxMode}
-          onToggleSandboxMode={onToggleSandboxMode}
-          onClearForeignPreMoves={onClearForeignPreMoves}
-          foreignModifiedOrdersCount={foreignModifiedOrdersCount}
-        />
+        {onToggleSandboxMode && (
+          <SandboxToolsSection
+            sandboxMode={sandboxMode}
+            onToggleSandboxMode={onToggleSandboxMode}
+            onClearForeignPreMoves={onClearForeignPreMoves}
+            foreignModifiedOrdersCount={foreignModifiedOrdersCount}
+          />
+        )}
       </div>
     </aside>
   );

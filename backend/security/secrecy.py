@@ -1,5 +1,3 @@
-import hmac
-
 from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
 from engine.adjudicator.resolver import adjudicate_turn
@@ -7,9 +5,9 @@ from engine.order_utils import create_default_orders
 from engine.reachability import compute_unit_options
 from fastapi import Depends, HTTPException, Request, status
 from security.auth import AuthUser, get_current_user
+from security.passcode import require_passcode
 from storage.store import (
     DEFAULT_GAME_ID,
-    GAME_PASSCODES,
     GAME_SUMMARIES,
     GAMES,
     PRIVATE_SANDBOXES,
@@ -24,8 +22,14 @@ def require_view_access(
     game_id: str,
     current_user: AuthUser | None,
     passcode: str | None,
+    *,
+    client: str,
 ) -> None:
-    """Refuse to show a private match to anyone who is neither seated in it nor has its passcode."""
+    """Refuse to show a private match to anyone who is neither seated in it nor has its passcode.
+
+    `client` is the caller's address (`security.passcode.client_address`), against which a wrong
+    passcode is counted.
+    """
     summary = GAME_SUMMARIES.get(game_id)
     if not (summary and summary.has_passcode and is_multiplayer_match(game_id)):
         return
@@ -33,13 +37,7 @@ def require_view_access(
         p.user_id == current_user.user_id for p in summary.participants.values()
     ):
         return
-    expected_pw = GAME_PASSCODES.get(game_id, "")
-    provided_pw = (passcode or "").strip()
-    if not expected_pw or not hmac.compare_digest(provided_pw, expected_pw):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Passcode required or incorrect for this private campaign.",
-        )
+    require_passcode(game_id, passcode, client)
 
 
 def verify_admin_access(

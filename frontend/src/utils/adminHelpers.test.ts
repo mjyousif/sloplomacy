@@ -14,7 +14,9 @@ import {
   filterUnitsForDisband,
   getAvailableCoasts,
   getUnacknowledgedAdminEntries,
+  isSpectating,
   resolvePlayerPower,
+  watchedPowerFor,
 } from './adminHelpers';
 
 describe('adminHelpers', () => {
@@ -381,5 +383,42 @@ describe('computeStagedDiffLines & getUnacknowledgedAdminEntries', () => {
         afterUndoOwnership.orders,
       ),
     ).toEqual([]);
+  });
+});
+
+describe('spectating', () => {
+  const units = [
+    { id: 'u1', power: 'GERMANY', type: 'A', province: 'BER' },
+    { id: 'u2', power: 'AUSTRIA', type: 'A', province: 'VIE' },
+  ] as unknown as Unit[];
+
+  it('is a multiplayer match opened without a seat', () => {
+    expect(isSpectating('multiplayer', null, null)).toBe(true);
+    expect(isSpectating('multiplayer', 'FRANCE', null)).toBe(false);
+    expect(isSpectating('sandbox', null, null)).toBe(false);
+    expect(isSpectating('lobby', null, null)).toBe(false);
+    expect(
+      isSpectating('multiplayer', null, {
+        is_sandbox: true,
+      } as MultiplayerGameSummary),
+    ).toBe(false);
+  });
+
+  it("shows the spectator's pick, else the first power with units", () => {
+    expect(watchedPowerFor('ITALY', units)).toBe('ITALY');
+    expect(watchedPowerFor(null, units)).toBe('GERMANY');
+    expect(watchedPowerFor(null, [])).toBe('FRANCE');
+  });
+
+  it("gives a spectator the power they watch, never the match's shared one", () => {
+    expect(
+      resolvePlayerPower('multiplayer', null, 'FRANCE', false, 'GERMANY'),
+    ).toBe('GERMANY');
+    expect(
+      resolvePlayerPower('multiplayer', 'ITALY', 'FRANCE', false, 'GERMANY'),
+    ).toBe('ITALY');
+    expect(resolvePlayerPower('sandbox', null, 'FRANCE', false, null)).toBe(
+      'FRANCE',
+    );
   });
 });

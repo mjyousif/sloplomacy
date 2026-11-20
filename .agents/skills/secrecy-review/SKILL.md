@@ -11,8 +11,10 @@ Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #
 
 - [ ] Every response or broadcast of a live match's `GameState` goes through `sanitize_game_state_for_viewer`. A `waiting` match (a lobby, or one that dropped to one player) is still live: never skip masking by status. This includes votes, extends, ready, `power`, `simulate`, save-as and WebSocket pushes. Returning `game` directly is a bug.
 - [ ] Derived fields are masked too: `preview`, issues, diagnostics, history. Rebuild them from what the viewer may see, never filter after the fact.
-- [ ] Counters leak too. A sequence number shared by messages that different viewers may read shows, by its gaps, how many they cannot see. Number per viewer (press `seq` comes from `PressMessage.numbers`).
-- [ ] A `?power=` query only selects among the caller's own seats. It never grants a view of another power.
+- [ ] Counters leak too. A sequence number shared by messages that different viewers may read shows, by its gaps, how many they cannot see. Number per viewer (press `seq` comes from `PressMessage.numbers`, and a spectator's from `PressMessage.public_number`).
+- [ ] A `?power=` query only selects among the caller's own seats. It never grants a view of another power. A spectator client sends none: without a token, a named `power` picks a seat claimed without an account.
+- [ ] A spectator (no seat) gets a fully masked board and, of press, only public messages (`security.press.spectator_feed` / `spectator_view`, never `view_of`). Test a new read path with a signed-out caller as well as the rival player.
+- [ ] A private match's passcode is checked only through `security.passcode` (`require_passcode`, `check_passcode`), which counts wrong guesses. A new route that takes a passcode uses it with `client_address(request)`, and checks it before anything with side effects (such as `tick_timer`).
 - [ ] The WebSocket learns the caller from the `auth` first message (`?handshake=1`). Never put a token in a URL (Cloud Run logs it).
 - [ ] Per-viewer broadcast: each socket gets its own masked copy, not one shared payload.
 - [ ] A lobby listing (`GET /api/games`, `/api/games/browse`, `/ws/lobby`) goes through `storage.lobby.public_summaries`, so it never names a private campaign or a sandbox. The lobby socket shares one payload, so anything per-player belongs in `GET /api/games/mine` instead. Browse rows carry no emails or user ids.

@@ -29,6 +29,8 @@ export interface GameBrowserProps {
   onRefreshGames: () => void;
   onOpenAuth: (reason?: string, tab?: 'signin' | 'signup') => void;
   onJoinOrEnterGame: (gameId: string, power: Power) => Promise<void>;
+  /** Watches a game without a seat. Signed-out visitors may watch too. */
+  onWatchGame: (gameId: string) => Promise<void>;
 }
 
 /** The public games, paged and filtered: open seats first, then most recently played. */
@@ -40,6 +42,7 @@ export const GameBrowser: React.FC<GameBrowserProps> = ({
   onRefreshGames,
   onOpenAuth,
   onJoinOrEnterGame,
+  onWatchGame,
 }) => {
   const { filters, setFilters, page, setPage, result, loading, error } =
     useLobbyBrowse(refreshSignal);
@@ -127,6 +130,7 @@ export const GameBrowser: React.FC<GameBrowserProps> = ({
                 myPower={myPowerIn(row.game_id, myGames, user?.id ?? null)}
                 joiningKey={joiningKey}
                 onClaim={(power) => claim(row.game_id, row.name, power)}
+                onWatch={() => onWatchGame(row.game_id).catch(() => {})}
               />
             ))}
           </ul>

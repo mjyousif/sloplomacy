@@ -596,3 +596,40 @@ describe('useGameSession: optimistic order lifecycle & stale revision guards', (
     expect(result.current.gameState?.game_id).toBe('mp_2');
   });
 });
+
+describe('useGameSession: watching without a seat', () => {
+  it('is a spectator in multiplayer with no seat, shown the first power with units', () => {
+    const { result } = renderSession('multiplayer');
+    act(() =>
+      result.current.setGameState(
+        state({
+          units: [
+            { id: 'u', power: 'GERMANY', type: 'A', province: 'BER' },
+          ] as unknown as GameState['units'],
+        }),
+      ),
+    );
+    expect(result.current.isSpectator).toBe(true);
+    expect(result.current.spectatorPower).toBe('GERMANY');
+    expect(result.current.playerPower).toBe('GERMANY');
+    act(() => result.current.setWatchedPower('ITALY'));
+    expect(result.current.playerPower).toBe('ITALY');
+    act(() => result.current.setLockedPower('TURKEY'));
+    expect(result.current.isSpectator).toBe(false);
+    expect(result.current.spectatorPower).toBeNull();
+    expect(result.current.playerPower).toBe('TURKEY');
+  });
+
+  it('names no power and sends the passcode when it loads the match', async () => {
+    fetchMock.mockResolvedValue(
+      reply(200, { state: state({ game_id: 'mp_1' }), provinces: {} }),
+    );
+    const { result } = renderSession('multiplayer');
+    act(() => result.current.setMatchPasscodes({ mp_1: 'Secret' }));
+    await act(() => result.current.fetchGame('mp_1'));
+    expect(urlOf(0)).toBe('/api/game?game_id=mp_1');
+    expect(fetchMock.mock.calls[0][1]).toEqual({
+      headers: { Authorization: 'Bearer t', 'X-Passcode': 'Secret' },
+    });
+  });
+});

@@ -11,7 +11,7 @@
 
   .main {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 96px auto 92px;
+    grid-template-columns: minmax(0, 1fr) 96px auto minmax(92px, auto);
     grid-template-areas: "name turn seats action";
     align-items: center;
     gap: 14px;
@@ -86,6 +86,7 @@
     grid-area: action;
     display: flex;
     justify-content: flex-end;
+    gap: 6px;
   }
 
   .button {
@@ -114,6 +115,17 @@
     border-color: #3c4454;
     color: var(--text-dim);
     cursor: not-allowed;
+  }
+
+  .button[data-variant="watch"] {
+    background: transparent;
+    border: 1px solid var(--border-slate-strong);
+    color: var(--text-secondary);
+  }
+
+  .button[data-variant="watch"]:hover {
+    border-color: var(--info-sky);
+    color: #e0f2fe;
   }
 
   .button[data-variant="resume"] {

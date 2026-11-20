@@ -1,14 +1,15 @@
 import { authedFetch } from '../lib/supabase';
-import type {
-  AdminActionLogEntry,
-  AuthUser,
-  MultiplayerGameSummary,
-  Order,
-  Power,
-  ProvinceInfo,
-  ProvinceType,
-  Unit,
-  UnitType,
+import {
+  type AdminActionLogEntry,
+  ALL_POWERS,
+  type AuthUser,
+  type MultiplayerGameSummary,
+  type Order,
+  type Power,
+  type ProvinceInfo,
+  type ProvinceType,
+  type Unit,
+  type UnitType,
 } from '../types/diplomacy';
 
 /**
@@ -20,11 +21,42 @@ export function resolvePlayerPower(
   lockedPower: Power | null,
   serverActivePower: Power | undefined,
   sandboxMode: boolean = false,
+  /** A spectator's power on screen (`watchedPowerFor`), which wins over the shared one. */
+  watchedPower: Power | null = null,
 ): Power {
   if (viewMode === 'multiplayer' && lockedPower && !sandboxMode) {
     return lockedPower;
   }
+  if (viewMode === 'multiplayer' && !lockedPower && watchedPower) {
+    return watchedPower;
+  }
   return serverActivePower ?? lockedPower ?? 'FRANCE';
+}
+
+/**
+ * Watching a match without a seat. A spectator sees every power's orders masked, never sends
+ * a `power` to the server (a token-less `power` would claim a guest seat), and gives no orders.
+ */
+export function isSpectating(
+  viewMode: 'lobby' | 'sandbox' | 'multiplayer',
+  lockedPower: Power | null,
+  summary: MultiplayerGameSummary | null,
+): boolean {
+  return viewMode === 'multiplayer' && !lockedPower && !summary?.is_sandbox;
+}
+
+/**
+ * The power a spectator's order panel shows: the one they picked, else the first power with
+ * units on the board. It is only what this browser shows, never sent to the server.
+ */
+export function watchedPowerFor(
+  picked: Power | null,
+  units: readonly Unit[] | undefined,
+): Power {
+  if (picked) return picked;
+  return (
+    ALL_POWERS.find((p) => units?.some((u) => u.power === p)) ?? ALL_POWERS[0]
+  );
 }
 
 export function checkIsGameCreator(

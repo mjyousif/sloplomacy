@@ -84,22 +84,24 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
 
       <div className={chromeStyles.railDivider} />
 
-      <button
-        type="button"
-        className={cx(
-          chromeStyles.sidebarRailBtn,
-          sandboxMode && styles.railActiveGlow,
-        )}
-        data-active={sandboxMode ? 'true' : undefined}
-        onClick={onToggleSandboxMode}
-        title={
-          sandboxMode
-            ? 'Hypothetical Mode ACTIVE (Click to toggle)'
-            : 'Enter Hypothetical Mode'
-        }
-      >
-        <Eye size={16} />
-      </button>
+      {onToggleSandboxMode && (
+        <button
+          type="button"
+          className={cx(
+            chromeStyles.sidebarRailBtn,
+            sandboxMode && styles.railActiveGlow,
+          )}
+          data-active={sandboxMode ? 'true' : undefined}
+          onClick={onToggleSandboxMode}
+          title={
+            sandboxMode
+              ? 'Hypothetical Mode ACTIVE (Click to toggle)'
+              : 'Enter Hypothetical Mode'
+          }
+        >
+          <Eye size={16} />
+        </button>
+      )}
 
       {press.enabled && (
         <button

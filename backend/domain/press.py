@@ -18,6 +18,9 @@ class PressMessage(BaseModel):
     # The message's place in each reader's own feed (1, 2, 3...), set when it is sent. This is
     # the `seq` a reader is sent until the press is revealed, when everyone reads everything.
     numbers: dict[Power, int] = Field(default_factory=dict)
+    # A public message's place among the public messages alone (1, 2, 3...), which is the `seq` a
+    # spectator is sent. 0 for a private message, which a spectator never reads.
+    public_number: int = 0
     sender: Power
     anonymous: bool = False
     # Empty for public press. Otherwise the powers it was sent to, never including the sender.
@@ -42,14 +45,20 @@ class PressMessage(BaseModel):
 
 
 def number_messages(messages: list[PressMessage]) -> None:
-    """Give each message that has no `numbers` yet its place in each reader's feed, counting on
-    from the messages before it. `messages` is in `seq` order. Press saved before numbering
-    existed is numbered the same way when it is loaded."""
+    """Give each message that has no `numbers` yet its place in each reader's feed, and each
+    public message that has no `public_number` yet its place among public messages, counting on
+    from the messages before it. `messages` is in `seq` order. Press saved before either kind of
+    numbering existed is numbered the same way when it is loaded."""
     last: dict[Power, int] = {}
+    last_public = 0
     for message in messages:
         if not message.numbers:
             message.numbers = {p: last.get(p, 0) + 1 for p in message.readers()}
         last.update(message.numbers)
+        if not message.recipients:
+            if not message.public_number:
+                message.public_number = last_public + 1
+            last_public = message.public_number
 
 
 class PressMessageView(BaseModel):
@@ -74,9 +83,12 @@ class PressMessageView(BaseModel):
 
 
 class PressFeed(BaseModel):
-    """What `GET /api/press` answers: the messages the caller's power may read, oldest first."""
+    """What `GET /api/press` answers: the messages the caller's power may read, oldest first.
 
-    power: Power
+    For a spectator (a viewer with no seat) `power` is None and the feed is the public box alone.
+    """
+
+    power: Power | None
     # True once the game is over: every thread and every anonymous author is shown to the players.
     revealed: bool
     messages: list[PressMessageView]

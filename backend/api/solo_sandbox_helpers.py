@@ -143,6 +143,7 @@ async def export_game_to_solo_sandbox(
     passcode: str | None,
     current_user: AuthUser | None,
     sync_lobby: Callable[[], Awaitable[None]],
+    client: str,
 ) -> GameBootstrapResponse:
     """Export an authorized view of `source_game_id` into a new personal draft sandbox."""
     check_game_capacity()
@@ -154,7 +155,7 @@ async def export_game_to_solo_sandbox(
         export_power = source.active_power
     else:
         require_saved_sandbox_owner(source.game_id, current_user)
-        require_view_access(source.game_id, current_user, passcode)
+        require_view_access(source.game_id, current_user, passcode, client=client)
         viewer_power = viewer_power_for(source.game_id, current_user)
         visible = sanitize_game_state_for_viewer(source, viewer_power)
         export_power = viewer_power or source.active_power
@@ -191,11 +192,12 @@ async def create_or_resume_solo_sandbox(
     passcode: str | None,
     current_user: AuthUser | None,
     sync_lobby: Callable[[], Awaitable[None]],
+    client: str,
 ) -> GameBootstrapResponse:
     """Create a fresh draft sandbox, resume an existing draft, or export a board state."""
     if source_game_id and source_game_id.strip():
         return await export_game_to_solo_sandbox(
-            source_game_id.strip(), resume_game_id, passcode, current_user, sync_lobby
+            source_game_id.strip(), resume_game_id, passcode, current_user, sync_lobby, client
         )
 
     if resume_game_id:

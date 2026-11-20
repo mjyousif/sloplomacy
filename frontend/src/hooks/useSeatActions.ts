@@ -106,8 +106,11 @@ export function useSeatActions({
   } | null>(null);
 
   const rememberCurrentGame = () => {
+    // A spectator holds no seat to come back to.
+    const watching = viewMode === 'multiplayer' && !lockedPower;
     if (
       viewMode !== 'lobby' &&
+      !watching &&
       activeGameSummary &&
       !activeGameSummary.is_draft
     ) {

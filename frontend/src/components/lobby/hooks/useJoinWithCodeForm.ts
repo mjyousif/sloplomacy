@@ -10,6 +10,8 @@ interface JoinWithCodeFormOptions {
     power: Power,
     passcode?: string,
   ) => Promise<void>;
+  /** Opens the match to watch without a seat; needs no account. */
+  onWatchGame: (gameId: string, passcode?: string) => Promise<void>;
   /** The form is finished with: the seat was claimed, or a guest was sent to sign in. */
   onDone: () => void;
 }
@@ -19,6 +21,7 @@ export function useJoinWithCodeForm({
   user,
   onOpenAuth,
   onJoinOrEnterGame,
+  onWatchGame,
   onDone,
 }: JoinWithCodeFormOptions) {
   const [joinCodeGameId, setJoinCodeGameId] = useState('');
@@ -55,6 +58,24 @@ export function useJoinWithCodeForm({
     }
   };
 
+  // Watching needs only the Game ID and, for a private match, its passcode.
+  const handleWatchClick = async () => {
+    const cleanId = joinCodeGameId.trim();
+    if (!cleanId) return;
+    setJoinCodeLoading(true);
+    setJoinCodeError(null);
+    try {
+      await onWatchGame(cleanId, joinCodePasscode.trim());
+      setJoinCodeGameId('');
+      setJoinCodePasscode('');
+      onDone();
+    } catch (err: any) {
+      setJoinCodeError(err.message || 'Could not watch this campaign.');
+    } finally {
+      setJoinCodeLoading(false);
+    }
+  };
+
   return {
     /** Props for `JoinWithCodeCard`, apart from `user`. */
     card: {
@@ -67,6 +88,7 @@ export function useJoinWithCodeForm({
       joinCodeLoading,
       joinCodeError,
       handleJoinCodeSubmit,
+      handleWatchClick,
     },
     clearError: () => setJoinCodeError(null),
   };

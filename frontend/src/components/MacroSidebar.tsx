@@ -1,5 +1,6 @@
 import type React from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import type { SpectatorControls } from '../hooks/useSpectate';
 import {
   type GameParticipant,
   type Order,
@@ -35,7 +36,9 @@ import {
 import { MacroSheet } from './macro/MacroSheet';
 import { ClearAllButton, OrderFooter } from './macro/OrderFooter';
 import { HistoryLockBar, PhaseContext, PowerHeader } from './macro/PowerHeader';
+import { SpectatorBar } from './macro/SpectatorBar';
 import { UnitOrderList } from './macro/UnitOrderList';
+import { useCompactOrders } from './macro/useCompactOrders';
 
 export interface MacroSidebarProps {
   provinces: Record<string, ProvinceInfo>;
@@ -120,6 +123,8 @@ export interface MacroSidebarProps {
   onOpenPress?: () => void;
   /** Ref for the phone Press button so closing the Press sheet restores focus to it. */
   pressToggleRef?: React.Ref<HTMLButtonElement>;
+  /** Watching without a seat: the units of `activePower` are listed with nothing to order. */
+  spectator?: SpectatorControls;
 }
 
 export const MacroSidebar: React.FC<MacroSidebarProps> = ({
@@ -179,6 +184,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   turnClockSettings,
   onOpenPress,
   pressToggleRef,
+  spectator,
 }) => {
   const powerMeta = POWER_METADATA[activePower];
   const isFinalized = finalizedPowers.includes(activePower);
@@ -234,7 +240,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     ],
   );
 
-  const progress = computeOrderProgress({
+  const computed = computeOrderProgress({
     units,
     orders,
     ownership,
@@ -245,39 +251,12 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     isAdjustmentPhase,
     isRetreatPhase,
   });
+  // A spectator is sent every order masked, so nothing about them is "unconfirmed".
+  const progress = spectator ? { ...computed, unconfirmedCount: 0 } : computed;
   const { myBlockingIssues, unconfirmedCount } = progress;
   const isSheet = variant === 'sheet';
-  const [localCompactOrders, setLocalCompactOrders] = useState<boolean>(() => {
-    try {
-      return (
-        typeof window !== 'undefined' &&
-        window.localStorage.getItem('sloplomacy_compact_orders') === '1'
-      );
-    } catch {
-      return false;
-    }
-  });
-  const compactOrders =
-    uiSpacing !== undefined ? uiSpacing === 'compact' : localCompactOrders;
-
-  const handleToggleCompactOrders = () => {
-    if (uiSpacing !== undefined && onToggleUiSpacing) {
-      onToggleUiSpacing();
-      return;
-    }
-    setLocalCompactOrders((prev) => {
-      const next = !prev;
-      try {
-        window.localStorage.setItem(
-          'sloplomacy_compact_orders',
-          next ? '1' : '0',
-        );
-      } catch {
-        // Ignore storage failures in restricted contexts.
-      }
-      return next;
-    });
-  };
+  const { compactOrders, toggleCompactOrders: handleToggleCompactOrders } =
+    useCompactOrders(uiSpacing, onToggleUiSpacing);
 
   const panelScrollRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -305,9 +284,13 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
   // The pieces of the expanded panel. The desktop panel and the phone sheet arrange the same
   // pieces differently, so neither copies the other.
-  const clearAllButton = isSurrendered ? null : (
-    <ClearAllButton key={season + phase} onClearAllOrders={onClearAllOrders} />
-  );
+  const clearAllButton =
+    isSurrendered || spectator ? null : (
+      <ClearAllButton
+        key={season + phase}
+        onClearAllOrders={onClearAllOrders}
+      />
+    );
 
   const phaseContext = (
     <PhaseContext
@@ -336,8 +319,9 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       isAdjustmentPhase={isAdjustmentPhase}
       isRetreatPhase={isRetreatPhase}
       isSheet={isSheet}
-      compactOrders={compactOrders}
-      onToggleCompactOrders={handleToggleCompactOrders}
+      // A spectator gets the read-only rows: no order buttons that only look pressable.
+      compactOrders={compactOrders || Boolean(spectator)}
+      onToggleCompactOrders={spectator ? undefined : handleToggleCompactOrders}
       onSelectUnit={onSelectUnit}
       onHoverUnit={onHoverUnit}
       onHighlightProvinces={onHighlightProvinces}
@@ -364,14 +348,26 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     />
   );
 
-  const locked = historyLabel !== null;
-  const lockBar = locked && (
-    <HistoryLockBar
-      historyLabel={historyLabel}
-      historyIsAdmin={historyIsAdmin}
-      onReturnToLive={onReturnToLive}
-    />
-  );
+  // A past turn, a move suggestion or watching without a seat: the live orders stay inert.
+  const locked = historyLabel !== null || Boolean(spectator);
+  const lockBar =
+    historyLabel !== null ? (
+      <HistoryLockBar
+        historyLabel={historyLabel}
+        historyIsAdmin={historyIsAdmin}
+        onReturnToLive={onReturnToLive}
+      />
+    ) : (
+      spectator && (
+        <SpectatorBar
+          controls={spectator}
+          activePower={activePower}
+          participants={participants}
+          gameOver={gameOver}
+          onSelectPower={onSelectPower}
+        />
+      )
+    );
 
   if (directEditActive && directEdit) {
     return (
@@ -474,6 +470,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         isRetreatPhase={isRetreatPhase}
         consensusInfo={consensusInfo}
         locked={locked}
+        spectating={Boolean(spectator)}
         lockBar={lockBar}
         clearAllButton={clearAllButton}
         phaseContext={phaseContext}
@@ -497,6 +494,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
       data-expanded="true"
       data-testid="macro-sidebar"
       data-history-locked={locked ? 'true' : undefined}
+      data-spectating={spectator ? 'true' : undefined}
       aria-label="Tactical Command & Orders"
     >
       {lockBar}
@@ -535,14 +533,16 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
         {unitList}
       </div>
 
-      {/* 3. STICKY FOOTER: FINALIZE & ADJUDICATE */}
-      <div
-        className={styles.sidebarFooterActions}
-        data-testid="macro-footer-actions"
-        inert={locked || undefined}
-      >
-        {footerActions}
-      </div>
+      {/* 3. STICKY FOOTER: FINALIZE & ADJUDICATE (a spectator has nothing to finalize) */}
+      {!spectator && (
+        <div
+          className={styles.sidebarFooterActions}
+          data-testid="macro-footer-actions"
+          inert={locked || undefined}
+        >
+          {footerActions}
+        </div>
+      )}
     </aside>
   );
 };

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Lock, Play, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, Lock, Play, Plus } from 'lucide-react';
 import type React from 'react';
 import {
   ALL_POWERS,
@@ -31,13 +31,15 @@ export interface GameBrowserRowProps {
   /** `${game_id}_${power}` while that seat is being claimed. */
   joiningKey: string | null;
   onClaim: (power: Power) => void;
+  /** Opens the game to watch without a seat. Not offered in a game the player is in. */
+  onWatch?: () => void;
   now: number;
 }
 
 /**
- * One public game: name, turn, host and a strip of its seven seats, with one button.
- * Join opens the row into the seats a newcomer can claim; a game the player is already
- * in offers Resume instead.
+ * One public game: name, turn, host and a strip of its seven seats, with its buttons.
+ * Join opens the row into the seats a newcomer can claim, and Watch opens the game without
+ * a seat; a game the player is already in offers Resume instead.
  */
 export const GameBrowserRow: React.FC<GameBrowserRowProps> = ({
   row,
@@ -46,6 +48,7 @@ export const GameBrowserRow: React.FC<GameBrowserRowProps> = ({
   myPower,
   joiningKey,
   onClaim,
+  onWatch,
   now,
 }) => {
   const joinable = isRowJoinable(row);
@@ -108,28 +111,43 @@ export const GameBrowserRow: React.FC<GameBrowserRowProps> = ({
               <span>Resume</span>
             </button>
           ) : (
-            <button
-              type="button"
-              className={styles.button}
-              data-variant="join"
-              aria-expanded={joinable ? showSeats : undefined}
-              disabled={!joinable}
-              onClick={onToggle}
-            >
-              <span>
-                {joinable
-                  ? 'Join'
-                  : row.status === 'completed'
-                    ? 'Finished'
-                    : 'Full'}
-              </span>
-              {joinable &&
-                (showSeats ? (
-                  <ChevronUp size={13} />
-                ) : (
-                  <ChevronDown size={13} />
-                ))}
-            </button>
+            <>
+              {onWatch && (
+                <button
+                  type="button"
+                  className={styles.button}
+                  data-variant="watch"
+                  data-testid="browser-row-watch"
+                  onClick={onWatch}
+                  title={`Watch "${row.name}" without a seat`}
+                >
+                  <Eye size={12} />
+                  <span>Watch</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.button}
+                data-variant="join"
+                aria-expanded={joinable ? showSeats : undefined}
+                disabled={!joinable}
+                onClick={onToggle}
+              >
+                <span>
+                  {joinable
+                    ? 'Join'
+                    : row.status === 'completed'
+                      ? 'Finished'
+                      : 'Full'}
+                </span>
+                {joinable &&
+                  (showSeats ? (
+                    <ChevronUp size={13} />
+                  ) : (
+                    <ChevronDown size={13} />
+                  ))}
+              </button>
+            </>
           )}
         </span>
       </div>

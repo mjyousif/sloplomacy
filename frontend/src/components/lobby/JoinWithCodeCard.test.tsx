@@ -20,6 +20,7 @@ function setup(over: Partial<JoinWithCodeCardProps> = {}) {
     joinCodeLoading: false,
     joinCodeError: null,
     handleJoinCodeSubmit: vi.fn((e) => e.preventDefault()),
+    handleWatchClick: vi.fn(),
     ...over,
   };
   const view = render(<JoinWithCodeCard {...props} />);
@@ -121,5 +122,16 @@ describe('JoinWithCodeCard', () => {
   it('shows no error box when there is none', () => {
     setup();
     expect(screen.queryByTestId('join-code-error')).toBeNull();
+  });
+});
+
+describe('JoinWithCodeCard watch', () => {
+  it('watches without a seat once a Game ID is typed', async () => {
+    const { props, user, view } = setup();
+    expect(screen.getByTestId('join-code-watch')).toBeDisabled();
+    view.rerender(<JoinWithCodeCard {...props} joinCodeGameId="mp_1" />);
+    await user.click(screen.getByTestId('join-code-watch'));
+    expect(props.handleWatchClick).toHaveBeenCalled();
+    expect(props.handleJoinCodeSubmit).not.toHaveBeenCalled();
   });
 });

@@ -14,6 +14,7 @@ function renderRow(
     expanded?: boolean;
     myPower?: Power | null;
     joiningKey?: string | null;
+    onWatch?: () => void;
   } = {},
 ) {
   const props = {
@@ -108,5 +109,27 @@ describe('GameBrowserRow', () => {
   it('says Finished for a completed game', () => {
     renderRow({ row: browseRow({ status: 'completed' }) });
     expect(screen.getByRole('button', { name: 'Finished' })).toBeDisabled();
+  });
+});
+
+describe('GameBrowserRow watch', () => {
+  it('offers Watch beside Join, but not in a game the player is in', async () => {
+    const onWatch = vi.fn();
+    renderRow({ onWatch });
+    await userEvent.click(screen.getByTestId('browser-row-watch'));
+    expect(onWatch).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /Join/ })).toBeInTheDocument();
+  });
+
+  it('hides Watch on a row the player holds a seat in', () => {
+    renderRow({ onWatch: vi.fn(), myPower: 'FRANCE' });
+    expect(screen.queryByTestId('browser-row-watch')).toBeNull();
+  });
+
+  it('can still watch a full game', async () => {
+    const onWatch = vi.fn();
+    renderRow({ onWatch, row: FULL_ROW });
+    await userEvent.click(screen.getByTestId('browser-row-watch'));
+    expect(onWatch).toHaveBeenCalled();
   });
 });

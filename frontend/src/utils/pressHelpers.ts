@@ -67,7 +67,8 @@ function kindOf(key: string): PressChannelKind {
  */
 export function buildChannels(
   messages: PressMessage[],
-  viewer: Power,
+  /** The reader's seat, or null for a spectator, who wrote none of them. */
+  viewer: Power | null,
   lastRead: Record<string, number>,
   keep?: string,
 ): PressChannel[] {
@@ -86,7 +87,7 @@ export function buildChannels(
       kind: kindOf(key),
       members: kindOf(key) === 'thread' ? threadMembers(key) : [],
       messages: list,
-      unread: list.filter((m) => m.seq > read && m.sender !== viewer).length,
+      unread: list.filter((m) => m.seq > read && !isOwn(m, viewer)).length,
       lastSeq: list.length ? list[list.length - 1].seq : 0,
     };
   });
@@ -100,12 +101,17 @@ export function buildChannels(
 
 export function totalUnread(
   messages: PressMessage[],
-  viewer: Power,
+  viewer: Power | null,
   lastRead: Record<string, number>,
 ): number {
   return messages.filter(
-    (m) => m.sender !== viewer && m.seq > (lastRead[channelOf(m)] ?? 0),
+    (m) => !isOwn(m, viewer) && m.seq > (lastRead[channelOf(m)] ?? 0),
   ).length;
+}
+
+/** The viewer wrote it. A spectator (no seat) wrote nothing, anonymous messages included. */
+function isOwn(message: PressMessage, viewer: Power | null): boolean {
+  return viewer !== null && message.sender === viewer;
 }
 
 /** Adds messages to a list, skipping ones already there, and keeps it oldest first. */
@@ -207,14 +213,14 @@ const READ_STORAGE_PREFIX = 'sloplomacy_press_read_v2';
 
 /**
  * Revealed press is numbered for the whole game, not per reader, so its marks are kept apart
- * from the ones made while the game was on.
+ * from the ones made while the game was on. A spectator (no seat) has marks of their own.
  */
 function readStorageKey(
   gameId: string,
-  power: Power,
+  power: Power | null,
   revealed: boolean,
 ): string {
-  return `${READ_STORAGE_PREFIX}:${gameId}:${power}${revealed ? ':revealed' : ''}`;
+  return `${READ_STORAGE_PREFIX}:${gameId}:${power ?? 'spectator'}${revealed ? ':revealed' : ''}`;
 }
 
 /** The newest `seq` in each channel: everything held, marked read. */
@@ -230,7 +236,7 @@ export function readUpToNow(messages: PressMessage[]): Record<string, number> {
 /** How far this browser has read each channel of a game, by channel key. */
 export function loadReadMarks(
   gameId: string,
-  power: Power,
+  power: Power | null,
   revealed = false,
 ): Record<string, number> {
   try {
@@ -252,7 +258,7 @@ export function loadReadMarks(
 
 export function saveReadMarks(
   gameId: string,
-  power: Power,
+  power: Power | null,
   marks: Record<string, number>,
   revealed = false,
 ): void {

@@ -476,7 +476,8 @@ export interface PressMessage {
 
 /** `GET /api/press`: what the player's power may read, oldest first. */
 export interface PressFeed {
-  power: Power;
+  /** The seat the feed is for; null for a spectator, who is sent the public box alone. */
+  power: Power | null;
   /** True once the game is over: every thread and anonymous author is shown. */
   revealed: boolean;
   messages: PressMessage[];

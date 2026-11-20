@@ -2,7 +2,7 @@
 
 from domain.board import Power
 from domain.press import PressMessage, number_messages
-from security.press import can_read, feed_for, view_of
+from security.press import can_read, feed_for, spectator_feed, spectator_view, view_of
 
 
 def message(seq=1, sender=Power.FRANCE, recipients=(), anonymous=False) -> PressMessage:
@@ -153,3 +153,52 @@ def test_a_view_carries_the_suggested_orders_as_a_copy():
     assert [o.target for o in view.orders] == ["BUR"]
     view.orders[0].target = "RUH"
     assert suggestion.orders[0].target == "BUR"
+
+
+def test_a_spectator_reads_public_press_alone_numbered_without_gaps():
+    messages = [
+        message(1),
+        message(2, recipients=[Power.GERMANY]),
+        message(3, sender=Power.GERMANY, anonymous=True),
+        message(4, sender=Power.GERMANY, recipients=[Power.FRANCE, Power.ITALY]),
+        message(5),
+    ]
+    number_messages(messages)
+    feed = spectator_feed(messages, revealed=False)
+    assert [(m.id, m.seq) for m in feed] == [("m1", 1), ("m3", 2), ("m5", 3)]
+    assert [m.sender for m in feed] == [Power.FRANCE, None, Power.FRANCE]
+    assert all(m.recipients == [] and m.orders == [] for m in feed)
+    assert [m.seq for m in spectator_feed(messages, revealed=False, after=2)] == [3]
+    # Once the game is over the anonymous public author is shown; private press never is.
+    revealed = spectator_feed(messages, revealed=True)
+    assert [(m.id, m.sender) for m in revealed] == [
+        ("m1", Power.FRANCE),
+        ("m3", Power.GERMANY),
+        ("m5", Power.FRANCE),
+    ]
+
+
+def test_spectator_numbers_stay_put_when_the_oldest_press_is_dropped():
+    messages = [message(1), message(2, recipients=[Power.GERMANY]), message(3)]
+    number_messages(messages)
+    del messages[0]
+    messages.append(message(4))
+    number_messages(messages)
+    assert [m.seq for m in spectator_feed(messages, revealed=False)] == [2, 3]
+
+
+def test_press_saved_before_public_numbering_is_numbered_on_load():
+    messages = [message(5), message(9, recipients=[Power.GERMANY]), message(12)]
+    number_messages(messages)
+    # Press saved with reader numbers but no public numbers yet.
+    for m in messages:
+        m.public_number = 0
+    number_messages(messages)
+    assert [m.public_number for m in messages] == [1, 0, 2]
+
+
+def test_a_private_message_has_no_spectator_view():
+    import pytest
+
+    with pytest.raises(ValueError):
+        spectator_view(message(1, recipients=[Power.GERMANY]), revealed=True)

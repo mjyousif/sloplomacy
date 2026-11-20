@@ -11,6 +11,11 @@ message (one recipient), `recipients` stays just that recipient so the sender is
 Once the game is over the press is `revealed`: every seated player may read every message and see
 every author.
 
+A spectator (someone watching with no seat) reads the public box alone, numbered by
+`PressMessage.public_number`, so the gaps private press would leave never show. An anonymous public
+author stays hidden from them until the press is revealed. A spectator never reads a private
+message, not even once the game is over, and never sends.
+
 The `seq` a player is sent numbers the messages they may read 1, 2, 3... (`PressMessage.numbers`),
 never the game-wide count, whose gaps would show how much private press the others exchange.
 Once the press is revealed everyone reads everything, so it is then the game-wide count.
@@ -72,4 +77,34 @@ def feed_for(
         view_of(message, viewer, revealed)
         for message in messages
         if can_read(message, viewer, revealed) and number_for(message, viewer, revealed) > after
+    ]
+
+
+def spectator_view(message: PressMessage, revealed: bool) -> PressMessageView:
+    """The copy of a public message a spectator may be sent. Never call it for a private one."""
+    if message.recipients:
+        raise ValueError("A spectator never reads a private message.")
+    return PressMessageView(
+        id=message.id,
+        seq=message.public_number,
+        sender=message.sender if revealed or not message.anonymous else None,
+        anonymous=message.anonymous,
+        recipients=[],
+        body=message.body,
+        sent_at=message.sent_at,
+        season=message.season,
+        year=message.year,
+        phase=message.phase,
+        orders=[],
+    )
+
+
+def spectator_feed(
+    messages: list[PressMessage], revealed: bool, after: int = 0
+) -> list[PressMessageView]:
+    """Every public message numbered after `after` among public messages, oldest first."""
+    return [
+        spectator_view(message, revealed)
+        for message in messages
+        if not message.recipients and message.public_number > after
     ]

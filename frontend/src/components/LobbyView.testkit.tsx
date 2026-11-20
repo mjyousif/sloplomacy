@@ -38,6 +38,7 @@ export function setup(over: Partial<Props> = {}) {
     onRefreshGames: vi.fn(),
     onEnterSandbox: vi.fn(),
     onOpenAuth: vi.fn(),
+    onWatchGame: vi.fn(async () => {}),
     onCreateGame: vi.fn(async () => {}),
     onJoinOrEnterGame: vi.fn(async () => {}),
     onOpenSurrenderModal: vi.fn(),

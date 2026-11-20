@@ -22,8 +22,8 @@ frontend/
     │   ├── ui/                  # Shared UI primitives (BottomSheet, CollapsibleSection, BrandEmblem, PowerFlag, chrome/form styles)
     │   ├── map/                 # Interactive SVG board: hooks/, hud/, layers/ (orders/, units/), and curve geometry
     │   ├── tools/               # Left ToolsSidebar sections (incl. PressSection and press/), filter chips (TurnHistorySelector), SaveSandboxModal, and collapsed rail
-    │   ├── macro/               # Right MacroSidebar order sheet, controls/, admin sidebars, and build slots
-    │   ├── lobby/               # Map hero and strip of the player's games (MiniMap), public game browser (filters, rows, pager, useLobbyBrowse), Host/Join buttons and their form dialogs, power picker
+    │   ├── macro/               # Right MacroSidebar order sheet, controls/, admin sidebars, build slots, and the spectator Watching bar
+    │   ├── lobby/               # Map hero and strip of the player's games (MiniMap), public game browser (filters, rows with Watch and Join, pager, useLobbyBrowse), Host/Join buttons and their form dialogs, power picker
     │   ├── admin/               # AdminSettingsMenu, TurnControlTab, and AdminActionWarningModal
     │   ├── auth/                # Sign-in / sign-up modal and account settings modal
     │   ├── game/                # PhaseTimerWidget and match-lifecycle modals (surrender, game over, sanity check)
