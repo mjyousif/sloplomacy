@@ -5,7 +5,6 @@ import {
   useEffect,
   useRef,
 } from 'react';
-import { getAuthHeaders } from '../lib/supabase';
 import type {
   GameState,
   MultiplayerGameSummary,
@@ -18,6 +17,7 @@ import type {
 import { readStoredSoloSandboxId } from '../utils/soloSandboxStorage';
 import { turnLabel } from '../utils/timerHelpers';
 import { useDiplomacyWebSocket } from './useDiplomacyWebSocket';
+import { gameReadHeaders } from './useGameSession';
 
 const API_BASE = '/api';
 
@@ -27,7 +27,8 @@ export const IDLE_POLL_MS = 60_000;
 export interface GameSyncOptions {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
   activeGameId: string;
-  playerPower: Power;
+  /** The seat to read the match from; null for a spectator, who names none. */
+  playerPower: Power | null;
   /** The private sandbox copy's id while the player is in one. The real match keeps moving behind it. */
   sandboxGameId: string | null;
   /** Real match turn label captured when Hypothetical Mode opened, so turn advances clear the branch. */
@@ -217,9 +218,8 @@ export function useGameSync({
         if (effectivePower) {
           params.set('power', effectivePower);
         }
-        const authHeaders = await getAuthHeaders();
         const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
-          headers: { ...authHeaders },
+          headers: await gameReadHeaders(matchPasscodes[activeGameId]),
         });
         if (!res.ok) return;
         const data = await res.json();
@@ -269,6 +269,7 @@ export function useGameSync({
     wsConnected,
     isIdleDisconnected,
     playerPower,
+    matchPasscodes,
   ]);
 
   return { wsConnected, handleTimerExpired };

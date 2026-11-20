@@ -5,8 +5,9 @@ from domain.game_state import GameState, TurnHistoryEntry, TurnRecord
 from domain.stats import CampaignStatsResponse
 from engine.adjudicator.resolver import adjudicate_turn
 from engine.stats import compute_campaign_stats
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from security.auth import AuthUser, get_current_user
+from security.passcode import client_address
 from security.secrecy import require_view_access
 from storage.store import GAME_HISTORY, GAME_SUMMARIES, PRIVATE_SANDBOXES, resolve_game
 
@@ -17,6 +18,7 @@ async def _resolve_accessible_history(
     game_id: str | None,
     current_user: AuthUser | None,
     passcode: str | None,
+    client: str,
 ) -> tuple[GameState, list[GameState]]:
     """The current game and the snapshots of it the caller may see, oldest first.
 
@@ -27,7 +29,7 @@ async def _resolve_accessible_history(
     if game_id and (game_id.startswith("sbx_") or game_id in PRIVATE_SANDBOXES):
         raise HTTPException(status_code=404, detail="A private sandbox has no shared history.")
     game = await resolve_game(game_id)
-    require_view_access(game.game_id, current_user, passcode)
+    require_view_access(game.game_id, current_user, passcode, client=client)
     return game, GAME_HISTORY.get(game.game_id, [])
 
 
@@ -38,12 +40,15 @@ async def _resolve_accessible_history(
     description="The phases of a game that have resolved, oldest first (up to the last 30).",
 )
 async def list_turn_history(
+    request: Request,
     game_id: str | None = Query(default=None),
     passcode: str | None = Query(default=None),
     x_passcode: str | None = Header(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    _, history = await _resolve_accessible_history(game_id, current_user, passcode or x_passcode)
+    _, history = await _resolve_accessible_history(
+        game_id, current_user, passcode or x_passcode, client_address(request)
+    )
     return [
         TurnHistoryEntry(index=i, season=snap.season, year=snap.year, phase=snap.phase)
         for i, snap in enumerate(history)
@@ -57,12 +62,15 @@ async def list_turn_history(
     description="Per-power tactical, diplomatic, and logistics statistics derived strictly from resolved turns.",
 )
 async def get_campaign_stats(
+    request: Request,
     game_id: str | None = Query(default=None),
     passcode: str | None = Query(default=None),
     x_passcode: str | None = Header(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    game, history = await _resolve_accessible_history(game_id, current_user, passcode or x_passcode)
+    game, history = await _resolve_accessible_history(
+        game_id, current_user, passcode or x_passcode, client_address(request)
+    )
     summary = GAME_SUMMARIES.get(game.game_id)
     player_names: dict[Power, str] = {}
     if summary:
@@ -80,12 +88,15 @@ async def get_campaign_stats(
 )
 async def get_turn_record(
     index: int,
+    request: Request,
     game_id: str | None = Query(default=None),
     passcode: str | None = Query(default=None),
     x_passcode: str | None = Header(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    _, history = await _resolve_accessible_history(game_id, current_user, passcode or x_passcode)
+    _, history = await _resolve_accessible_history(
+        game_id, current_user, passcode or x_passcode, client_address(request)
+    )
     if not 0 <= index < len(history):
         raise HTTPException(status_code=404, detail=f"No resolved turn at index {index}.")
     snap = history[index]

@@ -24,6 +24,7 @@ function renderBrowser(over: Partial<GameBrowserProps> = {}) {
     onRefreshGames: vi.fn(),
     onOpenAuth: vi.fn(),
     onJoinOrEnterGame: vi.fn(async () => {}),
+    onWatchGame: vi.fn(async () => {}),
     ...over,
   };
   return { props, ...render(<GameBrowser {...props} />) };

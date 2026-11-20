@@ -15,7 +15,11 @@ import type {
   ProvinceInfo,
   SimulationResult,
 } from '../types/diplomacy';
-import { resolvePlayerPower } from '../utils/adminHelpers';
+import {
+  isSpectating,
+  resolvePlayerPower,
+  watchedPowerFor,
+} from '../utils/adminHelpers';
 import {
   isStaleServerState,
   type PendingOrder,
@@ -51,6 +55,12 @@ export function useGameSession({
   const [activeGameSummary, setActiveGameSummary] =
     useState<MultiplayerGameSummary | null>(null);
   const [lockedPower, setLockedPower] = useState<Power | null>(null);
+  // The passcodes typed for private matches during this visit, by game id.
+  const [matchPasscodes, setMatchPasscodes] = useState<Record<string, string>>(
+    {},
+  );
+  // The power a spectator picked to look at; only this browser knows it.
+  const [watchedPower, setWatchedPower] = useState<Power | null>(null);
 
   // Lobby Games State. The public lobby (`GET /api/games` and the lobby socket) holds public
   // matches only; the player's own games, private campaigns included, come from `/games/mine`.
@@ -71,10 +81,16 @@ export function useGameSession({
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const isSpectator = isSpectating(viewMode, lockedPower, activeGameSummary);
+  const spectatorPower = isSpectator
+    ? watchedPowerFor(watchedPower, gameState?.units)
+    : null;
   const playerPower = resolvePlayerPower(
     viewMode,
     lockedPower,
     gameState?.active_power,
+    false,
+    spectatorPower,
   );
 
   const prunePendingFor = (st: GameState): PendingOrder[] => {
@@ -222,15 +238,19 @@ export function useGameSession({
     const seq = ++boardRequestSeq.current;
     try {
       setLoading(true);
+      // A spectator names no power: see `isSpectating`.
       const effectivePower =
-        targetPower !== undefined ? targetPower : playerPower;
+        targetPower !== undefined
+          ? targetPower
+          : isSpectator
+            ? null
+            : playerPower;
       const params = new URLSearchParams({ game_id: gid });
       if (effectivePower) {
         params.set('power', effectivePower);
       }
-      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
-        headers: { ...authHeaders },
+        headers: await gameReadHeaders(matchPasscodes[gid]),
       });
       if (!res.ok) {
         if (gid !== 'proto_1901' && gid === readStoredSoloSandboxId()) {
@@ -266,6 +286,13 @@ export function useGameSession({
     setActiveGameSummary,
     lockedPower,
     setLockedPower,
+    matchPasscodes,
+    setMatchPasscodes,
+    /** Watching the open match without a seat. */
+    isSpectator,
+    /** The power a spectator's panel shows (null for a player), and picking another. */
+    spectatorPower,
+    setWatchedPower,
     playerPower,
     /** The player's own games first, then the public lobby, each game once. */
     gamesList: lobbyGames,
@@ -297,4 +324,13 @@ export function mergeGames(
 ): MultiplayerGameSummary[] {
   const own = new Set(mine.map((g) => g.game_id));
   return [...mine, ...lobby.filter((g) => !own.has(g.game_id))];
+}
+
+/** The headers for reading a game: the player's token, and a private match's passcode. */
+export async function gameReadHeaders(
+  passcode?: string | null,
+): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { ...(await getAuthHeaders()) };
+  if (passcode) headers['X-Passcode'] = passcode;
+  return headers;
 }

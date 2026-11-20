@@ -12,9 +12,10 @@ from engine.order_utils import (
     refresh_diagnostics_and_simulation,
 )
 from engine.topology.provinces import PROVINCES
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from scenarios.presets import build_scenario
 from security.auth import AuthUser, get_current_user
+from security.passcode import client_address
 from security.secrecy import (
     require_view_access,
     sanitize_game_state_for_viewer,
@@ -239,6 +240,7 @@ async def create_multiplayer_game(
     summary="Create, Export, or Resume Personal Solo Sandbox",
 )
 async def create_solo_sandbox(
+    request: Request,
     resume_game_id: str | None = Query(default=None),
     source_game_id: str | None = Query(default=None),
     passcode: str | None = Query(default=None),
@@ -251,6 +253,7 @@ async def create_solo_sandbox(
         passcode=passcode or x_passcode,
         current_user=current_user,
         sync_lobby=sync_lobby_with_db,
+        client=client_address(request),
     )
 
 
@@ -345,6 +348,7 @@ async def save_sandbox_to_account(
     summary="Get Game State",
 )
 async def get_game(
+    request: Request,
     game_id: str | None = Query(default=None),
     power: Power | None = Query(default=None),
     passcode: str | None = Query(default=None),
@@ -354,13 +358,13 @@ async def get_game(
     from api.turns import tick_timer
 
     game = await resolve_game(game_id)
+    gid = game.game_id
+    # Before the clock is ticked, so a caller who may not see the match cannot resolve its turn.
+    require_view_access(gid, current_user, passcode or x_passcode, client=client_address(request))
     await tick_timer(game)
     refresh_diagnostics_and_simulation(game)
-    gid = game.game_id
     sync_summary(gid)
     summary = GAME_SUMMARIES.get(gid)
-
-    require_view_access(gid, current_user, passcode or x_passcode)
 
     viewer_power = viewer_power_for(gid, current_user, power)
 

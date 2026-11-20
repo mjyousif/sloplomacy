@@ -1,7 +1,6 @@
 """FastAPI router for real-time WebSocket communication (game turns and multiplayer lobby)."""
 
 import asyncio
-import hmac
 
 from api.turns import tick_timer
 from domain.board import Power
@@ -9,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconn
 from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials
 from security.auth import AuthUser, get_current_user
+from security.passcode import PasscodeRateLimited, check_passcode, client_address
 from security.secrecy import (
     caller_holds_seat,
     caller_owns_saved_sandbox,
@@ -19,7 +19,6 @@ from security.secrecy import (
 from storage import supabase
 from storage.lobby import public_summaries
 from storage.store import (
-    GAME_PASSCODES,
     GAME_SUMMARIES,
     GAMES,
     PRIVATE_SANDBOXES,
@@ -33,6 +32,11 @@ from ws.connection_manager import manager
 router = APIRouter()
 
 SOCKET_AUTH_TIMEOUT_SECONDS = 10.0
+# Close codes the client must not reconnect after: no such game, not allowed, too many wrong
+# passcodes. Keep in sync with `useDiplomacyWebSocket`.
+CLOSE_NOT_FOUND = 4004
+CLOSE_FORBIDDEN = 4403
+CLOSE_TOO_MANY_PASSCODES = 4429
 
 
 async def receive_socket_identity(websocket: WebSocket) -> AuthUser | None:
@@ -74,7 +78,7 @@ async def ws_game_endpoint(
             cache_loaded_game(game_id, loaded)
 
     if game_id not in GAMES:
-        await websocket.close(code=4004)
+        await websocket.close(code=CLOSE_NOT_FOUND)
         return
 
     await websocket.accept()
@@ -91,20 +95,21 @@ async def ws_game_endpoint(
     if game_id in PRIVATE_SANDBOXES:
         match_id, seat_power = PRIVATE_SANDBOXES[game_id]
         if not caller_holds_seat(GAME_SUMMARIES.get(match_id), seat_power, current_user):
-            await websocket.close(code=4403)
+            await websocket.close(code=CLOSE_FORBIDDEN)
             return
 
     summary = GAME_SUMMARIES.get(game_id)
     if summary and summary.is_sandbox and not caller_owns_saved_sandbox(summary, current_user):
-        await websocket.close(code=4403)
+        await websocket.close(code=CLOSE_FORBIDDEN)
         return
-    if summary and summary.has_passcode and is_multiplayer_match(game_id):
-        expected_pw = GAME_PASSCODES.get(game_id, "")
-        provided_pw = (passcode or "").strip()
-        if power_enum is None and (
-            not expected_pw or not hmac.compare_digest(provided_pw, expected_pw)
-        ):
-            await websocket.close(code=4403)
+    if summary and summary.has_passcode and is_multiplayer_match(game_id) and power_enum is None:
+        try:
+            allowed = check_passcode(game_id, passcode, client_address(websocket))
+        except PasscodeRateLimited:
+            await websocket.close(code=CLOSE_TOO_MANY_PASSCODES)
+            return
+        if not allowed:
+            await websocket.close(code=CLOSE_FORBIDDEN)
             return
 
     manager.register_game(game_id, websocket, power=power_enum)

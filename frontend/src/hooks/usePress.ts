@@ -12,44 +12,55 @@ import { totalUnread } from '../utils/pressHelpers';
 /** How often the press is re-read while the game socket is down. */
 export const PRESS_POLL_MS = 15000;
 
+/** Where a feed is read from: a seat, or a spectator (`power` null) with a match's passcode. */
+interface PressReader {
+  gameId: string;
+  power: Power | null;
+  passcode?: string | null;
+}
+
 async function readPress(
-  gameId: string,
-  power: Power,
+  { gameId, power, passcode }: PressReader,
   after = 0,
 ): Promise<PressFeed> {
-  const params = new URLSearchParams({ game_id: gameId, power });
+  const params = new URLSearchParams({ game_id: gameId });
+  // A spectator names no power: a seat named without holding it is refused.
+  if (power) params.set('power', power);
   if (after > 0) params.set('after', String(after));
-  const res = await authedFetch(`/api/press?${params.toString()}`);
+  const res = await authedFetch(`/api/press?${params.toString()}`, {
+    headers: !power && passcode ? { 'X-Passcode': passcode } : undefined,
+  });
   if (!res.ok) throw new Error(`Press read failed: HTTP ${res.status}`);
   return res.json();
 }
 
 /** Fetches what arrived after the newest message held, e.g. while the socket was down. */
-async function catchUp(gameId: string, power: Power): Promise<void> {
+async function catchUp(reader: PressReader): Promise<void> {
+  const { gameId, power } = reader;
   const held = pressStore.getState();
   if (held.gameId !== gameId || held.power !== power) return;
   // The first read is still on its way and will bring everything.
   if (held.status === 'loading') return;
   if (held.status !== 'ready') {
-    await loadAll(gameId, power);
+    await loadAll(reader);
     return;
   }
   const last = held.messages.length
     ? held.messages[held.messages.length - 1].seq
     : 0;
   try {
-    const feed = await readPress(gameId, power, last);
+    const feed = await readPress(reader, last);
     pressStore.addMessages(gameId, power, feed.messages);
   } catch {
     // The next poll or socket message tries again.
   }
 }
 
-async function loadAll(gameId: string, power: Power): Promise<void> {
+async function loadAll(reader: PressReader): Promise<void> {
   try {
-    pressStore.setFeed(gameId, await readPress(gameId, power));
+    pressStore.setFeed(reader.gameId, await readPress(reader));
   } catch {
-    pressStore.setError(gameId, power);
+    pressStore.setError(reader.gameId, reader.power);
   }
 }
 
@@ -87,11 +98,14 @@ export async function sendPress(
 const readSocketOpen = () => pressStore.getState().socketOpen;
 
 export interface PressSyncOptions {
-  /** The match, or null when the screen has no press (a sandbox, or no seat). */
+  /** The match, or null when the screen has no press (a sandbox). */
   gameId: string | null;
+  /** The seat, or null for a spectator, who reads the public box alone. */
   power: Power | null;
   /** Whether the game is over. All press is shown then, so it is read again. */
   gameOver: boolean;
+  /** A private match's passcode, which a spectator needs to read its press. */
+  passcode?: string | null;
 }
 
 /**
@@ -99,7 +113,12 @@ export interface PressSyncOptions {
  * or the game ends, catches up when the socket comes back, and polls while it is down.
  * New messages otherwise arrive on the game socket (see `useDiplomacyWebSocket`).
  */
-export function usePressSync({ gameId, power, gameOver }: PressSyncOptions) {
+export function usePressSync({
+  gameId,
+  power,
+  gameOver,
+  passcode = null,
+}: PressSyncOptions) {
   const socketOpen = useSyncExternalStore(
     pressStore.subscribe,
     readSocketOpen,
@@ -108,20 +127,20 @@ export function usePressSync({ gameId, power, gameOver }: PressSyncOptions) {
 
   // `gameOver` is not read below: it is what makes the feed load again once all is revealed.
   useEffect(() => {
-    if (!gameId || !power) {
+    if (!gameId) {
       pressStore.close();
       return;
     }
     pressStore.open(gameId, power);
-    loadAll(gameId, power);
-  }, [gameId, power, gameOver]);
+    loadAll({ gameId, power, passcode });
+  }, [gameId, power, gameOver, passcode]);
 
   useEffect(() => () => pressStore.close(), []);
 
   useEffect(() => {
-    if (!gameId || !power) return;
+    if (!gameId) return;
     if (socketOpen) {
-      catchUp(gameId, power);
+      catchUp({ gameId, power, passcode });
       return;
     }
     const timer = window.setInterval(() => {
@@ -129,11 +148,11 @@ export function usePressSync({ gameId, power, gameOver }: PressSyncOptions) {
         typeof document === 'undefined' ||
         document.visibilityState !== 'hidden'
       ) {
-        catchUp(gameId, power);
+        catchUp({ gameId, power, passcode });
       }
     }, PRESS_POLL_MS);
     return () => clearInterval(timer);
-  }, [gameId, power, socketOpen]);
+  }, [gameId, power, socketOpen, passcode]);
 }
 
 export function usePressState(): PressState {
@@ -146,12 +165,12 @@ export function usePressState(): PressState {
 
 /** Whether this screen has press, and how many unread messages wait in it. */
 export function usePressBadge(): { enabled: boolean; unread: number } {
-  const { power, messages, lastRead } = usePressState();
+  const { gameId, power, messages, lastRead } = usePressState();
   return useMemo(
     () => ({
-      enabled: power !== null,
-      unread: power ? totalUnread(messages, power, lastRead) : 0,
+      enabled: gameId !== null,
+      unread: gameId ? totalUnread(messages, power, lastRead) : 0,
     }),
-    [power, messages, lastRead],
+    [gameId, power, messages, lastRead],
   );
 }

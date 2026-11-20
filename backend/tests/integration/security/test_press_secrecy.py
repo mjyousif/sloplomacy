@@ -109,10 +109,23 @@ def test_naming_another_power_does_not_open_its_press(match):
     assert res.status_code == 403
 
 
-def test_a_spectator_reads_and_sends_nothing(match):
+def test_a_spectator_reads_only_the_public_box_and_sends_nothing(match):
+    send(match, alice_headers(), "FRANCE", "Split Belgium?", ["GERMANY"])
     send(match, alice_headers(), "FRANCE", "Public word")
+    send(match, bob_headers(), "GERMANY", "Who said that?", anonymous=True)
+    send(match, bob_headers(), "GERMANY", "Only us", ["FRANCE", "ENGLAND"], anonymous=True)
     for headers in (mallory_headers(), {}):
-        assert client.get(f"/api/press?game_id={match}", headers=headers).status_code == 403
+        res = client.get(f"/api/press?game_id={match}", headers=headers)
+        assert res.status_code == 200, res.text
+        payload = res.json()
+        assert payload["power"] is None
+        assert [(m["seq"], m["body"], m["sender"]) for m in payload["messages"]] == [
+            (1, "Public word", "FRANCE"),
+            (2, "Who said that?", None),
+        ]
+        assert "Split Belgium?" not in str(payload) and "Only us" not in str(payload)
+        assert "GERMANY" not in str(payload["messages"])
+        # Naming a seat the spectator does not hold opens nothing.
         assert (
             client.get(f"/api/press?game_id={match}&power=FRANCE", headers=headers).status_code
             == 403
@@ -162,8 +175,10 @@ def test_an_anonymous_thread_message_names_the_whole_thread_not_its_author(match
         assert seen["recipients"] == ["ENGLAND", "FRANCE", "GERMANY"]
     (own,) = feed(match, bob_headers(), "GERMANY")["messages"]
     assert own["recipients"] == ["ENGLAND", "FRANCE"]
-    # Someone without a seat still reads nothing.
-    assert client.get(f"/api/press?game_id={match}", headers=mallory_headers()).status_code == 403
+    # Someone without a seat reads only the public box, so not this thread.
+    watched = client.get(f"/api/press?game_id={match}", headers=mallory_headers())
+    assert watched.status_code == 200
+    assert watched.json()["messages"] == []
 
 
 def test_a_one_to_one_anonymous_message_hides_its_author_and_reaches_only_the_recipient(match):
@@ -219,7 +234,14 @@ def test_the_socket_delivers_press_only_to_players_who_may_read_it(match):
         public = receive_json(bob)["messages"][0]
         assert (public["seq"], public["sender"]) == (2, None)
 
-        # A socket without a seat is sent no press at all.
+        # A socket without a seat is sent the public message alone, numbered among public
+        # messages, with its anonymous author hidden.
+        watched = receive_json(spectator)
+        assert watched["type"] == "press"
+        assert watched["power"] is None
+        assert [(m["seq"], m["body"], m["sender"]) for m in watched["messages"]] == [
+            (1, "For everyone", None)
+        ]
         spectator.send_json({"type": "ping"})
         assert receive_json(spectator)["type"] == "pong"
     finally:
@@ -344,3 +366,39 @@ def test_sandboxes_have_no_press(match):
     assert sandbox_id.startswith("sbx_")
     res = client.get(f"/api/press?game_id={sandbox_id}&power=FRANCE", headers=alice_headers())
     assert res.status_code == 404
+
+
+def test_a_spectator_never_reads_private_press_even_after_the_game(match):
+    send(match, alice_headers(), "FRANCE", "Split Belgium?", ["GERMANY"])
+    send(match, bob_headers(), "GERMANY", "Trust nobody", anonymous=True)
+    GAMES[match].winner = Power.FRANCE
+
+    payload = client.get(f"/api/press?game_id={match}").json()
+    assert payload["revealed"] is True
+    # Once the game is over the anonymous public author is shown, as to the players, but the
+    # private thread never is.
+    assert [(m["seq"], m["body"], m["sender"]) for m in payload["messages"]] == [
+        (1, "Trust nobody", "GERMANY")
+    ]
+
+
+def test_a_spectator_feed_counts_on_with_after(match):
+    send(match, alice_headers(), "FRANCE", "one")
+    send(match, alice_headers(), "FRANCE", "secret", ["GERMANY"])
+    send(match, alice_headers(), "FRANCE", "two")
+    res = client.get(f"/api/press?game_id={match}&after=1").json()
+    assert [(m["seq"], m["body"]) for m in res["messages"]] == [(2, "two")]
+
+
+def test_a_private_match_needs_its_passcode_for_spectator_press():
+    from tests.integration.security.helpers import secret_plan_match
+
+    gid = secret_plan_match(private=True)
+    assert send(gid, alice_headers(), "FRANCE", "Hello all").status_code == 200
+    assert client.get(f"/api/press?game_id={gid}").status_code == 403
+    assert client.get(f"/api/press?game_id={gid}&passcode=wrong").status_code == 403
+    res = client.get(f"/api/press?game_id={gid}", headers={"X-Passcode": "Secret1901"})
+    assert res.status_code == 200
+    assert [m["body"] for m in res.json()["messages"]] == ["Hello all"]
+    # A seated player needs no passcode.
+    assert feed(gid, bob_headers(), "GERMANY")["messages"][0]["body"] == "Hello all"

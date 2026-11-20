@@ -36,6 +36,8 @@ export interface MacroSheetProps {
   isRetreatPhase: boolean;
   consensusInfo: ConsensusStatusInfo;
   locked: boolean;
+  /** Watching without a seat: no Finalize, and the inert cards are not dimmed. */
+  spectating?: boolean;
   lockBar: React.ReactNode;
   clearAllButton: React.ReactNode;
   phaseContext: React.ReactNode;
@@ -73,6 +75,7 @@ export const MacroSheet: React.FC<MacroSheetProps> = ({
   isRetreatPhase,
   consensusInfo,
   locked,
+  spectating = false,
   lockBar,
   clearAllButton,
   phaseContext,
@@ -112,6 +115,7 @@ export const MacroSheet: React.FC<MacroSheetProps> = ({
           className={macroStyles.macroSheetPeek}
           data-testid="macro-sheet-peek"
           data-history-locked={locked ? 'true' : undefined}
+          data-spectating={spectating ? 'true' : undefined}
           style={{ borderLeftColor: powerMeta.color }}
         >
           {lockBar}
@@ -138,29 +142,31 @@ export const MacroSheet: React.FC<MacroSheetProps> = ({
             className={styles.macroSheetActionBar}
             data-testid="macro-sheet-action-bar"
           >
-            <div
-              className={styles.macroSheetControls}
-              data-testid="macro-sheet-controls"
-              inert={locked || undefined}
-            >
-              <OrderFooter
-                powerMeta={powerMeta}
-                isFinalized={isFinalized}
-                isSurrendered={isSurrendered}
-                blockingIssueCount={progress.myBlockingIssues.length}
-                unconfirmedCount={progress.unconfirmedCount}
-                isMultiplayer={isMultiplayer}
-                gameOver={gameOver}
-                isAdjustmentPhase={isAdjustmentPhase}
-                isRetreatPhase={isRetreatPhase}
-                consensusInfo={consensusInfo}
-                showConsensusCard={false}
-                compactLabels={true}
-                onFinalizeClick={onFinalizeClick}
-                onUnfinalizeClick={onUnfinalizeClick}
-                onAdjudicateTurn={onAdjudicateTurn}
-              />
-            </div>
+            {!spectating && (
+              <div
+                className={styles.macroSheetControls}
+                data-testid="macro-sheet-controls"
+                inert={locked || undefined}
+              >
+                <OrderFooter
+                  powerMeta={powerMeta}
+                  isFinalized={isFinalized}
+                  isSurrendered={isSurrendered}
+                  blockingIssueCount={progress.myBlockingIssues.length}
+                  unconfirmedCount={progress.unconfirmedCount}
+                  isMultiplayer={isMultiplayer}
+                  gameOver={gameOver}
+                  isAdjustmentPhase={isAdjustmentPhase}
+                  isRetreatPhase={isRetreatPhase}
+                  consensusInfo={consensusInfo}
+                  showConsensusCard={false}
+                  compactLabels={true}
+                  onFinalizeClick={onFinalizeClick}
+                  onUnfinalizeClick={onUnfinalizeClick}
+                  onAdjudicateTurn={onAdjudicateTurn}
+                />
+              </div>
+            )}
             {onOpenPress && (
               <button
                 ref={pressToggleRef}
@@ -183,6 +189,7 @@ export const MacroSheet: React.FC<MacroSheetProps> = ({
         className={macroStyles.macroSheetBody}
         data-testid="macro-sheet-body"
         data-history-locked={locked ? 'true' : undefined}
+        data-spectating={spectating ? 'true' : undefined}
         ref={sheetBodyRef}
         inert={locked || isSurrendered || undefined}
       >

@@ -91,6 +91,7 @@ function history(over: Partial<TurnHistory> = {}): TurnHistory {
     entries: [ENTRY],
     viewIndex: null,
     turn: null,
+    viewedEntry: null,
     powers: [],
     actions: [],
     select: vi.fn(),

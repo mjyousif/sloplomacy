@@ -31,7 +31,8 @@ export interface ToolsSidebarProps {
   // Sandbox & Hypothetical Mode
   sandboxMode: boolean;
   viewingHistory?: boolean;
-  onToggleSandboxMode: () => void;
+  /** Absent while watching without a seat: Hypothetical Mode needs a seat. */
+  onToggleSandboxMode?: () => void;
   onClearForeignPreMoves: () => void;
   foreignModifiedOrdersCount: number;
   onLoadScenario?: (scenarioId: string) => void;

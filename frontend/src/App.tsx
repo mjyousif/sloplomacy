@@ -18,6 +18,7 @@ import { useMatchActions } from './hooks/useMatchActions';
 import { useSandboxExit } from './hooks/useSandboxExit';
 import { useSandboxSession } from './hooks/useSandboxSession';
 import { useSeatActions } from './hooks/useSeatActions';
+import { useSpectate } from './hooks/useSpectate';
 import { useToast } from './hooks/useToast';
 import { useTurnHistory } from './hooks/useTurnHistory';
 import { useTurnNotifications } from './hooks/useTurnNotifications';
@@ -31,18 +32,13 @@ import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
 import { myPowerIn } from './utils/heroGame';
 import { DEFAULT_CAMERA } from './utils/mapCameraHelpers';
 import { turnLabel } from './utils/timerHelpers';
+import { initialViewMode, type ViewMode } from './utils/viewMode';
 
 export function App() {
-  const [viewMode, setViewMode] = useState<'lobby' | 'sandbox' | 'multiplayer'>(
-    () =>
-      typeof window !== 'undefined' &&
-      (new URLSearchParams(window.location.search).get('view') === 'sandbox' ||
-        window.location.hash === '#sandbox')
-        ? 'sandbox'
-        : 'lobby',
-  );
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const [simulationResult, setSimulationResult] =
     useState<SimulationResult | null>(null);
+  const session = useGameSession({ viewMode, setSimulationResult });
   const {
     activeGameId,
     setActiveGameId,
@@ -50,6 +46,8 @@ export function App() {
     setActiveGameSummary,
     lockedPower,
     setLockedPower,
+    matchPasscodes,
+    setMatchPasscodes,
     playerPower,
     gamesList,
     setGamesList,
@@ -69,7 +67,7 @@ export function App() {
     fetchGame,
     fetchGamesList,
     fetchMyGames,
-  } = useGameSession({ viewMode, setSimulationResult });
+  } = session;
   const {
     authUser,
     setAuthUser,
@@ -104,9 +102,6 @@ export function App() {
   const mapRef = useRef<EuropeMapHandle | null>(null);
   const { toastBanner, triggerToast } = useToast();
   const { confirm, confirmModal } = useConfirm();
-  const [matchPasscodes, setMatchPasscodes] = useState<Record<string, string>>(
-    {},
-  );
   const turnHistory = useTurnHistory({
     gameId: activeGameId,
     liveTurnKey: gameState ? turnLabel(gameState) : '',
@@ -182,13 +177,14 @@ export function App() {
     lockedPower,
     gameState?.active_power,
     sandboxMode,
+    session.spectatorPower,
   );
 
   // The live socket, the first load and the fallback poll.
   const { handleTimerExpired } = useGameSync({
     viewMode,
     activeGameId,
-    playerPower,
+    playerPower: session.isSpectator ? null : playerPower,
     sandboxGameId,
     sandboxOriginTurn,
     setSandboxOriginTurn,
@@ -304,6 +300,13 @@ export function App() {
     triggerToast,
     setSelectedUnitId,
   });
+  const spectate = useSpectate({
+    session,
+    seats,
+    setViewMode,
+    authUser,
+    triggerToast,
+  });
 
   if (loading && !gameState) {
     return (
@@ -348,11 +351,6 @@ export function App() {
     setAdminModalOpen(false);
   };
 
-  const historyTurn = turnHistory.turn;
-  const viewedEntry =
-    turnHistory.viewIndex === null
-      ? null
-      : (turnHistory.entries[turnHistory.viewIndex] ?? null);
   const showPastTurn = async (index: number | null) => {
     if (adminModeActive) return;
     if (
@@ -516,6 +514,7 @@ export function App() {
           onOpenAuth={openAuthPrompt}
           onCreateGame={seats.handleCreateMultiplayerGame}
           onJoinOrEnterGame={seats.handleJoinOrEnterMultiplayerGame}
+          onWatchGame={spectate.watchGame}
           onOpenSurrenderModal={seats.handleOpenSurrenderModal}
         />
       ) : (
@@ -537,8 +536,8 @@ export function App() {
           closeToolsDrawer={layout.closeToolsDrawer}
           handleDockedBarChange={layout.handleDockedBarChange}
           turnHistory={turnHistory}
-          historyTurn={historyTurn}
-          viewedEntry={viewedEntry}
+          historyTurn={turnHistory.turn}
+          viewedEntry={turnHistory.viewedEntry}
           mapRef={mapRef}
           zoomPercent={zoomPercent}
           setZoomPercent={setZoomPercent}
@@ -574,7 +573,8 @@ export function App() {
           handleAdjudicateTurn={handleAdjudicateTurn}
           postTimerAction={postTimerAction}
           handleTimerExpired={handleTimerExpired}
-          handleSelectPower={seats.handleSelectPower}
+          handleSelectPower={spectate.handleSelectPower}
+          spectator={spectate.spectator}
           isGameCreator={isGameCreator}
           directEditActive={directEditActive}
           directEdit={directEdit}

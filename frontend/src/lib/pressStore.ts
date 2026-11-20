@@ -10,10 +10,14 @@ import {
  * The press of the match on screen, for the seat the player holds. It lives outside React so
  * the game socket can add to it and the Press section, the collapsed rail and the phone's top
  * bar can all read it, without threading it through every component between them.
+ *
+ * A spectator (watching with no seat) holds the match with `power` null: the server sends them
+ * the public box alone, with `power` null on the feed and on socket pushes too.
  */
 export interface PressState {
-  /** The match and seat the press belongs to, or null when there is none (lobby, sandbox). */
+  /** The match the press belongs to, or null when there is none (lobby, sandbox). */
   gameId: string | null;
+  /** The seat it is read from; null with a `gameId` is a spectator. */
   power: Power | null;
   messages: PressMessage[];
   /** True once the game is over and all press is shown. */
@@ -49,7 +53,7 @@ function set(next: PressState): void {
   for (const listener of listeners) listener();
 }
 
-function inScope(gameId: string, power: Power): boolean {
+function inScope(gameId: string, power: Power | null): boolean {
   return state.gameId === gameId && state.power === power;
 }
 
@@ -64,8 +68,11 @@ export const pressStore = {
     return state;
   },
 
-  /** Starts showing a match's press for a seat. Another match or seat starts from empty. */
-  open(gameId: string, power: Power): void {
+  /**
+   * Starts showing a match's press for a seat, or for a spectator with `power` null. Another
+   * match or seat starts from empty.
+   */
+  open(gameId: string, power: Power | null): void {
     if (inScope(gameId, power)) return;
     set({
       ...EMPTY,
@@ -106,12 +113,16 @@ export const pressStore = {
     });
   },
   /** New messages, from the socket, a poll or the player's own post. */
-  addMessages(gameId: string, power: Power, messages: PressMessage[]): void {
+  addMessages(
+    gameId: string,
+    power: Power | null,
+    messages: PressMessage[],
+  ): void {
     if (!inScope(gameId, power)) return;
     const merged = mergeMessages(state.messages, messages);
     if (merged !== state.messages) set({ ...state, messages: merged });
   },
-  setError(gameId: string, power: Power): void {
+  setError(gameId: string, power: Power | null): void {
     if (inScope(gameId, power) && state.status === 'loading') {
       set({ ...state, status: 'error' });
     }
@@ -119,7 +130,7 @@ export const pressStore = {
 
   /** Marks a channel read up to a message. Reading never goes backwards. */
   markRead(channel: string, seq: number): void {
-    if (state.gameId === null || state.power === null) return;
+    if (state.gameId === null) return;
     if ((state.lastRead[channel] ?? 0) >= seq) return;
     const lastRead = { ...state.lastRead, [channel]: seq };
     saveReadMarks(state.gameId, state.power, lastRead, state.revealed);

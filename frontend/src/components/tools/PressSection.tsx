@@ -25,12 +25,13 @@ import { PressMessageList } from './press/PressMessageList';
 import { PressRecipientBar } from './press/PressRecipientBar';
 import { PressSuggestionDraft } from './press/PressSuggestionDraft';
 import { channelLabel, listPowers } from './press/pressLabels';
+import { SpectatorPress } from './press/SpectatorPress';
 
 export interface PressSectionProps {
   /** The match (never a private sandbox copy's id). */
   gameId: string;
-  /** The seat the player writes from. */
-  power: Power;
+  /** The seat the player writes from; null while watching, which shows the public box alone. */
+  power: Power | null;
   /** The game is over: all press is shown and only the public box stays open. */
   gameOver: boolean;
   /** The player surrendered this seat, so they can read but no longer write. */
@@ -72,7 +73,14 @@ const EMPTY_TEXT: Record<string, string> = {
  * A signed private thread can also carry a move suggestion: the lamp button starts one, it is
  * written on the map (`lib/suggestionStore` holds the draft) and goes out with the next message.
  */
-export const PressSection: React.FC<PressSectionProps> = ({
+export const PressSection: React.FC<PressSectionProps> = (props) =>
+  props.power === null ? (
+    <SpectatorPress {...props} />
+  ) : (
+    <PlayerPressSection {...props} power={props.power} />
+  );
+
+const PlayerPressSection: React.FC<PressSectionProps & { power: Power }> = ({
   gameId,
   power,
   gameOver,

@@ -45,11 +45,14 @@ export function resolveWebSocketPath(
 }
 
 /**
- * Close codes the server sends when retrying cannot help: the game is gone (4004)
- * or the passcode is missing or wrong (4403). The hook stops reconnecting and the
- * caller falls back to HTTP polling, which knows who the player is.
+ * Close codes the server sends when retrying cannot help: the game is gone (4004),
+ * the passcode is missing or wrong (4403), or too many wrong passcodes came from
+ * this address (4429). The hook stops reconnecting and the caller falls back to
+ * HTTP polling, which knows who the player is.
  */
-export const PERMANENT_CLOSE_CODES: ReadonlySet<number> = new Set([4004, 4403]);
+export const PERMANENT_CLOSE_CODES: ReadonlySet<number> = new Set([
+  4004, 4403, 4429,
+]);
 
 export function shouldReconnect(closeCode: number): boolean {
   return closeCode !== 1000 && !PERMANENT_CLOSE_CODES.has(closeCode);

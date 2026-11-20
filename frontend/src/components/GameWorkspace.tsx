@@ -6,6 +6,7 @@ import {
 } from 'react';
 import { usePressSync } from '../hooks/usePress';
 import { useSidebarSelection } from '../hooks/useSidebarSelection';
+import type { SpectatorControls } from '../hooks/useSpectate';
 import { useSuggestionBoard } from '../hooks/useSuggestion';
 import type { TurnHistory } from '../hooks/useTurnHistory';
 import { suggestionStore } from '../lib/suggestionStore';
@@ -104,8 +105,10 @@ export interface GameWorkspaceProps {
     body?: Record<string, unknown>,
   ) => void;
   handleTimerExpired: () => void;
-  /** From `useSeatActions`. */
+  /** From `useSpectate`: picks the power on screen (only locally while watching). */
   handleSelectPower: (power: Power) => void;
+  /** Set while watching the match without a seat: nothing on the board can be ordered. */
+  spectator?: SpectatorControls;
   /** The host's tools. */
   isGameCreator: boolean;
   directEditActive: boolean;
@@ -169,6 +172,7 @@ export function GameWorkspace({
   postTimerAction,
   handleTimerExpired,
   handleSelectPower,
+  spectator,
   isGameCreator,
   directEditActive,
   directEdit,
@@ -201,10 +205,12 @@ export function GameWorkspace({
   const ownPower = lockedPower ?? playerPower;
   const { selectFromSidebar, selectFromMap, suppressUnitMenu } =
     useSidebarSelection(selectedUnitId, setSelectedUnitId);
-  // Press is for a seated player of a multiplayer match. The summary names the match even
-  // while the board shows the player's private sandbox copy of it.
+  // Press is for a multiplayer match: a seated player's, or the public box for a spectator. The
+  // summary names the match even while the board shows the player's private sandbox copy.
   const pressGameId =
-    viewMode === 'multiplayer' && lockedPower && !activeGameSummary?.is_sandbox
+    viewMode === 'multiplayer' &&
+    (lockedPower || spectator) &&
+    !activeGameSummary?.is_sandbox
       ? (activeGameSummary?.game_id ?? null)
       : null;
   const { pressToggleRef, pressSheetOpen, openPressSheet, closePressSheet } =
@@ -215,14 +221,19 @@ export function GameWorkspace({
       closeToolsDrawer,
     });
   const gameOver = Boolean(gameState.winner);
-  usePressSync({ gameId: pressGameId, power: lockedPower, gameOver });
+  usePressSync({
+    gameId: pressGameId,
+    power: lockedPower,
+    gameOver,
+    passcode: spectator?.passcode,
+  });
   const suggestion = useSuggestionBoard({
     gameState,
     power: pressGameId ? lockedPower : null,
     blocked: sandboxMode || directEditActive || viewingHistory,
   });
   const suggestionView = suggestion?.mode === 'view';
-  const readOnly = viewingHistory || suggestionView;
+  const readOnly = viewingHistory || suggestionView || Boolean(spectator);
   const boardOwnership =
     historyTurn?.phase === 'Admin' && historyTurn.resolution?.new_ownership
       ? historyTurn.resolution.new_ownership
@@ -232,14 +243,14 @@ export function GameWorkspace({
       ? historyTurn.resolution.new_units
       : (historyTurn?.units ?? gameState.units);
   const pressProps: Omit<PressSectionProps, 'visible' | 'variant'> | undefined =
-    pressGameId && lockedPower
+    pressGameId
       ? {
           gameId: pressGameId,
           power: lockedPower,
           gameOver,
-          surrendered: (gameState.surrendered_powers ?? []).includes(
-            lockedPower,
-          ),
+          surrendered: lockedPower
+            ? (gameState.surrendered_powers ?? []).includes(lockedPower)
+            : false,
           provinces,
           units: gameState.units,
           participants: activeGameSummary?.participants,
@@ -294,7 +305,7 @@ export function GameWorkspace({
         onChangeShowAllMoves={setShowAllSandboxMoves}
         sandboxMode={sandboxMode}
         viewingHistory={viewingHistory}
-        onToggleSandboxMode={handleToggleSandboxMode}
+        onToggleSandboxMode={spectator ? undefined : handleToggleSandboxMode}
         onClearForeignPreMoves={handleClearForeignPreMoves}
         foreignModifiedOrdersCount={
           gameState.units
@@ -464,6 +475,7 @@ export function GameWorkspace({
         lobbyStatus={activeGameSummary?.status}
         onSelectUnit={selectFromSidebar}
         onSelectPower={handleSelectPower}
+        spectator={spectator}
         onOpenPress={isCompact && pressProps ? openPressSheet : undefined}
         pressToggleRef={pressToggleRef}
         onHoverUnit={setHoveredUnitId}

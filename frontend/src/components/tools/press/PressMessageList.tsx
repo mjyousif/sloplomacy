@@ -18,7 +18,8 @@ import { powerName } from './pressLabels';
 
 export interface PressMessageListProps {
   messages: PressMessage[];
-  viewer: Power;
+  /** The reader's seat; null for a spectator, who wrote none of them and is sent no suggestion. */
+  viewer: Power | null;
   provinces: Record<string, ProvinceInfo>;
   /** Shown when the channel has no messages. */
   emptyText: string;
@@ -118,7 +119,7 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
       {messages.length === 0 && <p className={styles.emptyText}>{emptyText}</p>}
       {messages.map((message, i) => {
         const previous = messages[i - 1];
-        const mine = message.sender === viewer;
+        const mine = viewer !== null && message.sender === viewer;
         const hidden = message.sender === null;
         const color = message.sender
           ? POWER_METADATA[message.sender]?.fillColor
@@ -180,7 +181,7 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
                   onProvincePicked={onProvincePicked}
                 />
               )}
-              {message.orders.length > 0 && (
+              {viewer && message.orders.length > 0 && (
                 <PressSuggestionCard
                   {...suggestions}
                   message={message}

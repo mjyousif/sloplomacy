@@ -210,6 +210,51 @@ describe('press store', () => {
   });
 });
 
+describe('press for a spectator', () => {
+  it('reads the public feed with no power and the passcode of a private match', async () => {
+    authedFetch.mockReturnValue(
+      answer({ power: null, revealed: false, messages: [msg(1)] }),
+    );
+    renderHook(() =>
+      usePressSync({
+        gameId: 'g1',
+        power: null,
+        gameOver: false,
+        passcode: 'Secret',
+      }),
+    );
+    await waitFor(() => expect(pressStore.getState().status).toBe('ready'));
+    const [url, init] = authedFetch.mock.calls[0];
+    expect(url).toBe('/api/press?game_id=g1');
+    expect(init.headers).toEqual({ 'X-Passcode': 'Secret' });
+    expect(pressStore.getState().messages.map((m) => m.seq)).toEqual([1]);
+    expect(pressStore.getState().power).toBeNull();
+  });
+
+  it('takes socket press sent to no seat, keeps its own read marks and picks no recipients', () => {
+    pressStore.open('g1', null);
+    pressStore.addMessages('g1', 'FRANCE', [msg(1)]);
+    expect(pressStore.getState().messages).toEqual([]);
+    pressStore.addMessages('g1', null, [msg(2)]);
+    expect(pressStore.getState().messages.map((m) => m.seq)).toEqual([2]);
+    pressStore.markRead('public', 2);
+    pressStore.toggleRecipient('GERMANY');
+    expect(pressStore.getState().recipients).toEqual([]);
+    pressStore.close();
+    pressStore.open('g1', 'FRANCE');
+    expect(pressStore.getState().lastRead).toEqual({});
+    pressStore.open('g1', null);
+    expect(pressStore.getState().lastRead).toEqual({ public: 2 });
+  });
+
+  it('counts an unsigned public message as unread for a spectator', () => {
+    pressStore.open('g1', null);
+    pressStore.addMessages('g1', null, [msg(1, null), msg(2)]);
+    const { result } = renderHook(() => usePressBadge());
+    expect(result.current).toEqual({ enabled: true, unread: 2 });
+  });
+});
+
 describe('press recipients', () => {
   it('are picked per match and seat, never include the player, and reset on leaving', () => {
     pressStore.toggleRecipient('GERMANY');

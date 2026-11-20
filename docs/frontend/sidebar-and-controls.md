@@ -80,7 +80,7 @@ In the compact layout the game screen is the map, with everything else layered o
 
 ### Order sheet (`BottomSheet.tsx`, `MacroSheet.tsx`)
 - **Stops**: peek, half and full (`utils/sheetHelpers.ts`). It starts at peek every time a game opens. Drag the handle and let go to settle on the nearest stop, or flick to go one stop further. A tap or the keyboard steps peek → half → full → peek. It only slides when it moves between stops, never when it is measured or the screen rotates.
-- **Peek**: the active power (with a 1-tap `SheetPowerSwitcher` across all 7 powers in Solo Sandbox or Multiplayer Hypothetical Mode), unit/SC/unconfirmed counts, `StatusBadge`, and a single action row holding `Finalize` + `Resolve` (solo) or `Press` with unread badge (`mobile-press-toggle`, multiplayer).
+- **Peek**: the active power (with a 1-tap `SheetPowerSwitcher` across all 7 powers in Solo Sandbox or Multiplayer Hypothetical Mode), unit/SC/unconfirmed counts, `StatusBadge`, and a single action row holding `Finalize` + `Resolve` (solo) or `Press` with unread badge (`mobile-press-toggle`, multiplayer). A spectator's peek holds the Watching bar (flags, Claim and Leave on one row) and `Press`, with no Finalize.
 - **Body**: `PhaseContext`, the multiplayer consensus card (`MultiplayerConsensusCard`), the `Clear All Orders` utility bar (`macro-sheet-utility-bar`), and the builds and unit cards. While the sheet is lowered the body is off screen and `inert`.
 - **Spacer**: the sheet leaves a spacer as tall as its peek, so the map ends where the peek begins and the phone camera fits the map that is actually visible.
 
@@ -145,7 +145,7 @@ Turn history uses the same `TurnChronicle.tsx` control in `CompactTopBar` (with 
 - **Multiplayer Mode (Outside Hypothetical Mode)**: Displays diplomatic status (Orders Finalized or Civil Disorder). A power still drafting has no mark; the row's tooltip says so.
 
 ### 4. Press (`tools/PressSection.tsx`)
-Shown under Diplomatic Standing to a seated player of a multiplayer match (never in a sandbox, and not to a spectator). Its pieces are in `tools/press/`.
+Shown under Diplomatic Standing in a multiplayer match (never in a sandbox). Its pieces are in `tools/press/`. A spectator (watching without a seat, `power` null) gets `tools/press/SpectatorPress.tsx` instead: the public box alone, read-only, with "You are watching: only the players can send press." where the composer would be. It has no conversation chips, recipient letters or move suggestions, because the server sends a spectator nothing but public press.
 
 - **Conversations** (`PressChannelTabs`): a chip for the public box, and one per private thread (the flags of the other powers in it), each with its unread count. Anonymous messages are posted in the conversation they were written in.
 - **Messages** (`PressMessageList`): the picked conversation, oldest first, with a divider wherever the turn changes. An anonymous message shows a mask and "Anonymous"; the player's own shows "You" with an "anonymously" tag.
@@ -203,6 +203,8 @@ Shown under Diplomatic Standing to a seated player of a multiplayer match (never
 **Compact rows keep a warning folded away.** The desktop panel's Compact/Detailed button (`btn-toggle-compact-orders`, remembered in `localStorage` as `sloplomacy_compact_orders`) draws unit order cards and Winter build slots as one-line rows across Movement, Retreats, and Adjustments. A row with a warning and no error (`data-compact="true"` with `data-status="warning"`) glows amber like the warning box itself, and a ⚠ button at its end (`btn-unit-warning-toggle`, `aria-expanded`, "Show warning"/"Hide warning") opens and closes the warning's explanation under the row. It starts closed, the state is local to the card, and the button stops the click so it never selects or deselects the unit. Errors still show their explanation at once, as do info notes; detailed cards and the phone sheet are unchanged.
 
 Pieces must not be defined inside `MacroSidebar`: a component defined in a render is a new type each time and remounts its subtree, which drops select focus.
+
+**Watching without a seat.** When `spectator` is set (from `useSpectate`), the panel lists the units of the power on screen as compact read-only rows under `macro/SpectatorBar.tsx` instead of the past-turn bar. The bar holds a flag per power (picking one changes only this screen, never the shared `active_power`), **Claim** for that power while its seat is free, and **Leave**. The list is `inert` but not dimmed (`data-spectating`), there is no Clear All and no footer, and the phone sheet's peek has no Finalize. Every order a spectator is sent is masked to `HOLD`, so the unconfirmed count is not shown. The compact preference itself lives in `macro/useCompactOrders.ts`.
 
 ### 1. Active Sovereign Command Header & Telemetry
 - Displays active nation crest, name, controlled Supply Centers, and active/dislodged unit counts.

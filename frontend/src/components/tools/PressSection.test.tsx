@@ -552,3 +552,26 @@ describe('PressSection sheet and MobilePressSheet', () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('PressSection while watching', () => {
+  it('shows the public box alone, read-only', () => {
+    act(() => {
+      pressStore.open('g1', null);
+      pressStore.setFeed('g1', {
+        power: null,
+        revealed: false,
+        messages: [msg(1, 'GERMANY', 'Hello all'), msg(2, null, 'Who?')],
+      });
+    });
+    render(<PressSection {...base({ power: null })} />);
+    expect(bodies()).toEqual(['Hello all', 'Who?']);
+    expect(screen.getByTestId('press-section')).toHaveAttribute(
+      'data-spectating',
+      'true',
+    );
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(destination()).toMatch(/only the players can send press/);
+    expect(pressStore.getState().lastRead).toEqual({ public: 2 });
+  });
+});

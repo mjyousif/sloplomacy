@@ -90,6 +90,14 @@
     filter: grayscale(0.5);
   }
 
+  /* A spectator's cards are read-only, not a turn they left: shown at full strength. */
+  .macro-sidebar[data-spectating="true"] > [inert],
+  .macro-sheet-peek[data-spectating="true"] > [inert],
+  .macro-sheet-body[data-spectating="true"] {
+    opacity: 1;
+    filter: none;
+  }
+
   :global([data-spacing="compact"]) .active-power-banner {
     padding: 8px 12px;
   }

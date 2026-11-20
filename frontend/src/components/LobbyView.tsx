@@ -40,6 +40,8 @@ interface LobbyViewProps {
     power: Power,
     passcode?: string,
   ) => Promise<void>;
+  /** Opens a match to watch without a seat; rejects (after a toast) when it cannot be. */
+  onWatchGame: (gameId: string, passcode?: string) => Promise<void>;
   onOpenSurrenderModal: (game: MultiplayerGameSummary, power: Power) => void;
 }
 
@@ -52,6 +54,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onOpenAuth,
   onCreateGame,
   onJoinOrEnterGame,
+  onWatchGame,
   onOpenSurrenderModal,
 }) => {
   // Host and Join with code open as dialogs from the action row; one at a time.
@@ -67,6 +70,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     user,
     onOpenAuth,
     onJoinOrEnterGame,
+    onWatchGame,
     onDone: closeDialog,
   });
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -158,6 +162,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             onRefreshGames={onRefreshGames}
             onOpenAuth={onOpenAuth}
             onJoinOrEnterGame={onJoinOrEnterGame}
+            onWatchGame={onWatchGame}
           />
         </div>
       </div>

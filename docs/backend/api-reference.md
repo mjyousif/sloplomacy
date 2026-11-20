@@ -45,7 +45,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/history` | List the game's resolved phases, oldest first (up to the last 30) | *None* | `List[TurnHistoryEntry]` |
 | `GET` | `/api/history/stats` | Per-power tactical, diplomatic, and logistics War Ledger derived strictly from resolved history | *None* | `CampaignStatsResponse` |
-| `GET` | `/api/press` | The press (chat) the caller's seat may read, oldest first; `?after=<seq>` for newer messages only | *None* | `PressFeed` |
+| `GET` | `/api/press` | The press (chat) the caller's seat may read, oldest first (a spectator: the public box alone); `?after=<seq>` for newer messages only | *None* | `PressFeed` |
 | `POST` | `/api/press` | Send press from the caller's seat to the public box or a private thread, signed or anonymous | `PressPostRequest` | `PressMessageView` |
 | `GET` | `/api/history/{index}` | One resolved phase as it began, with every power's orders and how each resolved | *None* | `TurnRecord` |
 
@@ -226,7 +226,7 @@ Deletes a game from memory and Supabase. Only the host can delete a multiplayer 
 ---
 
 ### 5. `POST /api/games/{game_id}/join`
-Claims an open Great Power seat for a user. In the response, `state.active_power` is the power the caller just claimed; the shared game is not changed, so other players are unaffected. If the campaign is private (`has_passcode: true`), the correct `passcode` must be provided unless the user is already a confirmed participant.
+Claims an open Great Power seat for a user. In the response, `state.active_power` is the power the caller just claimed; the shared game is not changed, so other players are unaffected. If the campaign is private (`has_passcode: true`), the correct `passcode` must be provided unless the user is already a confirmed participant. A wrong passcode counts towards the [passcode limit](#passcode-limit) and answers `403`; once the limit is reached, `429`.
 
 #### Request (`JoinGameRequest`):
 ```json
@@ -373,6 +373,8 @@ Bootstraps the client by returning the current `GameState` along with the comple
 - **Headers**:
   - `X-Passcode` *(optional, string)*: Header alternative for campaign passcode.
   - `Authorization: Bearer <token>` *(optional)*: Identifies the caller, whose seat decides which orders they see. Signed out, a caller sees only seats claimed without an account.
+- **Spectators**: a caller with no seat, signed in or not, may watch any match they can open (a private one with its passcode). They get the board with every unadjudicated order masked to `HOLD` and no issues. A spectator client names no `power`: without a token, naming a seat claimed without an account would pick that seat.
+- **Access**: a private match needs its passcode unless the caller is seated in it (`403`). The passcode is checked before the clock is ticked, so a refused caller cannot resolve a deadline. <a id="passcode-limit"></a>**Passcode limit**: wrong passcodes are counted per client address and match, on every route that takes one (`GET /api/game`, `/api/history*`, `GET /api/press`, the solo-sandbox export, `join` and the game socket). After 10 wrong passcodes within 10 minutes the client gets `429` (the socket closes with `4429`), even for the right passcode, until the oldest try is 10 minutes old. A right passcode clears the count, and a missing one is refused without counting. The address is the last `X-Forwarded-For` entry (the one Cloud Run's front end adds), else the peer address (`security/passcode.py`).
 
 #### Response (`GameBootstrapResponse`):
 ```json
@@ -787,7 +789,8 @@ With `anonymous` the readers are the same, but the author is hidden. A one-to-on
 
 Rules that hold on both endpoints and on the socket:
 
-- **Seated players only.** The caller's seat comes from their token (`viewer_power_for`). `power` only picks among the caller's own seats; naming another power's seat answers `403`. A spectator, or a host without a seat, gets `403`, because what is returned depends on which power is asking.
+- **Seated players send; spectators read the public box.** The caller's seat comes from their token (`viewer_power_for`). `power` only picks among the caller's own seats; naming another power's seat answers `403`. A caller with no seat (a spectator, or a host without a seat) may read the public box and nothing else, after the same passcode check as `GET /api/game`; sending answers `403`.
+- **A spectator's feed is the public box alone.** `power` is `null`, and each message's `seq` is its place among public messages (`PressMessage.public_number`), so the gaps private press would leave never show. An anonymous public author stays hidden from a spectator until the game has a winner. A spectator never reads a private message, not even after the game. Their socket is sent new public messages the same way, with `power` `null`.
 - **An anonymous author is hidden from everyone but themself**, the host included: `sender` is `null` in every other player's copy. In those copies a private message's `recipients` lists the whole thread, the author included, because the real list leaves out exactly the author. The author's own copy keeps the real recipients.
 - **Game over reveals everything.** Once the game has a winner, `revealed` is `true`, every seated player may read every message, and every `sender` is filled in.
 - Sandboxes have no press: a solo or saved sandbox answers `409`, a private sandbox copy (`sbx_`) `404`. A failed Supabase read answers `503`, never an empty feed.
@@ -800,8 +803,9 @@ Rules that hold on both endpoints and on the socket:
 | Query | Description |
 | :--- | :--- |
 | `game_id` | The match. |
-| `power` | The caller's seat to read as. Optional for a signed-in player with one seat. |
+| `power` | The caller's seat to read as. Optional for a signed-in player with one seat. A spectator names none. |
 | `after` | Only messages with a `seq` above this (the reader's own numbering). |
+| `passcode` | For a spectator of a private match (or the `X-Passcode` header). Seated players need none. |
 
 #### Response (`PressFeed`):
 ```json
@@ -880,12 +884,13 @@ Establishes a persistent, low-latency WebSocket connection scoped to a specific 
 - **Connection Handshake**:
   - Validates that `game_id` exists. If the game is missing, closes with code `4004`.
   - Accepts the socket, then reads the `auth` message when `handshake=1`.
-  - For private campaigns, a caller who holds no seat must give the passcode, checked in constant time; if it is missing or wrong, closes with code `4403`.
+  - For private campaigns, a caller who holds no seat must give the passcode, checked in constant time; if it is missing or wrong, closes with code `4403`, and after too many wrong passcodes with `4429` (see the [passcode limit](#passcode-limit)).
+  - A caller with no seat is a spectator: every `game_update` masks all unadjudicated orders, and only public press is pushed, with `power` `null`.
   - Immediately transmits the sanitized `game_update` payload tailored to the connected viewer's power.
 - **Client Heartbeats & Refresh**:
   - Send `{"type": "ping"}` -> Server replies `{"type": "pong"}` to maintain Cloud Run & proxy connections.
   - Send `{"type": "refresh"}` -> Server runs `tick_timer` (resolving a deadline that has passed), then resends the latest authoritative `game_update`. The client sends this when its countdown reaches zero; `ping` does not run the clock.
-- **Close codes**: `4004` (no such game) and `4403` (passcode refused) are permanent, and the client does not reconnect. `1013` means try again later (the database could not be read).
+- **Close codes**: `4004` (no such game), `4403` (passcode refused) and `4429` (too many wrong passcodes) are permanent, and the client does not reconnect. `1013` means try again later (the database could not be read).
 - **Automatic Broadcast Triggers**:
   - Whenever an order is submitted or changed (`/api/order`, `/api/orders/batch`, `/api/orders/confirm-all`, `/api/orders/clear-all`).
   - Whenever a power finalizes or unfinalizes (`/api/finalize`, `/api/unfinalize`).

@@ -26,6 +26,8 @@ export interface TurnHistory {
   viewIndex: number | null;
   /** The record for `viewIndex` once it has arrived. */
   turn: TurnRecord | null;
+  /** The entry for `viewIndex`, or null for the live turn. */
+  viewedEntry: TurnHistoryEntry | null;
   /** The selected nation filters: only these powers' orders are drawn. Empty draws everyone's. */
   powers: Power[];
   /** The selected movement action filters. Empty draws all movement types. */
@@ -179,6 +181,7 @@ export function useTurnHistory({
     entries,
     viewIndex,
     turn: activeTurn,
+    viewedEntry: viewIndex === null ? null : (entries[viewIndex] ?? null),
     powers,
     actions,
     select,

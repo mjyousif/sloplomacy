@@ -1,4 +1,4 @@
-import { AlertTriangle, KeyRound } from 'lucide-react';
+import { AlertTriangle, Eye, KeyRound } from 'lucide-react';
 import type React from 'react';
 import {
   type AuthUser,
@@ -20,6 +20,8 @@ export interface JoinWithCodeCardProps {
   joinCodeLoading: boolean;
   joinCodeError: string | null;
   handleJoinCodeSubmit: (e: React.FormEvent) => void;
+  /** Watches the match without claiming a seat (the nation picked is ignored). */
+  handleWatchClick: () => void;
 }
 
 /** The Join Private Campaign card: a Game ID, a passcode and the country to claim. */
@@ -34,6 +36,7 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
   joinCodeLoading,
   joinCodeError,
   handleJoinCodeSubmit,
+  handleWatchClick,
 }) => {
   return (
     <div
@@ -47,7 +50,7 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
       </div>
       <p className={styles.lobbyCreateDesc}>
         Have a Game ID and passcode from a host? Enter them below to claim your
-        nation and join the war room.
+        nation and join the war room, or watch the match without a seat.
       </p>
 
       <form onSubmit={handleJoinCodeSubmit} className={styles.lobbyCreateForm}>
@@ -102,6 +105,16 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
                 ? `Unlock & Claim ${POWER_METADATA[joinCodePower].shortName}`
                 : 'Sign In to Join Campaign'}
           </span>
+        </button>
+        <button
+          type="button"
+          className={styles.lobbyWatchBtn}
+          data-testid="join-code-watch"
+          disabled={joinCodeLoading || !joinCodeGameId.trim()}
+          onClick={handleWatchClick}
+        >
+          <Eye size={15} />
+          <span>Watch without a seat</span>
         </button>
       </form>
     </div>

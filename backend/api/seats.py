@@ -1,6 +1,5 @@
 """Seats in a match: joining, leaving, surrendering, and picking which of your powers to play."""
 
-import hmac
 from datetime import datetime, timezone
 
 from domain.board import Power
@@ -18,8 +17,9 @@ from engine.order_utils import (
     refresh_diagnostics_and_simulation,
 )
 from engine.topology.provinces import PROVINCES
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from security.auth import AuthUser, get_current_user
+from security.passcode import client_address, require_passcode
 from security.secrecy import (
     sanitize_game_state_for_viewer,
     sanitize_summary_for_viewer,
@@ -27,7 +27,6 @@ from security.secrecy import (
 )
 from storage import supabase
 from storage.store import (
-    GAME_PASSCODES,
     GAME_SUMMARIES,
     PROFILE_NAMES,
     SANDBOX_CHECKPOINTS,
@@ -53,6 +52,7 @@ router = APIRouter(tags=["Lobby & Match Management"])
 async def join_multiplayer_game(
     game_id: str,
     req: JoinGameRequest,
+    request: Request,
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     from api.turns import refresh_timer
@@ -70,13 +70,7 @@ async def join_multiplayer_game(
             p.user_id == effective_user_id for p in summary.participants.values()
         )
         if not is_already_participant:
-            expected_pw = GAME_PASSCODES.get(game_id)
-            provided_pw = (req.passcode or "").strip()
-            if not expected_pw or not hmac.compare_digest(provided_pw, expected_pw):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Passcode required or incorrect for this private campaign.",
-                )
+            require_passcode(game_id, req.passcode, client_address(request))
 
     existing = summary.participants.get(req.power.value)
     if existing and existing.user_id != effective_user_id:
