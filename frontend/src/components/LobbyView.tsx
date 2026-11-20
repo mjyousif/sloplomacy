@@ -1,5 +1,7 @@
 import type React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useCopyFeedback } from '../hooks/useCopyFeedback';
+import type { PasscodeRequest } from '../hooks/useGameRoute';
 import {
   type AuthUser,
   type MultiplayerGameSummary,
@@ -42,6 +44,9 @@ interface LobbyViewProps {
   ) => Promise<void>;
   /** Opens a match to watch without a seat; rejects (after a toast) when it cannot be. */
   onWatchGame: (gameId: string, passcode?: string) => Promise<void>;
+  /** A private match's link opened with no passcode: Join with code opens to ask for it. */
+  passcodeRequest?: PasscodeRequest | null;
+  onPasscodeRequestShown?: () => void;
   onOpenSurrenderModal: (game: MultiplayerGameSummary, power: Power) => void;
 }
 
@@ -55,6 +60,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onCreateGame,
   onJoinOrEnterGame,
   onWatchGame,
+  passcodeRequest = null,
+  onPasscodeRequestShown,
   onOpenSurrenderModal,
 }) => {
   // Host and Join with code open as dialogs from the action row; one at a time.
@@ -73,15 +80,15 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     onWatchGame,
     onDone: closeDialog,
   });
-  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const { copied: copiedField, copy: handleCopy } = useCopyFeedback();
 
-  const handleCopy = (text: string, fieldId: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(fieldId);
-    setTimeout(() => {
-      setCopiedField((prev) => (prev === fieldId ? null : prev));
-    }, 2500);
-  };
+  // Join with code, with the Game ID from the link filled in.
+  useEffect(() => {
+    if (!passcodeRequest) return;
+    join.prefill(passcodeRequest.gameId);
+    setOpenDialog('join');
+    onPasscodeRequestShown?.();
+  }, [passcodeRequest]);
 
   // The user's active games (including unwitnessed & <24h grace); public games are in the browser
   const myGames = filterAndSortMyGames(games, user);
@@ -200,6 +207,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         onClose={host.closeCreatedPrivate}
         handleCopy={handleCopy}
         copiedGameId={copiedField === 'gid'}
+        copiedLink={copiedField === 'link'}
         copiedPasscode={copiedField === 'pw'}
       />
     </div>

@@ -1,9 +1,11 @@
 import {
+  Check,
   ChevronLeft,
   ChevronRight,
   Crown,
   Flag,
   FlaskConical,
+  Link,
   RotateCcw,
   Save,
   Trash2,
@@ -12,7 +14,9 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
+import { useCopyFeedback } from '../../hooks/useCopyFeedback';
 import type { MultiplayerGameSummary, Power } from '../../types/diplomacy';
+import { gameLink, isLinkableGameId } from '../../utils/gameRoute';
 import { AdminSettingsOptions } from '../admin/AdminSettingsMenu';
 import { PowerFlag } from '../ui/PowerFlag';
 import displayStyles from './DisplaySettings.module.css';
@@ -42,8 +46,8 @@ export interface GameSettingsMenuProps {
 type GameMenuView = 'main' | 'admin';
 
 /**
- * Top-bar "Game Settings" dropdown holding Open in Local Sandbox (when not already in
- * Solo Sandbox), Administrator (for the game creator while on a board), and Surrender
+ * Top-bar "Game Settings" dropdown holding Copy game link (in a multiplayer match, for
+ * players and spectators alike), Open in Local Sandbox (when not already in Solo Sandbox), Administrator (for the game creator while on a board), and Surrender
  * (in a live multiplayer seat). Trigger displays a flask in Solo Sandbox and a crown in games.
  */
 export function GameSettingsMenu({
@@ -89,6 +93,15 @@ export function GameSettingsMenu({
   const showPowerFlag =
     !isSandbox && viewMode === 'multiplayer' && Boolean(playerPower);
   const showExportToSandbox = viewMode !== 'lobby' && !isSandbox;
+  // The link holds only the game id; a private match asks whoever opens it for the passcode.
+  const linkGameId =
+    viewMode === 'multiplayer' &&
+    matchSummary &&
+    isLinkableGameId(matchSummary.game_id)
+      ? matchSummary.game_id
+      : null;
+  const { copied, copy } = useCopyFeedback();
+  const linkCopied = copied === 'link';
   const showAdmin = viewMode !== 'lobby' && isGameCreator;
   const showSaveSandbox = isSandbox && Boolean(onSaveSandbox);
   const showResetSandbox = isSandbox && Boolean(onResetSandbox);
@@ -230,6 +243,24 @@ export function GameSettingsMenu({
               </p>
 
               <div className={styles.gameMenuList}>
+                {linkGameId && (
+                  <button
+                    type="button"
+                    data-testid="game-settings-copy-link"
+                    className={styles.gameMenuItem}
+                    onClick={() => copy(gameLink(linkGameId), 'link')}
+                  >
+                    {linkCopied ? (
+                      <Check size={15} className={styles.gameMenuItemIcon} />
+                    ) : (
+                      <Link size={15} className={styles.gameMenuItemIcon} />
+                    )}
+                    <span aria-live="polite">
+                      {linkCopied ? 'Link copied' : 'Copy game link'}
+                    </span>
+                  </button>
+                )}
+
                 {showExportToSandbox && (
                   <button
                     type="button"
@@ -336,7 +367,7 @@ export function GameSettingsMenu({
 
                 {showSurrender && (
                   <>
-                    {(showExportToSandbox || showAdmin) && (
+                    {(linkGameId || showExportToSandbox || showAdmin) && (
                       <div className={styles.gameMenuDivider} />
                     )}
                     <button

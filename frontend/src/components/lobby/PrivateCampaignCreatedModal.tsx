@@ -1,5 +1,6 @@
 import { Check, Copy, KeyRound, ShieldAlert, X } from 'lucide-react';
 import type React from 'react';
+import { gameLink } from '../../utils/gameRoute';
 import { Modal, ModalCloseButton, ModalFooter } from '../modal/Modal';
 import promptStyles from '../modal/PromptDialog.module.css';
 import styles from './PrivateCampaignCreatedModal.module.css';
@@ -11,8 +12,9 @@ export interface PrivateCampaignCreatedModalProps {
     name: string;
   } | null;
   onClose: () => void;
-  handleCopy: (text: string, field: 'gid' | 'pw') => void;
+  handleCopy: (text: string, field: 'gid' | 'link' | 'pw') => void;
   copiedGameId: boolean;
+  copiedLink: boolean;
   copiedPasscode: boolean;
 }
 
@@ -23,9 +25,11 @@ export const PrivateCampaignCreatedModal: React.FC<
   onClose,
   handleCopy,
   copiedGameId,
+  copiedLink,
   copiedPasscode,
 }) => {
   if (!createdPrivateModal) return null;
+  const link = gameLink(createdPrivateModal.gameId);
 
   return (
     <Modal cardClassName={promptStyles.card}>
@@ -60,6 +64,27 @@ export const PrivateCampaignCreatedModal: React.FC<
             >
               {copiedGameId ? <Check size={14} /> : <Copy size={14} />}
               <span>{copiedGameId ? 'Copied' : 'Copy'}</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <span className={styles.credLabel}>Game Link:</span>
+          <div>
+            <span
+              className={`${styles.credValue} ${styles.credLink}`}
+              data-testid="private-campaign-link"
+            >
+              {link}
+            </span>
+            <button
+              type="button"
+              className={styles.credCopyBtn}
+              onClick={() => handleCopy(link, 'link')}
+              title="Copy Game Link (it asks for the passcode)"
+            >
+              {copiedLink ? <Check size={14} /> : <Copy size={14} />}
+              <span>{copiedLink ? 'Copied' : 'Copy'}</span>
             </button>
           </div>
         </div>

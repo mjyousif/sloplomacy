@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { LobbyView } from './LobbyView';
 import {
   hostDialog,
   joinDialog,
@@ -82,5 +83,24 @@ describe('LobbyView Host and Join dialogs', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     openJoin();
     expect(screen.queryByTestId('join-code-error')).not.toBeInTheDocument();
+  });
+
+  it('opens Join with code with the Game ID from a link, asking for the passcode', async () => {
+    const onPasscodeRequestShown = vi.fn();
+    const onWatchGame = vi.fn(async () => {});
+    const { user, view, props } = setup({
+      passcodeRequest: { gameId: 'mp_link' },
+      onPasscodeRequestShown,
+      onWatchGame,
+    });
+    const join = screen.getByRole('dialog', { name: 'Join with code' });
+    expect(within(join).getByLabelText('Game ID')).toHaveValue('mp_link');
+    expect(within(join).getByLabelText(/Passcode/)).toHaveValue('');
+    expect(onPasscodeRequestShown).toHaveBeenCalledTimes(1);
+    view.rerender(<LobbyView {...props} passcodeRequest={null} />);
+
+    await user.type(within(join).getByLabelText(/Passcode/), 'pw');
+    await user.click(within(join).getByRole('button', { name: /Watch/ }));
+    expect(onWatchGame).toHaveBeenCalledWith('mp_link', 'pw');
   });
 });

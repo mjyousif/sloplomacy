@@ -53,6 +53,8 @@ App.tsx (Root View Container: 'lobby' | 'multiplayer' | 'sandbox')
 └── AppModals (global modal coordinator)     ──► components/modal/, auth/, admin/, game/, tools/
 ```
 
+`viewMode` and the open game are kept in the address bar by `hooks/useGameRoute.ts`: a multiplayer match is at `/game/<id>` and the lobby at `/`, so a game can be linked, a reload stays in it and Back returns to the lobby. See [Game Links & Routing](state-management.md#game-links--routing-usegameroute).
+
 ---
 
 ## Vite Proxy Setup
