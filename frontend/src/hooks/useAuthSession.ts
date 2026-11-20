@@ -11,6 +11,8 @@ export type AuthModalTab = 'signin' | 'signup';
  */
 export function useAuthSession() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  // The first read is done (even if it failed), so `authUser` can be trusted.
+  const [authReady, setAuthReady] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [authModalReason, setAuthModalReason] = useState<string | null>(null);
   const [authModalTab, setAuthModalTab] = useState<AuthModalTab>('signin');
@@ -33,7 +35,10 @@ export function useAuthSession() {
       }
     };
 
-    getInitialAuthUser().then(handleUser);
+    getInitialAuthUser()
+      .then(handleUser)
+      .catch(() => {})
+      .finally(() => setAuthReady(true));
     const unsub = subscribeToAuthChanges(handleUser);
     return () => unsub();
   }, []);
@@ -53,6 +58,7 @@ export function useAuthSession() {
 
   return {
     authUser,
+    authReady,
     setAuthUser,
     authModalOpen,
     setAuthModalOpen,

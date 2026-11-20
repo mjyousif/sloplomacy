@@ -91,5 +91,11 @@ export function useJoinWithCodeForm({
       handleWatchClick,
     },
     clearError: () => setJoinCodeError(null),
+    /** Fills in a Game ID (from a link) with an empty passcode, to be asked for. */
+    prefill: (gameId: string) => {
+      setJoinCodeGameId(gameId);
+      setJoinCodePasscode('');
+      setJoinCodeError(null);
+    },
   };
 }

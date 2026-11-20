@@ -123,6 +123,15 @@ describe('LobbyView hosting', () => {
     fireEvent.click(screen.getByTitle('Copy Game ID'));
     expect(writeText).toHaveBeenLastCalledWith('mp_new');
     expect(screen.getByText('Copied')).toBeInTheDocument();
+    // The link holds the game id alone; whoever opens it is asked for the passcode.
+    expect(screen.getByTestId('private-campaign-link')).toHaveTextContent(
+      `${window.location.origin}/game/mp_new`,
+    );
+    fireEvent.click(screen.getByTitle(/Copy Game Link/));
+    expect(writeText).toHaveBeenLastCalledWith(
+      `${window.location.origin}/game/mp_new`,
+    );
+    expect(screen.getAllByText('Copied')).toHaveLength(1);
     fireEvent.click(screen.getByTitle('Copy Passcode'));
     expect(writeText).toHaveBeenLastCalledWith('sekret');
     act(() => {

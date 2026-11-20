@@ -106,6 +106,8 @@ npm run dev
 npm run build
 ```
 
+**Game links in dev.** A multiplayer match is at `/game/<id>` (for example `http://localhost:5173/game/mp_a1b2c3`), and the Vite dev server serves `index.html` for it, so a link or a reload opens the game. Use **Copy game link** in the in-game `Game Settings` menu to get one. A link holds only the game id: a private match asks for its passcode in Join with code. `?view=sandbox` (or `#sandbox`) still opens the Solo Sandbox. With the demo sign-in each browser profile is its own player, so open a link in a private window to see it as a signed-out visitor. See [Game Links & Routing](../frontend/state-management.md#game-links--routing-usegameroute).
+
 ### 3. Configuring Supabase Auth (Optional)
 To test cloud authentication locally rather than default local dev mode:
 1. Create `frontend/.env` (modeled after `frontend/.env.example`):
@@ -262,6 +264,7 @@ Use the file name (without `.spec.ts`) as the `ScenarioRecorder` name, because t
 | `history` | Turn history: a resolved bounce shown with every nation's orders, nation chips, the read-only orders panel, back to live | `artifacts/e2e/turn_history/` |
 | `press` | Press (chat) between three seated players in two browsers: public box, a private thread the third player is never served, anonymous messages in a group thread and the public box (never in a one-to-one thread), province links lighting the map, unread badges, and the phone drawer | `artifacts/e2e/press/`, `artifacts/e2e/press_phone/` |
 | `lobby_browser` | Lobby game browser with two players (desktop 1440x900 and a phone guest at 390x844): open, full, country and turn filters, a private campaign never listed, opening a row and claiming a seat, the guest's seat strip turning taken live, the guest's claim asking to sign in, and Resume on the player's own game | `artifacts/e2e/lobby_browser/` |
+| `spectate` | Watching without a seat: a signed-out visitor watches a public game from the browser (no hidden orders, nothing to order, public press only), a private game through Join with code, and on a phone; game links: `/game/<id>` watched signed out, reload keeps the game and Back returns to the lobby, Copy game link, a private link opening Join with code with the Game ID filled in, a seated player's link resuming their seat, and the link in the private-campaign dialog | `artifacts/e2e/spectate/` |
 | `convoy_scenarios` | Authoritative convoy reachability: ocean-blue potential/chained vs solid-green active highlights + reticles, dead-end path filtering, broken chains, 4-ship Trans-Med convoy, and bicoastal landings | `artifacts/e2e/convoy_scenarios/` |
 
 Each scenario exports a `summary.json` containing the execution status (`PASSED`/`FAILED`), step-by-step screenshot paths, and any browser console or uncaught page runtime errors.

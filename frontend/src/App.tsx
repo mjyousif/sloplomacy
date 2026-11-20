@@ -9,9 +9,11 @@ import { LobbyView } from './components/LobbyView';
 import { useConfirm } from './components/modal/ConfirmModal';
 import { useAdminDirectEdit } from './hooks/useAdminDirectEdit';
 import { useAuthSession } from './hooks/useAuthSession';
+import { useBoardExits } from './hooks/useBoardExits';
 import { useCompactLayout } from './hooks/useCompactLayout';
 import { useDisplayPrefs } from './hooks/useDisplayPrefs';
 import { useGameOverModal } from './hooks/useGameOverModal';
+import { useGameRoute } from './hooks/useGameRoute';
 import { useGameSession } from './hooks/useGameSession';
 import { useGameSync } from './hooks/useGameSync';
 import { useMatchActions } from './hooks/useMatchActions';
@@ -24,15 +26,12 @@ import { useTurnHistory } from './hooks/useTurnHistory';
 import { useTurnNotifications } from './hooks/useTurnNotifications';
 import { useWorkspaceLayout } from './hooks/useWorkspaceLayout';
 import { signOutUser } from './lib/supabase';
-import type {
-  MultiplayerGameSummary,
-  SimulationResult,
-} from './types/diplomacy';
+import type { SimulationResult } from './types/diplomacy';
 import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
-import { myPowerIn } from './utils/heroGame';
+import { initialViewMode } from './utils/gameRoute';
 import { DEFAULT_CAMERA } from './utils/mapCameraHelpers';
 import { turnLabel } from './utils/timerHelpers';
-import { initialViewMode, type ViewMode } from './utils/viewMode';
+import type { ViewMode } from './utils/viewMode';
 
 export function App() {
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
@@ -70,6 +69,7 @@ export function App() {
   } = session;
   const {
     authUser,
+    authReady,
     setAuthUser,
     authModalOpen,
     setAuthModalOpen,
@@ -307,6 +307,33 @@ export function App() {
     authUser,
     triggerToast,
   });
+  const exits = useBoardExits({
+    setViewMode,
+    authUser,
+    seats,
+    confirmIfDirty: directEdit.confirmIfDirty,
+    confirm,
+    closeAdminTools: () => {
+      setAdminModalOpen(false);
+      setAdminOverrideActive(false);
+    },
+    goLive: turnHistory.goLive,
+    handleLoadScenario,
+    fetchGamesList,
+  });
+  // The address bar: `/game/<id>` links, Back and Forward, and `?view=sandbox`.
+  const route = useGameRoute({
+    viewMode,
+    activeGameId,
+    authUser,
+    authReady,
+    matchPasscodes,
+    enterSeat: seats.handleJoinOrEnterMultiplayerGame,
+    watchGame: spectate.watchGame,
+    leaveToLobby: exits.handleBackToLobby,
+    openSandbox: exits.guardedEnterSoloSandbox,
+    triggerToast,
+  });
 
   if (loading && !gameState) {
     return (
@@ -371,63 +398,6 @@ export function App() {
     setHighlightedProvinces([]);
     turnHistory.step(delta);
   };
-  const handleBackToLobby = async () => {
-    if (!(await directEdit.confirmIfDirty('return to the lobby'))) return;
-    seats.rememberCurrentGame();
-    setViewMode('lobby');
-    fetchGamesList();
-  };
-  const guardedEnterSoloSandbox = async (event?: React.MouseEvent) => {
-    if (!(await directEdit.confirmIfDirty('open the Solo Sandbox'))) return;
-    setAdminModalOpen(false);
-    setAdminOverrideActive(false);
-    seats.handleEnterSoloSandbox(event);
-  };
-  const guardedResetSandbox = async (event?: React.MouseEvent) => {
-    if (!(await directEdit.confirmIfDirty('reset the sandbox'))) return;
-    const ok = await confirm(
-      {
-        title: 'Reset Sandbox?',
-        message:
-          'Reset this sandbox to Standard Spring 1901? All current orders and board changes will be lost.',
-        confirmLabel: 'Reset Sandbox',
-      },
-      event,
-    );
-    if (!ok) return;
-    turnHistory.goLive();
-    setAdminModalOpen(false);
-    setAdminOverrideActive(false);
-    await handleLoadScenario('standard_1901');
-  };
-  const guardedDeleteSandbox = async (event?: React.MouseEvent) => {
-    if (!(await directEdit.confirmIfDirty('delete this sandbox'))) return;
-    setAdminModalOpen(false);
-    setAdminOverrideActive(false);
-    await seats.handleDeleteSandbox(event);
-  };
-  const guardedSwitchToSoloSandbox = async () => {
-    if (!(await directEdit.confirmIfDirty('switch to Solo Sandbox'))) return;
-    setAdminModalOpen(false);
-    setAdminOverrideActive(false);
-    await seats.handleSwitchToSoloSandbox();
-  };
-  const guardedSwitchToGame = async (game: MultiplayerGameSummary) => {
-    if (!(await directEdit.confirmIfDirty('switch games'))) return;
-    setAdminModalOpen(false);
-    setAdminOverrideActive(false);
-    const power = myPowerIn(game, authUser) ?? 'FRANCE';
-    await seats.handleJoinOrEnterMultiplayerGame(game.game_id, power);
-  };
-  const guardedReturnToPreviousGame = seats.previousGame
-    ? async () => {
-        if (!(await directEdit.confirmIfDirty('return to the previous game')))
-          return;
-        setAdminModalOpen(false);
-        setAdminOverrideActive(false);
-        await seats.handleReturnToPreviousGame();
-      }
-    : undefined;
   const handleSignOut = async () => {
     seats.clearPreviousGame();
     await signOutUser();
@@ -475,14 +445,14 @@ export function App() {
         openAuthPrompt={openAuthPrompt}
         openAccountModal={openAccountModal}
         handleSignOut={handleSignOut}
-        handleBackToLobby={handleBackToLobby}
-        handleEnterSoloSandbox={guardedEnterSoloSandbox}
+        handleBackToLobby={exits.handleBackToLobby}
+        handleEnterSoloSandbox={exits.guardedEnterSoloSandbox}
         onSaveSandbox={handleOpenSaveSandboxModal}
-        onResetSandbox={guardedResetSandbox}
-        onDeleteSandbox={guardedDeleteSandbox}
-        onSwitchToSoloSandbox={guardedSwitchToSoloSandbox}
-        onReturnToPreviousGame={guardedReturnToPreviousGame}
-        onSelectGame={guardedSwitchToGame}
+        onResetSandbox={exits.guardedResetSandbox}
+        onDeleteSandbox={exits.guardedDeleteSandbox}
+        onSwitchToSoloSandbox={exits.guardedSwitchToSoloSandbox}
+        onReturnToPreviousGame={exits.guardedReturnToPreviousGame}
+        onSelectGame={exits.guardedSwitchToGame}
         onOpenSurrenderModal={seats.handleOpenSurrenderModal}
         toolsDrawerOpen={layout.toolsDrawerOpen}
         setToolsDrawerOpen={layout.setToolsDrawerOpen}
@@ -510,11 +480,13 @@ export function App() {
           games={gamesList}
           loadingGames={loadingGames}
           onRefreshGames={fetchGamesList}
-          onEnterSandbox={guardedEnterSoloSandbox}
+          onEnterSandbox={exits.guardedEnterSoloSandbox}
           onOpenAuth={openAuthPrompt}
           onCreateGame={seats.handleCreateMultiplayerGame}
           onJoinOrEnterGame={seats.handleJoinOrEnterMultiplayerGame}
           onWatchGame={spectate.watchGame}
+          passcodeRequest={route.passcodeRequest}
+          onPasscodeRequestShown={route.clearPasscodeRequest}
           onOpenSurrenderModal={seats.handleOpenSurrenderModal}
         />
       ) : (
@@ -637,7 +609,7 @@ export function App() {
         onCloseGameOverModal={closeGameOverModal}
         onReturnToLobby={() => {
           closeGameOverModal();
-          void handleBackToLobby();
+          void exits.handleBackToLobby();
         }}
       />
     </div>

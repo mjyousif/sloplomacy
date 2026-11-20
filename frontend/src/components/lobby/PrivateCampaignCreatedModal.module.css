@@ -16,6 +16,12 @@
     font-weight: 700;
   }
 
+  /* A link is long and has no spaces to break at. */
+  .cred-link {
+    font-size: 0.82rem;
+    overflow-wrap: anywhere;
+  }
+
   .cred-copy-btn {
     display: flex;
     align-items: center;

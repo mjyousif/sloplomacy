@@ -291,4 +291,33 @@ describe('GameSettingsMenu', () => {
     expect(screen.queryByTestId('game-settings-panel')).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
   });
+
+  it('copies the match link for players and spectators, and nowhere else', async () => {
+    const writeText = vi.fn(async () => {});
+    const user = userEvent.setup();
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    const { rerender, props } = renderGameSettings({ playerPower: null });
+    await user.click(screen.getByTestId('game-settings-trigger'));
+    const item = screen.getByTestId('game-settings-copy-link');
+    expect(item).toHaveTextContent('Copy game link');
+    await user.click(item);
+    expect(writeText).toHaveBeenCalledWith(
+      `${window.location.origin}/game/mp_1`,
+    );
+    expect(item).toHaveTextContent('Link copied');
+
+    rerender(
+      <GameSettingsMenu
+        {...props}
+        viewMode="sandbox"
+        matchSummary={{ ...MATCH, game_id: 'saved_1', is_sandbox: true }}
+      />,
+    );
+    expect(
+      screen.queryByTestId('game-settings-copy-link'),
+    ).not.toBeInTheDocument();
+  });
 });
