@@ -2,6 +2,19 @@
 
 This guide covers developer workflows, running the local development environment, testing, and debugging the Diplomacy 1901 Tactical Engine & Atlas.
 
+## Contents
+
+- [Prerequisites](#prerequisites)
+- [Quickstart (Single Command)](#quickstart-single-command)
+- [Individual Service Workflows](#individual-service-workflows)
+- [Code Quality, Linting & Formatting](#code-quality-linting--formatting)
+- [Running the Automated Test Suite](#running-the-automated-test-suite)
+- [Comparing Rendered Styles Between Two Builds](#comparing-rendered-styles-between-two-builds)
+- [LLM-Driven E2E Interactive Testing](#llm-driven-e2e-interactive-testing)
+- [Agent Playtest Harness (`scripts/playtest/`)](#agent-playtest-harness-scriptsplaytest)
+- [Repository Governance & Branch Protection (`main`)](#repository-governance--branch-protection-main)
+- [Troubleshooting & FAQ](#troubleshooting--faq)
+
 ---
 
 ## Prerequisites

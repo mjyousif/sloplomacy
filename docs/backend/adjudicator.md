@@ -4,6 +4,15 @@ The adjudication engine (`backend/engine/adjudicator/`) evaluates orders, manage
 
 It interfaces with the authoritative **Python `diplomacy` package** (`diplomacy>=1.1.2`), which implements standard Diplomacy Adjudicator Test Cases (DATC) resolution semantics.
 
+## Contents
+
+- [1. Engine Architecture & Integration](#1-engine-architecture--integration)
+- [2. Phase Resolution Cycle](#2-phase-resolution-cycle)
+- [3. Order Translation (`order_to_diplomacy_str`)](#3-order-translation-order_to_diplomacy_str)
+- [4. Simulation Preview vs. Commit Adjudication](#4-simulation-preview-vs-commit-adjudication)
+- [Orders Nobody Gave](#orders-nobody-gave)
+- [5. Standard Tactical Invariants Enforced](#5-standard-tactical-invariants-enforced)
+
 ---
 
 ## 1. Engine Architecture & Integration

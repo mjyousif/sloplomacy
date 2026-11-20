@@ -2,6 +2,12 @@
 
 This document provides a direct mapping between the official standard rules of Diplomacy (1901) and their implementation inside this engine's validator (`engine/validator/`) and adjudicator (`engine/adjudicator/`).
 
+## Contents
+
+- [The Great Powers & Starting Positions](#the-great-powers--starting-positions)
+- [Rulebook Mechanisms & Engine Behavior](#rulebook-mechanisms--engine-behavior)
+- [Winning the Game](#winning-the-game)
+
 ---
 
 ## The Great Powers & Starting Positions

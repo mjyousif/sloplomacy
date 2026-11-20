@@ -2,6 +2,15 @@
 
 This guide documents **Sloplomacy 1901's** production observability stack on Google Cloud Run and serves as the operational playbook for both developers and AI coding agents diagnosing regressions, inspecting production logs, or modifying backend telemetry.
 
+## Contents
+
+- [1. Live Google Cloud Monitoring Dashboards (`diplomacy-1901-prod`)](#1-live-google-cloud-monitoring-dashboards-diplomacy-1901-prod)
+- [2. Why Zero-Dependency `stdout` JSON + Log-Based Metrics](#2-why-zero-dependency-stdout-json--log-based-metrics)
+- [3. Structured Telemetry Events & Log-Based Metrics](#3-structured-telemetry-events--log-based-metrics)
+- [4. Performance Baselines & Regression Triage Playbook](#4-performance-baselines--regression-triage-playbook)
+- [5. CLI Log Inspection Recipes (`gcloud logging read`)](#5-cli-log-inspection-recipes-gcloud-logging-read)
+- [6. Maintenance Rules & Invariants](#6-maintenance-rules--invariants)
+
 ---
 
 ## 1. Live Google Cloud Monitoring Dashboards (`diplomacy-1901-prod`)

@@ -2,6 +2,16 @@
 
 This guide outlines how to deploy the **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** using **Google Cloud Platform (GCP)** with a true **scale-to-zero serverless architecture**, paired with **Supabase** for Authentication, cryptographically authorized host controls, and persistent PostgreSQL state tracking.
 
+## Contents
+
+- [1. Architectural Highlights & Zero-Cost Tier](#1-architectural-highlights--zero-cost-tier)
+- [2. Setting Up Supabase & Database Migrations](#2-setting-up-supabase--database-migrations)
+- [3. Automated One-Click Deployment Scripts](#3-automated-one-click-deployment-scripts)
+- [4. Infrastructure as Code (Terraform)](#4-infrastructure-as-code-terraform)
+- [5. Automated CI/CD Deployment (GitHub Actions)](#5-automated-cicd-deployment-github-actions)
+- [6. Single-Container Multi-Stage Dockerfile](#6-single-container-multi-stage-dockerfile)
+- [7. Cloud Monitoring Dashboards & Endpoint Observability](#7-cloud-monitoring-dashboards--endpoint-observability)
+
 ---
 
 ## 1. Architectural Highlights & Zero-Cost Tier

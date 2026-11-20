@@ -4,6 +4,11 @@ This document describes how **Sloplomacy** stores data in Supabase PostgreSQL, h
 
 For how the React frontend and FastAPI backend interact with these tables at runtime, see [Service Interactions](service-interactions.md).
 
+## Contents
+
+- [1. Database Schema & Entity Relationships](#1-database-schema--entity-relationships)
+- [2. Row-Level Security (RLS) & Trust Boundaries](#2-row-level-security-rls--trust-boundaries)
+
 ---
 
 ## 1. Database Schema & Entity Relationships

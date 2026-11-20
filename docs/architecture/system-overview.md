@@ -2,6 +2,13 @@
 
 The **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** is designed as a server-authoritative, real-time tactical workspace for standard 7-player *Diplomacy*. It pairs a lightweight, deterministic Python adjudication backend with an interactive, vectorized React client, a Supabase Auth/PostgreSQL persistence layer, and scale-to-zero Google Cloud Run hosting.
 
+## Contents
+
+- [Architectural Principles](#architectural-principles)
+- [High-Level Topology](#high-level-topology)
+- [State Synchronization Flow](#state-synchronization-flow)
+- [Sandbox Checkpointing Workflow](#sandbox-checkpointing-workflow)
+
 ---
 
 ## Architectural Principles
@@ -11,7 +18,7 @@ The **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** is designed as 
      $$\text{State}_{t+1} = \text{Adjudicate}(\text{State}_t, \text{Orders}_t)$$
    - Adjudication adheres strictly to official DATC rules via the Python `diplomacy` package.
    - When configured, game state is persisted to Supabase PostgreSQL (`public.multiplayer_games`) as JSONB on every mutation, while the FastAPI in-memory dictionary operates as a sub-millisecond L1 cache.
-   - Survives Cloud Run container scale-to-zero teardown and multi-instance restarts with zero state loss.
+   - Survives Cloud Run container scale-to-zero teardown and single-instance restarts with zero state loss (Cloud Run runs with `max_instance_count = 1`; see [Runtime & Infrastructure Model](runtime-and-infrastructure.md)).
 
 2. **Client-Side Real-Time Responsiveness**:
    - Order validation, reachability checks, and tactical previews are rendered on the client canvas at 60 FPS without requiring round-trip network hops for intermediate dragging.

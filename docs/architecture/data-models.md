@@ -2,6 +2,16 @@
 
 The Diplomacy 1901 Tactical Engine maintains synchronized data contracts between the Python FastAPI backend (using Pydantic v2 in `backend/domain/`: `board.py`, `orders.py`, `issues.py`, `game_state.py` and `requests.py`) and the TypeScript frontend (defined in `frontend/src/types/diplomacy.ts`).
 
+## Contents
+
+- [Core Enumerations](#core-enumerations)
+- [Primary Schemas](#primary-schemas)
+- [Lobby & Multiplayer Schemas](#lobby--multiplayer-schemas)
+- [Authentication & Identity Schemas](#authentication--identity-schemas)
+- [Administrator Schemas](#administrator-schemas)
+- [Real-Time WebSocket Synchronization Schemas](#real-time-websocket-synchronization-schemas)
+- [Campaign Statistics & War Ledger Schemas (`backend/domain/stats.py`)](#campaign-statistics--war-ledger-schemas-backenddomainstatspy)
+
 ---
 
 ## Core Enumerations

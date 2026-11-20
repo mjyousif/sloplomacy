@@ -11,6 +11,18 @@ On a wide screen the sidebars float over the map instead of sitting beside it: t
 
 Phones have no rails. The right sidebar becomes a pull-up order sheet and the left one a drawer opened from ≡ in the top bar. See [Phone Game Screen](#phone-game-screen).
 
+## Contents
+
+- [Layout Principles & Anti-Redundancy Rules](#layout-principles--anti-redundancy-rules)
+- [Top Bar Display Settings](#top-bar-display-settings)
+- [Desktop Top Bar (`TopHeader.tsx`)](#desktop-top-bar-topheadertsx)
+- [Phone Top Bar (`CompactTopBar.tsx`)](#phone-top-bar-compacttopbartsx)
+- [Phone Game Screen](#phone-game-screen)
+- [Reusable Collapsible Section (`CollapsibleSection.tsx`)](#reusable-collapsible-section-collapsiblesectiontsx)
+- [Left Sidebar: Chancellery Tools & Intel (`ToolsSidebar.tsx`)](#left-sidebar-chancellery-tools--intel-toolssidebartsx)
+- [Right Sidebar: Tactical Command & Orders (`MacroSidebar.tsx`)](#right-sidebar-tactical-command--orders-macrosidebartsx)
+- [Collapsible Sidebar Rails](#collapsible-sidebar-rails)
+
 ---
 
 ## Layout Principles & Anti-Redundancy Rules
@@ -106,17 +118,13 @@ Turn history uses the same `TurnChronicle.tsx` control in `CompactTopBar` (with 
 
 ## Reusable Collapsible Section (`CollapsibleSection.tsx`)
 
-`CollapsibleSection.tsx` standardizes all sidebar panel sections with a shared design and typographic hierarchy:
-- **Collapsible or Static Modes**: Set `collapsible={true}` for sections that can fold shut (such as Great Powers Standing, Pre-Move Sandbox, and Creator Admin Tools), or `collapsible={false}` for action controls (such as Map View & Camera) that share identical headers and borders without toggle behavior.
-- **Accessible ARIA Attributes**: Includes `aria-expanded` and `aria-controls` on the toggle button with animated chevron indicators (`ChevronDown` / `ChevronRight`).
-- **Badge and Counter Support**: Accepts an optional `badge` node (such as zoom percentage badges or unit counts).
-- **Controlled & Uncontrolled Support**: Supports `defaultOpen` for initial expansion state, or `isOpen` and `onToggle` for controlled state management.
+Every sidebar panel section shares one header and border style through `CollapsibleSection`. A section can fold shut (Standings, Press, Sandbox) or be static with the same header (Map View & Camera), and its toggle exposes `aria-expanded` and `aria-controls`. A header may carry a badge (zoom percentage, unit count, the `ACTIVE` pill) that stays visible while folded.
 
 ---
 
 ## Left Sidebar: Chancellery Tools & Intel (`ToolsSidebar.tsx`)
 
-`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Everything else is in `components/tools/`: `CollapsedRail`, then one component per section below (`MapControlsSection`, `StandingsSection` with `useStandingsSort`, `PressSection` with its pieces in `tools/press/`, `SandboxToolsSection`). Each section takes only the props it reads, typed as a `Pick<>` of `ToolsSidebarProps` (`tools/toolsSidebarProps.ts`). The parent decides which sections show: the zoom section is left out of the drawer, while Administrator controls live in Display Settings (`DisplaySettingsMenu.tsx`).
+`ToolsSidebar` keeps the header, the drawer's focus and Escape handling, and the history footer. Each section (map controls, standings, press, sandbox tools) is its own component under `components/tools/` and receives only the props it reads. The parent decides which sections show: the zoom section is left out of the phone drawer, and Administrator controls live in the top-bar Game Settings menu, not in this sidebar.
 
 ### 1. Map View & Camera Controls
 - Rendered via a non-collapsible `CollapsibleSection` to retain uniform visual hierarchy with action controls.
@@ -134,14 +142,10 @@ Turn history uses the same `TurnChronicle.tsx` control in `CompactTopBar` (with 
 - **Toggleable Map Move Visibility (Sandbox / Hypothetical Mode)**:
   - Shown when on a sandbox board (`!isMultiplayer`) or in Multiplayer Hypothetical Mode (`sandboxMode === true`).
   - Segmented **`Map Moves`** control lets commanders toggle between **`All Moves`** (renders planned orders for all 7 Great Powers) and **`Selected Nation`** (renders only the currently active/commanded power's orders).
-- **Compact Layout & Overflow Prevention**:
-  - The `Active` badge is positioned on the metrics row (`SC • Units`) rather than the country name row, preventing long commander names from crowding or pushing the `Draft` / `Finalized` / `CD` status tags outside the card.
-- **Player Names**:
-  - In multiplayer campaigns, each standing entry displays the claimed commander's player name (e.g. `(AdmiralNelson)`) or indicates `(Open)` if unclaimed.
-- **Historical WWI Flag SVGs (`PowerFlag.tsx`)**:
-  - Replaces emojis with crisp vector SVGs representing 1901–1918 flags: Austro-Hungarian dual civil ensign with Austrian and Hungarian coats of arms, British Union Flag, French Tricolour, German Empire black-white-red tricolour, Kingdom of Italy tricolour with crowned Savoy shield, Russian Empire tricolour with the 1914 imperial eagle canton, and Ottoman Empire crescent and star.
-- **Turn History Synchronization**: When viewing a past turn, the scoreboard updates its Supply Center counts, unit counts, and score rankings to match the viewed turn (using post-edit ownership and units on `"Admin"` snapshots), disables nation card hover/click power switching, and hides live-turn draft/finalized/surrender status marks.
-- **Sandbox Mode & Multiplayer Hypothetical Mode**: Clicking any power switches active command to that nation for hypothetical experimentation (in Multiplayer Hypothetical Mode, changes go to the ephemeral `sbx_` branch and never touch your real seat).
+- **Player Names**: in multiplayer each row shows the claimed commander's name, or `(Open)` if unclaimed. The `Active` badge sits on the metrics row so a long name never pushes the `Draft` / `Finalized` / `CD` tags out of the card.
+- **Flags**: each power is drawn with its 1901–1918 flag as an SVG (`PowerFlag`), never an emoji.
+- **Turn History Synchronization**: When viewing a past turn, the scoreboard shows that turn's Supply Center counts, unit counts and ranking (using post-edit ownership and units on `"Admin"` snapshots), disables hover/click power switching, and hides live-turn draft/finalized/surrender marks.
+- **Sandbox Mode & Multiplayer Hypothetical Mode**: Clicking any power switches active command to that nation (in Hypothetical Mode, changes go to the ephemeral `sbx_` branch and never touch your real seat).
 - **Multiplayer Mode (Outside Hypothetical Mode)**: Displays diplomatic status (Orders Finalized or Civil Disorder). A power still drafting has no mark; the row's tooltip says so.
 
 ### 4. Press (`tools/PressSection.tsx`)
@@ -185,18 +189,7 @@ Shown under Diplomatic Standing in a multiplayer match (never in a sandbox). Its
 
 ## Right Sidebar: Tactical Command & Orders (`MacroSidebar.tsx`)
 
-`MacroSidebar` reads the phase flags (`isAdjustmentPhase`, `isRetreatPhase`) from its props, keeps two `useMemo`s (the powers the match is waiting on, via `getRequiredPowers`, and the consensus card text) and calls `computeOrderProgress` for the rest: the power's units, its blocking issues, its supply center count, the builds and disbands owed and the confirmed counts (`utils/orderProgress.ts`). It passes that one `OrderProgress` object, plus a few flat props, to the pieces in `components/macro/`, and arranges them for the desktop panel, the collapsed rail or the phone sheet. Fix a number or a label in the piece that draws it, not in a copy per layout:
-
-| Piece | Draws |
-| :--- | :--- |
-| `PowerHeader` (with `StatusBadge`, `PhaseContext`, `HistoryLockBar`) | The power's name or crest, its unit and center counts, the status badge, the phase's instruction box and the past-turn bar |
-| `UnitOrderList` | The home build slots in winter and a `UnitMacroCard` per unit, and the handler that sends the order a picked type opens (`buildDefaultOrderForType`) |
-| `UnitMacroCard` | One unit: header, status pill (`Incomplete` while a MOVE, SUPPORT or CONVOY has no target yet), behavior bar, then `OrderTypeTabs` and `OrderParameterControls`, issues and the simulation strip |
-| `OrderTypeTabs` | The order-type buttons for the phase (Retreat/Disband, Keep/Disband or Hold/Move/Support/Convoy) |
-| `OrderParameterControls` | The selects for the order's type, in `macro/controls/` (`RetreatControls`, `MoveControls`, `SupportControls`, `ConvoyControls`); each takes only the props it reads |
-| `OrderFooter` (with `ClearAllButton`) | The Clear All Orders button (with its Yes / Cancel question) and the footer: Finalize or Unlock, then Resolve or the consensus card. `OrderFooter` itself is a fragment, because the sheet's CSS styles these buttons as direct children of `.macro-sheet-controls` |
-| `CollapsedRail` | The rail's contents. The `<aside>` stays in `MacroSidebar` so collapsing keeps one element and the width transition on `.macro-sidebar` plays |
-| `useSheetSelection` | The sheet's two reactions to the selected unit (highlight its provinces, scroll its card up when the sheet is raised) |
+`MacroSidebar` derives the phase flags, the powers the match is waiting on and the consensus card text, and computes one `OrderProgress` (the power's units, blocking issues, supply center count, builds and disbands owed, confirmed counts). It passes that, plus a few flat props, to the pieces in `components/macro/` and arranges them for the desktop panel, the collapsed rail or the phone sheet. The pieces are shared across all three layouts, so fix a number or label in the piece that draws it, not in a per-layout copy. The panel is, top to bottom: a power header (crest, counts, status badge, phase instruction box, past-turn bar), the home build slots in winter plus one card per unit (order-type tabs, then the parameter selects for that type, with issues and the simulation strip), and a footer (Clear All, then Finalize or Unlock, then Resolve or the consensus card). The footer is a fragment because the sheet's CSS styles its buttons as direct children of `.macro-sheet-controls`. The collapsed rail's `<aside>` stays in `MacroSidebar` so collapsing keeps one element and the width transition plays.
 
 **Picking an order type opens the order, it does not fill it in.** Choosing MOVE, SUPPORT or CONVOY on a card sends an order with no destination, supported unit or convoyed army, the way the map's unit menu waits for a click. The card shows `Choose a destination` (or unit, or army), an `Incomplete` pill, and blank selects (`Choose a destination…`), and no arrow is drawn. A default would look like an order the player meant. Until they pick, the server's validator reports it (`Missing Destination`, `Incomplete Support Order`) and the adjudicator leaves the unit holding. HOLD, DISBAND and RETREAT are complete at once (a retreat still starts on the first legal province). The MOVE destination is the same hover-aware dropdown as the SUPPORT and CONVOY selects (and the compact row's), so hovering a province in the menu previews it on the map; only the retreat select and the phone's native selects are plain `<select>`s.
 
@@ -206,35 +199,19 @@ Pieces must not be defined inside `MacroSidebar`: a component defined in a rende
 
 **Watching without a seat.** When `spectator` is set (from `useSpectate`), the panel lists the units of the power on screen as compact read-only rows under `macro/SpectatorBar.tsx` instead of the past-turn bar. The bar holds a flag per power (picking one changes only this screen, never the shared `active_power`), **Claim** for that power while its seat is free, and **Leave**. The list is `inert` but not dimmed (`data-spectating`), there is no Clear All and no footer, and the phone sheet's peek has no Finalize. Every order a spectator is sent is masked to `HOLD`, so the unconfirmed count is not shown. The compact preference itself lives in `macro/useCompactOrders.ts`.
 
-### 1. Active Sovereign Command Header & Telemetry
-- Displays active nation crest, name, controlled Supply Centers, and active/dislodged unit counts.
-- Real-time status badge: `Drafting Orders`, `Finalized`, `Civil Disorder`, or `X Issues`.
-- Top-right collapse button for quick toggling into a compact 44px rail.
-
-### 2. Phase-Aware Instructions & Quotas
+### 1. Header & Phase-Aware Instructions
+- The header shows the active nation, its centers and unit counts, and a status badge: `Drafting Orders`, `Finalized`, `Civil Disorder`, or `X Issues`.
 - **Winter Adjustments**: Summarizes build allowances (`+X` home builds allowed, `Y/X` assigned) or disband requirements (`-X` units required to disband).
-- **Retreats**: Prompts commanders on dislodged units requiring retreat destinations or disband orders. Until the player picks, a dislodged unit's card reads `NO ORDER · Disbands unless it retreats` and neither button is pressed: the server's default DISBAND (`is_explicit: false`) is what happens if nobody acts, not a choice.
+- **Retreats**: Prompts for retreat destinations or disbands. Until the player picks, a dislodged unit's card reads `NO ORDER · Disbands unless it retreats` and neither button is pressed: the server's default DISBAND (`is_explicit: false`) is what happens if nobody acts, not a choice.
 
-### 3. Quick Action Toolbar
+### 2. Quick Action Toolbar
 - **"Clear All Orders"**: Resets every order of the power to its phase default (units hold, dislodged units disband, build slots blank) and withdraws its finalization via `POST /api/orders/clear-all`. The first click only asks: the button's spot splits in half into **Yes** (left, red, `btn-clear-all-confirm`, clears) and **Cancel** (right, `btn-clear-all-cancel`), inside a `clear-all-confirm` group. Focus moves to Cancel; Cancel, Yes or Escape put the button back. The question never times out, but `MacroSidebar` keys the button by season and phase, so it closes when the turn moves on. The desktop quick-action row and the phone sheet's controls row show the same component (the sheet gives its two buttons the 44px touch height).
 
-### 4. Macro Force Orders Roster
+### 3. Orders Roster
+- **Home builds (Winter)**: vacant home centers for a power owed builds, each with `+ Army`, `+ Fleet` (with coast options) or `Waive`. Every slot starts waived, because a build only happens if it is ordered.
+- **Unit cards**: each unit shows its order tabs and contextual selects populated only with valid reachable provinces and convoy routes, inline DATC errors/warnings from the validator, and simulation feedback (advances, bounces, cut supports).
 
-#### A. Home Supply Center Builds (Winter Adjustments)
-- Displays vacant home supply centers for surplus powers.
-- Inline controls to toggle `+ Army`, `+ Fleet` (with coastal options for split coasts), or `Waive`. Every slot starts waived, because a build only happens if it is ordered.
-
-#### B. Active Field Units & Dislodged Units
-- **Unit Badge**: Army (`A`) or Fleet (`F`) with national color.
-- **Province Code & Title**: Name and code (with coastal notation, e.g. `STP/SC`).
-- **Behavior Visualizer**: Symbolic action summary (e.g. `MOVE -> BUR`, `HOLD Defending Paris`).
-- **Order Mode Tabs**: `HOLD`, `MOVE`, `SUPPORT`, `CONVOY`, `RETREAT`, `DISBAND`.
-- **Target & Auxiliary Selectors**: Clean, contextual dropdown menus populated strictly with valid reachable provinces and convoy routes, constrained with ellipsis truncation to prevent horizontal container blowout.
-- **Scrollable Order List**: Styled with slim dark-mode scrollbars matching the left sidebar and `overflow-x: hidden` to prevent horizontal scrollbar leaks.
-- **Real-Time Diagnostics**: Inline error/warning alerts explaining DATC violations.
-- **Simulation Preview Results**: Instant visual feedback on simulated advances, bounces, or cut supports.
-
-### 5. Sticky Action Footer & Consensus Resolution
+### 4. Sticky Action Footer & Consensus Resolution
 - **"Finalize Orders" (`POST /api/finalize`)**: Submits orders. Opens `SanityCheckModal.tsx` if warnings or unconfirmed moves exist.
 - **Consensus Auto-Adjudication (Multiplayer)**: In multiplayer matches, turns advance automatically once all required active powers finalize their orders. A power with no decision to make, such as one owed builds with every home center occupied, is not waited for, and a retreat or adjustment phase no player is involved in passes by itself. Non-creator players see a real-time consensus status card rather than a manual button. Connected clients poll state in the background to seamlessly receive phase transitions:
   - **Waiting Lobby Mode (< 2 Players)**: Multiplayer matches require a minimum of 2 players to auto-resolve turns. When a single player prepares and finalizes their orders, the status card clearly indicates `"Orders Locked • Waiting for Players (1/2 min)"` and explains that automatic resolution begins once opponents join.
@@ -251,6 +228,7 @@ Pieces must not be defined inside `MacroSidebar`: a component defined in a rende
 Desktop only. When either sidebar is collapsed:
 - **Left Tools Rail (44px)**: Houses collapse toggle, mini Zoom In / Out / Fit buttons, Sandbox active glow indicator, and Admin icon. In a match with press it also has a Press button with the unread count, which expands the sidebar.
 - **Right Tactical Rail (44px)**: Houses collapse toggle, active nation crest, unconfirmed orders counter pill (or green checkmark when complete), and warning badge.
+
 ### 8. Version Revision Badge (`VersionBadge.tsx`)
 - Sits in the main lobby footer (`LobbyView.tsx`).
 - Displays the current build revision short SHA (`rev <sha>`) with one-click clipboard copy and direct link to the commit on GitHub.

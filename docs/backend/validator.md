@@ -16,6 +16,12 @@ The validator is **phase-aware**, adjusting its checks dynamically for **Movemen
 | `diagnostics.py` | Movement, across units: self-bounces, bounces off your own units, direct swaps |
 | `convoys.py` | `has_active_convoy_chain`, whether ordered fleets connect an army's origin to its target |
 
+## Contents
+
+- [1. Diagnostic Issue Codes & Severities](#1-diagnostic-issue-codes--severities)
+- [2. Phase-Specific Validation Logic](#2-phase-specific-validation-logic)
+- [3. Pre-Finalization Gatekeeper](#3-pre-finalization-gatekeeper)
+
 ---
 
 ## 1. Diagnostic Issue Codes & Severities

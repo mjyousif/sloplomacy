@@ -2,6 +2,14 @@
 
 The backend service is located in the `backend/` directory. It is built with **FastAPI** and **Pydantic**, providing a stateless-capable, high-speed tactical evaluation, DATC adjudication, Supabase PostgreSQL persistence, and multiplayer lobby management engine for Diplomacy 1901.
 
+## Contents
+
+- [Directory Structure](#directory-structure)
+- [Technical Dependencies](#technical-dependencies)
+- [Core Execution Flow](#core-execution-flow)
+- [Running the Backend](#running-the-backend)
+- [Running Backend Tests](#running-backend-tests)
+
 ---
 
 ## Directory Structure
