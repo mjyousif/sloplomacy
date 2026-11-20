@@ -61,6 +61,14 @@ export function shouldReconnect(closeCode: number): boolean {
  */
 export const BACKGROUND_DISCONNECT_MS = 5 * 60 * 1000;
 
+/**
+ * Idle timeout while document is visible with no user input before closing the WebSocket.
+ * Stops Cloud Run active-request billing on tabs left open without interaction; user activity reconnects.
+ */
+export const IDLE_DISCONNECT_MS = 5 * 60 * 1000;
+
+const USER_ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'touchstart'] as const;
+
 /** The bearer token from getAuthHeaders, or null when signed out. */
 async function getSocketToken(): Promise<string | null> {
   try {
@@ -93,9 +101,12 @@ export function useDiplomacyWebSocket({
   onLobbyUpdate,
 }: UseDiplomacyWebSocketProps) {
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isIdleDisconnected, setIsIdleDisconnected] = useState<boolean>(false);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const backgroundTimerRef = useRef<number | null>(null);
+  const idleTimerRef = useRef<number | null>(null);
   const wasBackgroundDisconnectedRef = useRef<boolean>(false);
+  const wasIdleDisconnectedRef = useRef<boolean>(false);
   const wsRef = useRef<WebSocket | null>(null);
 
   // Keep callback refs fresh without resetting websocket connection
@@ -117,10 +128,30 @@ export function useDiplomacyWebSocket({
 
     if (!targetPath) {
       setIsConnected(false);
+      setIsIdleDisconnected(false);
       return;
     }
 
     const needsHandshake = targetPath.includes('handshake=1');
+
+    const clearIdleTimer = () => {
+      if (idleTimerRef.current !== null) {
+        clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+    };
+
+    const scheduleIdleDisconnect = () => {
+      clearIdleTimer();
+      idleTimerRef.current = window.setTimeout(() => {
+        idleTimerRef.current = null;
+        if (!isCancelled && wsRef.current) {
+          wasIdleDisconnectedRef.current = true;
+          setIsIdleDisconnected(true);
+          wsRef.current.close(1000);
+        }
+      }, IDLE_DISCONNECT_MS);
+    };
 
     const connect = async () => {
       if (isCancelled) return;
@@ -142,11 +173,14 @@ export function useDiplomacyWebSocket({
             return;
           }
           wasBackgroundDisconnectedRef.current = false;
+          wasIdleDisconnectedRef.current = false;
+          setIsIdleDisconnected(false);
           if (needsHandshake) {
             ws.send(JSON.stringify({ type: 'auth', token }));
           }
           setIsConnected(true);
           if (needsHandshake) pressStore.setSocketOpen(true);
+          scheduleIdleDisconnect();
 
           // Heartbeat ping every 25 seconds to keep proxies & Cloud Run alive
           heartbeat = window.setInterval(() => {
@@ -183,10 +217,11 @@ export function useDiplomacyWebSocket({
           setIsConnected(false);
           pressStore.setSocketOpen(false);
           // Only attempt reconnect if not intentionally closed by navigation/unmount,
-          // not suspended by background idle timeout, and not refused for a reason a retry cannot fix.
+          // not suspended by background/idle timeout, and not refused for a reason a retry cannot fix.
           if (
             !isCancelled &&
             !wasBackgroundDisconnectedRef.current &&
+            !wasIdleDisconnectedRef.current &&
             shouldReconnect(event.code)
           ) {
             reconnectTimeoutRef.current = window.setTimeout(() => {
@@ -233,20 +268,46 @@ export function useDiplomacyWebSocket({
           clearTimeout(backgroundTimerRef.current);
           backgroundTimerRef.current = null;
         }
-        if (wasBackgroundDisconnectedRef.current) {
+        if (
+          wasBackgroundDisconnectedRef.current ||
+          wasIdleDisconnectedRef.current
+        ) {
           wasBackgroundDisconnectedRef.current = false;
+          wasIdleDisconnectedRef.current = false;
+          setIsIdleDisconnected(false);
           connect();
+          scheduleIdleDisconnect();
         } else if (
           wsRef.current &&
           wsRef.current.readyState === WebSocket.OPEN
         ) {
           wsRef.current.send(JSON.stringify({ type: 'refresh' }));
+          scheduleIdleDisconnect();
         }
+      }
+    };
+
+    const handleUserActivity = () => {
+      if (isCancelled) return;
+      if (wasIdleDisconnectedRef.current) {
+        wasIdleDisconnectedRef.current = false;
+        setIsIdleDisconnected(false);
+        connect();
+        scheduleIdleDisconnect();
+      } else if (wsRef.current) {
+        scheduleIdleDisconnect();
       }
     };
 
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+    if (typeof window !== 'undefined') {
+      for (const eventName of USER_ACTIVITY_EVENTS) {
+        window.addEventListener(eventName, handleUserActivity, {
+          passive: true,
+        });
+      }
     }
 
     return () => {
@@ -257,10 +318,18 @@ export function useDiplomacyWebSocket({
           handleVisibilityChange,
         );
       }
+      if (typeof window !== 'undefined') {
+        for (const eventName of USER_ACTIVITY_EVENTS) {
+          window.removeEventListener(eventName, handleUserActivity);
+        }
+      }
       if (backgroundTimerRef.current !== null) {
         clearTimeout(backgroundTimerRef.current);
         backgroundTimerRef.current = null;
       }
+      clearIdleTimer();
+      wasBackgroundDisconnectedRef.current = false;
+      wasIdleDisconnectedRef.current = false;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
@@ -272,6 +341,7 @@ export function useDiplomacyWebSocket({
         ws.close(1000);
       }
       setIsConnected(false);
+      setIsIdleDisconnected(false);
       pressStore.setSocketOpen(false);
     };
   }, [viewMode, activeGameId, power, passcode, authKey]);
@@ -291,5 +361,5 @@ export function useDiplomacyWebSocket({
     return false;
   }, []);
 
-  return { isConnected, sendPing, sendRefresh };
+  return { isConnected, isIdleDisconnected, sendPing, sendRefresh };
 }
