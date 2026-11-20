@@ -12,7 +12,7 @@ docs/
 ├── architecture/
 │   ├── system-overview.md         # Full-stack architecture, design principles & data flow
 │   ├── database.md                # Supabase PostgreSQL schema (ER) & RLS boundaries (Mermaid)
-│   ├── service-interactions.md    # Frontend-to-services topology & interaction sequences (Mermaid)
+│   ├── service-interactions.md    # Frontend-to-services topology, interaction sequences & SPA routing (Mermaid)
 │   └── data-models.md             # Shared types, data contracts, schemas & serialization
 ├── backend/
 │   ├── README.md                  # Backend overview, FastAPI setup & structure
@@ -40,7 +40,7 @@ docs/
 ### 1. System Architecture & Fundamentals
 - [Full-Stack System Overview](architecture/system-overview.md): High-level system topology, request-response cycle, and real-time validation pipeline.
 - [Database Setup & Row-Level Security](architecture/database.md): Mermaid ER diagram, JSONB storage design, and RLS security boundaries.
-- [Service Interactions & Frontend Communication](architecture/service-interactions.md): Frontend-to-backend/Supabase topology, L1 cache, and Auth/WebSocket/Lobby/Sandbox sequence diagrams.
+- [Service Interactions & Frontend Communication](architecture/service-interactions.md): Frontend-to-backend/Supabase topology, L1 cache, and Auth/WebSocket/Lobby/Sandbox/game-link routing diagrams.
 - [Data Models & Contracts](architecture/data-models.md): Complete specifications for `GameState`, `Order`, `Unit`, `ValidationIssue`, and `SimulationResult`.
 
 ### 2. Backend Engine (FastAPI & Python)

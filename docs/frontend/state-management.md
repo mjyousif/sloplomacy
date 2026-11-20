@@ -147,7 +147,7 @@ App.applyServerState(st)
 
 ## Game Links & Routing (`useGameRoute`)
 
-There is no router library: the address bar is kept by `hooks/useGameRoute.ts`, and the pure pieces (`parseGameRoute`, `isLinkableGameId`, `urlFor`, `gameLink`) are in `utils/gameRoute.ts`.
+There is no router library: the address bar is kept by `hooks/useGameRoute.ts` (the request flow and Back/Forward are drawn in [Service Interactions § E](../architecture/service-interactions.md#e-game-links--spa-routing-gameid)), and the pure pieces (`parseGameRoute`, `isLinkableGameId`, `urlFor`, `gameLink`) are in `utils/gameRoute.ts`.
 
 - **Addresses.** A multiplayer match is at `/game/<id>` and everything else is `/`. Only `mp_` ids are linkable: a `solo_`, `saved_` or `sbx_` sandbox belongs to one player (`saved_sandbox_guard`), and `proto_1901` has no lobby summary to open it by, so a link to any of them opens the lobby. `?view=sandbox` and `#sandbox` still open the Solo Sandbox (`initialViewMode`), and a sandbox opened that way keeps its address; any other sandbox is at `/`, so a reload opens the lobby as it always has.
 - **Opening a link** (on load, once `authReady`, and on Forward/Back to a game) reads `GET /api/games/{id}`:
