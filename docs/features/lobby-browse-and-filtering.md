@@ -34,8 +34,8 @@ flowchart LR
 
 When a signed-in player has games in `My Games`, the lobby surfaces one **Featured Game Hero** at the top ([`frontend/src/utils/heroGame.ts`](../../frontend/src/utils/heroGame.ts)) and places the rest in a secondary strip:
 
-- **Urgency tiers**: Games are classified into `'your-move'` (active match where the player's power still needs to finalize or vote), `'waiting'` (waiting for others or lobby), `'sandbox'` (saved sandbox), and `'finished'` (completed).
-- **Tie-breaking**: Within `'your-move'`, games with the earliest running deadline come first; otherwise games sort by most recent update.
+- **Urgency tiers**: Games are classified into `'your-move'` (any non-sandbox, non-completed game where the player holds a non-surrendered, non-finalized seat), `'waiting'` (already finalized or surrendered), `'finished'` (completed), and `'sandbox'` (saved sandbox). `pickHeroGame()` skips saved sandboxes when selecting the Featured Hero.
+- **Tie-breaking**: Within `'your-move'`, games with the earliest running deadline come first; otherwise started matches (`last_moved_at` set) precede unstarted lobbies, then games sort by most recent update.
 - **Hero action**: The hero card renders a live `MiniMap` preview, deadline/finalization summary, and a direct Resume action, while Leave remains tucked inside a secondary actions menu.
 
 ---
@@ -45,7 +45,6 @@ When a signed-in player has games in `My Games`, the lobby surfaces one **Featur
 The public browser supports server-side filtering and paging (`page_size` default `10`, max `50`):
 
 - **Seat availability (`seats`)**: `'open'` (default—at least one unclaimed seat and not completed), `'full'`, or `'all'`.
-- **Search (`search`)**: Case-insensitive match on game name, room code, or host display name.
 - **Open countries (`countries`)**: Comma-separated list of Great Powers; matches games where **every** listed power is still unclaimed.
 - **Turn filter (`turn_op`, `season`, `year`)**: Filter `'at'`, `'before'`, or `'after'` a given year (and optional season: `Spring`, `Fall`, `Winter`).
 - **Sorting**: Open games and more recently updated games surface first, with consistent pagination metadata (`total`, `page`, `page_size`).
@@ -54,9 +53,9 @@ The public browser supports server-side filtering and paging (`page_size` defaul
 
 ## Mini-Map Previews & Joining Seats
 
-Each `MultiplayerGameSummary` and `LobbyGameRow` carries a compact `BoardPreview` (`board`: province ownership + non-dislodged units) maintained by `sync_summary()`. This lets `MiniMap.tsx` render an accurate map thumbnail in the Featured Hero, Other Games strip, and expanded browser rows without fetching full `GameState` payloads.
+Each `MultiplayerGameSummary` returned by `GET /api/games/mine` carries a compact `BoardPreview` (`board`: province ownership + non-dislodged units) maintained by `sync_summary()`. This lets `MiniMap.tsx` render an accurate map thumbnail in the Featured Hero and Other Games strip without fetching full `GameState` payloads (`LobbyGameRow` in the public browser omits `board`).
 
-Expanding a public row shows its 7-power seat strip (`mine`, `free`, or `taken`), allowing a player to claim an open seat directly from the browser. Private campaigns are never listed here; players join them via the "Join with code" dialog and supply the room passcode (`403` on wrong passcode, with rate limiting on repeated guesses).
+Each public browser row shows its 7-power seat strip (`mine`, `free`, or `taken`), and expanding a joinable row opens claim buttons so a player can claim an open seat directly from the browser. Private campaigns are never listed here; players join them via the "Join with code" dialog and supply the room passcode (`403` on wrong passcode, with rate limiting on repeated guesses).
 
 ---
 

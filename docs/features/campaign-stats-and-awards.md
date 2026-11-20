@@ -36,15 +36,15 @@ flowchart LR
 
 For every Great Power (`PowerStats`), the engine tracks:
 
-- **Territory & Logistics**: `scs_peak`, `scs_final`, `scs_captured`, `scs_lost`, `units_built`, `units_disbanded`, `units_destroyed`.
-- **Tactical**: `moves_ordered`, `moves_succeeded`, `moves_bounced`, `enemies_dislodged`, `times_dislodged`, `convoys_executed`.
-- **Diplomacy**: `supports_given`, `foreign_supports_given`, `foreign_supports_received`, `supports_cut`, and a directional `support_matrix` (`supporter -> beneficiary -> count`) showing who backed whom across the campaign.
+- **Territory & Logistics**: `peak_scs`, `current_scs`, `scs_captured`, `scs_lost`, `units_built` (`armies_built`, `fleets_built`), `builds_waived`, `units_disbanded`, `units_destroyed`, `is_eliminated`, `is_surrendered`.
+- **Tactical**: `moves_succeeded`, `moves_bounced`, `move_success_rate`, `self_bounces`, `enemies_dislodged`, `convoys_executed`, `foreign_convoys`.
+- **Diplomacy**: `foreign_supports_given`, `foreign_supports_effective`, `foreign_supports_received`, `supports_cut`, plus directional `support_matrix` (`supporter -> beneficiary -> count`) and `attack_matrix` on `CampaignStatsResponse`.
 
 ---
 
 ## Supply Center Timeline
 
-`sc_timeline` records a sequence of `SCTimelinePoint` entries starting from the initial board (before the first resolved phase) and adding a point after each Fall/Winter/final resolved phase, plus the current live `GameState` if it differs. The frontend renders this as a multi-line chart showing each power's rise and fall toward the 18-SC victory threshold.
+`sc_timeline` records a sequence of `SCTimelinePoint` entries starting from the initial board (before the first resolved phase) and recording a checkpoint after each resolved snapshot in `GAME_HISTORY` (deduplicated by `(season, year)` unless a winning turn changes counts), plus the current live `GameState` if it differs. The frontend renders this as a multi-line chart showing each power's rise and fall toward the 18-SC victory threshold.
 
 ---
 

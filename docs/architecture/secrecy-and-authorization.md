@@ -111,7 +111,8 @@ Reading is only half of it. Every mutation is checked against the caller's own s
 
 | Check | Used by | Rule |
 | :--- | :--- | :--- |
-| `verify_power_authorization` | order submission, batch updates, confirmation, finalize, unfinalize, timer votes | In a live match the caller must be the creator, or hold that power's seat (by id or email). A seat held by a registered user rejects an unauthenticated call with 401; a wrong user gets 403. |
+| `verify_power_authorization` | order submission, batch updates, confirmation, finalize, unfinalize | In a live match the caller must be the creator, or hold that power's seat (by id or email). A seat held by a registered user rejects an unauthenticated call with 401; a wrong user gets 403. |
+| `require_timer_player` | timer votes, extension requests, ready-up | Caller must hold that power's seat in an active match (no creator override). |
 | `verify_admin_access` | admin turn controls, board overrides, some sandbox operations | Only the match creator (matched by `creator_id`, or by `created_by` email). Sandboxes and the default demo game are open; an unknown game is 404, no token is 401, a non-creator is 403. |
 | `require_own_seat` | reads and actions that would reveal a seat's orders | 403 unless the caller holds the seat. |
 | `require_view_access` | viewing a private match | Seated participants pass; anyone else needs the passcode (see [Identity and Auth](identity-and-auth.md#private-match-passcodes)). |

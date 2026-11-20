@@ -17,7 +17,7 @@ Match creators (hosts) and sandbox owners have administrative tools to correct m
 
 - **Multiplayer matches**: `verify_admin_access()` ([`backend/security/secrecy.py`](../../backend/security/secrecy.py)) requires a valid Supabase JWT whose `user_id` matches the game's `creator_id` (or `created_by` email fallback when `creator_id` is unset). Guests and non-creator players receive `401` or `403`.
 - **Sandboxes**: Solo sandboxes allow admin actions locally without creator restrictions (except private `sbx_*` hypothetical branches, which belong only to their owning player).
-- **Test seeding**: `POST /api/admin/seed-scenario` is gated behind `ENABLE_TEST_SEEDING=1` or non-production environments (`403` in production).
+- **Test seeding**: `POST /api/test/seed` is gated behind `ENABLE_TEST_SEED_ENDPOINT=1` (or `true`) or insecure dev-auth environments (`403` in production).
 
 ---
 
@@ -26,7 +26,7 @@ Match creators (hosts) and sandbox owners have administrative tools to correct m
 From the Admin Turn & Clock sidebar (`AdminTurnClockSidebar.tsx`) and settings menu ([`backend/api/admin.py`](../../backend/api/admin.py)):
 
 - **Rollback (`POST /api/admin/rollback`)**: Reverts the board to a selected snapshot index in `GAME_HISTORY`, pops newer snapshots, clears `winner`, resets `timer`, and records a rollback entry.
-- **Set Turn (`POST /api/admin/set-turn`)**: Jumps the game's `season`, `year`, and `phase` (useful for testing or correcting phase state), recomputing default orders and diagnostics.
+- **Set Turn (`POST /api/admin/set-turn`)**: Jumps the game's `season`, `year`, and `phase` (useful for testing or correcting phase state), clears ephemeral sandboxes, restarts the timer if active, and refreshes diagnostics and simulation preview.
 - **Unfinalize All (`POST /api/admin/unfinalize-all`)**: Clears `finalized_powers` across all powers so players can revise orders before resolution.
 - **Force Adjudicate (`POST /api/adjudicate`)**: Resolves the current phase immediately without waiting for remaining players or the phase clock.
 
@@ -42,12 +42,12 @@ sequenceDiagram
     participant API as POST /api/admin/board-edit
     participant Store as GAMES[gid] & GAME_HISTORY
 
-    Host->>API: Batch changes + expected_revision
+    Host->>API: Batch changes + expected_revision / turn
     API->>API: verify_admin_access()
-    API->>API: Check expected_revision == game.state_revision (409 on mismatch)
+    API->>API: Check expected_revision, season, year, phase (409 on mismatch)
     API->>API: Validate terrain, coasts & ownership
     API->>Store: Apply all edits, bump state_revision, record "Admin" snapshot
-    API-->>Host: Sanitized GameState + WebSocket broadcast
+    API-->>Host: Updated GameState + per-viewer WebSocket broadcast
 ```
 
 - **Optimistic concurrency**: If another mutation incremented `state_revision` while the creator was staging edits, the server rejects the batch with `409 Conflict` so nothing is silently overwritten.
@@ -57,7 +57,7 @@ sequenceDiagram
 
 ## Audit Log, History Snapshots & Player Acknowledgement
 
-Every board edit or turn override records an `AdminActionLogEntry` (`id`, `timestamp`, `actor`, `action_type`, `summary`, `acknowledged_by`) on `GameState.admin_log` ([`backend/api/admin_utils.py`](../../backend/api/admin_utils.py)):
+Every board edit or turn override records an `AdminActionLogEntry` (`id`, `timestamp`, `actor`, `season`, `year`, `phase`, `summary_lines`, `acknowledged_by`) on `GameState.admin_log` ([`backend/api/admin_utils.py`](../../backend/api/admin_utils.py)):
 
 - **Consolidated `"Admin"` history snapshot**: Consecutive admin board edits on the same turn are consolidated into a single `"Admin"` entry in `GAME_HISTORY` with synthesized `BUILD` / `DISBAND` / `MOVE` diff orders so the Turn History view clearly highlights what the creator changed.
 - **Player warning & acknowledgement**: Seated players see a warning modal (`AdminActionWarningModal.tsx`) when unacknowledged admin actions exist, and acknowledge them via `POST /api/admin/acknowledge`.

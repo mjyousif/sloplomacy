@@ -19,10 +19,10 @@ Not everything in process memory is saved to Supabase:
 
 | Data | In-Memory Store (`storage/store.py`) | Persisted in Supabase? | Notes |
 | :--- | :--- | :--- | :--- |
-| **Live match & solo/saved sandbox state** | `GAMES[gid]` | Yes (`state` JSONB) | Derived `unit_options` are stripped before saving and rebuilt on load. |
-| **Match metadata & board preview** | `GAME_SUMMARIES[gid]` | Yes (`multiplayer_games` columns + `board` preview) | Loaded on startup for the lobby without loading full game state. |
+| **Live match & solo/saved sandbox state** | `GAMES[gid]` | Yes (`game_state` JSONB) | Derived `unit_options` and `preview` are stripped before saving and rebuilt on load. |
+| **Match metadata & board preview** | `GAME_SUMMARIES[gid]` | Yes (`multiplayer_games` columns + `game_state->summary`) | Loaded on startup for the lobby without loading full game state. |
 | **Resolved turn history** | `GAME_HISTORY[gid]` | Yes (`history` JSONB, capped at 30 turns) | Marked dirty in `HISTORY_UNSAVED` only when history changes (adjudication, rollback, admin edit). |
-| **Private match passcodes** | `GAME_PASSCODES[gid]` | Yes (`passcode` column) | Never included in `MultiplayerGameSummary` or `GameState` responses. |
+| **Private match passcodes** | `GAME_PASSCODES[gid]` | Yes (inside `game_state->passcode`) | Never included in `MultiplayerGameSummary` or `GameState` responses (with legacy fallback to the top-level `passcode` column on load). |
 | **Press messages (chat)** | `GAME_PRESS[gid]` | Yes (`press` JSONB column) | Stored in its own column so board saves, history snapshots, and rollbacks never touch press. |
 | **Profile display names** | `PROFILE_NAMES[uid]` | Yes (`public.profiles`) | Hydrated on startup and updated when users sign in or rename. |
 | **Default local game (`proto_1901`)** | `GAMES["proto_1901"]` | No | Ephemeral local/default sandbox; never written to Supabase. |
@@ -58,8 +58,8 @@ flowchart TD
 
 `GameState.state_revision` is a monotonically increasing integer (starting at `1`) incremented on every authoritative state change:
 
-- **Turn and order mutations**: Order submissions, finalizations, adjudications, seat claims/surrenders, rollbacks, and sandbox transitions all increment `state_revision`.
-- **Conflict detection**: Operations that operate on a snapshot of the board—such as the creator's batch board editor (`POST /api/admin/board-edit`)—send `expected_revision`. If `req.expected_revision != game.state_revision`, the server rejects the request with `409 Conflict` instead of silently overwriting concurrent changes.
+- **Turn and order mutations**: Order submissions, finalizations, adjudications, seat leaves/surrenders, rollbacks, and sandbox transitions increment `state_revision`.
+- **Conflict detection**: Operations that operate on a snapshot of the board—such as the creator's batch board editor (`POST /api/admin/board-edit`)—send `expected_revision` along with `expected_season`, `expected_year`, and `expected_phase`. If any of those do not match the live `GameState`, the server rejects the request with `409 Conflict` instead of silently overwriting concurrent changes.
 - **Turn-scoped staleness**: Order and finalization requests can also carry the expected turn string; `reject_stale_turn()` returns `409 Conflict` if the game has already adjudicated into a new phase.
 - **Database load reconciliation**: When `load_game_from_db()` reads a row from Supabase, it ensures `state.state_revision = max(state.state_revision, row["state_revision"])` so the revision never regresses.
 
@@ -71,7 +71,7 @@ Because board editing in the UI lets a creator move, spawn, destroy units, and r
 
 Instead, the frontend stages edits locally and submits a single `POST /api/admin/board-edit` batch with `expected_revision`:
 
-1. Verify creator/admin access and check `expected_revision == game.state_revision` (`409` on mismatch).
+1. Verify creator/admin access and check `expected_revision`, `expected_season`, `expected_year`, and `expected_phase` against the live `GameState` (`409` on mismatch).
 2. Validate every staged change against province topology and unit rules before mutating state.
 3. Apply all ownership changes, unit removals, teleports, and spawns in one pass, recomputing validation diagnostics, simulation preview, and `state_revision`.
 4. Record a single consolidated `"Admin"` snapshot in `GAME_HISTORY` and an `AdminActionLogEntry`, persist once, and broadcast once.

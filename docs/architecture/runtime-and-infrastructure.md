@@ -28,7 +28,7 @@ Google Cloud Run provisions the unified container with `min_instance_count = 0` 
 When a container starts (cold start), Cloud Run applies `startup_cpu_boost = true` to accelerate FastAPI boot, then runs the application lifespan hook ([`backend/main.py`](../../backend/main.py)):
 
 1. **Startup hydration (lightweight)**: If Supabase persistence is enabled, the server loads `PROFILE_NAMES` and all `GAME_SUMMARIES` (lightweight lobby metadata and board previews, without full `GameState` or `GAME_HISTORY`).
-2. **Lazy game loading**: Individual full `GameState`, `GAME_HISTORY`, and passcodes are **not** loaded on boot. They are loaded on demand by `resolve_game()` when a player opens a match URL, sends an API request, or connects to `/ws/{game_id}`, then cached in `GAMES` for subsequent requests.
+2. **Lazy game loading**: Individual full `GameState`, `GAME_HISTORY`, and passcodes are **not** loaded on boot. They are loaded on demand by `resolve_game()` on HTTP requests (and directly via `load_game_from_db()` on `/ws/games/{game_id}` connects), then cached in `GAMES` for subsequent requests.
 3. **Graceful shutdown flush**: On container shutdown, the lifespan `finally` block attempts to flush any game still marked in `UNSAVED_GAMES` to Supabase before closing the HTTP client.
 
 ```mermaid
@@ -39,7 +39,7 @@ sequenceDiagram
     participant DB as Supabase PostgreSQL
 
     Note over CloudRun: Scaled to 0 (no active traffic)
-    Client->>CloudRun: GET /api/state?game_id=abc123
+    Client->>CloudRun: GET /api/game?game_id=abc123
     CloudRun->>DB: Startup: load PROFILE_NAMES & GAME_SUMMARIES
     DB-->>CloudRun: Lobby metadata only
     CloudRun->>Store: resolve_game("abc123") -> cache miss
@@ -59,7 +59,7 @@ Instead, the phase clock is **purely timestamp-driven and request-evaluated**:
 
 - **Absolute Unix timestamps**: `PhaseTimer.deadline` stores an absolute UTC epoch timestamp (`now + seconds`), never a ticking countdown. It survives container restarts and scale-to-zero teardown unchanged.
 - **Client-driven evaluation**: When a client's `PhaseTimerWidget` counts down to zero, it sends `{"type": "refresh"}` over the WebSocket. The server runs `tick_timer(game)` on receipt—checking `has_expired(timer, time.time())`—and either closes a finished duration vote or triggers `_execute_adjudication(game)` for a running phase.
-- **Expired clock while scaled to zero**: If all players disconnect and the container scales to zero before a deadline passes, nothing resolves at the exact deadline second. As soon as any player reconnects to `/ws/{game_id}` (which runs `tick_timer` on connect) or sends `refresh`, the server sees `now >= deadline` and resolves the phase immediately.
+- **Expired clock while scaled to zero**: If all players disconnect and the container scales to zero before a deadline passes, nothing resolves at the exact deadline second. As soon as any player reconnects to `/ws/games/{game_id}` (which runs `tick_timer` on connect), loads `GET /api/game`, or sends `refresh`, the server sees `now >= deadline` and resolves the phase immediately.
 
 ```mermaid
 flowchart LR
@@ -79,7 +79,7 @@ flowchart LR
 Cloud Run's request timeout is configured to `timeout = "3600s"` (60 minutes) in [`terraform/main.tf`](../../terraform/main.tf), allowing long-lived WebSocket sessions without premature proxy drops:
 
 - **25-second client heartbeat**: Every connected WebSocket client sends `{"type": "ping"}` every 25 seconds. This keeps intermediate proxies and Cloud Run's HTTP/2 or WebSocket connection alive, and keeps the single instance warm while commanders are actively in a match.
-- **Reconnection on 60-minute boundary**: If a socket hits Cloud Run's 3600-second maximum request lifetime or experiences a network drop, the client reconnects with backoff, re-authenticates via the first-message `auth` handshake, and receives the latest authoritative state (including any timer expiry checked on connect).
+- **Reconnection on 60-minute boundary**: If a socket hits Cloud Run's 3600-second maximum request lifetime or experiences a network drop, the client reconnects after a short fixed delay (`2s` on close, `3s` on instantiation error), re-authenticates via the first-message `auth` handshake, and receives the latest authoritative state (including any timer expiry checked on connect).
 
 ---
 

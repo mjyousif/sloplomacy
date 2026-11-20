@@ -18,7 +18,7 @@ Sloplomacy supports both **Solo Sandboxes** (freeform tactical boards, scenario 
 
 | Aspect | Solo / Saved Sandbox | Multiplayer Hypothetical Mode |
 | :--- | :--- | :--- |
-| **Game ID** | Own ID (e.g. `proto_1901` or saved `sbx_...` / UUID) | Ephemeral `sbx_<match_id>_<power>` in `PRIVATE_SANDBOXES` |
+| **Game ID** | Own ID (e.g. `proto_1901`, draft `solo_<8-hex>`, or saved `saved_<8-hex>` / `solo_<8-hex>`) | Ephemeral `sbx_<8-hex>` in `PRIVATE_SANDBOXES` |
 | **Power switching** | Switch freely between all 7 Great Powers | Switch freely inside the private branch; locked on exit |
 | **Persisted to DB?** | Yes, if saved to an account (`POST /api/games/save-sandbox`) | Never persisted to Supabase; lives only in memory |
 | **Real match impact** | Standalone | Zero impact; live match continues independently (including clock & WS updates) |
@@ -31,7 +31,7 @@ When a seated player enters Hypothetical Mode from a live multiplayer match ([`b
 
 1. **Enter (`POST /api/sandbox/enter?game_id={match}`)**: `open_private_sandbox()` creates (or resumes, if still on the same live turn) a private copy in `PRIVATE_SANDBOXES` with `PRIVATE_SANDBOX_TURNS` tracking `(season, year, phase)`. All **other** powers are reset to default orders (`create_default_orders`) so the branch never reveals opponents' hidden orders.
 2. **Explore**: The player switches powers, plots multi-power moves, runs AI heuristics, or steps turns forward via `POST /api/adjudicate` using the `sbx_` game ID. The live match's `PhaseTimer` continues to be tracked via `hypotheticalMatchTimer` in the frontend.
-3. **Exit (`POST /api/sandbox/exit?game_id={sbx_id}`)**: Returns the untouched live match `GameState`. The `sbx_` branch remains resumable for the duration of that live turn and is automatically erased by `clear_ephemeral_sandboxes_for()` as soon as the real match adjudicates, rolls back, or the player leaves their seat.
+3. **Exit (`POST /api/sandbox/exit?game_id={sbx_id}`)**: Returns the untouched live match `GameState`. The `sbx_` branch remains resumable for the duration of that live turn and is automatically erased by `clear_ephemeral_sandboxes_for()` as soon as the real match adjudicates or rolls back (and evicted on exit or game eviction if the player leaves their seat).
 
 ```mermaid
 sequenceDiagram
@@ -66,21 +66,21 @@ sequenceDiagram
 Inside a sandbox or hypothetical branch, players can use [`backend/engine/ai.py`](../../backend/engine/ai.py) tools:
 
 - **`POST /api/sandbox/ai-orders`**: Generates heuristic orders for all non-selected (or specified) Great Powers for the current phase.
-- **`POST /api/sandbox/step-ai`**: Generates AI orders for other powers and immediately adjudicates one turn forward.
+- **`POST /api/sandbox/ai-step`**: Generates AI orders for foreign powers (and `active_power` if it has no explicit orders yet) and immediately adjudicates one turn forward.
 - **`POST /api/sandbox/clear-foreign`**: Resets all non-selected powers' orders back to defaults.
-- **`POST /api/sandbox/load-scenario`**: Resets a solo sandbox to a named preset (e.g. `standard_1901`, `crisis_1905`) or an exported board state.
+- **`POST /api/scenario`**: Resets a sandbox (or a live match, creator-only) to a named preset (`standard_1901`, `tactical_blunders_demo`, `spring_retreats_demo`, `winter_adjustments_demo`, `one_turn_from_win`).
 
 ---
 
 ## Board-State Export
 
-From an active multiplayer match, a player can launch a standalone **Solo Sandbox** seeded with the current match's public board state (`units`, `ownership`, `season`, `year`, `phase`) via `POST /api/games/solo-sandbox` with an exported snapshot ([`backend/api/solo_sandbox_helpers.py`](../../backend/api/solo_sandbox_helpers.py)). Exported snapshots never include other powers' hidden current-turn orders.
+From an active multiplayer match, a player can launch a standalone **Solo Sandbox** (`solo_<8-hex>`) seeded with the current match's visible board state and history via `POST /api/games/solo-sandbox?source_game_id=<id>` ([`backend/api/solo_sandbox_helpers.py`](../../backend/api/solo_sandbox_helpers.py)). The server copies the viewer-sanitized `GameState`, so exported boards never include other powers' hidden current-turn orders.
 
 ---
 
 ## Invariants
 
-- **Strict owner isolation**: `saved_sandbox_guard` and `require_saved_sandbox_owner` reject any other user trying to read or mutate a `sbx_*` branch or saved sandbox (`403` / `404`).
+- **Strict owner isolation**: `saved_sandbox_guard` and `require_saved_sandbox_owner` reject unauthenticated (`401`) or non-owner (`403`) callers trying to read or mutate a `sbx_*` branch or saved sandbox.
 - **No order leakage**: Private branches copy only the caller's own orders; foreign orders are always reset to defaults.
 
 ---

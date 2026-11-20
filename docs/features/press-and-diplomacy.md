@@ -24,7 +24,7 @@ Diplomacy is a negotiation game, so seated players need to talk without leaving 
 - attach **suggested orders** to a private message during a Movement phase;
 - see an **unread** badge on the Press section, the collapsed rail and the phone's Press button.
 
-Only multiplayer matches have press. A solo sandbox or a hypothetical private copy answers `404`; a non-match game answers `409`. Only players holding a seat may send; a spectator or a host with no seat is refused with `403` (see [Spectating](spectating.md)). A power that has surrendered can no longer send.
+Only multiplayer matches have press. A hypothetical private copy (`sbx_*`) answers `404`; a solo or saved sandbox (or other non-match game) answers `409`. Only players holding a seat may send; a spectator or a host with no seat is refused with `403` (see [Spectating](spectating.md)). A power that has surrendered can no longer send.
 
 ## Message kinds
 
@@ -62,7 +62,7 @@ Details that are easy to miss:
 
 - **Hidden authors** are hidden from everyone but themselves, the host included.
 - In an anonymous **group** thread the recipient list shown to others is the whole thread *including the author*, because the real list omits exactly the author and would give them away. In a **one-to-one** anonymous message the list stays just the recipient.
-- **Numbering is per reader.** Each message carries a per-reader number (1, 2, 3 …) rather than the game-wide counter, whose gaps would reveal how much private press others exchange. Spectators have a separate public-only numbering. After the game ends everyone gets the game-wide count.
+- **Numbering is per reader.** Each message carries a per-reader number (1, 2, 3 …) rather than the game-wide counter, whose gaps would reveal how much private press others exchange. Spectators have a separate public-only numbering. After the game ends, seated players switch to the game-wide count while spectators keep the public-only numbering.
 - A spectator never reads a private message, even after the game ends.
 
 ## Move suggestions

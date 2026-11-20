@@ -78,7 +78,7 @@ This id-or-email matching is what lets a player keep their seat after signing in
 
 ## Creator and admin
 
-There is no separate admin role in a match: the **creator** is the admin. A caller is the creator when the summary's `creator_id` equals their user id, or its `created_by` equals their email (case-insensitive). The default demo game, sandboxes and guest-created matches (`creator_id` of `guest`) are not restricted. Admin routes (turn controls, rollback, board edits, clock) all call `verify_admin_access`, and the creator may also order for any seat. Admin actions are recorded in the game's admin log, with emails reduced to names in what clients see.
+There is no separate admin role in a match: the **creator** is the admin. A caller is the creator when the summary's `creator_id` equals their user id, or its `created_by` equals their email (case-insensitive). The default demo game and sandboxes are not restricted by `verify_admin_access` (and `DELETE /api/games/{game_id}` also skips the creator check for guest-created matches whose `creator_id` is `guest`). Admin routes (turn controls, rollback, board edits, clock) all call `verify_admin_access`, and the creator may also order for any seat. Admin actions are recorded in the game's admin log, with emails reduced to names in what clients see.
 
 ## Private match passcodes
 

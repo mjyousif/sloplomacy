@@ -4,7 +4,7 @@ Sloplomacy alerts seated multiplayer commanders when their attention is required
 
 ## Contents
 
-- [Attention Detection (`computeTurnAttention`)](#attention-detection-computeTurnAttention)
+- [Attention Detection (`computeTurnAttention`)](#attention-detection-computeturnattention)
 - [Browser Tab Title Indicators](#browser-tab-title-indicators)
 - [Background-Tab Web Audio Chimes](#background-tab-web-audio-chimes)
 - [User Controls & Browser Autoplay Rules](#user-controls--browser-autoplay-rules)

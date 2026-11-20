@@ -1,6 +1,6 @@
 # Game Over & Turn History
 
-Sloplomacy preserves a rolling log of resolved phases (`GAME_HISTORY`), lets players inspect any past turn's board, orders, and territory/ownership changes, and transitions cleanly into a read-only Game Over state with the War Ledger when a Great Power reaches 18 Supply Centers (or wins by scenario/admin condition).
+Sloplomacy preserves a rolling log of resolved phases (`GAME_HISTORY`), lets players inspect any past turn's board, orders, and territory/ownership changes, and transitions cleanly into a read-only Game Over state with the War Ledger when a Great Power reaches 18 Supply Centers.
 
 ## Contents
 
@@ -16,7 +16,7 @@ Sloplomacy preserves a rolling log of resolved phases (`GAME_HISTORY`), lets pla
 
 - **Solo victory (18+ SCs)**: After adjudication, if any Great Power owns 18 or more Supply Centers, `GameState.winner` is set, `GameState.timer` is cleared (`null`), `sync_summary()` marks the match `status = "completed"` with `completed_at`, and further order/finalization mutations are rejected (`409`).
 - **Surrender**: A player can surrender their seat via `POST /api/games/{game_id}/surrender` (with a confirmation modal). Surrendered powers are added to `surrendered_powers`, their orders default to Hold/Disband/Waive, and they no longer block turn finalization or phase-clock votes.
-- **Game Over modal**: When `gameState.winner` becomes set (or when reopening a completed match), `useGameOverModal` opens `GameOverModal`, displaying the victor, final SC standings, and the tabbed War Ledger fetched from `/api/history/stats`.
+- **Game Over modal**: When `gameState.winner` becomes set (or when a seated participant reopens a completed match they have not yet acknowledged via `game_over_seen_at`), `useGameOverModal` opens `GameOverModal`, displaying the victor, final SC standings, and the tabbed War Ledger fetched from `/api/history/stats`.
 
 ---
 
@@ -37,7 +37,7 @@ sequenceDiagram
     UI->>API: GET /api/history/{index}?game_id={id}
     API->>Hist: Read snapshot[index]
     API->>API: Re-run adjudicate_turn (or read admin_resolution)
-    API-->>UI: TurnRecord (snapshot + TurnResolution)
+    API-->>UI: TurnRecord (snapshot + SimulationResult)
 ```
 
 ---
@@ -47,7 +47,7 @@ sequenceDiagram
 Players can switch between the live turn and any resolved turn via `TurnHistorySelector` (and the header `TurnChronicle` / mobile peek):
 
 - **Read-only board & arrows**: Selecting a past turn renders that turn's units, ownership, and resolved order arrows (succeeded, bounced, cut, dislodged) on `EuropeMap`, locking live order controls in `MacroSidebar`.
-- **Ownership & territory changes**: `HistoryOwnershipSection` (using `historyOwnershipChanges.ts` and `historyTurnLog.ts`) compares consecutive snapshots to list Supply Center captures/losses and territory shifts, as well as admin-applied ownership changes.
+- **Ownership & territory changes**: `HistoryOwnershipSection` (using `historyOwnershipChanges.ts` and `historyTurnLog.ts`) compares `turn.ownership` against `turn.resolution.new_ownership` on the selected `TurnRecord` to list Supply Center captures/losses and territory shifts, as well as admin-applied ownership changes.
 - **Turn log**: Summarizes the phase's movements, retreats, builds, and disbands alongside any admin action log entries.
 
 ---

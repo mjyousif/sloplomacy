@@ -118,7 +118,7 @@ Turn history uses the same `TurnChronicle.tsx` control in `CompactTopBar` (with 
 
 ## Reusable Collapsible Section (`CollapsibleSection.tsx`)
 
-Every sidebar panel section shares one header and border style through `CollapsibleSection`. A section can fold shut (Standings, Sandbox, Admin tools) or be static with the same header (Map View & Camera), and its toggle exposes `aria-expanded` and `aria-controls`. A header may carry a badge (zoom percentage, unit count, the `ACTIVE` pill) that stays visible while folded.
+Every sidebar panel section shares one header and border style through `CollapsibleSection`. A section can fold shut (Standings, Press, Sandbox) or be static with the same header (Map View & Camera), and its toggle exposes `aria-expanded` and `aria-controls`. A header may carry a badge (zoom percentage, unit count, the `ACTIVE` pill) that stays visible while folded.
 
 ---
 
@@ -204,14 +204,14 @@ Pieces must not be defined inside `MacroSidebar`: a component defined in a rende
 - **Winter Adjustments**: Summarizes build allowances (`+X` home builds allowed, `Y/X` assigned) or disband requirements (`-X` units required to disband).
 - **Retreats**: Prompts for retreat destinations or disbands. Until the player picks, a dislodged unit's card reads `NO ORDER · Disbands unless it retreats` and neither button is pressed: the server's default DISBAND (`is_explicit: false`) is what happens if nobody acts, not a choice.
 
-### 3. Quick Action Toolbar
+### 2. Quick Action Toolbar
 - **"Clear All Orders"**: Resets every order of the power to its phase default (units hold, dislodged units disband, build slots blank) and withdraws its finalization via `POST /api/orders/clear-all`. The first click only asks: the button's spot splits in half into **Yes** (left, red, `btn-clear-all-confirm`, clears) and **Cancel** (right, `btn-clear-all-cancel`), inside a `clear-all-confirm` group. Focus moves to Cancel; Cancel, Yes or Escape put the button back. The question never times out, but `MacroSidebar` keys the button by season and phase, so it closes when the turn moves on. The desktop quick-action row and the phone sheet's controls row show the same component (the sheet gives its two buttons the 44px touch height).
 
-### 4. Orders Roster
+### 3. Orders Roster
 - **Home builds (Winter)**: vacant home centers for a power owed builds, each with `+ Army`, `+ Fleet` (with coast options) or `Waive`. Every slot starts waived, because a build only happens if it is ordered.
 - **Unit cards**: each unit shows its order tabs and contextual selects populated only with valid reachable provinces and convoy routes, inline DATC errors/warnings from the validator, and simulation feedback (advances, bounces, cut supports).
 
-### 5. Sticky Action Footer & Consensus Resolution
+### 4. Sticky Action Footer & Consensus Resolution
 - **"Finalize Orders" (`POST /api/finalize`)**: Submits orders. Opens `SanityCheckModal.tsx` if warnings or unconfirmed moves exist.
 - **Consensus Auto-Adjudication (Multiplayer)**: In multiplayer matches, turns advance automatically once all required active powers finalize their orders. A power with no decision to make, such as one owed builds with every home center occupied, is not waited for, and a retreat or adjustment phase no player is involved in passes by itself. Non-creator players see a real-time consensus status card rather than a manual button. Connected clients poll state in the background to seamlessly receive phase transitions:
   - **Waiting Lobby Mode (< 2 Players)**: Multiplayer matches require a minimum of 2 players to auto-resolve turns. When a single player prepares and finalizes their orders, the status card clearly indicates `"Orders Locked • Waiting for Players (1/2 min)"` and explains that automatic resolution begins once opponents join.
