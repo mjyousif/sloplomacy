@@ -2,6 +2,14 @@
 
 The visual styling is defined in the `*.module.css` file beside each component (see [Component Stylesheets](#component-stylesheets-css-modules)) and in `frontend/src/styles/`, ordered by the cascade layers in `frontend/src/styles/index.css` (see [Stylesheet Layers](#stylesheet-layers)). It adopts an authentic, military war-room aesthetic inspired by turn-of-the-century European cartography, antique brass fittings, and parchment maps.
 
+## Contents
+
+- [Stylesheet Layers](#stylesheet-layers)
+- [Component Stylesheets (CSS Modules)](#component-stylesheets-css-modules)
+- [Great Power Color Palette](#great-power-color-palette)
+- [Typography & Hierarchy](#typography--hierarchy)
+- [Responsive & Layout Specifications](#responsive--layout-specifications)
+
 ---
 
 ## Stylesheet Layers

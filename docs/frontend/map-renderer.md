@@ -2,21 +2,35 @@
 
 The visual centerpiece of the application is `frontend/src/components/EuropeMap.tsx`. It is a fully vectorized, GPU-accelerated SVG cartographic map representing the European theatre in 1901.
 
-`EuropeMap.tsx` only lays the map out. Its view model, `components/map/hooks/useEuropeMap.ts`, applies the props' defaults and wires every map hook together: piece geometry (`usePieceGeometry`), camera and gestures, selection and the click state machine, the order overlay, build homes, phone tap targets and menu placement. It returns what the layers and menus need, including the context objects the order and unit layers read.
+`EuropeMap` only lays the map out. A single view model (`useEuropeMap`) applies the props' defaults and composes the map's concerns: piece geometry, camera and gestures, selection and the click state machine, the order overlay, build homes, phone tap targets and menu placement. The layers and menus below are driven by what it returns.
+
+## Contents
+
+- [Geometry & Coordinate System](#geometry--coordinate-system)
+- [Pan & Zoom Engine](#pan--zoom-engine)
+- [SVG Rendering Layers](#svg-rendering-layers)
+- [Mini Map (`components/lobby/MiniMap.tsx`)](#mini-map-componentslobbyminimaptsx)
+- [Piece Styles & Layouts](#piece-styles--layouts)
+- [Hover](#hover)
+- [Map Overlay](#map-overlay)
+- [Past Turns (`historyView`)](#past-turns-historyview)
+- [Move Suggestions (`suggestion`)](#move-suggestions-suggestion)
+- [Floating Unit Menu](#floating-unit-menu)
+- [Click-to-Order Interaction Modes](#click-to-order-interaction-modes)
 
 ---
 
 ## Geometry & Coordinate System
 
 - **ViewBox**: Defined in `frontend/src/data/europeMapGeometry.ts` (`MAP_VIEWBOX = "0 0 1524 1357"`).
-- **Provinces & Borders**: Exact SVG boundary paths for all 76 provinces (including neutral territories and coastal divisions) extracted from authentic historical cartography (`AUTHENTIC_BACKGROUND_SVG` and `AUTHENTIC_FOREGROUND_SVG`).
+- **Provinces & Borders**: Exact SVG boundary paths for all 76 provinces (the 75 playable ones plus impassable Switzerland, including neutral territories and coastal divisions) extracted from authentic historical cartography (`AUTHENTIC_BACKGROUND_SVG` and `AUTHENTIC_FOREGROUND_SVG`).
 - **Centroids**: Pre-calculated `Point { x, y }` coordinates for each province and split coast (e.g. `STP_NC`, `STP_SC`), determining unit placement and vector arrow anchors.
 
 ---
 
 ## Pan & Zoom Engine
 
-The map features smooth multi-modal navigation without external library bloat. The camera lives in `components/map/hooks/useMapCamera.ts` and the pointer gestures in `useMapGestures.ts`, next to it. `EuropeMap` spreads the gestures' pointer handlers on its `<svg>` and hands the camera a callback that moves the floating unit menu with every camera write.
+The map features smooth multi-modal navigation without a camera library. The camera (`useMapCamera`) and the pointer gestures (`useMapGestures`) live beside the map, and every camera write also moves the floating unit menu.
 1. **Drag to pan (mouse, finger or pen)**: The camera lives in a ref, and a `requestAnimationFrame` sync writes it to the camera group's SVG `transform` attribute, so panning never re-renders React:
    ```ts
    cameraGroupRef.current.setAttribute('transform', `translate(${x}, ${y}) scale(${zoom})`)
@@ -25,7 +39,7 @@ The map features smooth multi-modal navigation without external library bloat. T
 2. **Pinch zoom**: a second finger turns the gesture into a pinch. The board point under the fingers' midpoint follows them, and the zoom changes by how far they spread (`pinchStep`). Lifting one finger carries on as a pan.
 3. **Bounded Panning (`mapCameraHelpers.ts`)**: Prevents dragging or zooming the map endlessly off-screen into an empty void. Panning coordinates `(x, y)` are dynamically clamped to allowable zoom-dependent boundaries via `clampCamera`, keeping the map firmly in view while allowing full inspection of border territories and split coasts without dead-zone drag lag.
 4. **Wheel Zoom**: zooms about the cursor. The wheel, a pinch and the zoom buttons all go through `zoomAtPoint`, which keeps the board point under an anchor still. Its anchor is in viewBox units, and `elementPointToViewBox` allows for the letterbox that `preserveAspectRatio` leaves around the board. Zoom is clamped between `0.75x` and `3.0x` (`6.0x` on phones).
-5. **Imperative Handle (`EuropeMapHandle`)**: Exposes `stepZoom(delta)`, `resetCamera()`, and `getZoom()` via React `forwardRef`, enabling seamless zoom and fit control from the Left Tools Sidebar without SVG re-renders. `stepZoom` zooms about the middle of the view.
+5. **Imperative Handle (`EuropeMapHandle`)**: Exposes `stepZoom`, `resetCamera` and `getZoom` so the Left Tools Sidebar controls zoom and fit without SVG re-renders. `stepZoom` zooms about the middle of the view.
 6. **Zoom reports**: `onZoomChange` fires at most once per animation frame, and only when the rounded percentage changes. During a pinch it waits until the fingers lift, because each report re-renders App.
 
 ### Phone camera (`compact` prop)
@@ -45,7 +59,7 @@ The wide layout keeps the `3.0x` ceiling, renders no zoom buttons, floats its po
 
 On a wide screen the map element fills the whole workspace and both sidebars float over its edges (`position: absolute` on `.tools-sidebar`, `.macro-sidebar` and `.map-viewport-container`). Collapsing a sidebar therefore never resizes the map, and the camera is never touched: every province stays on the same screen pixel.
 
-- **Insets.** `GameWorkspace.module.css` sets `--map-inset-left` / `--map-inset-right` to the sidebar or rail width (0 on a phone). `map/hooks/mapInsets.ts` (`readMapInsets`) reads them in script; the CSS overlays use them directly. The map's frame (`.map-viewport-container::after`) hugs the uncovered strip.
+- **Insets.** The workspace stylesheet sets `--map-inset-left` / `--map-inset-right` to the sidebar or rail width (0 on a phone). Script reads them through `readMapInsets`; CSS overlays use them directly. The map's frame hugs the uncovered strip.
 - **Home view.** `getWideHomeCamera` (`utils/mapCameraHelpers.ts`) frames the board in the strip between the sidebars exactly as `DEFAULT_CAMERA` framed it in a map element that narrow. The camera goes there when the map opens and on Fit, using the sidebars open at that moment. With no insets it is `DEFAULT_CAMERA`. Because the element is wider than the strip, the zoom figure reads lower than before for the same view (about 90% at 1440×900).
 - **Limits.** `WIDE_CAMERA_OPTIONS` lowers the zoom floor to `0.5` and widens the sideways pan margin, so a board edge can be brought out from under an open sidebar.
 - **Zoom buttons** zoom about the middle of the strip, not the middle of the element. The floating unit menu is kept inside the strip (`useUnitMenuPlacement`).
@@ -147,17 +161,13 @@ Marks show whether a piece is an army or a fleet: `icons` (crossed swords and a 
 
 ![The four army and fleet marks on Star seat pieces](images/display-settings-unit-marks.jpg)
 
-**Layouts (`data/mapLayouts.ts`)** hold each non-classic style's placements. A row records only what differs from the geometry: a province with no `unit` keeps its `unitPos`, and one with no `star` keeps its `scPos`. `getMapLayout(style)` returns the full layout. Tight provinces such as Liverpool can't hold a token and a name at full size, so their tokens move and their names shrink, with a floor of 12 units (11 for Edinburgh, Denmark and Liverpool).
+**Layouts (`data/mapLayouts.ts`)** hold each non-classic style's placements, recording only what differs from the province geometry (a province with no `unit` keeps its `unitPos`, one with no `star` keeps its `scPos`). Tight provinces such as Liverpool can't hold a token and a name at full size, so their tokens move and their names shrink, with a floor of 12 units (11 for Edinburgh, Denmark and Liverpool). A test checks every placement against the province outlines, so values can be edited by hand and the test reports any province that stops fitting. Text widths come from measured Libre Baskerville Bold metrics, which also size the pills at render time.
 
-`mapLayouts.test.ts` checks every placement against the province outlines, so values can be edited by hand and the test reports any province that stops fitting. Text widths come from `data/mapTextMetrics.ts`, which holds Libre Baskerville Bold advance widths measured in the browser. Those widths also size the pills at render time.
-
-**Drawing (`components/MapPiece.tsx`)** is the only place piece bodies are drawn: units, simulation ghosts, winter builds and the previews in the settings menu all use `MapPiece`. It picks a body by style and re-exports the rest of `components/pieces/`, so every importer keeps one path: `pieceFrame.ts` (the frame, the pill and the arrow scales), `PieceOutlines.tsx` (rings, the hold ring and the hit area), `marks.tsx` (the marks and the supply star) and `styles/` (`DiscPiece` for classic, seated and compact, `FlagPiece`, `PillPiece`). Nothing under `pieces/` imports `MapPiece.tsx`. `getPieceFrame` returns a `PieceFrame` for each style, which sets ring sizes, badge offsets, banner positions, the step-aside offset for a dislodged unit, and an invisible hit area that keeps small pieces as easy to click as the original token.
-
-`getProvincePoint` and `getUnitPoint` read the active layout, so arrows, support lines, convoy paths, reticles and the floating unit menu all follow the pieces.
+**Drawing.** `MapPiece` is the only place piece bodies are drawn: units, simulation ghosts, winter builds and the previews in the settings menu all use it, so every style looks the same everywhere. Each style supplies a frame that sets ring sizes, badge offsets, banner positions, the step-aside offset for a dislodged unit, and an invisible hit area that keeps small pieces as easy to click as the original token. The point lookups read the active layout, so arrows, support lines, convoy paths, reticles and the floating unit menu all follow the pieces.
 
 ![Classic beside Star seat with every province occupied](images/display-settings-before-after.jpg)
 
-**Classic must stay pixel-identical to the original map.** With `letters`, its values in `getPieceFrame` (`pieces/pieceFrame.ts`) and `DISC_SHAPES` (`pieces/styles/DiscPiece.tsx`) are the original numbers. One known oddity is kept for this reason: `EUROPE_PROVINCE_GEOMETRY.CLY.unitPos` lies in the North Atlantic, so a Clyde unit draws on water in Classic. The other styles move it ashore.
+**Classic must stay pixel-identical to the original map.** With `letters`, its frame values and disc shapes are the original numbers. One known oddity is kept for this reason: `EUROPE_PROVINCE_GEOMETRY.CLY.unitPos` lies in the North Atlantic, so a Clyde unit draws on water in Classic. The other styles move it ashore.
 
 ---
 
@@ -195,7 +205,7 @@ A move suggestion from press takes the map the way a past turn does. `GameWorksp
 ---
 
 ## Floating Unit Menu
-The menus over the map are components in `components/map/hud/`: `UnitMenu` (the selected unit's buttons and hint), `BuildMenu` (a winter build slot), `CoastPicker`, `SimulationBanner` and, on a phone, `MapZoomControls`. Where they go comes from `map/hooks/useUnitMenuPlacement.ts`: the floating position beside the unit (kept clear of the provinces it can reach and moved with the camera), the header drag, and on a phone the docked bar and its `--docked-bar-h`. A unit picked on the sidebar gets no floating menu (its card has the controls, see `useSidebarSelection`), though its reachable provinces stay lit; picking it on the map shows the menu. A phone keeps its docked bar, which is where the sheet hands the unit's orders. Every order they send is built by `utils/orderBuilders.ts`.
+The menus over the map (the selected unit's menu, the winter build menu, the coast picker, the simulation banner and, on a phone, the zoom buttons) live in `components/map/hud/`. Their placement is computed separately: a floating position beside the unit (kept clear of the provinces it can reach, inside the strip between the sidebars, and moved with the camera), a draggable header, and on a phone the docked bar. A unit picked on the sidebar gets no floating menu (its card has the controls), though its reachable provinces stay lit; picking it on the map shows the menu. Every order the menus send is built by the shared order builders, so map, menus and sidebar send the same shape for the same order.
 
 - **Highlighted Button**: `getActiveOrderButton` lights exactly one of Move, Hold, Support, or Convoy. The menu opens on Move, or on Hold if the unit has an explicit `HOLD` order. Pressing Move, Support, or Convoy takes the highlight from a saved Hold. The saved order itself stays until a new one replaces it.
 - **Dragging**: Press and hold the menu header, then drag. The header captures the pointer, so the drag follows the cursor over the menu and outside the map, and it ends on release. Buttons in the header do not start a drag.
@@ -204,7 +214,7 @@ The menus over the map are components in `components/map/hud/`: `UnitMenu` (the 
 
 ## Click-to-Order Interaction Modes
 
-The click state machine lives in `components/map/hooks/useMapInteraction.ts`: the mode (`MOVE`, `SUPPORT_PICK_UNIT`, `SUPPORT_PICK_TARGET`, `CONVOY_PICK_ARMY`, `CONVOY_PICK_TARGET`), the unit a support or convoy is for, the coast choice, and the unit and province click handlers. The menu buttons call its `chooseMove`, `chooseSupport`, `chooseConvoy` and `chooseRetreat`. What is selected, whether the player may command it, and where it can go come from `useMapSelection.ts`. Every order is built by `utils/orderBuilders.ts` (`holdOrder`, `moveOrder`, `retreatOrder`, `supportOrder`, `convoyOrder`), so the map and its menus send the same shape for the same order.
+The click state machine (`useMapInteraction`) holds the interaction mode (`MOVE`, `SUPPORT_PICK_UNIT`, `SUPPORT_PICK_TARGET`, `CONVOY_PICK_ARMY`, `CONVOY_PICK_TARGET`), the unit a support or convoy is for, the coast choice, and the unit and province click handlers; the menu buttons switch its mode. What is selected, whether the player may command it, and where it can go come from `useMapSelection`. Orders go through the shared order builders.
 
 A player can only control their own units, and other powers' units are marked `data-locked="true"`. Every control check goes through `canEditAnyPower`, which is true in the sandbox and for a host with Direct-Edit on (`directEditActive`). That also decides whose orders and diagnostics are drawn.
 

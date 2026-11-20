@@ -5,6 +5,15 @@ The backend exposes a JSON REST API under the `/api` prefix on port `8000`. All 
 ### Multi-Game Room Scoping (`?game_id=...`)
 All operational endpoints accept an optional query parameter `?game_id=<id>`. When omitted, endpoints operate on the default match room (`proto_1901`). Sandbox sessions and concurrent multiplayer lobbies pass their scoped `game_id` with every request.
 
+## Contents
+
+- [Endpoint Summary](#endpoint-summary)
+- [Detailed Specifications: Lobby & Multiplayer Management](#detailed-specifications-lobby--multiplayer-management)
+- [Detailed Specifications: Match & Tactical Operations](#detailed-specifications-match--tactical-operations)
+- [Detailed Specifications: Administrator Controls](#detailed-specifications-administrator-controls)
+- [Detailed Specifications: Press](#detailed-specifications-press)
+- [Detailed Specifications: Real-Time WebSocket Synchronization](#detailed-specifications-real-time-websocket-synchronization)
+
 ---
 
 ## Endpoint Summary

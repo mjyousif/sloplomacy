@@ -2,6 +2,13 @@
 
 The frontend application is located in `frontend/`. It is built with **React 19**, **TypeScript**, and **Vite**, using **Lucide React** for tactical iconography, **Supabase** for player authentication, and pure SVG vector mathematics for the interactive European atlas.
 
+## Contents
+
+- [Directory Structure](#directory-structure)
+- [View & Package Architecture](#view--package-architecture)
+- [Vite Proxy Setup](#vite-proxy-setup)
+- [Building and Verification](#building-and-verification)
+
 ---
 
 ## Directory Structure

@@ -4,6 +4,11 @@ This document explains how the React frontend interacts with **Supabase Auth** a
 
 For the underlying PostgreSQL tables and Row-Level Security (RLS) policies, see [Database Setup & Row-Level Security](database.md).
 
+## Contents
+
+- [1. Frontend-to-Services Topology](#1-frontend-to-services-topology)
+- [2. Key Service Interaction Flows](#2-key-service-interaction-flows)
+
 ---
 
 ## 1. Frontend-to-Services Topology

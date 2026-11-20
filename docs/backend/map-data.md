@@ -2,6 +2,13 @@
 
 The spatial topology of the European theatre is defined in `backend/engine/topology/`: `provinces.py` holds the province records, adjacencies and the 1901 starting position as pure data, and `graph.py` holds the rules that read them (`can_unit_move_directly`, `can_unit_support_province`, `can_army_be_convoyed_theoretically`, `split_province_code`). It establishes a symmetric, bidirectional graph for land and maritime movement, supply center ownership, and dual-coast mechanics.
 
+## Contents
+
+- [Map Statistics](#map-statistics)
+- [Dual & Split Coast Mechanics](#dual--split-coast-mechanics)
+- [Adjacency Representation](#adjacency-representation)
+- [Helper Functions](#helper-functions)
+
 ---
 
 ## Map Statistics
