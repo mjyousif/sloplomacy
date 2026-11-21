@@ -146,16 +146,6 @@ export function resolveUnitPlacement(
   return { ok: true, coast };
 }
 
-export function filterUnitsForDisband(
-  units: Unit[],
-  powerFilter: string,
-): Unit[] {
-  if (!powerFilter || powerFilter === 'ALL') {
-    return units;
-  }
-  return units.filter((u) => u.power === powerFilter);
-}
-
 export function buildDefaultHoldOrder(
   unitId: string,
   power: Power,

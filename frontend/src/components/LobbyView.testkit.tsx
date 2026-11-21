@@ -59,12 +59,6 @@ export const hostDialog = () => screen.queryByTestId('host-game-dialog');
 export const joinDialog = () => screen.queryByTestId('join-with-code-dialog');
 
 export const OPEN = game({ game_id: 'mp_open', name: 'Open Table' });
-export const SECRET = game({
-  game_id: 'mp_sec',
-  name: 'Secret Table',
-  is_private: true,
-  has_passcode: true,
-});
 export const MINE = game({
   game_id: 'mp_mine',
   name: 'My Table',

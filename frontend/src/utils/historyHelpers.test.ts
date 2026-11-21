@@ -6,7 +6,6 @@ import {
   matchesHistoryActions,
   matchesHistoryPowers,
   sameTurn,
-  shortTurnLabel,
   stepTurn,
   toggleHistoryAction,
   toggleHistoryPower,
@@ -17,16 +16,6 @@ const entries: TurnHistoryEntry[] = [
   { index: 1, season: 'Fall', year: 1901, phase: 'Movement' },
   { index: 2, season: 'Winter', year: 1901, phase: 'Adjustments' },
 ];
-
-describe('shortTurnLabel', () => {
-  it('fits a turn into the phone pill', () => {
-    expect(shortTurnLabel(entries[1])).toBe('F1901 M');
-    expect(shortTurnLabel(entries[2])).toBe('W1901 A');
-    expect(
-      shortTurnLabel({ season: 'Spring', year: 1901, phase: 'Admin' }),
-    ).toBe('S1901 Adm');
-  });
-});
 
 describe('sameTurn', () => {
   it('matches on season, year and phase, not on index', () => {

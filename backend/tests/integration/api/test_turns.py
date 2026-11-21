@@ -61,7 +61,6 @@ def test_game_ends_when_a_power_reaches_eighteen_centers():
         client.post(f"/api/adjudicate?game_id={game_id}", headers=_auth_headers()).status_code
         == 409
     )
-    assert client.post(f"/api/sandbox/ai-step?game_id={game_id}").status_code == 409
 
 
 def test_game_ends_only_after_the_retreat_of_the_deciding_turn():

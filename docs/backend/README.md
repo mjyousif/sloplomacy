@@ -20,7 +20,7 @@ backend/
 ├── telemetry.py             # Structured JSON telemetry emitter & /api/* endpoint timing middleware
 ├── api/                     # Domain-partitioned FastAPI routers (games, lobby, seats, orders, turns, sandbox, admin, history, press, websocket)
 ├── domain/                  # Core Pydantic domain models & schemas (board, orders, issues, game state, press, stats, request/WS DTOs)
-├── engine/                  # Authoritative rules & simulation engine (phase timer, tactical AI, campaign stats, order/default helpers)
+├── engine/                  # Authoritative rules & simulation engine (phase timer, campaign stats, order/default helpers)
 │   ├── adjudicator/         # DATC turn adjudication over python 'diplomacy', one module per phase
 │   ├── validator/           # Pre-flight tactical blunder & legality checker (Movement, Retreats, Builds)
 │   ├── reachability/        # Authoritative move, convoy chain, and support options per unit

@@ -7,7 +7,7 @@ Sloplomacy supports both **Solo Sandboxes** (freeform tactical boards, scenario 
 - [Solo Sandbox vs. Multiplayer Hypothetical Mode](#solo-sandbox-vs-multiplayer-hypothetical-mode)
 - [Multiplayer Private Branch Lifecycle (`sbx_*`)](#multiplayer-private-branch-lifecycle-sbx_)
 - [Solo Sandbox Checkpoints & Saving](#solo-sandbox-checkpoints--saving)
-- [AI Heuristics & Step-Forward Simulation](#ai-heuristics--step-forward-simulation)
+- [Sandbox Tools & Step-Forward Simulation](#sandbox-tools--step-forward-simulation)
 - [Board-State Export](#board-state-export)
 - [Invariants](#invariants)
 - [Related Docs](#related-docs)
@@ -30,7 +30,7 @@ Sloplomacy supports both **Solo Sandboxes** (freeform tactical boards, scenario 
 When a seated player enters Hypothetical Mode from a live multiplayer match ([`backend/api/sandbox.py`](../../backend/api/sandbox.py)):
 
 1. **Enter (`POST /api/sandbox/enter?game_id={match}`)**: `open_private_sandbox()` creates (or resumes, if still on the same live turn) a private copy in `PRIVATE_SANDBOXES` with `PRIVATE_SANDBOX_TURNS` tracking `(season, year, phase)`. All **other** powers are reset to default orders (`create_default_orders`) so the branch never reveals opponents' hidden orders.
-2. **Explore**: The player switches powers, plots multi-power moves, runs AI heuristics, or steps turns forward via `POST /api/adjudicate` using the `sbx_` game ID. The live match's `PhaseTimer` continues to be tracked via `hypotheticalMatchTimer` in the frontend.
+2. **Explore**: The player switches powers, plots multi-power moves, or steps turns forward via `POST /api/adjudicate` using the `sbx_` game ID. The live match's `PhaseTimer` continues to be tracked via `hypotheticalMatchTimer` in the frontend.
 3. **Exit (`POST /api/sandbox/exit?game_id={sbx_id}`)**: Returns the untouched live match `GameState`. The `sbx_` branch remains resumable for the duration of that live turn and is automatically erased by `clear_ephemeral_sandboxes_for()` as soon as the real match adjudicates or rolls back (and evicted on exit or game eviction if the player leaves their seat).
 
 ```mermaid
@@ -61,12 +61,11 @@ sequenceDiagram
 
 ---
 
-## AI Heuristics & Step-Forward Simulation
+## Sandbox Tools & Step-Forward Simulation
 
-Inside a sandbox or hypothetical branch, players can use [`backend/engine/ai.py`](../../backend/engine/ai.py) tools:
+Inside a sandbox or hypothetical branch, players can use these tools:
 
-- **`POST /api/sandbox/ai-orders`**: Generates heuristic orders for all non-selected (or specified) Great Powers for the current phase.
-- **`POST /api/sandbox/ai-step`**: Generates AI orders for foreign powers (and `active_power` if it has no explicit orders yet) and immediately adjudicates one turn forward.
+- **`POST /api/adjudicate`** (on the `sbx_` or solo sandbox id): Adjudicates the current phase and steps the turn forward.
 - **`POST /api/sandbox/clear-foreign`**: Resets all non-selected powers' orders back to defaults.
 - **`POST /api/scenario`**: Resets a sandbox (or a live match, creator-only) to a named preset (`standard_1901`, `tactical_blunders_demo`, `spring_retreats_demo`, `winter_adjustments_demo`, `one_turn_from_win`).
 

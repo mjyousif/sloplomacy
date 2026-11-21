@@ -1,6 +1,6 @@
 """Request and response bodies for the HTTP API and WebSocket messages."""
 
-from domain.board import Power, ProvinceInfo, Unit, UnitType
+from domain.board import Power, ProvinceInfo, Unit
 from domain.game_state import GameState, MultiplayerGameSummary, TimerChoice, TurnHistoryEntry
 from domain.issues import ValidationIssue
 from domain.orders import Order
@@ -79,11 +79,6 @@ class JoinGameRequest(BaseModel):
     passcode: str | None = None
 
 
-class GenerateAIOrdersRequest(BaseModel):
-    powers: list[Power] | None = None
-    include_active: bool = False
-
-
 class LeaveGameRequest(BaseModel):
     user_id: str
     email: str | None = None
@@ -124,36 +119,6 @@ class AdminSetTurnRequest(BaseModel):
     email: str | None = None
 
 
-class AdminMoveUnitRequest(BaseModel):
-    unit_id: str
-    new_province: str
-    new_coast: str | None = None
-    user_id: str | None = None
-    email: str | None = None
-
-
-class AdminSpawnUnitRequest(BaseModel):
-    power: Power
-    unit_type: UnitType
-    province: str
-    coast: str | None = None
-    user_id: str | None = None
-    email: str | None = None
-
-
-class AdminDestroyUnitRequest(BaseModel):
-    unit_id: str
-    user_id: str | None = None
-    email: str | None = None
-
-
-class AdminSetOwnershipRequest(BaseModel):
-    province: str
-    power: Power | None = None
-    user_id: str | None = None
-    email: str | None = None
-
-
 class AdminAcknowledgeRequest(BaseModel):
     entry_ids: list[str] | None = None
     user_id: str | None = None
@@ -181,18 +146,6 @@ class AdminStatusResponse(BaseModel):
     history_entries: list[TurnHistoryEntry] = Field(default_factory=list)
     creator_email: str
     creator_id: str | None = None
-
-
-class WebSocketGameUpdate(BaseModel):
-    type: str = "game_update"
-    game_id: str
-    state: GameState
-    summary: MultiplayerGameSummary | None = None
-
-
-class WebSocketLobbyUpdate(BaseModel):
-    type: str = "lobby_update"
-    games: list[MultiplayerGameSummary]
 
 
 class GameBootstrapResponse(BaseModel):

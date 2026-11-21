@@ -41,7 +41,6 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/power` | Switch active viewing power (returns what the caller's own seat may see) | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/order` | Submit or update an order for a single military unit or build slot | `SingleOrderUpdateRequest` | `GameState` |
 | `POST` | `/api/orders/batch` | Update multiple orders simultaneously (atomic: an invalid batch changes nothing) | `OrderSubmissionRequest` | `GameState` |
-| `POST` | `/api/orders/confirm-all` | Mark all default orders of a given power as explicitly confirmed | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/orders/clear-all` | Reset every order of a given power to the phase default and withdraw its finalization | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/finalize` | Pre-flight sanity check and finalize power's orders; auto-adjudicates when all are ready | `FinalizeRequest` | `FinalizeResponse` |
 | `POST` | `/api/unfinalize` | Unlock finalized orders for subsequent editing | `SetPowerRequest` | `GameState` |
@@ -58,14 +57,12 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/press` | Send press from the caller's seat to the public box or a private thread, signed or anonymous | `PressPostRequest` | `PressMessageView` |
 | `GET` | `/api/history/{index}` | One resolved phase as it began, with every power's orders and how each resolved | *None* | `TurnRecord` |
 
-### Sandbox & AI Planning
+### Sandbox
 | Method | Endpoint | Description | Request Body | Response Model |
 | :--- | :--- | :--- | :--- | :--- |
 | `POST` | `/api/sandbox/enter` | Enter/resume Hypothetical Mode: ephemeral `sbx_` branch for multiplayer, or solo checkpoint | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/sandbox/exit` | Exit Hypothetical Mode and return real board & orders unchanged without mutating live match | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/sandbox/clear-foreign` | Reset all foreign hypothetical orders to default HOLD (`409` on live match) | `SetPowerRequest` | `GameState` |
-| `POST` | `/api/sandbox/ai-orders` | Generate DATC-compliant heuristic tactical AI orders for specified powers | `GenerateAIOrdersRequest` | `GameState` |
-| `POST` | `/api/sandbox/ai-step` | Auto-plan unassigned foreign powers with tactical AI and advance turn | *None* | `GameState` |
 | `POST` | `/api/games/save-sandbox` | Promote draft sandbox in-place or save clone of solo match session | `SaveSandboxRequest` | `MultiplayerGameSummary` |
 
 ### Phase Clock & Timers
@@ -82,10 +79,6 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `GET` | `/api/admin/status` | Query creator permissions and rollback snapshot depth | *None* | `AdminStatusResponse` |
 | `POST` | `/api/admin/rollback` | Revert game state to pre-adjudication timeline snapshot | `AdminRollbackRequest` | `GameState` |
 | `POST` | `/api/admin/set-turn` | Arbitrarily jump season, year, or phase | `AdminSetTurnRequest` | `GameState` |
-| `POST` | `/api/admin/unit/move` | Teleport any unit to any valid destination province | `AdminMoveUnitRequest` | `GameState` |
-| `POST` | `/api/admin/unit/spawn` | Spawn a new army or fleet for any Great Power | `AdminSpawnUnitRequest` | `GameState` |
-| `POST` | `/api/admin/unit/destroy` | Disband and remove any unit from the board | `AdminDestroyUnitRequest` | `GameState` |
-| `POST` | `/api/admin/ownership` | Reassign province / supply center ownership | `AdminSetOwnershipRequest` | `GameState` |
 | `POST` | `/api/admin/unfinalize-all` | Unlock and unfinalize orders for all 7 powers | *None* | `GameState` |
 | `POST` | `/api/admin/board-edit` | Atomically commit staged Direct-Edit board changes with concurrency check | `AdminBoardEditRequest` | `GameState` |
 | `POST` | `/api/admin/acknowledge` | Acknowledge admin action log entries for the calling viewer | `AdminAcknowledgeRequest` | `GameState` |
@@ -436,36 +429,12 @@ Leaves Hypothetical Mode cleanly without mutating the real game.
 - **Multiplayer match (`sbx_` id)**: keeps the `sbx_` branch in memory for the duration of the current live turn (unless the caller's seat was vacated, in which case it is evicted) and returns the untouched real match state masked for the caller's seat. Hypothetical moves and stepped turns never carry over to the real match, and `clear_ephemeral_sandboxes_for` erases all `sbx_` branches once the live turn resolves, resets, rolls back, sets turn, or receives admin board edits.
 - **Solo or saved sandbox**: saves the hypothetical board and turn history into `SANDBOX_BRANCHES[game_id]` (while on the same real turn) and restores the real checkpoint (`SANDBOX_CHECKPOINTS` and `SANDBOX_HISTORY_CHECKPOINTS`) unchanged, so hypothetical orders and stepped turns never overwrite real orders or appear in `/api/history` or rollback checkpoints.
 
-### 8. `POST /api/sandbox/ai-orders`
-Generates DATC-compliant, intelligent tactical orders for specified Great Powers (or foreign powers by default) using the Chancellery Tactical AI engine. Answers `409` on a live multiplayer match, where it must be called on a private sandbox id. Avoids friendly self-bounces, coordinates multi-power attacks and supports, and prioritizes strategic supply centers.
-
-#### Request (`GenerateAIOrdersRequest`):
-```json
-{
-  "powers": ["ENGLAND", "GERMANY", "RUSSIA", "AUSTRIA", "ITALY", "TURKEY"],
-  "include_active": false
-}
-```
-
-#### Response (`GameState`):
-Returns the updated `GameState` with the AI-assigned orders populated and real-time validation/diagnostics refreshed.
-
----
-
-### 9. `POST /api/sandbox/ai-step`
-Automatically plans tactical moves for any unassigned foreign powers with the Tactical AI engine and immediately adjudicates and steps the turn forward to the next phase/season. Answers `409` on a live multiplayer match.
-
-#### Response (`GameState`):
-Returns the next phase `GameState` with combat resolutions and updated unit positions.
-
----
-
 ### 10. `POST /api/order`
 Any `target_coast` on an army's order is ignored, because only fleets use coasts.
 
 Send the optional `turn` (for example `"Spring 1901 Movement"`) to have the order refused with `409` if that turn has already resolved.
 
-Submits or modifies a single military instruction. Automatically triggers validation and non-destructive simulation preview. For order-drafting endpoints (`/api/order`, `/api/orders/batch`, `/api/orders/clear-all`, `/api/orders/confirm-all`), WebSocket broadcasts and Supabase persistence run in `BackgroundTasks` after the HTTP response is sent.
+Submits or modifies a single military instruction. Automatically triggers validation and non-destructive simulation preview. For order-drafting endpoints (`/api/order`, `/api/orders/batch`, `/api/orders/clear-all`), WebSocket broadcasts and Supabase persistence run in `BackgroundTasks` after the HTTP response is sent.
 
 #### Request (`SingleOrderUpdateRequest`):
 ```json
@@ -491,7 +460,7 @@ Returns `400` if the order names a province or coast that does not exist. A real
 
 An order on a build slot must fit the slot: `404` for a slot the phase does not have (a home centre that is occupied, not owned, or any slot outside Winter), and `422` for a `BUILD` whose `origin` is not the slot's own home centre (`BUILD_FRANCE_BRE` builds only in `BRE`). Otherwise the stored order and its resolution would be filed under different slots. `/api/orders/batch` also answers `422` when two orders name the same `unit_id`, so no order silently replaces another. A refused batch changes nothing.
 
-In multiplayer matches, callers must supply a valid `Authorization: Bearer <token>` matching the participant who claimed the Great Power (or game creator). Attempts by opponents or unauthenticated callers to issue orders for claimed powers return `403 Forbidden` or `401 Unauthorized`. An empty seat is in Civil Disorder, so only the host may order it. A surrendered power is in Civil Disorder too: `/api/order`, `/api/orders/batch`, `/api/orders/clear-all`, `/api/orders/confirm-all`, `/api/finalize` and `/api/unfinalize` answer `403` for it in a live match (a sandbox is unaffected), until a player claims the seat again. A build slot (`BUILD_<POWER>_<PROVINCE>`) belongs to the power it names, whatever the order's `power` says, and in `/api/orders/batch` every unit must belong to the batch's `power` (otherwise `403`). Like `/api/order`, a batch may carry `turn` (e.g. `"Spring 1901 Movement"`): if the game has moved on it answers `409` and changes nothing. The client sends it when a player takes the orders of a move suggestion from press. Returned `GameState` is sanitized for the commanding power to preserve Fog of War.
+In multiplayer matches, callers must supply a valid `Authorization: Bearer <token>` matching the participant who claimed the Great Power (or game creator). Attempts by opponents or unauthenticated callers to issue orders for claimed powers return `403 Forbidden` or `401 Unauthorized`. An empty seat is in Civil Disorder, so only the host may order it. A surrendered power is in Civil Disorder too: `/api/order`, `/api/orders/batch`, `/api/orders/clear-all`, `/api/finalize` and `/api/unfinalize` answer `403` for it in a live match (a sandbox is unaffected), until a player claims the seat again. A build slot (`BUILD_<POWER>_<PROVINCE>`) belongs to the power it names, whatever the order's `power` says, and in `/api/orders/batch` every unit must belong to the batch's `power` (otherwise `403`). Like `/api/order`, a batch may carry `turn` (e.g. `"Spring 1901 Movement"`): if the game has moved on it answers `409` and changes nothing. The client sends it when a player takes the orders of a move suggestion from press. Returned `GameState` is sanitized for the commanding power to preserve Fog of War.
 
 ---
 
@@ -714,59 +683,6 @@ Jumps the game directly to an arbitrary season, year, or phase. The turn must be
 
 ---
 
-### 14. `POST /api/admin/unit/move`
-Teleports any unit to any province, evicting any previous occupant and resetting the unit's order to HOLD. Only a fleet on a split-coast province takes a coast: `new_coast` if valid, otherwise the first coast. An army never has one.
-
-#### Request (`AdminMoveUnitRequest`):
-```json
-{
-  "unit_id": "FRA_A_PAR",
-  "new_province": "BUR",
-  "new_coast": null
-}
-```
-
----
-
-### 15. `POST /api/admin/unit/spawn`
-Spawns an Army or Fleet for any Great Power in any valid province.
-
-#### Request (`AdminSpawnUnitRequest`):
-```json
-{
-  "power": "GERMANY",
-  "unit_type": "A",
-  "province": "MUN"
-}
-```
-
----
-
-### 16. `POST /api/admin/unit/destroy`
-Immediately disbands and removes a unit from the board.
-
-#### Request (`AdminDestroyUnitRequest`):
-```json
-{
-  "unit_id": "FRA_A_PAR"
-}
-```
-
----
-
-### 17. `POST /api/admin/ownership`
-Reassigns the owner of a supply center or other land province to any Great Power, or clears it to neutral. Returns `400` for a sea or impassable province.
-
-#### Request (`AdminSetOwnershipRequest`):
-```json
-{
-  "province": "BEL",
-  "power": "FRANCE"
-}
-```
-
----
-
 ### 18. `POST /api/admin/unfinalize-all`
 Unlocks and unfinalizes order submissions across all 7 Great Powers simultaneously.
 
@@ -901,12 +817,12 @@ Establishes a persistent, low-latency WebSocket connection scoped to a specific 
   - Send `{"type": "refresh"}` -> Server runs `tick_timer` (resolving a deadline that has passed), then resends the latest authoritative `game_update`. The client sends this when its countdown reaches zero; `ping` does not run the clock.
 - **Close codes**: `4004` (no such game), `4403` (passcode refused) and `4429` (too many wrong passcodes) are permanent, and the client does not reconnect. `1013` means try again later (the database could not be read).
 - **Automatic Broadcast Triggers**:
-  - Whenever an order is submitted or changed (`/api/order`, `/api/orders/batch`, `/api/orders/confirm-all`, `/api/orders/clear-all`).
+  - Whenever an order is submitted or changed (`/api/order`, `/api/orders/batch`, `/api/orders/clear-all`).
   - Whenever a power finalizes or unfinalizes (`/api/finalize`, `/api/unfinalize`).
-  - Whenever a turn is adjudicated (`/api/adjudicate`, `/api/sandbox/ai-step`).
+  - Whenever a turn is adjudicated (`/api/adjudicate`).
   - Whenever a scenario is reset (`/api/scenario`).
   - Whenever a player joins, leaves, or surrenders a sovereign power (`/api/games/{id}/join`, `/api/games/{id}/leave`, `/api/games/{id}/surrender`).
-  - Whenever an administrator modifies game state (rollback, teleport, spawn, destroy, turn jump).
+  - Whenever an administrator modifies game state (rollback, board edit, turn jump).
 
 #### Server Broadcast (`WebSocketGameUpdate`):
 ```json

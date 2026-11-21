@@ -379,11 +379,6 @@ export interface JoinGameRequest {
   passcode?: string | null;
 }
 
-export interface GenerateAIOrdersRequest {
-  powers?: Power[] | null;
-  include_active?: boolean;
-}
-
 export interface AuthUser {
   id: string;
   user_id?: string;

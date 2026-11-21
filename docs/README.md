@@ -75,7 +75,7 @@ docs/
 - [Lobby Browse, Filtering & Featured Games](features/lobby-browse-and-filtering.md): Public match browser, server-side filters/paging, My Games urgency sorting, Featured Hero, and MiniMap previews.
 - [Turn Clock (Phase Timer)](features/turn-clock.md): Movement duration voting, fixed Retreats/Adjustments clocks, extensions, pause/ready-up, and request-driven expiry.
 - [Press & Diplomacy](features/press-and-diplomacy.md): Public and private threads, signed vs. anonymous messages, move suggestions, unread tracking, and independent storage.
-- [Sandbox & Hypothetical Mode](features/sandbox-and-hypothetical-mode.md): Solo sandboxes, ephemeral `sbx_*` multiplayer branches, checkpoints, AI heuristics, and board-state export.
+- [Sandbox & Hypothetical Mode](features/sandbox-and-hypothetical-mode.md): Solo sandboxes, ephemeral `sbx_*` multiplayer branches, checkpoints, and board-state export.
 - [Admin & Creator Controls](features/admin-and-creator-controls.md): Turn rollback, set-turn, unfinalize-all, atomic `board-edit` batches, audit log, and player acknowledgements.
 - [Spectating](features/spectating.md): Read-only observation of public or passcode-unlocked matches, spectator bar, public press, and claiming an open seat.
 - [Game Over & Turn History](features/game-over-and-history.md): 18-SC victory, surrender, 30-turn `GAME_HISTORY` inspection, past-turn arrows, and ownership-change log.
