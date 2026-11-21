@@ -173,7 +173,6 @@ async def read_press(
     game_id: str | None = Query(default=None),
     power: Power | None = Query(default=None),
     after: int = Query(default=0, ge=0),
-    passcode: str | None = Query(default=None),
     x_passcode: str | None = Header(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
@@ -183,9 +182,7 @@ async def read_press(
     _refuse_unheld(power, seat)
     revealed = press_revealed(game)
     if seat is None:
-        require_view_access(
-            gid, current_user, passcode or x_passcode, client=client_address(request)
-        )
+        require_view_access(gid, current_user, x_passcode, client=client_address(request))
         messages = await _loaded_press(gid)
         return PressFeed(
             power=None, revealed=revealed, messages=spectator_feed(messages, revealed, after)

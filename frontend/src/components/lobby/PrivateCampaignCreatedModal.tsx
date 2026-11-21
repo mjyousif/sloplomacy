@@ -5,6 +5,8 @@ import { Modal, ModalCloseButton, ModalFooter } from '../modal/Modal';
 import promptStyles from '../modal/PromptDialog.module.css';
 import styles from './PrivateCampaignCreatedModal.module.css';
 
+export type CopyField = 'gid' | 'link' | 'pw';
+
 export interface PrivateCampaignCreatedModalProps {
   createdPrivateModal: {
     gameId: string;
@@ -12,10 +14,12 @@ export interface PrivateCampaignCreatedModalProps {
     name: string;
   } | null;
   onClose: () => void;
-  handleCopy: (text: string, field: 'gid' | 'link' | 'pw') => void;
+  handleCopy: (text: string, field: CopyField) => void;
   copiedGameId: boolean;
   copiedLink: boolean;
   copiedPasscode: boolean;
+  /** The field whose last copy failed, so its button can say so (select and copy by hand). */
+  copyFailed?: CopyField | null;
 }
 
 export const PrivateCampaignCreatedModal: React.FC<
@@ -27,6 +31,7 @@ export const PrivateCampaignCreatedModal: React.FC<
   copiedGameId,
   copiedLink,
   copiedPasscode,
+  copyFailed = null,
 }) => {
   if (!createdPrivateModal) return null;
   const link = gameLink(createdPrivateModal.gameId);
@@ -63,7 +68,13 @@ export const PrivateCampaignCreatedModal: React.FC<
               title="Copy Game ID"
             >
               {copiedGameId ? <Check size={14} /> : <Copy size={14} />}
-              <span>{copiedGameId ? 'Copied' : 'Copy'}</span>
+              <span>
+                {copiedGameId
+                  ? 'Copied'
+                  : copyFailed === 'gid'
+                    ? 'Copy failed'
+                    : 'Copy'}
+              </span>
             </button>
           </div>
         </div>
@@ -84,7 +95,13 @@ export const PrivateCampaignCreatedModal: React.FC<
               title="Copy Game Link (it asks for the passcode)"
             >
               {copiedLink ? <Check size={14} /> : <Copy size={14} />}
-              <span>{copiedLink ? 'Copied' : 'Copy'}</span>
+              <span>
+                {copiedLink
+                  ? 'Copied'
+                  : copyFailed === 'link'
+                    ? 'Copy failed'
+                    : 'Copy'}
+              </span>
             </button>
           </div>
         </div>
@@ -102,7 +119,13 @@ export const PrivateCampaignCreatedModal: React.FC<
               title="Copy Passcode"
             >
               {copiedPasscode ? <Check size={14} /> : <Copy size={14} />}
-              <span>{copiedPasscode ? 'Copied' : 'Copy'}</span>
+              <span>
+                {copiedPasscode
+                  ? 'Copied'
+                  : copyFailed === 'pw'
+                    ? 'Copy failed'
+                    : 'Copy'}
+              </span>
             </button>
           </div>
         </div>

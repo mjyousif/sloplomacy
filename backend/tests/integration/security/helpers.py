@@ -142,10 +142,13 @@ def assert_plan_hidden(state: dict) -> None:
         assert preview["resolutions"]["FRA_A_PAR"]["order_type"] == "HOLD"
 
 
-def socket_state(path: str, token: str | None = None) -> dict:
+def socket_state(path: str, token: str | None = None, passcode: str | None = None) -> dict:
     with client.websocket_connect(path) as ws:
         if "handshake=1" in path:
-            ws.send_json({"type": "auth", "token": token})
+            message: dict = {"type": "auth", "token": token}
+            if passcode is not None:
+                message["passcode"] = passcode
+            ws.send_json(message)
         msg = ws.receive_json()
         assert msg["type"] == "game_update"
         return msg["state"]

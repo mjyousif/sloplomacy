@@ -66,7 +66,7 @@ Every board edit or turn override records an `AdminActionLogEntry` (`id`, `times
 
 ## Invariants
 
-- **Never leak emails**: `resolve_admin_actor()` stores display names (or email local-parts as a last resort), never raw email addresses, in `admin_log`.
+- **Never leak emails**: `resolve_admin_actor()` stores display names (or email local-parts as a last resort), never raw email addresses, in `admin_log`. `acknowledged_by` stores ids and emails, but is filtered per viewer on the way out (`security/secrecy.py`), so one player never sees another's.
 - **Ephemeral sandbox cleanup**: Any turn rollback or set-turn clears attached `sbx_*` hypothetical branches (`clear_ephemeral_sandboxes_for`) so no player's "what-if" branch survives across a reset.
 - **Press is untouched**: Admin rollbacks and board edits never modify or delete `GAME_PRESS`.
 

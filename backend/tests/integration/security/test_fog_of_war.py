@@ -199,7 +199,7 @@ def test_private_match_socket_admits_seated_players_without_the_passcode():
         socket_state(f"/ws/games/{gid}?handshake=1", None)
     assert refused.value.code == 4403
 
-    assert_plan_hidden(socket_state(f"/ws/games/{gid}?passcode=Secret1901"))
+    assert_plan_hidden(socket_state(f"/ws/games/{gid}?handshake=1", None, "Secret1901"))
 
 
 def test_turn_history_never_shows_the_current_turns_orders():
@@ -272,8 +272,10 @@ def test_turn_history_of_a_private_match_needs_the_passcode():
         f"/api/history/stats?game_id={gid}",
     ):
         assert client.get(path).status_code == 403
-        assert client.get(f"{path}&passcode=wrong").status_code == 403
-        assert client.get(f"{path}&passcode=Secret1901").status_code == 200
+        assert client.get(path, headers={"X-Passcode": "wrong"}).status_code == 403
+        assert client.get(path, headers={"X-Passcode": "Secret1901"}).status_code == 200
+        # The passcode is read from the header only: a URL ends up in request logs.
+        assert client.get(f"{path}&passcode=Secret1901").status_code == 403
         # Seated players need no passcode, as with GET /api/game.
         assert client.get(path, headers=alice_headers()).status_code == 200
 

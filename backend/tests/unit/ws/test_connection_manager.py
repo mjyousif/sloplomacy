@@ -38,9 +38,9 @@ def test_state_is_masked_once_per_viewing_power_not_once_per_socket(monkeypatch)
     calls: list[Power | None] = []
     real = cm.sanitize_game_state_for_viewer
 
-    def counting(state, power=None):
+    def counting(state, power=None, viewer_ids=None):
         calls.append(power)
-        return real(state, power)
+        return real(state, power, viewer_ids)
 
     monkeypatch.setattr(cm, "sanitize_game_state_for_viewer", counting)
     sockets = [
@@ -57,6 +57,50 @@ def test_state_is_masked_once_per_viewing_power_not_once_per_socket(monkeypatch)
 
     assert sorted(calls, key=str) == sorted([Power.FRANCE, Power.GERMANY, None], key=str)
     assert all(len(ws.sent) == 1 for ws, _ in sockets)
+
+
+def test_sockets_of_one_power_each_get_only_their_own_acknowledgements():
+    from domain.game_state import AdminActionLogEntry
+
+    game = build_scenario("standard_1901", Power.FRANCE, "bc_ack")
+    game.admin_log = [
+        AdminActionLogEntry(
+            id="e1",
+            timestamp="t",
+            actor="host",
+            season="Spring",
+            year=1901,
+            phase="Movement",
+            acknowledged_by=["user-a", "a@x.com", "user-b", "b@x.com", "GERMANY", "guest"],
+        )
+    ]
+    calls: list[Power | None] = []
+    real = cm.sanitize_game_state_for_viewer
+
+    def counting(state, power=None, viewer_ids=None):
+        calls.append(power)
+        return real(state, power, viewer_ids)
+
+    a, b, nobody = FakeSocket(), FakeSocket(), FakeSocket()
+    manager = ConnectionManager()
+    manager.register_game("bc_ack", a, None, ("user-a", "a@x.com"))
+    manager.register_game("bc_ack", b, None, ("user-b", "b@x.com"))
+    manager.register_game("bc_ack", nobody, None)
+
+    original = cm.sanitize_game_state_for_viewer
+    cm.sanitize_game_state_for_viewer = counting
+    try:
+        asyncio.run(manager.broadcast_game("bc_ack", state=game))
+    finally:
+        cm.sanitize_game_state_for_viewer = original
+
+    def acked(ws):
+        return ws.sent[0]["state"]["admin_log"][0]["acknowledged_by"]
+
+    assert acked(a) == ["user-a", "a@x.com", "GERMANY", "guest"]
+    assert acked(b) == ["user-b", "b@x.com", "GERMANY", "guest"]
+    assert acked(nobody) == ["GERMANY", "guest"]
+    assert calls == [None]  # still masked once for the one viewing power
 
 
 def test_each_power_still_gets_only_its_own_masked_copy():

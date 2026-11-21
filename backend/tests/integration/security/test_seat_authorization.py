@@ -142,11 +142,13 @@ def test_private_game_passcode_enforced():
     assert res_no_pw.status_code == 403
 
     # Request with wrong passcode is forbidden
-    res_bad_pw = client.get(f"/api/game?game_id={gid}&passcode=wrongpassword")
+    res_bad_pw = client.get(f"/api/game?game_id={gid}", headers={"X-Passcode": "wrongpassword"})
     assert res_bad_pw.status_code == 403
 
     # Request with correct passcode succeeds
-    res_good_pw = client.get(f"/api/game?game_id={gid}&passcode=supersecretpassword")
+    res_good_pw = client.get(
+        f"/api/game?game_id={gid}", headers={"X-Passcode": "supersecretpassword"}
+    )
     assert res_good_pw.status_code == 200
 
 

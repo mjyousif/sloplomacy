@@ -167,11 +167,15 @@ describe('LobbyView details', () => {
       screen.getByRole('button', { name: /Create Private & Play as France/ }),
     );
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    fireEvent.click(screen.getByTitle('Copy Game ID'));
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Copy Game ID'));
+    });
     act(() => {
       vi.advanceTimersByTime(1500);
     });
-    fireEvent.click(screen.getByTitle('Copy Passcode'));
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Copy Passcode'));
+    });
     act(() => {
       vi.advanceTimersByTime(1200);
     });

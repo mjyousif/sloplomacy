@@ -1,6 +1,7 @@
 import { Check, ExternalLink, GitCommit } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
+import { copyText } from '../../utils/clipboard';
 import { cx } from '../../utils/cx';
 import styles from './VersionBadge.module.css';
 
@@ -13,7 +14,8 @@ export const VersionBadge: React.FC<VersionBadgeProps> = ({
   className = '',
   showExternalLink = true,
 }) => {
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<'copied' | 'failed' | null>(null);
+  const copied = copyState === 'copied';
   const commit =
     typeof __COMMIT_HASH__ !== 'undefined' && __COMMIT_HASH__
       ? __COMMIT_HASH__
@@ -23,13 +25,11 @@ export const VersionBadge: React.FC<VersionBadgeProps> = ({
     ? `https://github.com/mjyousif/sloplomacy/commit/${commit}`
     : undefined;
 
-  const handleCopy = (e: React.MouseEvent) => {
+  const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(commit);
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const ok = await copyText(commit);
+    setCopyState(ok ? 'copied' : 'failed');
+    setTimeout(() => setCopyState(null), 2000);
   };
 
   return (
@@ -50,7 +50,11 @@ export const VersionBadge: React.FC<VersionBadgeProps> = ({
           <GitCommit size={11} className={styles.versionBadgeCommitIcon} />
         )}
         <span className={styles.versionBadgeText}>
-          {copied ? 'copied' : `rev ${commit}`}
+          {copied
+            ? 'copied'
+            : copyState === 'failed'
+              ? 'copy failed'
+              : `rev ${commit}`}
         </span>
       </button>
 

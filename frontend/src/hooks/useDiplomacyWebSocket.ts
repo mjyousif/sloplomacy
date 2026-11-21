@@ -21,7 +21,6 @@ export function resolveWebSocketPath(
   viewMode: 'lobby' | 'sandbox' | 'multiplayer',
   activeGameId: string | null,
   power?: string | null,
-  passcode?: string | null,
 ): string | null {
   if (viewMode === 'lobby') {
     return '/ws/lobby';
@@ -32,16 +31,28 @@ export function resolveWebSocketPath(
   }
   if (activeGameId) {
     const params = new URLSearchParams();
-    // The server waits for an `auth` message first, which says who is connecting. A browser
-    // cannot put an Authorization header on a socket, and a token in the URL would be logged.
+    // The server waits for an `auth` message first, which says who is connecting and holds the
+    // passcode of a private match (`buildAuthMessage`). A browser cannot put an Authorization
+    // header on a socket, and a token or passcode in the URL would be logged.
     params.set('handshake', '1');
     // Only picks among the player's own seats; the server never shows another power's orders.
     if (power) params.set('power', power);
-    if (passcode) params.set('passcode', passcode);
     const qs = params.toString();
     return `/ws/games/${encodeURIComponent(activeGameId)}${qs ? `?${qs}` : ''}`;
   }
   return null;
+}
+
+/** The first message on a game socket: who is connecting, and the passcode of a private match. */
+export function buildAuthMessage(
+  token: string | null,
+  passcode?: string | null,
+): string {
+  return JSON.stringify({
+    type: 'auth',
+    token,
+    ...(passcode ? { passcode } : {}),
+  });
 }
 
 /**
@@ -122,12 +133,7 @@ export function useDiplomacyWebSocket({
     let isCancelled = false;
 
     // Determine target WS endpoint based on current viewMode & activeGameId
-    const targetPath = resolveWebSocketPath(
-      viewMode,
-      activeGameId,
-      power,
-      passcode,
-    );
+    const targetPath = resolveWebSocketPath(viewMode, activeGameId, power);
 
     if (!targetPath) {
       setIsConnected(false);
@@ -179,7 +185,7 @@ export function useDiplomacyWebSocket({
           wasIdleDisconnectedRef.current = false;
           setIsIdleDisconnected(false);
           if (needsHandshake) {
-            ws.send(JSON.stringify({ type: 'auth', token }));
+            ws.send(buildAuthMessage(token, passcode));
           }
           setIsConnected(true);
           if (needsHandshake) pressStore.setSocketOpen(true);

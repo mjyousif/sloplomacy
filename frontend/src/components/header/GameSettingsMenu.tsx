@@ -100,8 +100,9 @@ export function GameSettingsMenu({
     isLinkableGameId(matchSummary.game_id)
       ? matchSummary.game_id
       : null;
-  const { copied, copy } = useCopyFeedback();
+  const { copied, failed, copy } = useCopyFeedback();
   const linkCopied = copied === 'link';
+  const linkCopyFailed = failed === 'link';
   const showAdmin = viewMode !== 'lobby' && isGameCreator;
   const showSaveSandbox = isSandbox && Boolean(onSaveSandbox);
   const showResetSandbox = isSandbox && Boolean(onResetSandbox);
@@ -256,7 +257,11 @@ export function GameSettingsMenu({
                       <Link size={15} className={styles.gameMenuItemIcon} />
                     )}
                     <span aria-live="polite">
-                      {linkCopied ? 'Link copied' : 'Copy game link'}
+                      {linkCopied
+                        ? 'Link copied'
+                        : linkCopyFailed
+                          ? 'Copy failed'
+                          : 'Copy game link'}
                     </span>
                   </button>
                 )}
