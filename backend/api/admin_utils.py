@@ -181,7 +181,12 @@ def compute_board_edit_summary(
             if uid in before_by_id and uid in after_by_id:
                 bu = before_by_id[uid]
                 u = after_by_id[uid]
-                if bu.province == u.province and bu.coast == u.coast:
+                if (
+                    bu.province == u.province
+                    and bu.coast == u.coast
+                    and bu.power == u.power
+                    and bu.unit_type == u.unit_type
+                ):
                     prev_order = before_state.orders.get(uid)
                     if prev_order and (
                         prev_order.order_type != order.order_type
@@ -245,7 +250,7 @@ async def record_admin_history_and_log(
 ) -> None:
     """Record an admin action in the audit log and consolidate into GAME_HISTORY.
 
-    - Increments after_state.state_revision.
+    - Increments after_state.state_revision and after_state.board_revision.
     - Appends an AdminActionLogEntry with the actor already acknowledged.
     - Consolidates consecutive admin actions within the same turn window (season + year) into
       a single 'Admin' snapshot retaining pre-admin baseline units and ownership.
@@ -255,6 +260,7 @@ async def record_admin_history_and_log(
     - Broadcasts the update to all connected players.
     """
     after_state.state_revision = max(before_state.state_revision, after_state.state_revision) + 1
+    after_state.board_revision = max(before_state.board_revision, after_state.board_revision) + 1
 
     # 1. Audit log entry
     entry = create_admin_log_entry(

@@ -1,18 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ConfirmOptions } from '../components/modal/ConfirmModal';
 import type {
-  AuthUser,
   GameState,
   Order,
   Power,
-  ProvinceInfo,
   Unit,
   UnitType,
 } from '../types/diplomacy';
 import {
-  acknowledgeAdminEntriesRequest,
-  getUnacknowledgedAdminEntries,
-  postAdminBoardEditRequest,
+  type AdminBoardSnapshot,
+  applyOwnershipChange,
+  applyStageDestroy,
+  buildAdminBoardEditPayload,
+  buildClearEditsConfirmOptions,
+  buildDiscardEditsConfirmOptions,
+  commitAdminBoardEdit,
+  findDisplacedAndRelocatedIds,
+  getRevertedOrderUnitId,
+  hasLiveBoardDiverged,
+  mergeBaseSnapshotOrders,
+  resolveAdminOrderStage,
+  snapshotAdminBoardState,
+  type UseAdminDirectEditParams,
 } from '../utils/adminHelpers';
 import {
   applyStageRelocate,
@@ -20,24 +28,19 @@ import {
   applyUndoStagedChange,
   computeStagedChanges,
   computeStagedDiffLines,
+  mergeLiveUnitOrders,
   type StagedChangeEntry,
 } from '../utils/adminStagedChanges';
+import { useAdminAcknowledgement } from './useAdminAcknowledgement';
+import { useBeforeUnload } from './useBeforeUnload';
+import { useBoardConflictPrompt } from './useBoardConflictPrompt';
 
-export { computeStagedChanges, computeStagedDiffLines, type StagedChangeEntry };
-
-export interface UseAdminDirectEditParams {
-  activeGameId: string;
-  viewMode?: 'lobby' | 'sandbox' | 'multiplayer';
-  lockedPower?: Power | null;
-  gameState: GameState | null;
-  provinces: Record<string, ProvinceInfo>;
-  directEditActive: boolean;
-  setDirectEditActive: React.Dispatch<React.SetStateAction<boolean>>;
-  authUser: AuthUser | null;
-  onUpdateGameState: (newState: GameState) => void;
-  showToast: (msg: string) => void;
-  confirm: (opts: ConfirmOptions) => Promise<boolean>;
-}
+export {
+  computeStagedChanges,
+  computeStagedDiffLines,
+  type StagedChangeEntry,
+  type UseAdminDirectEditParams,
+};
 
 export function useAdminDirectEdit({
   activeGameId,
@@ -57,6 +60,10 @@ export function useAdminDirectEdit({
     {},
   );
   const [stagedOrders, setStagedOrders] = useState<Record<string, Order>>({});
+  const [baseState, setBaseState] = useState<AdminBoardSnapshot | null>(null);
+  const [stagedOrderIds, setStagedOrderIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [baseRevision, setBaseRevision] = useState<number>(1);
   const [baseTurn, setBaseTurn] = useState<{
     season: string;
@@ -72,30 +79,32 @@ export function useAdminDirectEdit({
   );
   const [relocatingUnitId, setRelocatingUnitId] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
-  const [acknowledgingAdminEntries, setAcknowledgingAdminEntries] =
-    useState(false);
+  const committingRef = useRef(false);
+  const lastSyncedGameStateRef = useRef<GameState | null>(null);
 
   const syncFromState = useCallback((state: GameState) => {
-    setStagedUnits(state.units.map((u) => ({ ...u })));
-    setStagedOwnership({ ...state.ownership });
-    setStagedOrders(
-      Object.fromEntries(
-        Object.entries(state.orders).map(([k, v]) => [k, { ...v }]),
-      ),
+    const snapshot = snapshotAdminBoardState(state);
+    lastSyncedGameStateRef.current = state;
+    setBaseState(snapshot);
+    setStagedUnits(snapshot.units);
+    setStagedOwnership(snapshot.ownership);
+    setStagedOrders(snapshot.orders);
+    setStagedOrderIds(new Set());
+    setBaseRevision(state.board_revision ?? state.state_revision ?? 1);
+    setBaseTurn((prev) =>
+      prev.season === state.season &&
+      prev.year === state.year &&
+      prev.phase === state.phase
+        ? prev
+        : { season: state.season, year: state.year, phase: state.phase },
     );
-    setBaseRevision(state.state_revision ?? 1);
-    setBaseTurn({
-      season: state.season,
-      year: state.year,
-      phase: state.phase,
-    });
   }, []);
 
   const stagedChanges = useMemo(
     () =>
       directEditActive
         ? computeStagedChanges(
-            gameState,
+            baseState ?? gameState,
             stagedUnits,
             stagedOwnership,
             stagedOrders,
@@ -103,6 +112,7 @@ export function useAdminDirectEdit({
           )
         : [],
     [
+      baseState,
       directEditActive,
       gameState,
       provinces,
@@ -120,13 +130,39 @@ export function useAdminDirectEdit({
   const isDirty = directEditActive && diffLines.length > 0;
   const isDirtyRef = useRef(isDirty);
   isDirtyRef.current = isDirty;
+  const stagedUnitsRef = useRef(stagedUnits);
+  stagedUnitsRef.current = stagedUnits;
+  const stagedOrderIdsRef = useRef(stagedOrderIds);
+  stagedOrderIdsRef.current = stagedOrderIds;
 
   const prevDirectEditRef = useRef(false);
   const prevGameIdRef = useRef(activeGameId);
 
+  const handleReloadLatest = useCallback(
+    (latest: GameState) => {
+      syncFromState(latest);
+      setInspectedProvince(null);
+      setRelocatingUnitId(null);
+    },
+    [syncFromState],
+  );
+
+  const { promptBoardConflictReload, resetPromptedConflict } =
+    useBoardConflictPrompt({
+      directEditActive,
+      isDirtyRef,
+      committingRef,
+      baseRevision,
+      baseTurn,
+      gameState,
+      confirm,
+      onReloadLatest: handleReloadLatest,
+    });
+
   useEffect(() => {
     if (!directEditActive) {
       prevDirectEditRef.current = false;
+      lastSyncedGameStateRef.current = null;
       setInspectedProvince(null);
       setRelocatingUnitId(null);
       return;
@@ -136,20 +172,52 @@ export function useAdminDirectEdit({
     prevDirectEditRef.current = true;
     prevGameIdRef.current = activeGameId;
 
-    if (gameState && (justEntered || gameChanged || !isDirtyRef.current)) {
+    if (
+      gameState &&
+      (justEntered ||
+        gameChanged ||
+        (!isDirtyRef.current && lastSyncedGameStateRef.current !== gameState))
+    ) {
       syncFromState(gameState);
+      resetPromptedConflict();
+    } else if (
+      gameState &&
+      lastSyncedGameStateRef.current !== gameState &&
+      !hasLiveBoardDiverged(gameState, baseRevision, baseTurn)
+    ) {
+      lastSyncedGameStateRef.current = gameState;
+      setBaseState((prev) =>
+        mergeBaseSnapshotOrders(prev, gameState, stagedOrderIdsRef.current),
+      );
+      setStagedOrders((prev) =>
+        mergeLiveUnitOrders(
+          gameState,
+          stagedUnitsRef.current,
+          prev,
+          stagedOrderIdsRef.current,
+        ),
+      );
     }
-  }, [directEditActive, activeGameId, gameState, syncFromState]);
+  }, [
+    directEditActive,
+    activeGameId,
+    baseRevision,
+    baseTurn,
+    gameState,
+    resetPromptedConflict,
+    syncFromState,
+  ]);
 
-  useEffect(() => {
-    if (!directEditActive || !isDirty) return;
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [directEditActive, isDirty]);
+  const dropStagedOrderIds = useCallback((...ids: string[]) => {
+    setStagedOrderIds((prev) => {
+      if (!ids.some((id) => prev.has(id))) return prev;
+      const nextSet = new Set(prev);
+      for (const id of ids) nextSet.delete(id);
+      return nextSet;
+    });
+  }, []);
+
+  useBeforeUnload(directEditActive && isDirty);
 
   const discardChanges = useCallback(() => {
     if (gameState) {
@@ -177,11 +245,14 @@ export function useAdminDirectEdit({
       if (!next.ok) return false;
       setStagedUnits(next.units);
       setStagedOrders(next.orders);
+      dropStagedOrderIds(
+        ...findDisplacedAndRelocatedIds(stagedUnits, next.units, unitId),
+      );
       setRelocatingUnitId(null);
       setInspectedProvince(next.provId);
       return true;
     },
-    [provinces, stagedOrders, stagedUnits, showToast],
+    [dropStagedOrderIds, provinces, stagedOrders, stagedUnits, showToast],
   );
 
   const stageSpawnOrUpdateUnit = useCallback(
@@ -202,109 +273,109 @@ export function useAdminDirectEdit({
         showToast,
       );
       if (!next.ok) return false;
+      const provId = province.toUpperCase();
+      const existing = stagedUnits.find(
+        (u) => !u.is_dislodged && u.province === provId,
+      );
       setStagedUnits(next.units);
       setStagedOrders(next.orders);
+      if (existing) dropStagedOrderIds(existing.id);
       return true;
     },
-    [provinces, stagedOrders, stagedUnits, showToast],
+    [dropStagedOrderIds, provinces, stagedOrders, stagedUnits, showToast],
   );
 
-  const stageDestroyUnit = useCallback((unitId: string) => {
-    setStagedUnits((prev) => prev.filter((u) => u.id !== unitId));
-    setStagedOrders((prev) => {
-      const next = { ...prev };
-      delete next[unitId];
-      return next;
-    });
-    setRelocatingUnitId((prev) => (prev === unitId ? null : prev));
-  }, []);
+  const stageDestroyUnit = useCallback(
+    (unitId: string) => {
+      const next = applyStageDestroy(stagedUnits, stagedOrders, unitId);
+      setStagedUnits(next.units);
+      setStagedOrders(next.orders);
+      dropStagedOrderIds(unitId);
+      setRelocatingUnitId((prev) => (prev === unitId ? null : prev));
+    },
+    [dropStagedOrderIds, stagedOrders, stagedUnits],
+  );
 
   const stageProvinceOwnership = useCallback(
     (province: string, power: Power | null) => {
-      const provId = province.toUpperCase();
-      setStagedOwnership((prev) => {
-        const next = { ...prev };
-        if (power === null) {
-          delete next[provId];
-        } else {
-          next[provId] = power;
-        }
-        return next;
-      });
+      setStagedOwnership((prev) => applyOwnershipChange(prev, province, power));
     },
     [],
   );
 
-  const stageUnitOrder = useCallback((order: Order) => {
-    setStagedOrders((prev) => ({
-      ...prev,
-      [order.unit_id]: { ...order, is_explicit: true },
-    }));
-  }, []);
+  const stageUnitOrder = useCallback(
+    (order: Order) => {
+      const { nextOrder, isExplicitOverride } = resolveAdminOrderStage(
+        baseState ?? gameState,
+        stagedUnits,
+        order,
+      );
+      setStagedOrders((prev) => ({ ...prev, [order.unit_id]: nextOrder }));
+      if (!isExplicitOverride) {
+        dropStagedOrderIds(order.unit_id);
+        return;
+      }
+      setStagedOrderIds((prev) => {
+        if (prev.has(order.unit_id)) return prev;
+        const nextSet = new Set(prev);
+        nextSet.add(order.unit_id);
+        return nextSet;
+      });
+    },
+    [baseState, dropStagedOrderIds, gameState, stagedUnits],
+  );
 
   const applyChanges = useCallback(async (): Promise<boolean> => {
     if (!gameState || !isDirty) return true;
+    committingRef.current = true;
     setCommitting(true);
     try {
-      const res = await postAdminBoardEditRequest(activeGameId, {
-        expected_revision: baseRevision,
-        expected_season: baseTurn.season,
-        expected_year: baseTurn.year,
-        expected_phase: baseTurn.phase,
-        units: stagedUnits,
-        ownership: stagedOwnership,
-        orders: stagedOrders,
-        summary_lines: diffLines.map((line) => `[ADMIN OVERRIDE] ${line}.`),
-      });
+      const payload = buildAdminBoardEditPayload(
+        baseRevision,
+        baseTurn,
+        stagedUnits,
+        stagedOwnership,
+        stagedOrders,
+        stagedOrderIds,
+        diffLines,
+      );
+      const outcome = await commitAdminBoardEdit(activeGameId, payload);
+      committingRef.current = false;
+      setCommitting(false);
 
-      if (res.status === 409) {
-        const errData = await res.json().catch(() => ({}));
-        const shouldReload = await confirm({
-          title: 'Board State Changed (409 Conflict)',
-          message:
-            errData.detail ||
-            'The underlying match state changed while you were editing. Discard your draft changes and reload the latest board state?',
-          confirmLabel: 'Discard Draft & Reload',
-        });
-        if (shouldReload && gameState) {
-          syncFromState(gameState);
-          setInspectedProvince(null);
-          setRelocatingUnitId(null);
-        }
+      if (outcome.kind === 'conflict') {
+        await promptBoardConflictReload(outcome.detail);
+        return false;
+      }
+      if (outcome.kind === 'error') {
+        showToast(outcome.message);
         return false;
       }
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        showToast(errData.detail || 'Failed to apply admin board edits.');
-        return false;
-      }
-
-      const updated: GameState = await res.json();
-      onUpdateGameState(updated);
-      syncFromState(updated);
+      onUpdateGameState(outcome.state);
+      syncFromState(outcome.state);
+      resetPromptedConflict();
       setRelocatingUnitId(null);
       showToast(
         `Applied ${diffLines.length} admin board edit${diffLines.length === 1 ? '' : 's'}.`,
       );
       return true;
-    } catch {
-      showToast('Network error applying admin board edits.');
-      return false;
     } finally {
+      committingRef.current = false;
       setCommitting(false);
     }
   }, [
     activeGameId,
-    authUser,
     baseRevision,
     baseTurn,
-    confirm,
     diffLines,
     gameState,
     isDirty,
     onUpdateGameState,
+    promptBoardConflictReload,
+    resetPromptedConflict,
     showToast,
+    stagedOrderIds,
     stagedOrders,
     stagedOwnership,
     stagedUnits,
@@ -314,11 +385,9 @@ export function useAdminDirectEdit({
   const confirmIfDirty = useCallback(
     async (actionDescription = 'leave'): Promise<boolean> => {
       if (!directEditActive || !isDirty) return true;
-      const ok = await confirm({
-        title: 'Unapplied Edit Board Changes',
-        message: `You have ${diffLines.length} unapplied board edit${diffLines.length === 1 ? '' : 's'}. Discard your uncommitted changes and ${actionDescription}?`,
-        confirmLabel: 'Discard Changes',
-      });
+      const ok = await confirm(
+        buildDiscardEditsConfirmOptions(diffLines.length, actionDescription),
+      );
       if (ok) {
         discardChanges();
       }
@@ -347,79 +416,29 @@ export function useAdminDirectEdit({
     };
   }, [directEditActive, gameState, stagedOrders, stagedOwnership, stagedUnits]);
 
-  const unacknowledgedAdminEntries = useMemo(
-    () =>
-      getUnacknowledgedAdminEntries(
-        gameState?.admin_log,
-        authUser,
-        lockedPower,
-        viewMode,
-      ),
-    [authUser, gameState?.admin_log, lockedPower, viewMode],
-  );
-
-  const handleAcknowledgeAdminEntries = useCallback(async () => {
-    if (!gameState || unacknowledgedAdminEntries.length === 0) return;
-    setAcknowledgingAdminEntries(true);
-    try {
-      const result = await acknowledgeAdminEntriesRequest(
-        activeGameId,
-        unacknowledgedAdminEntries.map((e) => e.id),
-        authUser,
-        lockedPower,
-      );
-      if (result?.ok) {
-        const ackedIds = new Set(unacknowledgedAdminEntries.map((e) => e.id));
-        const viewerTokens = [
-          result.acknowledged_by,
-          authUser?.id,
-          lockedPower,
-          !authUser && !lockedPower ? 'guest' : null,
-        ].filter((t): t is string => Boolean(t));
-        onUpdateGameState({
-          ...gameState,
-          admin_log: (gameState.admin_log ?? []).map((entry) =>
-            ackedIds.has(entry.id)
-              ? {
-                  ...entry,
-                  acknowledged_by: Array.from(
-                    new Set([
-                      ...(entry.acknowledged_by ?? []),
-                      ...viewerTokens,
-                    ]),
-                  ),
-                }
-              : entry,
-          ),
-        });
-      }
-    } finally {
-      setAcknowledgingAdminEntries(false);
-    }
-  }, [
-    activeGameId,
-    authUser,
-    gameState,
-    lockedPower,
-    onUpdateGameState,
+  const {
     unacknowledgedAdminEntries,
-  ]);
+    acknowledgingAdminEntries,
+    handleAcknowledgeAdminEntries,
+  } = useAdminAcknowledgement({
+    activeGameId,
+    viewMode,
+    lockedPower,
+    gameState,
+    authUser,
+    onUpdateGameState,
+  });
 
   const clearStagedChanges = useCallback(async () => {
     if (!isDirty) return;
-    const n = diffLines.length;
-    const ok = await confirm({
-      title: 'Clear Staged Board Edits?',
-      message: `This discards all ${n} unapplied board edit${n === 1 ? '' : 's'} and restores the live board. This cannot be undone.`,
-      confirmLabel: 'Clear Changes',
-    });
+    const ok = await confirm(buildClearEditsConfirmOptions(diffLines.length));
     if (ok) discardChanges();
   }, [confirm, diffLines.length, discardChanges, isDirty]);
 
   const undoStagedChange = useCallback(
     (changeId: string) => {
       const reverted = applyUndoStagedChange(
-        gameState,
+        baseState ?? gameState,
         stagedUnits,
         stagedOwnership,
         stagedOrders,
@@ -428,6 +447,8 @@ export function useAdminDirectEdit({
       setStagedUnits(reverted.units);
       setStagedOwnership(reverted.ownership);
       setStagedOrders(reverted.orders);
+      const dropId = getRevertedOrderUnitId(changeId);
+      if (dropId) dropStagedOrderIds(dropId);
       if (
         relocatingUnitId &&
         !reverted.units.some((u) => u.id === relocatingUnitId)
@@ -435,7 +456,15 @@ export function useAdminDirectEdit({
         setRelocatingUnitId(null);
       }
     },
-    [gameState, relocatingUnitId, stagedOrders, stagedOwnership, stagedUnits],
+    [
+      baseState,
+      dropStagedOrderIds,
+      gameState,
+      relocatingUnitId,
+      stagedOrders,
+      stagedOwnership,
+      stagedUnits,
+    ],
   );
 
   return {

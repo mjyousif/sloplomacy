@@ -158,7 +158,7 @@ def direct_edit(
         else:
             ownership[province] = power
     body = {
-        "expected_revision": state["state_revision"],
+        "expected_revision": state["board_revision"],
         "expected_season": state["season"],
         "expected_year": state["year"],
         "expected_phase": state["phase"],

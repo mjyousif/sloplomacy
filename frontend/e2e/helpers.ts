@@ -19,7 +19,11 @@ export class ScenarioRecorder {
 
   constructor(scenarioName: string) {
     this.scenarioName = scenarioName;
-    this.artifactDir = path.resolve(process.cwd(), '../artifacts/e2e', scenarioName);
+    this.artifactDir = path.resolve(
+      process.cwd(),
+      '../artifacts/e2e',
+      scenarioName,
+    );
     if (!fs.existsSync(this.artifactDir)) {
       fs.mkdirSync(this.artifactDir, { recursive: true });
     }
@@ -77,10 +81,14 @@ export class ScenarioRecorder {
         : 'PASSED';
     this.telemetry.status = finalStatus;
     const summaryPath = path.join(this.artifactDir, 'summary.json');
-    fs.writeFileSync(summaryPath, JSON.stringify(this.telemetry, null, 2), 'utf-8');
+    fs.writeFileSync(
+      summaryPath,
+      JSON.stringify(this.telemetry, null, 2),
+      'utf-8',
+    );
     if (status === 'PASSED' && hasPageErrors) {
       throw new Error(
-        `Scenario ${this.scenarioName} encountered uncaught pageerror(s): ${this.telemetry.pageErrors.join('; ')}`
+        `Scenario ${this.scenarioName} encountered uncaught pageerror(s): ${this.telemetry.pageErrors.join('; ')}`,
       );
     }
   }
@@ -93,7 +101,7 @@ export async function seedScenario(
   scenarioId: string,
   gameId: string = 'proto_1901',
   activePower?: string,
-  apiBase: string = DEFAULT_E2E_API_URL
+  apiBase: string = DEFAULT_E2E_API_URL,
 ) {
   const payload: Record<string, string> = {
     scenario_id: scenarioId,
@@ -109,7 +117,9 @@ export async function seedScenario(
   });
   if (!res.ok) {
     const errText = await res.text().catch(() => res.statusText);
-    throw new Error(`Failed to seed scenario '${scenarioId}' (${res.status}): ${errText}`);
+    throw new Error(
+      `Failed to seed scenario '${scenarioId}' (${res.status}): ${errText}`,
+    );
   }
   return await res.json();
 }
@@ -127,7 +137,9 @@ export async function spawnUnit(
 ) {
   const stateRes = await fetch(`${apiBase}/api/game?game_id=${gameId}`);
   if (!stateRes.ok) {
-    throw new Error(`Board read failed (${stateRes.status}): ${await stateRes.text()}`);
+    throw new Error(
+      `Board read failed (${stateRes.status}): ${await stateRes.text()}`,
+    );
   }
   const { state } = await stateRes.json();
   const prov = province.toUpperCase();
@@ -146,7 +158,7 @@ export async function spawnUnit(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      expected_revision: state.state_revision,
+      expected_revision: state.board_revision ?? state.state_revision,
       expected_season: state.season,
       expected_year: state.year,
       expected_phase: state.phase,

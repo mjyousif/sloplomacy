@@ -166,7 +166,7 @@ def _seed_one_turn_from_win_lobby(client: httpx.Client, base: str, state: GameSt
         f"{base}/api/admin/board-edit",
         params={"game_id": mp_gid},
         json={
-            "expected_revision": turn_state["state_revision"],
+            "expected_revision": turn_state["board_revision"],
             "expected_season": turn_state["season"],
             "expected_year": turn_state["year"],
             "expected_phase": turn_state["phase"],
@@ -212,7 +212,7 @@ def seed_api(base_url: str, game_id: str, preset: str, state: GameState) -> None
 
         if preset == "all_pieces":
             edit_payload = {
-                "expected_revision": seeded["state_revision"],
+                "expected_revision": seeded["board_revision"],
                 "expected_season": seeded["season"],
                 "expected_year": seeded["year"],
                 "expected_phase": seeded["phase"],
