@@ -2,7 +2,7 @@
 
 import uuid
 
-from api.turns import _execute_adjudication
+from api.turns import execute_adjudication
 from domain.board import Power
 from domain.game_state import GameState
 from domain.orders import OrderType
@@ -268,7 +268,7 @@ async def step_turn_with_ai(game_id: str | None = Query(default=None)):
     for ord_id, ord_obj in ai_orders.items():
         game.orders[ord_id] = ord_obj
 
-    return await _execute_adjudication(game)
+    return await execute_adjudication(game)
 
 
 @router.post(

@@ -11,6 +11,7 @@ from engine.order_utils import refresh_diagnostics_and_simulation
 from engine.topology.provinces import PROVINCES
 from scenarios.presets import build_scenario
 from security.auth import AuthUser
+from security.creator import is_creator
 from security.secrecy import (
     caller_owns_saved_sandbox,
     require_own_seat,
@@ -40,11 +41,7 @@ from storage.store import (
 
 
 def _draft_belongs_to_user(summary: MultiplayerGameSummary, user: AuthUser) -> bool:
-    if summary.creator_id == user.user_id:
-        return True
-    return bool(
-        summary.created_by and user.email and summary.created_by.lower() == user.email.lower()
-    )
+    return is_creator(summary, user.user_id, user.email)
 
 
 def _build_solo_draft_summary(
@@ -87,7 +84,7 @@ def _build_solo_draft_summary(
 async def try_load_draft_sandbox(
     gid: str, current_user: AuthUser | None
 ) -> tuple[GameState, MultiplayerGameSummary] | None:
-    if not gid or gid in (DEFAULT_GAME_ID, "proto_1901"):
+    if not gid or gid == DEFAULT_GAME_ID:
         return None
     if gid not in GAMES and supabase.is_persistence_enabled():
         try:
@@ -127,7 +124,7 @@ async def clear_caller_draft_sandboxes(
         if supabase.is_persistence_enabled():
             await sync_lobby()
         for gid_cand, s in list(GAME_SUMMARIES.items()):
-            if gid_cand in (DEFAULT_GAME_ID, "proto_1901"):
+            if gid_cand == DEFAULT_GAME_ID:
                 continue
             if s.is_sandbox and s.is_draft and _draft_belongs_to_user(s, current_user):
                 draft_ids.add(gid_cand)
@@ -214,7 +211,7 @@ async def create_or_resume_solo_sandbox(
         candidates = [
             s
             for gid, s in GAME_SUMMARIES.items()
-            if gid not in (DEFAULT_GAME_ID, "proto_1901")
+            if gid != DEFAULT_GAME_ID
             and s.is_sandbox
             and s.is_draft
             and s.creator_id

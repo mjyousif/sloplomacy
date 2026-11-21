@@ -1,6 +1,7 @@
 import { AlertTriangle, PanelRightClose, Wrench } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
+import { API_BASE } from '../../lib/api';
 import { getAuthHeaders } from '../../lib/supabase';
 import type {
   AdminStatusResponse,
@@ -20,8 +21,6 @@ import chromeStyles from '../ui/SidebarChrome.module.css';
 import adminSidebarStyles from './AdminSidebar.module.css';
 import styles from './AdminTurnClockSidebar.module.css';
 import { CollapsedRail } from './CollapsedRail';
-
-const API_BASE = '/api';
 
 export interface AdminTurnClockSettings {
   isOpen: boolean;

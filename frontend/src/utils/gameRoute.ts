@@ -14,7 +14,7 @@ const GAME_PATH = /^\/game\/([A-Za-z0-9_]+)\/?$/;
 /**
  * Whether a game can be opened from a link. Only multiplayer matches (`mp_`) can: a solo
  * (`solo_`), saved (`saved_`) or private (`sbx_`) sandbox belongs to one player, and the
- * shared default board (`proto_1901`) has no lobby entry to open it by.
+ * shared default board (`DEFAULT_GAME_ID`) has no lobby entry to open it by.
  */
 export function isLinkableGameId(gameId: string): boolean {
   return gameId.startsWith('mp_');

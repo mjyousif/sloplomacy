@@ -13,6 +13,7 @@ from urllib.parse import quote
 import httpx
 from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
+from domain.ids import DEFAULT_GAME_ID
 from telemetry import record_supabase_query
 
 logger = logging.getLogger("diplomacy.database")
@@ -346,7 +347,7 @@ async def load_all_summaries_from_db(
             raise SupabaseUnavailable(f"Unexpected response: {rows!r}")
         for row in rows:
             room_code = row.get("room_code")
-            if room_code and room_code not in ("proto_1901", "default"):
+            if room_code and room_code != DEFAULT_GAME_ID:
                 summaries[room_code] = build_summary_from_row(row)
         record_supabase_query("load_summaries", "ok", status_code, _elapsed_ms(start))
         return summaries
@@ -381,7 +382,7 @@ async def save_game_to_db(
     """Persist game state, metadata, and history into Supabase (upsert on room_code)."""
     if (
         not is_persistence_enabled()
-        or game_id in ("proto_1901", "default")
+        or game_id == DEFAULT_GAME_ID
         or not is_valid_room_code(game_id)
     ):
         return False

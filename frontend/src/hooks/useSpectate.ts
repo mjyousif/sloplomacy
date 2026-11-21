@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
+import { API_BASE } from '../lib/api';
 import type {
   AuthUser,
   GameState,
@@ -8,8 +9,6 @@ import type {
 } from '../types/diplomacy';
 import { myPowerIn } from '../utils/heroGame';
 import { gameReadHeaders } from './useGameSession';
-
-const API_BASE = '/api';
 
 type ViewMode = 'lobby' | 'sandbox' | 'multiplayer';
 

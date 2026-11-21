@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { AuthUser } from '../types/diplomacy';
+import { API_BASE } from './api';
 
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
@@ -45,7 +46,7 @@ function setLocalStoredUser(user: AuthUser | null) {
 }
 
 function mapSupabaseUser(sbUser: any): AuthUser {
-  const email = sbUser.email || 'commander@diplomacy.eu';
+  const email: string | null = sbUser.email || null;
   const explicitName =
     typeof sbUser.user_metadata?.display_name === 'string'
       ? sbUser.user_metadata.display_name.trim()
@@ -425,7 +426,7 @@ export async function updateAccountDisplayName(
   }
 
   try {
-    const res = await authedFetch('/api/account/profile', {
+    const res = await authedFetch(`${API_BASE}/account/profile`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ display_name: clean }),

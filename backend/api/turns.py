@@ -102,7 +102,7 @@ def reject_stale_turn(game: GameState, turn: str | None) -> None:
         )
 
 
-async def _execute_adjudication(
+async def execute_adjudication(
     game: GameState, admin_entry: AdminActionLogEntry | None = None
 ) -> GameState:
     gid = game.game_id
@@ -176,7 +176,7 @@ async def _execute_adjudication(
     await broadcast_game_update(game.game_id, game)
     await broadcast_lobby_update()
     if everyone_is_ready(game):
-        return await _execute_adjudication(game)
+        return await execute_adjudication(game)
     return game
 
 
@@ -187,7 +187,7 @@ async def tick_timer(game: GameState) -> None:
         return
     if timer.stage == TimerStage.RUNNING:
         try:
-            await _execute_adjudication(game)
+            await execute_adjudication(game)
         except Exception:
             logger.exception("Could not resolve %s when its clock ran out.", game.game_id)
             timer.stage = TimerStage.PAUSED
@@ -282,7 +282,7 @@ async def finalize_power_orders(
     await broadcast_lobby_update()
 
     if everyone_is_ready(game):
-        await _execute_adjudication(game)
+        await execute_adjudication(game)
     else:
         await persist_game(game.game_id)
     return FinalizeResponse(
@@ -374,7 +374,7 @@ async def adjudicate_and_advance(
             )
 
     reject_stale_turn(game, turn)
-    return await _execute_adjudication(game, admin_entry=admin_entry)
+    return await execute_adjudication(game, admin_entry=admin_entry)
 
 
 @router.post(

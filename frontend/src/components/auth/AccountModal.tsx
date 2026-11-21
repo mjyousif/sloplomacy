@@ -116,7 +116,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
             data-testid="account-email"
           >
             <Lock size={13} />
-            <span>{user.email}</span>
+            <span>{user.email ?? 'No email on file'}</span>
           </div>
         </div>
 

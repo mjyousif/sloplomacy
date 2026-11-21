@@ -107,7 +107,7 @@ def test_a_deadline_that_cannot_resolve_pauses_and_is_saved(client, monkeypatch)
         saved.append(GAMES[game_id].timer.stage if GAMES[game_id].timer else None)
         await real_persist(game_id)
 
-    monkeypatch.setattr(turns_api, "_execute_adjudication", broken)
+    monkeypatch.setattr(turns_api, "execute_adjudication", broken)
     monkeypatch.setattr(turns_api, "persist_game", recording_persist)
     asyncio.run(tick_timer(GAMES[gid]))
 

@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { API_BASE } from '../lib/api';
 import { getAuthHeaders } from '../lib/supabase';
 import type {
   GameState,
@@ -20,6 +21,7 @@ import {
   resolvePlayerPower,
   watchedPowerFor,
 } from '../utils/adminHelpers';
+import { DEFAULT_GAME_ID } from '../utils/gameIds';
 import {
   isStaleServerState,
   type PendingOrder,
@@ -30,8 +32,6 @@ import {
   writeStoredSoloSandboxId,
 } from '../utils/soloSandboxStorage';
 import { turnLabel } from '../utils/timerHelpers';
-
-const API_BASE = '/api';
 
 export interface GameSessionOptions {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -50,7 +50,7 @@ export function useGameSession({
   setSimulationResult,
 }: GameSessionOptions) {
   const [activeGameId, setActiveGameId] = useState<string>(
-    () => readStoredSoloSandboxId() ?? 'proto_1901',
+    () => readStoredSoloSandboxId() ?? DEFAULT_GAME_ID,
   );
   const [activeGameSummary, setActiveGameSummary] =
     useState<MultiplayerGameSummary | null>(null);
@@ -253,10 +253,10 @@ export function useGameSession({
         headers: await gameReadHeaders(matchPasscodes[gid]),
       });
       if (!res.ok) {
-        if (gid !== 'proto_1901' && gid === readStoredSoloSandboxId()) {
+        if (gid !== DEFAULT_GAME_ID && gid === readStoredSoloSandboxId()) {
           writeStoredSoloSandboxId(null);
-          setActiveGameId('proto_1901');
-          return fetchGame('proto_1901', targetPower);
+          setActiveGameId(DEFAULT_GAME_ID);
+          return fetchGame(DEFAULT_GAME_ID, targetPower);
         }
         throw new Error(`Backend returned ${res.status}`);
       }
