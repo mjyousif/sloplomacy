@@ -256,6 +256,66 @@ export function loadReadMarks(
   }
 }
 
+/**
+ * How many games keep read marks in this browser. A game's marks are one key per seat, so
+ * without a cap they pile up for every match a browser ever opened.
+ */
+export const MAX_READ_MARK_GAMES = 30;
+const READ_INDEX_KEY = 'sloplomacy_press_read_index_v1';
+
+/** The game id inside a read-mark key, or null for any other key. */
+function gameIdOfReadKey(key: string): string | null {
+  const head = `${READ_STORAGE_PREFIX}:`;
+  if (!key.startsWith(head)) return null;
+  const rest = key.slice(head.length);
+  const end = rest.indexOf(':');
+  return end === -1 ? null : rest.slice(0, end);
+}
+
+function readIndex(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem(READ_INDEX_KEY) ?? 'null',
+    );
+    return Array.isArray(parsed)
+      ? parsed.filter((id): id is string => typeof id === 'string')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Notes that `gameId` was just used and forgets the marks of every game but the
+ * `MAX_READ_MARK_GAMES` most recent. Marks saved before the index existed count as the
+ * oldest, so they are the first to go.
+ */
+function touchReadMarkGame(gameId: string): void {
+  const stored = new Map<string, string[]>();
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    const id = key === null ? null : gameIdOfReadKey(key);
+    if (key !== null && id !== null)
+      stored.set(id, [...(stored.get(id) ?? []), key]);
+  }
+  const known = readIndex().filter((id) => stored.has(id) && id !== gameId);
+  const unindexed = [...stored.keys()].filter(
+    (id) => !known.includes(id) && id !== gameId,
+  );
+  const order = [...unindexed, ...known, gameId];
+  const dropped = order.slice(
+    0,
+    Math.max(0, order.length - MAX_READ_MARK_GAMES),
+  );
+  for (const id of dropped) {
+    for (const key of stored.get(id) ?? []) localStorage.removeItem(key);
+  }
+  localStorage.setItem(
+    READ_INDEX_KEY,
+    JSON.stringify(order.slice(dropped.length)),
+  );
+}
+
 export function saveReadMarks(
   gameId: string,
   power: Power | null,
@@ -267,6 +327,7 @@ export function saveReadMarks(
       readStorageKey(gameId, power, revealed),
       JSON.stringify(marks),
     );
+    touchReadMarkGame(gameId);
   } catch {
     // Ignore storage quota / privacy mode restrictions
   }

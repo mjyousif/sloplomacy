@@ -16,6 +16,7 @@ from engine.topology.provinces import PROVINCES
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from scenarios.presets import build_scenario
 from security.auth import AuthUser, get_current_user
+from security.creator import is_creator
 from security.passcode import client_address
 from security.secrecy import (
     require_view_access,
@@ -131,12 +132,11 @@ async def list_games():
 async def refresh_lobby_summaries() -> None:
     """Bring the lobby's summaries up to date with Supabase and with the games in memory."""
     GAME_SUMMARIES.pop(DEFAULT_GAME_ID, None)
-    GAME_SUMMARIES.pop("proto_1901", None)
     if supabase.is_persistence_enabled():
         await sync_lobby_with_db()
 
     for gid in list(GAME_SUMMARIES.keys()):
-        if gid not in (DEFAULT_GAME_ID, "proto_1901"):
+        if gid != DEFAULT_GAME_ID:
             sync_summary(gid)
 
 
@@ -192,9 +192,7 @@ async def delete_game(
 
     if summary and not summary.is_sandbox:
         if summary.creator_id and summary.creator_id != "guest":
-            if not user or (
-                user.user_id != summary.creator_id and user.email != summary.created_by
-            ):
+            if not user or not is_creator(summary, user.user_id, user.email):
                 raise HTTPException(
                     status_code=403, detail="Only the host can delete this campaign."
                 )

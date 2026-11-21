@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { API_BASE } from '../../../lib/api';
 import type { LobbyBrowsePage } from '../../../types/diplomacy';
 import {
   type BrowseFilters,
@@ -6,8 +7,6 @@ import {
   DEFAULT_BROWSE_FILTERS,
   pageCount,
 } from '../../../utils/lobbyBrowse';
-
-const API_BASE = '/api';
 
 /**
  * One page of public games for the lobby browser, and the filters that pick it.

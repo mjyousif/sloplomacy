@@ -96,6 +96,11 @@ const isUiSpacing = (value: unknown): value is UiSpacing =>
   UI_SPACINGS.includes(value as UiSpacing);
 
 /** Keeps each valid setting and falls back to the default for anything else. */
+/** The change that flips the screen between compact and normal spacing. */
+export function toggledUiSpacing(prefs: DisplayPrefs): Partial<DisplayPrefs> {
+  return { uiSpacing: prefs.uiSpacing === 'compact' ? 'normal' : 'compact' };
+}
+
 export function sanitizeDisplayPrefs(raw: unknown): DisplayPrefs {
   const candidate = (raw && typeof raw === 'object' ? raw : {}) as Partial<
     Record<keyof DisplayPrefs, unknown>

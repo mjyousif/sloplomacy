@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { API_BASE } from '../lib/api';
 import type {
   AuthUser,
   MultiplayerGameSummary,
@@ -13,8 +14,6 @@ import {
 import { myPowerIn } from '../utils/heroGame';
 import type { ViewMode } from '../utils/viewMode';
 import { watchRefusal } from './useSpectate';
-
-const API_BASE = '/api';
 
 export interface GameRouteOptions {
   viewMode: ViewMode;

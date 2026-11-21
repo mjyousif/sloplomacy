@@ -5,6 +5,7 @@ import {
   useEffect,
   useRef,
 } from 'react';
+import { API_BASE } from '../lib/api';
 import type {
   GameState,
   MultiplayerGameSummary,
@@ -14,12 +15,11 @@ import type {
   WebSocketGameUpdate,
   WebSocketLobbyUpdate,
 } from '../types/diplomacy';
+import { DEFAULT_GAME_ID } from '../utils/gameIds';
 import { readStoredSoloSandboxId } from '../utils/soloSandboxStorage';
 import { turnLabel } from '../utils/timerHelpers';
 import { useDiplomacyWebSocket } from './useDiplomacyWebSocket';
 import { gameReadHeaders } from './useGameSession';
-
-const API_BASE = '/api';
 
 export const FALLBACK_POLL_MS = 4000;
 export const IDLE_POLL_MS = 60_000;
@@ -181,7 +181,7 @@ export function useGameSync({
 
   // The auth user is loaded and followed by useAuthSession.
   useEffect(() => {
-    fetchGame(readStoredSoloSandboxId() ?? 'proto_1901');
+    fetchGame(readStoredSoloSandboxId() ?? DEFAULT_GAME_ID);
     fetchGamesList();
   }, []);
 

@@ -28,9 +28,11 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080
 
-# Install runtime dependencies only (requirements.txt adds the test tools on top)
-COPY backend/requirements-runtime.txt ./
-RUN pip install --no-cache-dir -r requirements-runtime.txt
+# Install the hash-pinned runtime dependencies (requirements.txt adds the test tools on top).
+# The lock is made from requirements-runtime.txt by scripts/lock-requirements.sh, so a build
+# installs exactly the versions and files that were reviewed, and a changed file fails the build.
+COPY backend/requirements-runtime.lock ./
+RUN pip install --no-cache-dir --require-hashes -r requirements-runtime.lock
 
 # Copy backend application code
 COPY backend/ ./

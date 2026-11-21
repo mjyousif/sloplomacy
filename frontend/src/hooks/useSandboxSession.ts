@@ -1,4 +1,5 @@
 import { type Dispatch, type SetStateAction, useState } from 'react';
+import { API_BASE } from '../lib/api';
 import { authedFetch } from '../lib/supabase';
 import type {
   AuthUser,
@@ -13,8 +14,6 @@ import {
 } from '../utils/soloSandboxStorage';
 import { turnLabel } from '../utils/timerHelpers';
 import type { AuthModalTab } from './useAuthSession';
-
-const API_BASE = '/api';
 
 export interface SandboxSessionOptions {
   activeGameId: string;
@@ -109,7 +108,7 @@ export function useSandboxSession({
           body: JSON.stringify({
             name: customName,
             user_id: authUser.id,
-            email: authUser.email,
+            email: authUser.email ?? undefined,
             display_name: authUser.displayName,
           }),
         },

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { API_BASE } from '../lib/api';
 import { getAuthHeaders } from '../lib/supabase';
 import type {
   AuthUser,
@@ -43,7 +44,7 @@ export function useGameOverModal({
     try {
       const authHeaders = await getAuthHeaders();
       const res = await fetch(
-        `/api/games/${encodeURIComponent(gid)}/acknowledge-game-over`,
+        `${API_BASE}/games/${encodeURIComponent(gid)}/acknowledge-game-over`,
         {
           method: 'POST',
           headers: { ...authHeaders },

@@ -7,6 +7,7 @@ import {
   channelOf,
   destinationOf,
   loadReadMarks,
+  MAX_READ_MARK_GAMES,
   mergeMessages,
   PUBLIC_CHANNEL,
   readUpToNow,
@@ -218,6 +219,42 @@ describe('read marks', () => {
     saveReadMarks('g1', 'FRANCE', { public: 9 }, true);
     expect(loadReadMarks('g1', 'FRANCE')).toEqual({ public: 2 });
     expect(loadReadMarks('g1', 'FRANCE', true)).toEqual({ public: 9 });
+  });
+
+  it('keep only the most recent games, every seat of an old game going together', () => {
+    saveReadMarks('old', 'FRANCE', { public: 1 });
+    saveReadMarks('old', 'FRANCE', { public: 1 }, true);
+    for (let i = 0; i < MAX_READ_MARK_GAMES - 1; i++) {
+      saveReadMarks(`g${i}`, 'FRANCE', { public: i });
+    }
+    expect(loadReadMarks('old', 'FRANCE')).toEqual({ public: 1 });
+    // Using an old game again makes it recent, so the next new game pushes out another.
+    saveReadMarks('old', 'GERMANY', { public: 2 });
+    saveReadMarks('newest', 'FRANCE', { public: 3 });
+    expect(loadReadMarks('g0', 'FRANCE')).toEqual({});
+    expect(loadReadMarks('old', 'FRANCE')).toEqual({ public: 1 });
+    expect(loadReadMarks('old', 'FRANCE', true)).toEqual({ public: 1 });
+    expect(loadReadMarks('newest', 'FRANCE')).toEqual({ public: 3 });
+    const kept = Object.keys(localStorage).filter((k) =>
+      k.startsWith('sloplomacy_press_read_v2:'),
+    );
+    expect(new Set(kept.map((k) => k.split(':')[1])).size).toBe(
+      MAX_READ_MARK_GAMES,
+    );
+  });
+
+  it('drop marks saved before there was an index first, and leave other keys alone', () => {
+    localStorage.setItem(
+      'sloplomacy_press_read_v2:legacy:FRANCE',
+      '{"public":1}',
+    );
+    localStorage.setItem('unrelated', 'keep');
+    for (let i = 0; i < MAX_READ_MARK_GAMES; i++) {
+      saveReadMarks(`g${i}`, 'FRANCE', { public: 1 });
+    }
+    expect(loadReadMarks('legacy', 'FRANCE')).toEqual({});
+    expect(loadReadMarks('g0', 'FRANCE')).toEqual({ public: 1 });
+    expect(localStorage.getItem('unrelated')).toBe('keep');
   });
 
   it('can mark everything held as read', () => {

@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { API_BASE } from '../lib/api';
 import { suggestionStore } from '../lib/suggestionStore';
 import { authedFetch } from '../lib/supabase';
 import {
@@ -17,8 +18,6 @@ import {
   type ValidationIssue,
 } from '../types/diplomacy';
 import { turnLabel } from '../utils/timerHelpers';
-
-const API_BASE = '/api';
 
 export interface MatchActionsOptions {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';

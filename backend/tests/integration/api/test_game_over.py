@@ -2,7 +2,7 @@
 
 import asyncio
 
-from api.turns import _execute_adjudication
+from api.turns import execute_adjudication
 from domain.board import Power
 from domain.game_state import PhaseTimer, TimerStage
 from storage.store import GAME_SUMMARIES, GAMES
@@ -38,7 +38,7 @@ async def _win_game(game_id: str) -> None:
         players=[Power.FRANCE, Power.ENGLAND],
         deadline=9999999999.0,
     )
-    await _execute_adjudication(game)
+    await execute_adjudication(game)
 
 
 def test_acknowledge_game_over_requires_concluded_game():

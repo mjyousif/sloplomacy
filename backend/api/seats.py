@@ -19,6 +19,7 @@ from engine.order_utils import (
 from engine.topology.provinces import PROVINCES
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from security.auth import AuthUser, get_current_user
+from security.creator import is_creator
 from security.passcode import client_address, require_passcode
 from security.secrecy import (
     sanitize_game_state_for_viewer,
@@ -137,7 +138,7 @@ async def leave_game(
     req: LeaveGameRequest,
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    from api.turns import _execute_adjudication, refresh_timer
+    from api.turns import execute_adjudication, refresh_timer
 
     game_state = await resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
@@ -161,8 +162,8 @@ async def leave_game(
             )
 
     if summary.is_sandbox:
-        if summary.creator_id == effective_user_id or summary.created_by == (
-            current_user.email if current_user else req.email
+        if is_creator(
+            summary, effective_user_id, current_user.email if current_user else req.email
         ):
             evict_game(game_id)
             if supabase.is_persistence_enabled():
@@ -228,7 +229,7 @@ async def leave_game(
     await broadcast_game_update(game_id, game_state, summary)
     await broadcast_lobby_update()
     if everyone_is_ready(game_state):
-        await _execute_adjudication(game_state)
+        await execute_adjudication(game_state)
     return GameBootstrapResponse(
         state=sanitize_game_state_for_viewer(game_state),
         provinces=PROVINCES,
@@ -246,7 +247,7 @@ async def surrender_power(
     req: SurrenderRequest,
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    from api.turns import _execute_adjudication, refresh_timer
+    from api.turns import execute_adjudication, refresh_timer
 
     game_state = await resolve_game(game_id)
     summary = GAME_SUMMARIES.get(game_id)
@@ -306,7 +307,7 @@ async def surrender_power(
     await broadcast_game_update(game_id, game_state, summary)
     await broadcast_lobby_update()
     if everyone_is_ready(game_state):
-        await _execute_adjudication(game_state)
+        await execute_adjudication(game_state)
     return GameBootstrapResponse(
         state=sanitize_game_state_for_viewer(game_state),
         provinces=PROVINCES,

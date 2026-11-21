@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { API_BASE } from '../lib/api';
 import { type PressState, pressStore } from '../lib/pressStore';
 import { authedFetch } from '../lib/supabase';
 import type {
@@ -27,7 +28,7 @@ async function readPress(
   // A spectator names no power: a seat named without holding it is refused.
   if (power) params.set('power', power);
   if (after > 0) params.set('after', String(after));
-  const res = await authedFetch(`/api/press?${params.toString()}`, {
+  const res = await authedFetch(`${API_BASE}/press?${params.toString()}`, {
     headers: !power && passcode ? { 'X-Passcode': passcode } : undefined,
   });
   if (!res.ok) throw new Error(`Press read failed: HTTP ${res.status}`);
@@ -73,7 +74,7 @@ export async function sendPress(
   request: PressPostRequest,
 ): Promise<PressMessage> {
   const res = await authedFetch(
-    `/api/press?game_id=${encodeURIComponent(gameId)}`,
+    `${API_BASE}/press?game_id=${encodeURIComponent(gameId)}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -69,7 +69,7 @@ flowchart TD
 
 ## One Resolver per Turn
 
-Resolving a phase persists and broadcasts, so it awaits, and a second caller (a last finalize, a clock deadline seen by a poll, an admin force-resolve) can arrive meanwhile. `_execute_adjudication` ([`backend/api/turns.py`](../../backend/api/turns.py)) guards against that explicitly rather than relying on it mutating before its first `await`:
+Resolving a phase persists and broadcasts, so it awaits, and a second caller (a last finalize, a clock deadline seen by a poll, an admin force-resolve) can arrive meanwhile. `execute_adjudication` ([`backend/api/turns.py`](../../backend/api/turns.py)) guards against that explicitly rather than relying on it mutating before its first `await`:
 
 - **Per-game lock** (`adjudication_lock(game_id)` in `storage/store.py`): one resolver at a time. A phase nobody is left to wait for plays out in a loop *inside* the held lock, so chained phases never re-enter it and cannot deadlock.
 - **Expected turn**: the caller names the turn label it decided to resolve (default: the one on the board when it called). A caller that waited for the lock while another resolved that turn finds the board has moved on and returns without resolving the next turn too. A caller that awaits anything between deciding and calling passes the label it decided on.

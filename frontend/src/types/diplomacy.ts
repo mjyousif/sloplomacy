@@ -382,7 +382,7 @@ export interface JoinGameRequest {
 export interface AuthUser {
   id: string;
   user_id?: string;
-  email: string;
+  email: string | null;
   displayName: string;
   fullName?: string;
   isLocalDemo?: boolean;

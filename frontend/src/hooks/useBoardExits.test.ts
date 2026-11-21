@@ -4,14 +4,19 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AuthUser, MultiplayerGameSummary } from '../types/diplomacy';
 import { type BoardExitsOptions, useBoardExits } from './useBoardExits';
 
+vi.mock('../lib/supabase', () => ({ signOutUser: vi.fn(async () => {}) }));
+
 const ME: AuthUser = { id: 'me', email: 'me@test.com', displayName: 'Me' };
 
 function options(dirtyOk: boolean): BoardExitsOptions {
   return {
+    viewMode: 'multiplayer',
     setViewMode: vi.fn(),
     authUser: ME,
+    triggerToast: vi.fn(),
     seats: {
       rememberCurrentGame: vi.fn(),
+      clearPreviousGame: vi.fn(),
       handleJoinOrEnterMultiplayerGame: vi.fn(async () => {}),
       handleEnterSoloSandbox: vi.fn(),
       previousGame: null,
@@ -33,6 +38,17 @@ describe('useBoardExits', () => {
     expect(opts.seats.rememberCurrentGame).toHaveBeenCalled();
     expect(opts.setViewMode).toHaveBeenCalledWith('lobby');
     expect(opts.fetchGamesList).toHaveBeenCalled();
+  });
+
+  it('signs out of a match back to the lobby, forgetting the previous game', async () => {
+    const opts = options(true);
+    const { result } = renderHook(() => useBoardExits(opts));
+    await result.current.handleSignOut();
+    expect(opts.seats.clearPreviousGame).toHaveBeenCalled();
+    expect(opts.setViewMode).toHaveBeenCalledWith('lobby');
+    expect(opts.triggerToast).toHaveBeenCalledWith(
+      'Signed out — now in Guest Mode.',
+    );
   });
 
   it('stays on the board when staged edits are kept', async () => {

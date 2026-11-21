@@ -10,6 +10,7 @@ from domain.game_state import (
     PreviewUnit,
     TimerStage,
 )
+from domain.ids import DEFAULT_GAME_ID
 from domain.press import PressMessage
 from engine.adjudicator.territory import displayed_owners
 from engine.reachability import compute_unit_options
@@ -19,8 +20,6 @@ from storage.supabase import SupabaseUnavailable
 
 logger = logging.getLogger("diplomacy.server")
 
-
-DEFAULT_GAME_ID = "proto_1901"
 MAX_ACTIVE_GAMES = 250
 
 GAMES: dict[str, GameState] = {}
@@ -184,7 +183,7 @@ async def persist_game(game_id: str) -> None:
     """Persist the specified game to Supabase PostgreSQL if configured."""
     if not supabase.is_persistence_enabled():
         return
-    if game_id in (DEFAULT_GAME_ID, "proto_1901") or game_id in PRIVATE_SANDBOXES:
+    if game_id == DEFAULT_GAME_ID or game_id in PRIVATE_SANDBOXES:
         return
     if game_id not in GAMES:
         return

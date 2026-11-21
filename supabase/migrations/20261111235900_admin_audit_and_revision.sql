@@ -1,4 +1,4 @@
--- Migration: 20261112000000_admin_audit_and_revision.sql
+-- Migration: 20261111235900_admin_audit_and_revision.sql
 -- Documents JSONB schema extensions for admin action audit logs and consolidated Admin turn history.
 
 -- 1. multiplayer_games.game_state->'state' now persists 'admin_log':

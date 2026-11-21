@@ -191,12 +191,14 @@ export function AccountDropdownMenu({
                     >
                       @{authUser.displayName}
                     </div>
-                    <div
-                      className={styles.accountProfileEmail}
-                      data-testid="account-menu-email"
-                    >
-                      {authUser.email}
-                    </div>
+                    {authUser.email && (
+                      <div
+                        className={styles.accountProfileEmail}
+                        data-testid="account-menu-email"
+                      >
+                        {authUser.email}
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>
