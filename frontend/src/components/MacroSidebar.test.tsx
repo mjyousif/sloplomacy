@@ -667,9 +667,6 @@ describe('MacroSidebar sheet', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Adjust Game Clock & Season')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Unlock All Orders' }),
-    ).toBeInTheDocument();
     expect(screen.queryByText('Hard Reset Scenario')).not.toBeInTheDocument();
     expect(screen.queryByTestId('btn-admin-close')).toBeNull();
     expect(

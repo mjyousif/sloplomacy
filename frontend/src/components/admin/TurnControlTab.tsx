@@ -5,7 +5,6 @@ import {
   ChevronUp,
   RotateCcw,
   Undo2,
-  Unlock,
 } from 'lucide-react';
 import type React from 'react';
 import type { TurnHistoryEntry } from '../../types/diplomacy';
@@ -62,7 +61,6 @@ export interface TurnControlTabProps {
   selectedPhase: string;
   setSelectedPhase: (val: string) => void;
   handleSetTurn: () => void;
-  handleUnfinalizeAll: () => void;
 }
 
 export const TurnControlTab: React.FC<TurnControlTabProps> = ({
@@ -79,7 +77,6 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
   selectedPhase,
   setSelectedPhase,
   handleSetTurn,
-  handleUnfinalizeAll,
 }) => {
   const snapshotOptions: IconSelectOption[] = [...historyEntries]
     .reverse()
@@ -231,26 +228,6 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
             <span>Apply</span>
           </button>
         </div>
-      </div>
-
-      <div className={styles.adminCardSection}>
-        <div className={styles.adminCardTitleRow}>
-          <Unlock size={16} className={styles.sectionIconGold} />
-          <h4>Unlock All Power Orders</h4>
-        </div>
-        <p className={styles.adminSectionDesc}>
-          If powers have locked / finalized their turns, unlock them all so
-          players can freely edit and re-confirm their orders.
-        </p>
-        <button
-          type="button"
-          className={styles.adminSecondaryBtn}
-          disabled={loading}
-          onClick={handleUnfinalizeAll}
-        >
-          <Unlock size={14} />
-          <span>Unlock All Orders</span>
-        </button>
       </div>
     </div>
   );

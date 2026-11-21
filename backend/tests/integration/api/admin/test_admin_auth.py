@@ -44,12 +44,6 @@ def test_admin_security_enforcement():
     assert r7.status_code == 403
     assert "Administrator access denied" in r7.json()["detail"]
 
-    r8 = client.post(
-        f"/api/admin/unfinalize-all?game_id={game_id}",
-        headers=headers_intruder,
-    )
-    assert r8.status_code == 403
-
 
 # -------------------------------------------------------------
 # Cryptographic Supabase JWT Authorization Tests

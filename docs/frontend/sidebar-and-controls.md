@@ -55,7 +55,7 @@ To prevent interface bloat and preserve a clean, focused tactical workspace, adh
 Shown to the game creator (`isGameCreator`) inside the top-bar `Game Settings` dropdown (`GameSettingsMenu.tsx` -> `Administrator` -> `AdminSettingsOptions`):
 
 - **`Edit Board`** (`data-testid="btn-toggle-direct-edit"`): toggles interactive Direct-Edit Mode on the map (`AdminDirectEditSidebar.tsx`).
-- **`Turn and Clock Settings`** (`data-testid="btn-open-admin-console"`): opens `AdminTurnClockSidebar.tsx` in the right sidebar for Revert to Past Turn (`TurnControlTab`), Adjust Game Clock & Season, and Unlock All Power Orders.
+- **`Turn and Clock Settings`** (`data-testid="btn-open-admin-console"`): opens `AdminTurnClockSidebar.tsx` in the right sidebar for Revert to Past Turn (`TurnControlTab`) and Adjust Game Clock & Season.
 - **`Exit Admin Mode`** (`data-testid="btn-exit-admin-mode"`): appears whenever an admin mode is active (asking for confirmation if board edits are staged).
 
 The previews render with the real `MapPiece`, so they always match the map. These settings only affect this player's own view.
@@ -169,7 +169,7 @@ Shown under Diplomatic Standing in a multiplayer match (never in a sandbox). Its
 
 ### 6. Interactive Direct-Edit Mode & Administrator Controls (Game Creator Only)
 - **Top Bar Administrator Menu (`AdminSettingsMenu.tsx`)**: Room creators access `Edit Board`, `Turn and Clock Settings`, and `Resolve Turn` from `Game Settings -> Administrator` in the top bar on both desktop and phones. `Resolve Turn` prompts `ConfirmModal` before calling `POST /api/adjudicate` and, in multiplayer matches, records an `AdminActionLogEntry` that triggers `AdminActionWarningModal` for other players.
-- **Turn and Clock Settings (`AdminTurnClockSidebar.tsx`)**: Repurposes the right sidebar (or phone bottom sheet) for turn and clock arbitration (`TurnControlTab`: Revert to Past Turn with snapshot dropdown, Adjust Game Clock & Season, and Unlock All Power Orders).
+- **Turn and Clock Settings (`AdminTurnClockSidebar.tsx`)**: Repurposes the right sidebar (or phone bottom sheet) for turn and clock arbitration (`TurnControlTab`: Revert to Past Turn with snapshot dropdown and Adjust Game Clock & Season).
 - **Interactive Direct-Edit Mode (`useAdminDirectEdit.ts`, `AdminTileInspector.tsx`)**:
   - Suppresses reachability reticles and green/amber/purple province highlights on the map.
   - Clicking any province or unit opens `AdminTileInspector` (floating on desktop, docked on phones), allowing the host to reassign Supply Center ownership, spawn or modify a unit (`Power`, `A`/`F`, split coast), relocate a unit anywhere on the board without adjacency checks, set its order, or destroy it.

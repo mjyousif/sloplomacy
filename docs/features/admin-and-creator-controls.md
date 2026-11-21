@@ -27,7 +27,6 @@ From the Admin Turn & Clock sidebar (`AdminTurnClockSidebar.tsx`) and settings m
 
 - **Rollback (`POST /api/admin/rollback`)**: Reverts the board to a selected snapshot index in `GAME_HISTORY`, pops newer snapshots, clears `winner`, resets `timer`, and records a rollback entry.
 - **Set Turn (`POST /api/admin/set-turn`)**: Jumps the game's `season`, `year`, and `phase` (useful for testing or correcting phase state), clears ephemeral sandboxes, restarts the timer if active, and refreshes diagnostics and simulation preview.
-- **Unfinalize All (`POST /api/admin/unfinalize-all`)**: Clears `finalized_powers` across all powers so players can revise orders before resolution.
 - **Force Adjudicate (`POST /api/adjudicate`)**: Resolves the current phase immediately without waiting for remaining players or the phase clock.
 
 ---

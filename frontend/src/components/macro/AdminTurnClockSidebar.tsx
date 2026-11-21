@@ -205,35 +205,6 @@ export function AdminTurnClockSidebar({
     }
   };
 
-  const handleUnfinalizeAll = async () => {
-    setLoading(true);
-    setActionError(null);
-    try {
-      const res = await fetch(
-        `${API_BASE}/admin/unfinalize-all?game_id=${encodeURIComponent(gameId)}`,
-        {
-          method: 'POST',
-          headers: await getHeaders(),
-          body: JSON.stringify({}),
-        },
-      );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setActionError(err.detail || 'Failed to unfinalize powers.');
-        return;
-      }
-      const st: GameState = await res.json();
-      onStateUpdated(st);
-      onToast('All Great Power orders unlocked for editing!');
-    } catch (e: unknown) {
-      setActionError(
-        e instanceof Error ? e.message : 'Network error unlocking powers.',
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const bodyContent = (
     <div
       className={styles.adminTurnClockSidebarBody}
@@ -259,7 +230,6 @@ export function AdminTurnClockSidebar({
         selectedPhase={selectedPhase}
         setSelectedPhase={setSelectedPhase}
         handleSetTurn={handleSetTurn}
-        handleUnfinalizeAll={handleUnfinalizeAll}
       />
       {confirmModal}
     </div>
