@@ -9,16 +9,21 @@ import type {
   Unit,
   UnitType,
 } from '../types/diplomacy';
-import { postAdminBoardEditRequest } from '../utils/adminHelpers';
+import {
+  type AdminBoardSnapshot,
+  buildAdminBoardEditPayload,
+  mergeBaseSnapshotOrders,
+  postAdminBoardEditRequest,
+  resolveAdminOrderStage,
+  snapshotAdminBoardState,
+} from '../utils/adminHelpers';
 import {
   applyStageRelocate,
   applyStageSpawnOrUpdate,
   applyUndoStagedChange,
   computeStagedChanges,
   computeStagedDiffLines,
-  isUnitUnchangedFromBase,
   mergeLiveUnitOrders,
-  ordersHaveSameParameters,
   type StagedChangeEntry,
 } from '../utils/adminStagedChanges';
 import { useAdminAcknowledgement } from './useAdminAcknowledgement';
@@ -57,6 +62,7 @@ export function useAdminDirectEdit({
     {},
   );
   const [stagedOrders, setStagedOrders] = useState<Record<string, Order>>({});
+  const [baseState, setBaseState] = useState<AdminBoardSnapshot | null>(null);
   const [stagedOrderIds, setStagedOrderIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -77,13 +83,11 @@ export function useAdminDirectEdit({
   const [committing, setCommitting] = useState(false);
 
   const syncFromState = useCallback((state: GameState) => {
-    setStagedUnits(state.units.map((u) => ({ ...u })));
-    setStagedOwnership({ ...state.ownership });
-    setStagedOrders(
-      Object.fromEntries(
-        Object.entries(state.orders).map(([k, v]) => [k, { ...v }]),
-      ),
-    );
+    const snapshot = snapshotAdminBoardState(state);
+    setBaseState(snapshot);
+    setStagedUnits(snapshot.units);
+    setStagedOwnership(snapshot.ownership);
+    setStagedOrders(snapshot.orders);
     setStagedOrderIds(new Set());
     setBaseRevision(state.board_revision ?? state.state_revision ?? 1);
     setBaseTurn({
@@ -97,7 +101,7 @@ export function useAdminDirectEdit({
     () =>
       directEditActive
         ? computeStagedChanges(
-            gameState,
+            baseState ?? gameState,
             stagedUnits,
             stagedOwnership,
             stagedOrders,
@@ -105,6 +109,7 @@ export function useAdminDirectEdit({
           )
         : [],
     [
+      baseState,
       directEditActive,
       gameState,
       provinces,
@@ -144,7 +149,14 @@ export function useAdminDirectEdit({
 
     if (gameState && (justEntered || gameChanged || !isDirtyRef.current)) {
       syncFromState(gameState);
-    } else if (gameState) {
+    } else if (
+      gameState &&
+      (gameState.board_revision ?? gameState.state_revision ?? 1) ===
+        baseRevision
+    ) {
+      setBaseState((prev) =>
+        mergeBaseSnapshotOrders(prev, gameState, stagedOrderIdsRef.current),
+      );
       setStagedOrders((prev) =>
         mergeLiveUnitOrders(
           gameState,
@@ -154,7 +166,7 @@ export function useAdminDirectEdit({
         ),
       );
     }
-  }, [directEditActive, activeGameId, gameState, syncFromState]);
+  }, [directEditActive, activeGameId, baseRevision, gameState, syncFromState]);
 
   const dropStagedOrderIds = useCallback((...ids: string[]) => {
     setStagedOrderIds((prev) => {
@@ -274,25 +286,16 @@ export function useAdminDirectEdit({
 
   const stageUnitOrder = useCallback(
     (order: Order) => {
-      const baseUnit = gameState?.units.find((u) => u.id === order.unit_id);
-      const stagedUnit = stagedUnits.find((u) => u.id === order.unit_id);
-      const baseOrder = gameState?.orders[order.unit_id];
-      if (
-        baseOrder &&
-        isUnitUnchangedFromBase(baseUnit, stagedUnit) &&
-        ordersHaveSameParameters(baseOrder, order)
-      ) {
-        setStagedOrders((prev) => ({
-          ...prev,
-          [order.unit_id]: { ...baseOrder },
-        }));
+      const { nextOrder, isExplicitOverride } = resolveAdminOrderStage(
+        baseState ?? gameState,
+        stagedUnits,
+        order,
+      );
+      setStagedOrders((prev) => ({ ...prev, [order.unit_id]: nextOrder }));
+      if (!isExplicitOverride) {
         dropStagedOrderIds(order.unit_id);
         return;
       }
-      setStagedOrders((prev) => ({
-        ...prev,
-        [order.unit_id]: { ...order, is_explicit: true },
-      }));
       setStagedOrderIds((prev) => {
         if (prev.has(order.unit_id)) return prev;
         const nextSet = new Set(prev);
@@ -300,28 +303,26 @@ export function useAdminDirectEdit({
         return nextSet;
       });
     },
-    [dropStagedOrderIds, gameState, stagedUnits],
+    [baseState, dropStagedOrderIds, gameState, stagedUnits],
   );
 
   const applyChanges = useCallback(async (): Promise<boolean> => {
     if (!gameState || !isDirty) return true;
     setCommitting(true);
     try {
-      const explicitOrders = Object.fromEntries(
-        Object.entries(stagedOrders).filter(([uid]) => stagedOrderIds.has(uid)),
+      const payload = buildAdminBoardEditPayload(
+        baseRevision,
+        baseTurn,
+        stagedUnits,
+        stagedOwnership,
+        stagedOrders,
+        stagedOrderIds,
+        diffLines,
       );
-      const res = await postAdminBoardEditRequest(activeGameId, {
-        expected_revision: baseRevision,
-        expected_season: baseTurn.season,
-        expected_year: baseTurn.year,
-        expected_phase: baseTurn.phase,
-        units: stagedUnits,
-        ownership: stagedOwnership,
-        orders: explicitOrders,
-        summary_lines: diffLines.map((line) => `[ADMIN OVERRIDE] ${line}.`),
-      });
+      const res = await postAdminBoardEditRequest(activeGameId, payload);
 
       if (res.status === 409) {
+        setCommitting(false);
         const errData = await res.json().catch(() => ({}));
         const shouldReload = await confirm({
           title: 'Board State Changed (409 Conflict)',
@@ -360,7 +361,6 @@ export function useAdminDirectEdit({
     }
   }, [
     activeGameId,
-    authUser,
     baseRevision,
     baseTurn,
     confirm,
@@ -439,7 +439,7 @@ export function useAdminDirectEdit({
   const undoStagedChange = useCallback(
     (changeId: string) => {
       const reverted = applyUndoStagedChange(
-        gameState,
+        baseState ?? gameState,
         stagedUnits,
         stagedOwnership,
         stagedOrders,
@@ -460,6 +460,7 @@ export function useAdminDirectEdit({
       }
     },
     [
+      baseState,
       dropStagedOrderIds,
       gameState,
       relocatingUnitId,

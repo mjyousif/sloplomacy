@@ -4,6 +4,7 @@ import {
   type AdminActionLogEntry,
   ALL_POWERS,
   type AuthUser,
+  type GameState,
   type MultiplayerGameSummary,
   type Order,
   type Power,
@@ -12,6 +13,11 @@ import {
   type Unit,
   type UnitType,
 } from '../types/diplomacy';
+import {
+  isUnitUnchangedFromBase,
+  mergeLiveUnitOrders,
+  ordersHaveSameParameters,
+} from './adminStagedChanges';
 
 /**
  * The power this browser is playing. In multiplayer that is the seat the player claimed:
@@ -231,6 +237,80 @@ export async function postAdminBoardEditRequest(
       body: JSON.stringify(payload),
     },
   );
+}
+
+export type AdminBoardSnapshot = Pick<
+  GameState,
+  'units' | 'ownership' | 'orders'
+>;
+
+export function snapshotAdminBoardState(state: GameState): AdminBoardSnapshot {
+  return {
+    units: state.units.map((u) => ({ ...u })),
+    ownership: { ...state.ownership },
+    orders: Object.fromEntries(
+      Object.entries(state.orders).map(([k, v]) => [k, { ...v }]),
+    ),
+  };
+}
+
+export function resolveAdminOrderStage(
+  baseSnapshot: AdminBoardSnapshot | null,
+  stagedUnits: Unit[],
+  order: Order,
+): { nextOrder: Order; isExplicitOverride: boolean } {
+  const baseUnit = baseSnapshot?.units.find((u) => u.id === order.unit_id);
+  const stagedUnit = stagedUnits.find((u) => u.id === order.unit_id);
+  const baseOrder = baseSnapshot?.orders[order.unit_id];
+  if (
+    baseOrder &&
+    isUnitUnchangedFromBase(baseUnit, stagedUnit) &&
+    ordersHaveSameParameters(baseOrder, order)
+  ) {
+    return { nextOrder: { ...baseOrder }, isExplicitOverride: false };
+  }
+  return {
+    nextOrder: { ...order, is_explicit: true },
+    isExplicitOverride: true,
+  };
+}
+
+export function buildAdminBoardEditPayload(
+  baseRevision: number,
+  baseTurn: { season: string; year: number; phase: string },
+  units: Unit[],
+  ownership: Record<string, Power>,
+  stagedOrders: Record<string, Order>,
+  stagedOrderIds: ReadonlySet<string>,
+  diffLines: string[],
+): Record<string, unknown> {
+  return {
+    expected_revision: baseRevision,
+    expected_season: baseTurn.season,
+    expected_year: baseTurn.year,
+    expected_phase: baseTurn.phase,
+    units,
+    ownership,
+    orders: Object.fromEntries(
+      Object.entries(stagedOrders).filter(([uid]) => stagedOrderIds.has(uid)),
+    ),
+    summary_lines: diffLines.map((line) => `[ADMIN OVERRIDE] ${line}.`),
+  };
+}
+
+export function mergeBaseSnapshotOrders(
+  prev: AdminBoardSnapshot | null,
+  gameState: GameState,
+  overriddenIds: ReadonlySet<string>,
+): AdminBoardSnapshot | null {
+  if (!prev) return prev;
+  const orders = mergeLiveUnitOrders(
+    gameState,
+    prev.units,
+    prev.orders,
+    overriddenIds,
+  );
+  return orders === prev.orders ? prev : { ...prev, orders };
 }
 
 export {

@@ -413,4 +413,85 @@ describe('useAdminDirectEdit.clearStagedChanges', () => {
 
     fetchSpy.mockRestore();
   });
+
+  it('does not fabricate phantom diffs on concurrent board updates and clears committing while 409 modal is open', async () => {
+    const initialState: GameState = {
+      ...makeGameState(),
+      state_revision: 1,
+      board_revision: 1,
+    };
+    let resolveConfirm!: (ok: boolean) => void;
+    const confirm = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveConfirm = resolve;
+        }),
+    );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          detail:
+            'Board state changed while editing. Please review the latest board state before applying changes.',
+        }),
+        { status: 409, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    const { result, rerender } = renderHook(
+      ({ state }: { state: GameState }) =>
+        useAdminDirectEdit({
+          activeGameId: 'proto_1901',
+          gameState: state,
+          provinces: FRANCE_PROVINCES,
+          directEditActive: true,
+          setDirectEditActive: vi.fn(),
+          authUser: null,
+          onUpdateGameState: vi.fn(),
+          showToast: vi.fn(),
+          confirm,
+        }),
+      { initialProps: { state: initialState } },
+    );
+
+    act(() => {
+      result.current.onStageOwnership('BUR', 'FRANCE');
+    });
+    expect(result.current.stagedChanges.map((c) => c.id)).toEqual([
+      'ownership:BUR',
+    ]);
+
+    // A concurrent board edit arrives via WebSocket (board_revision bumped + GAS owned by FRANCE)
+    const concurrentState: GameState = {
+      ...initialState,
+      state_revision: 2,
+      board_revision: 2,
+      ownership: { ...initialState.ownership, GAS: 'FRANCE' },
+    };
+    rerender({ state: concurrentState });
+
+    // Staged diff must still show only the admin's own BUR change, not a phantom GAS diff
+    expect(result.current.stagedChanges.map((c) => c.id)).toEqual([
+      'ownership:BUR',
+    ]);
+
+    let applyPromise!: Promise<boolean>;
+    act(() => {
+      applyPromise = result.current.applyChanges();
+    });
+
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+    // Apply button must no longer read "Applying..." while the 409 modal is waiting on the user
+    expect(result.current.committing).toBe(false);
+
+    await act(async () => {
+      resolveConfirm(true);
+      await applyPromise;
+    });
+
+    expect(result.current.stagedChanges).toEqual([]);
+    expect(result.current.effectiveGameState?.ownership.GAS).toBe('FRANCE');
+    expect(result.current.effectiveGameState?.ownership.BUR).toBeUndefined();
+
+    fetchSpy.mockRestore();
+  });
 });

@@ -279,57 +279,7 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
         ),
       ).toBeVisible();
 
-      // 1h. Concurrent board change triggers 409 Conflict modal when Alice tries to apply staged edits
-      await alice
-        .locator('[data-testid="province-path"][data-province-id="HOL"]')
-        .click();
-      await alice.getByTestId('admin-inspector-ownership-select').click();
-      await alice
-        .getByTestId('admin-inspector-ownership-select-option-france')
-        .click();
-      await expect(alice.getByTestId('admin-staged-count')).toContainText(
-        '1 staged change',
-      );
-
-      const latest = (await api(ALICE, `/api/game?game_id=${gameId}`)).state;
-      await api(ALICE, `/api/admin/board-edit?game_id=${gameId}`, {
-        expected_revision: latest.board_revision,
-        expected_season: latest.season,
-        expected_year: latest.year,
-        expected_phase: latest.phase,
-        units: latest.units,
-        ownership: { ...latest.ownership, SPA: 'FRANCE' },
-      });
-
-      await alice.getByTestId('btn-admin-apply-edits').click();
-      const conflictDialog = alice.getByRole('alertdialog', {
-        name: 'Board State Changed (409 Conflict)',
-      });
-      await expect(conflictDialog).toBeVisible({ timeout: 10000 });
-      await expect(conflictDialog).toContainText(
-        'Board state changed while editing. Please review the latest board state before applying changes.',
-      );
-      await expect(
-        conflictDialog.getByTestId('btn-confirm-modal-confirm'),
-      ).toHaveText('Discard Draft & Reload');
-      await rec.recordStep(alice, 'edit_board_409_conflict_modal');
-
-      await conflictDialog.getByTestId('btn-confirm-modal-confirm').click();
-      await expect(conflictDialog).toHaveCount(0);
-      await expect(alice.getByTestId('admin-staged-count')).toContainText(
-        '0 staged changes',
-      );
-
-      // Acknowledge the concurrent board-edit warning on Bob's page before Resolve Turn
-      await expect(bob.getByTestId('admin-action-warning-modal')).toBeVisible({
-        timeout: 10000,
-      });
-      await bob.getByTestId('admin-warning-acknowledge-btn').click();
-      await expect(bob.getByTestId('admin-action-warning-modal')).toHaveCount(
-        0,
-      );
-
-      // 1i. Alice exits Edit Board mode
+      // 1h. Alice exits Edit Board mode
       await alice.getByTestId('game-settings-trigger').click();
       await alice.getByTestId('game-settings-admin-settings').click();
       await alice.getByTestId('btn-exit-admin-mode').click();
@@ -367,6 +317,80 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       );
       await rec.recordStep(bob, 'player_admin_warning_modal');
 
+      await bob.getByTestId('admin-warning-acknowledge-btn').click();
+      await expect(bob.getByTestId('admin-action-warning-modal')).toHaveCount(
+        0,
+      );
+
+      // 5b. On Fall 1901 Movement, a concurrent board-level edit triggers 409 Conflict cleanly
+      //     (rejected edit is never applied and never notifies the rival player).
+      await expect(alice.getByTestId('toast-banner')).toHaveCount(0, {
+        timeout: 10000,
+      });
+      await alice.getByTestId('game-settings-trigger').click();
+      await alice.getByTestId('game-settings-admin-settings').click();
+      await alice.getByTestId('btn-toggle-direct-edit').click();
+      await expect(alice.getByTestId('admin-staged-count')).toContainText(
+        '0 staged changes',
+      );
+
+      await alice
+        .locator('[data-testid="province-path"][data-province-id="HOL"]')
+        .click();
+      await alice.getByTestId('admin-inspector-ownership-select').click();
+      await alice
+        .getByTestId('admin-inspector-ownership-select-option-france')
+        .click();
+      await expect(alice.getByTestId('admin-staged-count')).toContainText(
+        '1 staged change',
+      );
+
+      const latest = (await api(ALICE, `/api/game?game_id=${gameId}`)).state;
+      await api(ALICE, `/api/admin/board-edit?game_id=${gameId}`, {
+        expected_revision: latest.board_revision,
+        expected_season: latest.season,
+        expected_year: latest.year,
+        expected_phase: latest.phase,
+        units: latest.units,
+        ownership: { ...latest.ownership, SPA: 'FRANCE' },
+      });
+
+      await alice.getByTestId('btn-admin-apply-edits').click();
+      const conflictDialog = alice.getByRole('alertdialog', {
+        name: 'Board State Changed (409 Conflict)',
+      });
+      await expect(conflictDialog).toBeVisible({ timeout: 10000 });
+      await expect(conflictDialog).toContainText(
+        'Board state changed while editing. Please review the latest board state before applying changes.',
+      );
+      await expect(
+        conflictDialog.getByTestId('btn-confirm-modal-confirm'),
+      ).toHaveText('Discard Draft & Reload');
+      await expect(alice.getByTestId('admin-staged-count')).toContainText(
+        '1 staged change',
+      );
+      await expect(alice.getByTestId('btn-admin-apply-edits')).toHaveText(
+        'Apply',
+      );
+      await expect(alice.getByTestId('toast-banner')).toHaveCount(0);
+      await rec.recordStep(alice, 'edit_board_409_conflict_modal');
+
+      await conflictDialog.getByTestId('btn-confirm-modal-confirm').click();
+      await expect(conflictDialog).toHaveCount(0);
+      await expect(alice.getByTestId('admin-staged-count')).toContainText(
+        '0 staged changes',
+      );
+
+      // Bob is notified only of the winning SPA edit, never the rejected HOL edit
+      await expect(bob.getByTestId('admin-action-warning-modal')).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(bob.getByTestId('admin-action-warning-modal')).toContainText(
+        'Set ownership of SPA to FRANCE.',
+      );
+      await expect(
+        bob.getByTestId('admin-action-warning-modal'),
+      ).not.toContainText('HOL');
       await bob.getByTestId('admin-warning-acknowledge-btn').click();
       await expect(bob.getByTestId('admin-action-warning-modal')).toHaveCount(
         0,
