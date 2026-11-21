@@ -67,9 +67,10 @@ def test_orphan_accepts_no_orders_or_finalize_for_any_power(orphan):
 
 def test_default_board_and_private_sandboxes_keep_working_without_a_summary():
     assert client.get("/api/game?game_id=proto_1901").status_code == 200
+    # The default board has no summary and is still open to its admin tools.
     moved = client.post(
-        "/api/admin/unit/move?game_id=proto_1901",
-        json={"unit_id": "FRA_A_PAR", "new_province": "BUR"},
+        "/api/admin/set-turn?game_id=proto_1901",
+        json={"season": "Spring", "year": 1901, "phase": "Movement"},
     )
     assert moved.status_code == 200
 
