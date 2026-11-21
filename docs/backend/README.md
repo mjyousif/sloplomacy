@@ -32,7 +32,8 @@ backend/
 ├── tests/                   # pytest suites, laid out as described in "Running Backend Tests"
 │   ├── unit/                # One module at a time, mirroring the packages (unit/engine/adjudicator/, ...)
 │   └── integration/         # The app through HTTP and the game socket (integration/api/, ...)
-├── requirements-runtime.txt # Python runtime dependencies (what the Docker image installs)
+├── requirements-runtime.txt # Python runtime dependency ranges (edited by hand)
+├── requirements-runtime.lock # Hash-pinned resolution of the above, what the Docker image installs
 ├── requirements.txt         # Runtime dependencies plus test tools, for CI tests
 └── requirements-dev.txt     # Runtime + test + code quality tools (Ruff) for development
 ```
@@ -43,15 +44,15 @@ backend/
 
 Runtime packages are listed in `backend/requirements-runtime.txt`, each capped below its next major version:
 ```txt
-fastapi>=0.162.0,<1.0
+fastapi>=0.163.0,<1.0
 uvicorn[standard]>=0.54.0,<1.0
-pydantic>=2.14.2,<3.0
+pydantic>=2.14.3,<3.0
 httpx>=0.28.1,<1.0
 diplomacy>=1.1.2,<2.0
-PyJWT>=2.8.0,<3.0
-cryptography>=42.0.0,<51.0
+PyJWT>=2.15.1,<3.0
+cryptography>=50.0.2,<51.0
 ```
-`backend/requirements.txt` includes that file and adds `pytest>=9.2.0,<10.0`. Install `requirements.txt` for development and tests.
+`backend/requirements.txt` includes that file and adds `pytest>=9.2.0,<10.0`. Install `requirements.txt` for development and tests. The Docker image installs `requirements-runtime.lock` instead, with `--require-hashes`; regenerate it after changing `requirements-runtime.txt` (see [Regenerating the lock](../guides/development.md#regenerating-the-python-lock)).
 
 ---
 
@@ -136,6 +137,8 @@ Tests live in `backend/tests/` and follow the code they cover:
 - `tests/unit/` tests one module directly and mirrors its package: `tests/unit/engine/adjudicator/test_movement.py` covers `engine/adjudicator/movement.py`, and `tests/unit/engine/test_phase_timer.py` covers `engine/phase_timer.py`.
 - `tests/integration/` drives the FastAPI app through `TestClient` and the game socket. API flows go under `tests/integration/api/`, grouped by router or feature (the turn clock's are in `tests/integration/api/turn_clock/`).
 - Fixtures shared by a folder go in its `conftest.py`, plain helpers in a `helpers.py` next to the tests that use them. Every test folder is a package (`__init__.py`), because file names repeat across packages (`test_retreats.py` exists for both the adjudicator and the validator).
+- `tests/unit/test_migrations.py` guards `supabase/migrations/`: every file is named `<14-digit version>_<name>.sql` and no two share a version, because the Supabase CLI rejects a repeated version. A migration must stay safe to run twice, since CI applies them twice and the deploy re-runs every file each time. Never rename an applied migration to a version that moves it later in the order; pick one that keeps the order.
+- `tests/unit/test_requirements_lock.py` fails when `requirements-runtime.lock` lacks a package from `requirements-runtime.txt`, pins one outside its range, has an unhashed entry, or the Dockerfile stops installing it with `--require-hashes`. Fix it with `scripts/lock-requirements.sh`.
 - Every test file passes on its own (`python -m pytest backend/tests/path/to/test_file.py`), not only in the full run. A test that needs seeded lobbies or a fresh board sets them up itself.
 
 Run all tests from the repository root:

@@ -105,6 +105,14 @@ export ENVIRONMENT=development ALLOW_INSECURE_DEV_AUTH=true      # macOS/Linux
 $env:ENVIRONMENT = "development"; $env:ALLOW_INSECURE_DEV_AUTH = "true"    # Windows PowerShell
 ```
 
+#### Regenerating the Python lock
+`backend/requirements-runtime.txt` holds the hand-edited version ranges. The Docker image installs `backend/requirements-runtime.lock` instead: every package and its dependencies pinned with hashes (`pip install --require-hashes`), so two builds of one commit install the same files. After changing a range, or to take newer releases, regenerate it on Python 3.11 (the image's version) with pip-tools installed:
+```bash
+./scripts/lock-requirements.sh            # keep pins, add what changed
+./scripts/lock-requirements.sh --upgrade  # newest versions the ranges allow
+```
+The script refuses another Python version, because a lock made elsewhere can miss the dependencies only 3.11 pulls in. Commit the `.lock` with the change. `requirements.txt` and `requirements-dev.txt` (tests, linters) are not locked.
+
 ### 2. Frontend Application (`frontend/`)
 ```bash
 cd frontend
@@ -188,6 +196,8 @@ Run all backend pytest suites, frontend Vitest unit tests, TypeScript typechecks
 The suites live in `backend/tests/`, split into `unit/` (one module at a time, mirroring the packages) and `integration/` (the app through HTTP and the game socket). [docs/backend/README.md](../backend/README.md#running-backend-tests) describes the layout.
 
 WebSocket tests read messages with `receive_json(ws)` from `backend/tests/ws_testing.py` rather than `ws.receive_json()`. Starlette's test client waits forever for a message, so a broadcast the server never sends would hang the run; the helper fails the test after 5 seconds instead. In CI every job also has a `timeout-minutes` limit.
+
+Adding a migration under `supabase/migrations/`: take a timestamp newer than the last file's, write it so a second run changes nothing (CI applies every file twice, and the deploy re-runs them all), and let `backend/tests/unit/test_migrations.py` catch a repeated version.
 
 Run all tests from the repository root:
 ```bash
