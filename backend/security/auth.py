@@ -46,6 +46,35 @@ def is_insecure_dev_auth_allowed() -> bool:
     ).lower() in ("test", "development")
 
 
+def decode_unverified_dev_token(token: str) -> AuthUser:
+    """Read the claims of a token nobody has verified, for the local dev sign-in only.
+
+    Callers have already checked `is_insecure_dev_auth_allowed()`. Even then the token must name
+    its own expiry (`exp`) and be unexpired, so a token pasted into a bug report or a log stops
+    working, and a typo'd demo token cannot live forever. Raises 401 otherwise.
+    """
+    try:
+        claims = jwt.decode(
+            token,
+            options={"verify_signature": False, "require": ["exp"], "verify_exp": True},
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token has expired.",
+        )
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload: a development token needs an expiry ('exp').",
+        )
+    return AuthUser(
+        user_id=claims.get("sub") or "dev_user",
+        email=claims.get("email"),
+        is_authenticated=True,
+    )
+
+
 def get_jwks_client(supabase_url: str) -> jwt.PyJWKClient | None:
     """Return a cached PyJWKClient for the given Supabase URL."""
     if not supabase_url:
@@ -81,18 +110,7 @@ def get_current_user(
 
     if alg.lower() == "none":
         if dev_allowed:
-            try:
-                unverified = jwt.decode(token, options={"verify_signature": False})
-                return AuthUser(
-                    user_id=unverified.get("sub", "dev_user"),
-                    email=unverified.get("email"),
-                    is_authenticated=True,
-                )
-            except Exception:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token payload.",
-                )
+            return decode_unverified_dev_token(token)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insecure 'none' algorithm token rejected in production.",
@@ -101,15 +119,7 @@ def get_current_user(
     # Dev fallback when neither secrets nor Supabase URL are configured in local environment
     if not jwt_secret and not jwt_pub_key and not sb_url:
         if dev_allowed:
-            try:
-                unverified = jwt.decode(token, options={"verify_signature": False})
-                return AuthUser(
-                    user_id=unverified.get("sub", "dev_user"),
-                    email=unverified.get("email"),
-                    is_authenticated=True,
-                )
-            except Exception:
-                return None
+            return decode_unverified_dev_token(token)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Supabase authentication provider is not configured on this server.",
@@ -141,12 +151,7 @@ def get_current_user(
                 )
             else:
                 if dev_allowed:
-                    unverified = jwt.decode(token, options={"verify_signature": False})
-                    return AuthUser(
-                        user_id=unverified.get("sub", "dev_user"),
-                        email=unverified.get("email"),
-                        is_authenticated=True,
-                    )
+                    return decode_unverified_dev_token(token)
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Token signed with ES256, but no public key or Supabase URL configured.",
@@ -155,12 +160,7 @@ def get_current_user(
             # Symmetric HS256 verification
             if not jwt_secret:
                 if dev_allowed:
-                    unverified = jwt.decode(token, options={"verify_signature": False})
-                    return AuthUser(
-                        user_id=unverified.get("sub", "dev_user"),
-                        email=unverified.get("email"),
-                        is_authenticated=True,
-                    )
+                    return decode_unverified_dev_token(token)
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Token signed with HS256, but no symmetric JWT secret configured on server.",

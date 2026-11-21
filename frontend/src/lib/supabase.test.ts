@@ -152,6 +152,10 @@ describe('supabase auth & local fallback helper', () => {
     expect(authHeaders.Authorization).toBeDefined();
     expect(authHeaders.Authorization.startsWith('Bearer ')).toBe(true);
 
+    // The dev backend refuses an unsigned token that does not expire.
+    const claims = JSON.parse(atob(authHeaders.Authorization.split('.')[1]));
+    expect(claims.exp).toBeGreaterThan(Date.now() / 1000);
+
     await signOutUser();
     const afterSignOut = await getAuthHeaders();
     expect(afterSignOut).toEqual({});

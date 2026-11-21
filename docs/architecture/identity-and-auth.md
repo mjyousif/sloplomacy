@@ -34,7 +34,7 @@ flowchart TD
     Alg -->|ES256| Asym["Verify with SUPABASE_JWT_PUBLIC_KEY, else the JWKS of SUPABASE_URL"]
     Alg -->|HS256| Sym["Verify with SUPABASE_JWT_SECRET"]
     Alg -->|"none"| Dev{"insecure dev auth allowed?"}
-    Dev -->|yes| Unsigned["Trust unsigned sub and email"]
+    Dev -->|yes| Unsigned["Trust unsigned sub and email, if it has an unexpired exp"]
     Dev -->|no| Reject["401"]
     Asym --> Claims["Check sub present, aud is authenticated, not expired"]
     Sym --> Claims
@@ -50,13 +50,15 @@ flowchart TD
 - Any other algorithm is rejected. A token needs a `sub`; an `aud` other than `authenticated` is rejected; expired or otherwise invalid tokens give 401.
 - If no key, secret or Supabase URL is configured at all, a production server answers 500 ("authentication provider is not configured") rather than trusting anything.
 
-**Insecure dev fallback.** The unverified paths (an `alg: none` token, or a signed token with no matching key configured) are only taken when `ALLOW_INSECURE_DEV_AUTH=true` or `ENVIRONMENT` is `test` or `development`. Otherwise `alg: none` is rejected with 401. Treat this switch as a deployment-safety boundary: it must never be on in production.
+**Identity comes only from the token.** No route reads an `X-User-Id` or `X-User-Email` header, and request bodies carry no `user_id` / `email` for admin actions. (A guest's `user_id` / `email` on create and join name the seat they claim, not who is calling.)
+
+**Insecure dev fallback.** All unverified paths go through one helper, `decode_unverified_dev_token`, which requires an `exp` claim and refuses an expired one (401), so a demo token that leaks stops working and none lives forever. The unverified paths (an `alg: none` token, or a signed token with no matching key configured) are only taken when `ALLOW_INSECURE_DEV_AUTH=true` or `ENVIRONMENT` is `test` or `development`. Otherwise `alg: none` is rejected with 401. Treat this switch as a deployment-safety boundary: it must never be on in production.
 
 The game WebSocket verifies the same token through the same function, but receives it in a first `auth` message rather than a header (see [the handshake](secrecy-and-authorization.md#websocket-handshake-and-broadcast)).
 
 ## Local demo and dev sign-in
 
-When Supabase is not configured in the frontend (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` missing or placeholder), the auth modal falls back to a **local demo user** stored in `localStorage`. Its requests carry an unsigned `alg: none` token containing `sub` and `email`; the backend accepts it only under the dev-auth rule above.
+When Supabase is not configured in the frontend (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` missing or placeholder), the auth modal falls back to a **local demo user** stored in `localStorage`. Its requests carry an unsigned `alg: none` token containing `sub`, `email` and an `exp` an hour ahead, rebuilt on each request; the backend accepts it only under the dev-auth rule above.
 
 On top of that, the Vite dev server (and only it, never a production build or Vitest) signs in a throwaway `Dev xxxx` player automatically, once per browser profile, so a local run can host and join immediately. Each browser profile or incognito window gets its own id, so two windows are two different players holding their own seats. `VITE_DEV_LOGIN=0` (the launcher's `--no-dev-login`) disables it to test the signed-out experience. See [Local Demo Sign-In](../guides/development.md#local-demo-sign-in).
 

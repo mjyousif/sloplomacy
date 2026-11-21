@@ -8,6 +8,7 @@ Sloplomacy is a simultaneous-move game, so the most important server guarantee i
 - [Who is the caller?](#who-is-the-caller)
 - [The sanitizer: one exit for every game state](#the-sanitizer-one-exit-for-every-game-state)
 - [Masking does not depend on status](#masking-does-not-depend-on-status)
+- [A game with no summary fails closed](#a-game-with-no-summary-fails-closed)
 - [WebSocket handshake and broadcast](#websocket-handshake-and-broadcast)
 - [Per-seat mutation authorization](#per-seat-mutation-authorization)
 - [Sandboxes and hypothetical work](#sandboxes-and-hypothetical-work)
@@ -57,7 +58,7 @@ flowchart LR
     Who --> San
 ```
 
-For broadcasts, the connection manager keeps the seat each socket resolved at connect time and calls the sanitizer once per socket, so a single order submission produces a different payload for each connected player.
+For broadcasts, the connection manager keeps the seat each socket resolved at connect time and builds one masked state per *viewing power* within a broadcast (not one per socket: masking runs the adjudicator), so a single order submission produces a different payload for each seat and spectators share one. Sends run concurrently with a timeout, so one stalled client cannot delay the others; a socket that is slow or fails unexpectedly is dropped and logged.
 
 ## Masking does not depend on status
 
@@ -75,6 +76,10 @@ stateDiagram-v2
     Masked --> Open: winner declared
     Open --> [*]
 ```
+
+## A game with no summary fails closed
+
+Seats, owner and passcode live in a game's `MultiplayerGameSummary`. The shared default board (`proto_1901`) and a member's private `sbx_` sandbox copy have none by design. Any other game held in memory without one (`lacks_summary`) is a game with nothing on record about who may enter or administer it, so every check treats it as a **live match nobody may touch**, never as an open one: `is_multiplayer_match` is true (orders stay masked), `verify_admin_access`, `verify_power_authorization`, `require_view_access` and `require_own_seat` all refuse, and no one holds a seat. The same goes for a saved game whose stored summary cannot be read: it is not loaded at all (see [Lobby Sync & Eviction](consistency-and-persistence.md#lobby-sync--eviction)).
 
 ## WebSocket handshake and broadcast
 
@@ -113,9 +118,11 @@ Reading is only half of it. Every mutation is checked against the caller's own s
 | :--- | :--- | :--- |
 | `verify_power_authorization` | order submission, batch updates, confirmation, finalize, unfinalize | In a live match the caller must be the creator, or hold that power's seat (by id or email). A seat held by a registered user rejects an unauthenticated call with 401; a wrong user gets 403. |
 | `require_timer_player` | timer votes, extension requests, ready-up | Caller must hold that power's seat in an active match (no creator override). |
-| `verify_admin_access` | admin turn controls, board overrides, some sandbox operations | Only the match creator (matched by `creator_id`, or by `created_by` email). Sandboxes and the default demo game are open; an unknown game is 404, no token is 401, a non-creator is 403. |
+| `verify_admin_access` | admin turn controls, board overrides, force-resolve, some sandbox operations | Only the match creator (matched by `creator_id`, or by `created_by` email), from the verified token alone. Sandboxes and the default demo game are open; an unknown game is 404, no token is 401, a non-creator is 403, and a game with no summary is 403 for everyone. |
 | `require_own_seat` | reads and actions that would reveal a seat's orders | 403 unless the caller holds the seat. |
 | `require_view_access` | viewing a private match | Seated participants pass; anyone else needs the passcode (see [Identity and Auth](identity-and-auth.md#private-match-passcodes)). |
+
+Who is acting is always the verified token. The server reads no `X-User-Id` / `X-User-Email` header and no `user_id` / `email` in an admin request body: they are not even declared, so a client cannot claim to be the host, put another name in the admin log, or dismiss another player's admin warning. `POST /api/admin/acknowledge` records the token's user id, email and the seats that token holds; a caller with no token is a guest and can only speak for a seat claimed without an account (`caller_holds_seat` with no user).
 
 The creator is allowed to act for any seat in `verify_power_authorization`, which is how admin tools work, but the sanitizer still shows a creator only the orders of a seat they actually hold.
 

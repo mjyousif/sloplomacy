@@ -85,7 +85,12 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   if (localUser) {
     const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
     const payload = btoa(
-      JSON.stringify({ sub: localUser.id, email: localUser.email }),
+      JSON.stringify({
+        sub: localUser.id,
+        email: localUser.email,
+        // The dev backend refuses an unsigned token that does not expire.
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      }),
     );
     return {
       Authorization: `Bearer ${header}.${payload}.`,

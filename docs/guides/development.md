@@ -57,7 +57,7 @@ python scripts/quickstart.py
 - `python scripts/quickstart.py --test`: Run the complete backend test suite and verify frontend build.
 
 ### Local Demo Sign-In
-When Supabase is not configured, the sign-in form creates a local demo account. It is stored in the browser, and the frontend sends it to the backend as an unsigned `alg: none` token.
+When Supabase is not configured, the sign-in form creates a local demo account. It is stored in the browser, and the frontend sends it to the backend as an unsigned `alg: none` token that expires an hour after each request. The backend refuses an unsigned token without an `exp`, so a hand-made one (a script, a Playwright spec) must carry one.
 
 `backend/security/auth.py` rejects those tokens unless `ENVIRONMENT` is `development` or `test`, or `ALLOW_INSECURE_DEV_AUTH=true`. Every launcher above sets `ENVIRONMENT=development` for the backend it starts, so a demo sign-in works out of the box:
 

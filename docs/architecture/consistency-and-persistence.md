@@ -7,7 +7,9 @@ Sloplomacy combines a sub-millisecond in-memory L1 store with write-through JSON
 - [In-Memory L1 Store vs. Durable Database](#in-memory-l1-store-vs-durable-database)
 - [Write-Through Persistence & Coalesced Saves](#write-through-persistence--coalesced-saves)
 - [Optimistic Concurrency (`state_revision`)](#optimistic-concurrency-state_revision)
+- [One Resolver per Turn](#one-resolver-per-turn)
 - [Atomic Admin Board Edits](#atomic-admin-board-edits)
+- [Lobby Sync & Eviction](#lobby-sync--eviction)
 - [Failure Modes & Restart Behavior](#failure-modes--restart-behavior)
 - [Related Docs](#related-docs)
 
@@ -65,6 +67,30 @@ flowchart TD
 
 ---
 
+## One Resolver per Turn
+
+Resolving a phase persists and broadcasts, so it awaits, and a second caller (a last finalize, a clock deadline seen by a poll, an admin force-resolve) can arrive meanwhile. `_execute_adjudication` ([`backend/api/turns.py`](../../backend/api/turns.py)) guards against that explicitly rather than relying on it mutating before its first `await`:
+
+- **Per-game lock** (`adjudication_lock(game_id)` in `storage/store.py`): one resolver at a time. A phase nobody is left to wait for plays out in a loop *inside* the held lock, so chained phases never re-enter it and cannot deadlock.
+- **Expected turn**: the caller names the turn label it decided to resolve (default: the one on the board when it called). A caller that waited for the lock while another resolved that turn finds the board has moved on and returns without resolving the next turn too. A caller that awaits anything between deciding and calling passes the label it decided on.
+
+Eviction forgets a game's lock. Rollback, set-turn and board edits mutate the board before their first `await` and do not take it.
+
+```mermaid
+sequenceDiagram
+    participant A as Resolver A
+    participant L as Game lock
+    participant B as Resolver B
+    A->>L: acquire (turn T)
+    B->>L: acquire (turn T), waits
+    A->>A: resolve T, persist, broadcast
+    A->>L: release (board is on T+1)
+    L->>B: acquired
+    B->>B: board is not on T, so return
+```
+
+---
+
 ## Atomic Admin Board Edits
 
 Because board editing in the UI lets a creator move, spawn, destroy units, and reassign province ownership together, applying those changes one HTTP request at a time would risk partial edits or mid-edit WebSocket broadcasts.
@@ -78,9 +104,20 @@ Instead, the frontend stages edits locally and submits a single `POST /api/admin
 
 ---
 
+## Lobby Sync & Eviction
+
+`GET /api/games` refreshes the lobby from Supabase (`sync_lobby_with_db`). Memory stays authoritative for a loaded game; the refresh only decides which in-memory games Supabase no longer has.
+
+- **Only what was known at the start of the read can be called deleted.** A game created and saved while the read was in flight is missing from its rows through no fault of its own. The sync snapshots the known games before the read and never evicts one outside that snapshot.
+- **Unsaved work blocks eviction.** `has_unsaved_work(gid)` is true while the game (`UNSAVED_GAMES`) or its press (`PRESS_UNSAVED`) has a change Supabase has not stored. The lobby sync, `GET /api/games/{id}` and the capacity sweep all skip such a game.
+- **One read for many callers.** Requests arriving while a table read is in flight wait for that read instead of starting their own. A request after it finishes reads again, so nothing is served from an older answer.
+- **An unreadable stored summary is withheld, never replaced.** A save writes the seats, privacy and passcode only inside the summary JSON, so the plain columns (`is_private`, `passcode`) cannot stand in for it: a game rebuilt from them would be public, passcode-less and empty. `build_summary_from_row` returns `None` for a row whose summary fails validation (logged at `WARNING`). `load_game_from_db` then raises `SupabaseUnavailable` (`503`), and the lobby read maps the row to `None`: not listed, not loaded, and not taken for a deleted game, so a loaded game stays in memory. A row that never stored a summary still reads from its columns.
+
+---
+
 ## Failure Modes & Restart Behavior
 
-- **Supabase read failure (`503`)**: If a game is not in `GAMES` and Supabase is unreachable, `load_saved_game()` raises `503 Service Unavailable` rather than returning `404` so clients do not mistake a transient outage for a deleted game.
+- **Supabase read failure (`503`)**: If a game is not in `GAMES` and Supabase is unreachable (or its stored summary is unreadable), `load_saved_game()` raises `503 Service Unavailable` rather than returning `404` so clients do not mistake a transient outage for a deleted game.
 - **Supabase write failure**: If `save_game_to_db()` fails, `game_id` remains in `UNSAVED_GAMES` (and `HISTORY_UNSAVED` if applicable). The next mutation retries, and the server's lifespan shutdown hook attempts a final flush of `UNSAVED_GAMES`.
 - **Single-instance guarantee**: Because `GAMES` is authoritative while a container is running, Cloud Run's `max_instance_count = 1` ensures two containers never diverge on `state_revision` or overwrite each other's rows.
 

@@ -1,6 +1,7 @@
 """FastAPI router for real-time WebSocket communication (game turns and multiplayer lobby)."""
 
 import asyncio
+import logging
 
 from api.turns import tick_timer
 from domain.board import Power
@@ -28,6 +29,8 @@ from storage.store import (
 )
 from storage.supabase import SupabaseUnavailable
 from ws.connection_manager import manager
+
+logger = logging.getLogger("diplomacy.ws")
 
 router = APIRouter()
 
@@ -154,6 +157,9 @@ async def ws_game_endpoint(
     except WebSocketDisconnect:
         manager.disconnect_game(game_id, websocket)
     except Exception:
+        # A socket that closed is routine (above). Anything else is a bug the client would only
+        # see as updates that stop, so it is logged with its traceback.
+        logger.exception("Game socket for '%s' failed unexpectedly.", game_id)
         manager.disconnect_game(game_id, websocket)
 
 
@@ -193,4 +199,5 @@ async def ws_lobby_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect_lobby(websocket)
     except Exception:
+        logger.exception("Lobby socket failed unexpectedly.")
         manager.disconnect_lobby(websocket)

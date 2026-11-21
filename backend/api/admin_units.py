@@ -14,7 +14,7 @@ from engine.order_utils import (
     refresh_diagnostics_and_simulation,
 )
 from engine.topology.provinces import PROVINCES
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from security.auth import AuthUser, get_current_user
 from security.secrecy import verify_admin_access
 from storage.store import (
@@ -58,8 +58,6 @@ async def admin_batch_board_edit(
     req: AdminBatchBoardEditRequest,
     game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
-    x_user_id: str | None = Header(default=None),
-    x_user_email: str | None = Header(default=None),
 ):
     """Atomically apply staged Direct-Edit mutations with optimistic concurrency checking."""
     gid = game_id or DEFAULT_GAME_ID
@@ -176,9 +174,7 @@ async def admin_batch_board_edit(
 
     refresh_diagnostics_and_simulation(game)
 
-    actor_email, actor_id = resolve_admin_actor(
-        gid, current_user, req.user_id, req.email, x_user_id, x_user_email
-    )
+    actor_email, actor_id = resolve_admin_actor(gid, current_user)
     await record_admin_history_and_log(
         gid, before_state, game, summary_lines, actor=actor_email, actor_id=actor_id
     )

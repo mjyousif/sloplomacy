@@ -33,13 +33,14 @@ def test_admin_status_solo_and_multiplayer():
     assert res_bismarck.status_code == 200
     assert res_bismarck.json()["is_creator"] is True
 
-    # Test with legacy headers fallback on GET status
-    res_bismarck_legacy = client.get(
+    # Identity headers prove nothing: only the verified token says who is asking.
+    res_bismarck_spoof = client.get(
         "/api/admin/status?game_id=mp_concert_104",
         headers={"X-User-Id": "bot_bismarck", "X-User-Email": "bismarck@diplomacy.eu"},
     )
-    assert res_bismarck_legacy.status_code == 200
-    assert res_bismarck_legacy.json()["is_creator"] is True
+    assert res_bismarck_spoof.status_code == 200
+    assert res_bismarck_spoof.json()["is_creator"] is False
+    assert res_bismarck_spoof.json()["history_entries"] == []
 
     # Non-creator (Tsar Nicholas / bot_romanov)
     res_romanov = client.get(

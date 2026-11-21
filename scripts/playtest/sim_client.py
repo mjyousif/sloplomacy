@@ -20,7 +20,7 @@ Order syntax: "A PAR H" | "A PAR - BUR" | "F GAS - SPA/SC"(fleet coast) | "A BEL
   "A PAR S A MAR - BUR" | "A PAR S A MAR" (support hold) | "F NTH C A LON - BEL"
   retreats: "A LON R WAL" or "A LON D" | winter: "BUILD A VIE", "BUILD F STP/SC", "WAIVE", "DISBAND A BUD"
 """
-import base64, json, os, re, sys, urllib.error, urllib.request
+import base64, json, os, re, sys, time, urllib.error, urllib.request
 
 API = os.environ.get("SIM_API", "http://127.0.0.1:8020")
 GAME = os.environ.get("SIM_GAME", "proto_1901")
@@ -31,7 +31,7 @@ SCS = "EDI LVP LON BRE PAR MAR KIE MUN BER VEN ROM NAP VIE BUD TRI STP MOS WAR S
 
 def token(power):
     b = lambda d: base64.urlsafe_b64encode(json.dumps(d).encode()).rstrip(b"=").decode()
-    return f"{b({'alg': 'none', 'typ': 'JWT'})}.{b({'sub': 'sim_' + power.lower(), 'email': power.lower() + '@sim.test'})}."
+    return f"{b({'alg': 'none', 'typ': 'JWT'})}.{b({'sub': 'sim_' + power.lower(), 'email': power.lower() + '@sim.test', 'exp': int(time.time()) + 3600})}."
 
 
 class ApiError(Exception):

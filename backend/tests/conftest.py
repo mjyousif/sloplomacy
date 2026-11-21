@@ -15,3 +15,14 @@ def forget_wrong_passcodes():
     reset_passcode_tries()
     yield
     reset_passcode_tries()
+
+
+@pytest.fixture
+def forget_games_made_by_test():
+    """Evict the games a test creates, so tests that make many do not fill the server's capacity."""
+    from storage.store import GAMES, evict_game
+
+    before = set(GAMES)
+    yield
+    for game_id in set(GAMES) - before:
+        evict_game(game_id)

@@ -186,3 +186,91 @@ def test_save_game_to_db_strips_creator_email_and_uuid_display_name_from_both_su
             assert "display_name" not in saved_summary["participants"]["FRANCE"]
 
     asyncio.run(run_test())
+
+
+def _private_row_with_unreadable_summary(room_code="secret_room"):
+    """A private game whose stored summary no longer validates, beside columns that say 'public'.
+
+    A save never writes `is_private`, `passcode` or the seats to their own columns, so those read
+    as a public, passcode-less, empty game.
+    """
+    broken = {
+        "game_id": room_code,
+        "name": "Private",
+        "created_at": "2026-11-05T00:00:00Z",
+        "is_private": True,
+        "has_passcode": True,
+        "participants": {"FRANCE": {"user_id": "alice"}},  # Missing fields: fails validation.
+    }
+    return {
+        "room_code": room_code,
+        "name": "Private",
+        "status": "in_progress",
+        "is_private": False,
+        "game_state": {"summary": broken},
+        "summary": broken,
+    }
+
+
+def test_unreadable_stored_summary_is_withheld_not_replaced_by_a_public_one():
+    assert build_summary_from_row(_private_row_with_unreadable_summary()) is None
+
+
+def test_unreadable_stored_summary_is_logged_as_a_warning(caplog):
+    with caplog.at_level("WARNING", logger="diplomacy.database"):
+        build_summary_from_row(_private_row_with_unreadable_summary())
+
+    assert any("secret_room" in r.message and r.levelname == "WARNING" for r in caplog.records)
+
+
+def test_row_without_any_stored_summary_still_reads_from_its_columns():
+    summary = build_summary_from_row(
+        {"room_code": "legacy", "name": "Old", "status": "lobby", "is_private": True}
+    )
+
+    assert summary is not None and summary.is_private
+
+
+def test_second_readable_summary_still_wins_over_an_unreadable_one():
+    good = MultiplayerGameSummary(
+        game_id="mixed", name="Mixed", created_at="2026-11-05T00:00:00Z", is_private=True
+    )
+    row = {
+        "room_code": "mixed",
+        "game_state": {"summary": {"game_id": "mixed"}},
+        "summary": good.model_dump(mode="json"),
+    }
+
+    assert build_summary_from_row(row).is_private
+
+
+def test_loading_a_game_with_an_unreadable_summary_is_unavailable_not_public():
+    async def run_test():
+        game = build_scenario("standard_1901", Power.FRANCE, "secret_room")
+        row = _private_row_with_unreadable_summary()
+        row["game_state"] = {**row["game_state"], "state": game.model_dump(mode="json")}
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.get.return_value = httpx.Response(status_code=200, json=[row])
+        env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+        with patch.dict(os.environ, env), pytest.raises(SupabaseUnavailable):
+            await load_game_from_db("secret_room", client=mock_client)
+
+    asyncio.run(run_test())
+
+
+def test_lobby_read_marks_an_unreadable_summary_as_withheld():
+    async def run_test():
+        rows = [
+            _private_row_with_unreadable_summary(),
+            {"room_code": "fine", "name": "Fine", "status": "lobby"},
+        ]
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.get.return_value = httpx.Response(status_code=200, json=rows)
+        env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+        with patch.dict(os.environ, env):
+            summaries = await load_all_summaries_from_db(client=mock_client)
+
+        assert summaries["secret_room"] is None
+        assert summaries["fine"] is not None
+
+    asyncio.run(run_test())

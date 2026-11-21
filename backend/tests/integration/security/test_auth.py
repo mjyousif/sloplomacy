@@ -35,6 +35,23 @@ def test_local_launcher_backend_accepts_demo_sign_in(monkeypatch):
     assert res.status_code == 200
 
 
+def test_dev_sign_in_must_expire_over_http(monkeypatch):
+    import base64
+    import json
+
+    monkeypatch.setenv("ENVIRONMENT", "development")
+
+    def unsigned(claims: dict) -> dict:
+        def part(value: dict) -> str:
+            return base64.b64encode(json.dumps(value).encode()).decode()
+
+        return {"Authorization": f"Bearer {part({'alg': 'none'})}.{part(claims)}."}
+
+    for claims in ({"sub": "demo"}, {"sub": "demo", "exp": 1}):
+        res = client.get("/api/admin/status?game_id=proto_1901", headers=unsigned(claims))
+        assert res.status_code == 401, claims
+
+
 def test_local_launcher_keeps_environment_set_in_the_shell(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "production")
     assert load_quickstart().backend_env()["ENVIRONMENT"] == "production"

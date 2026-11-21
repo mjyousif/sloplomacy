@@ -30,7 +30,7 @@ from engine.phase_timer import (
     start_phase_clock,
 )
 from engine.validator.orchestrator import validate_orders
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
     sanitize_game_state_for_viewer,
@@ -45,6 +45,7 @@ from storage.store import (
     HISTORY_UNSAVED,
     PRIVATE_SANDBOXES,
     SANDBOX_CHECKPOINTS,
+    adjudication_lock,
     clear_ephemeral_sandboxes_for,
     persist_game,
     resolve_game,
@@ -102,9 +103,40 @@ def reject_stale_turn(game: GameState, turn: str | None) -> None:
         )
 
 
+def turn_label(game: GameState) -> str:
+    return f"{game.season} {game.year} {game.phase}"
+
+
 async def _execute_adjudication(
-    game: GameState, admin_entry: AdminActionLogEntry | None = None
+    game: GameState,
+    admin_entry: AdminActionLogEntry | None = None,
+    *,
+    expected_turn: str | None = None,
 ) -> GameState:
+    """Resolve the phase being played, then any phase nobody is left to wait for.
+
+    Resolving a phase persists and broadcasts, so it awaits, and a second caller could arrive
+    meanwhile. Two guards make sure a phase is resolved once and only once:
+
+    - A per-game lock admits one resolver at a time. The loop below runs inside it, so a phase
+      that follows by itself never needs to take the lock again.
+    - `expected_turn` is the turn label the caller decided to resolve (default: the one on the
+      board when it called). A caller that waited for the lock while another resolved that turn
+      finds the board has moved on and does nothing, rather than resolving the next turn too.
+      A caller that awaits anything between deciding and calling passes the label it decided on.
+    """
+    expected = expected_turn or turn_label(game)
+    async with adjudication_lock(game.game_id):
+        if turn_label(game) != expected:
+            return game
+        await _resolve_phase(game, admin_entry)
+        while everyone_is_ready(game):
+            await _resolve_phase(game)
+    return game
+
+
+async def _resolve_phase(game: GameState, admin_entry: AdminActionLogEntry | None = None) -> None:
+    """Resolve the current phase. Only `_execute_adjudication` calls it, holding the game's lock."""
     gid = game.game_id
 
     if game.winner:
@@ -175,9 +207,6 @@ async def _execute_adjudication(
     await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
     await broadcast_lobby_update()
-    if everyone_is_ready(game):
-        return await _execute_adjudication(game)
-    return game
 
 
 async def tick_timer(game: GameState) -> None:
@@ -348,20 +377,17 @@ async def adjudicate_and_advance(
     # The turn the caller meant to resolve. A second click arrives after it resolved and is refused.
     turn: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
-    x_user_id: str | None = Header(default=None),
-    x_user_email: str | None = Header(default=None),
 ):
     game = await resolve_game(game_id)
     gid = game.game_id
 
     admin_entry: AdminActionLogEntry | None = None
     if gid != DEFAULT_GAME_ID:
+        # Runs for every game but the default board, so one with no summary is refused too.
+        verify_admin_access(gid, current_user)
         summary = GAME_SUMMARIES.get(gid)
         if summary and not summary.is_sandbox:
-            verify_admin_access(gid, current_user)
-            actor_email, actor_id = resolve_admin_actor(
-                gid, current_user, None, None, x_user_id, x_user_email
-            )
+            actor_email, actor_id = resolve_admin_actor(gid, current_user)
             prev_label = f"{game.season} {game.year} {game.phase}"
             admin_entry = create_admin_log_entry(
                 gid,
