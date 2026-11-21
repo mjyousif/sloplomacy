@@ -61,7 +61,6 @@ export function App() {
     clearPendingOrders,
     fetchGame,
     fetchGamesList,
-    fetchMyGames,
   } = session;
   const {
     authUser,
