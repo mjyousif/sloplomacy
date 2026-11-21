@@ -1,12 +1,14 @@
 import type React from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { ConfirmOptions } from '../components/modal/ConfirmModal';
+import { signOutUser } from '../lib/supabase';
 import type { AuthUser, MultiplayerGameSummary } from '../types/diplomacy';
 import { myPowerIn } from '../utils/heroGame';
 import type { ViewMode } from '../utils/viewMode';
 import type { useSeatActions } from './useSeatActions';
 
 export interface BoardExitsOptions {
+  viewMode: ViewMode;
   setViewMode: Dispatch<SetStateAction<ViewMode>>;
   authUser: AuthUser | null;
   seats: ReturnType<typeof useSeatActions>;
@@ -17,23 +19,26 @@ export interface BoardExitsOptions {
     event?: { shiftKey?: boolean } | null,
   ) => Promise<boolean>;
   closeAdminTools: () => void;
+  triggerToast: (msg: string) => void;
   goLive: () => void;
   handleLoadScenario: (scenario: string) => Promise<void>;
   fetchGamesList: () => void;
 }
 
 /**
- * The ways off the board on show: back to the lobby, into the Solo Sandbox, to another game
+ * The ways off the board on show: sign out, back to the lobby, into the Solo Sandbox, to another game
  * or the previous one, and resetting or deleting a sandbox. Each asks first while Edit Board
  * changes are still staged, and closes the admin tools.
  */
 export function useBoardExits({
+  viewMode,
   setViewMode,
   authUser,
   seats,
   confirmIfDirty,
   confirm,
   closeAdminTools,
+  triggerToast,
   goLive,
   handleLoadScenario,
   fetchGamesList,
@@ -45,6 +50,13 @@ export function useBoardExits({
     setViewMode('lobby');
     fetchGamesList();
     return true;
+  };
+  /** Signs out, which also drops a multiplayer board to the lobby. */
+  const handleSignOut = async () => {
+    seats.clearPreviousGame();
+    await signOutUser();
+    if (viewMode === 'multiplayer') setViewMode('lobby');
+    triggerToast('Signed out — now in Guest Mode.');
   };
   const guardedEnterSoloSandbox = async (event?: React.MouseEvent) => {
     if (!(await confirmIfDirty('open the Solo Sandbox'))) return;
@@ -93,6 +105,7 @@ export function useBoardExits({
 
   return {
     handleBackToLobby,
+    handleSignOut,
     guardedEnterSoloSandbox,
     guardedResetSandbox,
     guardedDeleteSandbox,
