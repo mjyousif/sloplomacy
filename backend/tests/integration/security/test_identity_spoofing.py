@@ -39,7 +39,6 @@ def test_headers_naming_the_host_do_not_make_a_stranger_the_admin():
             },
         ),
         (f"/api/adjudicate?game_id={gid}", None),
-        (f"/api/admin/unfinalize-all?game_id={gid}", None),
     ):
         res = client.post(path, json=body, headers=spoofed)
         assert res.status_code == 403, (path, res.status_code)

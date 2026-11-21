@@ -179,7 +179,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - `orders.py`: Move/retreat/build order submission, atomic batch updates, and order confirmation.
   - `turns.py`: Finalization, turn adjudication, phase timer voting, and extension requests.
   - `sandbox.py`: Sandbox sessions, speculative simulation, and scenario loading.
-  - `admin.py`: Creator/admin turn controls (status, rollback, set-turn, unfinalize-all, acknowledge, test seeding).
+  - `admin.py`: Creator/admin turn controls (status, rollback, set-turn, acknowledge, test seeding).
   - `admin_units.py`: Creator/admin Direct-Edit board commit (`board-edit`: units, ownership and orders in one batch with optimistic concurrency).
   - `admin_utils.py`: Admin audit log recording (`AdminActionLogEntry`), consolidated `"Admin"` phase snapshots in `GAME_HISTORY`, and before/after diff order generation.
   - `history.py`: Read-only turn history for the turn selector (resolved phases and their records).

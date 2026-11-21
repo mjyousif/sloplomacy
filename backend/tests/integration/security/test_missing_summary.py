@@ -37,7 +37,6 @@ def test_orphan_cannot_be_administered_by_anyone(orphan):
         for path, body in (
             (f"/api/adjudicate?game_id={orphan}", None),
             (f"/api/admin/rollback?game_id={orphan}", None),
-            (f"/api/admin/unfinalize-all?game_id={orphan}", None),
             (
                 f"/api/admin/set-turn?game_id={orphan}",
                 {"season": "Fall", "year": 1901, "phase": "Movement"},

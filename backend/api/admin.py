@@ -314,39 +314,6 @@ async def admin_set_turn(
 
 
 @router.post(
-    "/api/admin/unfinalize-all",
-    response_model=GameState,
-    summary="Unfinalize All Powers",
-    description="Unlock and unfinalize orders for all Great Powers simultaneously (creator only).",
-)
-async def admin_unfinalize_all(
-    game_id: str | None = Query(default=None),
-    current_user: AuthUser | None = Depends(get_current_user),
-):
-    """Unlock and unfinalize orders for all Great Powers (Creator Only)."""
-    gid = game_id or DEFAULT_GAME_ID
-    game = await resolve_game(gid)
-    verify_admin_access(gid, current_user)
-
-    before_state = game.model_copy(deep=True)
-    game.finalized_powers = []
-    summary_line = "[ADMIN OVERRIDE] Unlocked orders for all Great Powers."
-    game.turn_history.insert(0, summary_line)
-    refresh_diagnostics_and_simulation(game)
-
-    actor_id = resolve_admin_actor(gid, current_user)
-    await ensure_profile_loaded(actor_id)
-    await record_admin_history_and_log(
-        gid,
-        before_state,
-        game,
-        [summary_line],
-        actor_id=actor_id,
-    )
-    return with_sanitized_admin_log(game, current_user)
-
-
-@router.post(
     "/api/admin/acknowledge",
     summary="Acknowledge Admin Actions",
     description="Mark admin action log entries as acknowledged for the current player.",

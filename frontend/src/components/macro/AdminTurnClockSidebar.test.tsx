@@ -174,7 +174,7 @@ describe('AdminTurnClockSidebar', () => {
     );
   });
 
-  it('unlocks all power orders and shows an error banner on server failure', async () => {
+  it('shows an error banner on server failure', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) => {
@@ -196,7 +196,7 @@ describe('AdminTurnClockSidebar', () => {
     );
 
     const { settings, user } = setup();
-    await user.click(screen.getByRole('button', { name: 'Unlock All Orders' }));
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
     expect(await screen.findByText('Permission denied')).toBeInTheDocument();
     expect(settings.onStateUpdated).not.toHaveBeenCalled();
   });

@@ -79,7 +79,6 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `GET` | `/api/admin/status` | Query creator permissions and rollback snapshot depth | *None* | `AdminStatusResponse` |
 | `POST` | `/api/admin/rollback` | Revert game state to pre-adjudication timeline snapshot | `AdminRollbackRequest` | `GameState` |
 | `POST` | `/api/admin/set-turn` | Arbitrarily jump season, year, or phase | `AdminSetTurnRequest` | `GameState` |
-| `POST` | `/api/admin/unfinalize-all` | Unlock and unfinalize orders for all 7 powers | *None* | `GameState` |
 | `POST` | `/api/admin/board-edit` | Atomically commit staged Direct-Edit board changes with concurrency check | `AdminBoardEditRequest` | `GameState` |
 | `POST` | `/api/admin/acknowledge` | Acknowledge admin action log entries for the calling viewer | `AdminAcknowledgeRequest` | `GameState` |
 
@@ -674,11 +673,6 @@ Jumps the game directly to an arbitrary season, year, or phase. The turn must be
   "phase": "Movement"
 }
 ```
-
----
-
-### 18. `POST /api/admin/unfinalize-all`
-Unlocks and unfinalizes order submissions across all 7 Great Powers simultaneously.
 
 ---
 
