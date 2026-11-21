@@ -105,6 +105,14 @@ export ENVIRONMENT=development      # macOS/Linux
 $env:ENVIRONMENT = "development"    # Windows PowerShell
 ```
 
+#### Regenerating the Python lock
+`backend/requirements-runtime.txt` holds the hand-edited version ranges. The Docker image installs `backend/requirements-runtime.lock` instead: every package and its dependencies pinned with hashes (`pip install --require-hashes`), so two builds of one commit install the same files. After changing a range, or to take newer releases, regenerate it on Python 3.11 (the image's version) with pip-tools installed:
+```bash
+./scripts/lock-requirements.sh            # keep pins, add what changed
+./scripts/lock-requirements.sh --upgrade  # newest versions the ranges allow
+```
+The script refuses another Python version, because a lock made elsewhere can miss the dependencies only 3.11 pulls in. Commit the `.lock` with the change. `requirements.txt` and `requirements-dev.txt` (tests, linters) are not locked.
+
 ### 2. Frontend Application (`frontend/`)
 ```bash
 cd frontend
