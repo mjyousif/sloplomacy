@@ -78,7 +78,6 @@ describe('useSeatActions: surrender and leave', () => {
       body: {
         power: 'FRANCE',
         user_id: 'u1',
-        email: 'u1@example.test',
         leave: false,
       },
     });
@@ -160,7 +159,7 @@ describe('useSeatActions: surrender and leave', () => {
     expect(sent()).toEqual({
       url: '/api/games/mp%201/leave',
       method: 'POST',
-      body: { power: 'FRANCE', user_id: 'u1', email: 'u1@example.test' },
+      body: { power: 'FRANCE', user_id: 'u1' },
     });
     expect(here.setViewMode).not.toHaveBeenCalled();
     expect(here.triggerToast).toHaveBeenCalledWith('Left campaign.');

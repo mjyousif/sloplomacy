@@ -215,7 +215,6 @@ export function useSeatActions({
           name,
           creator_power: power,
           user_id: authUser.id,
-          email: authUser.email ?? undefined,
           display_name: authUser.displayName,
           is_private: Boolean(isPrivate),
           passcode: passcode?.trim() || null,
@@ -261,7 +260,6 @@ export function useSeatActions({
           body: JSON.stringify({
             power,
             user_id: authUser.id,
-            email: authUser.email ?? undefined,
             display_name: authUser.displayName,
             passcode: passcode?.trim() || null,
           }),
@@ -346,7 +344,6 @@ export function useSeatActions({
           body: JSON.stringify({
             power,
             user_id: authUser.id,
-            email: authUser.email ?? undefined,
             leave,
           }),
         },
@@ -396,7 +393,6 @@ export function useSeatActions({
           body: JSON.stringify({
             power,
             user_id: authUser.id,
-            email: authUser.email ?? undefined,
           }),
         },
       );

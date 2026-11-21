@@ -83,8 +83,8 @@ def test_sockets_of_one_power_each_get_only_their_own_acknowledgements():
 
     a, b, nobody = FakeSocket(), FakeSocket(), FakeSocket()
     manager = ConnectionManager()
-    manager.register_game("bc_ack", a, None, ("user-a", "a@x.com"))
-    manager.register_game("bc_ack", b, None, ("user-b", "b@x.com"))
+    manager.register_game("bc_ack", a, None, ("user-a",))
+    manager.register_game("bc_ack", b, None, ("user-b",))
     manager.register_game("bc_ack", nobody, None)
 
     original = cm.sanitize_game_state_for_viewer
@@ -97,8 +97,8 @@ def test_sockets_of_one_power_each_get_only_their_own_acknowledgements():
     def acked(ws):
         return ws.sent[0]["state"]["admin_log"][0]["acknowledged_by"]
 
-    assert acked(a) == ["user-a", "a@x.com", "GERMANY", "guest"]
-    assert acked(b) == ["user-b", "b@x.com", "GERMANY", "guest"]
+    assert acked(a) == ["user-a", "GERMANY", "guest"]
+    assert acked(b) == ["user-b", "GERMANY", "guest"]
     assert acked(nobody) == ["GERMANY", "guest"]
     assert calls == [None]  # still masked once for the one viewing power
 

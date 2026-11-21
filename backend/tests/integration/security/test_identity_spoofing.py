@@ -68,7 +68,9 @@ def test_admin_log_names_the_token_holder_not_a_header_or_body_claim():
     )
     assert res.status_code == 200
     entry = GAMES[gid].admin_log[-1]
-    assert entry.actor == "alice"
+    assert entry.actor_id == ALICE_ID
+    assert entry.actor == ""
+    assert res.json()["admin_log"][-1]["actor"] == "Envoy"
     assert BOB_ID not in entry.acknowledged_by
 
 

@@ -66,6 +66,11 @@ def test_compute_admin_orders_diff():
     assert orders["GER_A_BER"].target == "MUN"
 
 
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
+
 @pytest.mark.anyio
 async def test_record_admin_history_and_log_consolidation(base_game):
     gid = base_game.game_id
@@ -78,12 +83,12 @@ async def test_record_admin_history_and_log_consolidation(base_game):
         before_state=before_1,
         after_state=base_game,
         summary_lines=["[ADMIN OVERRIDE] Relocated GER A BER to MUN."],
-        actor="commander@diplomacy.eu",
         actor_id="user_admin_1",
     )
 
     assert len(base_game.admin_log) == 1
     assert "user_admin_1" in base_game.admin_log[0].acknowledged_by
+    assert base_game.admin_log[0].actor_id == "user_admin_1"
     assert len(GAME_HISTORY[gid]) == 1
     snap1 = GAME_HISTORY[gid][0]
     assert snap1.phase == "Admin"
@@ -104,7 +109,6 @@ async def test_record_admin_history_and_log_consolidation(base_game):
         before_state=before_2,
         after_state=base_game,
         summary_lines=["[ADMIN OVERRIDE] Destroyed ENG F in LON."],
-        actor="commander@diplomacy.eu",
         actor_id="user_admin_1",
     )
 

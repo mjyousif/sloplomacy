@@ -200,7 +200,6 @@ describe('useSeatActions: creating and joining', () => {
       name: 'G',
       creator_power: 'FRANCE',
       user_id: 'u1',
-      email: 'u1@example.test',
       display_name: 'Ada',
       is_private: false,
       passcode: null,
@@ -282,7 +281,6 @@ describe('useSeatActions: creating and joining', () => {
       body: {
         power: 'FRANCE',
         user_id: 'u1',
-        email: 'u1@example.test',
         display_name: 'Ada',
         passcode: 'k',
       },
@@ -369,7 +367,6 @@ describe('useSeatActions: creating and joining', () => {
       body: {
         power: 'ITALY',
         user_id: 'u1',
-        email: 'u1@example.test',
         display_name: 'Ada',
         passcode: 'secret',
       },

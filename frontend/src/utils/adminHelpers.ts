@@ -75,26 +75,11 @@ export function checkIsGameCreator(
     return true;
   }
   if (user) {
-    if (gameSummary.creator_id && gameSummary.creator_id === user.id) {
-      return true;
-    }
-    if (
-      gameSummary.created_by &&
-      user.email &&
-      gameSummary.created_by.toLowerCase() === user.email.toLowerCase()
-    ) {
-      return true;
-    }
-  } else {
-    if (
-      gameSummary.creator_id === 'guest' ||
-      (gameSummary.created_by &&
-        gameSummary.created_by.toLowerCase().includes('guest'))
-    ) {
-      return true;
-    }
+    return Boolean(
+      gameSummary.creator_id && gameSummary.creator_id === user.id,
+    );
   }
-  return false;
+  return gameSummary.creator_id === 'guest';
 }
 
 export function canPlaceUnitTypeInProvince(
@@ -196,7 +181,6 @@ export function getUnacknowledgedAdminEntries(
   }
   const viewerTokens = [
     authUser?.id,
-    authUser?.email,
     lockedPower,
     !authUser && !lockedPower ? 'guest' : null,
   ].filter((t): t is string => Boolean(t));

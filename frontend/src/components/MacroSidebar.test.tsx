@@ -728,7 +728,6 @@ describe('MacroSidebar sheet', () => {
                   { index: 0, season: 'Spring', year: 1901, phase: 'Movement' },
                   { index: 1, season: 'Fall', year: 1901, phase: 'Movement' },
                 ],
-                creator_email: 'commander@diplomacy.local',
                 creator_id: 'guest',
               }),
               { status: 200 },

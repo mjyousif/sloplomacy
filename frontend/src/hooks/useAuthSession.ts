@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getInitialAuthUser, subscribeToAuthChanges } from '../lib/supabase';
 import type { AuthUser } from '../types/diplomacy';
 
@@ -10,7 +10,7 @@ export type AuthModalTab = 'signin' | 'signup';
  * Supabase) another one.
  */
 export function useAuthSession() {
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authUser, setAuthUserState] = useState<AuthUser | null>(null);
   // The first read is done (even if it failed), so `authUser` can be trusted.
   const [authReady, setAuthReady] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
@@ -21,27 +21,27 @@ export function useAuthSession() {
     useState<boolean>(false);
   const promptedUserIdRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    const handleUser = (u: AuthUser | null) => {
-      setAuthUser(u);
-      if (u?.needsUsernameSetup && promptedUserIdRef.current !== u.id) {
-        promptedUserIdRef.current = u.id;
-        setAccountModalOnboarding(true);
-        setAccountModalOpen(true);
-      } else if (!u) {
-        promptedUserIdRef.current = null;
-        setAccountModalOpen(false);
-        setAccountModalOnboarding(false);
-      }
-    };
+  const applyAuthUser = useCallback((u: AuthUser | null) => {
+    setAuthUserState(u);
+    if (u?.needsUsernameSetup && promptedUserIdRef.current !== u.id) {
+      promptedUserIdRef.current = u.id;
+      setAccountModalOnboarding(true);
+      setAccountModalOpen(true);
+    } else if (!u) {
+      promptedUserIdRef.current = null;
+      setAccountModalOpen(false);
+      setAccountModalOnboarding(false);
+    }
+  }, []);
 
+  useEffect(() => {
     getInitialAuthUser()
-      .then(handleUser)
+      .then(applyAuthUser)
       .catch(() => {})
       .finally(() => setAuthReady(true));
-    const unsub = subscribeToAuthChanges(handleUser);
+    const unsub = subscribeToAuthChanges(applyAuthUser);
     return () => unsub();
-  }, []);
+  }, [applyAuthUser]);
 
   /** Opens the sign-in modal, with a banner saying why when an action needs an account. */
   const openAuthPrompt = (reason?: string, tab: AuthModalTab = 'signin') => {
@@ -59,7 +59,7 @@ export function useAuthSession() {
   return {
     authUser,
     authReady,
-    setAuthUser,
+    setAuthUser: applyAuthUser,
     authModalOpen,
     setAuthModalOpen,
     authModalReason,

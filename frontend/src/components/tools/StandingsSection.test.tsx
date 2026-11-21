@@ -207,7 +207,6 @@ describe('StandingsSection: choosing a power', () => {
 describe('StandingsSection: players and status', () => {
   const participant = (power: Power, name: string): GameParticipant => ({
     user_id: 'u',
-    email: 'e',
     display_name: name,
     power,
     joined_at: '',
@@ -298,7 +297,6 @@ describe('StandingsSection: players and status', () => {
 describe('StandingsSection: press recipients', () => {
   const seat = (power: Power): GameParticipant => ({
     user_id: power,
-    email: 'e',
     display_name: power,
     power,
     joined_at: '',

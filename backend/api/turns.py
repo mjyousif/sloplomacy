@@ -37,7 +37,9 @@ from security.secrecy import (
     verify_admin_access,
     verify_power_authorization,
     viewer_power_for,
+    with_sanitized_admin_log,
 )
+from storage.profiles import ensure_profile_loaded
 from storage.store import (
     DEFAULT_GAME_ID,
     GAME_HISTORY,
@@ -246,10 +248,7 @@ async def require_timer_player(
         part = summary.participants.get(power.value)
         if part:
             if current_user:
-                if part.user_id != current_user.user_id and (
-                    not current_user.email
-                    or current_user.email.lower() != (part.email or "").lower()
-                ):
+                if part.user_id != current_user.user_id:
                     raise HTTPException(
                         status_code=403, detail=f"You do not command {power.value} in this match."
                     )
@@ -387,7 +386,8 @@ async def adjudicate_and_advance(
         verify_admin_access(gid, current_user)
         summary = GAME_SUMMARIES.get(gid)
         if summary and not summary.is_sandbox:
-            actor_email, actor_id = resolve_admin_actor(gid, current_user)
+            actor_id = resolve_admin_actor(gid, current_user)
+            await ensure_profile_loaded(actor_id)
             prev_label = f"{game.season} {game.year} {game.phase}"
             admin_entry = create_admin_log_entry(
                 gid,
@@ -395,12 +395,13 @@ async def adjudicate_and_advance(
                 year=game.year,
                 phase=game.phase,
                 summary_lines=[f"[ADMIN OVERRIDE] Force-resolved {prev_label} Phase."],
-                actor=actor_email,
                 actor_id=actor_id,
             )
 
     reject_stale_turn(game, turn)
-    return await execute_adjudication(game, admin_entry=admin_entry)
+    return with_sanitized_admin_log(
+        await execute_adjudication(game, admin_entry=admin_entry), current_user
+    )
 
 
 @router.post(

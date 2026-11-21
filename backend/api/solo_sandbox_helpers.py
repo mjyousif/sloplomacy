@@ -22,6 +22,7 @@ from security.secrecy import (
     viewer_power_for,
 )
 from storage import supabase
+from storage.profiles import ensure_profile_loaded, resolve_display_name
 from storage.store import (
     DEFAULT_GAME_ID,
     GAME_HISTORY,
@@ -29,7 +30,6 @@ from storage.store import (
     GAMES,
     HISTORY_UNSAVED,
     PRIVATE_SANDBOXES,
-    PROFILE_NAMES,
     SANDBOX_CHECKPOINTS,
     check_game_capacity,
     evict_game,
@@ -41,7 +41,7 @@ from storage.store import (
 
 
 def _draft_belongs_to_user(summary: MultiplayerGameSummary, user: AuthUser) -> bool:
-    return is_creator(summary, user.user_id, user.email)
+    return is_creator(summary, user.user_id)
 
 
 def _build_solo_draft_summary(
@@ -52,10 +52,7 @@ def _build_solo_draft_summary(
 ) -> MultiplayerGameSummary:
     now_iso = datetime.now(timezone.utc).isoformat()
     effective_user_id = current_user.user_id if current_user else "guest"
-    effective_email = (
-        (current_user.email or "guest@diplomacy.local") if current_user else "guest@diplomacy.local"
-    )
-    display_name = PROFILE_NAMES.get(effective_user_id) or "Envoy"
+    display_name = resolve_display_name(effective_user_id)
     return MultiplayerGameSummary(
         game_id=gid,
         name=f"Draft Tactical Sandbox ({game_state.season} {game_state.year})",
@@ -63,13 +60,12 @@ def _build_solo_draft_summary(
         season=game_state.season,
         year=game_state.year,
         phase=game_state.phase,
-        created_by=effective_email,
+        created_by="",
         creator_id=effective_user_id,
         created_at=now_iso,
         participants={
             active_power.value: GameParticipant(
                 user_id=effective_user_id,
-                email=effective_email,
                 display_name=display_name,
                 power=active_power,
                 joined_at=now_iso,
@@ -103,7 +99,7 @@ async def try_load_draft_sandbox(
         return None
     if current_user and summary.creator_id in (None, "", "guest"):
         summary.creator_id = current_user.user_id
-        summary.created_by = current_user.email or summary.created_by
+        summary.created_by = ""
         await persist_game(gid)
     sync_summary(gid)
     return game, summary
@@ -173,6 +169,7 @@ async def export_game_to_solo_sandbox(
     if export_history:
         HISTORY_UNSAVED.add(gid)
 
+    await ensure_profile_loaded(current_user.user_id if current_user else None)
     summary = _build_solo_draft_summary(gid, game_state, export_power, current_user)
     GAME_SUMMARIES[gid] = summary
     await persist_game(gid)
@@ -236,6 +233,7 @@ async def create_or_resume_solo_sandbox(
     SANDBOX_CHECKPOINTS[gid] = None
     GAME_HISTORY[gid] = []
 
+    await ensure_profile_loaded(current_user.user_id if current_user else None)
     summary = _build_solo_draft_summary(gid, game_state, Power.FRANCE, current_user)
     GAME_SUMMARIES[gid] = summary
     await persist_game(gid)

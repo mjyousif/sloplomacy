@@ -17,7 +17,8 @@ def test_unsigned_token_with_a_future_expiry_names_its_user():
         _unsigned({"sub": "demo", "email": "demo@example.com", "exp": int(time.time()) + 60})
     )
 
-    assert (user.user_id, user.email, user.is_authenticated) == ("demo", "demo@example.com", True)
+    assert (user.user_id, user.is_authenticated) == ("demo", True)
+    assert not hasattr(user, "email")
 
 
 def test_unsigned_token_without_an_expiry_is_refused():

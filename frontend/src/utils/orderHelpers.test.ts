@@ -437,7 +437,6 @@ describe('formatOrderSummary', () => {
 describe('getConsensusStatusInfo', () => {
   const francePart: GameParticipant = {
     user_id: 'usr_fra',
-    email: 'fra@diplomacy.eu',
     display_name: 'Napoleon',
     power: 'FRANCE' as Power,
     joined_at: '2026-01-01T00:00:00Z',
@@ -445,7 +444,6 @@ describe('getConsensusStatusInfo', () => {
 
   const englandPart: GameParticipant = {
     user_id: 'usr_eng',
-    email: 'eng@diplomacy.eu',
     display_name: 'Churchill',
     power: 'ENGLAND' as Power,
     joined_at: '2026-01-01T00:00:00Z',

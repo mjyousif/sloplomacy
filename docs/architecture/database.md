@@ -88,7 +88,7 @@ erDiagram
 ### Key Schema Design Choices
 
 - **Separate `press` JSONB column**: `multiplayer_games.press` is stored in its own column (`backend/storage/press.py`) so saving chat messages never overwrites `game_state`, and saving a turn never clobbers press messages.
-- **Authoritative Profiles (`public.profiles`)**: When persisting summaries to `multiplayer_games`, denormalized display names for registered UUID users are stripped (`backend/storage/supabase.py`). On load, `hydrate_summary_profiles` resolves current names from `public.profiles` (`PROFILE_NAMES` cache).
+- **Authoritative Profiles (`public.profiles`)**: When persisting to `multiplayer_games`, `backend/storage/supabase_codec.py` strips `created_by`, participant `email`, UUID participant `display_name`, UUID `admin_log.actor`, and any `@` tokens from `summary`, `game_state`, and `history`. On load and viewer sanitization, `backend/storage/profiles.py` resolves display names strictly from `public.profiles` (`PROFILE_NAMES[user_id]` cache, defaulting to `"Envoy"`). The `handle_new_user()` trigger rejects email-like metadata and defaults new profiles to `'Envoy'`.
 - **Optimistic Concurrency (`state_revision`)**: Incremented on mutations and checked by admin board-edit operations (`backend/api/admin_units.py`) to prevent stale overwrites.
 - **Sanitized View (`public.lobby_games`)**: Excludes `game_state`, `history`, `press`, and plaintext `passcode` (exposing `has_passcode` boolean instead), and filters out sandboxes and private games.
 
@@ -98,9 +98,9 @@ For the full field-by-field schema of each model, see [Data Models & Contracts](
 
 | Column | Stored JSON Shape | Persistence & Stripping Rules |
 | :--- | :--- | :--- |
-| `game_state` | `{ "state": GameState, "summary": MultiplayerGameSummary, "passcode": string \| null }` | `unit_options` (`DERIVED_STATE_FIELDS`) is excluded and rebuilt on load; `preview` is never saved (`null`, rebuilt per viewer). `state.admin_log` stores admin audit entries. |
-| `summary` | `MultiplayerGameSummary` (metadata, `participants`, `finalized_powers`, `surrendered_powers`, `board` preview, `deadline`) | For registered UUID users, `created_by` and `participants[*].display_name` are stripped on save and hydrated from `public.profiles` on load. |
-| `history` | `GameState[]` (resolved phase snapshots + `phase: "Admin"` snapshots with `admin_resolution`, oldest first) | `unit_options` is excluded from each snapshot. Saving with `history=None` leaves existing DB history untouched. |
+| `game_state` | `{ "state": GameState, "summary": MultiplayerGameSummary, "passcode": string \| null }` | `unit_options` (`DERIVED_STATE_FIELDS`) is excluded and rebuilt on load; `preview` is never saved (`null`, rebuilt per viewer). `state.admin_log` stores `actor_id` (UUID `actor` strings and `@` tokens are stripped on save and resolved from `public.profiles` on read). |
+| `summary` | `MultiplayerGameSummary` (metadata, `participants`, `finalized_powers`, `surrendered_powers`, `board` preview, `deadline`) | `created_by`, participant `email`, and UUID `participants[*].display_name` are stripped on save and resolved from `public.profiles` (`PROFILE_NAMES`) on read. |
+| `history` | `GameState[]` (resolved phase snapshots + `phase: "Admin"` snapshots with `admin_resolution`, oldest first) | `unit_options` is excluded and `admin_log` is sanitized identically to `game_state.state`. Saving with `history=None` leaves existing DB history untouched. |
 | `press` | `PressMessage[]` (in-game chat messages, oldest first: `id`, `seq`, `numbers`, `sender`, `anonymous`, `recipients`, `body`, `orders`, `sent_at`, `season`, `year`, `phase`) | Written independently by `backend/storage/press.py` so chat saves and turn saves never overwrite each other. |
 
 ---

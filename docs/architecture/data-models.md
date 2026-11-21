@@ -258,7 +258,7 @@ interface PreviewUnit {
 
 *Note on `last_moved_at`*: `execute_adjudication` sets it each time a phase resolves. It is saved inside the summary in `game_state`, so it needs no column.
 
-*Note on `created_by` and `PROFILE_NAMES`*: `created_by` defaults to `""` and is stripped for UUID creators when persisting to Supabase so creator emails are never stored in `summary` or `game_state.summary`. On read and viewer sanitization, `PROFILE_NAMES[creator_id]` (from `public.profiles`) is authoritative; if `PROFILE_NAMES` is unavailable, `public_host_name` falls back to non-email `created_by` or `"Unknown host"`, and participant `display_name` falls back to `"Envoy"`.
+*Note on `created_by` and `PROFILE_NAMES`*: `created_by` is never persisted to Supabase (`_serialize_summary_for_db`) and never stores an email address. On read and viewer sanitization, `resolve_host_name` / `resolve_participant_name` (`backend/storage/profiles.py`) resolve registered UUID users strictly from `PROFILE_NAMES[user_id]` (`public.profiles`), defaulting to `"Envoy"` when missing (or `"Unknown host"` when no `creator_id` is recorded). Email local-parts are never extracted.
 
 ### `LobbyGameRow` and `LobbyBrowsePage`
 One public match in `GET /api/games/browse`, and a page of them. A row names players by display name only, never by email or user id.
@@ -292,21 +292,21 @@ Represents an enrolled player commanding a nation in a multiplayer match.
 ```typescript
 interface GameParticipant {
   user_id: string;
-  email: string;
   display_name: string;
   power: Power;
   joined_at: string;
   surrendered?: boolean;
   surrendered_at?: string | null;
+  game_over_seen_at?: string | null;
 }
 ```
 
 ### Request Models:
-- `CreateGameRequest`: `{ name, creator_power, user_id, email, display_name?, is_private?, passcode? }`
-- `JoinGameRequest`: `{ power, user_id, email, display_name?, passcode? }`
-- `LeaveGameRequest`: `{ user_id, email?, power? }`
-- `SurrenderRequest`: `{ power, user_id, email?, leave: boolean }`
-- `SaveSandboxRequest`: `{ name, user_id, email, display_name? }`
+- `CreateGameRequest`: `{ name, creator_power, user_id, display_name?, is_private?, passcode? }`
+- `JoinGameRequest`: `{ power, user_id, display_name?, passcode? }`
+- `LeaveGameRequest`: `{ user_id, power? }`
+- `SurrenderRequest`: `{ power, user_id, leave: boolean }`
+- `SaveSandboxRequest`: `{ name, user_id, display_name? }`
 - `SingleOrderUpdateRequest`: `{ order, active_power?, turn? }`
 - `FinalizeRequest`: `{ power, force?, turn? }`
 - `TimerVoteRequest`: `{ power, choice: TimerChoice }`
@@ -334,7 +334,6 @@ Backend (`backend/domain/requests.py`, returned by `security/auth.py`):
 ```python
 class AuthUser(BaseModel):
     user_id: str
-    email: Optional[str] = None
     is_authenticated: bool = True
 ```
 
@@ -357,9 +356,9 @@ interface DisplayPrefs {
 
 Used by the match creator to arbitrate games and perform scenario testing. In multiplayer games, all mutating admin actions require cryptographic Supabase JWT verification (`Authorization: Bearer <token>`):
 
-- `AdminStatusResponse`: `{ is_creator, can_rollback, history_count, creator_email, creator_id }`
-- `AdminRollbackRequest`: `{ user_id?, email? }` *(Identity verified via JWT Bearer token)*
-- `AdminSetTurnRequest`: `{ season, year, phase, user_id?, email? }`
+- `AdminStatusResponse`: `{ is_creator, can_rollback, history_count, history_entries, creator_id }`
+- `AdminRollbackRequest`: `{ snapshot_index? }` *(Identity verified via JWT Bearer token)*
+- `AdminSetTurnRequest`: `{ season, year, phase }` *(Identity verified via JWT Bearer token)*
 
 
 ---

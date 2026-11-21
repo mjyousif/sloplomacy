@@ -424,13 +424,12 @@ async def seed_dev_games() -> None:
             season=state.season,
             year=state.year,
             phase=state.phase,
-            created_by="sultan@diplomacy.local",
+            created_by="",
             creator_id="bot_sultan",
             created_at=now_iso,
             participants={
                 "TURKEY": GameParticipant(
                     user_id="bot_sultan",
-                    email="sultan@diplomacy.local",
                     display_name="Sultan Mehmed",
                     power=Power.TURKEY,
                     joined_at=now_iso,
@@ -461,13 +460,12 @@ async def seed_dev_games() -> None:
             season=state.season,
             year=state.year,
             phase=state.phase,
-            created_by="cartographer@diplomacy.local",
+            created_by="",
             creator_id="bot_cartographer",
             created_at=now_iso,
             participants={
                 "AUSTRIA": GameParticipant(
                     user_id="bot_cartographer",
-                    email="cartographer@diplomacy.local",
                     display_name="Chief Cartographer",
                     power=Power.AUSTRIA,
                     joined_at=now_iso,

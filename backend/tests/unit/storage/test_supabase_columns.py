@@ -150,11 +150,25 @@ def test_lobby_outage_is_not_retried_as_a_refused_query():
     asyncio.run(run_test())
 
 
-def test_save_game_to_db_strips_creator_email_and_uuid_display_name_from_both_summaries():
+def test_save_game_to_db_strips_creator_email_uuid_names_and_admin_log_emails():
+    from domain.game_state import AdminActionLogEntry
     from storage.supabase import save_game_to_db
 
     uid = "11111111-1111-1111-1111-111111111111"
     state = build_scenario("standard_1901", Power.FRANCE, "save_strip")
+    state.admin_log = [
+        AdminActionLogEntry(
+            id="log1",
+            timestamp="2026-11-05T00:00:00Z",
+            actor_id=uid,
+            actor="secret@example.com",
+            season="Spring",
+            year=1901,
+            phase="Movement",
+            summary_lines=["[ADMIN OVERRIDE] Edit"],
+            acknowledged_by=[uid, "secret@example.com", "FRANCE"],
+        )
+    ]
     summary = MultiplayerGameSummary(
         game_id="save_strip",
         name="Strip Test",
@@ -165,7 +179,6 @@ def test_save_game_to_db_strips_creator_email_and_uuid_display_name_from_both_su
         participants={
             "FRANCE": GameParticipant(
                 user_id=uid,
-                email="secret@example.com",
                 display_name="Freetvs",
                 power=Power.FRANCE,
                 joined_at="2026-11-05T00:00:00Z",
@@ -178,14 +191,58 @@ def test_save_game_to_db_strips_creator_email_and_uuid_display_name_from_both_su
         mock_client.post.return_value = httpx.Response(status_code=201, json=[])
         env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
         with patch.dict(os.environ, env):
-            await save_game_to_db("save_strip", state, summary, client=mock_client)
+            await save_game_to_db("save_strip", state, summary, history=[state], client=mock_client)
 
         payload = mock_client.post.call_args.kwargs["json"]
         for saved_summary in (payload["summary"], payload["game_state"]["summary"]):
             assert "created_by" not in saved_summary
+            assert "email" not in saved_summary["participants"]["FRANCE"]
             assert "display_name" not in saved_summary["participants"]["FRANCE"]
+        for saved_state in (payload["game_state"]["state"], payload["history"][0]):
+            log_entry = saved_state["admin_log"][0]
+            assert "actor" not in log_entry
+            assert log_entry["actor_id"] == uid
+            assert log_entry["acknowledged_by"] == [uid, "FRANCE"]
 
     asyncio.run(run_test())
+
+
+def test_load_profile_name_from_db_ignores_emails_and_validates_uuid():
+    from storage.supabase import load_profile_name_from_db
+
+    uid = "11111111-1111-1111-1111-111111111111"
+
+    async def run_test():
+        env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.get.side_effect = [
+            httpx.Response(status_code=200, json=[{"display_name": "Talleyrand"}]),
+            httpx.Response(status_code=200, json=[{"display_name": "leak@example.com"}]),
+        ]
+        with patch.dict(os.environ, env):
+            assert await load_profile_name_from_db("not-a-uuid", client=mock_client) is None
+            assert await load_profile_name_from_db(uid, client=mock_client) == "Talleyrand"
+            assert await load_profile_name_from_db(uid, client=mock_client) is None
+
+    asyncio.run(run_test())
+
+
+def test_build_summary_from_row_backfills_creator_id_from_host_user_id():
+    uid = "11111111-1111-1111-1111-111111111111"
+    row = {
+        "room_code": "backfill",
+        "host_user_id": uid,
+        "summary": {
+            "game_id": "backfill",
+            "name": "Backfill",
+            "created_by": "secret@example.com",
+            "created_at": "2026-11-05T00:00:00Z",
+        },
+    }
+    loaded = build_summary_from_row(row)
+    assert loaded is not None
+    assert loaded.creator_id == uid
+    assert loaded.created_by == ""
 
 
 def _private_row_with_unreadable_summary(room_code="secret_room"):

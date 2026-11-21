@@ -10,12 +10,16 @@ from fastapi import Depends, HTTPException, Request, status
 from security.auth import AuthUser, get_current_user
 from security.creator import is_creator
 from security.passcode import require_passcode
+from storage.profiles import (
+    resolve_actor_name,
+    resolve_host_name,
+    resolve_participant_name,
+)
 from storage.store import (
     DEFAULT_GAME_ID,
     GAME_SUMMARIES,
     GAMES,
     PRIVATE_SANDBOXES,
-    PROFILE_NAMES,
     is_multiplayer_match,
     lacks_summary,
     resolve_game,
@@ -81,7 +85,7 @@ def verify_admin_access(
             detail="Authentication required: Provide a valid Supabase Bearer token to modify multiplayer games.",
         )
 
-    if not is_creator(summary, user.user_id, user.email):
+    if not is_creator(summary, user.user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Administrator access denied: Only the game creator can modify game state.",
@@ -101,7 +105,7 @@ def verify_power_authorization(
     if not summary:
         raise _missing_summary_error(game_id)
 
-    if current_user and is_creator(summary, current_user.user_id, current_user.email):
+    if current_user and is_creator(summary, current_user.user_id):
         return
 
     part = summary.participants.get(power.value)
@@ -113,8 +117,6 @@ def verify_power_authorization(
 
     if current_user:
         if part.user_id == current_user.user_id:
-            return
-        if part.email and current_user.email and part.email.lower() == current_user.email.lower():
             return
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -140,11 +142,7 @@ def caller_holds_seat(
     if not part:
         return False
     if current_user:
-        if part.user_id and part.user_id == current_user.user_id:
-            return True
-        return bool(
-            part.email and current_user.email and part.email.lower() == current_user.email.lower()
-        )
+        return bool(part.user_id and part.user_id == current_user.user_id)
     return not (part.user_id and is_valid_uuid(part.user_id))
 
 
@@ -178,33 +176,15 @@ def require_own_seat(game_id: str, power: Power, current_user: AuthUser | None) 
         )
 
 
-def _strip_email_domain(value: str) -> str:
-    return value.split("@", 1)[0] if "@" in value else value
-
-
 def public_host_name(summary: MultiplayerGameSummary) -> str:
     """Return the host's public display name, never an email address."""
-    if summary.creator_id and summary.creator_id in PROFILE_NAMES:
-        return _strip_email_domain(PROFILE_NAMES[summary.creator_id]) or "Envoy"
-    for p in summary.participants.values():
-        if summary.creator_id and p.user_id == summary.creator_id and p.display_name:
-            return _strip_email_domain(p.display_name)
-        if (
-            summary.created_by
-            and p.email
-            and p.email.lower() == summary.created_by.lower()
-            and p.display_name
-        ):
-            return _strip_email_domain(p.display_name)
-    if summary.created_by:
-        return _strip_email_domain(summary.created_by)
-    return "Unknown host"
+    return resolve_host_name(summary)
 
 
 def sanitize_summary_for_viewer(
     summary: MultiplayerGameSummary, keep_board: bool = False
 ) -> MultiplayerGameSummary:
-    """Return a copy of `summary` with all user email addresses stripped.
+    """Return a copy of `summary` with centralized public display names resolved.
 
     The board preview is dropped too unless `keep_board` is set, which only a player's own
     games (`GET /api/games/mine`) do: the lobby list and socket go to everyone.
@@ -212,18 +192,14 @@ def sanitize_summary_for_viewer(
     sanitized_participants = {
         key: part.model_copy(
             update={
-                "email": "",
-                "display_name": _strip_email_domain(
-                    PROFILE_NAMES.get(part.user_id) or part.display_name
-                )
-                or "Envoy",
+                "display_name": resolve_participant_name(part),
             }
         )
         for key, part in summary.participants.items()
     }
     return summary.model_copy(
         update={
-            "created_by": public_host_name(summary),
+            "created_by": resolve_host_name(summary),
             "participants": sanitized_participants,
             "board": summary.board if keep_board else None,
         }
@@ -241,10 +217,10 @@ _PUBLIC_ACK_TOKENS = frozenset({p.value for p in Power} | {"guest"})
 
 
 def viewer_ack_ids(user: AuthUser | None) -> tuple[str, ...]:
-    """The acknowledgement tokens `user` files an admin log entry under: their id and email."""
-    if not user:
+    """The acknowledgement tokens `user` files an admin log entry under: their user id."""
+    if not user or not user.user_id:
         return ()
-    return tuple(t for t in (user.user_id, user.email) if t)
+    return (user.user_id,)
 
 
 def bind_viewer(user: AuthUser | None) -> None:
@@ -255,23 +231,39 @@ def bind_viewer(user: AuthUser | None) -> None:
 def sanitize_admin_log(game: GameState, viewer_ids: Collection[str]) -> list:
     """The admin log as one viewer may see it.
 
-    An entry stores who acknowledged it under whatever identified them: a user id, an email, a
-    seat. Only the viewer's own tokens and the nameless ones (a seat, `guest`) are sent, so
-    nobody learns another player's email or id (nor does a saved game that already holds some).
+    Actors are resolved centrally from `actor_id` / `PROFILE_NAMES` (`actor_id` is stripped from
+    the outgoing entry), and `acknowledged_by` keeps only the viewer's own tokens and the
+    nameless ones (a seat, `guest`), scrubbing any legacy email tokens.
     """
     if not game.admin_log:
         return game.admin_log
     allowed = _PUBLIC_ACK_TOKENS.union(viewer_ids)
+    summary = GAME_SUMMARIES.get(game.game_id)
     entries = []
     for entry in game.admin_log:
         update: dict = {}
-        if "@" in entry.actor:
-            update["actor"] = _strip_email_domain(entry.actor)
-        kept = [t for t in entry.acknowledged_by if t in allowed]
-        if len(kept) != len(entry.acknowledged_by):
+        resolved_actor = resolve_actor_name(entry, summary)
+        if entry.actor != resolved_actor:
+            update["actor"] = resolved_actor
+        if entry.actor_id is not None:
+            update["actor_id"] = None
+        kept = [t for t in entry.acknowledged_by if t in allowed and "@" not in t]
+        if len(kept) != len(entry.acknowledged_by) or any(
+            a != b for a, b in zip(kept, entry.acknowledged_by, strict=False)
+        ):
             update["acknowledged_by"] = kept
         entries.append(entry.model_copy(update=update) if update else entry)
     return entries
+
+
+def with_sanitized_admin_log(game: GameState, user: AuthUser | None) -> GameState:
+    """Return a copy of `game` with `admin_log` sanitized for `user`, if any entry changed."""
+    if not game.admin_log:
+        return game
+    sanitized_log = sanitize_admin_log(game, viewer_ack_ids(user))
+    if any(a is not b for a, b in zip(sanitized_log, game.admin_log, strict=False)):
+        return game.model_copy(update={"admin_log": sanitized_log})
+    return game
 
 
 def sanitize_game_state_for_viewer(
@@ -344,7 +336,7 @@ def caller_owns_saved_sandbox(
     """True when the caller saved this sandbox. A guest's sandbox stays open, like a guest's seat."""
     if not is_valid_uuid(summary.creator_id):
         return True
-    return bool(current_user and is_creator(summary, current_user.user_id, current_user.email))
+    return bool(current_user and is_creator(summary, current_user.user_id))
 
 
 def require_saved_sandbox_owner(game_id: str, current_user: AuthUser | None) -> None:

@@ -30,7 +30,7 @@ def test_update_profile_requires_auth(clean_profiles):
     assert res.status_code == 401
 
 
-def test_update_profile_validates_length(clean_profiles):
+def test_update_profile_validates_length_and_rejects_at_sign(clean_profiles):
     headers = _auth_headers(user_id="user_a", email="a@test.com")
     res_short = client.patch("/api/account/profile", headers=headers, json={"display_name": " A "})
     assert res_short.status_code == 422
@@ -39,6 +39,11 @@ def test_update_profile_validates_length(clean_profiles):
         "/api/account/profile", headers=headers, json={"display_name": "X" * 25}
     )
     assert res_long.status_code == 422
+
+    res_email = client.patch(
+        "/api/account/profile", headers=headers, json={"display_name": "alice@test.com"}
+    )
+    assert res_email.status_code == 422
 
 
 def test_update_profile_syncs_all_user_games_and_lobby(clean_profiles, monkeypatch):
@@ -102,14 +107,12 @@ def test_hydrate_summary_profiles_resolves_registered_names(clean_profiles):
         participants={
             "ITALY": GameParticipant(
                 user_id="u1",
-                email="a@test.com",
                 display_name="OldName",
                 power=Power.ITALY,
                 joined_at="2026-01-01T00:00:00Z",
             ),
             "AUSTRIA": GameParticipant(
                 user_id="guest_1",
-                email="g@test.com",
                 display_name="GuestPlayer",
                 power=Power.AUSTRIA,
                 joined_at="2026-01-01T00:00:00Z",
@@ -134,14 +137,12 @@ def test_serialize_summary_for_db_strips_uuid_display_name(clean_profiles):
         participants={
             "FRANCE": GameParticipant(
                 user_id=uid,
-                email="a@test.com",
                 display_name="Talleyrand",
                 power=Power.FRANCE,
                 joined_at="2026-01-01T00:00:00Z",
             ),
             "ITALY": GameParticipant(
                 user_id="guest",
-                email="g@test.com",
                 display_name="GuestPlayer",
                 power=Power.ITALY,
                 joined_at="2026-01-01T00:00:00Z",
@@ -151,6 +152,8 @@ def test_serialize_summary_for_db_strips_uuid_display_name(clean_profiles):
 
     serialized = _serialize_summary_for_db(summary)
     assert "created_by" not in serialized
+    assert "email" not in serialized["participants"]["FRANCE"]
+    assert "email" not in serialized["participants"]["ITALY"]
     assert "display_name" not in serialized["participants"]["FRANCE"]
     assert serialized["participants"]["ITALY"]["display_name"] == "GuestPlayer"
 
@@ -210,7 +213,6 @@ def test_update_account_profile_does_not_overwrite_summary_created_by(monkeypatc
         participants={
             "FRANCE": GameParticipant(
                 user_id=uid,
-                email="u@test.com",
                 display_name="OldName",
                 power=Power.FRANCE,
                 joined_at="2026-01-01T00:00:00Z",

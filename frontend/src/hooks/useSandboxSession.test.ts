@@ -453,7 +453,6 @@ describe('useSandboxSession: saving a sandbox', () => {
       body: {
         name: 'Lepanto',
         user_id: 'u_alice',
-        email: 'alice@example.test',
         display_name: 'alice',
       },
     });

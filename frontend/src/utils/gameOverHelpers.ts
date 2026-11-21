@@ -30,13 +30,7 @@ export function getMyParticipant(
 ): GameParticipant | null {
   if (!summary || !user) return null;
   const participants = Object.values(summary.participants || {});
-  return (
-    participants.find(
-      (p) =>
-        p.user_id === user.id ||
-        (user.email && p.email?.toLowerCase() === user.email.toLowerCase()),
-    ) ?? null
-  );
+  return participants.find((p) => p.user_id === user.id) ?? null;
 }
 
 /**

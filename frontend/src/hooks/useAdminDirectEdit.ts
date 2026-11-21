@@ -373,7 +373,6 @@ export function useAdminDirectEdit({
         const viewerTokens = [
           result.acknowledged_by,
           authUser?.id,
-          authUser?.email,
           lockedPower,
           !authUser && !lockedPower ? 'guest' : null,
         ].filter((t): t is string => Boolean(t));

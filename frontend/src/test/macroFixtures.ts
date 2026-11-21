@@ -88,7 +88,6 @@ export const participant = (
   extra: Partial<GameParticipant> = {},
 ): GameParticipant => ({
   user_id: `user-${power}`,
-  email: '',
   display_name: power,
   power,
   joined_at: '',

@@ -65,7 +65,6 @@ class CreateGameRequest(BaseModel):
     name: str
     creator_power: Power
     user_id: str = "guest"
-    email: str = "player@diplomacy.local"
     display_name: str | None = None
     is_private: bool = False
     passcode: str | None = None
@@ -74,34 +73,29 @@ class CreateGameRequest(BaseModel):
 class JoinGameRequest(BaseModel):
     power: Power
     user_id: str = "guest"
-    email: str = "player@diplomacy.local"
     display_name: str | None = None
     passcode: str | None = None
 
 
 class LeaveGameRequest(BaseModel):
     user_id: str
-    email: str | None = None
     power: Power | None = None
 
 
 class SurrenderRequest(BaseModel):
     power: Power
     user_id: str
-    email: str | None = None
     leave: bool = True
 
 
 class SaveSandboxRequest(BaseModel):
     name: str
     user_id: str
-    email: str = "player@diplomacy.local"
     display_name: str | None = None
 
 
 class AuthUser(BaseModel):
     user_id: str
-    email: str | None = None
     is_authenticated: bool = True
 
 
@@ -136,7 +130,6 @@ class AdminStatusResponse(BaseModel):
     can_rollback: bool
     history_count: int
     history_entries: list[TurnHistoryEntry] = Field(default_factory=list)
-    creator_email: str
     creator_id: str | None = None
 
 

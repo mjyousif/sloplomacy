@@ -108,7 +108,6 @@ export function useSandboxSession({
           body: JSON.stringify({
             name: customName,
             user_id: authUser.id,
-            email: authUser.email ?? undefined,
             display_name: authUser.displayName,
           }),
         },

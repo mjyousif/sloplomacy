@@ -101,5 +101,137 @@ begin
   if (parts -> 'ITALY' ->> 'display_name') is distinct from 'GuestPlayer' then
     raise exception 'Expected guest participant display_name to remain GuestPlayer, got %', parts -> 'ITALY';
   end if;
+
+  -- 5. Email-like display_name metadata must default to 'Envoy', and legacy emails/actors must be stripped.
+  declare
+    u3 uuid := '33333333-3333-3333-3333-333333333333';
+    name3 text;
+    gs jsonb;
+    top_sum jsonb;
+    log_entry jsonb;
+  begin
+    insert into auth.users (id, email, raw_user_meta_data)
+    values (u3, 'secret.user@example.com', '{"display_name": "secret.user@example.com"}'::jsonb);
+
+    select display_name into name3 from public.profiles where id = u3;
+    if name3 is distinct from 'Envoy' then
+      raise exception 'Expected email display_name metadata to default to Envoy, got %', name3;
+    end if;
+
+    insert into public.multiplayer_games (room_code, name, host_user_id, status, summary, game_state, history)
+    values (
+      'mig_test_email_strip',
+      'Email Strip Game',
+      u3,
+      'in_progress',
+      jsonb_build_object(
+        'game_id', 'mig_test_email_strip',
+        'created_by', 'secret.user@example.com',
+        'creator_id', u3::text,
+        'participants', jsonb_build_object(
+          'FRANCE', jsonb_build_object(
+            'user_id', u3::text,
+            'email', 'secret.user@example.com',
+            'display_name', 'secret.user@example.com',
+            'power', 'FRANCE'
+          ),
+          'ITALY', jsonb_build_object(
+            'user_id', 'guest',
+            'email', 'guest@diplomacy.local',
+            'display_name', 'GuestEnvoy',
+            'power', 'ITALY'
+          )
+        )
+      ),
+      jsonb_build_object(
+        'summary', jsonb_build_object(
+          'game_id', 'mig_test_email_strip',
+          'created_by', 'secret.user@example.com',
+          'creator_id', u3::text,
+          'participants', jsonb_build_object(
+            'FRANCE', jsonb_build_object(
+              'user_id', u3::text,
+              'email', 'secret.user@example.com',
+              'display_name', 'SecretName',
+              'power', 'FRANCE'
+            )
+          )
+        ),
+        'state', jsonb_build_object(
+          'admin_log', jsonb_build_array(
+            jsonb_build_object(
+              'id', 'log1',
+              'actor_id', u3::text,
+              'actor', 'secret.user@example.com',
+              'acknowledged_by', jsonb_build_array(u3::text, 'secret.user@example.com', 'FRANCE')
+            )
+          )
+        )
+      ),
+      jsonb_build_array(
+        jsonb_build_object(
+          'season', 'Spring',
+          'year', 1901,
+          'phase', 'Movement',
+          'admin_log', jsonb_build_array(
+            jsonb_build_object(
+              'id', 'hlog1',
+              'actor_id', u3::text,
+              'actor', 'secret.user@example.com',
+              'acknowledged_by', jsonb_build_array(u3::text, 'secret.user@example.com', 'FRANCE')
+            )
+          )
+        )
+      )
+    );
+  end;
+end
+$$;
+
+\i supabase/migrations/20261121000000_strip_emails_and_normalize_identities.sql
+
+do $$
+declare
+  gs jsonb;
+  top_sum jsonb;
+  hist jsonb;
+  log_entry jsonb;
+  hlog_entry jsonb;
+begin
+  select game_state, summary, history into gs, top_sum, hist
+  from public.multiplayer_games
+  where room_code = 'mig_test_email_strip';
+
+  if top_sum ? 'created_by' or (gs -> 'summary') ? 'created_by' then
+    raise exception 'Expected created_by to be stripped from both summaries';
+  end if;
+  if (top_sum -> 'participants' -> 'FRANCE') ? 'email'
+     or (top_sum -> 'participants' -> 'ITALY') ? 'email'
+     or (gs -> 'summary' -> 'participants' -> 'FRANCE') ? 'email' then
+    raise exception 'Expected participant emails to be stripped';
+  end if;
+  if (top_sum -> 'participants' -> 'FRANCE') ? 'display_name'
+     or (gs -> 'summary' -> 'participants' -> 'FRANCE') ? 'display_name' then
+    raise exception 'Expected UUID participant display_name to be stripped';
+  end if;
+  if (top_sum -> 'participants' -> 'ITALY' ->> 'display_name') is distinct from 'GuestEnvoy' then
+    raise exception 'Expected guest display_name to remain GuestEnvoy';
+  end if;
+
+  log_entry := gs -> 'state' -> 'admin_log' -> 0;
+  if log_entry ? 'actor' then
+    raise exception 'Expected UUID/email actor to be stripped from admin_log, got %', log_entry;
+  end if;
+  if (log_entry -> 'acknowledged_by') @> '["secret.user@example.com"]'::jsonb then
+    raise exception 'Expected email to be stripped from acknowledged_by, got %', log_entry -> 'acknowledged_by';
+  end if;
+
+  hlog_entry := hist -> 0 -> 'admin_log' -> 0;
+  if hlog_entry ? 'actor' then
+    raise exception 'Expected UUID/email actor to be stripped from history admin_log, got %', hlog_entry;
+  end if;
+  if (hlog_entry -> 'acknowledged_by') @> '["secret.user@example.com"]'::jsonb then
+    raise exception 'Expected email to be stripped from history acknowledged_by, got %', hlog_entry -> 'acknowledged_by';
+  end if;
 end
 $$;

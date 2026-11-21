@@ -16,7 +16,8 @@ from engine.order_utils import (
 from engine.topology.provinces import PROVINCES
 from fastapi import APIRouter, Depends, HTTPException, Query
 from security.auth import AuthUser, get_current_user
-from security.secrecy import verify_admin_access
+from security.secrecy import verify_admin_access, with_sanitized_admin_log
+from storage.profiles import ensure_profile_loaded
 from storage.store import (
     DEFAULT_GAME_ID,
     resolve_game,
@@ -174,8 +175,7 @@ async def admin_batch_board_edit(
 
     refresh_diagnostics_and_simulation(game)
 
-    actor_email, actor_id = resolve_admin_actor(gid, current_user)
-    await record_admin_history_and_log(
-        gid, before_state, game, summary_lines, actor=actor_email, actor_id=actor_id
-    )
-    return game
+    actor_id = resolve_admin_actor(gid, current_user)
+    await ensure_profile_loaded(actor_id)
+    await record_admin_history_and_log(gid, before_state, game, summary_lines, actor_id=actor_id)
+    return with_sanitized_admin_log(game, current_user)

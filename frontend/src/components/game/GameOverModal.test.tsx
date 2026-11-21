@@ -57,14 +57,12 @@ const SUMMARY: MultiplayerGameSummary = {
   participants: {
     FRANCE: {
       user_id: 'u1',
-      email: 'alice@example.com',
       display_name: 'Alice',
       power: 'FRANCE',
       joined_at: '2026-11-01T00:00:00Z',
     },
     ENGLAND: {
       user_id: 'u2',
-      email: 'bob@example.com',
       display_name: 'Bob',
       power: 'ENGLAND',
       joined_at: '2026-11-01T00:00:00Z',
