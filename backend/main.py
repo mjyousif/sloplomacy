@@ -38,9 +38,9 @@ from fastapi.staticfiles import StaticFiles
 from scenarios.presets import seed_dev_games
 from security.secrecy import saved_sandbox_guard
 from storage import supabase
+from storage.profiles import PROFILE_NAMES
 from storage.store import (
     GAME_SUMMARIES,
-    PROFILE_NAMES,
     UNSAVED_GAMES,
     hydrate_summary_profiles,
     persist_game,

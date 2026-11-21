@@ -237,3 +237,48 @@ def test_update_account_profile_does_not_overwrite_summary_created_by(monkeypatc
         app.dependency_overrides.pop(get_current_user, None)
         GAME_SUMMARIES.pop("g_keep_created_by", None)
         PROFILE_NAMES.pop(uid, None)
+
+
+def test_update_account_profile_skips_redundant_game_db_write_for_uuid(clean_profiles, monkeypatch):
+    from unittest.mock import AsyncMock
+
+    from scenarios.presets import build_scenario
+    from security.auth import AuthUser, get_current_user
+    from storage.store import GAMES
+
+    uid = "55555555-5555-5555-5555-555555555555"
+    gid = "g_uuid_no_rewrite"
+    GAMES[gid] = build_scenario("standard_1901", Power.FRANCE, gid)
+    GAME_SUMMARIES[gid] = MultiplayerGameSummary(
+        game_id=gid,
+        name="UUID Rename Test",
+        created_by="",
+        creator_id=uid,
+        created_at="2026-01-01T00:00:00Z",
+        participants={
+            "FRANCE": GameParticipant(
+                user_id=uid,
+                display_name="OldName",
+                power=Power.FRANCE,
+                joined_at="2026-01-01T00:00:00Z",
+            )
+        },
+    )
+
+    upsert_mock = AsyncMock(return_value=True)
+    save_mock = AsyncMock(return_value=True)
+    monkeypatch.setattr("storage.supabase.is_persistence_enabled", lambda: True)
+    monkeypatch.setattr("storage.supabase.upsert_profile_display_name", upsert_mock)
+    monkeypatch.setattr("storage.supabase.save_game_to_db", save_mock)
+    app.dependency_overrides[get_current_user] = lambda: AuthUser(user_id=uid)
+    try:
+        resp = client.patch("/api/account/profile", json={"display_name": "Talleyrand"})
+        assert resp.status_code == 200
+        assert upsert_mock.await_count == 1
+        assert save_mock.await_count == 0
+        assert PROFILE_NAMES[uid] == "Talleyrand"
+        assert GAME_SUMMARIES[gid].participants["FRANCE"].display_name == "Talleyrand"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        GAMES.pop(gid, None)
+        GAME_SUMMARIES.pop(gid, None)

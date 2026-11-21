@@ -11,11 +11,26 @@ UNKNOWN_HOST_NAME = "Unknown host"
 
 
 def sanitize_public_name(raw: str | None) -> str | None:
-    """Collapse whitespace and reject empty strings or email addresses (never slice `@`)."""
+    """Collapse whitespace and reject empty strings, UUIDs, or email addresses (never slice `@`)."""
     clean = " ".join((raw or "").split())
-    if not clean or "@" in clean:
+    if not clean or "@" in clean or is_valid_uuid(clean):
         return None
     return clean
+
+
+def participant_name_for_id(
+    summary: MultiplayerGameSummary | None,
+    user_id: str | None,
+) -> str | None:
+    """Return a sanitized inline `display_name` for a non-UUID participant matching `user_id`."""
+    if not summary or not user_id:
+        return None
+    for part in summary.participants.values():
+        if part.user_id == user_id:
+            clean = sanitize_public_name(part.display_name)
+            if clean:
+                return clean
+    return None
 
 
 def resolve_display_name(
@@ -54,17 +69,9 @@ def resolve_host_name(summary: MultiplayerGameSummary) -> str:
     if summary.creator_id:
         if is_valid_uuid(summary.creator_id):
             return resolve_display_name(summary.creator_id, default=DEFAULT_DISPLAY_NAME)
-        participant_name = next(
-            (
-                sanitize_public_name(p.display_name)
-                for p in summary.participants.values()
-                if p.user_id == summary.creator_id and sanitize_public_name(p.display_name)
-            ),
-            None,
-        )
         return (
             sanitize_public_name(PROFILE_NAMES.get(summary.creator_id))
-            or participant_name
+            or participant_name_for_id(summary, summary.creator_id)
             or sanitize_public_name(summary.created_by)
             or DEFAULT_DISPLAY_NAME
         )
@@ -79,19 +86,9 @@ def resolve_actor_name(
     if entry.actor_id:
         if is_valid_uuid(entry.actor_id):
             return resolve_display_name(entry.actor_id, default=DEFAULT_DISPLAY_NAME)
-        participant_fallback = None
-        if summary:
-            participant_fallback = next(
-                (
-                    p.display_name
-                    for p in summary.participants.values()
-                    if p.user_id == entry.actor_id and sanitize_public_name(p.display_name)
-                ),
-                None,
-            )
         return resolve_display_name(
             entry.actor_id,
-            fallback=participant_fallback or entry.actor,
+            fallback=participant_name_for_id(summary, entry.actor_id) or entry.actor,
             default=DEFAULT_DISPLAY_NAME,
         )
     return sanitize_public_name(entry.actor) or DEFAULT_DISPLAY_NAME

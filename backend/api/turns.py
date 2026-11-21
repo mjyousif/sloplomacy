@@ -53,7 +53,7 @@ from storage.store import (
     resolve_game,
     sync_summary,
 )
-from storage.supabase import is_valid_uuid
+from storage.supabase_codec import is_valid_uuid
 from ws.connection_manager import (
     broadcast_game_update,
     broadcast_lobby_update,
@@ -421,7 +421,9 @@ async def start_timer(game_id: str, current_user: AuthUser | None = Depends(get_
             status_code=409, detail="The clock can only start in a match being played."
         )
     start_phase_clock(game, players, time.time())
-    return await publish_timer(game)
+    return sanitize_game_state_for_viewer(
+        await publish_timer(game), viewer_power_for(game.game_id, current_user)
+    )
 
 
 @router.post(

@@ -13,6 +13,7 @@ from storage.store import (
     PRIVATE_SANDBOXES,
     persist_game,
 )
+from storage.supabase_codec import is_valid_uuid
 from ws.connection_manager import broadcast_game_update, broadcast_lobby_update
 
 router = APIRouter(tags=["Account"])
@@ -76,7 +77,7 @@ async def update_account_profile(
             public_lobby_touched = True
 
         if game is not None:
-            if participant_changed:
+            if participant_changed and not is_valid_uuid(current_user.user_id):
                 await persist_game(gid)
             if gid not in PRIVATE_SANDBOXES and not summary.is_draft:
                 await broadcast_game_update(gid, game, summary)

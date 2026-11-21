@@ -24,7 +24,7 @@ from storage.store import (
     lacks_summary,
     resolve_game,
 )
-from storage.supabase import is_valid_uuid
+from storage.supabase_codec import is_valid_uuid
 
 
 def _missing_summary_error(game_id: str) -> HTTPException:

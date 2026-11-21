@@ -207,6 +207,38 @@ def test_save_game_to_db_strips_creator_email_uuid_names_and_admin_log_emails():
     asyncio.run(run_test())
 
 
+def test_serialize_state_for_db_strips_raw_uuid_actor_and_turn_history_emails():
+    from domain.game_state import AdminActionLogEntry
+    from storage.supabase_codec import _serialize_state_for_db
+
+    uid = "11111111-1111-1111-1111-111111111111"
+    state = build_scenario("standard_1901", Power.FRANCE, "state_scrub")
+    state.admin_log = [
+        AdminActionLogEntry(
+            id="log_uuid_actor",
+            timestamp="2026-11-05T00:00:00Z",
+            actor_id=None,
+            actor=uid,
+            season="Spring",
+            year=1901,
+            phase="Movement",
+            summary_lines=["[ADMIN OVERRIDE] Edit"],
+            acknowledged_by=["FRANCE"],
+        )
+    ]
+    state.turn_history = [
+        "FRANCE (alice.secret@example.com) has formally surrendered! Sovereign forces have entered Civil Disorder.",
+        "Spring 1901 Movement resolved.",
+    ]
+
+    serialized = _serialize_state_for_db(state)
+    assert "actor" not in serialized["admin_log"][0]
+    assert serialized["turn_history"] == [
+        "FRANCE (Envoy) has formally surrendered! Sovereign forces have entered Civil Disorder.",
+        "Spring 1901 Movement resolved.",
+    ]
+
+
 def test_load_profile_name_from_db_ignores_emails_and_validates_uuid():
     from storage.supabase import load_profile_name_from_db
 

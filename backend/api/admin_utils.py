@@ -8,7 +8,7 @@ from domain.board import Power, Unit
 from domain.game_state import AdminActionLogEntry, GameState
 from domain.orders import Order, OrderType, SimulationResult
 from security.auth import AuthUser
-from storage.profiles import resolve_display_name, sanitize_public_name
+from storage.profiles import participant_name_for_id, resolve_display_name
 from storage.store import (
     GAME_HISTORY,
     GAME_SUMMARIES,
@@ -217,17 +217,11 @@ def create_admin_log_entry(
     if is_valid_uuid(actor_id):
         actor = ""
     else:
-        participant_fallback = None
-        if summary and actor_id:
-            participant_fallback = next(
-                (
-                    p.display_name
-                    for p in summary.participants.values()
-                    if p.user_id == actor_id and sanitize_public_name(p.display_name)
-                ),
-                None,
-            )
-        actor = resolve_display_name(actor_id, fallback=participant_fallback, default="Commander")
+        actor = resolve_display_name(
+            actor_id,
+            fallback=participant_name_for_id(summary, actor_id),
+            default="Commander",
+        )
 
     return AdminActionLogEntry(
         id=str(uuid.uuid4()),

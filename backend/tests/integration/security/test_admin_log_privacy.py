@@ -180,3 +180,57 @@ def test_updating_profile_updates_admin_log_actor_dynamically(monkeypatch):
         assert after["state"]["admin_log"][0]["actor_id"] is None
     finally:
         PROFILE_NAMES.pop(ALICE[0], None)
+
+
+def test_sandbox_enter_export_and_timer_start_sanitize_admin_log():
+    from storage.profiles import PROFILE_NAMES
+
+    PROFILE_NAMES[ALICE[0]] = "GeneralAlice"
+    try:
+        gid, entry_id = _match_with_admin_entry()
+        _acknowledge(gid, entry_id, BOB, power="GERMANY")
+        _acknowledge(gid, entry_id, CAROL)
+
+        # 1. Entering private hypothetical sandbox as Bob resolves actor & hides Alice/Carol UUIDs.
+        enter_res = client.post(
+            f"/api/sandbox/enter?game_id={gid}",
+            json={"power": "GERMANY"},
+            headers=auth_headers(*BOB),
+        )
+        assert enter_res.status_code == 200, enter_res.text
+        sbx_state = enter_res.json()
+        sbx_id = sbx_state["game_id"]
+        assert sbx_id.startswith("sbx_")
+        sbx_entry = sbx_state["admin_log"][0]
+        assert sbx_entry["actor"] == "GeneralAlice"
+        assert sbx_entry["actor_id"] is None
+        assert ALICE[0] not in sbx_entry["acknowledged_by"]
+        assert CAROL[0] not in sbx_entry["acknowledged_by"]
+        assert BOB[0] in sbx_entry["acknowledged_by"]
+
+        # 2. Exporting that private sandbox to a solo draft keeps admin_log sanitized.
+        export_res = client.post(
+            f"/api/games/solo-sandbox?source_game_id={sbx_id}",
+            headers=auth_headers(*BOB),
+        )
+        assert export_res.status_code == 200, export_res.text
+        exp_entry = export_res.json()["state"]["admin_log"][0]
+        assert exp_entry["actor"] == "GeneralAlice"
+        assert exp_entry["actor_id"] is None
+        assert ALICE[0] not in exp_entry["acknowledged_by"]
+        assert CAROL[0] not in exp_entry["acknowledged_by"]
+
+        # 3. Starting the phase clock as host Alice returns sanitized admin_log too.
+        timer_res = client.post(
+            f"/api/games/{gid}/timer/start",
+            headers=auth_headers(*ALICE),
+        )
+        assert timer_res.status_code == 200, timer_res.text
+        timer_entry = timer_res.json()["admin_log"][0]
+        assert timer_entry["actor"] == "GeneralAlice"
+        assert timer_entry["actor_id"] is None
+        assert BOB[0] not in timer_entry["acknowledged_by"]
+        assert CAROL[0] not in timer_entry["acknowledged_by"]
+        assert ALICE[0] in timer_entry["acknowledged_by"]
+    finally:
+        PROFILE_NAMES.pop(ALICE[0], None)

@@ -1,6 +1,7 @@
 """Serialization and row-decoding codec for Supabase `multiplayer_games` persistence."""
 
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -9,6 +10,8 @@ from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
 
 logger = logging.getLogger("diplomacy.database")
+
+_EMAIL_TOKEN_RE = re.compile(r'[^\s()<>"]+@[^\s()<>"]+')
 
 # Rebuilt from the board on refresh and for every viewer, never saved.
 DERIVED_STATE_FIELDS = {"unit_options", "preview"}
@@ -130,9 +133,16 @@ def _serialize_state_for_db(state: GameState) -> dict[str, Any]:
         for entry in admin_log:
             if not isinstance(entry, dict):
                 continue
-            if is_valid_uuid(entry.get("actor_id")) or "@" in str(entry.get("actor") or ""):
+            actor_str = str(entry.get("actor") or "")
+            if is_valid_uuid(entry.get("actor_id")) or is_valid_uuid(actor_str) or "@" in actor_str:
                 entry.pop("actor", None)
             acked = entry.get("acknowledged_by")
             if isinstance(acked, list):
                 entry["acknowledged_by"] = [t for t in acked if isinstance(t, str) and "@" not in t]
+    turn_history = data.get("turn_history")
+    if isinstance(turn_history, list):
+        data["turn_history"] = [
+            _EMAIL_TOKEN_RE.sub("Envoy", line) if isinstance(line, str) and "@" in line else line
+            for line in turn_history
+        ]
     return data

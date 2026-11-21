@@ -24,6 +24,7 @@ def test_sanitize_public_name_rejects_empty_and_emails():
     assert sanitize_public_name("   ") is None
     assert sanitize_public_name("alice@example.com") is None
     assert sanitize_public_name("foo @ bar") is None
+    assert sanitize_public_name("11111111-1111-1111-1111-111111111111") is None
     assert sanitize_public_name("  Otto   von  Bismarck ") == "Otto von Bismarck"
 
 
@@ -136,6 +137,17 @@ def test_resolve_actor_name_resolves_uuid_and_scrubs_legacy_emails():
             phase="Movement",
         )
         assert resolve_actor_name(legacy_email_entry) == DEFAULT_DISPLAY_NAME
+
+        legacy_uuid_actor_entry = AdminActionLogEntry(
+            id="e3",
+            timestamp="2026-01-01T00:00:00Z",
+            actor_id=None,
+            actor="11111111-1111-1111-1111-111111111111",
+            season="Spring",
+            year=1901,
+            phase="Movement",
+        )
+        assert resolve_actor_name(legacy_uuid_actor_entry) == DEFAULT_DISPLAY_NAME
     finally:
         PROFILE_NAMES.pop(uid, None)
 

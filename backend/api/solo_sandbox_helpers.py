@@ -20,6 +20,7 @@ from security.secrecy import (
     sanitize_game_state_for_viewer,
     sanitize_summary_for_viewer,
     viewer_power_for,
+    with_sanitized_admin_log,
 )
 from storage import supabase
 from storage.profiles import ensure_profile_loaded, resolve_display_name
@@ -144,7 +145,7 @@ async def export_game_to_solo_sandbox(
     if source.game_id in PRIVATE_SANDBOXES:
         match_id, seat_power = PRIVATE_SANDBOXES[source.game_id]
         require_own_seat(match_id, seat_power, current_user)
-        visible = source.model_copy(deep=True)
+        visible = with_sanitized_admin_log(source, current_user).model_copy(deep=True)
         export_power = source.active_power
     else:
         require_saved_sandbox_owner(source.game_id, current_user)
@@ -174,7 +175,7 @@ async def export_game_to_solo_sandbox(
     GAME_SUMMARIES[gid] = summary
     await persist_game(gid)
     return GameBootstrapResponse(
-        state=game_state,
+        state=with_sanitized_admin_log(game_state, current_user),
         provinces=PROVINCES,
         summary=sanitize_summary_for_viewer(summary),
     )
@@ -199,7 +200,7 @@ async def create_or_resume_solo_sandbox(
         if resumed:
             game_state, summary = resumed
             return GameBootstrapResponse(
-                state=game_state,
+                state=with_sanitized_admin_log(game_state, current_user),
                 provinces=PROVINCES,
                 summary=sanitize_summary_for_viewer(summary),
             )
@@ -221,7 +222,7 @@ async def create_or_resume_solo_sandbox(
             if resumed:
                 game_state, summary = resumed
                 return GameBootstrapResponse(
-                    state=game_state,
+                    state=with_sanitized_admin_log(game_state, current_user),
                     provinces=PROVINCES,
                     summary=sanitize_summary_for_viewer(summary),
                 )
