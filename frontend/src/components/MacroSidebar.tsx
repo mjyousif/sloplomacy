@@ -1,131 +1,26 @@
 import type React from 'react';
-import { useEffect, useMemo, useRef } from 'react';
-import type { SpectatorControls } from '../hooks/useSpectate';
-import {
-  type GameParticipant,
-  type Order,
-  POWER_METADATA,
-  type Power,
-  type ProvinceInfo,
-  type SimulationResult,
-  type TurnRecord,
-  type Unit,
-  type UnitMoveOptions,
-  type ValidationIssue,
-} from '../types/diplomacy';
-import type { UiSpacing, UnitMark } from '../utils/displayPrefs';
-import type { HistoryActionType } from '../utils/historyHelpers';
+import { useMemo } from 'react';
+import { POWER_METADATA } from '../types/diplomacy';
 import { getConsensusStatusInfo } from '../utils/orderHelpers';
 import {
   computeOrderProgress,
   getRequiredPowers,
 } from '../utils/orderProgress';
-import type { SheetSnap } from '../utils/sheetHelpers';
-import type { DirectEditMapHandlers } from './EuropeMap';
 import styles from './MacroSidebar.module.css';
 import { AdminDirectEditSidebar } from './macro/AdminDirectEditSidebar';
-import {
-  type AdminTurnClockSettings,
-  AdminTurnClockSidebar,
-} from './macro/AdminTurnClockSidebar';
+import { AdminTurnClockSidebar } from './macro/AdminTurnClockSidebar';
 import { CollapsedRail } from './macro/CollapsedRail';
-import {
-  type HistoryHighlightFocus,
-  HistoryTurnPanel,
-} from './macro/HistoryTurnPanel';
+import { HistoryTurnPanel } from './macro/HistoryTurnPanel';
 import { MacroSheet } from './macro/MacroSheet';
+import type { MacroSidebarProps } from './macro/macroSidebarProps';
 import { ClearAllButton, OrderFooter } from './macro/OrderFooter';
 import { HistoryLockBar, PhaseContext, PowerHeader } from './macro/PowerHeader';
 import { SpectatorBar } from './macro/SpectatorBar';
 import { UnitOrderList } from './macro/UnitOrderList';
 import { useCompactOrders } from './macro/useCompactOrders';
+import { usePanelCardScroll } from './macro/usePanelCardScroll';
 
-export interface MacroSidebarProps {
-  provinces: Record<string, ProvinceInfo>;
-  units: Unit[];
-  orders: Record<string, Order>;
-  ownership: Record<string, Power>;
-  activePower: Power;
-  finalizedPowers: Power[];
-  sandboxMode: boolean;
-  selectedUnitId: string | null;
-  hoveredUnitId: string | null;
-  issues: ValidationIssue[];
-  simulationResult: SimulationResult | null;
-  showSimulationOverlay: boolean;
-  phase?: string;
-  season?: string;
-  builds?: Record<Power, { count: number; homes: string[] }> | null;
-  retreats?: Record<Power, Record<string, string[]>> | null;
-  unitOptions?: Record<string, UnitMoveOptions> | null;
-  isMultiplayer?: boolean;
-  isGameCreator?: boolean;
-  gameOver?: boolean;
-  onOpenAdminTools?: () => void;
-  adminOverrideActive?: boolean;
-  onSelectPower?: (power: Power) => void;
-  onToggleSandboxMode?: () => void;
-  onSelectUnit: (unitId: string | null) => void;
-  onHoverUnit: (unitId: string | null) => void;
-  onHighlightProvinces: (provinces: string[]) => void;
-  onUpdateOrder: (order: Order) => void;
-  onClearAllOrders: () => void;
-  onClearForeignPreMoves?: () => void;
-  onFinalizeClick: () => void;
-  onUnfinalizeClick: () => void;
-  onSimulatePreMoves?: () => void;
-  onAdjudicateTurn: () => void;
-  onLoadScenario?: (scenarioId: string) => void;
-  onSaveSandboxClick?: () => void;
-  surrenderedPowers?: Power[];
-  participants?: Record<string, GameParticipant>;
-  lobbyStatus?: string;
-  // Collapsible Props
-  collapsed?: boolean;
-  onToggleCollapse?: () => void;
-  /**
-   * 'panel' is the desktop sidebar. 'sheet' is the phone's pull-up order sheet, which shows the
-   * power, Clear All and Finalize at its peek and the unit cards when pulled up.
-   */
-  variant?: 'panel' | 'sheet';
-  sheetSnap?: SheetSnap;
-  onSheetSnapChange?: (snap: SheetSnap) => void;
-  /** Set when inspecting a resolved past turn record; replaces live controls with the turn log. */
-  historyTurn?: TurnRecord | null;
-  /** Selected nation filters for the past turn log. Empty shows all nations. */
-  historyPowers?: readonly Power[];
-  /** Selected movement action filters for a past Movement turn. Empty shows all actions. */
-  historyActions?: readonly HistoryActionType[];
-  /** Unit icon display setting so the history log matches the map's pieces. */
-  unitMark?: UnitMark;
-  /** UI spacing preference from Display Settings ('compact' | 'normal'). */
-  uiSpacing?: UiSpacing;
-  onToggleUiSpacing?: () => void;
-  selectedHistoryOrderId?: string | null;
-  onSelectHistoryPowers?: (powers: Power[]) => void;
-  onSelectHistoryActions?: (actions: HistoryActionType[]) => void;
-  onHoverHistoryOrder?: (focus: HistoryHighlightFocus | null) => void;
-  onTogglePinHistoryOrder?: (focus: HistoryHighlightFocus) => void;
-  /**
-   * Set while the map shows a past turn or move suggestion. For move suggestions (no
-   * `historyTurn`), the live orders stay dimmed and inert under a bar back to live.
-   */
-  historyLabel?: string | null;
-  /** True when the viewed history entry is an admin board edit. */
-  historyIsAdmin?: boolean;
-  onReturnToLive?: () => void;
-  /** Repurposes the right sidebar into the Edit Board Inspector. */
-  directEditActive?: boolean;
-  directEdit?: DirectEditMapHandlers;
-  /** Repurposes the right sidebar into the Turn and Clock Settings panel. */
-  turnClockSettings?: AdminTurnClockSettings;
-  /** Phone sheet only: opens the full-width Press sheet from the peek bar. */
-  onOpenPress?: () => void;
-  /** Ref for the phone Press button so closing the Press sheet restores focus to it. */
-  pressToggleRef?: React.Ref<HTMLButtonElement>;
-  /** Watching without a seat: the units of `activePower` are listed with nothing to order. */
-  spectator?: SpectatorControls;
-}
+export type { MacroSidebarProps } from './macro/macroSidebarProps';
 
 export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   provinces,
@@ -258,29 +153,11 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   const { compactOrders, toggleCompactOrders: handleToggleCompactOrders } =
     useCompactOrders(uiSpacing, onToggleUiSpacing);
 
-  const panelScrollRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (isSheet || collapsed || !selectedUnitId) return;
-    const scroller = panelScrollRef.current;
-    if (!scroller) return;
-    const card = Array.from(
-      scroller.querySelectorAll<HTMLElement>(
-        '[data-unit-id], [data-home-province]',
-      ),
-    ).find(
-      (el) =>
-        el.dataset.unitId === selectedUnitId ||
-        `BUILD_${activePower}_${el.dataset.homeProvince}` === selectedUnitId,
-    );
-    if (!card) return;
-    const scrollerRect = scroller.getBoundingClientRect();
-    const cardRect = card.getBoundingClientRect();
-    if (cardRect.top < scrollerRect.top) {
-      scroller.scrollTop += cardRect.top - scrollerRect.top - 8;
-    } else if (cardRect.bottom > scrollerRect.bottom) {
-      scroller.scrollTop += cardRect.bottom - scrollerRect.bottom + 8;
-    }
-  }, [isSheet, collapsed, selectedUnitId, activePower]);
+  const panelScrollRef = usePanelCardScroll({
+    enabled: !isSheet && !collapsed,
+    selectedUnitId,
+    activePower,
+  });
 
   // The pieces of the expanded panel. The desktop panel and the phone sheet arrange the same
   // pieces differently, so neither copies the other.

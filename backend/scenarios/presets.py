@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from domain.board import Power, Unit, UnitType
 from domain.game_state import GameParticipant, GameState, MultiplayerGameSummary
+from domain.ids import DEFAULT_GAME_ID
 from domain.orders import Order, OrderType
 from engine.order_utils import (
     create_default_orders,
@@ -33,7 +34,7 @@ PHASES_BY_SEASON = {
 def build_scenario(
     scenario_id: str,
     active_power: Power | None = None,
-    game_id: str = "proto_1901",
+    game_id: str = DEFAULT_GAME_ID,
 ) -> GameState:
     units = get_initial_1901_units()
     ownership = get_initial_ownership()
@@ -182,7 +183,7 @@ def build_scenario(
     return game
 
 
-def build_scenario_history(scenario_id: str, game_id: str = "proto_1901") -> list[GameState]:
+def build_scenario_history(scenario_id: str, game_id: str = DEFAULT_GAME_ID) -> list[GameState]:
     """Return pre-resolved history snapshots for scenarios that simulate mid/late campaigns."""
     if scenario_id != "one_turn_from_win":
         return []

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { API_BASE } from '../lib/api';
 import { getAuthHeaders } from '../lib/supabase';
 import type { Power, TurnHistoryEntry, TurnRecord } from '../types/diplomacy';
 import {
@@ -6,8 +7,6 @@ import {
   sameTurn,
   stepTurn,
 } from '../utils/historyHelpers';
-
-const API_BASE = '/api';
 
 interface UseTurnHistoryOptions {
   /** The real game, never a private sandbox copy: the server keeps no shared history for those. */

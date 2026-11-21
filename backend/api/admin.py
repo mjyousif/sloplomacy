@@ -32,6 +32,7 @@ from engine.phase_timer import start_phase_clock
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from scenarios.presets import SCENARIO_IDS, build_scenario, build_scenario_history
 from security.auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
+from security.creator import is_creator
 from security.secrecy import caller_holds_seat, verify_admin_access
 from storage import supabase
 from storage.store import (
@@ -161,17 +162,13 @@ def get_admin_status(
     user_id = current_user.user_id if current_user else None
     email = current_user.email if current_user else None
 
-    is_creator = False
-    if user_id and summary.creator_id and summary.creator_id == user_id:
-        is_creator = True
-    elif email and summary.created_by and summary.created_by.lower() == email.lower():
-        is_creator = True
+    caller_is_creator = is_creator(summary, user_id, email)
 
     return AdminStatusResponse(
-        is_creator=is_creator,
+        is_creator=caller_is_creator,
         can_rollback=len(history_stack) > 0,
         history_count=len(history_stack),
-        history_entries=_build_entries() if is_creator else [],
+        history_entries=_build_entries() if caller_is_creator else [],
         creator_email="",
         creator_id=summary.creator_id,
     )

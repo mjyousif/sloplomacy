@@ -1,33 +1,31 @@
-import { AlertTriangle, Compass } from 'lucide-react';
 import { useRef, useState } from 'react';
 import styles from './App.module.css';
 import { AppHeader } from './components/AppHeader';
 import { AppModals } from './components/AppModals';
+import { ErrorScreen, LoadingScreen } from './components/AppStatusScreens';
 import type { EuropeMapHandle } from './components/EuropeMap';
 import { GameWorkspace } from './components/GameWorkspace';
 import { LobbyView } from './components/LobbyView';
 import { useConfirm } from './components/modal/ConfirmModal';
-import { useAdminDirectEdit } from './hooks/useAdminDirectEdit';
+import { useAdminActions } from './hooks/useAdminActions';
+import { useAdminMode } from './hooks/useAdminMode';
+import { useAppSync } from './hooks/useAppSync';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useBoardExits } from './hooks/useBoardExits';
 import { useCompactLayout } from './hooks/useCompactLayout';
 import { useDisplayPrefs } from './hooks/useDisplayPrefs';
-import { useGameOverModal } from './hooks/useGameOverModal';
 import { useGameRoute } from './hooks/useGameRoute';
 import { useGameSession } from './hooks/useGameSession';
-import { useGameSync } from './hooks/useGameSync';
 import { useMatchActions } from './hooks/useMatchActions';
-import { useSandboxExit } from './hooks/useSandboxExit';
 import { useSandboxSession } from './hooks/useSandboxSession';
 import { useSeatActions } from './hooks/useSeatActions';
 import { useSpectate } from './hooks/useSpectate';
 import { useToast } from './hooks/useToast';
 import { useTurnHistory } from './hooks/useTurnHistory';
-import { useTurnNotifications } from './hooks/useTurnNotifications';
 import { useWorkspaceLayout } from './hooks/useWorkspaceLayout';
-import { signOutUser } from './lib/supabase';
 import type { SimulationResult } from './types/diplomacy';
-import { checkIsGameCreator, resolvePlayerPower } from './utils/adminHelpers';
+import { resolvePlayerPower } from './utils/adminHelpers';
+import { toggledUiSpacing } from './utils/displayPrefs';
 import { initialViewMode } from './utils/gameRoute';
 import { DEFAULT_CAMERA } from './utils/mapCameraHelpers';
 import { turnLabel } from './utils/timerHelpers';
@@ -49,10 +47,8 @@ export function App() {
     setMatchPasscodes,
     playerPower,
     gamesList,
-    setGamesList,
     loadingGames,
     gameState,
-    setGameState,
     provinces,
     setProvinces,
     loading,
@@ -65,7 +61,6 @@ export function App() {
     clearPendingOrders,
     fetchGame,
     fetchGamesList,
-    fetchMyGames,
   } = session;
   const {
     authUser,
@@ -91,9 +86,6 @@ export function App() {
   const [highlightedProvinces, setHighlightedProvinces] = useState<string[]>(
     [],
   );
-  const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
-  const [adminOverrideActive, setAdminOverrideActive] =
-    useState<boolean>(false);
   const [zoomPercent, setZoomPercent] = useState<number>(() =>
     Math.round(DEFAULT_CAMERA.zoom * 100),
   );
@@ -108,53 +100,22 @@ export function App() {
     passcode: matchPasscodes[activeGameId] ?? null,
     enabled: viewMode !== 'lobby',
   });
-  const isGameCreator = checkIsGameCreator(
-    activeGameSummary,
-    authUser,
+  const admin = useAdminMode({
     viewMode,
-  );
-  const directEditActive = isGameCreator && adminOverrideActive;
-  const handleAdminUpdateState = (st: typeof gameState) => {
-    if (!st) return;
-    applyServerState(st);
-    fetchGamesList();
-  };
-  const directEdit = useAdminDirectEdit({
     activeGameId,
-    viewMode,
+    activeGameSummary,
     lockedPower,
     gameState,
     provinces,
-    directEditActive,
-    setDirectEditActive: setAdminOverrideActive,
     authUser,
-    onUpdateGameState: handleAdminUpdateState,
-    showToast: triggerToast,
+    applyServerState,
+    fetchGamesList,
+    triggerToast,
     confirm,
   });
+  const { isGameCreator, directEditActive, directEdit } = admin;
   // Hypothetical Mode, the scenario reset and saving a sandbox.
-  const {
-    sandboxMode,
-    setSandboxMode,
-    sandboxGameId,
-    setSandboxGameId,
-    sandboxOriginTurn,
-    setSandboxOriginTurn,
-    setHypotheticalMatchTimer,
-    showSimulationOverlay,
-    setShowSimulationOverlay,
-    saveSandboxModalOpen,
-    setSaveSandboxModalOpen,
-    savingSandbox,
-    draftGameId,
-    matchTimer,
-    requireRealBoard,
-    handleOpenSaveSandboxModal,
-    handleSaveSandboxToAccount,
-    handleClearForeignPreMoves,
-    handleToggleSandboxMode,
-    handleLoadScenario,
-  } = useSandboxSession({
+  const sandbox = useSandboxSession({
     activeGameId,
     setActiveGameId,
     setActiveGameSummary,
@@ -170,6 +131,26 @@ export function App() {
     fetchGame,
     fetchGamesList,
   });
+  const {
+    sandboxMode,
+    setSandboxMode,
+    sandboxGameId,
+    setSandboxGameId,
+    setHypotheticalMatchTimer,
+    showSimulationOverlay,
+    setShowSimulationOverlay,
+    saveSandboxModalOpen,
+    setSaveSandboxModalOpen,
+    savingSandbox,
+    draftGameId,
+    matchTimer,
+    requireRealBoard,
+    handleOpenSaveSandboxModal,
+    handleSaveSandboxToAccount,
+    handleClearForeignPreMoves,
+    handleToggleSandboxMode,
+    handleLoadScenario,
+  } = sandbox;
 
   // In multiplayer Hypothetical Mode, Standings and unit selection can switch the commanded power on the ephemeral branch.
   const activePower = resolvePlayerPower(
@@ -180,64 +161,17 @@ export function App() {
     session.spectatorPower,
   );
 
-  // The live socket, the first load and the fallback poll.
-  const { handleTimerExpired } = useGameSync({
+  // The live socket, the first load, the fallback poll, turn alerts and sandbox exit.
+  const { handleTimerExpired, gameOver } = useAppSync({
     viewMode,
-    activeGameId,
-    playerPower: session.isSpectator ? null : playerPower,
-    sandboxGameId,
-    sandboxOriginTurn,
-    setSandboxOriginTurn,
-    setSandboxGameId,
-    setSandboxMode,
-    setShowSimulationOverlay,
-    setSelectedUnitId,
-    matchPasscodes,
-    authKey: authUser?.id ?? null,
-    triggerToast,
-    setActiveGameSummary,
-    setGameState,
-    setGamesList,
-    setSimulationResult,
-    setHypotheticalMatchTimer,
-    applyServerState,
-    fetchGame,
-    fetchGamesList,
-    fetchMyGames,
-  });
-
-  useTurnNotifications({
-    viewMode,
-    gameState,
-    activeGameSummary,
-    lockedPower,
-    sandboxGameId,
-    hypotheticalMatchTimer: matchTimer,
+    session,
+    sandbox,
+    authUser,
     soundEnabled: displayPrefs.soundNotifications,
+    triggerToast,
+    setSelectedUnitId,
+    setSimulationResult,
   });
-
-  // Leaving the match board by any route closes its private sandbox.
-  useSandboxExit({
-    viewMode,
-    sandboxGameId,
-    playerPower,
-    setSandboxGameId,
-    setSandboxMode,
-    setShowSimulationOverlay,
-  });
-
-  const { gameOverModalOpen, openGameOverModal, closeGameOverModal } =
-    useGameOverModal({
-      viewMode,
-      activeGameId,
-      gameState,
-      activeGameSummary,
-      authUser,
-      onSummaryUpdated: (updatedSummary) => {
-        setActiveGameSummary(updatedSummary);
-        void fetchMyGames();
-      },
-    });
 
   // Orders, finalizing, resolving the turn and the turn clock.
   const {
@@ -310,12 +244,14 @@ export function App() {
   const exits = useBoardExits({
     setViewMode,
     authUser,
+    viewMode,
     seats,
+    triggerToast,
     confirmIfDirty: directEdit.confirmIfDirty,
     confirm,
     closeAdminTools: () => {
-      setAdminModalOpen(false);
-      setAdminOverrideActive(false);
+      admin.setAdminModalOpen(false);
+      admin.setAdminOverrideActive(false);
     },
     goLive: turnHistory.goLive,
     handleLoadScenario,
@@ -335,93 +271,38 @@ export function App() {
     triggerToast,
   });
 
-  if (loading && !gameState) {
-    return (
-      <div className={styles.loadingScreen}>
-        <Compass className="spin-icon" size={38} />
-        <h2>Unrolling 1901 Imperial War Atlas...</h2>
-      </div>
-    );
-  }
+  const adminActions = useAdminActions({
+    viewMode,
+    isCompact,
+    activeGameId,
+    authUser,
+    gameState,
+    admin,
+    turnHistory,
+    layout,
+    requireRealBoard,
+    handleAdjudicateTurn,
+    setSelectedUnitId,
+    setHighlightedProvinces,
+    triggerToast,
+    confirm,
+  });
+  const {
+    adminModeActive,
+    turnClockSettings,
+    openAdminTools,
+    handleToggleEditBoard,
+    handleExitAdmin,
+    showPastTurn,
+    stepPastTurn,
+    handleAdminResolveTurn,
+  } = adminActions;
 
+  if (loading && !gameState) return <LoadingScreen />;
   if (errorMsg || !gameState) {
-    return (
-      <div className={styles.errorScreen}>
-        <AlertTriangle size={36} />
-        <h2>Backend Connection Required</h2>
-        <p>{errorMsg}</p>
-        <button onClick={() => fetchGame()}>Retry Connection</button>
-      </div>
-    );
+    return <ErrorScreen message={errorMsg} onRetry={() => fetchGame()} />;
   }
-
-  const openAdminTools = async () => {
-    if (!requireRealBoard('use the admin tools')) return;
-    if (!(await directEdit.confirmIfDirty('open Turn and Clock Settings')))
-      return;
-    turnHistory.goLive();
-    setAdminOverrideActive(false);
-    setAdminModalOpen(true);
-    layout.setRightSidebarCollapsed(false);
-    if (isCompact) layout.setSheetSnap('half');
-  };
-  const handleToggleEditBoard = () => {
-    if (!directEditActive) turnHistory.goLive();
-    setAdminModalOpen(false);
-    layout.setRightSidebarCollapsed(false);
-    directEdit.handleToggleDirectEdit();
-  };
-  const adminModeActive = directEditActive || (isGameCreator && adminModalOpen);
-  // Leaves either admin mode; Edit Board asks first if edits are still staged.
-  const handleExitAdmin = async () => {
-    if (directEditActive) await directEdit.handleToggleDirectEdit();
-    setAdminModalOpen(false);
-  };
-
-  const showPastTurn = async (index: number | null) => {
-    if (adminModeActive) return;
-    if (
-      index !== null &&
-      !(await directEdit.confirmIfDirty('view a past turn'))
-    )
-      return;
-    if (index !== null) {
-      setSelectedUnitId(null);
-      setHighlightedProvinces([]);
-    }
-    turnHistory.select(index);
-  };
-  const stepPastTurn = async (delta: -1 | 1) => {
-    if (adminModeActive) return;
-    if (!(await directEdit.confirmIfDirty('view a past turn'))) return;
-    setSelectedUnitId(null);
-    setHighlightedProvinces([]);
-    turnHistory.step(delta);
-  };
-  const handleSignOut = async () => {
-    seats.clearPreviousGame();
-    await signOutUser();
-    if (viewMode === 'multiplayer') setViewMode('lobby');
-    triggerToast('Signed out — now in Guest Mode.');
-  };
   const boardState = directEdit.effectiveGameState ?? gameState;
-  const handleAdminResolveTurn = async (event?: React.MouseEvent) => {
-    if (!boardState || boardState.winner) return;
-    if (!requireRealBoard('resolve the real turn')) return;
-    const isMp = viewMode === 'multiplayer';
-    const ok = await confirm(
-      {
-        title: 'Force-Resolve Turn?',
-        message: isMp
-          ? `Force-resolve ${boardState.season} ${boardState.year} ${boardState.phase} and advance to the next phase? Other players will be notified of this admin action.`
-          : `Resolve ${boardState.season} ${boardState.year} ${boardState.phase} and advance to the next phase?`,
-        confirmLabel: 'Resolve Turn',
-      },
-      event,
-    );
-    if (!ok) return;
-    await handleAdjudicateTurn();
-  };
 
   return (
     <div
@@ -444,7 +325,7 @@ export function App() {
         authUser={authUser}
         openAuthPrompt={openAuthPrompt}
         openAccountModal={openAccountModal}
-        handleSignOut={handleSignOut}
+        handleSignOut={exits.handleSignOut}
         handleBackToLobby={exits.handleBackToLobby}
         handleEnterSoloSandbox={exits.guardedEnterSoloSandbox}
         onSaveSandbox={handleOpenSaveSandboxModal}
@@ -461,7 +342,7 @@ export function App() {
         directEditActive={directEditActive}
         openAdminTools={openAdminTools}
         onToggleDirectEdit={handleToggleEditBoard}
-        turnClockOpen={isGameCreator && adminModalOpen}
+        turnClockOpen={isGameCreator && admin.adminModalOpen}
         onResolveTurn={handleAdminResolveTurn}
         onExitAdmin={handleExitAdmin}
         toastBanner={toastBanner}
@@ -470,7 +351,7 @@ export function App() {
         historyLocked={adminModeActive}
         onSelectHistoryTurn={showPastTurn}
         onStepHistoryTurn={stepPastTurn}
-        onOpenGameOverModal={openGameOverModal}
+        onOpenGameOverModal={gameOver.openGameOverModal}
       />
 
       {/* VIEW 1: MAIN PAGE / LOBBY */}
@@ -515,10 +396,7 @@ export function App() {
           setZoomPercent={setZoomPercent}
           displayPrefs={displayPrefs}
           onToggleUiSpacing={() =>
-            updateDisplayPrefs({
-              uiSpacing:
-                displayPrefs.uiSpacing === 'compact' ? 'normal' : 'compact',
-            })
+            updateDisplayPrefs(toggledUiSpacing(displayPrefs))
           }
           selectedUnitId={selectedUnitId}
           setSelectedUnitId={setSelectedUnitId}
@@ -550,19 +428,7 @@ export function App() {
           isGameCreator={isGameCreator}
           directEditActive={directEditActive}
           directEdit={directEdit}
-          turnClockSettings={
-            isGameCreator && adminModalOpen
-              ? {
-                  isOpen: true,
-                  onClose: () => setAdminModalOpen(false),
-                  gameId: activeGameId,
-                  gameState,
-                  user: authUser,
-                  onStateUpdated: handleAdminUpdateState,
-                  onToast: triggerToast,
-                }
-              : undefined
-          }
+          turnClockSettings={turnClockSettings}
         />
       )}
 
@@ -599,16 +465,16 @@ export function App() {
         accountModalOpen={accountModalOpen}
         setAccountModalOpen={setAccountModalOpen}
         accountModalOnboarding={accountModalOnboarding}
-        handleSignOut={handleSignOut}
+        handleSignOut={exits.handleSignOut}
         confirmModal={confirmModal}
         viewMode={viewMode}
         provinces={provinces}
         activeGameSummary={activeGameSummary}
         gamePasscode={matchPasscodes[activeGameId] ?? null}
-        gameOverModalOpen={gameOverModalOpen}
-        onCloseGameOverModal={closeGameOverModal}
+        gameOverModalOpen={gameOver.gameOverModalOpen}
+        onCloseGameOverModal={gameOver.closeGameOverModal}
         onReturnToLobby={() => {
-          closeGameOverModal();
+          gameOver.closeGameOverModal();
           void exits.handleBackToLobby();
         }}
       />

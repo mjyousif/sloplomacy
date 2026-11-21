@@ -19,7 +19,7 @@ TurnOp = Literal["at", "before", "after"]
 
 def is_public_listing(game_id: str, summary: MultiplayerGameSummary) -> bool:
     return (
-        game_id not in (DEFAULT_GAME_ID, "proto_1901")
+        game_id != DEFAULT_GAME_ID
         and not summary.is_private
         and not summary.is_sandbox
         and not summary.is_draft
@@ -37,7 +37,7 @@ def summaries_for_user(user_id: str) -> list[MultiplayerGameSummary]:
     return [
         s
         for gid, s in GAME_SUMMARIES.items()
-        if gid not in (DEFAULT_GAME_ID, "proto_1901")
+        if gid != DEFAULT_GAME_ID
         and not s.is_draft
         and (s.creator_id == user_id or any(p.user_id == user_id for p in s.participants.values()))
     ]

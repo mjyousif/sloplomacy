@@ -22,7 +22,7 @@ Sloplomacy preserves a rolling log of resolved phases (`GAME_HISTORY`), lets pla
 
 ## Resolved Turn History (`GAME_HISTORY`)
 
-Just before each phase adjudicates (`_execute_adjudication`), the backend appends a deep copy of the pre-resolution `GameState` (with `preview`, `issues`, and `timer` stripped) to `GAME_HISTORY[game_id]`, capped at the **last 30 snapshots**. Admin board overrides and turn edits also record a consolidated `"Admin"` snapshot with `admin_resolution` metadata and an `AdminActionLogEntry`.
+Just before each phase adjudicates (`execute_adjudication`), the backend appends a deep copy of the pre-resolution `GameState` (with `preview`, `issues`, and `timer` stripped) to `GAME_HISTORY[game_id]`, capped at the **last 30 snapshots**. Admin board overrides and turn edits also record a consolidated `"Admin"` snapshot with `admin_resolution` metadata and an `AdminActionLogEntry`.
 
 History is stored in Supabase's `history` JSONB column on `multiplayer_games` and uploaded only when `HISTORY_UNSAVED` is marked dirty (adjudication, rollback, or admin edit).
 

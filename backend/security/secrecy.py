@@ -5,6 +5,7 @@ from engine.order_utils import create_default_orders
 from engine.reachability import compute_unit_options
 from fastapi import Depends, HTTPException, Request, status
 from security.auth import AuthUser, get_current_user
+from security.creator import is_creator
 from security.passcode import require_passcode
 from storage.store import (
     DEFAULT_GAME_ID,
@@ -77,13 +78,7 @@ def verify_admin_access(
             detail="Authentication required: Provide a valid Supabase Bearer token to modify multiplayer games.",
         )
 
-    is_creator = False
-    if summary.creator_id and summary.creator_id == user.user_id:
-        is_creator = True
-    elif summary.created_by and user.email and summary.created_by.lower() == user.email.lower():
-        is_creator = True
-
-    if not is_creator:
+    if not is_creator(summary, user.user_id, user.email):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Administrator access denied: Only the game creator can modify game state.",
@@ -103,18 +98,7 @@ def verify_power_authorization(
     if not summary:
         raise _missing_summary_error(game_id)
 
-    is_creator = False
-    if current_user:
-        if summary.creator_id and summary.creator_id == current_user.user_id:
-            is_creator = True
-        elif (
-            summary.created_by
-            and current_user.email
-            and summary.created_by.lower() == current_user.email.lower()
-        ):
-            is_creator = True
-
-    if is_creator:
+    if current_user and is_creator(summary, current_user.user_id, current_user.email):
         return
 
     part = summary.participants.get(power.value)
@@ -317,15 +301,7 @@ def caller_owns_saved_sandbox(
     """True when the caller saved this sandbox. A guest's sandbox stays open, like a guest's seat."""
     if not is_valid_uuid(summary.creator_id):
         return True
-    if current_user:
-        if summary.creator_id and summary.creator_id == current_user.user_id:
-            return True
-        return bool(
-            summary.created_by
-            and current_user.email
-            and summary.created_by.lower() == current_user.email.lower()
-        )
-    return False
+    return bool(current_user and is_creator(summary, current_user.user_id, current_user.email))
 
 
 def require_saved_sandbox_owner(game_id: str, current_user: AuthUser | None) -> None:

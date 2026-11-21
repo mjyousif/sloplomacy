@@ -1,3 +1,4 @@
+import { API_BASE } from '../lib/api';
 import { authedFetch } from '../lib/supabase';
 import {
   type AdminActionLogEntry,
@@ -79,6 +80,7 @@ export function checkIsGameCreator(
     }
     if (
       gameSummary.created_by &&
+      user.email &&
       gameSummary.created_by.toLowerCase() === user.email.toLowerCase()
     ) {
       return true;
@@ -217,7 +219,7 @@ export async function acknowledgeAdminEntriesRequest(
   lockedPower: Power | null,
 ): Promise<AdminAcknowledgeResponse | null> {
   const res = await authedFetch(
-    `/api/admin/acknowledge?game_id=${encodeURIComponent(activeGameId)}`,
+    `${API_BASE}/admin/acknowledge?game_id=${encodeURIComponent(activeGameId)}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -238,7 +240,7 @@ export async function postAdminBoardEditRequest(
   payload: Record<string, unknown>,
 ): Promise<Response> {
   return authedFetch(
-    `/api/admin/board-edit?game_id=${encodeURIComponent(activeGameId)}`,
+    `${API_BASE}/admin/board-edit?game_id=${encodeURIComponent(activeGameId)}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

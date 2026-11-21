@@ -1,12 +1,4 @@
-import {
-  AlertCircle,
-  AlertTriangle,
-  Anchor,
-  CheckCircle2,
-  Info,
-  Swords,
-  Trash2,
-} from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useRef, useState } from 'react';
 import type {
@@ -19,11 +11,9 @@ import type {
   ValidationIssue,
 } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
-import { isOrderIncomplete, splitProvinceCode } from '../../utils/orderHelpers';
-import { MoveControls } from './controls/MoveControls';
-import { RetreatControls } from './controls/RetreatControls';
-import { OrderParameterControls } from './OrderParameterControls';
-import { OrderTypeTabs } from './OrderTypeTabs';
+import { splitProvinceCode } from '../../utils/orderHelpers';
+import { UnitCardCompactRow } from './UnitCardCompactRow';
+import { UnitCardDetail } from './UnitCardDetail';
 import styles from './UnitMacroCard.module.css';
 
 export interface UnitMacroCardProps {
@@ -171,342 +161,53 @@ export const UnitMacroCard: React.FC<UnitMacroCardProps> = ({
       }}
     >
       {isCompactRow ? (
-        <>
-          <div className={styles.unitCompactRow} data-testid="unit-compact-row">
-            <span
-              className={cx(styles.unitTypeBadge, styles.compact)}
-              data-testid="unit-type-badge"
-              data-unit-type={unit.unit_type === 'A' ? 'army' : 'fleet'}
-              style={{
-                backgroundColor: unit.is_dislodged
-                  ? '#ea580c'
-                  : isDisbanding
-                    ? '#dc2626'
-                    : powerMeta.color,
-              }}
-              title={`${unit.unit_type === 'A' ? 'Army' : 'Fleet'} in ${provinces[unit.province]?.name ?? unit.province}`}
-            >
-              {unit.unit_type === 'A' ? (
-                <Swords size={10} />
-              ) : (
-                <Anchor size={10} />
-              )}
-              {unit.unit_type}
-            </span>
-            <span
-              className={styles.unitCompactProv}
-              title={`${provinces[unit.province]?.name ?? unit.province} (${unit.province}${unit.coast ? `/${unit.coast}` : ''})`}
-            >
-              {provinces[unit.province]?.name ?? unit.province}
-            </span>
-            <div
-              className={styles.unitCompactControls}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {isAdjustmentPhase ? (
-                buildCount < 0 ? (
-                  <OrderTypeTabs
-                    unit={unit}
-                    order={order}
-                    provinces={provinces}
-                    validRetreats={validRetreats}
-                    isDisbanding={isDisbanding}
-                    isRetreatPhase={isRetreatPhase}
-                    isAdjustmentPhase={isAdjustmentPhase}
-                    buildCount={buildCount}
-                    compact={true}
-                    handleOrderTypeChange={handleOrderTypeChange}
-                  />
-                ) : (
-                  <span
-                    className={cx(styles.unitMiniPill, styles.confirmed)}
-                    data-testid="unit-mini-pill"
-                  >
-                    <CheckCircle2 size={10} /> Retained
-                  </span>
-                )
-              ) : isRetreatPhase ? (
-                unit.is_dislodged ? (
-                  <>
-                    <OrderTypeTabs
-                      unit={unit}
-                      order={order}
-                      provinces={provinces}
-                      validRetreats={validRetreats}
-                      isDisbanding={isDisbanding}
-                      isRetreatPhase={isRetreatPhase}
-                      isAdjustmentPhase={isAdjustmentPhase}
-                      buildCount={buildCount}
-                      compact={true}
-                      handleOrderTypeChange={handleOrderTypeChange}
-                    />
-                    {order?.order_type === 'RETREAT' ? (
-                      <RetreatControls
-                        unit={unit}
-                        order={order}
-                        provinces={provinces}
-                        validRetreats={validRetreats}
-                        compact={true}
-                        onUpdateOrder={onUpdateOrder}
-                      />
-                    ) : (
-                      <span
-                        className={styles.unitCompactTargetPlaceholder}
-                        aria-hidden="true"
-                      />
-                    )}
-                  </>
-                ) : (
-                  <span
-                    className={cx(styles.unitMiniPill, styles.confirmed)}
-                    data-testid="unit-mini-pill"
-                  >
-                    <CheckCircle2 size={10} /> Retained
-                  </span>
-                )
-              ) : (
-                <>
-                  <OrderTypeTabs
-                    unit={unit}
-                    order={order}
-                    provinces={provinces}
-                    validRetreats={validRetreats}
-                    isDisbanding={isDisbanding}
-                    isRetreatPhase={isRetreatPhase}
-                    isAdjustmentPhase={isAdjustmentPhase}
-                    buildCount={buildCount}
-                    compact={true}
-                    handleOrderTypeChange={handleOrderTypeChange}
-                  />
-                  {order?.order_type === 'MOVE' ? (
-                    <MoveControls
-                      dropdownClassNames={{
-                        root: styles.unitCompactDropdown,
-                        trigger: styles.unitCompactTrigger,
-                        value: styles.unitCompactValue,
-                        menu: styles.unitCompactMenu,
-                      }}
-                      unit={unit}
-                      order={order}
-                      provinces={provinces}
-                      reachable={reachable}
-                      unitOptions={unitOptions}
-                      compact={true}
-                      useNativeSelect={useNativeSelect}
-                      onUpdateOrder={onUpdateOrder}
-                      onHoverProvince={handleHoverOptionProvince}
-                    />
-                  ) : (
-                    <span
-                      className={styles.unitCompactTargetPlaceholder}
-                      aria-hidden="true"
-                    />
-                  )}
-                </>
-              )}
-            </div>
-            {hasWarnToggle && (
-              <button
-                type="button"
-                className={styles.unitWarningToggle}
-                data-testid="btn-unit-warning-toggle"
-                data-active={isWarnOpen ? 'true' : undefined}
-                aria-expanded={isWarnOpen}
-                aria-label={isWarnOpen ? 'Hide warning' : 'Show warning'}
-                title={isWarnOpen ? 'Hide warning' : 'Show warning'}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsWarnOpen((open) => !open);
-                }}
-              >
-                <AlertTriangle size={12} />
-              </button>
-            )}
-          </div>
-          {!isAdjustmentPhase &&
-            !isRetreatPhase &&
-            (order?.order_type === 'SUPPORT' ||
-              order?.order_type === 'CONVOY') && (
-              <div
-                className={styles.unitCompactSubcontrols}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <OrderParameterControls
-                  unit={unit}
-                  order={order}
-                  provinces={provinces}
-                  units={units}
-                  unitsByProv={unitsByProv}
-                  orders={orders}
-                  reachable={reachable}
-                  validRetreats={validRetreats}
-                  unitOptions={unitOptions}
-                  isRetreatPhase={isRetreatPhase}
-                  compact={true}
-                  useNativeSelect={useNativeSelect}
-                  onUpdateOrder={onUpdateOrder}
-                  onHoverProvince={handleHoverOptionProvince}
-                />
-              </div>
-            )}
-        </>
+        <UnitCardCompactRow
+          unit={unit}
+          order={order}
+          powerColor={powerMeta.color}
+          provinces={provinces}
+          units={units}
+          unitsByProv={unitsByProv}
+          orders={orders}
+          reachable={reachable}
+          validRetreats={validRetreats}
+          unitOptions={unitOptions}
+          isDisbanding={isDisbanding}
+          isRetreatPhase={isRetreatPhase}
+          isAdjustmentPhase={isAdjustmentPhase}
+          buildCount={buildCount}
+          useNativeSelect={useNativeSelect}
+          hasWarnToggle={hasWarnToggle}
+          isWarnOpen={isWarnOpen}
+          onToggleWarn={() => setIsWarnOpen((open) => !open)}
+          handleOrderTypeChange={handleOrderTypeChange}
+          onUpdateOrder={onUpdateOrder}
+          onHoverProvince={handleHoverOptionProvince}
+        />
       ) : (
-        <>
-          {/* Unit Card Header */}
-          <div className={styles.unitCardHeader} data-testid="unit-card-header">
-            <div className={styles.unitIdentity}>
-              <span
-                className={styles.unitTypeBadge}
-                data-testid="unit-type-badge"
-                data-unit-type={unit.unit_type === 'A' ? 'army' : 'fleet'}
-                style={{
-                  backgroundColor: unit.is_dislodged
-                    ? '#ea580c'
-                    : isDisbanding
-                      ? '#dc2626'
-                      : powerMeta.color,
-                }}
-              >
-                {unit.unit_type === 'A' ? (
-                  <Swords size={11} />
-                ) : (
-                  <Anchor size={11} />
-                )}
-                {unit.unit_type}
-              </span>
-              <div>
-                <div
-                  className={styles.unitProvTitle}
-                  data-testid="unit-prov-title"
-                >
-                  {provinces[unit.province]?.name}
-                  <span className={styles.unitProvCode}>
-                    {unit.province}
-                    {unit.coast ? `/${unit.coast}` : ''}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* An unfinished order outranks the server's error for it: it is not an order yet. */}
-            <div>
-              {unit.is_dislodged ? (
-                <span
-                  className={cx(styles.unitMiniPill, styles.error)}
-                  data-testid="unit-mini-pill"
-                >
-                  <AlertTriangle size={11} /> Dislodged
-                </span>
-              ) : isDisbanding ? (
-                <span
-                  className={cx(styles.unitMiniPill, styles.error)}
-                  data-testid="unit-mini-pill"
-                >
-                  <Trash2 size={11} /> Disbanding
-                </span>
-              ) : isOrderIncomplete(order) ? (
-                <span
-                  className={cx(styles.unitMiniPill, styles.unconfirmed)}
-                  data-testid="unit-mini-pill"
-                >
-                  <AlertTriangle size={11} /> Incomplete
-                </span>
-              ) : hasError ? (
-                <span
-                  className={cx(styles.unitMiniPill, styles.error)}
-                  data-testid="unit-mini-pill"
-                >
-                  <AlertCircle size={11} /> Illegal
-                </span>
-              ) : hasWarn ? (
-                <span
-                  className={cx(styles.unitMiniPill, styles.warning)}
-                  data-testid="unit-mini-pill"
-                >
-                  <AlertTriangle size={11} /> Warning
-                </span>
-              ) : isAdjustmentPhase ||
-                (isRetreatPhase && !unit.is_dislodged) ? (
-                <span
-                  className={cx(styles.unitMiniPill, styles.confirmed)}
-                  data-testid="unit-mini-pill"
-                >
-                  <CheckCircle2 size={11} /> Retained
-                </span>
-              ) : order?.is_explicit ? (
-                <span
-                  className={cx(styles.unitMiniPill, styles.confirmed)}
-                  data-testid="unit-mini-pill"
-                >
-                  <CheckCircle2 size={11} /> Ready
-                </span>
-              ) : (
-                <span
-                  className={cx(styles.unitMiniPill, styles.unconfirmed)}
-                  data-testid="unit-mini-pill"
-                >
-                  Hold
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Behavior Bar */}
-          <div className={styles.unitBehaviorVisualizer}>
-            <span
-              className={styles.behaviorVerbTag}
-              data-testid="behavior-verb-tag"
-              style={{ backgroundColor: summary.badgeColor }}
-            >
-              {isAdjustmentPhase && !isDisbanding ? 'RETAIN' : summary.verb}
-            </span>
-            <span
-              className={styles.behaviorTargetText}
-              data-testid="behavior-target-text"
-            >
-              {isAdjustmentPhase && !isDisbanding
-                ? `Retained in ${provinces[unit.province]?.name}`
-                : summary.targetText}
-            </span>
-          </div>
-
-          {/* Order Controls */}
-          <div
-            className={styles.unitInlineControls}
-            data-testid="unit-inline-controls"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <OrderTypeTabs
-              unit={unit}
-              order={order}
-              provinces={provinces}
-              validRetreats={validRetreats}
-              isDisbanding={isDisbanding}
-              isRetreatPhase={isRetreatPhase}
-              isAdjustmentPhase={isAdjustmentPhase}
-              buildCount={buildCount}
-              handleOrderTypeChange={handleOrderTypeChange}
-            />
-            {(isRetreatPhase ? unit.is_dislodged : !isAdjustmentPhase) && (
-              <OrderParameterControls
-                unit={unit}
-                order={order}
-                provinces={provinces}
-                units={units}
-                unitsByProv={unitsByProv}
-                orders={orders}
-                reachable={reachable}
-                validRetreats={validRetreats}
-                unitOptions={unitOptions}
-                isRetreatPhase={isRetreatPhase}
-                compact={true}
-                useNativeSelect={useNativeSelect}
-                onUpdateOrder={onUpdateOrder}
-                onHoverProvince={handleHoverOptionProvince}
-              />
-            )}
-          </div>
-        </>
+        <UnitCardDetail
+          unit={unit}
+          order={order}
+          powerColor={powerMeta.color}
+          provinces={provinces}
+          units={units}
+          unitsByProv={unitsByProv}
+          orders={orders}
+          reachable={reachable}
+          validRetreats={validRetreats}
+          unitOptions={unitOptions}
+          summary={summary}
+          hasError={hasError}
+          hasWarn={hasWarn}
+          isDisbanding={isDisbanding}
+          isRetreatPhase={isRetreatPhase}
+          isAdjustmentPhase={isAdjustmentPhase}
+          buildCount={buildCount}
+          useNativeSelect={useNativeSelect}
+          handleOrderTypeChange={handleOrderTypeChange}
+          onUpdateOrder={onUpdateOrder}
+          onHoverProvince={handleHoverOptionProvince}
+        />
       )}
 
       {/* Diagnostic Alerts (a compact warning row shows its warnings only while opened) */}

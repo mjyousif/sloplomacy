@@ -58,7 +58,7 @@ Cloud Run with `cpu_idle = true` and `min_instance_count = 0` only grants CPU wh
 Instead, the phase clock is **purely timestamp-driven and request-evaluated**:
 
 - **Absolute Unix timestamps**: `PhaseTimer.deadline` stores an absolute UTC epoch timestamp (`now + seconds`), never a ticking countdown. It survives container restarts and scale-to-zero teardown unchanged.
-- **Client-driven evaluation**: When a client's `PhaseTimerWidget` counts down to zero, it sends `{"type": "refresh"}` over the WebSocket. The server runs `tick_timer(game)` on receipt—checking `has_expired(timer, time.time())`—and either closes a finished duration vote or triggers `_execute_adjudication(game)` for a running phase.
+- **Client-driven evaluation**: When a client's `PhaseTimerWidget` counts down to zero, it sends `{"type": "refresh"}` over the WebSocket. The server runs `tick_timer(game)` on receipt—checking `has_expired(timer, time.time())`—and either closes a finished duration vote or triggers `execute_adjudication(game)` for a running phase.
 - **Expired clock while scaled to zero**: If all players disconnect and the container scales to zero before a deadline passes, nothing resolves at the exact deadline second. As soon as any player reconnects to `/ws/games/{game_id}` (which runs `tick_timer` on connect), loads `GET /api/game`, or sends `refresh`, the server sees `now >= deadline` and resolves the phase immediately.
 
 ```mermaid

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from domain.board import Power, ProvinceType, Unit, UnitType
 from domain.game_state import GameParticipant, GameState, MultiplayerGameSummary
+from domain.ids import DEFAULT_GAME_ID
 from domain.orders import Order, OrderType
 from engine.adjudicator.resolver import adjudicate_turn
 from engine.order_utils import create_default_orders, refresh_diagnostics_and_simulation
@@ -335,7 +336,7 @@ def _simulate_one_turn_from_win_campaign(game_id: str) -> tuple[list[GameState],
 
 def build_one_turn_from_win_scenario(
     active_power: Power | None = None,
-    game_id: str = "proto_1901",
+    game_id: str = DEFAULT_GAME_ID,
 ) -> GameState:
     """Build the Fall 1906 live GameState where France is one move from 18 SCs."""
     _, game = _simulate_one_turn_from_win_campaign(game_id)
@@ -345,7 +346,7 @@ def build_one_turn_from_win_scenario(
     return game
 
 
-def build_one_turn_from_win_history(game_id: str = "proto_1901") -> list[GameState]:
+def build_one_turn_from_win_history(game_id: str = DEFAULT_GAME_ID) -> list[GameState]:
     """Return the continuous 1901-1906 resolved history snapshots for one_turn_from_win."""
     history, _ = _simulate_one_turn_from_win_campaign(game_id)
     return history

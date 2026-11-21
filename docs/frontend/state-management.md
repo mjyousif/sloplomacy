@@ -16,7 +16,7 @@ The frontend architecture prioritizes server-authoritative truth, immediate reac
 
 ## State Variables (`App.tsx`)
 
-`App.tsx` is the one state coordinator. It owns almost no logic itself: it calls a chain of state hooks, each named for what it does, and hands their values to `AppHeader`, `LobbyView` or `GameWorkspace`, and `AppModals`. None of those three keeps game state.
+`App.tsx` is the one state coordinator. It owns almost no logic itself: it calls a chain of state hooks, each named for what it does (`useAppSync` bundles the live socket, turn alerts, sandbox exit and game-over modal; `useAdminMode` and `useAdminActions` the creator's admin modes), and hands their values to `AppHeader`, `LobbyView` or `GameWorkspace`, and `AppModals`. None of those three keeps game state.
 
 ```mermaid
 flowchart TD
@@ -34,14 +34,14 @@ flowchart TD
 | Concern | Where it lives | Principle |
 | :--- | :--- | :--- |
 | Open game, seat, board, lobby list | `useGameSession` | The board (`gameState`, `provinces`) is always the server's last answer. The seat (`lockedPower`) is what `resolvePlayerPower` turns into the player's power: the seat in multiplayer, `gameState.active_power` in a sandbox. `gamesList` holds the player's own games (`/api/games/mine`) followed by public matches, each game once. |
-| Keeping it current | `useGameSync` | Owns the socket, the first load and the fallback poll. Its effects run in a fixed order relative to the other App effects (after display-prefs, layout-reset and turn-history, before `useSandboxExit`), so reordering the hook calls in App changes behavior. |
+| Keeping it current | `useGameSync` | Owns the socket, the first load and the fallback poll. `useAppSync` calls it, then the turn alerts, `useSandboxExit` and the game-over modal. Its effects run in a fixed order relative to the other App effects (after display-prefs, layout-reset and turn-history, before `useSandboxExit`), so reordering the hook calls in App changes behavior. |
 | Hypothetical Mode and scenario reset | `useSandboxSession` | `sandboxGameId` is the private server copy used inside a multiplayer match. Drafts, power switches, previews and hypothetical resolves go to `draftGameId`: `sandboxGameId` when set, else `activeGameId`. The real match's clock is held aside (`hypotheticalMatchTimer`) because the copy has none. |
 | What a player does in a match | `useMatchActions` | Order edits, finalize (through the Sanity Check modal), unfinalize, resolve (guarded against a double click) and clock buttons. Each applies the server's reply through `applyServerState`. |
 | Taking and leaving seats | `useSeatActions`, `useSpectate`, `useBoardExits` | Seat changes and every route off the board; the exits ask first while staged Edit Board changes exist. A spectator holds a match with `lockedPower` null and the client never sends a `power` for them. |
 | Selection | `useSidebarSelection` | One `selectedUnitId` shared by map and sidebar, so a pick on either side lights the other. The hook records where the pick happened so the map does not float a unit menu over a unit whose card is already on screen. |
 | Identity | `useAuthSession` | `authReady` turns true after the first saved-user read, so a game link can know the player's seat. Sign-in and sign-out are followed afterwards. |
 | Layout | `useWorkspaceLayout`, `useCompactLayout` | Desktop rails collapse automatically on narrow screens (left below `1200px`, both below `960px`); phones have a bottom order sheet (`peek`/`half`/`full`) and a tools drawer, both reset when the game, view or layout changes. `isCompact` is written on the shell as `data-layout` for the `@layer compact` CSS. |
-| Admin Direct-Edit | `useAdminDirectEdit` | Board edits are staged locally and committed atomically (`POST /api/admin/board-edit`, which answers `409` on a concurrent change). Leaving with staged edits asks first; admin audit entries must be acknowledged per participant. |
+| Admin Direct-Edit | `useAdminMode`, `useAdminDirectEdit`, `useAdminActions` | Board edits are staged locally and committed atomically (`POST /api/admin/board-edit`, which answers `409` on a concurrent change). Leaving with staged edits asks first; admin audit entries must be acknowledged per participant. |
 | Turn history | `useTurnHistory` | The resolved-phase list is refetched whenever the live turn changes (covers socket updates and rollbacks); a phase on show is re-found by season, year and phase, and the view returns to live if it is gone. It always reads `activeGameId`, never `sandboxGameId`. While a past turn is set the map is read-only and the orders panel is dimmed. |
 | Toast | `useToast` | A new message replaces the current one; each clears after 4.5 seconds. |
 

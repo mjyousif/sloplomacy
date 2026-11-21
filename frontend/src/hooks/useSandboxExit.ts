@@ -1,8 +1,7 @@
 import { type Dispatch, type SetStateAction, useEffect } from 'react';
+import { API_BASE } from '../lib/api';
 import { authedFetch } from '../lib/supabase';
 import type { Power } from '../types/diplomacy';
-
-const API_BASE = '/api';
 
 export interface SandboxExitOptions {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';

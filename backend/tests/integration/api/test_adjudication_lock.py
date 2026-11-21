@@ -4,7 +4,7 @@ import asyncio
 from unittest.mock import patch
 
 import pytest
-from api.turns import _execute_adjudication, turn_label
+from api.turns import execute_adjudication, turn_label
 from domain.board import Power
 from storage.store import ADJUDICATION_LOCKS, GAME_HISTORY, GAMES
 from tests.integration.api.helpers import _dislodge_russia_in_silesia, _seated_game
@@ -28,9 +28,9 @@ def test_two_resolvers_of_one_turn_resolve_it_once():
     async def run():
         with _slow_persist():
             await asyncio.gather(
-                _execute_adjudication(game, expected_turn=label),
-                _execute_adjudication(game, expected_turn=label),
-                _execute_adjudication(game, expected_turn=label),
+                execute_adjudication(game, expected_turn=label),
+                execute_adjudication(game, expected_turn=label),
+                execute_adjudication(game, expected_turn=label),
             )
 
     asyncio.run(run())
@@ -46,9 +46,9 @@ def test_resolver_that_lost_the_race_does_not_resolve_the_next_turn_too():
 
     async def run():
         with _slow_persist():
-            first = asyncio.ensure_future(_execute_adjudication(game, expected_turn=stale))
+            first = asyncio.ensure_future(execute_adjudication(game, expected_turn=stale))
             await asyncio.sleep(0)  # The first resolver now holds the lock, mid-persist.
-            second = await _execute_adjudication(game, expected_turn=stale)
+            second = await execute_adjudication(game, expected_turn=stale)
             await first
             return second
 
@@ -67,7 +67,7 @@ def test_phases_nobody_waits_for_chain_inside_the_lock_without_deadlock():
 
     async def run():
         with _slow_persist():
-            await asyncio.wait_for(_execute_adjudication(game), timeout=10)
+            await asyncio.wait_for(execute_adjudication(game), timeout=10)
 
     asyncio.run(run())
 
