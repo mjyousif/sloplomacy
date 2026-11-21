@@ -397,11 +397,23 @@ describe('PressSection: move suggestions', () => {
     is_explicit: true,
   };
 
-  it('offers the lamp only in a signed private thread, during a Movement turn', async () => {
+  it('offers the lamp in public press, signed threads, and 1-to-1 backchannels, but not anonymous group threads', async () => {
     const { rerender } = render(<PressSection {...base()} />);
     fill([]);
-    expect(lamp()).toBeNull();
+    // Public box (signed and anonymous) offers the lamp.
+    expect(lamp()).not.toBeNull();
+    await userEvent.click(screen.getByTestId('press-anonymous'));
+    expect(lamp()).not.toBeNull();
+    await userEvent.click(screen.getByTestId('press-anonymous'));
+
+    // 1-to-1 thread (signed and anonymous backchannel) offers the lamp.
     await tick('GERMANY');
+    expect(lamp()).not.toBeNull();
+    await userEvent.click(screen.getByTestId('press-anonymous'));
+    expect(lamp()).not.toBeNull();
+    await userEvent.click(screen.getByTestId('press-anonymous'));
+
+    // Group thread: signed offers the lamp, anonymous hides it.
     await tick('ENGLAND');
     expect(lamp()).not.toBeNull();
     await userEvent.click(screen.getByTestId('press-anonymous'));
@@ -409,6 +421,27 @@ describe('PressSection: move suggestions', () => {
     await userEvent.click(screen.getByTestId('press-anonymous'));
     rerender(<PressSection {...base({ suggestTurn: null })} />);
     expect(lamp()).toBeNull();
+  });
+
+  it('posts an anonymous public suggestion without discarding on public channel', async () => {
+    render(<PressSection {...base()} />);
+    fill([]);
+    await userEvent.click(screen.getByTestId('press-anonymous'));
+    await userEvent.click(screen.getByTestId('press-suggest'));
+    expect(suggestionStore.getState().draft).toMatchObject({
+      members: [],
+      turn: 'Spring 1901 Movement',
+      anonymous: true,
+    });
+    act(() => suggestionStore.stageOrder(order));
+    await userEvent.click(screen.getByTestId('press-send'));
+    expect(lastPost().body).toEqual({
+      power: 'FRANCE',
+      recipients: [],
+      anonymous: true,
+      body: '',
+      orders: [order],
+    });
   });
 
   it('starts a draft for the thread, and sends its orders with a message that needs no text', async () => {
@@ -571,5 +604,34 @@ describe('PressSection while watching', () => {
     expect(screen.queryByRole('tablist')).toBeNull();
     expect(destination()).toMatch(/only the players can send press/);
     expect(pressStore.getState().lastRead).toEqual({ public: 2 });
+  });
+
+  it('lets a spectator view public order suggestions on the map without adopting', async () => {
+    const suggestionOrder = {
+      unit_id: 'GER_A_MUN',
+      power: 'GERMANY' as Power,
+      unit_type: 'A' as const,
+      origin: 'MUN',
+      order_type: 'MOVE' as const,
+      target: 'BUR',
+      via_convoy: false,
+      is_explicit: true,
+    };
+    const publicSuggestion = msg(1, 'GERMANY', 'Try this', [], {
+      orders: [suggestionOrder],
+    });
+    act(() => {
+      pressStore.open('g1', null);
+      pressStore.setFeed('g1', {
+        power: null,
+        revealed: false,
+        messages: [publicSuggestion],
+      });
+    });
+    render(<PressSection {...base({ power: null })} />);
+    expect(screen.getByTestId('press-suggestion')).toBeInTheDocument();
+    expect(screen.queryByTestId('suggestion-use')).toBeNull();
+    await userEvent.click(screen.getByTestId('suggestion-show'));
+    expect(suggestionStore.getState().viewing).toEqual(publicSuggestion);
   });
 });

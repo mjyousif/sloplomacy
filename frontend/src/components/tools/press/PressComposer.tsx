@@ -110,11 +110,11 @@ export const PressComposer: React.FC<PressComposerProps> = ({
             data-testid="press-suggest"
             data-active={suggest.active ? 'true' : undefined}
             aria-pressed={suggest.active}
-            aria-label="Suggest moves"
+            aria-label="Suggest orders"
             title={
               suggest.active
-                ? 'Writing a move suggestion on the map'
-                : 'Suggest moves: order their units and yours on the map'
+                ? 'Writing an order suggestion on the map'
+                : 'Suggest orders: stage orders on the map'
             }
             onClick={suggest.onStart}
           >

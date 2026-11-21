@@ -203,7 +203,7 @@ The chat of a multiplayer match, in `backend/domain/press.py` and `frontend/src/
 | `body` | `string` | Up to 1000 characters. |
 | `sent_at` | `string` | ISO time. |
 | `season`, `year`, `phase` | | The turn it was sent in. |
-| `orders` | `Order[]` | A move suggestion: orders for units of the sender and the recipients. Empty for a plain message. Only in a signed private thread message sent in a Movement phase. |
+| `orders` | `Order[]` | Suggested orders for the current phase (`Movement`, `Retreats`, or `Adjustments`). Empty for a plain message. Allowed in public press (signed or anonymous, any power), signed private threads (sender + recipients), or 1-to-1 anonymous backchannels (recipient only). |
 
 `PressFeed` (`GET /api/press`) is `{ power, revealed, messages }`: the seat it was read as (`null` for a spectator, whose feed is the public box alone, numbered by the stored `PressMessage.public_number`), whether the game is over and all press is shown, and the messages oldest first. `PressPostRequest` is `{ power, recipients, anonymous, body, orders? }`. `OrderSubmissionRequest` (`POST /api/orders/batch`) is `{ power, orders, turn? }`. `WebSocketPressUpdate` is `{ type: 'press', game_id, power, messages }`.
 

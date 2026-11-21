@@ -15,6 +15,8 @@ export interface UseBuildHomesOptions {
   historyActions?: readonly HistoryActionType[];
   isAdjustmentPhase: boolean;
   phase?: string;
+  /** While an order suggestion is being drafted: powers whose build slots may be staged. */
+  suggestPowers?: Power[] | null;
 }
 
 const NO_HISTORY_ACTIONS: readonly HistoryActionType[] = [];
@@ -33,6 +35,7 @@ export function useBuildHomes({
   historyActions = NO_HISTORY_ACTIONS,
   isAdjustmentPhase,
   phase,
+  suggestPowers = null,
 }: UseBuildHomesOptions): Record<string, Power> {
   // Build homes map for Adjustments phase (and Admin history snapshots with spawned units)
   return useMemo(() => {
@@ -50,7 +53,10 @@ export function useBuildHomes({
     if (isAdjustmentPhase && builds) {
       for (const [pwrStr, bInfo] of Object.entries(builds)) {
         const pwr = pwrStr as Power;
-        if (bInfo.count > 0 && (pwr === activePower || canEditAnyPower)) {
+        const canBuild = suggestPowers
+          ? suggestPowers.includes(pwr)
+          : pwr === activePower || canEditAnyPower;
+        if (bInfo.count > 0 && canBuild) {
           for (const h of bInfo.homes) {
             homes[h] = pwr;
           }
@@ -68,5 +74,6 @@ export function useBuildHomes({
     builds,
     activePower,
     canEditAnyPower,
+    suggestPowers,
   ]);
 }

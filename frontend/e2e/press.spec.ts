@@ -287,15 +287,27 @@ test.describe('Scenario: Press between three players', () => {
       recorder.attachListeners(alice);
       recorder.attachListeners(bob);
 
-      // 1. The lamp button is only offered in a private thread.
+      // 1. The lamp button is offered in public press and private threads, and hidden in
+      // anonymous group threads.
       await alice
         .locator('[data-testid="press-section"]')
         .scrollIntoViewIfNeeded();
-      await expect(alice.locator('[data-testid="press-suggest"]')).toHaveCount(
-        0,
+      await expect(alice.locator('[data-testid="press-suggest"]:visible')).toHaveCount(
+        1,
       );
       await alice
         .locator('[data-testid="press-recipient-GERMANY"]:visible')
+        .click();
+      await alice
+        .locator('[data-testid="press-recipient-ENGLAND"]:visible')
+        .click();
+      await alice.locator('[data-testid="press-anonymous"]:visible').click();
+      await expect(alice.locator('[data-testid="press-suggest"]')).toHaveCount(
+        0,
+      );
+      await alice.locator('[data-testid="press-anonymous"]:visible').click();
+      await alice
+        .locator('[data-testid="press-recipient-ENGLAND"]:visible')
         .click();
       const lamp = alice.locator('[data-testid="press-suggest"]:visible');
       await lamp.click();

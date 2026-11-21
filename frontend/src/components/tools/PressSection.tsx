@@ -209,12 +209,12 @@ const PlayerPressSection: React.FC<PressSectionProps & { power: Power }> = ({
     return byProvince;
   }, [units]);
 
-  // A suggestion is written for one thread (and either signed or one-to-one anonymous).
-  // Switching countries or toggling the mask discards it so own-unit orders never leak.
+  // A suggestion is written for one channel (public, signed thread, or 1-to-1 anonymous).
+  // Switching countries or toggling the mask into an anonymous group thread discards it.
   const draftIsHere =
     draft !== null &&
     Boolean(draft.anonymous) === sendAnonymous &&
-    (!sendAnonymous || recipients.length === 1) &&
+    (!sendAnonymous || recipients.length <= 1) &&
     draft.members.length === recipients.length &&
     draft.members.every((p) => recipients.includes(p));
   useEffect(() => {
@@ -225,9 +225,9 @@ const PlayerPressSection: React.FC<PressSectionProps & { power: Power }> = ({
   const canSuggest =
     suggestTurn !== null &&
     !blocked &&
-    (!sendAnonymous || recipients.length === 1) &&
-    recipients.length > 0 &&
-    active.kind === 'thread';
+    (!sendAnonymous || recipients.length <= 1) &&
+    (active.kind === 'public' ||
+      (active.kind === 'thread' && recipients.length > 0));
   const startSuggestion = () => {
     if (!draftIsHere && suggestTurn) {
       suggestionStore.startDraft(recipients, suggestTurn, sendAnonymous);

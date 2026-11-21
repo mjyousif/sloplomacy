@@ -2,7 +2,13 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { suggestionStore } from '../lib/suggestionStore';
-import type { GameState, Order, PressMessage, Unit } from '../types/diplomacy';
+import {
+  ALL_POWERS,
+  type GameState,
+  type Order,
+  type PressMessage,
+  type Unit,
+} from '../types/diplomacy';
 import {
   finishedOrders,
   type SuggestionBoardOptions,
@@ -129,16 +135,124 @@ describe('useSuggestionBoard', () => {
     expect(suggestionStore.getState().draft).toBeNull();
   });
 
-  it('ends when the board is needed for something else, or the phase is not Movement', () => {
+  it('ends when the board is needed for something else or the game ends', () => {
     const blocked = board({ blocked: true });
     act(() => suggestionStore.view(message()));
     expect(blocked.result.current).toBeNull();
     expect(suggestionStore.getState().viewing).toBeNull();
     blocked.unmount();
 
-    const retreats = board({ gameState: game({ phase: 'Retreats' }) });
-    act(() => suggestionStore.view(message({ phase: 'Retreats', orders: [] })));
-    expect(retreats.result.current).toBeNull();
+    const won = board({ gameState: game({ winner: 'FRANCE' }) });
+    act(() => suggestionStore.view(message()));
+    expect(won.result.current).toBeNull();
+  });
+
+  it('supports Retreats drafts and views for dislodged units only', () => {
+    const dislodgedGer: Unit = {
+      id: 'GER_A_BUR_DIS',
+      power: 'GERMANY',
+      unit_type: 'A',
+      province: 'BUR',
+      is_dislodged: true,
+    };
+    const retreatOrder: Order = {
+      unit_id: dislodgedGer.id,
+      power: 'GERMANY',
+      unit_type: 'A',
+      origin: 'BUR',
+      order_type: 'RETREAT',
+      target: 'MUN',
+      via_convoy: false,
+      is_explicit: true,
+    };
+    const { result } = board({
+      gameState: game({
+        phase: 'Retreats',
+        units: [...UNITS, dislodgedGer],
+      }),
+    });
+    act(() => suggestionStore.startDraft(['GERMANY'], 'Spring 1901 Retreats'));
+    act(() => {
+      result.current?.stage(retreatOrder);
+      // Non-dislodged unit order is filtered out in Retreats.
+      result.current?.stage(move(UNITS[0], 'BUR'));
+    });
+    expect([...(result.current?.map.unitIds ?? [])]).toEqual([dislodgedGer.id]);
+    expect(result.current?.orders[dislodgedGer.id].order_type).toBe('RETREAT');
+  });
+
+  it('supports Adjustments drafts with build slots, disbands, and unstaging Keep Unit', () => {
+    const buildOrder: Order = {
+      unit_id: 'BUILD_GERMANY_BER',
+      power: 'GERMANY',
+      unit_type: 'A',
+      origin: 'BER',
+      origin_coast: null,
+      order_type: 'BUILD',
+      via_convoy: false,
+      is_explicit: true,
+    };
+    const disbandOrder: Order = {
+      unit_id: 'FRA_A_PAR',
+      power: 'FRANCE',
+      unit_type: 'A',
+      origin: 'PAR',
+      order_type: 'DISBAND',
+      via_convoy: false,
+      is_explicit: true,
+    };
+    const { result } = board({
+      gameState: game({
+        season: 'Winter',
+        phase: 'Adjustments',
+        builds: {
+          GERMANY: { count: 1, homes: ['BER'] },
+          FRANCE: { count: -1, homes: [] },
+        } as unknown as GameState['builds'],
+      }),
+    });
+    act(() =>
+      suggestionStore.startDraft(['GERMANY'], 'Winter 1901 Adjustments'),
+    );
+    expect(result.current?.orders.BUILD_GERMANY_BER).toMatchObject({
+      order_type: 'WAIVE',
+      is_explicit: false,
+    });
+    act(() => {
+      result.current?.stage(buildOrder);
+      result.current?.stage(disbandOrder);
+    });
+    expect(result.current?.orders.BUILD_GERMANY_BER.order_type).toBe('BUILD');
+    expect(result.current?.orders.FRA_A_PAR.order_type).toBe('DISBAND');
+    expect(result.current?.mine.map((o) => o.unit_id)).toEqual(['FRA_A_PAR']);
+
+    // Staging HOLD (Keep Unit) on a regular unit in Adjustments removes it from the draft.
+    act(() =>
+      result.current?.stage({
+        ...disbandOrder,
+        order_type: 'HOLD',
+      }),
+    );
+    expect(suggestionStore.getState().draft?.orders.FRA_A_PAR).toBeUndefined();
+  });
+
+  it('allows public drafts (signed and anonymous) to edit any power on the board', () => {
+    const { result } = board();
+    act(() => suggestionStore.startDraft([], TURN, true));
+    expect(result.current?.label).toBe('your anonymous public suggestion');
+    expect(result.current?.map.editablePowers).toEqual([...ALL_POWERS]);
+    act(() => result.current?.stage(move(UNITS[2], 'WAL')));
+    expect(result.current?.count).toBe(1);
+  });
+
+  it('lets a spectator (power null) view a public suggestion read-only', () => {
+    const { result } = board({ power: null });
+    act(() =>
+      suggestionStore.view(message({ recipients: [], sender: 'GERMANY' })),
+    );
+    expect(result.current?.mode).toBe('view');
+    expect(result.current?.mine).toEqual([]);
+    expect(result.current?.count).toBe(2);
   });
 
   it('never shows a suggestion made for an earlier turn', () => {

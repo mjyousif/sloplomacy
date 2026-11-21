@@ -174,6 +174,7 @@ export function useEuropeMap(
     historyActions,
     isAdjustmentPhase,
     phase,
+    suggestPowers: suggestion?.editablePowers ?? null,
   });
 
   const touchHitRadius = useTouchHitRadius({

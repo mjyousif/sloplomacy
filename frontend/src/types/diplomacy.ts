@@ -478,7 +478,7 @@ export interface PressPostRequest {
   anonymous: boolean;
   /** May be empty when `orders` are attached. */
   body: string;
-  /** Suggested moves: a signed private thread in a Movement phase only. */
+  /** Suggested orders: public press, a signed private thread, or a 1-to-1 anonymous backchannel. */
   orders?: Order[];
 }
 

@@ -30,7 +30,7 @@ export const PressSuggestionDraft: React.FC<PressSuggestionDraftProps> = ({
   <div className={styles.draft} data-testid="press-suggestion-draft">
     <div className={styles.draftTitle}>
       <Lightbulb size={11} aria-hidden="true" />
-      <span>Suggested moves</span>
+      <span>Suggested orders</span>
       <button
         type="button"
         className={styles.discardBtn}
@@ -42,8 +42,8 @@ export const PressSuggestionDraft: React.FC<PressSuggestionDraftProps> = ({
     </div>
     {orders.length === 0 ? (
       <p className={styles.draftHint}>
-        On the map, give orders to their units and to any of yours you want to
-        show. Your real orders stay as they are.
+        On the map, order units or build slots to include. Your real orders stay
+        as they are.
       </p>
     ) : (
       <SuggestedOrders
