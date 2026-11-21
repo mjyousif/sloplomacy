@@ -307,7 +307,6 @@ interface GameParticipant {
 - `LeaveGameRequest`: `{ user_id, email?, power? }`
 - `SurrenderRequest`: `{ power, user_id, email?, leave: boolean }`
 - `SaveSandboxRequest`: `{ name, user_id, email, display_name? }`
-- `GenerateAIOrdersRequest`: `{ powers?: Power[] | null, include_active?: boolean }`
 - `SingleOrderUpdateRequest`: `{ order, active_power?, turn? }`
 - `FinalizeRequest`: `{ power, force?, turn? }`
 - `TimerVoteRequest`: `{ power, choice: TimerChoice }`
@@ -361,10 +360,6 @@ Used by the match creator to arbitrate games and perform scenario testing. In mu
 - `AdminStatusResponse`: `{ is_creator, can_rollback, history_count, creator_email, creator_id }`
 - `AdminRollbackRequest`: `{ user_id?, email? }` *(Identity verified via JWT Bearer token)*
 - `AdminSetTurnRequest`: `{ season, year, phase, user_id?, email? }`
-- `AdminMoveUnitRequest`: `{ unit_id, new_province, new_coast?, user_id?, email? }`
-- `AdminSpawnUnitRequest`: `{ power, unit_type, province, coast?, user_id?, email? }`
-- `AdminDestroyUnitRequest`: `{ unit_id, user_id?, email? }`
-- `AdminSetOwnershipRequest`: `{ province, power?, user_id?, email? }`
 
 
 ---

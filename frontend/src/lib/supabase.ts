@@ -86,7 +86,12 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   if (localUser) {
     const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
     const payload = btoa(
-      JSON.stringify({ sub: localUser.id, email: localUser.email }),
+      JSON.stringify({
+        sub: localUser.id,
+        email: localUser.email,
+        // The dev backend refuses an unsigned token that does not expire.
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      }),
     );
     return {
       Authorization: `Bearer ${header}.${payload}.`,
@@ -118,7 +123,7 @@ export async function authedFetch(
  * runs it unless a test sets `MODE` itself. It runs once per browser profile: the player
  * is then kept in `localStorage` like a demo sign-in. Each profile (or incognito window)
  * gets its own id, so each is a different player and can hold its own seat. The backend
- * still decides whether to trust the unsigned token (`ENVIRONMENT=development`).
+ * still decides whether to trust the unsigned token (`ALLOW_INSECURE_DEV_AUTH=true`).
  */
 function devSignIn(): AuthUser | null {
   if (

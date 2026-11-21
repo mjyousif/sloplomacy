@@ -1,13 +1,10 @@
-"""FastAPI router for sandbox (war room) mode, scenario loading, and AI tactical planning."""
+"""FastAPI router for sandbox (war room) mode and scenario loading."""
 
 import uuid
 
-from api.turns import execute_adjudication
 from domain.board import Power
 from domain.game_state import GameState
-from domain.orders import OrderType
-from domain.requests import GenerateAIOrdersRequest, ScenarioRequest, SetPowerRequest
-from engine.ai import generate_tactical_orders
+from domain.requests import ScenarioRequest, SetPowerRequest
 from engine.order_utils import (
     refresh_diagnostics_and_simulation,
     reset_foreign_orders,
@@ -46,7 +43,7 @@ from ws.connection_manager import (
     broadcast_lobby_update,
 )
 
-router = APIRouter(tags=["Sandbox & AI Planning"])
+router = APIRouter(tags=["Sandbox"])
 
 
 def open_private_sandbox(match: GameState, power: Power) -> GameState:
@@ -194,81 +191,6 @@ async def clear_foreign_pre_moves(req: SetPowerRequest, game_id: str | None = Qu
     await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
     return game
-
-
-@router.post(
-    "/api/sandbox/ai-orders",
-    response_model=GameState,
-    summary="Generate AI Orders",
-    description="Generate DATC-compliant heuristic tactical orders for specified Great Powers or foreign powers in sandbox mode.",
-)
-async def generate_sandbox_ai_orders(
-    req: GenerateAIOrdersRequest | None = None,
-    game_id: str | None = Query(default=None),
-):
-    game = await resolve_game(game_id)
-    reject_on_multiplayer_match(game.game_id)
-    if req and req.powers:
-        target_powers = req.powers
-    elif req and req.include_active:
-        target_powers = list(Power)
-    else:
-        target_powers = [p for p in Power if p != game.active_power]
-
-    ai_orders = generate_tactical_orders(
-        units=game.units,
-        ownership=game.ownership,
-        season=game.season,
-        year=game.year,
-        phase=game.phase,
-        target_powers=target_powers,
-        retreats=game.retreats,
-        builds=game.builds,
-    )
-    for ord_id, ord_obj in ai_orders.items():
-        game.orders[ord_id] = ord_obj
-
-    refresh_diagnostics_and_simulation(game)
-    sync_summary(game.game_id)
-    await persist_game(game.game_id)
-    await broadcast_game_update(game.game_id, game)
-    return game
-
-
-@router.post(
-    "/api/sandbox/ai-step",
-    response_model=GameState,
-    summary="Step Turn With AI",
-    description="Auto-plan unassigned foreign powers with tactical AI and advance to next phase in sandbox mode.",
-)
-async def step_turn_with_ai(game_id: str | None = Query(default=None)):
-    game = await resolve_game(game_id)
-    reject_on_multiplayer_match(game.game_id)
-    powers_needing_orders = [
-        p
-        for p in Power
-        if p != game.active_power
-        or not any(
-            o.power == p
-            and o.is_explicit
-            and (game.phase == "Movement" or o.order_type != OrderType.HOLD)
-            for o in game.orders.values()
-        )
-    ]
-    ai_orders = generate_tactical_orders(
-        units=game.units,
-        ownership=game.ownership,
-        season=game.season,
-        year=game.year,
-        phase=game.phase,
-        target_powers=powers_needing_orders,
-        retreats=game.retreats,
-        builds=game.builds,
-    )
-    for ord_id, ord_obj in ai_orders.items():
-        game.orders[ord_id] = ord_obj
-
-    return await execute_adjudication(game)
 
 
 @router.post(

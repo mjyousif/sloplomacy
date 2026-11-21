@@ -255,8 +255,6 @@ export function useAdminDirectEdit({
         ownership: stagedOwnership,
         orders: stagedOrders,
         summary_lines: diffLines.map((line) => `[ADMIN OVERRIDE] ${line}.`),
-        user_id: authUser?.id || 'guest',
-        email: authUser?.email || 'commander@diplomacy.local',
       });
 
       if (res.status === 409) {

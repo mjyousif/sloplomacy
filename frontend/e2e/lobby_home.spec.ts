@@ -25,7 +25,7 @@ const RIVAL: DemoUser = {
 function authHeaders(user: DemoUser): Record<string, string> {
   const part = (value: object) =>
     Buffer.from(JSON.stringify(value)).toString('base64');
-  const token = `${part({ alg: 'none', typ: 'JWT' })}.${part({ sub: user.id, email: user.email })}.`;
+  const token = `${part({ alg: 'none', typ: 'JWT' })}.${part({ sub: user.id, email: user.email, exp: Math.floor(Date.now() / 1000) + 3600 })}.`;
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 

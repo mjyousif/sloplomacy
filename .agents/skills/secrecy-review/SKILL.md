@@ -26,7 +26,8 @@ Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #
 
 - [ ] The order's power comes from the seat or slot being edited, never trusted from the request body. Every unit in a batch must belong to the batch's power.
 - [ ] `require_own_seat` (or the equivalent timer or admin check) runs before any mutation. Empty seats can only be ordered by the host.
-- [ ] Admin checks fail **closed**. If the game's summary is not loaded, load it first.
+- [ ] Admin checks fail **closed**. If the game's summary is not loaded, load it first. A game in memory with no summary (`lacks_summary`) is refused by every check, never treated as open; only the default board and a private `sbx_` copy have none.
+- [ ] Identity comes only from the verified token (`get_current_user`). Never read `X-User-Id` / `X-User-Email` or a `user_id` / `email` / `power` in a body to decide who is calling or acknowledging.
 - [ ] `GameState.active_power` is shared by all players. Never use it to identify a caller.
 - [ ] Sandbox write endpoints answer `409` on a live multiplayer match, and foreign hypothetical moves are never written into real state.
 - [ ] A saved sandbox is its owner's alone. New HTTP routes get this from `saved_sandbox_guard` (a router dependency in `main.py`) as long as they take the game as `game_id` in the path or query; a new socket or a differently named parameter needs its own check (`caller_owns_saved_sandbox`).
@@ -34,7 +35,9 @@ Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #
 ## Persistence
 
 - [ ] `persist_game` is called after every change.
-- [ ] Memory wins over the database for a loaded game, and a `SupabaseUnavailable` read is not "game missing".
+- [ ] Memory wins over the database for a loaded game, and a `SupabaseUnavailable` read is not "game missing". An unreadable stored summary is withheld (`build_summary_from_row` returns `None`), never rebuilt from the plain columns, which would make a private game public.
+- [ ] Anything that evicts a game checks `has_unsaved_work`, and a sync that read Supabase only evicts games it knew of before the read began.
+- [ ] Resolving a turn goes through `execute_adjudication`, which holds the game's lock and takes the turn it expects to resolve.
 - [ ] Anything that changes turn outside `execute_adjudication` calls `start_phase_clock`.
 - [ ] Never denormalize user display names or emails (`created_by`, UUID participant `display_name`) into persisted game blobs. Serialize **both** top-level `payload["summary"]` and `payload["game_state"]["summary"]` through `_serialize_summary_for_db`, and resolve display names from `PROFILE_NAMES[user_id]` (refreshed with a TTL cache, not on every lobby request).
 

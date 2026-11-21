@@ -4,6 +4,7 @@ import json
 
 from fastapi.testclient import TestClient
 from main import app
+from tests.integration.api.helpers import direct_edit
 from tests.integration.security.helpers import auth_headers, make_jwt, socket_state
 from tests.ws_testing import receive_json
 
@@ -82,21 +83,13 @@ def test_emails_are_never_exposed_in_lobby_game_admin_or_sockets():
     assert status_res.status_code == 200
     assert alice_email not in status_res.text
 
-    spawn_res = client.post(
-        f"/api/admin/unit/spawn?game_id={gid}",
-        json={"power": "ITALY", "unit_type": "A", "province": "ROM"},
-        headers=alice_hdrs,
-    )
+    spawn_res = direct_edit(gid, alice_hdrs, place=[("ITALY", "A", "ROM")])
     assert spawn_res.status_code == 200
     assert alice_email not in spawn_res.text
     assert spawn_res.json()["admin_log"][0]["actor"] == "GeneralAlice"
 
     # Non-creator error message must not leak creator's email
-    denied_res = client.post(
-        f"/api/admin/unit/spawn?game_id={gid}",
-        json={"power": "ITALY", "unit_type": "A", "province": "VEN"},
-        headers=bob_hdrs,
-    )
+    denied_res = direct_edit(gid, bob_hdrs, place=[("ITALY", "A", "VEN")])
     assert denied_res.status_code == 403
     assert alice_email not in denied_res.text
 

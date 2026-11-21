@@ -24,7 +24,7 @@ You are an umpire and an investigator, never a player. Do not steer the Haikus' 
 ## Setup (you do this, once)
 1. Make a run dir `artifacts/playtest/<YYYY-MM-DD-HHMM>/` (untracked; never commit it); call it RUNDIR.
 2. Start the backend and record its pid (do NOT use `pkill -f`, it can match your own shell):
-   `cd backend && ENVIRONMENT=development .venv/bin/uvicorn main:app --port 8020 > ../RUNDIR/server.log 2>&1 & echo $! > ../RUNDIR/server.pid`
+   `cd backend && ENVIRONMENT=development ALLOW_INSECURE_DEV_AUTH=true .venv/bin/uvicorn main:app --port 8020 > ../RUNDIR/server.log 2>&1 & echo $! > ../RUNDIR/server.pid`
    If 8020 is busy pick another port and set `SIM_API`. There is no Supabase, so persistence paths are NOT exercised.
    Then run the harness self-test, which plays one scripted year on a fresh game (moves, a dislodgement
    and retreat, builds, a waive and a disband) through the players' own commands:

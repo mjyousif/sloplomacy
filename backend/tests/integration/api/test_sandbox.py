@@ -209,8 +209,6 @@ def test_deleting_a_match_removes_its_sandboxes():
     [
         "/api/sandbox/exit",
         "/api/sandbox/clear-foreign",
-        "/api/sandbox/ai-orders",
-        "/api/sandbox/ai-step",
     ],
 )
 def test_sandbox_writes_are_refused_on_a_live_match(path):

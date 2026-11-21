@@ -230,16 +230,31 @@ def to_app_status(db_status: str) -> str:
     return DB_TO_APP_STATUS.get(db_status, "waiting")
 
 
-def build_summary_from_row(row: dict[str, Any]) -> MultiplayerGameSummary:
+def build_summary_from_row(row: dict[str, Any]) -> MultiplayerGameSummary | None:
+    """The summary a row stores, or one built from its plain columns for a row that has none.
+
+    Returns None when the row stores a summary that cannot be read. The columns are no fallback
+    for that case: a save never writes `is_private`, `passcode` or the seats to them, so a summary
+    built from them would be a public, passcode-less game with nobody seated. An unreadable summary
+    means the game is unavailable, never that it is open.
+    """
     room_code = row.get("room_code", "")
     raw_blob = row.get("game_state") or {}
     packed = raw_blob.get("summary") if isinstance(raw_blob, dict) else None
+    stored = False
     for candidate in (packed, row.get("summary")):
         if isinstance(candidate, dict) and candidate:
+            stored = True
             try:
                 return MultiplayerGameSummary.model_validate(candidate)
             except Exception as ex:
-                logger.debug("Could not deserialize summary for %s: %s", room_code, ex)
+                logger.warning(
+                    "Stored summary of '%s' is unreadable, so the game is withheld: %s",
+                    room_code,
+                    ex,
+                )
+    if stored:
+        return None
 
     raw_winner = row.get("winner")
     parsed_winner: Power | None = None
@@ -303,6 +318,8 @@ async def load_game_from_db(
             state.state_revision = max(state.state_revision, int(row["state_revision"]))
 
         summary = build_summary_from_row(row)
+        if summary is None:
+            raise SupabaseUnavailable(f"The stored summary of '{game_id}' is unreadable.")
 
         history: list[GameState] = []
         if isinstance(history_data, list):
@@ -323,8 +340,12 @@ async def load_game_from_db(
 
 async def load_all_summaries_from_db(
     client: httpx.AsyncClient | None = None,
-) -> dict[str, MultiplayerGameSummary]:
-    """Fetch all game summaries from Supabase; raise SupabaseUnavailable on error."""
+) -> dict[str, MultiplayerGameSummary | None]:
+    """Fetch all game summaries from Supabase; raise SupabaseUnavailable on error.
+
+    A row whose stored summary cannot be read maps to None: the game exists but is withheld, so
+    the lobby neither lists it nor takes it for a deleted game.
+    """
     if not is_persistence_enabled():
         return {}
 

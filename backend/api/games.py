@@ -1,5 +1,6 @@
 """Matches as a whole: the lobby list, creating, loading, deleting, and saving sandboxes."""
 
+import asyncio
 import time
 import uuid
 from datetime import datetime, timezone
@@ -33,10 +34,10 @@ from storage.store import (
     GAMES,
     PROFILE_NAMES,
     SANDBOX_CHECKPOINTS,
-    UNSAVED_GAMES,
     cache_loaded_game,
     check_game_capacity,
     evict_game,
+    has_unsaved_work,
     hydrate_summary_profiles,
     load_saved_game,
     persist_game,
@@ -56,9 +57,31 @@ _PROFILES_TTL_SECONDS = 60.0
 _PROFILES_REFRESHED_AT: float = 0.0
 
 
+_LOBBY_SYNC: tuple[asyncio.AbstractEventLoop, "asyncio.Task[None]"] | None = None
+
+
 async def sync_lobby_with_db() -> None:
+    """Bring the lobby up to date with Supabase, reading the whole table once however many ask.
+
+    Every `GET /api/games` used to read every row. Callers that arrive while a read is in flight
+    now wait for that one: nothing is served from an older answer, so a game deleted by hand is
+    still noticed on the next call after the read finishes.
+    """
+    global _LOBBY_SYNC
+    loop = asyncio.get_running_loop()
+    if _LOBBY_SYNC is None or _LOBBY_SYNC[0] is not loop or _LOBBY_SYNC[1].done():
+        _LOBBY_SYNC = (loop, asyncio.ensure_future(_sync_lobby_once()))
+    # Shielded, so a caller that gives up does not cancel the read the others are waiting on.
+    await asyncio.shield(_LOBBY_SYNC[1])
+
+
+async def _sync_lobby_once() -> None:
     global _PROFILES_REFRESHED_AT
-    unsaved_at_read = set(UNSAVED_GAMES)
+    # Only a game this process already knew of before the read can be called deleted by it. One
+    # created and saved while the read was in flight is missing from the rows through no fault of
+    # its own, and by the time the read returns it is no longer "unsaved" either.
+    known_at_read = set(GAME_SUMMARIES)
+    unsaved_at_read = {gid for gid in known_at_read if has_unsaved_work(gid)}
     try:
         db_summaries = await supabase.load_all_summaries_from_db()
     except SupabaseUnavailable:
@@ -76,12 +99,18 @@ async def sync_lobby_with_db() -> None:
 
     evicted = False
     for gid in list(GAME_SUMMARIES.keys()):
-        if gid not in db_summaries and gid not in unsaved_at_read and gid not in UNSAVED_GAMES:
+        if (
+            gid in known_at_read
+            and gid not in db_summaries
+            and gid not in unsaved_at_read
+            and not has_unsaved_work(gid)
+        ):
             evict_game(gid)
             evicted = True
 
     for gid, summary in db_summaries.items():
-        if gid not in GAMES:
+        # None is a saved game whose summary cannot be read: withheld, not listed.
+        if summary is not None and gid not in GAMES:
             GAME_SUMMARIES[gid] = hydrate_summary_profiles(summary)
 
     if evicted:
@@ -118,7 +147,8 @@ async def refresh_lobby_summaries() -> None:
 )
 async def get_game_details(game_id: str):
     if supabase.is_persistence_enabled():
-        unsaved_at_read = game_id in UNSAVED_GAMES
+        known_at_read = game_id in GAME_SUMMARIES or game_id in GAMES
+        unsaved_at_read = has_unsaved_work(game_id)
         try:
             loaded = await supabase.load_game_from_db(game_id)
         except SupabaseUnavailable:
@@ -130,7 +160,7 @@ async def get_game_details(game_id: str):
         else:
             if loaded is not None:
                 cache_loaded_game(game_id, loaded)
-            elif not unsaved_at_read and game_id not in UNSAVED_GAMES:
+            elif known_at_read and not unsaved_at_read and not has_unsaved_work(game_id):
                 evict_game(game_id)
 
     sync_summary(game_id)

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, timezone
 
@@ -41,6 +42,8 @@ PROFILE_NAMES: dict[str, str] = {}
 # board, copied into history snapshots or sandboxes, or undone by a rollback. See storage/press.py.
 GAME_PRESS: dict[str, list[PressMessage]] = {}
 PRESS_UNSAVED: set[str] = set()
+# One resolver per game at a time (see `adjudication_lock`), with the loop each lock was made on.
+ADJUDICATION_LOCKS: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Lock]] = {}
 
 
 def hydrate_summary_profiles(summary: MultiplayerGameSummary) -> MultiplayerGameSummary:
@@ -61,10 +64,53 @@ def init_default_game() -> None:
 init_default_game()
 
 
+def lacks_summary(game_id: str) -> bool:
+    """True for a game held in memory with no summary, which nothing is supposed to produce.
+
+    The shared default board and a member's private sandbox copy have none by design. Any other
+    game without one has no seats, owner or passcode on record, so every check treats it as a
+    live match nobody may enter or administer, never as an open one.
+    """
+    return (
+        game_id in GAMES
+        and game_id not in GAME_SUMMARIES
+        and game_id != DEFAULT_GAME_ID
+        and game_id not in PRIVATE_SANDBOXES
+    )
+
+
 def is_multiplayer_match(game_id: str) -> bool:
-    """True for a game shared by several players, as opposed to a solo or saved sandbox."""
+    """True for a game shared by several players, as opposed to a solo or saved sandbox.
+
+    A game that lacks its summary counts as one, so its orders stay masked.
+    """
     summary = GAME_SUMMARIES.get(game_id)
-    return bool(summary and not summary.is_sandbox)
+    if summary:
+        return not summary.is_sandbox
+    return lacks_summary(game_id)
+
+
+def adjudication_lock(game_id: str) -> asyncio.Lock:
+    """The lock a phase resolution holds, so a game never has two resolving at once.
+
+    A lock binds to the event loop it first waits on, and the server has one, so the loop is only
+    recorded to let a test that starts a fresh loop get a fresh lock.
+    """
+    loop = asyncio.get_running_loop()
+    held = ADJUDICATION_LOCKS.get(game_id)
+    if held is None or held[0] is not loop:
+        held = (loop, asyncio.Lock())
+        ADJUDICATION_LOCKS[game_id] = held
+    return held[1]
+
+
+def has_unsaved_work(game_id: str) -> bool:
+    """True while memory holds a change to the game or its press that Supabase has not stored yet.
+
+    Evicting such a game would throw that change away, so every eviction that is a guess about
+    what Supabase holds (the lobby sync, the capacity sweep) leaves it alone.
+    """
+    return game_id in UNSAVED_GAMES or game_id in PRESS_UNSAVED
 
 
 def evict_game(game_id: str) -> None:
@@ -84,6 +130,7 @@ def evict_game(game_id: str) -> None:
     PRIVATE_SANDBOX_TURNS.pop(game_id, None)
     GAME_PRESS.pop(game_id, None)
     PRESS_UNSAVED.discard(game_id)
+    ADJUDICATION_LOCKS.pop(game_id, None)
     for sandbox_id, (match_id, _) in list(PRIVATE_SANDBOXES.items()):
         if match_id == game_id:
             evict_game(sandbox_id)
@@ -230,7 +277,7 @@ def check_game_capacity() -> None:
                     evict_game(gid)
         if len(GAMES) >= MAX_ACTIVE_GAMES:
             for gid, s in list(GAME_SUMMARIES.items()):
-                if s.status == "completed" and gid not in UNSAVED_GAMES:
+                if s.status == "completed" and not has_unsaved_work(gid):
                     evict_game(gid)
         if len(GAMES) >= MAX_ACTIVE_GAMES:
             raise HTTPException(

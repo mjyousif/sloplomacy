@@ -379,11 +379,6 @@ export interface JoinGameRequest {
   passcode?: string | null;
 }
 
-export interface GenerateAIOrdersRequest {
-  powers?: Power[] | null;
-  include_active?: boolean;
-}
-
 export interface AuthUser {
   id: string;
   user_id?: string;
@@ -411,8 +406,6 @@ export interface AdminBatchBoardEditRequest {
   ownership: Record<string, Power>;
   orders?: Record<string, Order> | null;
   summary_lines?: string[] | null;
-  user_id?: string | null;
-  email?: string | null;
 }
 
 export interface WebSocketGameUpdate {

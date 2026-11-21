@@ -2,26 +2,7 @@
 // @order 1
 // @description Map reticle Move, Support vector, Hold toggle, Sea-Fleet Convoy guard (#142), adjudication, and Admin Console turn rollback.
 import { test, expect } from '@playwright/test';
-import { ScenarioRecorder, seedScenario } from './helpers';
-
-async function spawnUnit(
-  power: string,
-  unit_type: 'A' | 'F',
-  province: string,
-  gameId = 'proto_1901',
-) {
-  const res = await fetch(
-    `http://localhost:8000/api/admin/unit/spawn?game_id=${gameId}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ power, unit_type, province }),
-    },
-  );
-  if (!res.ok) {
-    throw new Error(`Spawn failed (${res.status}): ${await res.text()}`);
-  }
-}
+import { ScenarioRecorder, seedScenario, spawnUnit } from './helpers';
 
 test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollback', () => {
   test('selects unit, orders move via map reticle, plots support vector, adjudicates, and rolls back turn via Admin Console', async ({ page }) => {

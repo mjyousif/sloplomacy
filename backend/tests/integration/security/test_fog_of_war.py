@@ -5,6 +5,7 @@ from domain.orders import OrderType
 from fastapi.testclient import TestClient
 from main import app
 from storage.store import GAMES
+from tests.integration.api.helpers import direct_edit
 from tests.integration.security.helpers import (
     ALICE_ID,
     BOB_ID,
@@ -348,18 +349,13 @@ def test_supporting_foreign_unit_never_leaks_and_allows_finalization():
 def test_mixed_multi_fleet_secret_convoy_never_leaks_via_http_or_socket():
     """Two-player test: Bob's secret convoy order never promotes Alice's unit_options over HTTP or WS."""
     gid = secret_plan_match()
-    # Spawn France A PIC + F MAO, and Germany F ENG (forming a 2-fleet ENG -> MAO bridge to SPA)
-    for pwr, utype, prov in (
-        ("FRANCE", "A", "PIC"),
-        ("FRANCE", "F", "MAO"),
-        ("GERMANY", "F", "ENG"),
-    ):
-        r = client.post(
-            f"/api/admin/unit/spawn?game_id={gid}",
-            json={"power": pwr, "unit_type": utype, "province": prov},
-            headers=alice_headers(),
-        )
-        assert r.status_code == 200
+    # Place France A PIC + F MAO, and Germany F ENG (forming a 2-fleet ENG -> MAO bridge to SPA)
+    r = direct_edit(
+        gid,
+        alice_headers(),
+        place=[("FRANCE", "A", "PIC"), ("FRANCE", "F", "MAO"), ("GERMANY", "F", "ENG")],
+    )
+    assert r.status_code == 200
 
     # Bob (Germany) secretly orders GER_F_ENG to convoy FRA_A_PIC -> SPA (and LON)
     bob_convoy = client.post(

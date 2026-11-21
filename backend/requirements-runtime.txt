@@ -1,4 +1,5 @@
-# What the server needs to run. The Docker image installs only this file.
+# What the server needs to run. These are the hand-edited ranges; the Docker image installs
+# the hash-pinned requirements-runtime.lock made from this file (scripts/lock-requirements.sh).
 # Each package is capped below its next major version, so a breaking release
 # is never picked up by a fresh install or image build.
 fastapi>=0.163.0,<1.0

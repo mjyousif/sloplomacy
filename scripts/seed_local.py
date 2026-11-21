@@ -99,7 +99,7 @@ def _dev_auth_headers(user_id: str, email: str) -> dict[str, str]:
         .decode()
     )
     payload = (
-        base64.urlsafe_b64encode(json.dumps({"sub": user_id, "email": email}).encode())
+        base64.urlsafe_b64encode(json.dumps({"sub": user_id, "email": email, "exp": int(time.time()) + 3600}).encode())
         .rstrip(b"=")
         .decode()
     )

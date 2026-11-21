@@ -27,7 +27,7 @@ An interactive web-based tactical adjudicator, move-planner, and real-time multi
   - **Winter Adjustments (`A`)**: Supply center accounting, home center builds, and forced disbands.
 - 🛡️ **Real-Time Tactical Validator & Blunder Detection**: Pre-flight linting engine alerts commanders to invalid reachability, cut supports, fleet coast collisions, or dislodgement risks before final order submission.
 - 🌐 **Real-Time Multiplayer & Consensus Engine**: Multi-room game lobbies, 7-power seat claiming, live state broadcasts via WebSockets, and consensus-driven phase auto-resolution when all active commanders finalize orders.
-- 🧪 **Sandbox "War Room" & Heuristic AI**: Experiment with hypothetical maneuvers for all 7 Great Powers in an isolated scratchpad without altering live multiplayer match state. Includes one-click heuristic AI move generation.
+- 🧪 **Sandbox "War Room"**: Experiment with hypothetical maneuvers for all 7 Great Powers in an isolated scratchpad without altering live multiplayer match state.
 - 🛠️ **Administrative & Gamemaster Suite**: Built-in god-mode tools for tournament directors and scenario creators: unit teleportation, unit spawning, phase rollback, turn jumping, and power state resets.
 - 🗂️ **Dual Collapsible Tactical HUD**: Ergonomic dual-sidebar interface featuring quick-access tools and room navigation on the left, with interactive order builders, diagnostics, and consensus progress on the right.
 

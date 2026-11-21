@@ -2,6 +2,7 @@
 
 import os
 import time
+from datetime import datetime, timezone
 
 from api.admin_utils import (
     create_admin_log_entry,
@@ -13,6 +14,7 @@ from domain.game_state import (
     FIRST_YEAR,
     PHASES_BY_SEASON,
     GameState,
+    MultiplayerGameSummary,
     TurnHistoryEntry,
 )
 from domain.requests import (
@@ -27,11 +29,11 @@ from engine.order_utils import (
     refresh_diagnostics_and_simulation,
 )
 from engine.phase_timer import start_phase_clock
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from scenarios.presets import SCENARIO_IDS, build_scenario, build_scenario_history
 from security.auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
 from security.creator import is_creator
-from security.secrecy import verify_admin_access
+from security.secrecy import caller_holds_seat, verify_admin_access
 from storage import supabase
 from storage.store import (
     DEFAULT_GAME_ID,
@@ -58,9 +60,11 @@ router = APIRouter(tags=["Administrator & Creator Controls"])
 
 def is_test_seed_enabled() -> bool:
     """Permit the test seed endpoint only in local development or automated test runs."""
-    return is_insecure_dev_auth_allowed() or os.getenv("ENABLE_TEST_SEED_ENDPOINT", "").lower() in (
-        "1",
-        "true",
+    # Its own gate, unchanged by what enables unsigned dev tokens: `ENVIRONMENT` still opens it.
+    return (
+        is_insecure_dev_auth_allowed()
+        or os.getenv("ENVIRONMENT", "").lower() in ("test", "development")
+        or os.getenv("ENABLE_TEST_SEED_ENDPOINT", "").lower() in ("1", "true")
     )
 
 
@@ -102,9 +106,22 @@ async def seed_test_scenario(req: SeedScenarioRequest):
     if gid in GAMES:
         new_game.state_revision = GAMES[gid].state_revision + 1
     GAMES[gid] = new_game
-    sync_summary(gid)
-    if gid in GAME_SUMMARIES:
-        await persist_game(gid)
+    if gid != DEFAULT_GAME_ID and gid not in GAME_SUMMARIES:
+        # A seeded board is a throwaway sandbox. Without a summary it would count as a match with
+        # no seats or owner, which nobody may enter. It is not persisted.
+        GAME_SUMMARIES[gid] = MultiplayerGameSummary(
+            game_id=gid,
+            name=f"Seeded {req.scenario_id}",
+            status="active",
+            created_at=datetime.now(timezone.utc).isoformat(),
+            is_sandbox=True,
+            is_draft=True,
+        )
+        sync_summary(gid)
+    else:
+        sync_summary(gid)
+        if gid in GAME_SUMMARIES:
+            await persist_game(gid)
     await broadcast_game_update(gid, GAMES[gid])
     await broadcast_lobby_update()
     return GAMES[gid]
@@ -119,8 +136,6 @@ async def seed_test_scenario(req: SeedScenarioRequest):
 def get_admin_status(
     game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
-    x_user_id: str | None = Header(default=None),
-    x_user_email: str | None = Header(default=None),
 ):
     """Check creator/admin privileges and rollback history depth for the given game."""
     gid = game_id or DEFAULT_GAME_ID
@@ -143,8 +158,9 @@ def get_admin_status(
             creator_id=summary.creator_id if summary else "guest",
         )
 
-    user_id = current_user.user_id if current_user else x_user_id
-    email = current_user.email if current_user else x_user_email
+    # Only the verified token says who is asking: a header or body field never does.
+    user_id = current_user.user_id if current_user else None
+    email = current_user.email if current_user else None
 
     caller_is_creator = is_creator(summary, user_id, email)
 
@@ -168,8 +184,6 @@ async def admin_rollback_turn(
     req: AdminRollbackRequest | None = None,
     game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
-    x_user_id: str | None = Header(default=None),
-    x_user_email: str | None = Header(default=None),
 ):
     """Roll back to the previous turn snapshot in history (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
@@ -216,14 +230,7 @@ async def admin_rollback_turn(
     )
     prev_state.turn_history.insert(0, summary_line)
 
-    actor_email, actor_id = resolve_admin_actor(
-        gid,
-        current_user,
-        req.user_id if req else None,
-        req.email if req else None,
-        x_user_id,
-        x_user_email,
-    )
+    actor_email, actor_id = resolve_admin_actor(gid, current_user)
     if current and current.admin_log:
         prev_state.admin_log = list(current.admin_log)
     prev_state.admin_log.append(
@@ -261,8 +268,6 @@ async def admin_set_turn(
     req: AdminSetTurnRequest,
     game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
-    x_user_id: str | None = Header(default=None),
-    x_user_email: str | None = Header(default=None),
 ):
     """Arbitrarily adjust season, year, or phase (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
@@ -298,9 +303,7 @@ async def admin_set_turn(
     game.turn_history.insert(0, summary_line)
     refresh_diagnostics_and_simulation(game)
 
-    actor_email, actor_id = resolve_admin_actor(
-        gid, current_user, req.user_id, req.email, x_user_id, x_user_email
-    )
+    actor_email, actor_id = resolve_admin_actor(gid, current_user)
     await record_admin_history_and_log(
         gid,
         before_state,
@@ -321,8 +324,6 @@ async def admin_set_turn(
 async def admin_unfinalize_all(
     game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
-    x_user_id: str | None = Header(default=None),
-    x_user_email: str | None = Header(default=None),
 ):
     """Unlock and unfinalize orders for all Great Powers (Creator Only)."""
     gid = game_id or DEFAULT_GAME_ID
@@ -335,9 +336,7 @@ async def admin_unfinalize_all(
     game.turn_history.insert(0, summary_line)
     refresh_diagnostics_and_simulation(game)
 
-    actor_email, actor_id = resolve_admin_actor(
-        gid, current_user, None, None, x_user_id, x_user_email
-    )
+    actor_email, actor_id = resolve_admin_actor(gid, current_user)
     await record_admin_history_and_log(
         gid,
         before_state,
@@ -358,33 +357,32 @@ async def acknowledge_admin_actions(
     req: AdminAcknowledgeRequest | None = None,
     game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
-    x_user_id: str | None = Header(default=None),
-    x_user_email: str | None = Header(default=None),
 ):
     """Persist per-player dismissal of admin action warning modals."""
     gid = game_id or DEFAULT_GAME_ID
     game = await resolve_game(gid)
 
-    ack_id = (
-        (current_user.user_id if current_user else None)
-        or (req.user_id if req else None)
-        or x_user_id
-        or (req.power.value if req and req.power else None)
-        or "guest"
-    )
-    extra_ids: list[str] = [ack_id]
-    if current_user and current_user.email and current_user.email not in extra_ids:
-        extra_ids.append(current_user.email)
-    if req and req.email and req.email not in extra_ids:
-        extra_ids.append(req.email)
-    if req and req.power and req.power.value not in extra_ids:
-        extra_ids.append(req.power.value)
-
+    # Who is acknowledging comes from the token, and from the seats that token holds. A body
+    # field naming another user, email or power is never believed: it would dismiss that
+    # player's warning for them. A caller without a token is a guest, who can only speak for a
+    # seat claimed without an account.
     summary = GAME_SUMMARIES.get(gid)
-    if summary and current_user:
-        for p_key, part in summary.participants.items():
-            if part.user_id == current_user.user_id and p_key not in extra_ids:
-                extra_ids.append(p_key)
+    named_power = req.power if req else None
+    if current_user:
+        ack_id = current_user.user_id
+        extra_ids: list[str] = [ack_id]
+        if current_user.email and current_user.email not in extra_ids:
+            extra_ids.append(current_user.email)
+        if summary:
+            for p_key, part in summary.participants.items():
+                if caller_holds_seat(summary, part.power, current_user) and p_key not in extra_ids:
+                    extra_ids.append(p_key)
+    elif named_power and caller_holds_seat(summary, named_power, None):
+        ack_id = named_power.value
+        extra_ids = [ack_id]
+    else:
+        ack_id = "guest"
+        extra_ids = [ack_id]
 
     target_ids = set(req.entry_ids) if (req and req.entry_ids is not None) else None
     changed = False

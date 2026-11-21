@@ -145,14 +145,17 @@ def run_tests():
 def backend_env() -> dict:
     """Environment for the local backend, so a local demo sign-in works.
 
-    Demo sign-ins send unsigned `alg: none` tokens, which backend/auth.py only
-    accepts when ENVIRONMENT is `development` or `test`. A value already set in
-    the shell wins, so `ENVIRONMENT=production python scripts/quickstart.py` still rejects
-    them. Nothing that deploys the app runs this launcher or may set this flag.
+    Demo sign-ins send unsigned `alg: none` tokens, which backend/security/auth.py only
+    accepts when ALLOW_INSECURE_DEV_AUTH=true (and never on Cloud Run or under
+    ENVIRONMENT=production). A value already set in the shell wins, so
+    `ALLOW_INSECURE_DEV_AUTH=false python scripts/quickstart.py` or
+    `ENVIRONMENT=production python scripts/quickstart.py` still rejects them. Nothing that
+    deploys the app runs this launcher or may set this flag.
     """
     env = os.environ.copy()
     if not env.get("ENVIRONMENT"):
         env["ENVIRONMENT"] = "development"
+    env.setdefault("ALLOW_INSECURE_DEV_AUTH", "true")
     return env
 
 

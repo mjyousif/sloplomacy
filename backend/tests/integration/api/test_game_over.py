@@ -90,14 +90,6 @@ def test_game_over_clears_timer_hides_from_public_lobby_and_rejects_orders():
     )
     assert (
         client.post(
-            f"/api/orders/confirm-all?game_id={gid}",
-            json={"power": "FRANCE"},
-            headers=host_headers,
-        ).status_code
-        == 409
-    )
-    assert (
-        client.post(
             f"/api/finalize?game_id={gid}",
             json={"power": "FRANCE", "force": True},
             headers=host_headers,

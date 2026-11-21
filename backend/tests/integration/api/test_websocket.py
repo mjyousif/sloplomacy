@@ -186,3 +186,27 @@ def test_ws_lobby_hears_about_resolved_turns():
         update = receive_json(ws)
         assert update["type"] == "lobby_update"
         assert next(g for g in update["games"] if g["game_id"] == game_id)["season"] == "Fall"
+
+
+def test_unexpected_socket_failure_is_logged_and_the_socket_dropped(monkeypatch, caplog):
+    import contextlib
+    import logging
+
+    import api.websocket as websocket_api
+    from ws.connection_manager import manager
+
+    def broken(*args, **kwargs):
+        raise ValueError("masking blew up")
+
+    monkeypatch.setattr(websocket_api, "sanitize_game_state_for_viewer", broken)
+    client = TestClient(app)
+    with caplog.at_level(logging.WARNING, logger="diplomacy.ws"):
+        # The server closes the socket on the failure, so the client sees it end.
+        with contextlib.suppress(Exception), client.websocket_connect("/ws/games/proto_1901") as ws:
+            receive_json(ws)
+
+    assert any(
+        r.levelno >= logging.ERROR and r.exc_info and "masking blew up" in str(r.exc_info[1])
+        for r in caplog.records
+    )
+    assert not manager.game_connections.get("proto_1901")
