@@ -122,7 +122,7 @@ export async function authedFetch(
  * runs it unless a test sets `MODE` itself. It runs once per browser profile: the player
  * is then kept in `localStorage` like a demo sign-in. Each profile (or incognito window)
  * gets its own id, so each is a different player and can hold its own seat. The backend
- * still decides whether to trust the unsigned token (`ENVIRONMENT=development`).
+ * still decides whether to trust the unsigned token (`ALLOW_INSECURE_DEV_AUTH=true`).
  */
 function devSignIn(): AuthUser | null {
   if (

@@ -39,11 +39,38 @@ def get_supabase_url() -> str:
     return url.rstrip("/")
 
 
+_DEV_AUTH_REFUSAL_LOGGED = False
+
+
+def _hosted_environment() -> str | None:
+    """Why this process is not a local machine, or None. Cloud Run sets `K_SERVICE`/`K_REVISION`."""
+    if os.getenv("K_SERVICE") or os.getenv("K_REVISION"):
+        return "it is running on Cloud Run (K_SERVICE is set)"
+    if os.getenv("ENVIRONMENT", "").lower() == "production":
+        return "ENVIRONMENT=production"
+    return None
+
+
 def is_insecure_dev_auth_allowed() -> bool:
-    """Determine whether unverified development auth fallback is permitted."""
-    return os.getenv("ALLOW_INSECURE_DEV_AUTH", "false").lower() == "true" or os.getenv(
-        "ENVIRONMENT", ""
-    ).lower() in ("test", "development")
+    """Whether unsigned dev tokens may be trusted.
+
+    Only an explicit `ALLOW_INSECURE_DEV_AUTH=true` turns it on: `ENVIRONMENT=development` or
+    `test` no longer does. Even with the flag it stays off on Cloud Run and under
+    `ENVIRONMENT=production`, so a flag that leaks into a deployment is inert (and said so once).
+    """
+    global _DEV_AUTH_REFUSAL_LOGGED
+    if os.getenv("ALLOW_INSECURE_DEV_AUTH", "").lower() != "true":
+        return False
+    reason = _hosted_environment()
+    if reason:
+        if not _DEV_AUTH_REFUSAL_LOGGED:
+            _DEV_AUTH_REFUSAL_LOGGED = True
+            logger.error(
+                "ALLOW_INSECURE_DEV_AUTH=true is ignored because %s. Unsigned tokens stay rejected.",
+                reason,
+            )
+        return False
+    return True
 
 
 def decode_unverified_dev_token(token: str) -> AuthUser:

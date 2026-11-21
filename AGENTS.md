@@ -40,7 +40,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```bash
   uvicorn main:app --reload --host 127.0.0.1 --port 8000
   ```
-  *(Set `ENVIRONMENT=development` first to use a local demo sign-in. The launchers do this for you. See [Local Demo Sign-In](docs/guides/development.md#local-demo-sign-in).)*
+  *(Set `ALLOW_INSECURE_DEV_AUTH=true` first to use a local demo sign-in (and `ENVIRONMENT=development` to seed the dev games). The launchers do this for you. See [Local Demo Sign-In](docs/guides/development.md#local-demo-sign-in).)*
 - **Execute Test Suite**:
   ```bash
   python -m pytest backend/ -v
@@ -244,6 +244,7 @@ The game cycles through three standard phases per year:
 - **Invariant**: `GameState.preview` is a guess at the phase being played (the viewer's own orders, everyone else holding), never a resolved phase, and nothing may present it as one. It is rebuilt per viewer, never saved, and `null` once there is a winner. A resolved phase is read from `GET /api/history`; an `"Admin"` history snapshot keeps its board edit in `admin_resolution`.
 - **Invariant**: Orders are public once their phase has resolved. `GET /api/history` serves only the `GAME_HISTORY` snapshots `_execute_adjudication` takes just before a phase resolves, so the phase being played is never among them (rollback pops the one it restores). It never serves a private sandbox (`sbx_`) id, whose snapshots hold its owner's live orders for the match's current turn, and it uses the same passcode rule as `GET /api/game` (`require_view_access`).
 - **Invariant**: The public lobby (`GET /api/games`, `/api/games/browse` and every `/ws/lobby` payload) lists only what `storage.lobby.public_summaries` returns: never a private campaign, a sandbox or a draft. The lobby socket sends one payload to everyone, so it can hold nothing per-viewer. A player's own private games come from `GET /api/games/mine`, and browse rows carry no emails or user ids.
+- **Invariant**: Unsigned dev tokens are trusted only with an explicit `ALLOW_INSECURE_DEV_AUTH=true` (never `ENVIRONMENT` alone), never on Cloud Run (`K_SERVICE`/`K_REVISION`) or under `ENVIRONMENT=production`, and only with an unexpired `exp`; one helper (`decode_unverified_dev_token`) does the decode.
 - **Invariant**: Who is calling comes only from the verified token. Nothing reads `X-User-Id` / `X-User-Email`, and an admin request body carries no `user_id` / `email`; `POST /api/admin/acknowledge` records the token's own ids and seats (a guest may name only a seat claimed without an account).
 - **Invariant**: A game in memory with no summary (`lacks_summary`: not the default board, not a private `sbx_` copy) has no seats, owner or passcode on record, so it counts as a live match nobody may enter or administer. Every check refuses it, and `is_multiplayer_match` keeps its orders masked.
 - **Invariant**: A stored summary that cannot be read withholds its game. `build_summary_from_row` returns `None` (logged at `WARNING`) and never rebuilds one from the `is_private` / `passcode` columns, which a save does not write. A row with no stored summary at all still reads from its columns.

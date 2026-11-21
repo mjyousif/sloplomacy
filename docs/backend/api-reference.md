@@ -624,7 +624,7 @@ Computes and returns the Campaign Statistics & War Ledger (`CampaignStatsRespons
 Seed the game state for a specific test scenario (`standard_1901`, `tactical_blunders_demo`, `spring_retreats_demo`, `winter_adjustments_demo`). Designed for LLM-driven E2E tests and local developer verification without requiring admin credentials or full manual playthroughs.
 
 - **Seeded boards**: a `game_id` other than `proto_1901` that has no summary gets a throwaway draft sandbox summary (not persisted), so it is a sandbox and not a summary-less game that nobody may use.
-- **Security Gate**: Only active when `ENVIRONMENT` is `development` or `test`, `ALLOW_INSECURE_DEV_AUTH=true`, or `ENABLE_TEST_SEED_ENDPOINT=1`. Returns `403 Forbidden` in production or if called against a multiplayer match.
+- **Security Gate**: Its own gate, separate from unsigned dev auth: only active when `ENVIRONMENT` is `development` or `test`, `ALLOW_INSECURE_DEV_AUTH=true` (not on Cloud Run), or `ENABLE_TEST_SEED_ENDPOINT=1`. Returns `403 Forbidden` in production or if called against a multiplayer match.
 
 **Request Schema (`SeedScenarioRequest`)**:
 ```json

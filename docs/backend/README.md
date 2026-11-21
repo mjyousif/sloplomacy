@@ -121,7 +121,7 @@ source .venv/bin/activate       # macOS/Linux
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Unlike the launchers, this does not set `ENVIRONMENT=development`, so a local demo sign-in gets a `401`. See [Local Demo Sign-In](../guides/development.md#local-demo-sign-in).
+Unlike the launchers, this does not set `ALLOW_INSECURE_DEV_AUTH=true`, so a local demo sign-in gets a `401`. See [Local Demo Sign-In](../guides/development.md#local-demo-sign-in).
 
 ### Interactive OpenAPI Documentation
 Once running, OpenAPI documentation is automatically served by Swagger UI at:

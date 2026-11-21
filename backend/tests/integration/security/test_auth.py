@@ -23,23 +23,56 @@ def test_jwt_alg_none_rejected(monkeypatch):
     assert res.status_code == 401
 
 
+def _demo_status():
+    return client.get("/api/admin/status?game_id=proto_1901", headers=demo_sign_in_headers())
+
+
+def _clean_environment(monkeypatch):
+    for name in ("ENVIRONMENT", "ALLOW_INSECURE_DEV_AUTH", "K_SERVICE", "K_REVISION"):
+        monkeypatch.delenv(name, raising=False)
+
+
 def test_local_launcher_backend_accepts_demo_sign_in(monkeypatch):
-    monkeypatch.delenv("ENVIRONMENT", raising=False)
-    monkeypatch.delenv("ALLOW_INSECURE_DEV_AUTH", raising=False)
+    _clean_environment(monkeypatch)
+    assert _demo_status().status_code == 401
 
-    res = client.get("/api/admin/status?game_id=proto_1901", headers=demo_sign_in_headers())
-    assert res.status_code == 401
+    launcher_env = load_quickstart().backend_env()
+    assert launcher_env["ALLOW_INSECURE_DEV_AUTH"] == "true"
+    monkeypatch.setenv("ALLOW_INSECURE_DEV_AUTH", launcher_env["ALLOW_INSECURE_DEV_AUTH"])
+    assert _demo_status().status_code == 200
 
-    monkeypatch.setenv("ENVIRONMENT", load_quickstart().backend_env()["ENVIRONMENT"])
-    res = client.get("/api/admin/status?game_id=proto_1901", headers=demo_sign_in_headers())
-    assert res.status_code == 200
+
+def test_environment_alone_no_longer_turns_on_dev_auth(monkeypatch):
+    _clean_environment(monkeypatch)
+    for environment in ("development", "test"):
+        monkeypatch.setenv("ENVIRONMENT", environment)
+        assert _demo_status().status_code == 401, environment
+
+
+def test_dev_auth_is_refused_on_cloud_run_and_in_production_even_with_the_flag(monkeypatch):
+    _clean_environment(monkeypatch)
+    monkeypatch.setenv("ALLOW_INSECURE_DEV_AUTH", "true")
+    assert _demo_status().status_code == 200
+
+    monkeypatch.setenv("K_SERVICE", "diplomacy-1901")
+    assert _demo_status().status_code == 401
+    monkeypatch.delenv("K_SERVICE")
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    assert _demo_status().status_code == 401
+
+
+def test_launcher_keeps_a_flag_set_in_the_shell(monkeypatch):
+    monkeypatch.setenv("ALLOW_INSECURE_DEV_AUTH", "false")
+    assert load_quickstart().backend_env()["ALLOW_INSECURE_DEV_AUTH"] == "false"
 
 
 def test_dev_sign_in_must_expire_over_http(monkeypatch):
     import base64
     import json
 
-    monkeypatch.setenv("ENVIRONMENT", "development")
+    _clean_environment(monkeypatch)
+    monkeypatch.setenv("ALLOW_INSECURE_DEV_AUTH", "true")
 
     def unsigned(claims: dict) -> dict:
         def part(value: dict) -> str:

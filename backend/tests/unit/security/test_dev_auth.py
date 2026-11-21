@@ -41,3 +41,48 @@ def test_garbage_is_refused():
         decode_unverified_dev_token("not-a-token")
 
     assert refused.value.status_code == 401
+
+
+@pytest.fixture
+def clean_env(monkeypatch):
+    for name in ("ENVIRONMENT", "ALLOW_INSECURE_DEV_AUTH", "K_SERVICE", "K_REVISION"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr("security.auth._DEV_AUTH_REFUSAL_LOGGED", False)
+    return monkeypatch
+
+
+def test_only_the_explicit_flag_enables_dev_auth(clean_env):
+    from security.auth import is_insecure_dev_auth_allowed
+
+    assert not is_insecure_dev_auth_allowed()
+    for environment in ("development", "test"):
+        clean_env.setenv("ENVIRONMENT", environment)
+        assert not is_insecure_dev_auth_allowed()
+        clean_env.setenv("ALLOW_INSECURE_DEV_AUTH", "false")
+        assert not is_insecure_dev_auth_allowed()
+        clean_env.delenv("ALLOW_INSECURE_DEV_AUTH")
+    clean_env.setenv("ALLOW_INSECURE_DEV_AUTH", "true")
+    assert is_insecure_dev_auth_allowed()
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("K_SERVICE", "diplomacy-1901"),
+        ("K_REVISION", "diplomacy-1901-00001"),
+        ("ENVIRONMENT", "production"),
+    ],
+)
+def test_flag_is_inert_on_cloud_run_or_in_production_and_says_so_once(
+    clean_env, caplog, name, value
+):
+    from security.auth import is_insecure_dev_auth_allowed
+
+    clean_env.setenv("ALLOW_INSECURE_DEV_AUTH", "true")
+    clean_env.setenv(name, value)
+
+    with caplog.at_level("ERROR", logger="diplomacy.auth"):
+        assert not is_insecure_dev_auth_allowed()
+        assert not is_insecure_dev_auth_allowed()
+
+    assert len([r for r in caplog.records if "ALLOW_INSECURE_DEV_AUTH" in r.getMessage()]) == 1

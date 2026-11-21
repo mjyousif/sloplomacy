@@ -40,9 +40,10 @@ if (-not (Test-Path (Join-Path $FrontendDir "node_modules"))) {
 
 if ($SeparateWindows) {
     Write-Host "`nLaunching Backend and Frontend in separate windows..." -ForegroundColor Green
-    # Lets a local demo sign-in work, same as backend_env() in scripts/quickstart.py. It is set in the
-    # backend window so it cannot stay behind in the shell that ran this script.
-    $BackendEnv = "if (-not `$env:ENVIRONMENT) { `$env:ENVIRONMENT = 'development' }"
+    # Lets a local demo sign-in work, same as backend_env() in scripts/quickstart.py: the backend trusts
+    # unsigned demo tokens only with ALLOW_INSECURE_DEV_AUTH=true. A value already in the shell wins. It
+    # is set in the backend window so it cannot stay behind in the shell that ran this script.
+    $BackendEnv = "if (-not `$env:ENVIRONMENT) { `$env:ENVIRONMENT = 'development' }; if (-not `$env:ALLOW_INSECURE_DEV_AUTH) { `$env:ALLOW_INSECURE_DEV_AUTH = 'true' }"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$BackendDir'; $BackendEnv; Write-Host 'FastAPI Backend running on http://127.0.0.1:8000' -ForegroundColor Cyan; & '$PythonCmd' -m uvicorn main:app --reload --port 8000"
     # -NoDevLogin turns off the throwaway local player that is signed in on load, same as --no-dev-login in scripts/quickstart.py.
     $FrontendEnv = if ($NoDevLogin) { "`$env:VITE_DEV_LOGIN = '0';" } else { "" }

@@ -59,9 +59,11 @@ router = APIRouter(tags=["Administrator & Creator Controls"])
 
 def is_test_seed_enabled() -> bool:
     """Permit the test seed endpoint only in local development or automated test runs."""
-    return is_insecure_dev_auth_allowed() or os.getenv("ENABLE_TEST_SEED_ENDPOINT", "").lower() in (
-        "1",
-        "true",
+    # Its own gate, unchanged by what enables unsigned dev tokens: `ENVIRONMENT` still opens it.
+    return (
+        is_insecure_dev_auth_allowed()
+        or os.getenv("ENVIRONMENT", "").lower() in ("test", "development")
+        or os.getenv("ENABLE_TEST_SEED_ENDPOINT", "").lower() in ("1", "true")
     )
 
 
