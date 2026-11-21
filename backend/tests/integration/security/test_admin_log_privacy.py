@@ -110,8 +110,9 @@ def test_an_acknowledgement_response_and_the_socket_hide_others_too():
 
     bob_payload = socket_state(f"/ws/games/{gid}?handshake=1", token=make_jwt(*BOB))
     acked = bob_payload["admin_log"][0]["acknowledged_by"]
-    assert BOB[0] in acked and BOB[1] in acked
+    assert BOB[0] in acked and BOB[1] not in acked
     assert ALICE[0] not in acked and ALICE[1] not in acked
+    assert bob_payload["admin_log"][0]["actor_id"] is None
 
 
 def test_a_saved_game_that_already_holds_emails_is_scrubbed_when_sent():
@@ -151,3 +152,85 @@ def test_a_broadcast_to_a_connected_viewer_hides_others_too():
         log = json.dumps(seen["state"]["admin_log"])
         for ident in (*ALICE, *BOB):
             assert ident not in log
+
+
+def test_updating_profile_updates_admin_log_actor_dynamically(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    from storage.profiles import PROFILE_NAMES
+
+    monkeypatch.setattr(
+        "storage.supabase.upsert_profile_display_name", AsyncMock(return_value=True)
+    )
+    PROFILE_NAMES.pop(ALICE[0], None)
+    try:
+        gid, _ = _match_with_admin_entry()
+        before = client.get(f"/api/game?game_id={gid}", headers=auth_headers(*BOB)).json()
+        assert before["state"]["admin_log"][0]["actor"] == "Envoy"
+
+        patch_res = client.patch(
+            "/api/account/profile",
+            json={"display_name": "PrinceTalleyrand"},
+            headers=auth_headers(*ALICE),
+        )
+        assert patch_res.status_code == 200
+
+        after = client.get(f"/api/game?game_id={gid}", headers=auth_headers(*BOB)).json()
+        assert after["state"]["admin_log"][0]["actor"] == "PrinceTalleyrand"
+        assert after["state"]["admin_log"][0]["actor_id"] is None
+    finally:
+        PROFILE_NAMES.pop(ALICE[0], None)
+
+
+def test_sandbox_enter_export_and_timer_start_sanitize_admin_log():
+    from storage.profiles import PROFILE_NAMES
+
+    PROFILE_NAMES[ALICE[0]] = "GeneralAlice"
+    try:
+        gid, entry_id = _match_with_admin_entry()
+        _acknowledge(gid, entry_id, BOB, power="GERMANY")
+        _acknowledge(gid, entry_id, CAROL)
+
+        # 1. Entering private hypothetical sandbox as Bob resolves actor & hides Alice/Carol UUIDs.
+        enter_res = client.post(
+            f"/api/sandbox/enter?game_id={gid}",
+            json={"power": "GERMANY"},
+            headers=auth_headers(*BOB),
+        )
+        assert enter_res.status_code == 200, enter_res.text
+        sbx_state = enter_res.json()
+        sbx_id = sbx_state["game_id"]
+        assert sbx_id.startswith("sbx_")
+        sbx_entry = sbx_state["admin_log"][0]
+        assert sbx_entry["actor"] == "GeneralAlice"
+        assert sbx_entry["actor_id"] is None
+        assert ALICE[0] not in sbx_entry["acknowledged_by"]
+        assert CAROL[0] not in sbx_entry["acknowledged_by"]
+        assert BOB[0] in sbx_entry["acknowledged_by"]
+
+        # 2. Exporting that private sandbox to a solo draft keeps admin_log sanitized.
+        export_res = client.post(
+            f"/api/games/solo-sandbox?source_game_id={sbx_id}",
+            headers=auth_headers(*BOB),
+        )
+        assert export_res.status_code == 200, export_res.text
+        exp_entry = export_res.json()["state"]["admin_log"][0]
+        assert exp_entry["actor"] == "GeneralAlice"
+        assert exp_entry["actor_id"] is None
+        assert ALICE[0] not in exp_entry["acknowledged_by"]
+        assert CAROL[0] not in exp_entry["acknowledged_by"]
+
+        # 3. Starting the phase clock as host Alice returns sanitized admin_log too.
+        timer_res = client.post(
+            f"/api/games/{gid}/timer/start",
+            headers=auth_headers(*ALICE),
+        )
+        assert timer_res.status_code == 200, timer_res.text
+        timer_entry = timer_res.json()["admin_log"][0]
+        assert timer_entry["actor"] == "GeneralAlice"
+        assert timer_entry["actor_id"] is None
+        assert BOB[0] not in timer_entry["acknowledged_by"]
+        assert CAROL[0] not in timer_entry["acknowledged_by"]
+        assert ALICE[0] in timer_entry["acknowledged_by"]
+    finally:
+        PROFILE_NAMES.pop(ALICE[0], None)

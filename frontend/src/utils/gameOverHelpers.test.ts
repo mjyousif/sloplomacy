@@ -39,7 +39,6 @@ function makeSummary(
     participants: {
       FRANCE: {
         user_id: 'usr-1',
-        email: 'alice@example.com',
         display_name: 'Alice',
         power: 'FRANCE',
         joined_at: '2026-11-01T00:00:00Z',
@@ -51,7 +50,7 @@ function makeSummary(
 }
 
 describe('gameOverHelpers', () => {
-  it('finds the viewer participant by user_id or email', () => {
+  it('finds the viewer participant strictly by user_id (never email)', () => {
     const summary = makeSummary();
     expect(getMyParticipant(summary, USER)?.power).toBe('FRANCE');
     expect(
@@ -59,8 +58,8 @@ describe('gameOverHelpers', () => {
         id: 'other',
         email: 'ALICE@example.com',
         displayName: 'Alice',
-      })?.power,
-    ).toBe('FRANCE');
+      }),
+    ).toBeNull();
     expect(getMyParticipant(summary, null)).toBeNull();
   });
 

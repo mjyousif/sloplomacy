@@ -97,7 +97,6 @@ def decode_unverified_dev_token(token: str) -> AuthUser:
         )
     return AuthUser(
         user_id=claims.get("sub") or "dev_user",
-        email=claims.get("email"),
         is_authenticated=True,
     )
 
@@ -205,7 +204,6 @@ def get_current_user(
             )
 
         user_id = payload.get("sub")
-        email = payload.get("email")
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -219,7 +217,7 @@ def get_current_user(
                 detail=f"Invalid token audience: {aud}",
             )
 
-        return AuthUser(user_id=user_id, email=email, is_authenticated=True)
+        return AuthUser(user_id=user_id, is_authenticated=True)
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

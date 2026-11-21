@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from security.auth import AuthUser, get_current_user
 from security.passcode import client_address
 from security.secrecy import require_view_access
+from storage.profiles import resolve_participant_name
 from storage.store import GAME_HISTORY, GAME_SUMMARIES, PRIVATE_SANDBOXES, resolve_game
 
 router = APIRouter(tags=["Turn History"])
@@ -73,8 +74,7 @@ async def get_campaign_stats(
     player_names: dict[Power, str] = {}
     if summary:
         for part in summary.participants.values():
-            if part.display_name:
-                player_names[part.power] = part.display_name
+            player_names[part.power] = resolve_participant_name(part)
     return compute_campaign_stats(history, game, player_names=player_names)
 
 

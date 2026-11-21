@@ -8,6 +8,7 @@ from domain.board import Power, Unit
 from domain.game_state import AdminActionLogEntry, GameState
 from domain.orders import Order, OrderType, SimulationResult
 from security.auth import AuthUser
+from storage.profiles import participant_name_for_id, resolve_display_name
 from storage.store import (
     GAME_HISTORY,
     GAME_SUMMARIES,
@@ -16,6 +17,7 @@ from storage.store import (
     persist_game,
     sync_summary,
 )
+from storage.supabase_codec import is_valid_uuid
 from ws.connection_manager import (
     broadcast_game_update,
     broadcast_lobby_update,
@@ -25,32 +27,17 @@ from ws.connection_manager import (
 def resolve_admin_actor(
     game_id: str,
     current_user: AuthUser | None,
-) -> tuple[str, str | None]:
-    """Return (actor_display, actor_id) for an admin action, never an email address.
+) -> str | None:
+    """Return `actor_id` for an admin action from the verified token or recorded creator_id.
 
     The actor is whoever the verified token names. Nothing a client puts in a header or the body
     can name another. With no token (only a sandbox reaches an admin route without one) the
-    actor is the game's creator on record, or the generic commander.
+    actor falls back to the game's recorded `creator_id`.
     """
     summary = GAME_SUMMARIES.get(game_id)
-    user_id = (current_user.user_id if current_user else None) or (
+    return (current_user.user_id if current_user else None) or (
         summary.creator_id if summary else None
     )
-    raw_email = (current_user.email if current_user else None) or (
-        summary.created_by if summary else None
-    )
-    actor_display = None
-    if summary:
-        for part in summary.participants.values():
-            if (user_id and part.user_id == user_id) or (
-                raw_email and part.email and part.email.lower() == raw_email.lower()
-            ):
-                if part.display_name:
-                    actor_display = part.display_name.split("@", 1)[0]
-                    break
-    if not actor_display:
-        actor_display = raw_email.split("@", 1)[0] if raw_email else "Commander"
-    return actor_display, user_id
 
 
 def compute_admin_orders(
@@ -216,28 +203,30 @@ def create_admin_log_entry(
     year: int,
     phase: str,
     summary_lines: list[str],
-    actor: str,
     actor_id: str | None = None,
 ) -> AdminActionLogEntry:
-    """Build an AdminActionLogEntry with the acting admin already acknowledged."""
-    ack_list: list[str] = []
-    if actor_id:
-        ack_list.append(actor_id)
-    if actor and actor not in ack_list:
-        ack_list.append(actor)
+    """Build an AdminActionLogEntry keyed by `actor_id` with the acting admin acknowledged."""
+    ack_list: list[str] = [actor_id] if actor_id else ["guest"]
 
     summary = GAME_SUMMARIES.get(game_id)
-    if summary:
+    if summary and actor_id:
         for p_key, part in summary.participants.items():
-            if (actor_id and part.user_id == actor_id) or (
-                actor and part.email and part.email.lower() == actor.lower()
-            ):
-                if p_key not in ack_list:
-                    ack_list.append(p_key)
+            if part.user_id == actor_id and p_key not in ack_list:
+                ack_list.append(p_key)
+
+    if is_valid_uuid(actor_id):
+        actor = ""
+    else:
+        actor = resolve_display_name(
+            actor_id,
+            fallback=participant_name_for_id(summary, actor_id),
+            default="Commander",
+        )
 
     return AdminActionLogEntry(
         id=str(uuid.uuid4()),
         timestamp=datetime.now(timezone.utc).isoformat(),
+        actor_id=actor_id,
         actor=actor,
         season=season,
         year=year,
@@ -252,7 +241,6 @@ async def record_admin_history_and_log(
     before_state: GameState,
     after_state: GameState,
     summary_lines: list[str],
-    actor: str,
     actor_id: str | None = None,
 ) -> None:
     """Record an admin action in the audit log and consolidate into GAME_HISTORY.
@@ -275,7 +263,6 @@ async def record_admin_history_and_log(
         year=before_state.year,
         phase=before_state.phase,
         summary_lines=summary_lines,
-        actor=actor,
         actor_id=actor_id,
     )
     after_state.admin_log.append(entry)

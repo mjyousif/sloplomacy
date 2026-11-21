@@ -21,14 +21,12 @@ from security.secrecy import (
 from storage.store import GAME_SUMMARIES
 
 GID = "mp_secrecy_unit"
-ALICE = AuthUser(user_id="00000000-0000-0000-0000-00000000a11c", email="alice@test.com")
-BOB = AuthUser(user_id="00000000-0000-0000-0000-000000000b0b", email="bob@test.com")
+ALICE = AuthUser(user_id="00000000-0000-0000-0000-00000000a11c")
+BOB = AuthUser(user_id="00000000-0000-0000-0000-000000000b0b")
 
 
-def seat(user: AuthUser, power: Power) -> GameParticipant:
-    return GameParticipant(
-        user_id=user.user_id, email=user.email, display_name=user.email, power=power, joined_at="t"
-    )
+def seat(user: AuthUser, power: Power, name: str = "Envoy") -> GameParticipant:
+    return GameParticipant(user_id=user.user_id, display_name=name, power=power, joined_at="t")
 
 
 def summary(*seats: GameParticipant, is_sandbox: bool = False) -> MultiplayerGameSummary:
@@ -148,25 +146,25 @@ def test_a_player_can_only_claim_their_own_seat(game):
     # Naming the other seat gets you nothing more than your own.
     assert viewer_power_for(GID, BOB, Power.FRANCE) == Power.GERMANY
     assert viewer_power_for(GID, ALICE, Power.GERMANY) == Power.FRANCE
-    stranger = AuthUser(user_id="00000000-0000-0000-0000-0000000ca201", email="carol@test.com")
+    stranger = AuthUser(user_id="00000000-0000-0000-0000-0000000ca201")
     assert viewer_power_for(GID, stranger, Power.FRANCE) is None
     # A signed-out caller cannot claim an account's seat.
     assert viewer_power_for(GID, None, Power.FRANCE) is None
 
 
 def test_a_guest_seat_is_open_to_a_signed_out_caller():
-    guest = GameParticipant(
-        user_id="guest_123", email="g@test.com", display_name="g", power=Power.ITALY, joined_at="t"
-    )
+    guest = GameParticipant(user_id="guest_123", display_name="g", power=Power.ITALY, joined_at="t")
     s = summary(guest)
     assert caller_holds_seat(s, Power.ITALY, None)
     assert not caller_holds_seat(s, Power.FRANCE, None)
 
 
-def test_the_seat_matches_by_email_whatever_its_case(game):
-    same_person = AuthUser(user_id="another-id", email="ALICE@Test.com")
-    assert caller_holds_seat(GAME_SUMMARIES[GID], Power.FRANCE, same_person)
-    assert not caller_holds_seat(GAME_SUMMARIES[GID], Power.GERMANY, same_person)
+def test_the_seat_matches_by_user_id_only(game):
+    same_id = AuthUser(user_id=ALICE.user_id)
+    different_id = AuthUser(user_id="another-id")
+    assert caller_holds_seat(GAME_SUMMARIES[GID], Power.FRANCE, same_id)
+    assert not caller_holds_seat(GAME_SUMMARIES[GID], Power.FRANCE, different_id)
+    assert not caller_holds_seat(GAME_SUMMARIES[GID], Power.GERMANY, same_id)
 
 
 def test_secret_foreign_convoy_in_single_or_mixed_chain_never_turns_active(game):
@@ -223,28 +221,29 @@ def test_secret_foreign_convoy_in_single_or_mixed_chain_never_turns_active(game)
 
 
 def test_sanitize_summary_strips_all_emails_without_mutating_store(game):
+    from storage.profiles import PROFILE_NAMES
+
     raw = GAME_SUMMARIES[GID]
     raw.creator_id = ALICE.user_id
-    raw.participants[Power.FRANCE.value].display_name = "AliceDisplay"
-
-    sanitized = sanitize_summary_for_viewer(raw)
-    assert sanitized.created_by == "AliceDisplay"
-    assert "@" not in sanitized.model_dump_json()
-    for part in sanitized.participants.values():
-        assert part.email == ""
-
-    # Original in-memory summary retains internal fields for legacy auth checks
-    assert raw.created_by == "alice@test.com"
-    assert raw.participants[Power.FRANCE.value].email == "alice@test.com"
+    PROFILE_NAMES[ALICE.user_id] = "AliceDisplay"
+    try:
+        sanitized = sanitize_summary_for_viewer(raw)
+        assert sanitized.created_by == "AliceDisplay"
+        assert sanitized.participants[Power.FRANCE.value].display_name == "AliceDisplay"
+        assert "@" not in sanitized.model_dump_json()
+        assert "alice@test.com" in raw.created_by
+    finally:
+        PROFILE_NAMES.pop(ALICE.user_id, None)
 
 
-def test_sanitize_game_state_strips_email_from_admin_log_actor(game):
+def test_sanitize_game_state_scrubs_email_from_admin_log_actor_to_envoy(game):
     from domain.game_state import AdminActionLogEntry
 
     game.admin_log = [
         AdminActionLogEntry(
             id="log1",
             timestamp="2026-11-13T00:00:00Z",
+            actor_id=ALICE.user_id,
             actor="alice@test.com",
             season="Spring",
             year=1901,
@@ -254,27 +253,28 @@ def test_sanitize_game_state_strips_email_from_admin_log_actor(game):
         )
     ]
     seen = sanitize_game_state_for_viewer(game, Power.GERMANY)
-    assert seen.admin_log[0].actor == "alice"
+    assert seen.admin_log[0].actor == "Envoy"
+    assert seen.admin_log[0].actor_id is None
+    assert "alice" not in seen.admin_log[0].actor
     assert "@" not in seen.admin_log[0].actor
 
 
 def test_public_host_name_and_sanitize_summary_prefer_profile_names_and_fallback():
     from domain.game_state import GameParticipant, MultiplayerGameSummary
     from security.secrecy import public_host_name
-    from storage.store import PROFILE_NAMES
+    from storage.profiles import PROFILE_NAMES
 
     uid = "22222222-2222-2222-2222-222222222222"
     summary = MultiplayerGameSummary(
         game_id="g_profile_pref",
         name="Profile Prefs",
-        created_by="",
+        created_by="secret@example.com",
         creator_id=uid,
         created_at="2026-11-13T00:00:00Z",
         participants={
             Power.FRANCE.value: GameParticipant(
                 user_id=uid,
-                email="secret@example.com",
-                display_name="",
+                display_name="secret@example.com",
                 power=Power.FRANCE,
                 joined_at="2026-11-13T00:00:00Z",
             )
@@ -283,10 +283,11 @@ def test_public_host_name_and_sanitize_summary_prefer_profile_names_and_fallback
 
     try:
         PROFILE_NAMES.pop(uid, None)
-        assert public_host_name(summary) == "Unknown host"
+        assert public_host_name(summary) == "Envoy"
         no_profile = sanitize_summary_for_viewer(summary)
-        assert no_profile.created_by == "Unknown host"
+        assert no_profile.created_by == "Envoy"
         assert no_profile.participants[Power.FRANCE.value].display_name == "Envoy"
+        assert "secret" not in no_profile.model_dump_json()
 
         PROFILE_NAMES[uid] = "Freetvs"
         assert public_host_name(summary) == "Freetvs"

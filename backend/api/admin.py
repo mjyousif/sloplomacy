@@ -33,8 +33,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from scenarios.presets import SCENARIO_IDS, build_scenario, build_scenario_history
 from security.auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
 from security.creator import is_creator
-from security.secrecy import caller_holds_seat, verify_admin_access
+from security.secrecy import caller_holds_seat, verify_admin_access, with_sanitized_admin_log
 from storage import supabase
+from storage.profiles import ensure_profile_loaded
 from storage.store import (
     DEFAULT_GAME_ID,
     GAME_HISTORY,
@@ -154,22 +155,19 @@ def get_admin_status(
             can_rollback=len(history_stack) > 0,
             history_count=len(history_stack),
             history_entries=_build_entries(),
-            creator_email="",
             creator_id=summary.creator_id if summary else "guest",
         )
 
     # Only the verified token says who is asking: a header or body field never does.
     user_id = current_user.user_id if current_user else None
-    email = current_user.email if current_user else None
 
-    caller_is_creator = is_creator(summary, user_id, email)
+    caller_is_creator = is_creator(summary, user_id)
 
     return AdminStatusResponse(
         is_creator=caller_is_creator,
         can_rollback=len(history_stack) > 0,
         history_count=len(history_stack),
         history_entries=_build_entries() if caller_is_creator else [],
-        creator_email="",
         creator_id=summary.creator_id,
     )
 
@@ -230,7 +228,8 @@ async def admin_rollback_turn(
     )
     prev_state.turn_history.insert(0, summary_line)
 
-    actor_email, actor_id = resolve_admin_actor(gid, current_user)
+    actor_id = resolve_admin_actor(gid, current_user)
+    await ensure_profile_loaded(actor_id)
     if current and current.admin_log:
         prev_state.admin_log = list(current.admin_log)
     prev_state.admin_log.append(
@@ -240,7 +239,6 @@ async def admin_rollback_turn(
             year=prev_state.year,
             phase=prev_state.phase,
             summary_lines=[summary_line],
-            actor=actor_email,
             actor_id=actor_id,
         )
     )
@@ -255,7 +253,7 @@ async def admin_rollback_turn(
     await persist_game(gid)
     await broadcast_game_update(gid, prev_state)
     await broadcast_lobby_update()
-    return prev_state
+    return with_sanitized_admin_log(prev_state, current_user)
 
 
 @router.post(
@@ -303,16 +301,16 @@ async def admin_set_turn(
     game.turn_history.insert(0, summary_line)
     refresh_diagnostics_and_simulation(game)
 
-    actor_email, actor_id = resolve_admin_actor(gid, current_user)
+    actor_id = resolve_admin_actor(gid, current_user)
+    await ensure_profile_loaded(actor_id)
     await record_admin_history_and_log(
         gid,
         before_state,
         game,
         [summary_line],
-        actor=actor_email,
         actor_id=actor_id,
     )
-    return game
+    return with_sanitized_admin_log(game, current_user)
 
 
 @router.post(
@@ -336,16 +334,16 @@ async def admin_unfinalize_all(
     game.turn_history.insert(0, summary_line)
     refresh_diagnostics_and_simulation(game)
 
-    actor_email, actor_id = resolve_admin_actor(gid, current_user)
+    actor_id = resolve_admin_actor(gid, current_user)
+    await ensure_profile_loaded(actor_id)
     await record_admin_history_and_log(
         gid,
         before_state,
         game,
         [summary_line],
-        actor=actor_email,
         actor_id=actor_id,
     )
-    return game
+    return with_sanitized_admin_log(game, current_user)
 
 
 @router.post(
@@ -371,8 +369,6 @@ async def acknowledge_admin_actions(
     if current_user:
         ack_id = current_user.user_id
         extra_ids: list[str] = [ack_id]
-        if current_user.email and current_user.email not in extra_ids:
-            extra_ids.append(current_user.email)
         if summary:
             for p_key, part in summary.participants.items():
                 if caller_holds_seat(summary, part.power, current_user) and p_key not in extra_ids:

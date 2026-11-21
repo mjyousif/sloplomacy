@@ -10,6 +10,7 @@ from typing import Literal
 from domain.board import Power
 from domain.game_state import MultiplayerGameSummary
 from domain.requests import LobbyBrowsePage, LobbyGameRow
+from storage.profiles import resolve_host_name
 from storage.store import DEFAULT_GAME_ID, GAME_SUMMARIES
 
 SEASON_ORDER = {"Spring": 0, "Fall": 1, "Winter": 2}
@@ -47,13 +48,6 @@ def open_powers(summary: MultiplayerGameSummary) -> list[Power]:
     return [p for p in Power if p.value not in summary.participants]
 
 
-def _host_name(summary: MultiplayerGameSummary) -> str:
-    for p in summary.participants.values():
-        if summary.creator_id and p.user_id == summary.creator_id:
-            return p.display_name
-    return "Unknown host"
-
-
 def to_row(summary: MultiplayerGameSummary) -> LobbyGameRow:
     open_seats = open_powers(summary)
     return LobbyGameRow(
@@ -63,7 +57,7 @@ def to_row(summary: MultiplayerGameSummary) -> LobbyGameRow:
         season=summary.season,
         year=summary.year,
         phase=summary.phase,
-        host_name=_host_name(summary),
+        host_name=resolve_host_name(summary),
         created_at=summary.created_at,
         last_moved_at=summary.last_moved_at or summary.created_at,
         claimed_powers=[p for p in Power if p not in open_seats],

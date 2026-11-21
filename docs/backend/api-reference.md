@@ -119,10 +119,10 @@ Returns the public multiplayer matches. A private campaign, a sandbox (saved or 
       "AUSTRIA": "usr_9988",
       "RUSSIA": "usr_7711"
     },
-    "participants": [
-      { "user_id": "usr_9988", "email": "diplomat@slop.eu", "power": "AUSTRIA", "role": "host" },
-      { "user_id": "usr_7711", "email": "tsar@slop.eu", "power": "RUSSIA", "role": "player" }
-    ],
+    "participants": {
+      "AUSTRIA": { "user_id": "usr_9988", "display_name": "Archduke", "power": "AUSTRIA", "joined_at": "2026-11-03T14:00:00Z" },
+      "RUSSIA": { "user_id": "usr_7711", "display_name": "TsarNicholas", "power": "RUSSIA", "joined_at": "2026-11-03T14:05:00Z" }
+    },
     "created_at": "2026-11-03T14:00:00Z"
   }
 ]
@@ -213,7 +213,6 @@ Creates a new multiplayer game room (public or private) and automatically assign
   "name": "Western Front 1901",
   "creator_power": "FRANCE",
   "user_id": "usr_1020",
-  "email": "marshal@slop.eu",
   "display_name": "Napoleon",
   "is_private": true,
   "passcode": "Secret1901"
@@ -235,7 +234,6 @@ Claims an open Great Power seat for a user. In the response, `state.active_power
 {
   "power": "FRANCE",
   "user_id": "usr_1020",
-  "email": "marshal@slop.eu",
   "display_name": "Napoleon",
   "passcode": "Secret1901"
 }
@@ -250,7 +248,6 @@ Vacates a claimed power seat in a lobby or active match, or deletes a saved sand
 ```json
 {
   "user_id": "usr_1020",
-  "email": "marshal@slop.eu",
   "power": "FRANCE"
 }
 ```
@@ -258,15 +255,14 @@ Vacates a claimed power seat in a lobby or active match, or deletes a saved sand
 ---
 
 ### 7. `POST /api/games/{game_id}/surrender`
-Concedes command of a Great Power into **Civil Disorder**. Surrendered units hold passively, never provide support, and auto-disband if forced to retreat or down in supply centers. If `vacate_seat: true`, the user's claim on the seat is relinquished.
+Concedes command of a Great Power into **Civil Disorder**. Surrendered units hold passively, never provide support, and auto-disband if forced to retreat or down in supply centers. If `leave: true`, the user's claim on the seat is relinquished.
 
 #### Request (`SurrenderRequest`):
 ```json
 {
   "user_id": "usr_1020",
-  "email": "marshal@slop.eu",
   "power": "FRANCE",
-  "vacate_seat": false
+  "leave": false
 }
 ```
 
@@ -322,15 +318,13 @@ Saves an active solo sandbox into the persistent game summary registry.
 #### Request (`SaveSandboxRequest`):
 ```json
 {
-  "game_id": "solo_f47ac10b-58cc-4372-a567-0e02b2c3d479",
   "name": "Burgundy Opening Analysis",
-  "user_id": "usr_1020",
-  "email": "marshal@slop.eu"
+  "user_id": "usr_1020"
 }
 ```
 
 ### `PATCH /api/account/profile`
-Updates the signed-in caller's public `display_name` (2–24 characters). Requires a valid Bearer token (`401` otherwise). Persists to `public.profiles` in Supabase, updates the in-memory profile cache, syncs the caller's `display_name` across all loaded games they participate in, and broadcasts masked per-viewer game updates and lobby updates.
+Updates the signed-in caller's public `display_name` (2–24 characters, `@` rejected with `422`). Requires a valid Bearer token (`401` otherwise). Persists to `public.profiles` in Supabase, updates the in-memory `PROFILE_NAMES` cache, syncs the caller's `display_name` across all loaded games they participate in, created, or acted on as admin, and broadcasts masked per-viewer game updates and lobby updates.
 
 #### Request (`UpdateProfileRequest`):
 ```json
@@ -645,12 +639,12 @@ Seed the game state for a specific test scenario (`standard_1901`, `tactical_blu
 
 Strictly restricted to the creator/host of the room in multiplayer matches. Authentication is cryptographically enforced via Supabase JWT Bearer tokens passed in the `Authorization: Bearer <token>` header:
 - **Solo Sandbox Bypass**: The default local sandbox (`proto_1901`) and saved personal sandboxes (`is_sandbox=True`) permit anonymous local access without authentication headers.
-- **Cryptographic JWT Verification**: In multiplayer matches, requests must supply a valid Supabase JWT signed with `SUPABASE_JWT_SECRET` (HS256). Claims (`exp`, `sub`, `email`) are validated before trusting identity.
-- **Identity is the token alone**: no `X-User-Id` / `X-User-Email` header and no `user_id` / `email` request field is read. The admin log's actor is the token's user.
+- **Cryptographic JWT Verification**: In multiplayer matches, requests must supply a valid Supabase JWT signed with `SUPABASE_JWT_SECRET` (HS256) or ES256. Claims (`exp`, `sub`, `aud`) are validated before trusting identity.
+- **Identity is the token alone**: no `X-User-Id` / `X-User-Email` header and no `user_id` / `email` request field is read. The admin log records `actor_id` (the token's `sub`) and resolves `actor` dynamically from `PROFILE_NAMES` (`"Envoy"` if missing).
 - **No summary, no access**: a game held in memory without a summary (neither the default board nor a private `sbx_` copy) answers `403` to every admin action, `/api/adjudicate` included.
 - **Error Codes**:
   - `401 Unauthorized`: Token missing, expired, or invalid signature when accessing multiplayer admin actions.
-  - `403 Forbidden`: Authenticated caller's `sub` or `email` does not match the room creator (`creator_id` / `created_by`).
+  - `403 Forbidden`: Authenticated caller's `sub` does not match the room creator (`creator_id`).
 
 ### 11. `GET /api/admin/status`
 Checks creator authorization and available timeline rollback snapshots (`AdminStatusResponse`, including `history_entries` as `{index, season, year, phase}` metadata for creators).
@@ -698,7 +692,7 @@ Applies an atomic batch of staged Direct-Edit board mutations (`units`, `ownersh
 ### 18c. `POST /api/admin/acknowledge`
 Marks one or more `AdminActionLogEntry` items in `GameState.admin_log` as acknowledged by the caller and persists the updated `GameState` to Supabase so the player is not re-prompted after a page reload or cold start.
 
-The request holds `entry_ids` (all entries when omitted) and, for a guest, `power`. The acknowledging identity comes from the token: its user id, its email and the seats it holds. A caller without a token is a guest: `power` is believed only for a seat claimed without an account, otherwise it is recorded as `guest`. A `user_id`, `email` or other power in the body is ignored, so nobody can dismiss another player's warning. `acknowledged_by` in the response is the id recorded. The entry stores whatever identified the acknowledger (user id, email, seat), but `acknowledged_by` is sent back per viewer: only the viewer's own id and email and the nameless tokens (a seat, `guest`) remain, so no one sees another player's email or id (see [secrecy](../architecture/secrecy-and-authorization.md)).
+The request holds `entry_ids` (all entries when omitted) and, for a guest, `power`. The acknowledging identity comes from the token: its `user_id` and the seats it holds. A caller without a token is a guest: `power` is believed only for a seat claimed without an account, otherwise it is recorded as `guest`. A `user_id`, `email` or other power in the body is ignored, so nobody can dismiss another player's warning. `acknowledged_by` in the response is the id recorded. On read and broadcast, `sanitize_admin_log` keeps only the viewer's own `user_id` and the nameless tokens (a seat, `guest`), scrubbing any legacy email tokens and stripping `actor_id` so no one sees another player's id or email (see [secrecy](../architecture/secrecy-and-authorization.md)).
 
 
 ---

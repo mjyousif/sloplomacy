@@ -52,7 +52,6 @@ function makeSummary(seenAt: string | null = null): MultiplayerGameSummary {
     participants: {
       FRANCE: {
         user_id: 'u1',
-        email: 'alice@example.com',
         display_name: 'Alice',
         power: 'FRANCE',
         joined_at: '2026-11-01T00:00:00Z',

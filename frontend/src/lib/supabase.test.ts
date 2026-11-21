@@ -126,6 +126,36 @@ describe('supabase auth & local fallback helper', () => {
     );
     expect(res.error).toBeNull();
     expect(res.user?.displayName).toBe('Otto von Bismarck');
+    expect(res.user?.needsUsernameSetup).toBe(false);
+  });
+
+  it('defaults to Envoy with onboarding flag and never uses email local-part on sign-up', async () => {
+    const res = await signUpWithEmailPassword(
+      'secret.person@example.com',
+      'securepass123',
+    );
+    expect(res.error).toBeNull();
+    expect(res.user?.displayName).toBe('Envoy');
+    expect(res.user?.needsUsernameSetup).toBe(true);
+    expect(res.user?.displayName).not.toContain('secret.person');
+
+    const bad = await signUpWithEmailPassword(
+      'secret.person@example.com',
+      'securepass123',
+      'bad@name.com',
+    );
+    expect(bad.user).toBeNull();
+    expect(bad.error).toBe('Username cannot contain "@".');
+  });
+
+  it('rejects @ in updateAccountDisplayName', async () => {
+    const { updateAccountDisplayName } = await import('./supabase');
+    const res = await updateAccountDisplayName(
+      { id: 'u1', email: 'u1@example.com', displayName: 'Envoy' },
+      'u1@example.com',
+    );
+    expect(res.user).toBeNull();
+    expect(res.error).toBe('Username cannot contain "@".');
   });
 
   it('notifies subscribers on auth state transitions', async () => {
@@ -152,9 +182,10 @@ describe('supabase auth & local fallback helper', () => {
     expect(authHeaders.Authorization).toBeDefined();
     expect(authHeaders.Authorization.startsWith('Bearer ')).toBe(true);
 
-    // The dev backend refuses an unsigned token that does not expire.
+    // The dev backend refuses an unsigned token that does not expire, and email is omitted.
     const claims = JSON.parse(atob(authHeaders.Authorization.split('.')[1]));
     expect(claims.exp).toBeGreaterThan(Date.now() / 1000);
+    expect(claims.email).toBeUndefined();
 
     await signOutUser();
     const afterSignOut = await getAuthHeaders();

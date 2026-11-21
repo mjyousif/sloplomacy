@@ -86,6 +86,19 @@ describe('useAuthSession: the signed-in user', () => {
     act(() => result.current.setAuthUser(ALICE));
     expect(result.current.authUser).toEqual(ALICE);
   });
+
+  it('immediately opens onboarding account modal when setAuthUser has needsUsernameSetup', () => {
+    const { result } = renderHook(() => useAuthSession());
+    act(() =>
+      result.current.setAuthUser({
+        ...ALICE,
+        displayName: 'Envoy',
+        needsUsernameSetup: true,
+      }),
+    );
+    expect(result.current.accountModalOpen).toBe(true);
+    expect(result.current.accountModalOnboarding).toBe(true);
+  });
 });
 
 describe('useAuthSession: the sign-in modal', () => {

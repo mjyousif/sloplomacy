@@ -28,7 +28,7 @@ Three small functions in `backend/security/secrecy.py` answer the question, all 
 
 | Function | Question it answers |
 | :--- | :--- |
-| `caller_holds_seat` | Does this caller sit in power X's seat? Matches on user id, or on email (case-insensitive). With no token, only a *guest* seat (one whose id is not a Supabase UUID) counts as held. |
+| `caller_holds_seat` | Does this caller sit in power X's seat? Matches strictly on `user_id` (never email). With no token, only a *guest* seat (one whose id is not a Supabase UUID) counts as held. |
 | `viewer_power_for` | Which power's hidden orders may this caller see? Honors the requested power only if the caller holds it; otherwise falls back to the first seat the signed-in caller holds; otherwise nobody (`None`). |
 | `require_own_seat` | Raise 403 unless the caller holds that seat (live matches only). |
 
@@ -42,7 +42,7 @@ A `None` viewer power means "spectator or stranger": they see no one's orders. I
 - **`issues`**: only validation issues belonging to the viewer's power.
 - **`preview`**: re-adjudicated from the masked orders, so the stored preview (which reflects everyone's real orders) never leaves the server.
 - **`unit_options`**: recomputed from the masked orders, so a foreign fleet's secret convoy never makes a destination "turn green".
-- **`admin_log`**: actor emails are cut to the part before `@`, and `acknowledged_by` keeps only the viewer's own tokens (their user id and email) and the nameless ones (a seat, `guest`). An entry stores who acknowledged it by id, email and seat, so everything else is dropped on the way out, which also scrubs a saved game that already holds emails. The viewer comes from `bind_viewer` (set by `saved_sandbox_guard` for every HTTP route) or, for a game socket, from the identity its `auth` message gave (`ConnectionManager.socket_viewers`); where it is unknown the viewer has no id, so the entry shows only seats.
+- **`admin_log`**: `actor` is resolved centrally from `actor_id` / `PROFILE_NAMES` (defaulting to `"Envoy"` and scrubbing any legacy email actors without exposing local-parts; `actor_id` is cleared on outgoing copies), and `acknowledged_by` keeps only the viewer's own `user_id` and the nameless tokens (a seat, `guest`), scrubbing any legacy email tokens. The viewer comes from `bind_viewer` (set by `saved_sandbox_guard` for every HTTP route) or, for a game socket, from the identity its `auth` message gave (`ConnectionManager.socket_viewers`); where it is unknown the viewer has no id, so the entry shows only seats.
 
 Every HTTP response and WebSocket message that carries a live game goes through it.
 
@@ -116,13 +116,13 @@ Reading is only half of it. Every mutation is checked against the caller's own s
 
 | Check | Used by | Rule |
 | :--- | :--- | :--- |
-| `verify_power_authorization` | order submission, batch updates, confirmation, finalize, unfinalize | In a live match the caller must be the creator, or hold that power's seat (by id or email). A seat held by a registered user rejects an unauthenticated call with 401; a wrong user gets 403. |
+| `verify_power_authorization` | order submission, batch updates, confirmation, finalize, unfinalize | In a live match the caller must be the creator, or hold that power's seat (by `user_id`). A seat held by a registered user rejects an unauthenticated call with 401; a wrong user gets 403. |
 | `require_timer_player` | timer votes, extension requests, ready-up | Caller must hold that power's seat in an active match (no creator override). |
-| `verify_admin_access` | admin turn controls, board overrides, force-resolve, some sandbox operations | Only the match creator (matched by `creator_id`, or by `created_by` email), from the verified token alone. Sandboxes and the default demo game are open; an unknown game is 404, no token is 401, a non-creator is 403, and a game with no summary is 403 for everyone. |
+| `verify_admin_access` | admin turn controls, board overrides, force-resolve, some sandbox operations | Only the match creator (matched strictly by `creator_id`), from the verified token alone. Sandboxes and the default demo game are open; an unknown game is 404, no token is 401, a non-creator is 403, and a game with no summary is 403 for everyone. |
 | `require_own_seat` | reads and actions that would reveal a seat's orders | 403 unless the caller holds the seat. |
 | `require_view_access` | viewing a private match | Seated participants pass; anyone else needs the passcode (see [Identity and Auth](identity-and-auth.md#private-match-passcodes)). |
 
-Who is acting is always the verified token. The server reads no `X-User-Id` / `X-User-Email` header and no `user_id` / `email` in an admin request body: they are not even declared, so a client cannot claim to be the host, put another name in the admin log, or dismiss another player's admin warning. `POST /api/admin/acknowledge` records the token's user id, email and the seats that token holds; a caller with no token is a guest and can only speak for a seat claimed without an account (`caller_holds_seat` with no user).
+Who is acting is always the verified token. The server reads no `X-User-Id` or `X-User-Email` header and no `user_id` / `email` in an admin request body, so a client cannot claim to be the host, put another name in the admin log, or dismiss another player's admin warning. `POST /api/admin/acknowledge` records the token's `user_id` and the seats that token holds; a caller with no token is a guest and can only speak for a seat claimed without an account (`caller_holds_seat` with no user).
 
 The creator is allowed to act for any seat in `verify_power_authorization`, which is how admin tools work, but the sanitizer still shows a creator only the orders of a seat they actually hold.
 
@@ -142,7 +142,7 @@ Press (chat) has its own rules in `backend/security/press.py`, applied when mess
 
 ## Public summaries and PII
 
-Lobby summaries go to everyone, so `sanitize_summary_for_viewer` returns a copy with every participant email blanked, display names reduced to the part before `@` (preferring the profile name), the host shown by public name (never an email), and the board preview dropped unless the caller is asking for their own games (`/api/games/mine`). Details of how identity data is stored live in [Identity and Auth](identity-and-auth.md#pii-stripping).
+Lobby summaries go to everyone, so `sanitize_summary_for_viewer` returns a copy with participant `display_name` (`resolve_participant_name`) and `created_by` (`resolve_host_name`) resolved strictly from `PROFILE_NAMES` by UUID (defaulting to `"Envoy"` / `"Unknown host"`, never an email or email local-part), and the board preview dropped unless the caller is asking for their own games (`/api/games/mine`). Details of how identity data is stored live in [Identity and Auth](identity-and-auth.md#pii-stripping).
 
 ## Related docs
 

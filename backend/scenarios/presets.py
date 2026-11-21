@@ -253,20 +253,18 @@ def seed_initial_multiplayer_lobbies() -> None:
         season=g1_state.season,
         year=g1_state.year,
         phase=g1_state.phase,
-        created_by="bismarck@diplomacy.eu",
+        created_by="",
         creator_id="bot_bismarck",
         created_at=now_iso,
         participants={
             "GERMANY": GameParticipant(
                 user_id="bot_bismarck",
-                email="bismarck@diplomacy.eu",
                 display_name="Otto von B.",
                 power=Power.GERMANY,
                 joined_at=now_iso,
             ),
             "RUSSIA": GameParticipant(
                 user_id="bot_romanov",
-                email="tsar@diplomacy.eu",
                 display_name="Tsar Nicholas",
                 power=Power.RUSSIA,
                 joined_at=now_iso,
@@ -288,13 +286,12 @@ def seed_initial_multiplayer_lobbies() -> None:
         season=g2_state.season,
         year=g2_state.year,
         phase=g2_state.phase,
-        created_by="cavour@diplomacy.it",
+        created_by="",
         creator_id="bot_cavour",
         created_at=now_iso,
         participants={
             "ITALY": GameParticipant(
                 user_id="bot_cavour",
-                email="cavour@diplomacy.it",
                 display_name="Count Cavour",
                 power=Power.ITALY,
                 joined_at=now_iso,

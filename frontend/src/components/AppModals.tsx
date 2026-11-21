@@ -50,7 +50,7 @@ export interface AppModalsProps {
   acknowledgingAdminEntries?: boolean;
   /** The sign-in modal, from `useAuthSession`. */
   authUser: AuthUser | null;
-  setAuthUser: Dispatch<SetStateAction<AuthUser | null>>;
+  setAuthUser: (user: AuthUser | null) => void;
   authModalOpen: boolean;
   setAuthModalOpen: Dispatch<SetStateAction<boolean>>;
   authModalTab: AuthModalTab;

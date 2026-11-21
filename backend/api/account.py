@@ -3,15 +3,17 @@
 from domain.requests import UpdateProfileRequest, UpdateProfileResponse
 from fastapi import APIRouter, Depends, HTTPException
 from security.auth import AuthUser, get_current_user
+from security.creator import is_creator
 from storage import supabase
 from storage.lobby import is_public_listing
+from storage.profiles import PROFILE_NAMES
 from storage.store import (
     GAME_SUMMARIES,
     GAMES,
     PRIVATE_SANDBOXES,
-    PROFILE_NAMES,
     persist_game,
 )
+from storage.supabase_codec import is_valid_uuid
 from ws.connection_manager import broadcast_game_update, broadcast_lobby_update
 
 router = APIRouter(tags=["Account"])
@@ -21,8 +23,13 @@ MAX_USERNAME_LEN = 24
 
 
 def normalize_display_name(raw: str) -> str:
-    """Trim and collapse whitespace; enforce 2..24 character bounds."""
+    """Trim and collapse whitespace; enforce 2..24 character bounds and disallow '@'."""
     clean = " ".join((raw or "").split())
+    if "@" in clean:
+        raise HTTPException(
+            status_code=422,
+            detail="Username cannot contain '@'.",
+        )
     if len(clean) < MIN_USERNAME_LEN or len(clean) > MAX_USERNAME_LEN:
         raise HTTPException(
             status_code=422,
@@ -51,22 +58,29 @@ async def update_account_profile(
     public_lobby_touched = False
 
     for gid, summary in list(GAME_SUMMARIES.items()):
-        changed = False
+        participant_changed = False
         for part in summary.participants.values():
             if part.user_id == current_user.user_id and part.display_name != clean_name:
                 part.display_name = clean_name
-                changed = True
-        if not changed:
+                participant_changed = True
+        creator_match = is_creator(summary, current_user.user_id)
+        game = GAMES.get(gid)
+        admin_actor_match = bool(
+            game and any(e.actor_id == current_user.user_id for e in game.admin_log)
+        )
+        if not (participant_changed or creator_match or admin_actor_match):
             continue
 
-        updated_games += 1
+        if participant_changed or creator_match:
+            updated_games += 1
         if is_public_listing(gid, summary):
             public_lobby_touched = True
 
-        if gid in GAMES:
-            await persist_game(gid)
+        if game is not None:
+            if participant_changed and not is_valid_uuid(current_user.user_id):
+                await persist_game(gid)
             if gid not in PRIVATE_SANDBOXES and not summary.is_draft:
-                await broadcast_game_update(gid, GAMES[gid], summary)
+                await broadcast_game_update(gid, game, summary)
 
     if public_lobby_touched:
         await broadcast_lobby_update()

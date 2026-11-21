@@ -309,7 +309,6 @@ export const ALL_POWERS: Power[] = [
 
 export interface GameParticipant {
   user_id: string;
-  email: string;
   display_name: string;
   power: Power;
   joined_at: string;
@@ -365,7 +364,6 @@ export interface CreateGameRequest {
   name: string;
   creator_power: Power;
   user_id?: string;
-  email?: string;
   display_name?: string | null;
   is_private?: boolean;
   passcode?: string | null;
@@ -374,7 +372,6 @@ export interface CreateGameRequest {
 export interface JoinGameRequest {
   power: Power;
   user_id?: string;
-  email?: string;
   display_name?: string | null;
   passcode?: string | null;
 }
@@ -393,7 +390,6 @@ export interface AdminStatusResponse {
   can_rollback: boolean;
   history_count: number;
   history_entries?: TurnHistoryEntry[];
-  creator_email: string;
   creator_id?: string | null;
 }
 

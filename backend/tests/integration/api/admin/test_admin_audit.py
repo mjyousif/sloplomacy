@@ -28,7 +28,7 @@ def test_admin_direct_edit_and_warning_acknowledgment():
     assert len(st["admin_log"]) == 1
     entry = st["admin_log"][0]
     assert "@" not in entry["actor"]
-    assert entry["actor"] == "host"
+    assert entry["actor"] == "Envoy"
     # Creator is already acknowledged
     assert "host" in entry["acknowledged_by"]
 
@@ -169,7 +169,7 @@ def test_admin_force_resolve_logs_warning_for_other_players():
     assert st["phase"] == "Movement"
     assert len(st["admin_log"]) == 1
     entry = st["admin_log"][0]
-    assert entry["actor"] == "host"
+    assert entry["actor"] == "Envoy"
     assert "host" in entry["acknowledged_by"]
     assert "bob" not in entry["acknowledged_by"]
     assert any(

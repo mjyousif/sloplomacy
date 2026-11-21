@@ -16,6 +16,8 @@ from engine.adjudicator.territory import displayed_owners
 from engine.reachability import compute_unit_options
 from fastapi import HTTPException, status
 from storage import supabase
+from storage.profiles import PROFILE_NAMES as PROFILE_NAMES
+from storage.profiles import resolve_participant_name
 from storage.supabase import SupabaseUnavailable
 
 logger = logging.getLogger("diplomacy.server")
@@ -37,7 +39,6 @@ PRIVATE_SANDBOXES: dict[str, tuple[str, Power]] = {}
 PRIVATE_SANDBOX_TURNS: dict[str, tuple[str, int, str]] = {}
 # Preserves a solo/saved sandbox's hypothetical branch for the current real turn across exit/re-enter.
 SANDBOX_BRANCHES: dict[str, tuple[tuple[str, int, str], GameState, list[GameState]]] = {}
-PROFILE_NAMES: dict[str, str] = {}
 # Press (chat) per game, oldest first. Kept outside GameState so it is never broadcast with the
 # board, copied into history snapshots or sandboxes, or undone by a rollback. See storage/press.py.
 GAME_PRESS: dict[str, list[PressMessage]] = {}
@@ -47,10 +48,9 @@ ADJUDICATION_LOCKS: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Lock]] = 
 
 
 def hydrate_summary_profiles(summary: MultiplayerGameSummary) -> MultiplayerGameSummary:
-    """Resolve registered participants' display_name from PROFILE_NAMES when available."""
+    """Resolve participants' display_name from PROFILE_NAMES (UUID-authoritative)."""
     for part in summary.participants.values():
-        if part.user_id in PROFILE_NAMES:
-            part.display_name = PROFILE_NAMES[part.user_id]
+        part.display_name = resolve_participant_name(part)
     return summary
 
 

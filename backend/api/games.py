@@ -26,13 +26,13 @@ from security.secrecy import (
 )
 from storage import supabase
 from storage.lobby import public_summaries
+from storage.profiles import PROFILE_NAMES, ensure_profile_loaded, resolve_display_name
 from storage.store import (
     DEFAULT_GAME_ID,
     GAME_HISTORY,
     GAME_PASSCODES,
     GAME_SUMMARIES,
     GAMES,
-    PROFILE_NAMES,
     SANDBOX_CHECKPOINTS,
     cache_loaded_game,
     check_game_capacity,
@@ -192,7 +192,7 @@ async def delete_game(
 
     if summary and not summary.is_sandbox:
         if summary.creator_id and summary.creator_id != "guest":
-            if not user or not is_creator(summary, user.user_id, user.email):
+            if not user or not is_creator(summary, user.user_id):
                 raise HTTPException(
                     status_code=403, detail="Only the host can delete this campaign."
                 )
@@ -229,13 +229,10 @@ async def create_multiplayer_game(
         GAME_PASSCODES[gid] = clean_passcode
 
     effective_user_id = current_user.user_id if current_user else req.user_id
-    effective_email = (current_user.email or req.email) if current_user else req.email
-    display_name = (
-        PROFILE_NAMES.get(effective_user_id) or req.display_name or effective_email.split("@")[0]
-    )
+    await ensure_profile_loaded(effective_user_id)
+    display_name = resolve_display_name(effective_user_id, fallback=req.display_name)
     participant = GameParticipant(
         user_id=effective_user_id,
-        email=effective_email,
         display_name=display_name,
         power=req.creator_power,
         joined_at=now_iso,
@@ -247,7 +244,7 @@ async def create_multiplayer_game(
         season=game_state.season,
         year=game_state.year,
         phase=game_state.phase,
-        created_by=effective_email,
+        created_by="",
         creator_id=effective_user_id,
         created_at=now_iso,
         participants={req.creator_power.value: participant},
@@ -300,10 +297,8 @@ async def save_sandbox_to_account(
     now_iso = datetime.now(timezone.utc).isoformat()
 
     effective_user_id = current_user.user_id if current_user else req.user_id
-    effective_email = (current_user.email or req.email) if current_user else req.email
-    display_name = (
-        PROFILE_NAMES.get(effective_user_id) or req.display_name or effective_email.split("@")[0]
-    )
+    await ensure_profile_loaded(effective_user_id)
+    display_name = resolve_display_name(effective_user_id, fallback=req.display_name)
 
     existing_summary = GAME_SUMMARIES.get(gid)
     if existing_summary and existing_summary.is_sandbox and existing_summary.is_draft:
@@ -315,10 +310,9 @@ async def save_sandbox_to_account(
         existing_summary.name = chosen_name
         existing_summary.is_draft = False
         existing_summary.creator_id = effective_user_id
-        existing_summary.created_by = effective_email
+        existing_summary.created_by = ""
         existing_summary.participants[source_game.active_power.value] = GameParticipant(
             user_id=effective_user_id,
-            email=effective_email,
             display_name=display_name,
             power=source_game.active_power,
             joined_at=now_iso,
@@ -347,13 +341,12 @@ async def save_sandbox_to_account(
         season=cloned_state.season,
         year=cloned_state.year,
         phase=cloned_state.phase,
-        created_by=effective_email,
+        created_by="",
         creator_id=effective_user_id,
         created_at=now_iso,
         participants={
             cloned_state.active_power.value: GameParticipant(
                 user_id=effective_user_id,
-                email=effective_email,
                 display_name=display_name,
                 power=cloned_state.active_power,
                 joined_at=now_iso,

@@ -27,16 +27,20 @@ from security.secrecy import (
     viewer_power_for,
 )
 from storage import supabase
+from storage.profiles import (
+    ensure_profile_loaded,
+    resolve_display_name,
+    resolve_participant_name,
+)
 from storage.store import (
     GAME_SUMMARIES,
-    PROFILE_NAMES,
     SANDBOX_CHECKPOINTS,
     evict_game,
     persist_game,
     resolve_game,
     sync_summary,
 )
-from storage.supabase import is_valid_uuid
+from storage.supabase_codec import is_valid_uuid
 from ws.connection_manager import (
     broadcast_game_update,
     broadcast_lobby_update,
@@ -64,7 +68,6 @@ async def join_multiplayer_game(
         raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
 
     effective_user_id = current_user.user_id if current_user else req.user_id
-    effective_email = (current_user.email or req.email) if current_user else req.email
 
     if summary.has_passcode:
         is_already_participant = any(
@@ -77,7 +80,7 @@ async def join_multiplayer_game(
     if existing and existing.user_id != effective_user_id:
         raise HTTPException(
             status_code=409,
-            detail=f"{req.power.value} is already claimed by {existing.display_name}.",
+            detail=f"{req.power.value} is already claimed by {resolve_participant_name(existing)}.",
         )
     if existing and existing.user_id == effective_user_id:
         if is_valid_uuid(existing.user_id) and not current_user:
@@ -91,12 +94,10 @@ async def join_multiplayer_game(
             del summary.participants[p_key]
 
     now_iso = datetime.now(timezone.utc).isoformat()
-    display_name = (
-        PROFILE_NAMES.get(effective_user_id) or req.display_name or effective_email.split("@")[0]
-    )
+    await ensure_profile_loaded(effective_user_id)
+    display_name = resolve_display_name(effective_user_id, fallback=req.display_name)
     summary.participants[req.power.value] = GameParticipant(
         user_id=effective_user_id,
-        email=effective_email,
         display_name=display_name,
         power=req.power,
         joined_at=now_iso,
@@ -162,9 +163,7 @@ async def leave_game(
             )
 
     if summary.is_sandbox:
-        if is_creator(
-            summary, effective_user_id, current_user.email if current_user else req.email
-        ):
+        if is_creator(summary, effective_user_id):
             evict_game(game_id)
             if supabase.is_persistence_enabled():
                 await supabase.delete_game_from_db(game_id)
@@ -258,9 +257,7 @@ async def surrender_power(
     part = summary.participants.get(p_val)
     if part:
         if current_user:
-            if part.user_id != current_user.user_id and (
-                not current_user.email or current_user.email.lower() != (part.email or "").lower()
-            ):
+            if part.user_id != current_user.user_id:
                 raise HTTPException(
                     status_code=403,
                     detail=f"You do not command {p_val} in this campaign.",
@@ -284,7 +281,7 @@ async def surrender_power(
     if req.power in game_state.finalized_powers:
         game_state.finalized_powers.remove(req.power)
 
-    disp = part.display_name if part else "Envoy"
+    disp = resolve_participant_name(part)
     game_state.turn_history.append(
         f"{p_val} ({disp}) has formally surrendered! Sovereign forces have entered Civil Disorder."
     )
@@ -363,17 +360,7 @@ async def acknowledge_game_over(
     matched = [
         part
         for part in summary.participants.values()
-        if (
-            current_user is not None
-            and (
-                part.user_id == current_user.user_id
-                or (
-                    part.email
-                    and current_user.email
-                    and part.email.lower() == current_user.email.lower()
-                )
-            )
-        )
+        if (current_user is not None and part.user_id == current_user.user_id)
         or (current_user is None and summary.is_sandbox and not is_valid_uuid(part.user_id))
     ]
     if not matched:
@@ -382,7 +369,11 @@ async def acknowledge_game_over(
                 status_code=403,
                 detail="You do not hold a seat in this campaign.",
             )
-        return {"ok": True, "game_over_seen_at": None, "summary": summary}
+        return {
+            "ok": True,
+            "game_over_seen_at": None,
+            "summary": sanitize_summary_for_viewer(summary),
+        }
 
     now_iso = datetime.now(timezone.utc).isoformat()
     seen_at: str | None = None
@@ -393,4 +384,8 @@ async def acknowledge_game_over(
 
     sync_summary(gid)
     await persist_game(gid)
-    return {"ok": True, "game_over_seen_at": seen_at, "summary": summary}
+    return {
+        "ok": True,
+        "game_over_seen_at": seen_at,
+        "summary": sanitize_summary_for_viewer(summary),
+    }

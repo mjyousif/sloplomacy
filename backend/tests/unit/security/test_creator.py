@@ -13,18 +13,19 @@ def _summary(creator_id: str | None, created_by: str = "") -> MultiplayerGameSum
 
 
 def test_matches_creator_id():
-    assert is_creator(_summary("u1"), "u1", None)
+    assert is_creator(_summary("u1"), "u1")
 
 
-def test_matches_email_without_regard_to_case():
-    assert is_creator(_summary(None, "Host@Example.com"), None, "host@example.COM")
+def test_email_or_created_by_never_grants_creator():
+    assert not is_creator(_summary(None, "Host@Example.com"), "host@example.COM")
+    assert not is_creator(_summary("u1", "Host@Example.com"), "Host@Example.com")
 
 
 def test_rejects_other_users():
-    assert not is_creator(_summary("u1", "a@b.c"), "u2", "x@y.z")
+    assert not is_creator(_summary("u1", "a@b.c"), "u2")
 
 
 def test_missing_values_never_match_each_other():
-    assert not is_creator(_summary(None, ""), None, "")
-    assert not is_creator(_summary(None, ""), None, None)
-    assert not is_creator(None, "u1", "a@b.c")
+    assert not is_creator(_summary(None, ""), None)
+    assert not is_creator(_summary(None, ""), "")
+    assert not is_creator(None, "u1")

@@ -32,7 +32,6 @@ function makeGame(
     participants: {
       FRANCE: {
         user_id: 'user-alice',
-        email: 'alice@example.test',
         display_name: 'AliceHandle',
         power: 'FRANCE',
         joined_at: '2026-11-01T00:00:00Z',

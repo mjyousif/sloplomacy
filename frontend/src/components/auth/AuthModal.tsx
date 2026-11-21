@@ -247,13 +247,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       <form onSubmit={handleSubmit} className={styles.authForm}>
         {tab === 'signup' && (
           <div className={styles.authField}>
-            <label htmlFor="auth-display-name"> Envoy / Commander Name</label>
+            <label htmlFor="auth-display-name">Public Username</label>
             <input
               id="auth-display-name"
               type="text"
-              name="name"
-              autoComplete="name"
-              placeholder="e.g. Talleyrand"
+              name="public_username"
+              autoComplete="nickname"
+              placeholder="e.g. Talleyrand (2–24 chars, no email)"
+              required
+              minLength={2}
+              maxLength={24}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
             />

@@ -478,14 +478,12 @@ describe('PressSection sheet and MobilePressSheet', () => {
           participants: {
             FRANCE: {
               user_id: 'u1',
-              email: 'f@example.com',
               display_name: 'France',
               power: 'FRANCE',
               joined_at: '2026-11-01T00:00:00Z',
             },
             GERMANY: {
               user_id: 'u2',
-              email: 'g@example.com',
               display_name: 'Germany',
               power: 'GERMANY',
               joined_at: '2026-11-01T00:00:00Z',

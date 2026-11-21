@@ -16,9 +16,12 @@ from security.secrecy import (
     caller_holds_seat,
     reject_on_multiplayer_match,
     require_own_seat,
+    sanitize_admin_log,
     sanitize_game_state_for_viewer,
     verify_admin_access,
+    viewer_ack_ids,
     viewer_power_for,
+    with_sanitized_admin_log,
 )
 from storage.store import (
     GAME_HISTORY,
@@ -46,7 +49,11 @@ from ws.connection_manager import (
 router = APIRouter(tags=["Sandbox"])
 
 
-def open_private_sandbox(match: GameState, power: Power) -> GameState:
+def open_private_sandbox(
+    match: GameState,
+    power: Power,
+    current_user: AuthUser | None = None,
+) -> GameState:
     """Give a multiplayer seat a private ephemeral sandbox branch for the current turn."""
     match_turn = (match.season, match.year, match.phase)
     for sandbox_id, owner in list(PRIVATE_SANDBOXES.items()):
@@ -54,11 +61,12 @@ def open_private_sandbox(match: GameState, power: Power) -> GameState:
             existing = GAMES.get(sandbox_id)
             if existing and PRIVATE_SANDBOX_TURNS.get(sandbox_id) == match_turn:
                 refresh_diagnostics_and_simulation(existing)
-                return existing
+                return with_sanitized_admin_log(existing, current_user)
             evict_game(sandbox_id)
 
     sandbox_id = f"sbx_{uuid.uuid4().hex[:8]}"
     sandbox = match.model_copy(deep=True)
+    sandbox.admin_log = sanitize_admin_log(match, viewer_ack_ids(current_user))
     sandbox.game_id = sandbox_id
     sandbox.active_power = power
     sandbox.timer = None  # The match keeps the real clock, and a copy must never run out
@@ -101,7 +109,7 @@ async def enter_sandbox_mode(
     gid = game.game_id
     if is_multiplayer_match(gid):
         require_own_seat(gid, req.power, current_user)
-        return open_private_sandbox(game, req.power)
+        return open_private_sandbox(game, req.power, current_user)
 
     origin_turn = (game.season, game.year, game.phase)
     SANDBOX_CHECKPOINTS[gid] = game.model_copy(deep=True)
@@ -121,7 +129,7 @@ async def enter_sandbox_mode(
         game.active_power = req.power
     refresh_diagnostics_and_simulation(game)
     await broadcast_game_update(gid, game)
-    return game
+    return with_sanitized_admin_log(game, current_user)
 
 
 @router.post(
@@ -174,7 +182,7 @@ async def exit_sandbox_mode(
     await persist_game(gid)
     await broadcast_game_update(gid, game)
     await broadcast_lobby_update()
-    return game
+    return with_sanitized_admin_log(game, current_user)
 
 
 @router.post(
@@ -183,14 +191,18 @@ async def exit_sandbox_mode(
     summary="Clear Foreign Pre-Moves",
     description="Reset all hypothetical orders in sandbox mode for powers other than req.power back to default HOLD.",
 )
-async def clear_foreign_pre_moves(req: SetPowerRequest, game_id: str | None = Query(default=None)):
+async def clear_foreign_pre_moves(
+    req: SetPowerRequest,
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+):
     game = await resolve_game(game_id)
     reject_on_multiplayer_match(game.game_id)
     reset_foreign_orders(game, req.power)
     refresh_diagnostics_and_simulation(game)
     await persist_game(game.game_id)
     await broadcast_game_update(game.game_id, game)
-    return game
+    return with_sanitized_admin_log(game, current_user)
 
 
 @router.post(

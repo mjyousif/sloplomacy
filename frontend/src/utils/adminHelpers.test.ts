@@ -55,10 +55,17 @@ describe('adminHelpers', () => {
       expect(checkIsGameCreator(mpGame, creatorUser, 'multiplayer')).toBe(true);
     });
 
-    it('returns false for joined non-creator player in multiplayer match', () => {
+    it('returns false for joined non-creator player in multiplayer match (never matches email)', () => {
       expect(checkIsGameCreator(mpGame, regularPlayer, 'multiplayer')).toBe(
         false,
       );
+      expect(
+        checkIsGameCreator(
+          mpGame,
+          { ...regularPlayer, email: 'bismarck@diplomacy.eu' },
+          'multiplayer',
+        ),
+      ).toBe(false);
     });
 
     it('returns true for saved sandbox sessions', () => {
@@ -251,6 +258,19 @@ describe('computeStagedDiffLines & getUnacknowledgedAdminEntries', () => {
     expect(
       getUnacknowledgedAdminEntries(
         entries,
+        { id: 'usr_2', email: 'c@d.com', displayName: 'C' },
+        'FRANCE',
+        'multiplayer',
+      ),
+    ).toHaveLength(1);
+    expect(
+      getUnacknowledgedAdminEntries(
+        [
+          {
+            ...entries[0],
+            acknowledged_by: ['c@d.com'],
+          },
+        ],
         { id: 'usr_2', email: 'c@d.com', displayName: 'C' },
         'FRANCE',
         'multiplayer',

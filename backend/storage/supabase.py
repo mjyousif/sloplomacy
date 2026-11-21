@@ -5,15 +5,40 @@ import logging
 import os
 import re
 import time
-import uuid
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
 import httpx
-from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
 from domain.ids import DEFAULT_GAME_ID
+from storage.supabase_codec import (
+    APP_TO_DB_STATUS as APP_TO_DB_STATUS,
+)
+from storage.supabase_codec import (
+    DB_TO_APP_STATUS as DB_TO_APP_STATUS,
+)
+from storage.supabase_codec import (
+    DERIVED_STATE_FIELDS as DERIVED_STATE_FIELDS,
+)
+from storage.supabase_codec import (
+    _serialize_state_for_db as _serialize_state_for_db,
+)
+from storage.supabase_codec import (
+    _serialize_summary_for_db as _serialize_summary_for_db,
+)
+from storage.supabase_codec import (
+    build_summary_from_row as build_summary_from_row,
+)
+from storage.supabase_codec import (
+    is_valid_uuid as is_valid_uuid,
+)
+from storage.supabase_codec import (
+    to_app_status as to_app_status,
+)
+from storage.supabase_codec import (
+    to_db_status as to_db_status,
+)
 from telemetry import record_supabase_query
 
 logger = logging.getLogger("diplomacy.database")
@@ -52,10 +77,6 @@ async def close_http_client() -> None:
 
 ROOM_CODE_REGEX = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 
-# Rebuilt from the board whenever a game loads, so saving them would only bloat every row.
-# Rebuilt from the board on refresh and for every viewer, never saved.
-DERIVED_STATE_FIELDS = {"unit_options", "preview"}
-
 
 def is_valid_room_code(code: str | None) -> bool:
     """Verify that a game_id / room_code conforms to safe alphanumeric syntax."""
@@ -72,22 +93,6 @@ LOBBY_COLUMNS = (
     "room_code,name,status,winner,completed_at,phase,season,year,created_at,"
     "host_user_id,is_sandbox,is_private,summary:game_state->summary"
 )
-
-# Status mapping between Application and Database check constraint
-APP_TO_DB_STATUS = {
-    "waiting": "lobby",
-    "active": "in_progress",
-    "completed": "completed",
-    "lobby": "lobby",
-    "in_progress": "in_progress",
-}
-DB_TO_APP_STATUS = {
-    "lobby": "waiting",
-    "in_progress": "active",
-    "completed": "completed",
-    "waiting": "waiting",
-    "active": "active",
-}
 
 
 def get_supabase_url() -> str:
@@ -162,16 +167,6 @@ def is_persistence_enabled() -> bool:
     return bool(url and key and "your-project-ref" not in url and "your-supabase" not in url)
 
 
-def is_valid_uuid(val: str | None) -> bool:
-    if not val:
-        return False
-    try:
-        uuid.UUID(str(val))
-        return True
-    except (ValueError, AttributeError):
-        return False
-
-
 def get_headers() -> dict[str, str]:
     key = get_supabase_key()
     return {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
@@ -220,68 +215,6 @@ async def _execute_write_op(
         record_supabase_query(operation, "error", 0, _elapsed_ms(start))
         logger.warning("Supabase exception during %s: %s", label, ex)
         return False
-
-
-def to_db_status(app_status: str) -> str:
-    return APP_TO_DB_STATUS.get(app_status, "lobby")
-
-
-def to_app_status(db_status: str) -> str:
-    return DB_TO_APP_STATUS.get(db_status, "waiting")
-
-
-def build_summary_from_row(row: dict[str, Any]) -> MultiplayerGameSummary | None:
-    """The summary a row stores, or one built from its plain columns for a row that has none.
-
-    Returns None when the row stores a summary that cannot be read. The columns are no fallback
-    for that case: a save never writes `is_private`, `passcode` or the seats to them, so a summary
-    built from them would be a public, passcode-less game with nobody seated. An unreadable summary
-    means the game is unavailable, never that it is open.
-    """
-    room_code = row.get("room_code", "")
-    raw_blob = row.get("game_state") or {}
-    packed = raw_blob.get("summary") if isinstance(raw_blob, dict) else None
-    stored = False
-    for candidate in (packed, row.get("summary")):
-        if isinstance(candidate, dict) and candidate:
-            stored = True
-            try:
-                return MultiplayerGameSummary.model_validate(candidate)
-            except Exception as ex:
-                logger.warning(
-                    "Stored summary of '%s' is unreadable, so the game is withheld: %s",
-                    room_code,
-                    ex,
-                )
-    if stored:
-        return None
-
-    raw_winner = row.get("winner")
-    parsed_winner: Power | None = None
-    if raw_winner:
-        try:
-            parsed_winner = Power(raw_winner)
-        except ValueError:
-            parsed_winner = None
-    return MultiplayerGameSummary(
-        game_id=room_code,
-        name=row.get("name") or f"Match {room_code}",
-        status=to_app_status(row.get("status", "lobby")),
-        winner=parsed_winner,
-        completed_at=row.get("completed_at"),
-        season=row.get("season", "Spring"),
-        year=int(row.get("year", 1901)),
-        phase=row.get("phase", "Movement"),
-        created_by="",
-        creator_id=str(row.get("host_user_id")) if row.get("host_user_id") else None,
-        created_at=row.get("created_at") or datetime.now(timezone.utc).isoformat(),
-        participants={},
-        finalized_powers=[],
-        is_sandbox=bool(row.get("is_sandbox", False)),
-        is_draft=bool(row.get("is_draft", False)),
-        is_private=bool(row.get("is_private", False)),
-        has_passcode=bool(row.get("passcode")),
-    )
 
 
 async def load_game_from_db(
@@ -379,19 +312,6 @@ async def load_all_summaries_from_db(
         raise SupabaseUnavailable(str(ex)) from ex
 
 
-def _serialize_summary_for_db(summary: MultiplayerGameSummary) -> dict[str, Any]:
-    """Strip denormalized names from registered (UUID) users; public.profiles is authoritative."""
-    data = summary.model_dump(mode="json")
-    if is_valid_uuid(data.get("creator_id")):
-        data.pop("created_by", None)
-    participants = data.get("participants")
-    if isinstance(participants, dict):
-        for part in participants.values():
-            if isinstance(part, dict) and is_valid_uuid(part.get("user_id")):
-                part.pop("display_name", None)
-    return data
-
-
 async def save_game_to_db(
     game_id: str,
     state: GameState,
@@ -422,16 +342,14 @@ async def save_game_to_db(
         "year": state.year,
         "summary": serialized_summary,
         "game_state": {
-            "state": state.model_dump(mode="json", exclude=DERIVED_STATE_FIELDS),
+            "state": _serialize_state_for_db(state),
             "summary": serialized_summary,
             "passcode": passcode,
         },
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     if history is not None:
-        payload["history"] = [
-            h.model_dump(mode="json", exclude=DERIVED_STATE_FIELDS) for h in history
-        ]
+        payload["history"] = [_serialize_state_for_db(h) for h in history]
     if summary and is_valid_uuid(summary.creator_id):
         payload["host_user_id"] = summary.creator_id
 
@@ -483,7 +401,9 @@ async def load_profile_names_from_db(client: httpx.AsyncClient | None = None) ->
         profiles = {
             str(r["id"]): (r.get("display_name") or "").strip()
             for r in rows
-            if r.get("id") and (r.get("display_name") or "").strip()
+            if r.get("id")
+            and (r.get("display_name") or "").strip()
+            and "@" not in (r.get("display_name") or "")
         }
         record_supabase_query("load_profiles", "ok", resp.status_code, _elapsed_ms(start))
         return profiles
@@ -491,6 +411,39 @@ async def load_profile_names_from_db(client: httpx.AsyncClient | None = None) ->
         record_supabase_query("load_profiles", "error", 0, _elapsed_ms(start))
         logger.warning("Supabase exception loading profiles: %s", ex)
         return {}
+
+
+async def load_profile_name_from_db(
+    user_id: str, client: httpx.AsyncClient | None = None
+) -> str | None:
+    """Load a single registered user's display_name from public.profiles by UUID."""
+    if not is_persistence_enabled() or not is_valid_uuid(user_id):
+        return None
+
+    url = (
+        f"{get_supabase_url()}/rest/v1/profiles?id=eq.{quote(user_id, safe='')}&select=display_name"
+    )
+    start = time.perf_counter()
+    try:
+        resp = await _execute_http("get", url, get_headers(), client=client)
+        if resp.status_code != 200:
+            record_supabase_query("load_profile", "error", resp.status_code, _elapsed_ms(start))
+            logger.warning("Supabase profile read failed: HTTP %d %s", resp.status_code, resp.text)
+            return None
+        rows = resp.json()
+        if not isinstance(rows, list) or not rows:
+            record_supabase_query("load_profile", "ok", resp.status_code, _elapsed_ms(start))
+            return None
+        raw_name = rows[0].get("display_name")
+        clean = (raw_name or "").strip() if isinstance(raw_name, str) else ""
+        record_supabase_query("load_profile", "ok", resp.status_code, _elapsed_ms(start))
+        if not clean or "@" in clean:
+            return None
+        return clean
+    except Exception as ex:
+        record_supabase_query("load_profile", "error", 0, _elapsed_ms(start))
+        logger.warning("Supabase exception loading profile '%s': %s", user_id, ex)
+        return None
 
 
 async def upsert_profile_display_name(

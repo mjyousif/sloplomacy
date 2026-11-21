@@ -190,14 +190,12 @@ describe('ToolsSidebar', () => {
         participants: {
           FRANCE: {
             user_id: 'u1',
-            email: 'napoleon@example.com',
             display_name: 'Napoleon',
             power: 'FRANCE',
             joined_at: '2026-11-06T00:00:00Z',
           },
           ENGLAND: {
             user_id: 'u2',
-            email: 'nelson@example.com',
             display_name: 'AdmiralNelson',
             power: 'ENGLAND',
             joined_at: '2026-11-06T00:00:00Z',

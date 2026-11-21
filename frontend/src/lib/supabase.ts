@@ -47,10 +47,12 @@ function setLocalStoredUser(user: AuthUser | null) {
 
 function mapSupabaseUser(sbUser: any): AuthUser {
   const email: string | null = sbUser.email || null;
-  const explicitName =
+  const rawMetaName =
     typeof sbUser.user_metadata?.display_name === 'string'
-      ? sbUser.user_metadata.display_name.trim()
+      ? sbUser.user_metadata.display_name.trim().replace(/\s+/g, ' ')
       : '';
+  const explicitName =
+    rawMetaName && !rawMetaName.includes('@') ? rawMetaName : '';
   const rawFullName =
     typeof sbUser.user_metadata?.full_name === 'string'
       ? sbUser.user_metadata.full_name.trim()
@@ -88,7 +90,6 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
     const payload = btoa(
       JSON.stringify({
         sub: localUser.id,
-        email: localUser.email,
         // The dev backend refuses an unsigned token that does not expire.
         exp: Math.floor(Date.now() / 1000) + 3600,
       }),
@@ -222,17 +223,32 @@ export async function signUpWithEmailPassword(
     return { user: null, error: 'Password must be at least 6 characters.' };
   }
 
-  const chosenName = (displayName || '').trim() || cleanEmail.split('@')[0];
+  const cleanName = (displayName || '').trim().replace(/\s+/g, ' ');
+  if (cleanName) {
+    if (cleanName.includes('@')) {
+      return { user: null, error: 'Username cannot contain "@".' };
+    }
+    if (cleanName.length < 2 || cleanName.length > 24) {
+      return {
+        user: null,
+        error: 'Username must be between 2 and 24 characters.',
+      };
+    }
+  }
 
   if (supabase) {
     const { data, error } = await supabase.auth.signUp({
       email: cleanEmail,
       password,
-      options: {
-        data: {
-          display_name: chosenName,
-        },
-      },
+      ...(cleanName
+        ? {
+            options: {
+              data: {
+                display_name: cleanName,
+              },
+            },
+          }
+        : {}),
     });
     if (error) return { user: null, error: error.message };
     if (data.user) {
@@ -252,8 +268,9 @@ export async function signUpWithEmailPassword(
   const demoUser: AuthUser = {
     id: `local_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`,
     email: cleanEmail,
-    displayName: chosenName,
+    displayName: cleanName || 'Envoy',
     isLocalDemo: true,
+    needsUsernameSetup: !cleanName,
   };
   setLocalStoredUser(demoUser);
   return { user: demoUser, error: null };
@@ -398,6 +415,12 @@ export async function updateAccountDisplayName(
   displayName: string,
 ): Promise<{ user: AuthUser | null; error: string | null }> {
   const clean = displayName.trim().replace(/\s+/g, ' ');
+  if (clean.includes('@')) {
+    return {
+      user: null,
+      error: 'Username cannot contain "@".',
+    };
+  }
   if (clean.length < 2 || clean.length > 24) {
     return {
       user: null,

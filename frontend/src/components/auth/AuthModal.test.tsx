@@ -94,4 +94,12 @@ describe('AuthModal', () => {
       screen.queryByText('Invalid login credentials'),
     ).not.toBeInTheDocument();
   });
+
+  it('requires a public username with 2..24 chars on the Create Account tab', () => {
+    render(renderModal(true, 'signup'));
+    const usernameInput = screen.getByLabelText('Public Username');
+    expect(usernameInput).toBeRequired();
+    expect(usernameInput).toHaveAttribute('minlength', '2');
+    expect(usernameInput).toHaveAttribute('maxlength', '24');
+  });
 });

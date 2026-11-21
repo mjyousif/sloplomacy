@@ -94,7 +94,8 @@ class AdminActionLogEntry(BaseModel):
 
     id: str
     timestamp: str
-    actor: str
+    actor_id: str | None = None
+    actor: str = ""
     season: str
     year: int
     phase: str
@@ -170,7 +171,6 @@ class TurnRecord(TurnHistoryEntry):
 
 class GameParticipant(BaseModel):
     user_id: str
-    email: str
     display_name: str = "Envoy"
     power: Power
     joined_at: str
