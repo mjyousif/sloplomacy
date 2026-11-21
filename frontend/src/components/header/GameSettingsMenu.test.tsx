@@ -320,4 +320,23 @@ describe('GameSettingsMenu', () => {
       screen.queryByTestId('game-settings-copy-link'),
     ).not.toBeInTheDocument();
   });
+
+  it('says the copy failed when the browser refuses the clipboard', async () => {
+    const user = userEvent.setup();
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+      configurable: true,
+    });
+    Object.defineProperty(document, 'execCommand', {
+      value: () => false,
+      configurable: true,
+      writable: true,
+    });
+    renderGameSettings({ playerPower: null });
+    await user.click(screen.getByTestId('game-settings-trigger'));
+    const item = screen.getByTestId('game-settings-copy-link');
+    await user.click(item);
+    expect(item).toHaveTextContent('Copy failed');
+    expect(item).not.toHaveTextContent('Link copied');
+  });
 });

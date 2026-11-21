@@ -15,6 +15,7 @@ from security.secrecy import (
     caller_owns_saved_sandbox,
     sanitize_game_state_for_viewer,
     sanitize_summary_for_viewer,
+    viewer_ack_ids,
     viewer_power_for,
 )
 from storage import supabase
@@ -42,25 +43,30 @@ CLOSE_FORBIDDEN = 4403
 CLOSE_TOO_MANY_PASSCODES = 4429
 
 
-async def receive_socket_identity(websocket: WebSocket) -> AuthUser | None:
+async def receive_socket_identity(websocket: WebSocket) -> tuple[AuthUser | None, str | None]:
     """
-    Read who is on an accepted game socket.
+    Read who is on an accepted game socket, and the passcode they offer.
 
-    Browsers cannot put an Authorization header on a WebSocket, and a token in the URL would end
-    up in request logs, so the client sends `{"type": "auth", "token": ...}` as its first message
-    (it asks for this with `?handshake=1`). A missing, late or invalid token means signed out.
+    Browsers cannot put an Authorization header on a WebSocket, and a token or passcode in the URL
+    would end up in request logs, so the client sends `{"type": "auth", "token": ..., "passcode":
+    ...}` as its first message (it asks for this with `?handshake=1`). Either may be absent. A
+    missing, late or invalid token means signed out, and no first message means no passcode.
     """
     try:
         data = await asyncio.wait_for(websocket.receive_json(), timeout=SOCKET_AUTH_TIMEOUT_SECONDS)
     except (asyncio.TimeoutError, ValueError, KeyError, WebSocketDisconnect):
-        return None
-    if not isinstance(data, dict) or data.get("type") != "auth" or not data.get("token"):
-        return None
+        return None, None
+    if not isinstance(data, dict) or data.get("type") != "auth":
+        return None, None
+    passcode = data.get("passcode")
+    passcode = passcode if isinstance(passcode, str) else None
+    if not data.get("token"):
+        return None, passcode
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=str(data["token"]))
     try:
-        return await run_in_threadpool(get_current_user, credentials)
+        return await run_in_threadpool(get_current_user, credentials), passcode
     except HTTPException:
-        return None
+        return None, passcode
 
 
 @router.websocket("/ws/games/{game_id}")
@@ -68,7 +74,6 @@ async def ws_game_endpoint(
     websocket: WebSocket,
     game_id: str,
     power: str | None = Query(default=None),
-    passcode: str | None = Query(default=None),
     handshake: bool = Query(default=False),
 ):
     if game_id not in GAMES and supabase.is_persistence_enabled():
@@ -85,7 +90,7 @@ async def ws_game_endpoint(
         return
 
     await websocket.accept()
-    current_user = await receive_socket_identity(websocket) if handshake else None
+    current_user, passcode = await receive_socket_identity(websocket) if handshake else (None, None)
 
     requested: Power | None = None
     if power:
@@ -115,13 +120,14 @@ async def ws_game_endpoint(
             await websocket.close(code=CLOSE_FORBIDDEN)
             return
 
-    manager.register_game(game_id, websocket, power=power_enum)
+    viewer_ids = viewer_ack_ids(current_user)
+    manager.register_game(game_id, websocket, power=power_enum, viewer_ids=viewer_ids)
     sync_summary(game_id)
     game = GAMES[game_id]
     try:
         await tick_timer(game)
         summary = GAME_SUMMARIES.get(game_id)
-        sanitized = sanitize_game_state_for_viewer(game, power_enum)
+        sanitized = sanitize_game_state_for_viewer(game, power_enum, viewer_ids)
         await websocket.send_json(
             {
                 "type": "game_update",
@@ -143,7 +149,7 @@ async def ws_game_endpoint(
                     s = GAME_SUMMARIES.get(game_id)
                     if g:
                         await tick_timer(g)
-                        g_sanitized = sanitize_game_state_for_viewer(g, power_enum)
+                        g_sanitized = sanitize_game_state_for_viewer(g, power_enum, viewer_ids)
                         await websocket.send_json(
                             {
                                 "type": "game_update",

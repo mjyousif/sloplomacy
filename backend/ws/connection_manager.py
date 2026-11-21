@@ -7,7 +7,11 @@ from domain.game_state import GameState, MultiplayerGameSummary
 from domain.press import PressMessage
 from fastapi import WebSocket
 from security.press import can_read, spectator_view, view_of
-from security.secrecy import sanitize_game_state_for_viewer, sanitize_summary_for_viewer
+from security.secrecy import (
+    sanitize_admin_log,
+    sanitize_game_state_for_viewer,
+    sanitize_summary_for_viewer,
+)
 from starlette.websockets import WebSocketDisconnect
 from storage.lobby import public_summaries
 from storage.store import GAME_SUMMARIES, GAMES, sync_summary
@@ -54,6 +58,8 @@ class ConnectionManager:
     def __init__(self) -> None:
         self.game_connections: dict[str, dict[WebSocket, Power | None]] = defaultdict(dict)
         self.lobby_connections: set[WebSocket] = set()
+        # Who each game socket is, as the admin-log tokens it may be shown (`viewer_ack_ids`).
+        self.socket_viewers: dict[WebSocket, tuple[str, ...]] = {}
 
     async def connect_game(
         self, game_id: str, websocket: WebSocket, power: Power | None = None
@@ -61,12 +67,20 @@ class ConnectionManager:
         await websocket.accept()
         self.game_connections[game_id][websocket] = power
 
-    def register_game(self, game_id: str, websocket: WebSocket, power: Power | None = None) -> None:
+    def register_game(
+        self,
+        game_id: str,
+        websocket: WebSocket,
+        power: Power | None = None,
+        viewer_ids: tuple[str, ...] = (),
+    ) -> None:
         """Add a socket that has already been accepted."""
         self.game_connections[game_id][websocket] = power
+        self.socket_viewers[websocket] = viewer_ids
 
     def disconnect_game(self, game_id: str, websocket: WebSocket) -> None:
         self.game_connections[game_id].pop(websocket, None)
+        self.socket_viewers.pop(websocket, None)
         if not self.game_connections[game_id]:
             self.game_connections.pop(game_id, None)
 
@@ -100,18 +114,35 @@ class ConnectionManager:
             sanitize_summary_for_viewer(summary).model_dump(mode="json") if summary else None
         )
         payload_by_power: dict[Power | None, dict] = {}
+        payload_by_viewer: dict[tuple[Power | None, tuple[str, ...]], dict] = {}
         sends: list[tuple[WebSocket, dict]] = []
         for ws, ws_power in list(connections.items()):
             if ws_power not in payload_by_power:
                 payload_by_power[ws_power] = {
                     "type": "game_update",
                     "game_id": game_id,
-                    "state": sanitize_game_state_for_viewer(state, ws_power).model_dump(
+                    "state": sanitize_game_state_for_viewer(state, ws_power, ()).model_dump(
                         mode="json"
                     ),
                     "summary": summary_json,
                 }
-            sends.append((ws, payload_by_power[ws_power]))
+            payload = payload_by_power[ws_power]
+            # Only the admin log differs between sockets of one power: it keeps the viewer's own
+            # acknowledgement tokens. Players with an account are the only ones with any.
+            viewer_ids = self.socket_viewers.get(ws, ())
+            if viewer_ids and state.admin_log:
+                key = (ws_power, viewer_ids)
+                if key not in payload_by_viewer:
+                    log = sanitize_admin_log(state, viewer_ids)
+                    payload_by_viewer[key] = {
+                        **payload,
+                        "state": {
+                            **payload["state"],
+                            "admin_log": [entry.model_dump(mode="json") for entry in log],
+                        },
+                    }
+                payload = payload_by_viewer[key]
+            sends.append((ws, payload))
 
         for ws in await send_to_all(sends):
             self.disconnect_game(game_id, ws)

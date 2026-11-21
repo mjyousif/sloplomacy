@@ -42,12 +42,11 @@ async def _resolve_accessible_history(
 async def list_turn_history(
     request: Request,
     game_id: str | None = Query(default=None),
-    passcode: str | None = Query(default=None),
     x_passcode: str | None = Header(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     _, history = await _resolve_accessible_history(
-        game_id, current_user, passcode or x_passcode, client_address(request)
+        game_id, current_user, x_passcode, client_address(request)
     )
     return [
         TurnHistoryEntry(index=i, season=snap.season, year=snap.year, phase=snap.phase)
@@ -64,12 +63,11 @@ async def list_turn_history(
 async def get_campaign_stats(
     request: Request,
     game_id: str | None = Query(default=None),
-    passcode: str | None = Query(default=None),
     x_passcode: str | None = Header(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     game, history = await _resolve_accessible_history(
-        game_id, current_user, passcode or x_passcode, client_address(request)
+        game_id, current_user, x_passcode, client_address(request)
     )
     summary = GAME_SUMMARIES.get(game.game_id)
     player_names: dict[Power, str] = {}
@@ -90,12 +88,11 @@ async def get_turn_record(
     index: int,
     request: Request,
     game_id: str | None = Query(default=None),
-    passcode: str | None = Query(default=None),
     x_passcode: str | None = Header(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     _, history = await _resolve_accessible_history(
-        game_id, current_user, passcode or x_passcode, client_address(request)
+        game_id, current_user, x_passcode, client_address(request)
     )
     if not 0 <= index < len(history):
         raise HTTPException(status_code=404, detail=f"No resolved turn at index {index}.")

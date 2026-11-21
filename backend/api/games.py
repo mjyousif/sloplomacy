@@ -273,14 +273,13 @@ async def create_solo_sandbox(
     request: Request,
     resume_game_id: str | None = Query(default=None),
     source_game_id: str | None = Query(default=None),
-    passcode: str | None = Query(default=None),
     x_passcode: str | None = Header(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     return await create_or_resume_solo_sandbox(
         resume_game_id=resume_game_id,
         source_game_id=source_game_id,
-        passcode=passcode or x_passcode,
+        passcode=x_passcode,
         current_user=current_user,
         sync_lobby=sync_lobby_with_db,
         client=client_address(request),
@@ -381,7 +380,6 @@ async def get_game(
     request: Request,
     game_id: str | None = Query(default=None),
     power: Power | None = Query(default=None),
-    passcode: str | None = Query(default=None),
     x_passcode: str | None = Header(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
@@ -390,7 +388,7 @@ async def get_game(
     game = await resolve_game(game_id)
     gid = game.game_id
     # Before the clock is ticked, so a caller who may not see the match cannot resolve its turn.
-    require_view_access(gid, current_user, passcode or x_passcode, client=client_address(request))
+    require_view_access(gid, current_user, x_passcode, client=client_address(request))
     await tick_timer(game)
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)

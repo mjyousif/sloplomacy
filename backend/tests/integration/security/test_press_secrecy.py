@@ -396,7 +396,9 @@ def test_a_private_match_needs_its_passcode_for_spectator_press():
     gid = secret_plan_match(private=True)
     assert send(gid, alice_headers(), "FRANCE", "Hello all").status_code == 200
     assert client.get(f"/api/press?game_id={gid}").status_code == 403
-    assert client.get(f"/api/press?game_id={gid}&passcode=wrong").status_code == 403
+    assert (
+        client.get(f"/api/press?game_id={gid}", headers={"X-Passcode": "wrong"}).status_code == 403
+    )
     res = client.get(f"/api/press?game_id={gid}", headers={"X-Passcode": "Secret1901"})
     assert res.status_code == 200
     assert [m["body"] for m in res.json()["messages"]] == ["Hello all"]

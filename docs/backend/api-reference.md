@@ -282,7 +282,7 @@ Stamps `participants[power].game_over_seen_at` (ISO-8601 UTC) for the calling se
 ### 8. `POST /api/games/solo-sandbox`
 Mints an isolated, ephemeral draft sandbox session with a unique UUID (`solo_<uuid>`), resumes an existing draft sandbox when `?resume_game_id=<id>` is passed (or when an authenticated user already owns an unpromoted draft), or exports a snapshot of an active game when `?source_game_id=<id>` is passed.
 
-- **Board-State Export (`?source_game_id=`)**: When called with `source_game_id`, validates view access (checking `passcode` / `X-Passcode` for private campaigns), sanitizes multiplayer state via `sanitize_game_state_for_viewer` so rival orders remain masked to `HOLD`, deletes/overrides any prior draft sandbox held via `resume_game_id` or account lookup, and initializes a new draft sandbox from that snapshot (`is_sandbox=True`, `is_draft=True`, no clock).
+- **Board-State Export (`?source_game_id=`)**: When called with `source_game_id`, validates view access (checking the `X-Passcode` header for private campaigns), sanitizes multiplayer state via `sanitize_game_state_for_viewer` so rival orders remain masked to `HOLD`, deletes/overrides any prior draft sandbox held via `resume_game_id` or account lookup, and initializes a new draft sandbox from that snapshot (`is_sandbox=True`, `is_draft=True`, no clock).
 - **Draft Isolation & Resumption**: Sets `is_sandbox=True` and `is_draft=True`. Draft sandboxes are completely isolated per visitor/player. Leaving a Solo Sandbox and returning from the lobby resumes the same draft (via `resume_game_id` stored in `localStorage` or account lookup) until the user exports another board, resets the board, or promotes it via Save Sandbox.
 - **Lobby & WebSocket Exclusion**: Sandboxes, drafts or saved, are filtered out of public `/api/games` listings, `/api/games/browse` and `/ws/lobby` broadcasts, ensuring that no sandbox is discoverable or shared by other players. A saved one appears to its owner in `GET /api/games/mine`.
 - **Capacity & Eviction**: When total active games approach `MAX_CONCURRENT_GAMES`, unpromoted draft sandboxes are prioritized for memory eviction before rejecting new rooms.
@@ -371,9 +371,8 @@ Bootstraps the client by returning the current `GameState` along with the comple
 - **Query Parameters**:
   - `game_id` *(optional, string)*: Scoped match identifier (defaults to `proto_1901`).
   - `power` *(optional, Power)*: Picks which of the caller's own seats to view. It is checked against the caller's seat and never shows another power's orders: naming a seat you do not hold gives the same view as not naming one. In multiplayer matches, whether `waiting` or `active`, foreign unadjudicated moves are masked to default `HOLD`s, foreign diagnostic issues are excluded, and `preview` (the phase being played, resolved from the viewer's own orders with everyone else holding) is rebuilt per viewer (Fog of War). `preview` is a guess, never a resolved phase: what really happened is in `GET /api/history`. It is `null` once the game has a winner.
-  - `passcode` *(optional, string)*: Passcode for private campaigns (compared using timing-safe `hmac.compare_digest`).
 - **Headers**:
-  - `X-Passcode` *(optional, string)*: Header alternative for campaign passcode.
+  - `X-Passcode` *(optional, string)*: Passcode for private campaigns (compared using timing-safe `hmac.compare_digest`). It is read from this header only: a passcode in the URL is ignored (and counts no try), because URLs end up in request logs.
   - `Authorization: Bearer <token>` *(optional)*: Identifies the caller, whose seat decides which orders they see. Signed out, a caller sees only seats claimed without an account.
 - **Spectators**: a caller with no seat, signed in or not, may watch any match they can open (a private one with its passcode). They get the board with every unadjudicated order masked to `HOLD` and no issues. A spectator client names no `power`: without a token, naming a seat claimed without an account would pick that seat.
 - **Access**: a private match needs its passcode unless the caller is seated in it (`403`). The passcode is checked before the clock is ticked, so a refused caller cannot resolve a deadline. <a id="passcode-limit"></a>**Passcode limit**: wrong passcodes are counted per client address and match, on every route that takes one (`GET /api/game`, `/api/history*`, `GET /api/press`, the solo-sandbox export, `join` and the game socket). After 10 wrong passcodes within 10 minutes the client gets `429` (the socket closes with `4429`), even for the right passcode, until the oldest try is 10 minutes old. A right passcode clears the count, and a missing one is refused without counting. The address is the last `X-Forwarded-For` entry (the one Cloud Run's front end adds), else the peer address (`security/passcode.py`).
@@ -519,7 +518,7 @@ In a live match, a retreat or adjustment phase that no player is involved in the
 ### `GET /api/history`
 Lists the phases of a game that have resolved, oldest first, for the turn selector. They come from the snapshots `/api/adjudicate` takes just before each phase resolves (the same ones admin rollback uses), so at most the last 30 phases are kept and a rollback removes the phase it restores.
 
-- **Query Parameters**: `game_id` *(optional)*, `passcode` *(optional)*. Header `X-Passcode` and `Authorization: Bearer <token>` work as for `GET /api/game`.
+- **Query Parameters**: `game_id` *(optional)*. Header `X-Passcode` and `Authorization: Bearer <token>` work as for `GET /api/game`.
 - **Access**: the same as `GET /api/game`. A private match needs its passcode unless the caller is seated in it (`403`). A private sandbox id (`sbx_…`) answers `404` for everyone, because its snapshots hold its owner's live orders for the match's current turn.
 - **Secrecy**: every phase listed has resolved, so its orders are public. The current phase is never in the list.
 
@@ -563,7 +562,7 @@ Returns one resolved phase from `GET /api/history`, as the board stood when it b
 ### `GET /api/history/stats`
 Computes and returns the Campaign Statistics & War Ledger (`CampaignStatsResponse`) for a match using only resolved snapshots in `GAME_HISTORY` and public board ownership/unit counts on the current state.
 
-- **Query Parameters**: `game_id` *(optional)*, `passcode` *(optional)*. Header `X-Passcode` and `Authorization: Bearer <token>` work identically to `GET /api/history`.
+- **Query Parameters**: `game_id` *(optional)*. Header `X-Passcode` and `Authorization: Bearer <token>` work identically to `GET /api/history`.
 - **Access & Secrecy**: Enforces `require_view_access` (private matches require passcode or seated membership; private sandboxes `sbx_...` return `404`; saved sandboxes are restricted to their owner via `saved_sandbox_guard`). **Never reads or exposes live unresolved turn orders** (`current_state.orders`, `preview`, `issues`, or `unit_options`).
 
 #### Response (`CampaignStatsResponse`):
@@ -699,7 +698,7 @@ Applies an atomic batch of staged Direct-Edit board mutations (`units`, `ownersh
 ### 18c. `POST /api/admin/acknowledge`
 Marks one or more `AdminActionLogEntry` items in `GameState.admin_log` as acknowledged by the caller and persists the updated `GameState` to Supabase so the player is not re-prompted after a page reload or cold start.
 
-The request holds `entry_ids` (all entries when omitted) and, for a guest, `power`. The acknowledging identity comes from the token: its user id, its email and the seats it holds. A caller without a token is a guest: `power` is believed only for a seat claimed without an account, otherwise it is recorded as `guest`. A `user_id`, `email` or other power in the body is ignored, so nobody can dismiss another player's warning. `acknowledged_by` in the response is the id recorded.
+The request holds `entry_ids` (all entries when omitted) and, for a guest, `power`. The acknowledging identity comes from the token: its user id, its email and the seats it holds. A caller without a token is a guest: `power` is believed only for a seat claimed without an account, otherwise it is recorded as `guest`. A `user_id`, `email` or other power in the body is ignored, so nobody can dismiss another player's warning. `acknowledged_by` in the response is the id recorded. The entry stores whatever identified the acknowledger (user id, email, seat), but `acknowledged_by` is sent back per viewer: only the viewer's own id and email and the nameless tokens (a seat, `guest`) remain, so no one sees another player's email or id (see [secrecy](../architecture/secrecy-and-authorization.md)).
 
 
 ---
@@ -733,7 +732,6 @@ Rules that hold on both endpoints and on the socket:
 | `game_id` | The match. |
 | `power` | The caller's seat to read as. Optional for a signed-in player with one seat. A spectator names none. |
 | `after` | Only messages with a `seq` above this (the reader's own numbering). |
-| `passcode` | For a spectator of a private match (or the `X-Passcode` header). Seated players need none. |
 
 #### Response (`PressFeed`):
 ```json
@@ -806,13 +804,12 @@ A seated player's game socket receives each new message it may read, as that pla
 Establishes a persistent, low-latency WebSocket connection scoped to a specific game room (`game_id`).
 
 - **Query Parameters**:
-  - `handshake` *(optional, `1`)*: The client sends `{"type": "auth", "token": "<jwt or null>"}` as its first message, and the server waits up to 10 seconds for it. Browsers cannot set an `Authorization` header on a socket, and a token in the URL would end up in request logs. Without `handshake` the caller is treated as signed out.
+  - `handshake` *(optional, `1`)*: The client sends `{"type": "auth", "token": "<jwt or null>", "passcode": "<passcode, optional>"}` as its first message, and the server waits up to 10 seconds for it. Browsers cannot set an `Authorization` header on a socket, and a token or passcode in the URL would end up in request logs. Without `handshake` the caller is treated as signed out and has no passcode, so a private match refuses it (`4403`).
   - `power` *(optional, Power)*: Picks among the caller's own seats, as in `GET /api/game`. It never shows another power's orders. Broadcasts mask foreign unadjudicated moves to default `HOLD`s, hide foreign issues and rebuild the turn preview from what the viewer may see (Fog of War).
-  - `passcode` *(optional, string)*: Passcode for private campaigns. Players seated in the match do not need it.
 - **Connection Handshake**:
   - Validates that `game_id` exists. If the game is missing, closes with code `4004`.
   - Accepts the socket, then reads the `auth` message when `handshake=1`.
-  - For private campaigns, a caller who holds no seat must give the passcode, checked in constant time; if it is missing or wrong, closes with code `4403`, and after too many wrong passcodes with `4429` (see the [passcode limit](#passcode-limit)).
+  - For private campaigns, a caller who holds no seat must give the passcode in the `auth` message, checked in constant time; if it is missing or wrong, closes with code `4403`, and after too many wrong passcodes with `4429` (see the [passcode limit](#passcode-limit)).
   - A caller with no seat is a spectator: every `game_update` masks all unadjudicated orders, and only public press is pushed, with `power` `null`.
   - Immediately transmits the sanitized `game_update` payload tailored to the connected viewer's power.
 - **Client Heartbeats & Refresh**:

@@ -120,19 +120,25 @@ describe('LobbyView hosting', () => {
     expect(hostDialog()).not.toBeInTheDocument();
 
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    fireEvent.click(screen.getByTitle('Copy Game ID'));
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Copy Game ID'));
+    });
     expect(writeText).toHaveBeenLastCalledWith('mp_new');
     expect(screen.getByText('Copied')).toBeInTheDocument();
     // The link holds the game id alone; whoever opens it is asked for the passcode.
     expect(screen.getByTestId('private-campaign-link')).toHaveTextContent(
       `${window.location.origin}/game/mp_new`,
     );
-    fireEvent.click(screen.getByTitle(/Copy Game Link/));
+    await act(async () => {
+      fireEvent.click(screen.getByTitle(/Copy Game Link/));
+    });
     expect(writeText).toHaveBeenLastCalledWith(
       `${window.location.origin}/game/mp_new`,
     );
     expect(screen.getAllByText('Copied')).toHaveLength(1);
-    fireEvent.click(screen.getByTitle('Copy Passcode'));
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Copy Passcode'));
+    });
     expect(writeText).toHaveBeenLastCalledWith('sekret');
     act(() => {
       vi.advanceTimersByTime(2400);
@@ -142,6 +148,35 @@ describe('LobbyView hosting', () => {
       vi.advanceTimersByTime(200);
     });
     expect(screen.queryByText('Copied')).not.toBeInTheDocument();
+  });
+
+  it('says so when a credential could not be copied, instead of "Copied"', async () => {
+    const onCreateGame = vi.fn(async () =>
+      game({ game_id: 'mp_new', name: 'Fresh' }),
+    );
+    const { user } = setup({ onCreateGame });
+    // Plain http has no clipboard, and the legacy command refuses too.
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      configurable: true,
+    });
+    Object.defineProperty(document, 'execCommand', {
+      value: () => false,
+      configurable: true,
+      writable: true,
+    });
+    openHost();
+    await user.click(
+      screen.getByRole('button', { name: /Private \(Passcode\)/ }),
+    );
+    await user.type(screen.getByLabelText('Campaign Passcode / PIN'), 'sekret');
+    await user.click(
+      screen.getByRole('button', { name: /Create Private & Play as France/ }),
+    );
+    await user.click(screen.getByTitle('Copy Passcode'));
+    expect(screen.getByTitle('Copy Passcode')).toHaveTextContent('Copy failed');
+    expect(screen.queryByText('Copied')).not.toBeInTheDocument();
+    expect(screen.getByTitle('Copy Game ID')).toHaveTextContent('Copy');
   });
 
   it('empties the passcode after creating, and shows no credentials when none come back', async () => {

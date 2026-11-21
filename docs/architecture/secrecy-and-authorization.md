@@ -42,7 +42,7 @@ A `None` viewer power means "spectator or stranger": they see no one's orders. I
 - **`issues`**: only validation issues belonging to the viewer's power.
 - **`preview`**: re-adjudicated from the masked orders, so the stored preview (which reflects everyone's real orders) never leaves the server.
 - **`unit_options`**: recomputed from the masked orders, so a foreign fleet's secret convoy never makes a destination "turn green".
-- **`admin_log`**: actor emails are cut to the part before `@`.
+- **`admin_log`**: actor emails are cut to the part before `@`, and `acknowledged_by` keeps only the viewer's own tokens (their user id and email) and the nameless ones (a seat, `guest`). An entry stores who acknowledged it by id, email and seat, so everything else is dropped on the way out, which also scrubs a saved game that already holds emails. The viewer comes from `bind_viewer` (set by `saved_sandbox_guard` for every HTTP route) or, for a game socket, from the identity its `auth` message gave (`ConnectionManager.socket_viewers`); where it is unknown the viewer has no id, so the entry shows only seats.
 
 Every HTTP response and WebSocket message that carries a live game goes through it.
 
@@ -83,7 +83,7 @@ Seats, owner and passcode live in a game's `MultiplayerGameSummary`. The shared 
 
 ## WebSocket handshake and broadcast
 
-Browsers cannot set an `Authorization` header on a WebSocket, and a token in the URL would land in request logs. So the game socket (`/ws/games/{game_id}`) identifies the caller with a first message instead:
+Browsers cannot set an `Authorization` header on a WebSocket, and a token or passcode in the URL would land in request logs (Cloud Run records full URLs). So the game socket (`/ws/games/{game_id}`) identifies the caller with a first message instead:
 
 ```mermaid
 sequenceDiagram
@@ -91,9 +91,9 @@ sequenceDiagram
     participant S as Game socket
     participant G as Guards
     participant M as Connection manager
-    C->>S: connect ?handshake=1&power=X&passcode=...
+    C->>S: connect ?handshake=1&power=X
     S->>C: accept
-    C->>S: {type: auth, token}
+    C->>S: {type: auth, token, passcode}
     Note over S: no message within 10 s, or a bad token, means signed out
     S->>G: viewer_power_for(token user, power X)
     G-->>S: seat or None

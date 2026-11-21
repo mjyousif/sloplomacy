@@ -1,3 +1,6 @@
+from collections.abc import Collection
+from contextvars import ContextVar
+
 from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
 from engine.adjudicator.resolver import adjudicate_turn
@@ -243,23 +246,63 @@ def sanitize_summary_for_viewer(
     )
 
 
-def _sanitize_admin_log(game: GameState) -> list:
+# Who the caller of the current HTTP request is, as the tokens an admin-log acknowledgement may be
+# filed under (`viewer_ack_ids`). `saved_sandbox_guard` binds it for every route, and the game
+# socket and the broadcast pass theirs explicitly, so no `sanitize_game_state_for_viewer` call has
+# to be handed the caller.
+_VIEWER_ACK_IDS: ContextVar[tuple[str, ...]] = ContextVar("viewer_ack_ids", default=())
+
+# Acknowledgement tokens that name no one: a seat, or an anonymous guest.
+_PUBLIC_ACK_TOKENS = frozenset({p.value for p in Power} | {"guest"})
+
+
+def viewer_ack_ids(user: AuthUser | None) -> tuple[str, ...]:
+    """The acknowledgement tokens `user` files an admin log entry under: their id and email."""
+    if not user:
+        return ()
+    return tuple(t for t in (user.user_id, user.email) if t)
+
+
+def bind_viewer(user: AuthUser | None) -> None:
+    """Remember who is calling, for the admin log of every state this request returns."""
+    _VIEWER_ACK_IDS.set(viewer_ack_ids(user))
+
+
+def sanitize_admin_log(game: GameState, viewer_ids: Collection[str]) -> list:
+    """The admin log as one viewer may see it.
+
+    An entry stores who acknowledged it under whatever identified them: a user id, an email, a
+    seat. Only the viewer's own tokens and the nameless ones (a seat, `guest`) are sent, so
+    nobody learns another player's email or id (nor does a saved game that already holds some).
+    """
     if not game.admin_log:
         return game.admin_log
-    return [
-        entry.model_copy(update={"actor": _strip_email_domain(entry.actor)})
-        if "@" in entry.actor
-        else entry
-        for entry in game.admin_log
-    ]
+    allowed = _PUBLIC_ACK_TOKENS.union(viewer_ids)
+    entries = []
+    for entry in game.admin_log:
+        update: dict = {}
+        if "@" in entry.actor:
+            update["actor"] = _strip_email_domain(entry.actor)
+        kept = [t for t in entry.acknowledged_by if t in allowed]
+        if len(kept) != len(entry.acknowledged_by):
+            update["acknowledged_by"] = kept
+        entries.append(entry.model_copy(update=update) if update else entry)
+    return entries
 
 
 def sanitize_game_state_for_viewer(
     game: GameState,
     viewer_power: Power | None = None,
+    viewer_ids: Collection[str] | None = None,
 ) -> GameState:
-    """Preserve simultaneous move secrecy (Fog of War) in active multiplayer matches."""
-    sanitized_log = _sanitize_admin_log(game)
+    """Preserve simultaneous move secrecy (Fog of War) in active multiplayer matches.
+
+    `viewer_ids` are the viewer's acknowledgement tokens (`viewer_ack_ids`). Left out, they come
+    from the request being served (`bind_viewer`), and none are known outside one.
+    """
+    sanitized_log = sanitize_admin_log(
+        game, _VIEWER_ACK_IDS.get() if viewer_ids is None else viewer_ids
+    )
     if not is_multiplayer_match(game.game_id) or game.winner:
         if sanitized_log is not game.admin_log and any(
             a is not b for a, b in zip(sanitized_log, game.admin_log, strict=False)
@@ -350,6 +393,7 @@ async def saved_sandbox_guard(
 
     It runs for every route, so a new endpoint cannot forget the check.
     """
+    bind_viewer(current_user)
     gid = request.path_params.get("game_id") or request.query_params.get("game_id")
     if not gid:
         return

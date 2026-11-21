@@ -22,7 +22,10 @@ import { LobbyFormDialog } from './lobby/LobbyFormDialog';
 import { LobbyHero } from './lobby/LobbyHero';
 import { MyGamesSection } from './lobby/MyGamesSection';
 import { OtherGamesStrip } from './lobby/OtherGamesStrip';
-import { PrivateCampaignCreatedModal } from './lobby/PrivateCampaignCreatedModal';
+import {
+  type CopyField,
+  PrivateCampaignCreatedModal,
+} from './lobby/PrivateCampaignCreatedModal';
 
 interface LobbyViewProps {
   user: AuthUser | null;
@@ -80,7 +83,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     onWatchGame,
     onDone: closeDialog,
   });
-  const { copied: copiedField, copy: handleCopy } = useCopyFeedback();
+  const {
+    copied: copiedField,
+    failed: failedCopyField,
+    copy: handleCopy,
+  } = useCopyFeedback();
 
   // Join with code, with the Game ID from the link filled in.
   useEffect(() => {
@@ -209,6 +216,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         copiedGameId={copiedField === 'gid'}
         copiedLink={copiedField === 'link'}
         copiedPasscode={copiedField === 'pw'}
+        copyFailed={failedCopyField as CopyField | null}
       />
     </div>
   );

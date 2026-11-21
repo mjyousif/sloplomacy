@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BACKGROUND_DISCONNECT_MS,
+  buildAuthMessage,
   getWebSocketUrl,
   resolveWebSocketPath,
   shouldReconnect,
@@ -34,9 +35,9 @@ describe('useDiplomacyWebSocket helpers', () => {
       expect(resolveWebSocketPath('sandbox', null)).toBeNull();
     });
 
-    it('asks for the auth handshake and never carries a token in the URL', () => {
-      expect(resolveWebSocketPath('multiplayer', 'g1', 'FRANCE', 'pw')).toBe(
-        '/ws/games/g1?handshake=1&power=FRANCE&passcode=pw',
+    it('asks for the auth handshake and carries no token or passcode in the URL', () => {
+      expect(resolveWebSocketPath('multiplayer', 'g1', 'FRANCE')).toBe(
+        '/ws/games/g1?handshake=1&power=FRANCE',
       );
     });
 
@@ -44,6 +45,28 @@ describe('useDiplomacyWebSocket helpers', () => {
       expect(resolveWebSocketPath('multiplayer', 'game/room#1')).toBe(
         '/ws/games/game%2Froom%231?handshake=1',
       );
+    });
+  });
+
+  describe('buildAuthMessage', () => {
+    it('sends the token and the passcode in the first message', () => {
+      expect(JSON.parse(buildAuthMessage('tok', 'pw'))).toEqual({
+        type: 'auth',
+        token: 'tok',
+        passcode: 'pw',
+      });
+    });
+
+    it('sends a passcode for a signed-out spectator and none when there is none', () => {
+      expect(JSON.parse(buildAuthMessage(null, 'pw'))).toEqual({
+        type: 'auth',
+        token: null,
+        passcode: 'pw',
+      });
+      expect(JSON.parse(buildAuthMessage('tok'))).toEqual({
+        type: 'auth',
+        token: 'tok',
+      });
     });
   });
 
