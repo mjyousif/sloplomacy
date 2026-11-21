@@ -115,6 +115,61 @@ def _remove_unit(game_id, unit_id):
     game.orders.pop(unit_id, None)
 
 
+def direct_edit(
+    game_id,
+    headers=None,
+    *,
+    place=(),
+    moves=None,
+    remove=(),
+    owners=None,
+    summary_lines=None,
+):
+    """Commit a Direct-Edit batch (POST /api/admin/board-edit) on the board as it stands.
+
+    The only admin route that changes units, so tests use it wherever the per-unit routes
+    once did. `place` takes (power, unit_type, province[, coast]) tuples and replaces whatever
+    stood in that province, `moves` maps unit ids to new provinces, `remove` lists unit ids to
+    drop, and `owners` maps provinces to a power (None clears the province). Returns the raw
+    response so each test asserts what it needs.
+    """
+    state = client.get(f"/api/game?game_id={game_id}", headers=headers).json()["state"]
+    units = [dict(u) for u in state["units"]]
+    for unit_id, province in (moves or {}).items():
+        units = [u for u in units if u["id"] == unit_id or u["province"] != province]
+        next(u for u in units if u["id"] == unit_id).update(province=province, coast=None)
+    for power, unit_type, province, *coast in place:
+        units = [u for u in units if u["province"] != province]
+        units.append(
+            {
+                "id": f"{power[:3]}_{unit_type}_{province}",
+                "power": power,
+                "unit_type": unit_type,
+                "province": province,
+                "coast": coast[0] if coast else None,
+                "is_dislodged": False,
+            }
+        )
+    units = [u for u in units if u["id"] not in remove]
+    ownership = dict(state["ownership"])
+    for province, power in (owners or {}).items():
+        if power is None:
+            ownership.pop(province, None)
+        else:
+            ownership[province] = power
+    body = {
+        "expected_revision": state["state_revision"],
+        "expected_season": state["season"],
+        "expected_year": state["year"],
+        "expected_phase": state["phase"],
+        "units": units,
+        "ownership": ownership,
+    }
+    if summary_lines is not None:
+        body["summary_lines"] = summary_lines
+    return client.post(f"/api/admin/board-edit?game_id={game_id}", json=body, headers=headers)
+
+
 def _place_unit(game_id, unit_id, province):
     game = GAMES[game_id]
     next(u for u in game.units if u.id == unit_id).province = province

@@ -3,31 +3,11 @@
 // @description Backend-authoritative convoy reachability: fleet-in-port guard, ocean-blue chained vs solid-green active highlights, outline-only convoys through another power's fleet, no convoy highlights on Hold, dead-end path filtering, Fog of War isolation, broken chains, 4-ship Trans-Med convoy, British Isles unlocking, and bicoastal landing.
 import { expect, test } from '@playwright/test';
 import {
-  DEFAULT_E2E_API_URL,
   postOrder,
   ScenarioRecorder,
   seedScenario,
+  spawnUnit,
 } from './helpers';
-
-async function spawnUnit(
-  power: string,
-  unit_type: 'A' | 'F',
-  province: string,
-  gameId = 'proto_1901',
-) {
-  const res = await fetch(
-    `${DEFAULT_E2E_API_URL}/api/admin/unit/spawn?game_id=${gameId}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ power, unit_type, province, user_id: 'guest' }),
-    },
-  );
-  if (!res.ok) {
-    throw new Error(`Spawn failed (${res.status}): ${await res.text()}`);
-  }
-  return await res.json();
-}
 
 test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
   test('verifies ocean-blue potential convoys, solid-green active chains, path filtering, and Fog of War isolation', async ({

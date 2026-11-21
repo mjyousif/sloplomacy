@@ -1,4 +1,4 @@
-"""FastAPI router for tactical orders and order confirmations."""
+"""FastAPI router for tactical orders."""
 
 from domain.board import Power, UnitType
 from domain.game_state import GameState

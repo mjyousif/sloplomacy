@@ -1,6 +1,6 @@
 """Request and response bodies for the HTTP API and WebSocket messages."""
 
-from domain.board import Power, ProvinceInfo, Unit, UnitType
+from domain.board import Power, ProvinceInfo, Unit
 from domain.game_state import GameState, MultiplayerGameSummary, TimerChoice, TurnHistoryEntry
 from domain.issues import ValidationIssue
 from domain.orders import Order
@@ -79,11 +79,6 @@ class JoinGameRequest(BaseModel):
     passcode: str | None = None
 
 
-class GenerateAIOrdersRequest(BaseModel):
-    powers: list[Power] | None = None
-    include_active: bool = False
-
-
 class LeaveGameRequest(BaseModel):
     user_id: str
     email: str | None = None
@@ -120,36 +115,6 @@ class AdminSetTurnRequest(BaseModel):
     season: str
     year: int
     phase: str
-    user_id: str | None = None
-    email: str | None = None
-
-
-class AdminMoveUnitRequest(BaseModel):
-    unit_id: str
-    new_province: str
-    new_coast: str | None = None
-    user_id: str | None = None
-    email: str | None = None
-
-
-class AdminSpawnUnitRequest(BaseModel):
-    power: Power
-    unit_type: UnitType
-    province: str
-    coast: str | None = None
-    user_id: str | None = None
-    email: str | None = None
-
-
-class AdminDestroyUnitRequest(BaseModel):
-    unit_id: str
-    user_id: str | None = None
-    email: str | None = None
-
-
-class AdminSetOwnershipRequest(BaseModel):
-    province: str
-    power: Power | None = None
     user_id: str | None = None
     email: str | None = None
 

@@ -178,15 +178,15 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - `seats.py`: Seat claiming (join), leaving, surrender, and picking the active power.
   - `orders.py`: Move/retreat/build order submission, atomic batch updates, and order confirmation.
   - `turns.py`: Finalization, turn adjudication, phase timer voting, and extension requests.
-  - `sandbox.py`: Sandbox sessions, speculative simulation, and AI heuristics.
+  - `sandbox.py`: Sandbox sessions, speculative simulation, and scenario loading.
   - `admin.py`: Creator/admin turn controls (status, rollback, set-turn, unfinalize-all, acknowledge, test seeding).
-  - `admin_units.py`: Creator/admin board overrides (teleport, unit spawning/deletion, ownership, atomic `board-edit` batch commit with optimistic concurrency).
+  - `admin_units.py`: Creator/admin Direct-Edit board commit (`board-edit`: units, ownership and orders in one batch with optimistic concurrency).
   - `admin_utils.py`: Admin audit log recording (`AdminActionLogEntry`), consolidated `"Admin"` phase snapshots in `GAME_HISTORY`, and before/after diff order generation.
   - `history.py`: Read-only turn history for the turn selector (resolved phases and their records).
   - `press.py`: Press (chat): reading a seat's press and sending public and private thread messages, signed or anonymous (a signed private one may carry suggested moves).
   - `websocket.py`: Live turn synchronization and WebSocket subscriptions.
 - **Domain Models (`backend/domain/`)**: Authoritative Pydantic v2 schemas: `board.py` (powers, provinces, units), `orders.py` (orders and adjudication results), `issues.py` (validation issues), `game_state.py` (`GameState`, `UnitMoveOptions`, clock, history, seats), `press.py` (the stored `PressMessage` and the `PressMessageView` a player is sent), `stats.py` (`PowerStats`, `SCTimelinePoint`, `CampaignAward`, `CampaignStatsResponse`), and `requests.py` (request/response DTOs and WebSocket messages).
-- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator/`, one module per phase), DATC/rulebook validation (`validator/`, one module per phase or concern), authoritative unit reachability (`reachability/`: direct moves, active/potential convoy chains, simple-path sea routing, fleet convoy options, and valid supports), map topology (`topology/`: `provinces.py` data, `graph.py` movement rules), phase timer (`phase_timer.py`), AI heuristics (`ai.py`), campaign statistics (`stats.py`), and order helpers (`order_utils.py`). Completely decoupled from HTTP transport.
+- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator/`, one module per phase), DATC/rulebook validation (`validator/`, one module per phase or concern), authoritative unit reachability (`reachability/`: direct moves, active/potential convoy chains, simple-path sea routing, fleet convoy options, and valid supports), map topology (`topology/`: `provinces.py` data, `graph.py` movement rules), phase timer (`phase_timer.py`), campaign statistics (`stats.py`), and order helpers (`order_utils.py`). Completely decoupled from HTTP transport.
 - **Persistence Layer (`backend/storage/`)**: Authoritative in-memory state store (`store.py`), which games the lobby lists (`lobby.py`), press and its own Supabase column (`press.py`), and Supabase PostgREST client (`supabase.py`).
 - **Security & Authorization (`backend/security/`)**: JWT verification and auth dependencies (`auth.py`) viewer state secrecy sanitization (`secrecy.py`), who may read a press message and see its author (`press.py`), and a private match's passcode check with its wrong-guess limit (`passcode.py`).
 - **Scenarios & Presets (`backend/scenarios/`)**: Scenario definitions and match presets (`presets.py`).

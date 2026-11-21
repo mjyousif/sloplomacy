@@ -114,6 +114,54 @@ export async function seedScenario(
   return await res.json();
 }
 
+/**
+ * Places one unit through the Direct-Edit commit (POST /api/admin/board-edit), the only admin
+ * route that adds units. Whatever stood in the province is replaced.
+ */
+export async function spawnUnit(
+  power: string,
+  unitType: 'A' | 'F',
+  province: string,
+  gameId: string = 'proto_1901',
+  apiBase: string = DEFAULT_E2E_API_URL,
+) {
+  const stateRes = await fetch(`${apiBase}/api/game?game_id=${gameId}`);
+  if (!stateRes.ok) {
+    throw new Error(`Board read failed (${stateRes.status}): ${await stateRes.text()}`);
+  }
+  const { state } = await stateRes.json();
+  const prov = province.toUpperCase();
+  const units = (state.units as Array<Record<string, unknown>>).filter(
+    (u) => u.province !== prov,
+  );
+  units.push({
+    id: `${power.slice(0, 3)}_${unitType}_${prov}`,
+    power,
+    unit_type: unitType,
+    province: prov,
+    coast: null,
+    is_dislodged: false,
+  });
+  const res = await fetch(`${apiBase}/api/admin/board-edit?game_id=${gameId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      expected_revision: state.state_revision,
+      expected_season: state.season,
+      expected_year: state.year,
+      expected_phase: state.phase,
+      units,
+      ownership: state.ownership,
+      // The guest acts as the admin, so the warning it logs is acknowledged for this viewer.
+      user_id: 'guest',
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Spawn failed (${res.status}): ${await res.text()}`);
+  }
+  return await res.json();
+}
+
 /** Sets one unit's order through the API, as if its player had made it. */
 export async function postOrder(
   order: Record<string, unknown>,

@@ -5,21 +5,23 @@ from main import app
 from tests.integration.api.helpers import (
     _auth_headers,
     _seated_game,
+    direct_edit,
     make_auth_headers,
 )
 
 client = TestClient(app)
 
 
-def test_admin_unit_spawn_and_warning_acknowledgment():
+def test_admin_direct_edit_and_warning_acknowledgment():
     game_id = _seated_game()
     creator_headers = _auth_headers()
 
-    # 1. Admin spawns an army in Ruh
-    res = client.post(
-        f"/api/admin/unit/spawn?game_id={game_id}",
-        json={"power": "GERMANY", "unit_type": "A", "province": "RUH"},
-        headers=creator_headers,
+    # 1. Admin places an army in Ruh
+    res = direct_edit(
+        game_id,
+        creator_headers,
+        place=[("GERMANY", "A", "RUH")],
+        summary_lines=["Spawned GERMANY A at RUH."],
     )
     assert res.status_code == 200
     st = res.json()
@@ -42,8 +44,7 @@ def test_admin_unit_spawn_and_warning_acknowledgment():
     assert any(
         "[ADMIN OVERRIDE] Spawned GERMANY A at RUH." in s for s in record["resolution"]["summary"]
     )
-    assert "BUILD_GERMANY_RUH" in record["orders"]
-    assert record["orders"]["BUILD_GERMANY_RUH"]["order_type"] == "BUILD"
+    assert any(u["id"] == "GER_A_RUH" for u in st["units"])
 
     # 2. Player 2 (Bob) loads game and acknowledges the notification
     bob_headers = make_auth_headers("bob", "bob@test.com")
@@ -68,18 +69,20 @@ def test_consecutive_admin_actions_consolidate_in_history():
     creator_headers = _auth_headers()
 
     # Action 1: Set ownership of BEL to FRANCE
-    r1 = client.post(
-        f"/api/admin/ownership?game_id={game_id}",
-        json={"province": "BEL", "power": "FRANCE"},
-        headers=creator_headers,
+    r1 = direct_edit(
+        game_id,
+        creator_headers,
+        owners={"BEL": "FRANCE"},
+        summary_lines=["Set ownership of BEL to FRANCE."],
     )
     assert r1.status_code == 200
 
     # Action 2: Relocate GER_A_BER to SIL
-    r2 = client.post(
-        f"/api/admin/unit/move?game_id={game_id}",
-        json={"unit_id": "GER_A_BER", "new_province": "SIL"},
-        headers=creator_headers,
+    r2 = direct_edit(
+        game_id,
+        creator_headers,
+        moves={"GER_A_BER": "SIL"},
+        summary_lines=["Relocated GERMANY A from BER to SIL."],
     )
     assert r2.status_code == 200
 
