@@ -9,6 +9,7 @@ from domain.board import Power, ProvinceType, Unit, UnitType
 from domain.game_state import GameState
 from domain.orders import Order, OrderType
 from domain.requests import AdminBatchBoardEditRequest
+from engine.adjudicator.resolver import compute_current_builds
 from engine.order_utils import (
     fleet_coast,
     refresh_diagnostics_and_simulation,
@@ -16,7 +17,12 @@ from engine.order_utils import (
 from engine.topology.provinces import PROVINCES
 from fastapi import APIRouter, Depends, HTTPException, Query
 from security.auth import AuthUser, get_current_user
-from security.secrecy import verify_admin_access, with_sanitized_admin_log
+from security.secrecy import (
+    sanitize_game_state_for_viewer,
+    verify_admin_access,
+    viewer_ack_ids,
+    viewer_power_for,
+)
 from storage.profiles import ensure_profile_loaded
 from storage.store import (
     DEFAULT_GAME_ID,
@@ -66,7 +72,7 @@ async def admin_batch_board_edit(
     verify_admin_access(gid, current_user)
 
     if (
-        req.expected_revision != game.state_revision
+        req.expected_revision != game.board_revision
         or req.expected_season != game.season
         or req.expected_year != game.year
         or req.expected_phase != game.phase
@@ -115,8 +121,22 @@ async def admin_batch_board_edit(
     # Reconcile orders for the updated unit roster
     new_orders: dict[str, Order] = {}
     for u in validated_units:
+        prev_unit = before_by_id.get(u.id)
+        prev_order = before_state.orders.get(u.id)
+        unit_unchanged = (
+            prev_unit is not None
+            and prev_unit.province == u.province
+            and prev_unit.coast == u.coast
+            and prev_unit.power == u.power
+            and prev_unit.unit_type == u.unit_type
+            and prev_unit.is_dislodged == u.is_dislodged
+        )
         req_order = req.orders.get(u.id) if req.orders else None
-        if req_order and req_order.origin.upper() == u.province:
+        if (
+            req_order
+            and req_order.origin.upper() == u.province
+            and (req_order.is_explicit or not (unit_unchanged and prev_order is not None))
+        ):
             new_orders[u.id] = req_order.model_copy(
                 update={
                     "unit_id": u.id,
@@ -128,16 +148,7 @@ async def admin_batch_board_edit(
             )
             continue
 
-        prev_unit = before_by_id.get(u.id)
-        prev_order = before_state.orders.get(u.id)
-        if (
-            prev_unit
-            and prev_order
-            and prev_unit.province == u.province
-            and prev_unit.coast == u.coast
-            and prev_unit.power == u.power
-            and prev_unit.unit_type == u.unit_type
-        ):
+        if unit_unchanged and prev_order is not None:
             new_orders[u.id] = prev_order
         else:
             new_orders[u.id] = Order(
@@ -150,9 +161,20 @@ async def admin_batch_board_edit(
                 is_explicit=False,
             )
 
-    if req.orders:
-        for k, o in req.orders.items():
-            if k.startswith("BUILD_") and k not in new_orders:
+    if game.phase == "Adjustments":
+        builds_info = compute_current_builds(validated_units, validated_ownership, game.year)
+        valid_build_slots = {
+            f"BUILD_{p_name}_{h}"
+            for p_name, b_info in builds_info.items()
+            if b_info.get("count", 0) > 0
+            for h in b_info.get("homes", [])
+        }
+        if req.orders:
+            for k, o in req.orders.items():
+                if k in valid_build_slots and k not in new_orders and o.is_explicit:
+                    new_orders[k] = o
+        for k, o in before_state.orders.items():
+            if k in valid_build_slots and k not in new_orders:
                 new_orders[k] = o
 
     computed_lines = compute_board_edit_summary(
@@ -178,4 +200,8 @@ async def admin_batch_board_edit(
     actor_id = resolve_admin_actor(gid, current_user)
     await ensure_profile_loaded(actor_id)
     await record_admin_history_and_log(gid, before_state, game, summary_lines, actor_id=actor_id)
-    return with_sanitized_admin_log(game, current_user)
+    return sanitize_game_state_for_viewer(
+        game,
+        viewer_power_for(gid, current_user),
+        viewer_ack_ids(current_user),
+    )

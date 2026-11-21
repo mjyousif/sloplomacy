@@ -22,7 +22,7 @@ def _admin_edit(gid: str, province: str, owner: str):
     return client.post(
         f"/api/admin/board-edit?game_id={gid}",
         json={
-            "expected_revision": current["state_revision"],
+            "expected_revision": current["board_revision"],
             "expected_season": current["season"],
             "expected_year": current["year"],
             "expected_phase": current["phase"],

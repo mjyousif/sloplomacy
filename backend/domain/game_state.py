@@ -128,6 +128,7 @@ class GameState(BaseModel):
     timer: PhaseTimer | None = None  # None until the host starts the clock
     admin_log: list[AdminActionLogEntry] = Field(default_factory=list)
     state_revision: int = 1
+    board_revision: int = 1
     # Per unit id: where it may move, convoy and support. Rebuilt on refresh and load, never saved.
     unit_options: dict[str, UnitMoveOptions] = Field(default_factory=dict)
 

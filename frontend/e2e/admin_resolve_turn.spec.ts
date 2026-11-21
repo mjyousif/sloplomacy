@@ -1,5 +1,7 @@
 // @scenario admin_resolve_turn
-// @description Host uses Administrator -> Resolve Turn with confirmation modal, advancing the match and warning other players via AdminActionWarningModal.
+// @alias admin
+// @alias admin_board_edit
+// @description Host stages Direct-Edit board changes (ownership, spawn, relocate, undo) while another player orders and finalizes without 409, then force-resolves the turn; rival receives and acknowledges AdminActionWarningModal with unimpacted orders preserved.
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import { DEFAULT_E2E_API_URL, ScenarioRecorder } from './helpers';
 
@@ -70,7 +72,11 @@ async function openAs(
 ): Promise<Page> {
   const context = await browser.newContext(
     phone
-      ? { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }
+      ? {
+          viewport: { width: 390, height: 844 },
+          hasTouch: true,
+          isMobile: true,
+        }
       : { viewport: { width: 1440, height: 900 } },
   );
   await context.addInitScript((user) => {
@@ -87,9 +93,7 @@ async function openAs(
   const page = await context.newPage();
   await page.goto('/');
   const row = page
-    .locator(
-      '[data-testid="featured-game-hero"], [data-testid="my-game-row"]',
-    )
+    .locator('[data-testid="featured-game-hero"], [data-testid="my-game-row"]')
     .filter({ hasText: matchName });
   await row.getByRole('button', { name: /^Resume as/ }).click();
   await page.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
@@ -111,11 +115,174 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       rec.attachListeners(bob);
 
       // 1. Multiplayer footer shows consensus card only (no inline host override button)
-      await expect(
-        alice.getByTestId('mp-consensus-status-card'),
-      ).toBeVisible();
+      await expect(alice.getByTestId('mp-consensus-status-card')).toBeVisible();
       await expect(alice.getByTestId('btn-creator-override')).toHaveCount(0);
       await rec.recordStep(alice, 'multiplayer_footer_no_override');
+
+      // 1b. Alice plots an order on an unimpacted unit (FRA_A_PAR -> BUR) before editing the board
+      await alice
+        .locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"]')
+        .click();
+      await alice
+        .locator('[data-testid="reachable-reticle"][data-province-id="BUR"]')
+        .click();
+      await expect(
+        alice.locator(
+          '[data-testid="order-arrow"][data-order-unit="FRA_A_PAR"][data-order-type="MOVE"][data-order-target="BUR"]',
+        ),
+      ).toBeVisible();
+
+      // 1c. Alice enters Edit Board mode via Administrator menu
+      await alice.getByTestId('game-settings-trigger').click();
+      await alice.getByTestId('game-settings-admin-settings').click();
+      await alice.getByTestId('btn-toggle-direct-edit').click();
+      await expect(alice.getByTestId('admin-sidebar-title')).toContainText(
+        'Edit Board',
+      );
+      await expect(alice.getByTestId('admin-inspector-empty')).toBeVisible();
+      await expect(alice.getByTestId('admin-staged-count')).toContainText(
+        '0 staged changes',
+      );
+      await rec.recordStep(alice, 'edit_board_opened');
+
+      // 1d. Alice stages ownership (BEL -> France), unit spawn (FRA A BEL), unit relocate (MAR -> GAS), and tests Undo on FRA_F_BRE delete
+      await alice
+        .locator('[data-testid="province-path"][data-province-id="BEL"]')
+        .click();
+      await expect(alice.getByTestId('admin-tile-inspector')).toBeVisible();
+      await alice.getByTestId('admin-inspector-ownership-select').click();
+      await alice
+        .getByTestId('admin-inspector-ownership-select-option-france')
+        .click();
+      await alice.getByTestId('admin-inspector-spawn-army').click();
+      await alice.getByTestId('admin-inspector-spawn-power').click();
+      await alice
+        .getByTestId('admin-inspector-spawn-power-option-france')
+        .click();
+      await expect(
+        alice.locator(
+          '[data-testid="unit-token"][data-unit-id="FRA_A_BEL"][data-province="BEL"]',
+        ),
+      ).toBeVisible();
+
+      await alice
+        .locator('[data-testid="unit-token"][data-unit-id="FRA_A_MAR"]')
+        .click();
+      await alice.getByTestId('admin-inspector-relocate-btn').click();
+      await alice
+        .locator('[data-testid="province-path"][data-province-id="GAS"]')
+        .click();
+      await expect(
+        alice.locator(
+          '[data-testid="unit-token"][data-unit-id="FRA_A_MAR"][data-province="GAS"]',
+        ),
+      ).toBeVisible();
+
+      await alice
+        .locator('[data-testid="unit-token"][data-unit-id="FRA_F_BRE"]')
+        .click();
+      await alice.getByTestId('admin-inspector-destroy-btn').click();
+      await expect(alice.getByTestId('admin-staged-count')).toContainText(
+        '4 staged changes',
+      );
+
+      await alice.getByTestId('admin-staged-count').click();
+      await expect(alice.getByTestId('admin-staged-drawer')).toBeVisible();
+      await alice.getByTestId('btn-admin-undo-change-0').click();
+      await expect(
+        alice.locator('[data-testid="unit-token"][data-unit-id="FRA_F_BRE"]'),
+      ).toBeVisible();
+      await expect(alice.getByTestId('admin-staged-count')).toContainText(
+        '3 staged changes',
+      );
+      await rec.recordStep(alice, 'edit_board_staged_changes');
+
+      // 1e. While Alice has uncommitted board edits, Bob submits an order and finalizes (Issue #362)
+      await bob
+        .locator('[data-testid="unit-token"][data-unit-id="ENG_F_LON"]')
+        .click();
+      await bob
+        .locator('[data-testid="reachable-reticle"][data-province-id="NTH"]')
+        .click();
+      await expect(
+        bob.locator(
+          '[data-testid="order-arrow"][data-order-unit="ENG_F_LON"][data-order-type="MOVE"][data-order-target="NTH"]',
+        ),
+      ).toBeVisible();
+      await bob.getByTestId('btn-finalize-orders').click();
+      const sanityModal = bob.getByTestId('sanity-check-modal');
+      try {
+        await sanityModal.waitFor({ state: 'visible', timeout: 1500 });
+        await bob.getByTestId('btn-sanity-force-confirm').click();
+      } catch {
+        // No sanity check modal needed
+      }
+      await expect(bob.getByTestId('btn-unfinalize-orders')).toBeVisible({
+        timeout: 5000,
+      });
+      await expect(alice.getByTestId('admin-staged-count')).toContainText(
+        '3 staged changes',
+      );
+
+      // 1f. Alice commits the batch board edit without 409; unimpacted orders & Fog of War are preserved
+      await alice.getByTestId('btn-admin-apply-edits').click();
+      await expect(alice.getByTestId('toast-banner')).toContainText(
+        'Applied 3 admin board edits.',
+        { timeout: 10000 },
+      );
+      await expect(alice.getByTestId('admin-staged-count')).toContainText(
+        '0 staged changes',
+      );
+      await expect(
+        alice.locator(
+          '[data-testid="unit-token"][data-unit-id="FRA_A_BEL"][data-province="BEL"]',
+        ),
+      ).toBeVisible();
+      await expect(
+        alice.locator(
+          '[data-testid="unit-token"][data-unit-id="FRA_A_MAR"][data-province="GAS"]',
+        ),
+      ).toBeVisible();
+      await expect(
+        alice.locator(
+          '[data-testid="order-arrow"][data-order-unit="FRA_A_PAR"][data-order-type="MOVE"][data-order-target="BUR"]',
+        ),
+      ).toBeVisible();
+      await expect(
+        alice.locator(
+          '[data-testid="order-arrow"][data-order-unit="ENG_F_LON"]',
+        ),
+      ).toHaveCount(0);
+      await rec.recordStep(alice, 'edit_board_applied_orders_preserved');
+
+      // 1g. Bob receives the board-edit AdminActionWarningModal, acknowledges it, and still keeps his ENG_F_LON -> NTH order
+      await expect(bob.getByTestId('admin-action-warning-modal')).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(bob.getByTestId('admin-action-warning-modal')).toContainText(
+        'Set ownership of Belgium to France',
+      );
+      await expect(bob.getByTestId('admin-action-warning-modal')).toContainText(
+        'Spawned France Army at Belgium',
+      );
+      await expect(bob.getByTestId('admin-action-warning-modal')).toContainText(
+        'Relocated France Army from Marseilles to Gascony',
+      );
+      await rec.recordStep(bob, 'player_board_edit_warning_modal');
+      await bob.getByTestId('admin-warning-acknowledge-btn').click();
+      await expect(bob.getByTestId('admin-action-warning-modal')).toHaveCount(
+        0,
+      );
+      await expect(
+        bob.locator(
+          '[data-testid="order-arrow"][data-order-unit="ENG_F_LON"][data-order-type="MOVE"][data-order-target="NTH"]',
+        ),
+      ).toBeVisible();
+
+      // 1h. Alice exits Edit Board mode
+      await alice.getByTestId('game-settings-trigger').click();
+      await alice.getByTestId('game-settings-admin-settings').click();
+      await alice.getByTestId('btn-exit-admin-mode').click();
 
       // 2. Host opens Administrator submenu inside Game Settings and sees Resolve Turn
       await alice.getByTestId('game-settings-trigger').click();
@@ -142,18 +309,18 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       await rec.recordStep(alice, 'host_resolved_fall_1901');
 
       // 5. Bob receives the AdminActionWarningModal and acknowledges it
-      await expect(
-        bob.getByTestId('admin-action-warning-modal'),
-      ).toBeVisible({ timeout: 10000 });
-      await expect(
-        bob.getByTestId('admin-action-warning-modal'),
-      ).toContainText('Force-resolved Spring 1901 Movement Phase.');
+      await expect(bob.getByTestId('admin-action-warning-modal')).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(bob.getByTestId('admin-action-warning-modal')).toContainText(
+        'Force-resolved Spring 1901 Movement Phase.',
+      );
       await rec.recordStep(bob, 'player_admin_warning_modal');
 
       await bob.getByTestId('admin-warning-acknowledge-btn').click();
-      await expect(
-        bob.getByTestId('admin-action-warning-modal'),
-      ).toHaveCount(0);
+      await expect(bob.getByTestId('admin-action-warning-modal')).toHaveCount(
+        0,
+      );
 
       // 6. Phone top bar Game Settings -> Administrator also exposes Resolve Turn for the host
       const alicePhone = await openAs(browser, ALICE, matchName, true);

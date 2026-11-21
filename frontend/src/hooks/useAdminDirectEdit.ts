@@ -9,19 +9,19 @@ import type {
   Unit,
   UnitType,
 } from '../types/diplomacy';
-import {
-  acknowledgeAdminEntriesRequest,
-  getUnacknowledgedAdminEntries,
-  postAdminBoardEditRequest,
-} from '../utils/adminHelpers';
+import { postAdminBoardEditRequest } from '../utils/adminHelpers';
 import {
   applyStageRelocate,
   applyStageSpawnOrUpdate,
   applyUndoStagedChange,
   computeStagedChanges,
   computeStagedDiffLines,
+  isUnitUnchangedFromBase,
+  mergeLiveUnitOrders,
+  ordersHaveSameParameters,
   type StagedChangeEntry,
 } from '../utils/adminStagedChanges';
+import { useAdminAcknowledgement } from './useAdminAcknowledgement';
 
 export { computeStagedChanges, computeStagedDiffLines, type StagedChangeEntry };
 
@@ -57,6 +57,9 @@ export function useAdminDirectEdit({
     {},
   );
   const [stagedOrders, setStagedOrders] = useState<Record<string, Order>>({});
+  const [stagedOrderIds, setStagedOrderIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [baseRevision, setBaseRevision] = useState<number>(1);
   const [baseTurn, setBaseTurn] = useState<{
     season: string;
@@ -72,8 +75,6 @@ export function useAdminDirectEdit({
   );
   const [relocatingUnitId, setRelocatingUnitId] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
-  const [acknowledgingAdminEntries, setAcknowledgingAdminEntries] =
-    useState(false);
 
   const syncFromState = useCallback((state: GameState) => {
     setStagedUnits(state.units.map((u) => ({ ...u })));
@@ -83,7 +84,8 @@ export function useAdminDirectEdit({
         Object.entries(state.orders).map(([k, v]) => [k, { ...v }]),
       ),
     );
-    setBaseRevision(state.state_revision ?? 1);
+    setStagedOrderIds(new Set());
+    setBaseRevision(state.board_revision ?? state.state_revision ?? 1);
     setBaseTurn({
       season: state.season,
       year: state.year,
@@ -120,6 +122,10 @@ export function useAdminDirectEdit({
   const isDirty = directEditActive && diffLines.length > 0;
   const isDirtyRef = useRef(isDirty);
   isDirtyRef.current = isDirty;
+  const stagedUnitsRef = useRef(stagedUnits);
+  stagedUnitsRef.current = stagedUnits;
+  const stagedOrderIdsRef = useRef(stagedOrderIds);
+  stagedOrderIdsRef.current = stagedOrderIds;
 
   const prevDirectEditRef = useRef(false);
   const prevGameIdRef = useRef(activeGameId);
@@ -138,8 +144,26 @@ export function useAdminDirectEdit({
 
     if (gameState && (justEntered || gameChanged || !isDirtyRef.current)) {
       syncFromState(gameState);
+    } else if (gameState) {
+      setStagedOrders((prev) =>
+        mergeLiveUnitOrders(
+          gameState,
+          stagedUnitsRef.current,
+          prev,
+          stagedOrderIdsRef.current,
+        ),
+      );
     }
   }, [directEditActive, activeGameId, gameState, syncFromState]);
+
+  const dropStagedOrderIds = useCallback((...ids: string[]) => {
+    setStagedOrderIds((prev) => {
+      if (!ids.some((id) => prev.has(id))) return prev;
+      const nextSet = new Set(prev);
+      for (const id of ids) nextSet.delete(id);
+      return nextSet;
+    });
+  }, []);
 
   useEffect(() => {
     if (!directEditActive || !isDirty) return;
@@ -175,13 +199,17 @@ export function useAdminDirectEdit({
         showToast,
       );
       if (!next.ok) return false;
+      const removedIds = stagedUnits
+        .filter((u) => !next.units.some((nu) => nu.id === u.id))
+        .map((u) => u.id);
       setStagedUnits(next.units);
       setStagedOrders(next.orders);
+      dropStagedOrderIds(unitId, ...removedIds);
       setRelocatingUnitId(null);
       setInspectedProvince(next.provId);
       return true;
     },
-    [provinces, stagedOrders, stagedUnits, showToast],
+    [dropStagedOrderIds, provinces, stagedOrders, stagedUnits, showToast],
   );
 
   const stageSpawnOrUpdateUnit = useCallback(
@@ -202,22 +230,31 @@ export function useAdminDirectEdit({
         showToast,
       );
       if (!next.ok) return false;
+      const provId = province.toUpperCase();
+      const existing = stagedUnits.find(
+        (u) => !u.is_dislodged && u.province === provId,
+      );
       setStagedUnits(next.units);
       setStagedOrders(next.orders);
+      if (existing) dropStagedOrderIds(existing.id);
       return true;
     },
-    [provinces, stagedOrders, stagedUnits, showToast],
+    [dropStagedOrderIds, provinces, stagedOrders, stagedUnits, showToast],
   );
 
-  const stageDestroyUnit = useCallback((unitId: string) => {
-    setStagedUnits((prev) => prev.filter((u) => u.id !== unitId));
-    setStagedOrders((prev) => {
-      const next = { ...prev };
-      delete next[unitId];
-      return next;
-    });
-    setRelocatingUnitId((prev) => (prev === unitId ? null : prev));
-  }, []);
+  const stageDestroyUnit = useCallback(
+    (unitId: string) => {
+      setStagedUnits((prev) => prev.filter((u) => u.id !== unitId));
+      setStagedOrders((prev) => {
+        const next = { ...prev };
+        delete next[unitId];
+        return next;
+      });
+      dropStagedOrderIds(unitId);
+      setRelocatingUnitId((prev) => (prev === unitId ? null : prev));
+    },
+    [dropStagedOrderIds],
+  );
 
   const stageProvinceOwnership = useCallback(
     (province: string, power: Power | null) => {
@@ -235,17 +272,44 @@ export function useAdminDirectEdit({
     [],
   );
 
-  const stageUnitOrder = useCallback((order: Order) => {
-    setStagedOrders((prev) => ({
-      ...prev,
-      [order.unit_id]: { ...order, is_explicit: true },
-    }));
-  }, []);
+  const stageUnitOrder = useCallback(
+    (order: Order) => {
+      const baseUnit = gameState?.units.find((u) => u.id === order.unit_id);
+      const stagedUnit = stagedUnits.find((u) => u.id === order.unit_id);
+      const baseOrder = gameState?.orders[order.unit_id];
+      if (
+        baseOrder &&
+        isUnitUnchangedFromBase(baseUnit, stagedUnit) &&
+        ordersHaveSameParameters(baseOrder, order)
+      ) {
+        setStagedOrders((prev) => ({
+          ...prev,
+          [order.unit_id]: { ...baseOrder },
+        }));
+        dropStagedOrderIds(order.unit_id);
+        return;
+      }
+      setStagedOrders((prev) => ({
+        ...prev,
+        [order.unit_id]: { ...order, is_explicit: true },
+      }));
+      setStagedOrderIds((prev) => {
+        if (prev.has(order.unit_id)) return prev;
+        const nextSet = new Set(prev);
+        nextSet.add(order.unit_id);
+        return nextSet;
+      });
+    },
+    [dropStagedOrderIds, gameState, stagedUnits],
+  );
 
   const applyChanges = useCallback(async (): Promise<boolean> => {
     if (!gameState || !isDirty) return true;
     setCommitting(true);
     try {
+      const explicitOrders = Object.fromEntries(
+        Object.entries(stagedOrders).filter(([uid]) => stagedOrderIds.has(uid)),
+      );
       const res = await postAdminBoardEditRequest(activeGameId, {
         expected_revision: baseRevision,
         expected_season: baseTurn.season,
@@ -253,7 +317,7 @@ export function useAdminDirectEdit({
         expected_phase: baseTurn.phase,
         units: stagedUnits,
         ownership: stagedOwnership,
-        orders: stagedOrders,
+        orders: explicitOrders,
         summary_lines: diffLines.map((line) => `[ADMIN OVERRIDE] ${line}.`),
       });
 
@@ -305,6 +369,7 @@ export function useAdminDirectEdit({
     isDirty,
     onUpdateGameState,
     showToast,
+    stagedOrderIds,
     stagedOrders,
     stagedOwnership,
     stagedUnits,
@@ -347,63 +412,18 @@ export function useAdminDirectEdit({
     };
   }, [directEditActive, gameState, stagedOrders, stagedOwnership, stagedUnits]);
 
-  const unacknowledgedAdminEntries = useMemo(
-    () =>
-      getUnacknowledgedAdminEntries(
-        gameState?.admin_log,
-        authUser,
-        lockedPower,
-        viewMode,
-      ),
-    [authUser, gameState?.admin_log, lockedPower, viewMode],
-  );
-
-  const handleAcknowledgeAdminEntries = useCallback(async () => {
-    if (!gameState || unacknowledgedAdminEntries.length === 0) return;
-    setAcknowledgingAdminEntries(true);
-    try {
-      const result = await acknowledgeAdminEntriesRequest(
-        activeGameId,
-        unacknowledgedAdminEntries.map((e) => e.id),
-        authUser,
-        lockedPower,
-      );
-      if (result?.ok) {
-        const ackedIds = new Set(unacknowledgedAdminEntries.map((e) => e.id));
-        const viewerTokens = [
-          result.acknowledged_by,
-          authUser?.id,
-          lockedPower,
-          !authUser && !lockedPower ? 'guest' : null,
-        ].filter((t): t is string => Boolean(t));
-        onUpdateGameState({
-          ...gameState,
-          admin_log: (gameState.admin_log ?? []).map((entry) =>
-            ackedIds.has(entry.id)
-              ? {
-                  ...entry,
-                  acknowledged_by: Array.from(
-                    new Set([
-                      ...(entry.acknowledged_by ?? []),
-                      ...viewerTokens,
-                    ]),
-                  ),
-                }
-              : entry,
-          ),
-        });
-      }
-    } finally {
-      setAcknowledgingAdminEntries(false);
-    }
-  }, [
-    activeGameId,
-    authUser,
-    gameState,
-    lockedPower,
-    onUpdateGameState,
+  const {
     unacknowledgedAdminEntries,
-  ]);
+    acknowledgingAdminEntries,
+    handleAcknowledgeAdminEntries,
+  } = useAdminAcknowledgement({
+    activeGameId,
+    viewMode,
+    lockedPower,
+    gameState,
+    authUser,
+    onUpdateGameState,
+  });
 
   const clearStagedChanges = useCallback(async () => {
     if (!isDirty) return;
@@ -428,6 +448,10 @@ export function useAdminDirectEdit({
       setStagedUnits(reverted.units);
       setStagedOwnership(reverted.ownership);
       setStagedOrders(reverted.orders);
+      const sepIdx = changeId.indexOf(':');
+      if (sepIdx > 0 && changeId.slice(0, sepIdx) !== 'ownership') {
+        dropStagedOrderIds(changeId.slice(sepIdx + 1));
+      }
       if (
         relocatingUnitId &&
         !reverted.units.some((u) => u.id === relocatingUnitId)
@@ -435,7 +459,14 @@ export function useAdminDirectEdit({
         setRelocatingUnitId(null);
       }
     },
-    [gameState, relocatingUnitId, stagedOrders, stagedOwnership, stagedUnits],
+    [
+      dropStagedOrderIds,
+      gameState,
+      relocatingUnitId,
+      stagedOrders,
+      stagedOwnership,
+      stagedUnits,
+    ],
   );
 
   return {

@@ -167,4 +167,250 @@ describe('useAdminDirectEdit.clearStagedChanges', () => {
 
     fetchSpy.mockRestore();
   });
+
+  it('sends board_revision as expected_revision and only explicitly staged orders', async () => {
+    const baseState: GameState = {
+      ...makeGameState(),
+      state_revision: 12,
+      board_revision: 4,
+      orders: {
+        FRANCE_A_PAR: {
+          unit_id: 'FRANCE_A_PAR',
+          power: 'FRANCE',
+          unit_type: 'A',
+          origin: 'PAR',
+          order_type: 'HOLD',
+          via_convoy: false,
+          is_explicit: false,
+        },
+        FRANCE_A_MAR: {
+          unit_id: 'FRANCE_A_MAR',
+          power: 'FRANCE',
+          unit_type: 'A',
+          origin: 'MAR',
+          order_type: 'MOVE',
+          target: 'SPA',
+          via_convoy: false,
+          is_explicit: true,
+        },
+      },
+    };
+    const updatedState: GameState = {
+      ...baseState,
+      state_revision: 13,
+      board_revision: 5,
+    };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify(updatedState), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useAdminDirectEdit({
+        activeGameId: 'proto_1901',
+        gameState: baseState,
+        provinces: FRANCE_PROVINCES,
+        directEditActive: true,
+        setDirectEditActive: vi.fn(),
+        authUser: null,
+        onUpdateGameState: vi.fn(),
+        showToast: vi.fn(),
+        confirm: vi.fn(),
+      }),
+    );
+
+    act(() => {
+      result.current.onStageUnitOrder({
+        unit_id: 'FRANCE_A_PAR',
+        power: 'FRANCE',
+        unit_type: 'A',
+        origin: 'PAR',
+        order_type: 'MOVE',
+        target: 'BUR',
+        via_convoy: false,
+        is_explicit: true,
+      });
+    });
+
+    await act(async () => {
+      await result.current.applyChanges();
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(
+      (fetchSpy.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.expected_revision).toBe(4);
+    expect(Object.keys(body.orders)).toEqual(['FRANCE_A_PAR']);
+    expect(body.orders.FRANCE_A_PAR.target).toBe('BUR');
+
+    fetchSpy.mockRestore();
+  });
+
+  it('preserves staged board edits without phantom order diffs when live orders update', () => {
+    const initialState: GameState = {
+      ...makeGameState(),
+      state_revision: 1,
+      board_revision: 1,
+      orders: {
+        FRANCE_A_PAR: {
+          unit_id: 'FRANCE_A_PAR',
+          power: 'FRANCE',
+          unit_type: 'A',
+          origin: 'PAR',
+          order_type: 'HOLD',
+          via_convoy: false,
+          is_explicit: false,
+        },
+        FRANCE_A_MAR: {
+          unit_id: 'FRANCE_A_MAR',
+          power: 'FRANCE',
+          unit_type: 'A',
+          origin: 'MAR',
+          order_type: 'HOLD',
+          via_convoy: false,
+          is_explicit: false,
+        },
+      },
+    };
+
+    const { result, rerender } = renderHook(
+      ({ state }: { state: GameState }) =>
+        useAdminDirectEdit({
+          activeGameId: 'proto_1901',
+          gameState: state,
+          provinces: FRANCE_PROVINCES,
+          directEditActive: true,
+          setDirectEditActive: vi.fn(),
+          authUser: null,
+          onUpdateGameState: vi.fn(),
+          showToast: vi.fn(),
+          confirm: vi.fn(),
+        }),
+      { initialProps: { state: initialState } },
+    );
+
+    act(() => {
+      result.current.onStageOwnership('BUR', 'FRANCE');
+    });
+    expect(result.current.stagedChanges.map((c) => c.id)).toEqual([
+      'ownership:BUR',
+    ]);
+
+    const nextState: GameState = {
+      ...initialState,
+      state_revision: 2,
+      board_revision: 1,
+      orders: {
+        ...initialState.orders,
+        FRANCE_A_PAR: {
+          unit_id: 'FRANCE_A_PAR',
+          power: 'FRANCE',
+          unit_type: 'A',
+          origin: 'PAR',
+          order_type: 'MOVE',
+          target: 'BUR',
+          via_convoy: false,
+          is_explicit: true,
+        },
+      },
+    };
+
+    rerender({ state: nextState });
+
+    expect(result.current.isDirty).toBe(true);
+    expect(result.current.stagedChanges.map((c) => c.id)).toEqual([
+      'ownership:BUR',
+    ]);
+    expect(result.current.effectiveGameState?.orders.FRANCE_A_PAR.target).toBe(
+      'BUR',
+    );
+  });
+
+  it('drops unit from stagedOrderIds when an order override is reverted back to base order', async () => {
+    const initialState: GameState = {
+      ...makeGameState(),
+      state_revision: 1,
+      board_revision: 1,
+      orders: {
+        FRANCE_A_PAR: {
+          unit_id: 'FRANCE_A_PAR',
+          power: 'FRANCE',
+          unit_type: 'A',
+          origin: 'PAR',
+          order_type: 'HOLD',
+          via_convoy: false,
+          is_explicit: false,
+        },
+        FRANCE_A_MAR: {
+          unit_id: 'FRANCE_A_MAR',
+          power: 'FRANCE',
+          unit_type: 'A',
+          origin: 'MAR',
+          order_type: 'HOLD',
+          via_convoy: false,
+          is_explicit: false,
+        },
+      },
+    };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ ...initialState, board_revision: 2 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useAdminDirectEdit({
+        activeGameId: 'proto_1901',
+        gameState: initialState,
+        provinces: FRANCE_PROVINCES,
+        directEditActive: true,
+        setDirectEditActive: vi.fn(),
+        authUser: null,
+        onUpdateGameState: vi.fn(),
+        showToast: vi.fn(),
+        confirm: vi.fn(),
+      }),
+    );
+
+    // Stage ownership change + temporary order override, then revert order back to HOLD
+    act(() => {
+      result.current.onStageOwnership('BUR', 'FRANCE');
+      result.current.onStageUnitOrder({
+        unit_id: 'FRANCE_A_PAR',
+        power: 'FRANCE',
+        unit_type: 'A',
+        origin: 'PAR',
+        order_type: 'MOVE',
+        target: 'BUR',
+        via_convoy: false,
+        is_explicit: true,
+      });
+      result.current.onStageUnitOrder({
+        unit_id: 'FRANCE_A_PAR',
+        power: 'FRANCE',
+        unit_type: 'A',
+        origin: 'PAR',
+        order_type: 'HOLD',
+        target: null,
+        via_convoy: false,
+        is_explicit: true,
+      });
+    });
+
+    await act(async () => {
+      await result.current.applyChanges();
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(
+      (fetchSpy.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.orders).toEqual({});
+
+    fetchSpy.mockRestore();
+  });
 });

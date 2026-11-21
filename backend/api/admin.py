@@ -33,7 +33,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from scenarios.presets import SCENARIO_IDS, build_scenario, build_scenario_history
 from security.auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
 from security.creator import is_creator
-from security.secrecy import caller_holds_seat, verify_admin_access, with_sanitized_admin_log
+from security.secrecy import (
+    caller_holds_seat,
+    sanitize_game_state_for_viewer,
+    verify_admin_access,
+    viewer_ack_ids,
+    viewer_power_for,
+    with_sanitized_admin_log,
+)
 from storage import supabase
 from storage.profiles import ensure_profile_loaded
 from storage.store import (
@@ -106,6 +113,7 @@ async def seed_test_scenario(req: SeedScenarioRequest):
     new_game = build_scenario(req.scenario_id, req.active_power, gid)
     if gid in GAMES:
         new_game.state_revision = GAMES[gid].state_revision + 1
+        new_game.board_revision = GAMES[gid].board_revision + 1
     GAMES[gid] = new_game
     if gid != DEFAULT_GAME_ID and gid not in GAME_SUMMARIES:
         # A seeded board is a throwaway sandbox. Without a summary it would count as a match with
@@ -245,6 +253,9 @@ async def admin_rollback_turn(
     prev_state.state_revision = (
         max(prev_state.state_revision, current.state_revision if current else 1) + 1
     )
+    prev_state.board_revision = (
+        max(prev_state.board_revision, current.board_revision if current else 1) + 1
+    )
 
     clear_ephemeral_sandboxes_for(gid)
     GAMES[gid] = prev_state
@@ -310,7 +321,11 @@ async def admin_set_turn(
         [summary_line],
         actor_id=actor_id,
     )
-    return with_sanitized_admin_log(game, current_user)
+    return sanitize_game_state_for_viewer(
+        game,
+        viewer_power_for(gid, current_user),
+        viewer_ack_ids(current_user),
+    )
 
 
 @router.post(

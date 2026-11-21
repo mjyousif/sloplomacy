@@ -40,6 +40,29 @@ const formatProvinceName = (
 const formatUnitTypeName = (unitType: UnitType): string =>
   unitType === 'A' ? 'Army' : 'Fleet';
 
+export function ordersHaveSameParameters(a: Order, b: Order): boolean {
+  return (
+    a.order_type === b.order_type &&
+    (a.target ?? null) === (b.target ?? null) &&
+    (a.target_coast ?? null) === (b.target_coast ?? null) &&
+    (a.aux_unit_origin ?? null) === (b.aux_unit_origin ?? null)
+  );
+}
+
+export function isUnitUnchangedFromBase(
+  baseUnit: Unit | undefined,
+  stagedUnit: Unit | undefined,
+): boolean {
+  return Boolean(
+    baseUnit &&
+      stagedUnit &&
+      baseUnit.province === stagedUnit.province &&
+      (baseUnit.coast ?? null) === (stagedUnit.coast ?? null) &&
+      baseUnit.power === stagedUnit.power &&
+      baseUnit.unit_type === stagedUnit.unit_type,
+  );
+}
+
 export function computeStagedChanges(
   baseState: Pick<GameState, 'units' | 'ownership' | 'orders'> | null,
   stagedUnits: Unit[],
@@ -122,23 +145,9 @@ export function computeStagedChanges(
   for (const [uid, order] of Object.entries(stagedOrders)) {
     const bu = baseById.get(uid);
     const u = stagedById.get(uid);
-    if (
-      bu &&
-      u &&
-      bu.province === u.province &&
-      (bu.coast ?? null) === (u.coast ?? null) &&
-      bu.power === u.power &&
-      bu.unit_type === u.unit_type
-    ) {
+    if (u && isUnitUnchangedFromBase(bu, u)) {
       const prevOrder = baseState.orders[uid];
-      if (
-        prevOrder &&
-        (prevOrder.order_type !== order.order_type ||
-          (prevOrder.target ?? null) !== (order.target ?? null) ||
-          (prevOrder.target_coast ?? null) !== (order.target_coast ?? null) ||
-          (prevOrder.aux_unit_origin ?? null) !==
-            (order.aux_unit_origin ?? null))
-      ) {
+      if (prevOrder && !ordersHaveSameParameters(prevOrder, order)) {
         entries.push({
           id: `order:${uid}`,
           kind: 'order',
@@ -438,4 +447,39 @@ export function applyUndoStagedChange(
   }
 
   return next;
+}
+
+/**
+ * Updates `stagedOrders` from incoming `gameState.orders` for untouched units
+ * (not in `overriddenIds` and not relocated/modified) so live order changes do
+ * not create phantom staged order diffs.
+ */
+export function mergeLiveUnitOrders(
+  gameState: Pick<GameState, 'units' | 'orders'>,
+  stagedUnits: Unit[],
+  stagedOrders: Record<string, Order>,
+  overriddenIds: ReadonlySet<string>,
+): Record<string, Order> {
+  const stagedById = new Map(stagedUnits.map((u) => [u.id, u]));
+  let changed = false;
+  const next = { ...stagedOrders };
+  for (const u of gameState.units) {
+    if (overriddenIds.has(u.id)) continue;
+    const staged = stagedById.get(u.id);
+    if (!isUnitUnchangedFromBase(u, staged)) {
+      continue;
+    }
+    const liveOrder = gameState.orders[u.id];
+    const prevOrder = stagedOrders[u.id];
+    if (
+      liveOrder &&
+      (!prevOrder ||
+        !ordersHaveSameParameters(prevOrder, liveOrder) ||
+        prevOrder.is_explicit !== liveOrder.is_explicit)
+    ) {
+      next[u.id] = { ...liveOrder };
+      changed = true;
+    }
+  }
+  return changed ? next : stagedOrders;
 }

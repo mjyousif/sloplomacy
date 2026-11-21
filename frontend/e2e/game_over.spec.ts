@@ -1,11 +1,7 @@
 // @scenario game_over
 // @description Game Over modal triggered by 18+ supply centers, final board inspection, and re-opening from the top-bar winner pill.
 import { expect, test } from '@playwright/test';
-import {
-  DEFAULT_E2E_API_URL,
-  ScenarioRecorder,
-  seedScenario,
-} from './helpers';
+import { DEFAULT_E2E_API_URL, ScenarioRecorder, seedScenario } from './helpers';
 
 test.describe('Scenario: Game Over Modal & Final Board Inspection', () => {
   test('opens GameOverModal on victory, inspects final board, and re-opens via winner pill', async ({
@@ -61,7 +57,7 @@ test.describe('Scenario: Game Over Modal & Final Board Inspection', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            expected_revision: state.state_revision,
+            expected_revision: state.board_revision ?? state.state_revision,
             expected_season: state.season,
             expected_year: state.year,
             expected_phase: state.phase,
@@ -115,7 +111,9 @@ test.describe('Scenario: Game Over Modal & Final Board Inspection', () => {
         await ackBtn.click();
       }
 
-      const adjudicateBtn = page.locator('[data-testid="btn-adjudicate-phase"]');
+      const adjudicateBtn = page.locator(
+        '[data-testid="btn-adjudicate-phase"]',
+      );
       await expect(adjudicateBtn).toBeVisible();
       await adjudicateBtn.dblclick();
 
@@ -123,7 +121,9 @@ test.describe('Scenario: Game Over Modal & Final Board Inspection', () => {
       const modal = page.locator('[data-testid="game-over-modal"]');
       await expect(modal).toBeVisible({ timeout: 10000 });
       await expect(modal).toContainText('France Claims Continental Hegemony');
-      const overviewTable = modal.locator('[data-testid="stats-overview-table"]');
+      const overviewTable = modal.locator(
+        '[data-testid="stats-overview-table"]',
+      );
       await expect(overviewTable).toBeVisible();
       await expect(
         overviewTable.locator('[data-testid="stats-row-france"]'),

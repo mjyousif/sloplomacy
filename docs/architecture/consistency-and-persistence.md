@@ -6,7 +6,7 @@ Sloplomacy combines a sub-millisecond in-memory L1 store with write-through JSON
 
 - [In-Memory L1 Store vs. Durable Database](#in-memory-l1-store-vs-durable-database)
 - [Write-Through Persistence & Coalesced Saves](#write-through-persistence--coalesced-saves)
-- [Optimistic Concurrency (`state_revision`)](#optimistic-concurrency-state_revision)
+- [Optimistic Concurrency (`state_revision` & `board_revision`)](#optimistic-concurrency-state_revision--board_revision)
 - [One Resolver per Turn](#one-resolver-per-turn)
 - [Atomic Admin Board Edits](#atomic-admin-board-edits)
 - [Lobby Sync & Eviction](#lobby-sync--eviction)
@@ -56,12 +56,13 @@ flowchart TD
 
 ---
 
-## Optimistic Concurrency (`state_revision`)
+## Optimistic Concurrency (`state_revision` & `board_revision`)
 
-`GameState.state_revision` is a monotonically increasing integer (starting at `1`) incremented on every authoritative state change:
+`GameState` tracks two monotonically increasing revision counters (both starting at `1`):
 
-- **Turn and order mutations**: Order submissions, finalizations, adjudications, seat leaves/surrenders, rollbacks, and sandbox transitions increment `state_revision`.
-- **Conflict detection**: Operations that operate on a snapshot of the board—such as the creator's batch board editor (`POST /api/admin/board-edit`)—send `expected_revision` along with `expected_season`, `expected_year`, and `expected_phase`. If any of those do not match the live `GameState`, the server rejects the request with `409 Conflict` instead of silently overwriting concurrent changes.
+- **`state_revision`**: Incremented on every authoritative state change—order submissions, finalizations, adjudications, seat leaves/surrenders, rollbacks, admin edits, and sandbox transitions. Used by the client's `isStaleServerState` guard to ignore out-of-order responses/polls.
+- **`board_revision`**: Incremented **only** on meaningful board or turn mutations—turn adjudication, admin `board-edit`, `set-turn`, rollback, scenario load/seed, and solo sandbox branch transitions. Order submissions, finalizations, and seat changes do **not** increment `board_revision`.
+- **Conflict detection**: `POST /api/admin/board-edit` checks `expected_revision` against `game.board_revision` along with `expected_season`, `expected_year`, and `expected_phase`. If any of those do not match the live `GameState`, the server rejects the request with `409 Conflict` instead of silently overwriting concurrent board changes, while letting concurrent player order submissions proceed without blocking the admin.
 - **Turn-scoped staleness**: Order and finalization requests can also carry the expected turn string; `reject_stale_turn()` returns `409 Conflict` if the game has already adjudicated into a new phase.
 - **Database load reconciliation**: When `load_game_from_db()` reads a row from Supabase, it ensures `state.state_revision = max(state.state_revision, row["state_revision"])` so the revision never regresses.
 
@@ -97,9 +98,9 @@ Because board editing in the UI lets a creator move, spawn, destroy units, and r
 
 Instead, the frontend stages edits locally and submits a single `POST /api/admin/board-edit` batch with `expected_revision`:
 
-1. Verify creator/admin access and check `expected_revision`, `expected_season`, `expected_year`, and `expected_phase` against the live `GameState` (`409` on mismatch).
+1. Verify creator/admin access and check `expected_revision` (against `board_revision`), `expected_season`, `expected_year`, and `expected_phase` against the live `GameState` (`409` on mismatch).
 2. Validate every staged change against province topology and unit rules before mutating state.
-3. Apply all ownership changes, unit removals, teleports, and spawns in one pass, recomputing validation diagnostics, simulation preview, and `state_revision`.
+3. Apply all ownership changes, unit removals, teleports, and spawns in one pass (preserving existing orders on unimpacted units), recomputing validation diagnostics, simulation preview, `state_revision`, and `board_revision`.
 4. Record a single consolidated `"Admin"` snapshot in `GAME_HISTORY` and an `AdminActionLogEntry`, persist once, and broadcast once.
 
 ---

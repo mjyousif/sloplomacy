@@ -43,13 +43,13 @@ sequenceDiagram
 
     Host->>API: Batch changes + expected_revision / turn
     API->>API: verify_admin_access()
-    API->>API: Check expected_revision, season, year, phase (409 on mismatch)
+    API->>API: Check expected_revision (board_revision), season, year, phase (409 on mismatch)
     API->>API: Validate terrain, coasts & ownership
-    API->>Store: Apply all edits, bump state_revision, record "Admin" snapshot
-    API-->>Host: Updated GameState + per-viewer WebSocket broadcast
+    API->>Store: Apply all edits (preserving unimpacted orders), bump state_revision & board_revision, record "Admin" snapshot
+    API-->>Host: Viewer-sanitized GameState + per-viewer WebSocket broadcast
 ```
 
-- **Optimistic concurrency**: If another mutation incremented `state_revision` while the creator was staging edits, the server rejects the batch with `409 Conflict` so nothing is silently overwritten.
+- **Optimistic concurrency**: `expected_revision` is checked against `GameState.board_revision`, which increments on board/turn changes (adjudication, rollback, `set-turn`, `board-edit`, scenario load) rather than player order submissions or finalizations. If a board/turn change occurred while the creator was staging edits, the server rejects the batch with `409 Conflict` so nothing is silently overwritten; concurrent player orders on unimpacted units are preserved.
 - **Terrain rules**: Armies cannot be placed at sea, fleets cannot be placed inland, and multi-coast provinces (`STP`, `SPA`, `BUL`) normalize or require valid coasts.
 
 ---

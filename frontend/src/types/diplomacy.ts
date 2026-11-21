@@ -182,6 +182,7 @@ export interface GameState {
   timer?: PhaseTimer | null;
   admin_log?: AdminActionLogEntry[];
   state_revision?: number;
+  board_revision?: number;
   unit_options?: Record<string, UnitMoveOptions>;
 }
 

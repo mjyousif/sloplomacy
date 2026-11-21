@@ -186,6 +186,7 @@ async def _resolve_phase(game: GameState, admin_entry: AdminActionLogEntry | Non
     game.retreats = result.retreats
     game.finalized_powers = []
     game.state_revision += 1
+    game.board_revision += 1
     game.turn_history.insert(0, history_entry)
     if admin_entry:
         game.admin_log.append(admin_entry)

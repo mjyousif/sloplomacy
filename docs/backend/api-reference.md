@@ -677,9 +677,10 @@ Jumps the game directly to an arbitrary season, year, or phase. The turn must be
 ---
 
 ### 18b. `POST /api/admin/board-edit`
-Applies an atomic batch of staged Direct-Edit board mutations (`units`, `ownership`, `orders`, `summary_lines`) with optimistic concurrency checking against `expected_revision` (and optional `expected_season`, `expected_year`, `expected_phase`).
-- Rejects stale commits with `409 Conflict` if the underlying `GameState` (`state_revision` or turn clock) changed while the admin was drafting edits.
-- Increments `state_revision`, appends an `AdminActionLogEntry` to `GameState.admin_log`, consolidates consecutive `"Admin"` snapshots in `GAME_HISTORY[game_id]`, marks `HISTORY_UNSAVED`, persists to Supabase, and broadcasts over WebSocket.
+Applies an atomic batch of staged Direct-Edit board mutations (`units`, `ownership`, `orders`, `summary_lines`) with optimistic concurrency checking against `expected_revision` (compared against `GameState.board_revision`), `expected_season`, `expected_year`, and `expected_phase`.
+- Rejects stale commits with `409 Conflict` if the underlying board or turn (`board_revision` or season/year/phase) changed while the admin was drafting edits. Concurrent player order submissions and finalizations do not increment `board_revision` and do not trigger `409`.
+- Preserves existing server orders on unimpacted units unless an explicit order override is submitted, and returns the resulting `GameState` sanitized for the calling viewer (`sanitize_game_state_for_viewer`) so Fog of War is preserved.
+- Increments `state_revision` and `board_revision`, appends an `AdminActionLogEntry` to `GameState.admin_log`, consolidates consecutive `"Admin"` snapshots in `GAME_HISTORY[game_id]`, marks `HISTORY_UNSAVED`, persists to Supabase, and broadcasts over WebSocket.
 
 ---
 
