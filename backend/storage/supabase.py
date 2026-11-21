@@ -417,8 +417,7 @@ async def load_profile_name_from_db(
         return None
 
     url = (
-        f"{get_supabase_url()}/rest/v1/profiles"
-        f"?id=eq.{quote(user_id, safe='')}&select=display_name"
+        f"{get_supabase_url()}/rest/v1/profiles?id=eq.{quote(user_id, safe='')}&select=display_name"
     )
     start = time.perf_counter()
     try:

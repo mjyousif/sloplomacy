@@ -35,7 +35,7 @@ Body format that has worked well here:
 - **Screenshots inspected (Mandatory for visual/behavior changes)**: name the scenario, the steps you opened, and what each showed (for example, "step 2: modal lists the Burgundy self-bounce"). Opening and referencing the images is mandatory whenever user-facing UI, layout, map rendering, or diagnostics change.
 - **After Screenshots**: include or embed visual evidence of the new behavior in the PR description or task summary.
 - **Deploy notes**: new secrets, env vars, migrations, or "nothing needed". Reviewers act on this.
-  - If adding files under `supabase/migrations/`, note whether they must be applied manually to Supabase (they do not auto-run on merge) and include a backup/rollback note for destructive data migrations.
+  - If adding files under `supabase/migrations/`, note that CI (`Deploy to Google Cloud Run` -> `Apply Supabase Migrations`) automatically runs all `supabase/migrations/*.sql` in a single transaction on merge to `main` when `DATABASE_URL` / `SUPABASE_DB_URL` is set, and include a backup/rollback note for destructive data migrations.
 - `Closes #<issue>` when there is one.
 
 ## Attaching screenshots
