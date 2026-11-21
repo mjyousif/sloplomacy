@@ -414,17 +414,17 @@ describe('useAdminDirectEdit.clearStagedChanges', () => {
     fetchSpy.mockRestore();
   });
 
-  it('does not fabricate phantom diffs on concurrent board updates and clears committing while 409 modal is open', async () => {
+  it('prompts immediately on concurrent WebSocket board updates without phantom diffs and still falls back to HTTP 409', async () => {
     const initialState: GameState = {
       ...makeGameState(),
       state_revision: 1,
       board_revision: 1,
     };
-    let resolveConfirm!: (ok: boolean) => void;
+    const resolvers: Array<(ok: boolean) => void> = [];
     const confirm = vi.fn(
       () =>
         new Promise<boolean>((resolve) => {
-          resolveConfirm = resolve;
+          resolvers.push(resolve);
         }),
     );
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
@@ -473,18 +473,25 @@ describe('useAdminDirectEdit.clearStagedChanges', () => {
     expect(result.current.stagedChanges.map((c) => c.id)).toEqual([
       'ownership:BUR',
     ]);
+    // WebSocket conflict immediately triggers the reload prompt without waiting for Apply
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+
+    // If the admin cancels the WebSocket prompt and still clicks Apply, HTTP 409 fallback prompts again
+    await act(async () => {
+      resolvers[0](false);
+    });
 
     let applyPromise!: Promise<boolean>;
     act(() => {
       applyPromise = result.current.applyChanges();
     });
 
-    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(2));
     // Apply button must no longer read "Applying..." while the 409 modal is waiting on the user
     expect(result.current.committing).toBe(false);
 
     await act(async () => {
-      resolveConfirm(true);
+      resolvers[1](true);
       await applyPromise;
     });
 

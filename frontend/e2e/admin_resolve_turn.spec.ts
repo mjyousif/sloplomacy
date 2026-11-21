@@ -315,7 +315,8 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
         '1 staged change',
       );
 
-      // France finalizes via API; since Bob is already finalized, Spring 1901 auto-adjudicates to Fall 1901
+      // France finalizes via API; since Bob is already finalized, Spring 1901 auto-adjudicates to Fall 1901.
+      // Alice receives the WebSocket update and is immediately prompted to reload her stale draft (no Apply click needed).
       await api(ALICE, `/api/finalize?game_id=${gameId}`, {
         power: 'FRANCE',
         force: true,
@@ -325,7 +326,6 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
         { timeout: 10000 },
       );
 
-      await alice.getByTestId('btn-admin-apply-edits').click();
       const conflictDialog = alice.getByRole('alertdialog', {
         name: 'Board State Changed (409 Conflict)',
       });
