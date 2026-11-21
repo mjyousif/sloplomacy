@@ -325,7 +325,7 @@ Represents an authenticated Supabase user whose token signature has been cryptog
 ```typescript
 interface AuthUser {
   id: string;
-  email: string;
+  email: string | null; // null for a user with no email, never a placeholder
   displayName: string;
   isLocalDemo?: boolean;
 }
