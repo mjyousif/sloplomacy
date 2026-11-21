@@ -1,7 +1,7 @@
 // @scenario admin_resolve_turn
 // @alias admin
 // @alias admin_board_edit
-// @description Host stages Direct-Edit board changes (ownership, spawn, relocate, undo) while another player orders and finalizes without 409, then force-resolves the turn; rival receives and acknowledges AdminActionWarningModal with unimpacted orders preserved.
+// @description Demonstrates both Issue #362 branches: (1) admin board-edit succeeds alongside concurrent player orders + finalization, resetting only impacted unit orders while preserving unimpacted orders and Fog of War; (2) turn advancing while admin has staged edits triggers 409 Conflict and Discard Draft & Reload; then force-resolves turn with AdminActionWarningModal.
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import { DEFAULT_E2E_API_URL, ScenarioRecorder } from './helpers';
 
@@ -145,7 +145,7 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       );
       await rec.recordStep(alice, 'edit_board_opened');
 
-      // 1d. Alice stages ownership (BEL -> France), unit spawn (FRA A BEL), unit relocate (MAR -> GAS), and tests Undo on FRA_F_BRE delete
+      // 1d. Alice stages ownership (BEL -> France), unit spawn (FRA A BEL), relocates Bob's ENG_F_EDI -> CLY (impacted unit), and tests Undo on FRA_F_BRE delete
       await alice
         .locator('[data-testid="province-path"][data-province-id="BEL"]')
         .click();
@@ -166,15 +166,15 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       ).toBeVisible();
 
       await alice
-        .locator('[data-testid="unit-token"][data-unit-id="FRA_A_MAR"]')
+        .locator('[data-testid="unit-token"][data-unit-id="ENG_F_EDI"]')
         .click();
       await alice.getByTestId('admin-inspector-relocate-btn').click();
       await alice
-        .locator('[data-testid="province-path"][data-province-id="GAS"]')
+        .locator('[data-testid="province-path"][data-province-id="CLY"]')
         .click();
       await expect(
         alice.locator(
-          '[data-testid="unit-token"][data-unit-id="FRA_A_MAR"][data-province="GAS"]',
+          '[data-testid="unit-token"][data-unit-id="ENG_F_EDI"][data-province="CLY"]',
         ),
       ).toBeVisible();
 
@@ -197,7 +197,8 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       );
       await rec.recordStep(alice, 'edit_board_staged_changes');
 
-      // 1e. While Alice has uncommitted board edits, Bob submits an order and finalizes (Issue #362)
+      // 1e. Branch 1: While Alice has uncommitted board edits, Bob orders BOTH an unimpacted unit
+      //     (ENG_F_LON -> NTH) and an impacted unit (ENG_F_EDI -> NWG), and finalizes (Issue #362)
       await bob
         .locator('[data-testid="unit-token"][data-unit-id="ENG_F_LON"]')
         .click();
@@ -207,6 +208,17 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       await expect(
         bob.locator(
           '[data-testid="order-arrow"][data-order-unit="ENG_F_LON"][data-order-type="MOVE"][data-order-target="NTH"]',
+        ),
+      ).toBeVisible();
+      await bob
+        .locator('[data-testid="unit-token"][data-unit-id="ENG_F_EDI"]')
+        .click();
+      await bob
+        .locator('[data-testid="reachable-reticle"][data-province-id="NWG"]')
+        .click();
+      await expect(
+        bob.locator(
+          '[data-testid="order-arrow"][data-order-unit="ENG_F_EDI"][data-order-type="MOVE"][data-order-target="NWG"]',
         ),
       ).toBeVisible();
       await bob.getByTestId('btn-finalize-orders').click();
@@ -240,7 +252,7 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       ).toBeVisible();
       await expect(
         alice.locator(
-          '[data-testid="unit-token"][data-unit-id="FRA_A_MAR"][data-province="GAS"]',
+          '[data-testid="unit-token"][data-unit-id="ENG_F_EDI"][data-province="CLY"]',
         ),
       ).toBeVisible();
       await expect(
@@ -255,7 +267,7 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       ).toHaveCount(0);
       await rec.recordStep(alice, 'edit_board_applied_orders_preserved');
 
-      // 1g. Bob receives the board-edit AdminActionWarningModal, acknowledges it, and still keeps his ENG_F_LON -> NTH order
+      // 1g. Bob receives the board-edit AdminActionWarningModal, acknowledges it, loses only impacted ENG_F_EDI's order, and keeps unimpacted ENG_F_LON -> NTH
       await expect(bob.getByTestId('admin-action-warning-modal')).toBeVisible({
         timeout: 10000,
       });
@@ -266,7 +278,7 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
         'Spawned France Army at Belgium',
       );
       await expect(bob.getByTestId('admin-action-warning-modal')).toContainText(
-        'Relocated France Army from Marseilles to Gascony',
+        'Relocated England Fleet from Edinburgh to Clyde',
       );
       await rec.recordStep(bob, 'player_board_edit_warning_modal');
       await bob.getByTestId('admin-warning-acknowledge-btn').click();
@@ -275,11 +287,82 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       );
       await expect(
         bob.locator(
+          '[data-testid="unit-token"][data-unit-id="ENG_F_EDI"][data-province="CLY"]',
+        ),
+      ).toBeVisible();
+      await expect(
+        bob.locator(
           '[data-testid="order-arrow"][data-order-unit="ENG_F_LON"][data-order-type="MOVE"][data-order-target="NTH"]',
         ),
       ).toBeVisible();
+      await expect(
+        bob.locator('[data-testid="order-arrow"][data-order-unit="ENG_F_EDI"]'),
+      ).toHaveCount(0);
+      await rec.recordStep(bob, 'player_impacted_order_reset_unimpacted_kept');
 
-      // 1h. Alice exits Edit Board mode
+      // 1h. Branch 2: Turn moves on (Spring 1901 -> Fall 1901) while Alice has staged edits -> 409 Conflict & Discard Draft & Reload
+      await expect(alice.getByTestId('toast-banner')).toHaveCount(0, {
+        timeout: 10000,
+      });
+      await alice
+        .locator('[data-testid="province-path"][data-province-id="HOL"]')
+        .click();
+      await alice.getByTestId('admin-inspector-ownership-select').click();
+      await alice
+        .getByTestId('admin-inspector-ownership-select-option-france')
+        .click();
+      await expect(alice.getByTestId('admin-staged-count')).toContainText(
+        '1 staged change',
+      );
+
+      // France finalizes via API; since Bob is already finalized, Spring 1901 auto-adjudicates to Fall 1901
+      await api(ALICE, `/api/finalize?game_id=${gameId}`, {
+        power: 'FRANCE',
+        force: true,
+      });
+      await expect(alice.getByTestId('turn-chronicle-pill')).toContainText(
+        'Fall 1901',
+        { timeout: 10000 },
+      );
+
+      await alice.getByTestId('btn-admin-apply-edits').click();
+      const conflictDialog = alice.getByRole('alertdialog', {
+        name: 'Board State Changed (409 Conflict)',
+      });
+      await expect(conflictDialog).toBeVisible({ timeout: 10000 });
+      await expect(conflictDialog).toContainText(
+        'Board state changed while editing. Please review the latest board state before applying changes.',
+      );
+      await expect(
+        conflictDialog.getByTestId('btn-confirm-modal-confirm'),
+      ).toHaveText('Discard Draft & Reload');
+      await expect(alice.getByTestId('admin-staged-count')).toContainText(
+        '1 staged change',
+      );
+      await expect(alice.getByTestId('btn-admin-apply-edits')).toHaveText(
+        'Apply',
+      );
+      await expect(alice.getByTestId('toast-banner')).toHaveCount(0);
+      await rec.recordStep(alice, 'edit_board_409_turn_moved_on');
+
+      await conflictDialog.getByTestId('btn-confirm-modal-confirm').click();
+      await expect(conflictDialog).toHaveCount(0);
+      await expect(alice.getByTestId('admin-staged-count')).toContainText(
+        '0 staged changes',
+      );
+      await expect(
+        alice.locator(
+          '[data-testid="unit-token"][data-unit-id="FRA_A_PAR"][data-province="BUR"]',
+        ),
+      ).toBeVisible();
+      await expect(
+        alice.locator(
+          '[data-testid="unit-token"][data-unit-id="ENG_F_LON"][data-province="NTH"]',
+        ),
+      ).toBeVisible();
+      await rec.recordStep(alice, 'edit_board_reloaded_after_409');
+
+      // 1i. Alice exits Edit Board mode
       await alice.getByTestId('game-settings-trigger').click();
       await alice.getByTestId('game-settings-admin-settings').click();
       await alice.getByTestId('btn-exit-admin-mode').click();
@@ -301,96 +384,22 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       );
       await rec.recordStep(alice, 'confirm_resolve_turn_modal');
 
-      // 4. Confirming advances the match to Fall 1901 Movement
+      // 4. Confirming advances the match from Fall 1901 Movement to Spring 1902 Movement
       await alice.getByTestId('btn-confirm-modal-confirm').click();
       await expect(alice.getByTestId('turn-chronicle-pill')).toContainText(
-        'Fall 1901',
+        'Spring 1902',
       );
-      await rec.recordStep(alice, 'host_resolved_fall_1901');
+      await rec.recordStep(alice, 'host_resolved_spring_1902');
 
       // 5. Bob receives the AdminActionWarningModal and acknowledges it
       await expect(bob.getByTestId('admin-action-warning-modal')).toBeVisible({
         timeout: 10000,
       });
       await expect(bob.getByTestId('admin-action-warning-modal')).toContainText(
-        'Force-resolved Spring 1901 Movement Phase.',
+        'Force-resolved Fall 1901 Movement Phase.',
       );
       await rec.recordStep(bob, 'player_admin_warning_modal');
 
-      await bob.getByTestId('admin-warning-acknowledge-btn').click();
-      await expect(bob.getByTestId('admin-action-warning-modal')).toHaveCount(
-        0,
-      );
-
-      // 5b. On Fall 1901 Movement, a concurrent board-level edit triggers 409 Conflict cleanly
-      //     (rejected edit is never applied and never notifies the rival player).
-      await expect(alice.getByTestId('toast-banner')).toHaveCount(0, {
-        timeout: 10000,
-      });
-      await alice.getByTestId('game-settings-trigger').click();
-      await alice.getByTestId('game-settings-admin-settings').click();
-      await alice.getByTestId('btn-toggle-direct-edit').click();
-      await expect(alice.getByTestId('admin-staged-count')).toContainText(
-        '0 staged changes',
-      );
-
-      await alice
-        .locator('[data-testid="province-path"][data-province-id="HOL"]')
-        .click();
-      await alice.getByTestId('admin-inspector-ownership-select').click();
-      await alice
-        .getByTestId('admin-inspector-ownership-select-option-france')
-        .click();
-      await expect(alice.getByTestId('admin-staged-count')).toContainText(
-        '1 staged change',
-      );
-
-      const latest = (await api(ALICE, `/api/game?game_id=${gameId}`)).state;
-      await api(ALICE, `/api/admin/board-edit?game_id=${gameId}`, {
-        expected_revision: latest.board_revision,
-        expected_season: latest.season,
-        expected_year: latest.year,
-        expected_phase: latest.phase,
-        units: latest.units,
-        ownership: { ...latest.ownership, SPA: 'FRANCE' },
-      });
-
-      await alice.getByTestId('btn-admin-apply-edits').click();
-      const conflictDialog = alice.getByRole('alertdialog', {
-        name: 'Board State Changed (409 Conflict)',
-      });
-      await expect(conflictDialog).toBeVisible({ timeout: 10000 });
-      await expect(conflictDialog).toContainText(
-        'Board state changed while editing. Please review the latest board state before applying changes.',
-      );
-      await expect(
-        conflictDialog.getByTestId('btn-confirm-modal-confirm'),
-      ).toHaveText('Discard Draft & Reload');
-      await expect(alice.getByTestId('admin-staged-count')).toContainText(
-        '1 staged change',
-      );
-      await expect(alice.getByTestId('btn-admin-apply-edits')).toHaveText(
-        'Apply',
-      );
-      await expect(alice.getByTestId('toast-banner')).toHaveCount(0);
-      await rec.recordStep(alice, 'edit_board_409_conflict_modal');
-
-      await conflictDialog.getByTestId('btn-confirm-modal-confirm').click();
-      await expect(conflictDialog).toHaveCount(0);
-      await expect(alice.getByTestId('admin-staged-count')).toContainText(
-        '0 staged changes',
-      );
-
-      // Bob is notified only of the winning SPA edit, never the rejected HOL edit
-      await expect(bob.getByTestId('admin-action-warning-modal')).toBeVisible({
-        timeout: 10000,
-      });
-      await expect(bob.getByTestId('admin-action-warning-modal')).toContainText(
-        'Set ownership of SPA to FRANCE.',
-      );
-      await expect(
-        bob.getByTestId('admin-action-warning-modal'),
-      ).not.toContainText('HOL');
       await bob.getByTestId('admin-warning-acknowledge-btn').click();
       await expect(bob.getByTestId('admin-action-warning-modal')).toHaveCount(
         0,
