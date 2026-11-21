@@ -68,13 +68,31 @@ export function useMapSelection({
   suggestPowers = null,
 }: UseMapSelectionOptions): MapSelection {
   // Check if selectedUnitId refers to a BUILD_ order or an existing Unit
+  const canEditAnyPower = !historyView && (sandboxMode || directEditActive);
+  const controlPower: Power | null = historyView ? null : activePower;
   const isSelectedBuildOrder = Boolean(
-    isAdjustmentPhase && selectedUnitId && selectedUnitId.startsWith('BUILD_'),
+    !historyView &&
+      isAdjustmentPhase &&
+      selectedUnitId &&
+      selectedUnitId.startsWith('BUILD_'),
+  );
+  const buildSlotPower =
+    isSelectedBuildOrder && selectedUnitId
+      ? (selectedUnitId.split('_')[1] as Power | undefined)
+      : undefined;
+  const canControlBuildSlot = Boolean(
+    buildSlotPower &&
+      (canEditAnyPower ||
+        (suggestPowers
+          ? suggestPowers.includes(buildSlotPower)
+          : buildSlotPower === controlPower)),
   );
   const selectedBuildOrder =
-    isSelectedBuildOrder && selectedUnitId ? orders[selectedUnitId] : null;
+    isSelectedBuildOrder && canControlBuildSlot && selectedUnitId
+      ? orders[selectedUnitId]
+      : null;
   const selectedBuildProv =
-    isSelectedBuildOrder && selectedUnitId
+    isSelectedBuildOrder && canControlBuildSlot && selectedUnitId
       ? selectedBuildOrder?.origin || selectedUnitId.split('_')[2] || null
       : null;
 
@@ -82,8 +100,6 @@ export function useMapSelection({
     selectedUnitId && !isSelectedBuildOrder ? unitsById[selectedUnitId] : null;
   // A player may only command foreign units in the sandbox, or as host with Direct-Edit on
   // A past turn is read-only: no power's units can be picked up, not even the player's own.
-  const canEditAnyPower = !historyView && (sandboxMode || directEditActive);
-  const controlPower: Power | null = historyView ? null : activePower;
   // Strictly disallow controlling or showing the menu for foreign units otherwise. A move
   // suggestion is written for the units of the thread's members, the player's own included.
   const canControl = useCallback(

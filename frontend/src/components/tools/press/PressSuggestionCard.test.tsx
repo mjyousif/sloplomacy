@@ -136,4 +136,13 @@ describe('PressSuggestionCard', () => {
     expect(screen.queryByTestId('suggestion-use')).toBeNull();
     expect(screen.getAllByTestId('suggested-order')).toHaveLength(2);
   });
+
+  it('lets a spectator (viewer null) preview the suggestion without Use these orders', () => {
+    card({ viewer: null });
+    expect(screen.getByTestId('suggestion-show')).toBeEnabled();
+    expect(screen.queryByTestId('suggestion-use')).toBeNull();
+    expect(screen.getByTestId('suggested-orders-GERMANY')).toHaveTextContent(
+      'Germany',
+    );
+  });
 });

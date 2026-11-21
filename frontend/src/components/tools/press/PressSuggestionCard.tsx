@@ -24,16 +24,16 @@ export interface PressSuggestionContext {
 
 export interface PressSuggestionCardProps extends PressSuggestionContext {
   message: PressMessage;
-  viewer: Power;
+  viewer: Power | null;
   provinces: Record<string, ProvinceInfo>;
   /** The map was asked for (the phone closes its drawer to show it). */
   onShowMap?: () => void;
 }
 
 /**
- * The moves a private message suggests, under its text. During the turn it was sent in they
- * can be shown on the map, and the ones for the player's own units copied into their orders
- * (still editable, nothing finalized). Afterwards only the text of the orders is left.
+ * The orders a message suggests, under its text. During the turn it was sent in they can be
+ * shown on the map, and the ones for the player's own units or build slots copied into their
+ * orders (still editable, nothing finalized). Afterwards only the text of the orders is left.
  */
 export const PressSuggestionCard: React.FC<PressSuggestionCardProps> = ({
   message,
@@ -49,8 +49,10 @@ export const PressSuggestionCard: React.FC<PressSuggestionCardProps> = ({
   const [error, setError] = useState<string | null>(null);
   const current = `${message.season} ${message.year} ${message.phase}` === turn;
   const shown = viewingId === message.id;
-  const mine = message.orders.filter((order) => order.power === viewer);
-  const fromMe = message.sender === viewer;
+  const mine = viewer
+    ? message.orders.filter((order) => order.power === viewer)
+    : [];
+  const fromMe = viewer !== null && message.sender === viewer;
 
   const take = async () => {
     setBusy(true);
@@ -65,7 +67,7 @@ export const PressSuggestionCard: React.FC<PressSuggestionCardProps> = ({
     <div className={styles.card} data-testid="press-suggestion">
       <div className={styles.cardTitle}>
         <Lightbulb size={11} aria-hidden="true" />
-        Suggested moves
+        Suggested orders
       </div>
       <SuggestedOrders
         orders={message.orders}

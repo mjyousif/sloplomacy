@@ -48,7 +48,7 @@ export const SuggestionPill: React.FC<SuggestionPillProps> = ({
           <>
             Writing <strong>{suggestion.label}</strong> ·{' '}
             {suggestion.count === 0
-              ? 'order their units and yours on the map'
+              ? 'order units or build slots on the map'
               : `${plural(suggestion.count)}, send from Press`}
           </>
         ) : (

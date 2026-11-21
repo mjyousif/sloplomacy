@@ -2,38 +2,44 @@ import { MessagesSquare } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePressState } from '../../../hooks/usePress';
+import { useSuggestionState } from '../../../hooks/useSuggestion';
 import { pressStore } from '../../../lib/pressStore';
+import type { Unit } from '../../../types/diplomacy';
 import { buildChannels, PUBLIC_CHANNEL } from '../../../utils/pressHelpers';
 import { CollapsibleSection } from '../../ui/CollapsibleSection';
 import type { PressSectionProps } from '../PressSection';
 import styles from '../PressSection.module.css';
 import { PressMessageList } from './PressMessageList';
 
-const NO_SUGGESTIONS = {
-  unitsByProvince: {},
-  turn: '',
-  boardFree: false,
-  viewingId: null,
-};
-
 /**
  * Press while watching a match without a seat: the public box alone, read-only. The server
- * sends a spectator nothing else (no private thread, no backchannel, no move suggestion), and
- * an anonymous public author stays hidden until the game is over.
+ * sends a spectator nothing else (no private thread, no backchannel), and an anonymous public
+ * author stays hidden until the game is over.
  */
 export const SpectatorPress: React.FC<PressSectionProps> = ({
   gameId,
   provinces,
+  units,
+  turn,
+  suggestTurn,
   onHighlightProvinces,
   onProvincePicked,
   visible = true,
   variant = 'section',
 }) => {
   const press = usePressState();
+  const { viewing } = useSuggestionState();
   const [open, setOpen] = useState(true);
   const [onScreen, setOnScreen] = useState(true);
   const listRef = useRef<HTMLDivElement | null>(null);
   const ready = press.gameId === gameId && press.power === null;
+  const unitsByProvince = useMemo(() => {
+    const byProvince: Record<string, Unit> = {};
+    for (const unit of units) {
+      if (!unit.is_dislodged) byProvince[unit.province] = unit;
+    }
+    return byProvince;
+  }, [units]);
   const channel = useMemo(
     () =>
       buildChannels(ready ? press.messages : [], null, press.lastRead).find(
@@ -85,7 +91,12 @@ export const SpectatorPress: React.FC<PressSectionProps> = ({
         }
         onHighlightProvinces={onHighlightProvinces}
         onProvincePicked={onProvincePicked}
-        suggestions={NO_SUGGESTIONS}
+        suggestions={{
+          unitsByProvince,
+          turn,
+          boardFree: suggestTurn !== null,
+          viewingId: viewing?.id ?? null,
+        }}
       />
       <p
         className={styles.destination}

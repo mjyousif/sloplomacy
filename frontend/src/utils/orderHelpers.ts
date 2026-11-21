@@ -109,7 +109,8 @@ export function getActiveOrderButton(
  */
 export function isOrderIncomplete(order: Order | undefined): boolean {
   if (!order) return false;
-  if (order.order_type === 'MOVE') return !order.target;
+  if (order.order_type === 'MOVE' || order.order_type === 'RETREAT')
+    return !order.target;
   if (order.order_type === 'SUPPORT' || order.order_type === 'CONVOY') {
     return !order.aux_unit_origin || !order.target;
   }

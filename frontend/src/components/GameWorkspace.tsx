@@ -255,14 +255,9 @@ export function GameWorkspace({
           units: gameState.units,
           participants: activeGameSummary?.participants,
           turn: turnLabel(gameState),
-          // Moves can be suggested, shown and taken while the live Movement turn is on
-          // the board.
+          // Orders can be suggested, shown and taken while the live turn is on the board.
           suggestTurn:
-            gameState.phase === 'Movement' &&
-            !gameOver &&
-            !sandboxMode &&
-            !directEditActive &&
-            !viewingHistory
+            !gameOver && !sandboxMode && !directEditActive && !viewingHistory
               ? turnLabel(gameState)
               : null,
           onHighlightProvinces: setHighlightedProvinces,
@@ -370,8 +365,8 @@ export function GameWorkspace({
           readOnly ? ignore : (suggestion?.stage ?? handleUpdateOrder)
         }
         historyView={readOnly}
-        historyPowers={turnHistory.powers}
-        historyActions={turnHistory.actions}
+        historyPowers={suggestionView ? NO_POWERS : turnHistory.powers}
+        historyActions={suggestionView ? undefined : turnHistory.actions}
         phase={historyTurn?.phase ?? gameState.phase}
         season={historyTurn?.season ?? gameState.season}
         builds={historyTurn ? (historyTurn.builds ?? null) : gameState.builds}

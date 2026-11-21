@@ -181,7 +181,7 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
                   onProvincePicked={onProvincePicked}
                 />
               )}
-              {viewer && message.orders.length > 0 && (
+              {message.orders.length > 0 && (
                 <PressSuggestionCard
                   {...suggestions}
                   message={message}

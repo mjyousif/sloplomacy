@@ -711,7 +711,7 @@ Rules that hold on both endpoints and on the socket:
 - Sandboxes have no press: a solo or saved sandbox answers `409`, a private sandbox copy (`sbx_`) `404`. A failed Supabase read answers `503`, never an empty feed.
 - A player who takes over a seat reads that seat's earlier press. A private message can only go to seats someone holds, so nobody inherits a message sent to an empty seat.
 - **`seq` is the reader's own count.** Each player's messages are numbered 1, 2, 3… among the messages that player may read, so its gaps show nothing about other players' private press. The game-wide count stays on the server. Once the press is revealed every player reads every message, so `seq` is then the game-wide count, and a client reads the whole feed again.
-- **A private thread message may suggest moves.** `orders` holds orders for units of the sender and the recipients: a joint plan, where the sender's own half is only a claim. It is exactly what the sender attached. The server never reads it from the game's orders and never writes it to them, so sending one changes no `GameState`. It goes only where its message goes (the thread, and everyone once the game is over). A recipient who wants to follow it sends their own part through `POST /api/orders/batch`.
+- **Messages may suggest orders across all active phases.** Public press (signed or anonymous), signed private threads, and one-to-one anonymous backchannels may carry `orders` during `Movement`, `Retreats`, or `Adjustments`. Public press allows any power's units or build slots on the board (so anonymous public suggestions never reveal the author), signed private threads allow the sender and recipients, and one-to-one backchannels allow only the recipient's units or build slots. `orders` is exactly what the sender attached: the server never reads it from the game's orders and never writes it to them, so sending one changes no `GameState`. Public suggestions are included in `spectator_view` / `spectator_feed` as read-only copies. A seated recipient who wants to follow a suggestion sends their own part through `POST /api/orders/batch`.
 
 ### `GET /api/press`
 
@@ -762,7 +762,7 @@ With a move suggestion (`body` may then be empty):
 }
 ```
 
-Each suggested order is rebuilt from the unit it names (`power`, `unit_type`, `origin` and `origin_coast` are taken from the unit, as in `POST /api/order`) and stored as explicit. Like the order endpoints, this checks that the provinces and coasts exist, not that the move is legal.
+Each suggested order is rebuilt from the unit or build slot it names (`power`, `unit_type`, `origin` and `origin_coast` are taken from the unit or build slot, as in `POST /api/order`) and stored as explicit. Like the order endpoints, this checks that the provinces and coasts exist and belong to the current phase, not that the move is legal.
 
 The sender is `power`, which must be the caller's own seat. The sender is dropped from `recipients`, and the rest are stored once each. The message is stamped with the turn it was sent in, sent to the sockets of the players who may read it, and saved. The response is the sender's own copy (`PressMessageView`).
 
@@ -770,8 +770,8 @@ The sender is `power`, which must be the caller's own seat. The sender is droppe
 | :--- | :--- |
 | `403` | The caller does not hold `power`'s seat, or that power has surrendered. |
 | `400` | A suggested order names a province or coast that does not exist. |
-| `409` | The game is over and the message is private or anonymous (only signed public messages remain), the game is a sandbox, or `orders` are attached outside a Movement phase. |
-| `422` | The body is empty (with no `orders`) or longer than 1000 characters, the only recipient is the sender, an anonymous message has exactly one recipient (a one-to-one thread), or a recipient's seat is empty. With `orders`: the message is public or anonymous, a unit does not exist or belongs to a power outside the thread, an order is not a hold, move, support or convoy, or a unit has two orders. |
+| `409` | The game is over and the message is private or anonymous (only signed public messages remain), the game is a sandbox, or `orders` are attached when the game is over or in an unsupported phase. |
+| `422` | The body is empty (with no `orders`) or longer than 1000 characters, the only recipient is the sender, or a recipient's seat is empty. With `orders`: the message is an anonymous group thread (2+ recipients), a unit or build slot does not exist or belongs to a disallowed power (outside the thread, or not the recipient in a 1-to-1 backchannel), an order type does not fit the current phase or target (e.g., non-dislodged unit in Retreats, `RETREAT` without target, `BUILD_` slot outside Adjustments, inland fleet build), or a unit/slot has two orders. |
 | `429` | The seat sent more than 8 messages within 10 seconds. |
 
 ### Press on the game socket (`WebSocketPressUpdate`)

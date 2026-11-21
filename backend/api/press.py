@@ -5,7 +5,7 @@ import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 
-from domain.board import Power
+from domain.board import Power, UnitType
 from domain.game_state import GameState
 from domain.orders import Order, OrderType
 from domain.press import (
@@ -15,7 +15,15 @@ from domain.press import (
     PressMessageView,
     PressPostRequest,
 )
-from engine.order_utils import normalize_unit_order, validate_order_references
+from engine.adjudicator.resolver import compute_current_builds
+from engine.order_utils import (
+    build_slot_power,
+    build_slot_province,
+    fleet_coast,
+    normalize_unit_order,
+    validate_order_references,
+)
+from engine.topology.provinces import PROVINCES
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from security.auth import AuthUser, get_current_user
 from security.passcode import client_address
@@ -38,8 +46,14 @@ RATE_LIMIT_MESSAGES = 8
 RATE_LIMIT_WINDOW_SECONDS = 10.0
 _recent_posts: dict[tuple[str, Power], deque[float]] = defaultdict(deque)
 
-# What a suggestion may hold: the orders of a Movement phase.
-SUGGESTABLE_ORDER_TYPES = {OrderType.HOLD, OrderType.MOVE, OrderType.SUPPORT, OrderType.CONVOY}
+# What a suggestion may hold, by phase and target kind.
+PHASE_UNIT_ORDER_TYPES: dict[str, set[OrderType]] = {
+    "Movement": {OrderType.HOLD, OrderType.MOVE, OrderType.SUPPORT, OrderType.CONVOY},
+    "Retreats": {OrderType.RETREAT, OrderType.DISBAND},
+    "Adjustments": {OrderType.DISBAND},
+}
+BUILD_SLOT_ORDER_TYPES = {OrderType.BUILD, OrderType.WAIVE}
+SUGGESTABLE_ORDER_TYPES = set().union(*PHASE_UNIT_ORDER_TYPES.values()) | BUILD_SLOT_ORDER_TYPES
 
 
 async def _press_match(game_id: str | None) -> GameState:
@@ -104,31 +118,116 @@ def _check_rate(game_id: str, power: Power) -> None:
 def _suggested_orders(
     game: GameState, seat: Power, recipients: list[Power], req: PressPostRequest
 ) -> list[Order]:
-    """The orders a suggestion will carry, checked and rebuilt from the units they are for.
+    """The orders a suggestion will carry, checked and rebuilt from the units or build slots they
+    are for.
 
-    A suggestion is a message in a private thread (signed) or a one-to-one backchannel
-    (anonymous), made in a Movement phase, with at most one order for each unit. Signed threads
-    allow units of the sender and the recipients; anonymous backchannels allow only units of the
-    recipient so the sender is never revealed. Nothing here reads or writes the game's own
-    orders: the message holds only what the sender attached. Like `POST /api/order`, it checks
-    that the provinces exist, not that the moves are legal.
+    A suggestion may be attached to public press (signed or anonymous), a signed private thread,
+    or a one-to-one anonymous backchannel, during any active phase (Movement, Retreats, or
+    Adjustments), with at most one order per unit or build slot. Public press allows any power's
+    units or build slots on the board so anonymous posts never leak sender identity; signed private
+    threads allow the sender and recipients; anonymous backchannels allow only the recipient's
+    units or build slots. Nothing here reads or writes the game's own orders: the message holds
+    only what the sender attached. Like `POST /api/order`, it checks that provinces and coasts
+    exist and belong to the current phase, not that the moves are legal.
     """
     if not req.orders:
         return []
-    if not recipients or (req.anonymous and len(recipients) != 1):
+    if req.anonymous and len(recipients) > 1:
         raise HTTPException(
             status_code=422,
-            detail="Moves can only be suggested in a signed private message or a one-to-one backchannel.",
+            detail="Orders can only be suggested in public press, a signed private message, or a one-to-one backchannel.",
         )
-    if game.phase != "Movement":
+    if game.winner is not None or game.phase not in PHASE_UNIT_ORDER_TYPES:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Moves can only be suggested during a Movement phase.",
+            detail="Orders cannot be suggested in the current game state or phase.",
         )
-    members = set(recipients) if req.anonymous else {seat, *recipients}
+
+    if not recipients:
+        members = set(Power)
+    elif req.anonymous:
+        members = set(recipients)
+    else:
+        members = {seat, *recipients}
+
+    builds = (
+        game.builds
+        if game.phase != "Adjustments" or game.builds is not None
+        else compute_current_builds(game.units, game.ownership, game.year)
+    )
     units = {u.id: u for u in game.units}
     orders: dict[str, Order] = {}
     for order in req.orders:
+        if order.unit_id in orders:
+            raise HTTPException(
+                status_code=422, detail=f"{order.unit_id} has more than one suggested order."
+            )
+        if order.unit_id.startswith("BUILD_"):
+            if game.phase != "Adjustments":
+                raise HTTPException(
+                    status_code=422,
+                    detail="Build slots can only be suggested during Adjustments.",
+                )
+            slot_power = build_slot_power(order.unit_id)
+            home = build_slot_province(order.unit_id)
+            b_info = (builds or {}).get(slot_power.value, {}) if slot_power else {}
+            valid_slot = (
+                slot_power is not None
+                and home is not None
+                and home in PROVINCES
+                and (
+                    order.unit_id in game.orders
+                    or (b_info.get("count", 0) > 0 and home in b_info.get("homes", []))
+                )
+            )
+            if not valid_slot or slot_power is None or home is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"There is no build slot {order.unit_id} this phase.",
+                )
+            if slot_power not in members:
+                detail = (
+                    f"{order.unit_id} belongs to {slot_power.value}; anonymous backchannel "
+                    "suggestions may only include the recipient's units."
+                    if req.anonymous
+                    else f"{order.unit_id} belongs to {slot_power.value}, who is not in this thread."
+                )
+                raise HTTPException(status_code=422, detail=detail)
+            if order.order_type not in BUILD_SLOT_ORDER_TYPES:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"A {order.order_type.value} order cannot be suggested for a build slot.",
+                )
+            if order.order_type == OrderType.BUILD:
+                if order.unit_type == UnitType.FLEET:
+                    if PROVINCES[home].type == "LAND":
+                        raise HTTPException(
+                            status_code=422,
+                            detail=f"Cannot build a fleet in inland province '{home}'.",
+                        )
+                    if order.origin_coast and order.origin_coast not in PROVINCES[home].coasts:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"'{home}' has no coast '{order.origin_coast}'.",
+                        )
+                    origin_coast = fleet_coast(UnitType.FLEET, PROVINCES[home], order.origin_coast)
+                else:
+                    origin_coast = None
+            else:
+                origin_coast = None
+
+            orders[order.unit_id] = Order(
+                unit_id=order.unit_id,
+                power=slot_power,
+                unit_type=UnitType.ARMY if order.order_type == OrderType.WAIVE else order.unit_type,
+                origin=home,
+                origin_coast=origin_coast,
+                order_type=order.order_type,
+                via_convoy=False,
+                is_explicit=True,
+            )
+            continue
+
         unit = units.get(order.unit_id)
         if unit is None:
             raise HTTPException(status_code=422, detail=f"There is no unit {order.unit_id}.")
@@ -140,15 +239,22 @@ def _suggested_orders(
                 else f"{order.unit_id} belongs to {unit.power.value}, who is not in this thread."
             )
             raise HTTPException(status_code=422, detail=detail)
-        if order.order_type not in SUGGESTABLE_ORDER_TYPES:
+        if order.order_type not in PHASE_UNIT_ORDER_TYPES[game.phase]:
             raise HTTPException(
                 status_code=422,
-                detail=f"A {order.order_type.value} order cannot be suggested.",
+                detail=f"A {order.order_type.value} order cannot be suggested during {game.phase}.",
             )
-        if order.unit_id in orders:
-            raise HTTPException(
-                status_code=422, detail=f"{order.unit_id} has more than one suggested order."
-            )
+        if game.phase == "Retreats":
+            if not unit.is_dislodged:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"{order.unit_id} is not dislodged.",
+                )
+            if order.order_type == OrderType.RETREAT and not order.target:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"A RETREAT order for {order.unit_id} needs a target province.",
+                )
         validate_order_references(order)
         suggested = normalize_unit_order(order, unit)
         suggested.is_explicit = True
@@ -200,9 +306,9 @@ async def read_press(
     description=(
         "Post to the public box (no recipients) or to a private thread (recipients). With "
         "`anonymous` the author is hidden (one-to-one anonymous messages go to the recipient's "
-        "backchannel). The sender is the caller's own seat. A "
-        "signed private message may carry `orders`: moves suggested for the units of the "
-        "sender and the recipients, which change nobody's real orders."
+        "backchannel). The sender is the caller's own seat. Public press (signed or anonymous), "
+        "signed private messages, and one-to-one backchannels may carry `orders` in any active "
+        "phase (Movement, Retreats, or Adjustments), which change nobody's real orders."
     ),
 )
 async def send_press(

@@ -95,7 +95,7 @@ def spectator_view(message: PressMessage, revealed: bool) -> PressMessageView:
         season=message.season,
         year=message.year,
         phase=message.phase,
-        orders=[],
+        orders=[order.model_copy() for order in message.orders],
     )
 
 

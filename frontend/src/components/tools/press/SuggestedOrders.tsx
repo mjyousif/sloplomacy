@@ -17,7 +17,7 @@ import { powerName } from './pressLabels';
 
 export interface SuggestedOrdersProps {
   orders: Order[];
-  viewer: Power;
+  viewer: Power | null;
   provinces: Record<string, ProvinceInfo>;
   unitsByProvince: Record<string, Unit>;
   /** A draft's orders can be taken off one at a time. */

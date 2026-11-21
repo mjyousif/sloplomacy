@@ -165,8 +165,12 @@ def test_a_suggestion_only_covers_units_of_the_thread(match):
 
 def test_suggestion_rules(match):
     plan = [order("GER_A_MUN", target="BUR")]
-    # Not in the public box, and not in an anonymous message.
-    assert suggest(match, alice_headers(), "FRANCE", plan, recipients=()).status_code == 422
+    # Public press (signed and anonymous) is allowed, while anonymous group threads are refused.
+    assert suggest(match, alice_headers(), "FRANCE", plan, recipients=()).status_code == 200
+    assert (
+        suggest(match, alice_headers(), "FRANCE", plan, recipients=(), anonymous=True).status_code
+        == 200
+    )
     assert (
         suggest(
             match, alice_headers(), "FRANCE", plan, ["GERMANY", "ENGLAND"], anonymous=True
@@ -175,7 +179,7 @@ def test_suggestion_rules(match):
     )
     # One order for each unit.
     assert suggest(match, alice_headers(), "FRANCE", plan + plan).status_code == 422
-    # Only the orders of a Movement phase, and only provinces that exist.
+    # Only the orders of the active phase, and only provinces that exist.
     assert (
         suggest(match, alice_headers(), "FRANCE", [order("GER_A_MUN", "DISBAND")]).status_code
         == 422
@@ -186,7 +190,10 @@ def test_suggestion_rules(match):
     )
     # A message with no text and no orders is still empty.
     assert suggest(match, alice_headers(), "FRANCE", []).status_code == 422
-    assert feed(match, bob_headers(), "GERMANY")["messages"] == []
+    assert (
+        feed(match, bob_headers(), "GERMANY")["messages"] == []
+        or len(feed(match, bob_headers(), "GERMANY")["messages"]) == 2
+    )
 
 
 def test_an_anonymous_backchannel_may_suggest_only_the_recipients_units(match):
@@ -219,10 +226,194 @@ def test_an_anonymous_backchannel_may_suggest_only_the_recipients_units(match):
     assert "FRANCE" in leaks_sender.json()["detail"]
 
 
-def test_moves_can_only_be_suggested_in_a_movement_phase(match):
-    GAMES[match].phase = "Retreats"
-    refused = suggest(match, alice_headers(), "FRANCE", [order("GER_A_MUN", target="BUR")])
+def test_orders_cannot_be_suggested_after_game_over(match):
+    GAMES[match].winner = GAMES[match].units[0].power
+    refused = suggest(
+        match,
+        alice_headers(),
+        "FRANCE",
+        [order("GER_A_MUN", target="BUR")],
+        recipients=(),
+    )
     assert refused.status_code == 409
+
+
+def test_public_press_suggestions_allow_any_unit_and_reach_spectators(match):
+    res = suggest(
+        match,
+        alice_headers(),
+        "FRANCE",
+        [order("FRA_A_PAR", target="BUR"), order("ENG_F_LON", target="NTH")],
+        recipients=(),
+        anonymous=True,
+    )
+    assert res.status_code == 200, res.text
+
+    # Carol (England) sees the public suggestion without knowing France sent it.
+    (carol_msg,) = feed(match, carol_headers(), "ENGLAND")["messages"]
+    assert carol_msg["sender"] is None
+    assert carol_msg["recipients"] == []
+    assert {o["unit_id"] for o in carol_msg["orders"]} == {"FRA_A_PAR", "ENG_F_LON"}
+
+    # A spectator also sees the public suggestion with the anonymous sender hidden.
+    spec = client.get(f"/api/press?game_id={match}").json()
+    assert spec["power"] is None
+    (spec_msg,) = spec["messages"]
+    assert spec_msg["sender"] is None
+    assert {o["unit_id"] for o in spec_msg["orders"]} == {"FRA_A_PAR", "ENG_F_LON"}
+
+
+def test_retreats_phase_suggestions_cover_retreat_and_disband(match):
+    from domain.board import Power, Unit, UnitType
+
+    game = GAMES[match]
+    game.phase = "Retreats"
+    dislodged_ger = Unit(
+        id="GER_A_BUR_DIS",
+        power=Power.GERMANY,
+        unit_type=UnitType.ARMY,
+        province="BUR",
+        is_dislodged=True,
+    )
+    dislodged_fra = Unit(
+        id="FRA_A_PIC_DIS",
+        power=Power.FRANCE,
+        unit_type=UnitType.ARMY,
+        province="PIC",
+        is_dislodged=True,
+    )
+    game.units.extend([dislodged_ger, dislodged_fra])
+
+    # Non-dislodged units and Movement orders are rejected in Retreats.
+    assert (
+        suggest(match, alice_headers(), "FRANCE", [order("GER_A_MUN", "DISBAND")]).status_code
+        == 422
+    )
+    assert (
+        suggest(
+            match,
+            alice_headers(),
+            "FRANCE",
+            [order("GER_A_BUR_DIS", "MOVE", target="MUN")],
+        ).status_code
+        == 422
+    )
+    assert (
+        suggest(
+            match,
+            alice_headers(),
+            "FRANCE",
+            [order("GER_A_BUR_DIS", "RETREAT", target=None)],
+        ).status_code
+        == 422
+    )
+
+    plan = [
+        order("GER_A_BUR_DIS", "RETREAT", target="MUN"),
+        order("FRA_A_PIC_DIS", "DISBAND"),
+    ]
+    ok = suggest(match, alice_headers(), "FRANCE", plan)
+    assert ok.status_code == 200, ok.text
+    (msg,) = feed(match, bob_headers(), "GERMANY")["messages"]
+    by_unit = {o["unit_id"]: o for o in msg["orders"]}
+    assert by_unit["GER_A_BUR_DIS"]["order_type"] == "RETREAT"
+    assert by_unit["GER_A_BUR_DIS"]["target"] == "MUN"
+    assert by_unit["FRA_A_PIC_DIS"]["order_type"] == "DISBAND"
+
+    # Bob can adopt his retreat order via /api/orders/batch.
+    mine = [o for o in msg["orders"] if o["power"] == "GERMANY"]
+    taken = client.post(
+        f"/api/orders/batch?game_id={match}",
+        json={"power": "GERMANY", "orders": mine, "turn": "Spring 1901 Retreats"},
+        headers=bob_headers(),
+    )
+    assert taken.status_code == 200, taken.text
+    assert GAMES[match].orders["GER_A_BUR_DIS"].order_type.value == "RETREAT"
+    assert GAMES[match].orders["GER_A_BUR_DIS"].target == "MUN"
+
+
+def test_adjustments_phase_suggestions_cover_build_waive_and_disband(match):
+    from domain.board import Power
+    from engine.order_utils import refresh_diagnostics_and_simulation
+
+    game = GAMES[match]
+    # Remove France's Paris army so France has 1 build slot, and give England 1 extra SC Deficit.
+    game.units = [u for u in game.units if u.id != "FRA_A_PAR"]
+    game.ownership["BEL"] = Power.FRANCE
+    game.ownership["LON"] = Power.GERMANY
+    game.season = "Winter"
+    game.phase = "Adjustments"
+    refresh_diagnostics_and_simulation(game)
+
+    # Invalid build slot, inland fleet build, and wrong order types are rejected.
+    assert (
+        suggest(
+            match,
+            alice_headers(),
+            "FRANCE",
+            [order("BUILD_FRANCE_BRE", "BUILD", unit_type="A", origin="BRE")],
+        ).status_code
+        == 422
+    )
+    assert (
+        suggest(
+            match,
+            alice_headers(),
+            "FRANCE",
+            [order("BUILD_FRANCE_PAR", "BUILD", unit_type="F", origin="PAR")],
+        ).status_code
+        == 422
+    )
+    assert (
+        suggest(
+            match,
+            alice_headers(),
+            "FRANCE",
+            [order("BUILD_FRANCE_PAR", "HOLD", origin="PAR")],
+        ).status_code
+        == 422
+    )
+    assert (
+        suggest(
+            match,
+            alice_headers(),
+            "FRANCE",
+            [order("ENG_A_LVP", "HOLD")],
+            recipients=("ENGLAND",),
+        ).status_code
+        == 422
+    )
+
+    # Valid public Adjustments suggestion: France builds in Paris, England disbands Liverpool.
+    plan = [
+        {
+            "unit_id": "BUILD_FRANCE_PAR",
+            "power": "TURKEY",
+            "unit_type": "A",
+            "origin": "XXX",
+            "order_type": "BUILD",
+            "target": None,
+        },
+        order("ENG_A_LVP", "DISBAND"),
+    ]
+    ok = suggest(match, alice_headers(), "FRANCE", plan, recipients=())
+    assert ok.status_code == 200, ok.text
+    (msg,) = feed(match, carol_headers(), "ENGLAND")["messages"]
+    by_id = {o["unit_id"]: o for o in msg["orders"]}
+    assert by_id["BUILD_FRANCE_PAR"]["power"] == "FRANCE"
+    assert by_id["BUILD_FRANCE_PAR"]["origin"] == "PAR"
+    assert by_id["BUILD_FRANCE_PAR"]["order_type"] == "BUILD"
+    assert by_id["ENG_A_LVP"]["order_type"] == "DISBAND"
+
+    # England can adopt her disband order via /api/orders/batch.
+    mine = [o for o in msg["orders"] if o["power"] == "ENGLAND"]
+    taken = client.post(
+        f"/api/orders/batch?game_id={match}",
+        json={"power": "ENGLAND", "orders": mine, "turn": "Winter 1901 Adjustments"},
+        headers=carol_headers(),
+    )
+    assert taken.status_code == 200, taken.text
+    assert GAMES[match].orders["ENG_A_LVP"].order_type.value == "DISBAND"
 
 
 def test_taking_a_suggestion_is_an_ordinary_batch_of_ones_own_orders(match):

@@ -202,3 +202,25 @@ def test_a_private_message_has_no_spectator_view():
 
     with pytest.raises(ValueError):
         spectator_view(message(1, recipients=[Power.GERMANY]), revealed=True)
+
+
+def test_spectator_view_carries_public_suggested_orders_as_a_copy():
+    from domain.board import UnitType
+    from domain.orders import Order, OrderType
+
+    public = message(1, sender=Power.FRANCE, anonymous=True)
+    public.orders = [
+        Order(
+            unit_id="GER_A_MUN",
+            power=Power.GERMANY,
+            unit_type=UnitType.ARMY,
+            origin="MUN",
+            order_type=OrderType.MOVE,
+            target="BUR",
+        )
+    ]
+    view = spectator_view(public, revealed=False)
+    assert view.sender is None
+    assert [o.target for o in view.orders] == ["BUR"]
+    view.orders[0].target = "RUH"
+    assert public.orders[0].target == "BUR"
