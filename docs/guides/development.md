@@ -189,6 +189,8 @@ The suites live in `backend/tests/`, split into `unit/` (one module at a time, m
 
 WebSocket tests read messages with `receive_json(ws)` from `backend/tests/ws_testing.py` rather than `ws.receive_json()`. Starlette's test client waits forever for a message, so a broadcast the server never sends would hang the run; the helper fails the test after 5 seconds instead. In CI every job also has a `timeout-minutes` limit.
 
+Adding a migration under `supabase/migrations/`: take a timestamp newer than the last file's, write it so a second run changes nothing (CI applies every file twice, and the deploy re-runs them all), and let `backend/tests/unit/test_migrations.py` catch a repeated version.
+
 Run all tests from the repository root:
 ```bash
 python -m pytest backend/ -v

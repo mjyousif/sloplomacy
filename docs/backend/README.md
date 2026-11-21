@@ -136,6 +136,7 @@ Tests live in `backend/tests/` and follow the code they cover:
 - `tests/unit/` tests one module directly and mirrors its package: `tests/unit/engine/adjudicator/test_movement.py` covers `engine/adjudicator/movement.py`, and `tests/unit/engine/test_phase_timer.py` covers `engine/phase_timer.py`.
 - `tests/integration/` drives the FastAPI app through `TestClient` and the game socket. API flows go under `tests/integration/api/`, grouped by router or feature (the turn clock's are in `tests/integration/api/turn_clock/`).
 - Fixtures shared by a folder go in its `conftest.py`, plain helpers in a `helpers.py` next to the tests that use them. Every test folder is a package (`__init__.py`), because file names repeat across packages (`test_retreats.py` exists for both the adjudicator and the validator).
+- `tests/unit/test_migrations.py` guards `supabase/migrations/`: every file is named `<14-digit version>_<name>.sql` and no two share a version, because the Supabase CLI rejects a repeated version. A migration must stay safe to run twice, since CI applies them twice and the deploy re-runs every file each time. Never rename an applied migration to a version that moves it later in the order; pick one that keeps the order.
 - Every test file passes on its own (`python -m pytest backend/tests/path/to/test_file.py`), not only in the full run. A test that needs seeded lobbies or a fresh board sets them up itself.
 
 Run all tests from the repository root:
