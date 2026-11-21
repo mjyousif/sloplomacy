@@ -11,7 +11,6 @@ import {
   checkIsGameCreator,
   computeStagedChanges,
   computeStagedDiffLines,
-  filterUnitsForDisband,
   getAvailableCoasts,
   getUnacknowledgedAdminEntries,
   isSpectating,
@@ -107,24 +106,6 @@ describe('adminHelpers', () => {
 
     it('returns empty array for armies', () => {
       expect(getAvailableCoasts(spain, 'A')).toEqual([]);
-    });
-  });
-
-  describe('filterUnitsForDisband', () => {
-    const sampleUnits: Unit[] = [
-      { id: 'FRA_A_PAR', power: 'FRANCE', unit_type: 'A', province: 'PAR' },
-      { id: 'GER_A_BER', power: 'GERMANY', unit_type: 'A', province: 'BER' },
-      { id: 'GER_F_KIE', power: 'GERMANY', unit_type: 'F', province: 'KIE' },
-    ];
-
-    it('returns all units when filter is ALL', () => {
-      expect(filterUnitsForDisband(sampleUnits, 'ALL')).toHaveLength(3);
-    });
-
-    it('filters units by Great Power', () => {
-      const germanUnits = filterUnitsForDisband(sampleUnits, 'GERMANY');
-      expect(germanUnits).toHaveLength(2);
-      expect(germanUnits.every((u) => u.power === 'GERMANY')).toBe(true);
     });
   });
 });

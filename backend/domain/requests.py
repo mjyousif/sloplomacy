@@ -183,18 +183,6 @@ class AdminStatusResponse(BaseModel):
     creator_id: str | None = None
 
 
-class WebSocketGameUpdate(BaseModel):
-    type: str = "game_update"
-    game_id: str
-    state: GameState
-    summary: MultiplayerGameSummary | None = None
-
-
-class WebSocketLobbyUpdate(BaseModel):
-    type: str = "lobby_update"
-    games: list[MultiplayerGameSummary]
-
-
 class GameBootstrapResponse(BaseModel):
     state: GameState
     provinces: dict[str, ProvinceInfo]

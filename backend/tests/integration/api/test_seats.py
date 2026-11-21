@@ -249,7 +249,7 @@ def test_surrendered_power_cannot_submit_orders():
         json={"power": "GERMANY", "orders": [order]},
     )
     assert batch.status_code == 403
-    for path in ("/api/orders/clear-all", "/api/orders/confirm-all", "/api/unfinalize"):
+    for path in ("/api/orders/clear-all", "/api/unfinalize"):
         res = client.post(path, params={"game_id": gid}, json={"power": "GERMANY"})
         assert res.status_code == 403, path
     fin = client.post(

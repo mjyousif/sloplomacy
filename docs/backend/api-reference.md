@@ -41,7 +41,6 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/power` | Switch active viewing power (returns what the caller's own seat may see) | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/order` | Submit or update an order for a single military unit or build slot | `SingleOrderUpdateRequest` | `GameState` |
 | `POST` | `/api/orders/batch` | Update multiple orders simultaneously (atomic: an invalid batch changes nothing) | `OrderSubmissionRequest` | `GameState` |
-| `POST` | `/api/orders/confirm-all` | Mark all default orders of a given power as explicitly confirmed | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/orders/clear-all` | Reset every order of a given power to the phase default and withdraw its finalization | `SetPowerRequest` | `GameState` |
 | `POST` | `/api/finalize` | Pre-flight sanity check and finalize power's orders; auto-adjudicates when all are ready | `FinalizeRequest` | `FinalizeResponse` |
 | `POST` | `/api/unfinalize` | Unlock finalized orders for subsequent editing | `SetPowerRequest` | `GameState` |
@@ -465,7 +464,7 @@ Any `target_coast` on an army's order is ignored, because only fleets use coasts
 
 Send the optional `turn` (for example `"Spring 1901 Movement"`) to have the order refused with `409` if that turn has already resolved.
 
-Submits or modifies a single military instruction. Automatically triggers validation and non-destructive simulation preview. For order-drafting endpoints (`/api/order`, `/api/orders/batch`, `/api/orders/clear-all`, `/api/orders/confirm-all`), WebSocket broadcasts and Supabase persistence run in `BackgroundTasks` after the HTTP response is sent.
+Submits or modifies a single military instruction. Automatically triggers validation and non-destructive simulation preview. For order-drafting endpoints (`/api/order`, `/api/orders/batch`, `/api/orders/clear-all`), WebSocket broadcasts and Supabase persistence run in `BackgroundTasks` after the HTTP response is sent.
 
 #### Request (`SingleOrderUpdateRequest`):
 ```json
@@ -491,7 +490,7 @@ Returns `400` if the order names a province or coast that does not exist. A real
 
 An order on a build slot must fit the slot: `404` for a slot the phase does not have (a home centre that is occupied, not owned, or any slot outside Winter), and `422` for a `BUILD` whose `origin` is not the slot's own home centre (`BUILD_FRANCE_BRE` builds only in `BRE`). Otherwise the stored order and its resolution would be filed under different slots. `/api/orders/batch` also answers `422` when two orders name the same `unit_id`, so no order silently replaces another. A refused batch changes nothing.
 
-In multiplayer matches, callers must supply a valid `Authorization: Bearer <token>` matching the participant who claimed the Great Power (or game creator). Attempts by opponents or unauthenticated callers to issue orders for claimed powers return `403 Forbidden` or `401 Unauthorized`. An empty seat is in Civil Disorder, so only the host may order it. A surrendered power is in Civil Disorder too: `/api/order`, `/api/orders/batch`, `/api/orders/clear-all`, `/api/orders/confirm-all`, `/api/finalize` and `/api/unfinalize` answer `403` for it in a live match (a sandbox is unaffected), until a player claims the seat again. A build slot (`BUILD_<POWER>_<PROVINCE>`) belongs to the power it names, whatever the order's `power` says, and in `/api/orders/batch` every unit must belong to the batch's `power` (otherwise `403`). Like `/api/order`, a batch may carry `turn` (e.g. `"Spring 1901 Movement"`): if the game has moved on it answers `409` and changes nothing. The client sends it when a player takes the orders of a move suggestion from press. Returned `GameState` is sanitized for the commanding power to preserve Fog of War.
+In multiplayer matches, callers must supply a valid `Authorization: Bearer <token>` matching the participant who claimed the Great Power (or game creator). Attempts by opponents or unauthenticated callers to issue orders for claimed powers return `403 Forbidden` or `401 Unauthorized`. An empty seat is in Civil Disorder, so only the host may order it. A surrendered power is in Civil Disorder too: `/api/order`, `/api/orders/batch`, `/api/orders/clear-all`, `/api/finalize` and `/api/unfinalize` answer `403` for it in a live match (a sandbox is unaffected), until a player claims the seat again. A build slot (`BUILD_<POWER>_<PROVINCE>`) belongs to the power it names, whatever the order's `power` says, and in `/api/orders/batch` every unit must belong to the batch's `power` (otherwise `403`). Like `/api/order`, a batch may carry `turn` (e.g. `"Spring 1901 Movement"`): if the game has moved on it answers `409` and changes nothing. The client sends it when a player takes the orders of a move suggestion from press. Returned `GameState` is sanitized for the commanding power to preserve Fog of War.
 
 ---
 
@@ -901,7 +900,7 @@ Establishes a persistent, low-latency WebSocket connection scoped to a specific 
   - Send `{"type": "refresh"}` -> Server runs `tick_timer` (resolving a deadline that has passed), then resends the latest authoritative `game_update`. The client sends this when its countdown reaches zero; `ping` does not run the clock.
 - **Close codes**: `4004` (no such game), `4403` (passcode refused) and `4429` (too many wrong passcodes) are permanent, and the client does not reconnect. `1013` means try again later (the database could not be read).
 - **Automatic Broadcast Triggers**:
-  - Whenever an order is submitted or changed (`/api/order`, `/api/orders/batch`, `/api/orders/confirm-all`, `/api/orders/clear-all`).
+  - Whenever an order is submitted or changed (`/api/order`, `/api/orders/batch`, `/api/orders/clear-all`).
   - Whenever a power finalizes or unfinalizes (`/api/finalize`, `/api/unfinalize`).
   - Whenever a turn is adjudicated (`/api/adjudicate`, `/api/sandbox/ai-step`).
   - Whenever a scenario is reset (`/api/scenario`).

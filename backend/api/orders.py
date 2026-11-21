@@ -248,30 +248,3 @@ async def clear_all_power_orders(
     background_tasks.add_task(broadcast_lobby_update)
     background_tasks.add_task(persist_game, game.game_id)
     return viewer_state
-
-
-@router.post(
-    "/api/orders/confirm-all",
-    response_model=GameState,
-    summary="Confirm All Orders",
-    description="Mark all default orders for a given Great Power as explicitly confirmed.",
-)
-async def confirm_all_power_orders(
-    req: SetPowerRequest,
-    background_tasks: BackgroundTasks,
-    game_id: str | None = Query(default=None),
-    current_user: AuthUser | None = Depends(get_current_user),
-):
-    game = await resolve_game(game_id)
-    reject_if_game_over(game)
-    verify_power_authorization(game.game_id, req.power, current_user)
-    reject_if_surrendered(game, req.power)
-    for ord_obj in game.orders.values():
-        if ord_obj.power == req.power:
-            ord_obj.is_explicit = True
-    game.state_revision += 1
-    refresh_diagnostics_and_simulation(game)
-    viewer_state = sanitize_game_state_for_viewer(game, req.power)
-    background_tasks.add_task(broadcast_game_update, game.game_id, game)
-    background_tasks.add_task(persist_game, game.game_id)
-    return viewer_state

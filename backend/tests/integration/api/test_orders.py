@@ -1,4 +1,4 @@
-"""Order submission: single orders, batches, confirm-all, build slots, and orders that name nothing real."""
+"""Order submission: single orders, batches, build slots, and orders that name nothing real."""
 
 import asyncio
 import socket
@@ -49,13 +49,8 @@ def test_api_order_updates_finalize_and_unfinalize():
     st = order_res.json()
     assert st["orders"]["FRA_A_PAR"]["target"] == "BUR"
 
-    # Confirm all orders for France
-    conf_res = client.post("/api/orders/confirm-all", json={"power": "FRANCE"})
-    assert conf_res.status_code == 200
-    assert conf_res.json()["orders"]["FRA_A_PAR"]["is_explicit"] is True
-
     # Finalize France
-    fin_res = client.post("/api/finalize", json={"power": "FRANCE", "force": False})
+    fin_res = client.post("/api/finalize", json={"power": "FRANCE", "force": True})
     assert fin_res.status_code == 200
     assert "FRANCE" in fin_res.json()["state"]["finalized_powers"]
 
@@ -220,8 +215,7 @@ def test_api_winter_builds_and_slot_management():
             },
         )
 
-    # Confirm all orders for France and adjudicate Winter 1901 Adjustments -> Spring 1902 Movement
-    client.post("/api/orders/confirm-all", json={"power": "FRANCE"})
+    # Adjudicate Winter 1901 Adjustments -> Spring 1902 Movement
     res_w1901 = client.post("/api/adjudicate").json()
     assert res_w1901["season"] == "Spring"
     assert res_w1901["year"] == 1902
