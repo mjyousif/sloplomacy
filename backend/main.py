@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI):
             PROFILE_NAMES.update(profile_names)
             summaries = await supabase.load_all_summaries_from_db()
             for gid, summary in summaries.items():
-                if gid not in GAME_SUMMARIES:
+                if summary is not None and gid not in GAME_SUMMARIES:
                     hydrate_summary_profiles(summary)
                     GAME_SUMMARIES[gid] = summary
             logger.info("Loaded %d game summaries from Supabase on startup.", len(summaries))

@@ -406,8 +406,6 @@ export interface AdminBatchBoardEditRequest {
   ownership: Record<string, Power>;
   orders?: Record<string, Order> | null;
   summary_lines?: string[] | null;
-  user_id?: string | null;
-  email?: string | null;
 }
 
 export interface WebSocketGameUpdate {

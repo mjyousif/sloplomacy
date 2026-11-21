@@ -99,7 +99,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 ## Detailed Specifications: Lobby & Multiplayer Management
 
 ### 1. `GET /api/games`
-Returns the public multiplayer matches. A private campaign, a sandbox (saved or draft) and `proto_1901` are never listed: players find their own private games and saved sandboxes with `GET /api/games/mine`, and others join a private campaign by its id and passcode. If Supabase cannot be read, the list comes from memory and the call still succeeds.
+Returns the public multiplayer matches. A private campaign, a sandbox (saved or draft) and `proto_1901` are never listed: players find their own private games and saved sandboxes with `GET /api/games/mine`, and others join a private campaign by its id and passcode. If Supabase cannot be read, the list comes from memory and the call still succeeds. A saved game whose stored summary is unreadable is withheld, never listed as a public game. Requests that arrive while a table read is in flight share that one read.
 
 #### Response (`List[MultiplayerGameSummary]`):
 ```json
@@ -623,7 +623,8 @@ Computes and returns the Campaign Statistics & War Ledger (`CampaignStatsRespons
 ### `POST /api/test/seed`
 Seed the game state for a specific test scenario (`standard_1901`, `tactical_blunders_demo`, `spring_retreats_demo`, `winter_adjustments_demo`). Designed for LLM-driven E2E tests and local developer verification without requiring admin credentials or full manual playthroughs.
 
-- **Security Gate**: Only active when `ENVIRONMENT` is `development` or `test`, `ALLOW_INSECURE_DEV_AUTH=true`, or `ENABLE_TEST_SEED_ENDPOINT=1`. Returns `403 Forbidden` in production or if called against a multiplayer match.
+- **Seeded boards**: a `game_id` other than `proto_1901` that has no summary gets a throwaway draft sandbox summary (not persisted), so it is a sandbox and not a summary-less game that nobody may use.
+- **Security Gate**: Its own gate, separate from unsigned dev auth: only active when `ENVIRONMENT` is `development` or `test`, `ALLOW_INSECURE_DEV_AUTH=true` (not on Cloud Run), or `ENABLE_TEST_SEED_ENDPOINT=1`. Returns `403 Forbidden` in production or if called against a multiplayer match.
 
 **Request Schema (`SeedScenarioRequest`)**:
 ```json
@@ -646,6 +647,8 @@ Seed the game state for a specific test scenario (`standard_1901`, `tactical_blu
 Strictly restricted to the creator/host of the room in multiplayer matches. Authentication is cryptographically enforced via Supabase JWT Bearer tokens passed in the `Authorization: Bearer <token>` header:
 - **Solo Sandbox Bypass**: The default local sandbox (`proto_1901`) and saved personal sandboxes (`is_sandbox=True`) permit anonymous local access without authentication headers.
 - **Cryptographic JWT Verification**: In multiplayer matches, requests must supply a valid Supabase JWT signed with `SUPABASE_JWT_SECRET` (HS256). Claims (`exp`, `sub`, `email`) are validated before trusting identity.
+- **Identity is the token alone**: no `X-User-Id` / `X-User-Email` header and no `user_id` / `email` request field is read. The admin log's actor is the token's user.
+- **No summary, no access**: a game held in memory without a summary (neither the default board nor a private `sbx_` copy) answers `403` to every admin action, `/api/adjudicate` included.
 - **Error Codes**:
   - `401 Unauthorized`: Token missing, expired, or invalid signature when accessing multiplayer admin actions.
   - `403 Forbidden`: Authenticated caller's `sub` or `email` does not match the room creator (`creator_id` / `created_by`).
@@ -661,9 +664,7 @@ Rolls back match state to a snapshot from timeline history. Accepts an optional 
 #### Request (`AdminRollbackRequest`):
 ```json
 {
-  "snapshot_index": 0,
-  "user_id": "usr_1020",
-  "email": "marshal@slop.eu"
+  "snapshot_index": 0
 }
 ```
 
@@ -696,7 +697,9 @@ Applies an atomic batch of staged Direct-Edit board mutations (`units`, `ownersh
 ---
 
 ### 18c. `POST /api/admin/acknowledge`
-Marks one or more `AdminActionLogEntry` items in `GameState.admin_log` as acknowledged by the calling participant (`user_id`, `email`, and/or `power`) and persists the updated `GameState` to Supabase so the player is not re-prompted after a page reload or cold start.
+Marks one or more `AdminActionLogEntry` items in `GameState.admin_log` as acknowledged by the caller and persists the updated `GameState` to Supabase so the player is not re-prompted after a page reload or cold start.
+
+The request holds `entry_ids` (all entries when omitted) and, for a guest, `power`. The acknowledging identity comes from the token: its user id, its email and the seats it holds. A caller without a token is a guest: `power` is believed only for a seat claimed without an account, otherwise it is recorded as `guest`. A `user_id`, `email` or other power in the body is ignored, so nobody can dismiss another player's warning. `acknowledged_by` in the response is the id recorded.
 
 
 ---

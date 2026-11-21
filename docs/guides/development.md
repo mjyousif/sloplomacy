@@ -57,21 +57,21 @@ python scripts/quickstart.py
 - `python scripts/quickstart.py --test`: Run the complete backend test suite and verify frontend build.
 
 ### Local Demo Sign-In
-When Supabase is not configured, the sign-in form creates a local demo account. It is stored in the browser, and the frontend sends it to the backend as an unsigned `alg: none` token.
+When Supabase is not configured, the sign-in form creates a local demo account. It is stored in the browser, and the frontend sends it to the backend as an unsigned `alg: none` token that expires an hour after each request. The backend refuses an unsigned token without an `exp`, so a hand-made one (a script, a Playwright spec) must carry one.
 
-`backend/security/auth.py` rejects those tokens unless `ENVIRONMENT` is `development` or `test`, or `ALLOW_INSECURE_DEV_AUTH=true`. Every launcher above sets `ENVIRONMENT=development` for the backend it starts, so a demo sign-in works out of the box:
+`backend/security/auth.py` rejects those tokens unless `ALLOW_INSECURE_DEV_AUTH=true`. `ENVIRONMENT=development` or `test` alone no longer enables them, and even with the flag the backend ignores it (and logs an error once) on Cloud Run (`K_SERVICE` is set) or under `ENVIRONMENT=production`. Every launcher above sets the flag, and `ENVIRONMENT=development` for the dev-game seeding, for the backend it starts, so a demo sign-in works out of the box:
 
-- `scripts/quickstart.py` sets it in `backend_env()`. `scripts/start.sh`, `scripts/start.bat`, `scripts/dev.sh` and the default path of `scripts/start.ps1` and `scripts/dev.ps1` all run `scripts/quickstart.py`.
-- `scripts/dev.ps1` sets it in the backend window for `-SeparateWindows`, which starts Uvicorn directly.
+- `scripts/quickstart.py` sets them in `backend_env()`. `scripts/start.sh`, `scripts/start.bat`, `scripts/dev.sh` and the default path of `scripts/start.ps1` and `scripts/dev.ps1` all run `scripts/quickstart.py`.
+- `scripts/dev.ps1` sets them in the backend window for `-SeparateWindows`, which starts Uvicorn directly.
 
-**Skipping the form.** On the dev server the app signs in a throwaway local player on load, with no form, so you can host and join right away. `getInitialAuthUser` in `frontend/src/lib/supabase.ts` creates a `local_dev_<tag>` player the first time a browser profile loads the app, and keeps it in `localStorage` like any demo sign-in. Each profile or incognito window gets its own id, so a second one is a different player and can claim its own seat. It runs only on the Vite dev server (`import.meta.env.DEV`) and only when Supabase is not configured, so a production build leaves it out, and Vitest (`MODE=test`) never runs it. The backend still needs `ENVIRONMENT=development` to accept the token, which the launchers set.
+**Skipping the form.** On the dev server the app signs in a throwaway local player on load, with no form, so you can host and join right away. `getInitialAuthUser` in `frontend/src/lib/supabase.ts` creates a `local_dev_<tag>` player the first time a browser profile loads the app, and keeps it in `localStorage` like any demo sign-in. Each profile or incognito window gets its own id, so a second one is a different player and can claim its own seat. It runs only on the Vite dev server (`import.meta.env.DEV`) and only when Supabase is not configured, so a production build leaves it out, and Vitest (`MODE=test`) never runs it. The backend still needs `ALLOW_INSECURE_DEV_AUTH=true` to accept the token, which the launchers set.
 
 To test the signed-out experience (the guest sandbox, the sign-in prompts), start with `python scripts/quickstart.py --no-dev-login` (`.\scripts\dev.ps1 -NoDevLogin`), or set `VITE_DEV_LOGIN=0` when you start Vite by hand. Clear the site's `localStorage` once if a dev player is already saved. `scripts/e2e_runner.py` sets it for the Vite it starts, because the specs expect to begin signed out.
 
-A value already in your shell wins. To try the production behaviour locally, run `ENVIRONMENT=production python scripts/quickstart.py`, and a demo sign-in gets a `401`.
+A value already in your shell wins. To try the production behaviour locally, run `ALLOW_INSECURE_DEV_AUTH=false python scripts/quickstart.py` (or `ENVIRONMENT=production python scripts/quickstart.py`), and a demo sign-in gets a `401`.
 
 > [!WARNING]
-> With this flag the backend trusts unsigned tokens, and it also reads other tokens without checking their signature if it has no Supabase keys, so anyone who can reach it can act as any player. It belongs on a local machine only. Never set `ENVIRONMENT=development`, `ENVIRONMENT=test` or `ALLOW_INSECURE_DEV_AUTH=true` in `scripts/deploy.*`, `terraform/`, the `Dockerfile` or CI. The deployed container runs Uvicorn directly, so it never gets the flag from these launchers.
+> With this flag the backend trusts unsigned tokens, and it also reads other tokens without checking their signature if it has no Supabase keys, so anyone who can reach it can act as any player. It belongs on a local machine only. Never set `ALLOW_INSECURE_DEV_AUTH=true`, `ENVIRONMENT=development` or `ENVIRONMENT=test` in `scripts/deploy.*`, `terraform/`, the `Dockerfile` or CI. The deployed container runs Uvicorn directly, so it never gets the flag from these launchers, and a flag that did leak into Cloud Run would be ignored.
 
 ---
 
@@ -99,10 +99,10 @@ uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
 Starting Uvicorn by hand skips the launchers, so to use a [local demo sign-in](#local-demo-sign-in) set the flag yourself first:
 ```bash
-export ENVIRONMENT=development      # macOS/Linux
+export ENVIRONMENT=development ALLOW_INSECURE_DEV_AUTH=true      # macOS/Linux
 ```
 ```powershell
-$env:ENVIRONMENT = "development"    # Windows PowerShell
+$env:ENVIRONMENT = "development"; $env:ALLOW_INSECURE_DEV_AUTH = "true"    # Windows PowerShell
 ```
 
 ### 2. Frontend Application (`frontend/`)
@@ -233,7 +233,7 @@ Sloplomacy includes an interactive end-to-end (E2E) testing framework designed f
 By default, `frontend/playwright.config.ts` uses system Google Chrome (`channel: 'chrome'`). If Google Chrome is not installed on your machine, you can override the browser channel with `PLAYWRIGHT_CHANNEL=none` (or `PLAYWRIGHT_CHANNEL=chromium`) after installing Playwright's Chromium binary (`npx playwright install chromium` in `frontend/`).
 
 ### Running Interactive Scenarios
-Use the cross-platform runner (`scripts/e2e_runner.py`), which auto-detects and launches the backend (with `ENVIRONMENT=development`) and frontend dev servers if not already running:
+Use the cross-platform runner (`scripts/e2e_runner.py`), which auto-detects and launches the backend (with `ENVIRONMENT=development` and `ALLOW_INSECURE_DEV_AUTH=true`) and frontend dev servers if not already running:
 
 ```bash
 # List all available scenarios:
@@ -296,7 +296,7 @@ A Game Master agent can run a full game between seven agent players against the 
 | `gmtool.py` | Game Master views: one resolved turn with every order and its result (`hist N`), centre counts (`sc`), a fog-of-war check (`probe POWER`) and `units`. |
 | `watch.py` | A read-only spectator page (`python3 scripts/playtest/watch.py 8021`) showing every power's live orders and all press. |
 
-The scripts read `SIM_API` (default `http://127.0.0.1:8020`) and `SIM_GAME`; `sim_client.py` also reads `SIM_POWER`. They sign in with the local demo token, so the backend must run with `ENVIRONMENT=development` (see [Local Demo Sign-In](#local-demo-sign-in)). Never point them at a deployed server. A run writes its notes, log and report to `artifacts/playtest/<timestamp>/`, which is gitignored.
+The scripts read `SIM_API` (default `http://127.0.0.1:8020`) and `SIM_GAME`; `sim_client.py` also reads `SIM_POWER`. They sign in with the local demo token, so the backend must run with `ALLOW_INSECURE_DEV_AUTH=true` (see [Local Demo Sign-In](#local-demo-sign-in)). Never point them at a deployed server. A run writes its notes, log and report to `artifacts/playtest/<timestamp>/`, which is gitignored.
 
 ---
 
@@ -333,8 +333,8 @@ The `main` branch is protected with automated quality gates and configuration-as
 
 ### "Backend Connection Required" / "Backend returned 401" After a Demo Sign-In
 - The backend is rejecting the unsigned demo token. See [Local Demo Sign-In](#local-demo-sign-in).
-- Start the app with one of the launchers, or set `ENVIRONMENT=development` before running Uvicorn by hand.
-- Check that your shell does not already export another value: `echo $ENVIRONMENT` (or `$env:ENVIRONMENT` in PowerShell).
+- Start the app with one of the launchers, or set `ALLOW_INSECURE_DEV_AUTH=true` before running Uvicorn by hand.
+- Check that your shell does not already export another value: `echo $ALLOW_INSECURE_DEV_AUTH` (or `$env:ALLOW_INSECURE_DEV_AUTH` in PowerShell), and that `ENVIRONMENT` is not `production`.
 
 ### Frontend API Proxy 502 / Connection Refused
 - Confirm the backend is running at `http://127.0.0.1:8000`.

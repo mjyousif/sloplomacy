@@ -58,7 +58,7 @@ export function AdminTurnClockSidebar({
   progress,
   settings,
 }: AdminTurnClockSidebarProps) {
-  const { isOpen, gameId, gameState, user, onStateUpdated, onToast } = settings;
+  const { isOpen, gameId, gameState, onStateUpdated, onToast } = settings;
 
   const [historyEntries, setHistoryEntries] = useState<TurnHistoryEntry[]>([]);
   const [selectedSnapshotIndex, setSelectedSnapshotIndex] = useState<
@@ -80,10 +80,8 @@ export function AdminTurnClockSidebar({
     return {
       'Content-Type': 'application/json',
       ...authHeaders,
-      ...(user?.id ? { 'X-User-Id': user.id } : {}),
-      ...(user?.email ? { 'X-User-Email': user.email } : {}),
     };
-  }, [user?.id, user?.email]);
+  }, []);
 
   const fetchAdminStatus = useCallback(async () => {
     try {
@@ -154,8 +152,6 @@ export function AdminTurnClockSidebar({
             ...(selectedSnapshotIndex !== null
               ? { snapshot_index: selectedSnapshotIndex }
               : {}),
-            user_id: user?.id || 'guest',
-            email: user?.email || 'commander@diplomacy.local',
           }),
         },
       );
@@ -190,8 +186,6 @@ export function AdminTurnClockSidebar({
             season: selectedSeason,
             year: selectedYear,
             phase: selectedPhase,
-            user_id: user?.id || 'guest',
-            email: user?.email || 'commander@diplomacy.local',
           }),
         },
       );
@@ -221,10 +215,7 @@ export function AdminTurnClockSidebar({
         {
           method: 'POST',
           headers: await getHeaders(),
-          body: JSON.stringify({
-            user_id: user?.id || 'guest',
-            email: user?.email || 'commander@diplomacy.local',
-          }),
+          body: JSON.stringify({}),
         },
       );
       if (!res.ok) {

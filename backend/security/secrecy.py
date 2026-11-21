@@ -13,9 +13,18 @@ from storage.store import (
     PRIVATE_SANDBOXES,
     PROFILE_NAMES,
     is_multiplayer_match,
+    lacks_summary,
     resolve_game,
 )
 from storage.supabase import is_valid_uuid
+
+
+def _missing_summary_error(game_id: str) -> HTTPException:
+    """A game with no summary has no seats, owner or passcode on record, so nobody passes."""
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=f"Game '{game_id}' is unavailable: its record is incomplete.",
+    )
 
 
 def require_view_access(
@@ -31,6 +40,8 @@ def require_view_access(
     passcode is counted.
     """
     summary = GAME_SUMMARIES.get(game_id)
+    if lacks_summary(game_id):
+        raise _missing_summary_error(game_id)
     if not (summary and summary.has_passcode and is_multiplayer_match(game_id)):
         return
     if current_user and any(
@@ -55,6 +66,8 @@ def verify_admin_access(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Game '{gid}' is not loaded.",
         )
+    if lacks_summary(gid):
+        raise _missing_summary_error(gid)
     if not summary or summary.is_sandbox:
         return
 
@@ -88,7 +101,7 @@ def verify_power_authorization(
 
     summary = GAME_SUMMARIES.get(game_id)
     if not summary:
-        return
+        raise _missing_summary_error(game_id)
 
     is_creator = False
     if current_user:

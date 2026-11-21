@@ -69,7 +69,13 @@ def demo_sign_in_headers() -> dict:
         return base64.b64encode(json.dumps(value, separators=(",", ":")).encode()).decode()
 
     header = encode({"alg": "none", "typ": "JWT"})
-    payload = encode({"sub": "local_demo_example_com", "email": "demo@example.com"})
+    payload = encode(
+        {
+            "sub": "local_demo_example_com",
+            "email": "demo@example.com",
+            "exp": int(time.time()) + 3600,
+        }
+    )
     return {"Authorization": f"Bearer {header}.{payload}."}
 
 

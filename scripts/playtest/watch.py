@@ -2,7 +2,7 @@
 """Read-only spectator page for a playtest. python3 scripts/playtest/watch.py [port]  ->  http://127.0.0.1:8021
 Env: SIM_API (default http://127.0.0.1:8020), SIM_GAME (game id).
 Reads the game as each seat (omniscient view: all press, all live orders) and never writes."""
-import base64, json, os, sys, urllib.request
+import base64, json, os, sys, time, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 API, GAME = os.environ.get("SIM_API", "http://127.0.0.1:8020"), os.environ.get("SIM_GAME", "proto_1901")
@@ -12,7 +12,7 @@ SCS = set("EDI LVP LON BRE PAR MAR KIE MUN BER VEN ROM NAP VIE BUD TRI STP MOS W
 
 def get(path, power):
     b = lambda d: base64.urlsafe_b64encode(json.dumps(d).encode()).rstrip(b"=").decode()
-    tok = f"{b({'alg': 'none', 'typ': 'JWT'})}.{b({'sub': 'sim_' + power.lower(), 'email': power.lower() + '@sim.test'})}."
+    tok = f"{b({'alg': 'none', 'typ': 'JWT'})}.{b({'sub': 'sim_' + power.lower(), 'email': power.lower() + '@sim.test', 'exp': int(time.time()) + 3600})}."
     sep = "&" if "?" in path else "?"
     req = urllib.request.Request(f"{API}{path}{sep}game_id={GAME}", headers={"Authorization": f"Bearer {tok}"})
     return json.loads(urllib.request.urlopen(req, timeout=5).read())

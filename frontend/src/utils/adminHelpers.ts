@@ -223,9 +223,9 @@ export async function acknowledgeAdminEntriesRequest(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         entry_ids: entryIds,
-        user_id: authUser?.id || (!lockedPower ? 'guest' : undefined),
-        email: authUser?.email,
-        power: lockedPower,
+        // Who is acknowledging comes from the token. A guest names its seat; the server
+        // believes it only for a seat claimed without an account.
+        power: authUser ? undefined : lockedPower,
       }),
     },
   );

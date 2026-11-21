@@ -15,7 +15,7 @@ const USER = {
 function demoHeaders(): Record<string, string> {
   const encode = (value: object) =>
     Buffer.from(JSON.stringify(value)).toString('base64');
-  const token = `${encode({ alg: 'none', typ: 'JWT' })}.${encode({ sub: USER.id, email: USER.email })}.`;
+  const token = `${encode({ alg: 'none', typ: 'JWT' })}.${encode({ sub: USER.id, email: USER.email, exp: Math.floor(Date.now() / 1000) + 3600 })}.`;
   return {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',

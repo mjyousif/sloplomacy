@@ -107,22 +107,16 @@ class AuthUser(BaseModel):
 
 class AdminRollbackRequest(BaseModel):
     snapshot_index: int | None = None
-    user_id: str | None = None
-    email: str | None = None
 
 
 class AdminSetTurnRequest(BaseModel):
     season: str
     year: int
     phase: str
-    user_id: str | None = None
-    email: str | None = None
 
 
 class AdminAcknowledgeRequest(BaseModel):
     entry_ids: list[str] | None = None
-    user_id: str | None = None
-    email: str | None = None
     power: Power | None = None
 
 
@@ -135,8 +129,6 @@ class AdminBatchBoardEditRequest(BaseModel):
     ownership: dict[str, Power]
     orders: dict[str, Order] | None = None
     summary_lines: list[str] | None = None
-    user_id: str | None = None
-    email: str | None = None
 
 
 class AdminStatusResponse(BaseModel):

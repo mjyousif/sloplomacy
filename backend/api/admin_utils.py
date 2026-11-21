@@ -25,24 +25,19 @@ from ws.connection_manager import (
 def resolve_admin_actor(
     game_id: str,
     current_user: AuthUser | None,
-    req_user_id: str | None = None,
-    req_email: str | None = None,
-    x_user_id: str | None = None,
-    x_user_email: str | None = None,
 ) -> tuple[str, str | None]:
-    """Return (actor_display, actor_id) for an admin action, never an email address."""
+    """Return (actor_display, actor_id) for an admin action, never an email address.
+
+    The actor is whoever the verified token names. Nothing a client puts in a header or the body
+    can name another. With no token (only a sandbox reaches an admin route without one) the
+    actor is the game's creator on record, or the generic commander.
+    """
     summary = GAME_SUMMARIES.get(game_id)
-    user_id = (
-        (current_user.user_id if current_user else None)
-        or req_user_id
-        or x_user_id
-        or (summary.creator_id if summary else None)
+    user_id = (current_user.user_id if current_user else None) or (
+        summary.creator_id if summary else None
     )
-    raw_email = (
-        (current_user.email if current_user else None)
-        or req_email
-        or x_user_email
-        or (summary.created_by if summary else None)
+    raw_email = (current_user.email if current_user else None) or (
+        summary.created_by if summary else None
     )
     actor_display = None
     if summary:

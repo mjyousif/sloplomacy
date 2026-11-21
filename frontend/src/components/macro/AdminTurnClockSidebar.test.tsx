@@ -39,7 +39,12 @@ const UPDATED_STATE = {
 
 const USER = { id: 'u1', email: 'a@b.c', displayName: 'Ada' } as AuthUser;
 
-const calls: { url: string; method?: string; body?: unknown }[] = [];
+const calls: {
+  url: string;
+  method?: string;
+  body?: unknown;
+  headers?: HeadersInit;
+}[] = [];
 
 beforeEach(() => {
   calls.length = 0;
@@ -49,6 +54,7 @@ beforeEach(() => {
       calls.push({
         url,
         method: init?.method,
+        headers: init?.headers,
         body: init?.body ? JSON.parse(init.body as string) : undefined,
       });
       const body = url.includes('/status')
@@ -131,7 +137,12 @@ describe('AdminTurnClockSidebar', () => {
     );
     const post = calls.find((c) => c.method === 'POST');
     expect(post?.url).toBe('/api/admin/rollback?game_id=mp_1');
-    expect(post?.body).toMatchObject({ snapshot_index: 0, user_id: 'u1' });
+    // Who is asking is the token's business: no identity rides in the body or in headers.
+    expect(post?.body).toEqual({ snapshot_index: 0 });
+    expect(
+      Object.keys(post?.headers ?? {}).map((k) => k.toLowerCase()),
+    ).not.toEqual(expect.arrayContaining(['x-user-id']));
+    expect(JSON.stringify(post?.headers)).not.toMatch(/x-user/i);
     expect(settings.onToast).toHaveBeenCalledWith(
       'Turn rolled back to Spring 1903 Movement!',
     );
