@@ -85,7 +85,15 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
     assignedBuildsCount,
     neededDisbands,
     assignedDisbandsCount,
+    myActiveFieldUnits,
+    myDislodgedUnits,
+    scCountByPower,
   } = progress;
+  const countsText = `${myActiveFieldUnits.length} Units${
+    myDislodgedUnits.length > 0
+      ? ` (+${myDislodgedUnits.length} Dislodged)`
+      : ''
+  } • ${scCountByPower[activePower]} SCs`;
 
   const handleOrderTypeChange = (unit: Unit, newType: OrderType) => {
     const nextOrder = buildDefaultOrderForType({
@@ -164,11 +172,18 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
         </div>
       )}
 
-      <div className={styles.macroListHeader} data-testid="macro-list-header">
+      <div
+        className={styles.macroListHeader}
+        data-testid="macro-list-header"
+        data-sticky="true"
+      >
         <span>
           {isAdjustmentPhase && buildCount < 0
             ? `DISBAND UNITS (${assignedDisbandsCount}/${neededDisbands} SELECTED)`
-            : `ACTIVE FORCE ORDERS (${myUnits.length} UNITS)`}
+            : 'ACTIVE ORDERS'}
+        </span>
+        <span className={styles.macroCounts} data-testid="macro-unit-counts">
+          {countsText}
         </span>
         {!showBuildsSection && densityToggle ? densityToggle : hintLabel}
       </div>

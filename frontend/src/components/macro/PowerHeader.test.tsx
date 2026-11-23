@@ -241,9 +241,7 @@ describe('PowerHeader', () => {
     expect(
       c.querySelector('[data-testid="power-banner-title"]'),
     ).toHaveTextContent('French Republic');
-    expect(
-      c.querySelector('[data-testid="power-banner-sub"]'),
-    ).toHaveTextContent('3 Units • 3 SCs');
+    expect(c.querySelector('[data-testid="power-banner-sub"]')).toBeNull();
     fireEvent.click(screen.getByTestId('macro-sidebar-collapse-btn'));
     expect(onToggleCollapse).toHaveBeenCalledTimes(1);
   });
@@ -274,40 +272,14 @@ describe('PowerHeader', () => {
     expect(screen.queryByTestId('macro-sidebar-collapse-btn')).toBeNull();
   });
 
-  it('panel: adds the dislodged units to the count', () => {
-    const dislodged = unitAt('FRANCE', 'A', 'MAR', { is_dislodged: true });
-    const c = header(
-      {},
-      progressFor({ units: [A_PAR, dislodged], isRetreatPhase: true }),
-    );
-    expect(
-      c.querySelector('[data-testid="power-banner-sub"]'),
-    ).toHaveTextContent('1 Units (+1 Dislodged) • 3 SCs');
-  });
-
-  it('sheet: short name, counts with the unconfirmed number, and the status', () => {
+  it('sheet: short name and status only, without counts', () => {
     const c = header({ variant: 'sheet' });
     expect(
       c.querySelector('[data-testid="power-name-text"]'),
     ).toHaveTextContent('France');
-    expect(screen.getByTestId('macro-sheet-counts')).toHaveTextContent(
-      '3 units · 3 SCs · 3 unconfirmed',
-    );
+    expect(c.querySelector('[data-testid="macro-sheet-counts"]')).toBeNull();
     expect(c.querySelector('[data-testid="status-badge"]')).toHaveTextContent(
       'Drafting',
-    );
-  });
-
-  it('sheet: drops the unconfirmed count once everything is confirmed', () => {
-    const orders = Object.fromEntries(
-      Object.entries(progressFor().unitsByProv).map(([, u]) => [
-        u.id,
-        { unit_id: u.id, is_explicit: true },
-      ]),
-    );
-    header({ variant: 'sheet' }, progressFor({ orders: orders as never }));
-    expect(screen.getByTestId('macro-sheet-counts')).toHaveTextContent(
-      /^3 units · 3 SCs$/,
     );
   });
 

@@ -38,12 +38,12 @@ Body format that has worked well here:
   - If adding files under `supabase/migrations/`, note that CI (`Deploy to Google Cloud Run` -> `Apply Supabase Migrations`) automatically runs all `supabase/migrations/*.sql` in a single transaction on merge to `main` when `DATABASE_URL` / `SUPABASE_DB_URL` is set, and include a backup/rollback note for destructive data migrations.
 - `Closes #<issue>` when there is one.
 
-## Attaching screenshots
+## Attaching screenshots (mandatory for UI / visual changes)
 
-For visual changes (layout, map, piece styles, phone layout), attach one or two key screenshots from `artifacts/e2e/<scenario>/` as a PR comment. Backend-only or logic changes don't need images. Needs `gh` 2.99+ and write access:
+For any user-facing UI or visual change (layout, sidebars, top bar, modals, map, piece styles, lobby, phone layout), you **must** attach after-screenshots from `artifacts/e2e/<scenario>/` as a PR comment immediately when opening or updating the PR—never wait for a reviewer to ask. When the change touches shared components (sidebars, headers, order controls, modals, lobby, map HUD), include **both** desktop (`1440×900`) and mobile (`390×844`, `mobile` scenario) screenshots. Backend-only or pure logic changes don't need images. Needs `gh` 2.99+ and write access:
 
 ```powershell
-gh pr comment <n> --body-file .pr_comment.md --attach "artifacts/e2e/<scenario>/step_02_<name>.png#What it shows"
+gh pr comment <n> --body-file .pr_comment.md --attach "artifacts/e2e/<desktop_scenario>/step_02_<name>.png#Desktop: what it shows" --attach "artifacts/e2e/mobile_compact_hud/step_07_<name>.png#Mobile: what it shows"
 ```
 Alt text goes after `#`. If the comment body references the file as `![alt](./path.png)`, the link is rewritten to the uploaded asset. Never commit `artifacts/`.
 
@@ -59,5 +59,6 @@ Squash merging rewrites history, so a branch that was cut from another open PR c
 
 - Push to `main`, force-push over a reviewed branch without saying so, or disable checks.
 - Push new work onto a branch whose PR is already `MERGED` or `CLOSED`.
+- Open or push a UI/visual PR without attaching after-screenshots (both desktop and mobile when shared UI changed) via `gh pr comment --attach`.
 - Leave docs out of the PR. The docs checklist in `AGENTS.md` section 5.1 and `.agents/skills/verify-change/SKILL.md` section 3 is part of the change—confirm `docs/features/` and `docs/architecture/` reflect any new feature or invariant, and every touched doc has an up-to-date `## Contents` TOC.
 - Bundle unrelated fixes. Small single-topic PRs were reviewed and merged fastest.
