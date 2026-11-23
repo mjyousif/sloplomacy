@@ -16,7 +16,7 @@ const authedFetchMock = vi.hoisted(() =>
   vi.fn(async () => ({
     ok: true,
     status: 200,
-    json: async () => ({ power: 'FRANCE', revealed: false, messages: [] }),
+    json: async () => ({ power: 'FRANCE', messages: [] }),
   })),
 );
 vi.mock('../lib/supabase', () => ({ authedFetch: authedFetchMock }));

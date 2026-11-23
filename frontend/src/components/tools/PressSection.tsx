@@ -32,8 +32,6 @@ export interface PressSectionProps {
   gameId: string;
   /** The seat the player writes from; null while watching, which shows the public box alone. */
   power: Power | null;
-  /** The game is over: all press is shown and only the public box stays open. */
-  gameOver: boolean;
   /** The player surrendered this seat, so they can read but no longer write. */
   surrendered: boolean;
   provinces: Record<string, ProvinceInfo>;
@@ -83,7 +81,6 @@ export const PressSection: React.FC<PressSectionProps> = (props) =>
 const PlayerPressSection: React.FC<PressSectionProps & { power: Power }> = ({
   gameId,
   power,
-  gameOver,
   surrendered,
   provinces,
   units,
@@ -179,9 +176,6 @@ const PlayerPressSection: React.FC<PressSectionProps & { power: Power }> = ({
   let blocked: string | null = null;
   if (surrendered)
     blocked = 'You surrendered, so you can read press but not send it.';
-  else if (gameOver && active.key !== PUBLIC_CHANNEL)
-    blocked =
-      'The game is over. Private press is closed and shown to everyone.';
   else if (active.kind === 'backchannel')
     blocked =
       'Select a power in Diplomatic Standing to send an anonymous message.';
@@ -266,7 +260,7 @@ const PlayerPressSection: React.FC<PressSectionProps & { power: Power }> = ({
       data-testid="press-section"
       data-press-sheet={isSheet ? 'true' : undefined}
     >
-      {isSheet && !gameOver && !surrendered && (
+      {isSheet && !surrendered && (
         <PressRecipientBar
           viewer={power}
           recipients={recipients}
@@ -286,7 +280,6 @@ const PlayerPressSection: React.FC<PressSectionProps & { power: Power }> = ({
       />
       <p className={styles.channelCaption} data-testid="press-channel-caption">
         {channelLabel(active, power)}
-        {gameOver && active.key !== PUBLIC_CHANNEL && ' (revealed)'}
       </p>
       <PressMessageList
         listRef={listRef}
@@ -311,7 +304,7 @@ const PlayerPressSection: React.FC<PressSectionProps & { power: Power }> = ({
         }}
       />
       <PressComposer
-        plainOnly={gameOver || surrendered}
+        plainOnly={surrendered}
         draft={text}
         onDraftChange={setText}
         anonymous={sendAnonymous}

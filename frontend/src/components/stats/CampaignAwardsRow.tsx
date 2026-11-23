@@ -4,6 +4,7 @@ import {
   Crown,
   Flame,
   Hammer,
+  MessageSquare,
   Swords,
   TrendingUp,
 } from 'lucide-react';
@@ -26,6 +27,8 @@ function AwardIcon({ id }: { id: string }) {
       return <Anchor size={13} aria-hidden="true" />;
     case 'attrition_magnet':
       return <Flame size={13} aria-hidden="true" />;
+    case 'silver_tongue':
+      return <MessageSquare size={13} aria-hidden="true" />;
     case 'expansionist':
       return <TrendingUp size={13} aria-hidden="true" />;
     case 'industrialist':

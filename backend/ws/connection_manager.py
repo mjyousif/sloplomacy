@@ -147,7 +147,7 @@ class ConnectionManager:
         for ws in await send_to_all(sends):
             self.disconnect_game(game_id, ws)
 
-    async def broadcast_press(self, game_id: str, message: PressMessage, revealed: bool) -> None:
+    async def broadcast_press(self, game_id: str, message: PressMessage) -> None:
         """Send a new press message to each seated player's socket that may read it, as that
         player may see it. A socket with no seat (a spectator) is sent public messages alone, as
         a spectator may see them, with `power` null."""
@@ -160,9 +160,9 @@ class ConnectionManager:
             if ws_power is None:
                 if message.recipients:
                     continue
-                view = spectator_view(message, revealed)
-            elif can_read(message, ws_power, revealed):
-                view = view_of(message, ws_power, revealed)
+                view = spectator_view(message)
+            elif can_read(message, ws_power):
+                view = view_of(message, ws_power)
             else:
                 continue
             payload = {

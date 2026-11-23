@@ -249,25 +249,25 @@ def test_the_socket_delivers_press_only_to_players_who_may_read_it(match):
             ctx.__exit__(None, None, None)
 
 
-def test_game_over_reveals_all_press_and_closes_private_press(match):
+def test_game_over_keeps_private_press_secret_and_anonymous_hidden(match):
     send(match, alice_headers(), "FRANCE", "Split Belgium?", ["GERMANY"])
     send(match, bob_headers(), "GERMANY", "Trust nobody", anonymous=True)
     GAMES[match].winner = Power.FRANCE
 
     payload = feed(match, carol_headers(), "ENGLAND")
-    assert payload["revealed"] is True
+    assert "revealed" not in payload
     assert [(m["body"], m["sender"]) for m in payload["messages"]] == [
-        ("Split Belgium?", "FRANCE"),
-        ("Trust nobody", "GERMANY"),
+        ("Trust nobody", None),
     ]
-    assert send(match, carol_headers(), "ENGLAND", "psst", ["FRANCE"]).status_code == 409
+    # Private and anonymous press remain open after game over.
+    assert send(match, carol_headers(), "ENGLAND", "psst", ["FRANCE"]).status_code == 200
     assert (
         send(
             match, carol_headers(), "ENGLAND", "psst", ["FRANCE", "GERMANY"], anonymous=True
         ).status_code
-        == 409
+        == 200
     )
-    assert send(match, carol_headers(), "ENGLAND", "psst", anonymous=True).status_code == 409
+    assert send(match, carol_headers(), "ENGLAND", "psst", anonymous=True).status_code == 200
     assert send(match, carol_headers(), "ENGLAND", "Good game").status_code == 200
 
 
@@ -374,11 +374,10 @@ def test_a_spectator_never_reads_private_press_even_after_the_game(match):
     GAMES[match].winner = Power.FRANCE
 
     payload = client.get(f"/api/press?game_id={match}").json()
-    assert payload["revealed"] is True
-    # Once the game is over the anonymous public author is shown, as to the players, but the
-    # private thread never is.
+    assert "revealed" not in payload
+    # Even after the game is over, private press stays hidden and anonymous public authors stay hidden.
     assert [(m["seq"], m["body"], m["sender"]) for m in payload["messages"]] == [
-        (1, "Trust nobody", "GERMANY")
+        (1, "Trust nobody", None)
     ]
 
 

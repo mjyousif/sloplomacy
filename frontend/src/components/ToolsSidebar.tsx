@@ -152,9 +152,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
           viewingHistory={viewingHistory}
           adminOverrideActive={adminOverrideActive}
           pressPower={
-            press && !press.gameOver && !press.surrendered
-              ? (press.power ?? undefined)
-              : undefined
+            press && !press.surrendered ? (press.power ?? undefined) : undefined
           }
           onPressPick={isDrawer ? onOpenPress : undefined}
         />

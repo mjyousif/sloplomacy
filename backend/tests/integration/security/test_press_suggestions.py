@@ -454,8 +454,9 @@ def test_a_batch_for_a_turn_that_has_passed_is_refused(match):
     assert GAMES[match].orders["GER_A_MUN"].order_type.value == "HOLD"
 
 
-def test_game_over_reveals_suggestions_with_the_rest_of_the_press(match):
+def test_game_over_keeps_private_suggestions_hidden(match):
     assert suggest(match, alice_headers(), "FRANCE", JOINT_PLAN).status_code == 200
     GAMES[match].winner = GAMES[match].units[0].power
-    (message,) = feed(match, carol_headers(), "ENGLAND")["messages"]
+    assert feed(match, carol_headers(), "ENGLAND")["messages"] == []
+    (message,) = feed(match, bob_headers(), "GERMANY")["messages"]
     assert len(message["orders"]) == 2

@@ -468,8 +468,6 @@ export interface PressMessage {
 export interface PressFeed {
   /** The seat the feed is for; null for a spectator, who is sent the public box alone. */
   power: Power | null;
-  /** True once the game is over: every thread and anonymous author is shown. */
-  revealed: boolean;
   messages: PressMessage[];
 }
 
@@ -534,6 +532,7 @@ export interface PowerStats {
   moves_bounced: number;
   move_success_rate: number;
   self_bounces: number;
+  press_messages_sent: number;
 }
 
 export interface SCTimelinePoint {

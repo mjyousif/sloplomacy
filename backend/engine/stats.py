@@ -5,6 +5,7 @@ from collections import defaultdict
 from domain.board import Power, Unit, UnitType
 from domain.game_state import GameState
 from domain.orders import Order, OrderResolution, OrderType, SimulationResult
+from domain.press import PressMessage
 from domain.stats import CampaignAward, CampaignStatsResponse, PowerStats, SCTimelinePoint
 from engine.adjudicator.resolver import adjudicate_turn, compute_current_builds
 from engine.adjudicator.territory import supply_center_owners
@@ -249,6 +250,13 @@ def _compute_awards(stats: dict[Power, PowerStats]) -> list[CampaignAward]:
             lambda s: s.units_destroyed + s.units_disbanded,
             lambda n: f"{n} lost",
         ),
+        (
+            "silver_tongue",
+            "Silver Tongue",
+            "Most Press Messages Sent",
+            lambda s: s.press_messages_sent,
+            lambda n: f"{n} message{'s' if n != 1 else ''}",
+        ),
     ]
     fallback_specs = [
         (
@@ -329,6 +337,7 @@ def compute_campaign_stats(
     history: list[GameState],
     current_state: GameState,
     player_names: dict[Power, str] | None = None,
+    press_messages: list[PressMessage] | None = None,
 ) -> CampaignStatsResponse:
     """Compute campaign statistics solely from resolved `history` and public `current_state`.
 
@@ -424,6 +433,11 @@ def compute_campaign_stats(
         ps.move_success_rate = (
             round(100.0 * ps.moves_succeeded / total_moves, 1) if total_moves > 0 else 0.0
         )
+
+    if current_state.winner is not None and press_messages:
+        for msg in press_messages:
+            if msg.sender in stats:
+                stats[msg.sender].press_messages_sent += 1
 
     awards = _compute_awards(stats)
 

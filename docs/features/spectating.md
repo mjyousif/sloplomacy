@@ -58,7 +58,7 @@ The client treats a view as spectating when it is in multiplayer mode with no lo
 ## What a spectator sees
 
 - **Board state**: with no viewer power every unit gets its server default order (hold, or disband for a dislodged unit) in place of the real hidden one. Validation issues are emptied, and the adjudication preview and per-unit move options are rebuilt from those defaults so nothing is inferred from them.
-- **Press**: the public box only, numbered separately from seated players so gaps from private press never show. Anonymous public authors stay hidden until the game ends. Private threads are never readable, even after the game ends. See [Press and diplomacy](press-and-diplomacy.md).
+- **Press**: the public box only, numbered separately from seated players so gaps from private press never show. Anonymous public authors stay hidden, even after the game ends. Private threads are never readable, even after the game ends. See [Press and diplomacy](press-and-diplomacy.md).
 - **Summaries**: sanitized like everyone else's, so email addresses are stripped.
 - Once the game has a winner masking stops and the finished board is shown as is.
 

@@ -27,7 +27,7 @@ from engine.topology.provinces import PROVINCES
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from security.auth import AuthUser, get_current_user
 from security.passcode import client_address
-from security.press import feed_for, press_revealed, spectator_feed, view_of
+from security.press import feed_for, spectator_feed, view_of
 from security.secrecy import require_view_access, viewer_power_for
 from storage.press import add_press, next_press_seq, persist_press, press_of
 from storage.store import (
@@ -286,17 +286,12 @@ async def read_press(
     gid = game.game_id
     seat = viewer_power_for(gid, current_user, power)
     _refuse_unheld(power, seat)
-    revealed = press_revealed(game)
     if seat is None:
         require_view_access(gid, current_user, x_passcode, client=client_address(request))
         messages = await _loaded_press(gid)
-        return PressFeed(
-            power=None, revealed=revealed, messages=spectator_feed(messages, revealed, after)
-        )
+        return PressFeed(power=None, messages=spectator_feed(messages, after))
     messages = await _loaded_press(gid)
-    return PressFeed(
-        power=seat, revealed=revealed, messages=feed_for(messages, seat, revealed, after)
-    )
+    return PressFeed(power=seat, messages=feed_for(messages, seat, after))
 
 
 @router.post(
@@ -342,11 +337,6 @@ async def send_press(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"{seat.value} has surrendered and can no longer send press.",
         )
-    if press_revealed(game) and (recipients or req.anonymous):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="The game is over: all press is public now, so only signed public messages can be sent.",
-        )
 
     _check_rate(gid, seat)
     await _loaded_press(gid)
@@ -368,7 +358,6 @@ async def send_press(
     )
     add_press(gid, message)
 
-    revealed = press_revealed(game)
-    await manager.broadcast_press(gid, message, revealed)
+    await manager.broadcast_press(gid, message)
     await persist_press(gid)
-    return view_of(message, seat, revealed)
+    return view_of(message, seat)

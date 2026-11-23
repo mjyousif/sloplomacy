@@ -2,7 +2,6 @@ import type { Power, PressFeed, PressMessage } from '../types/diplomacy';
 import {
   loadReadMarks,
   mergeMessages,
-  readUpToNow,
   saveReadMarks,
 } from '../utils/pressHelpers';
 
@@ -20,8 +19,6 @@ export interface PressState {
   /** The seat it is read from; null with a `gameId` is a spectator. */
   power: Power | null;
   messages: PressMessage[];
-  /** True once the game is over and all press is shown. */
-  revealed: boolean;
   status: 'idle' | 'loading' | 'ready' | 'error';
   /** How far the player has read each channel. */
   lastRead: Record<string, number>;
@@ -38,7 +35,6 @@ const EMPTY: PressState = {
   gameId: null,
   power: null,
   messages: [],
-  revealed: false,
   status: 'idle',
   lastRead: {},
   recipients: [],
@@ -89,26 +85,14 @@ export const pressStore = {
   },
 
   /**
-   * A whole feed from `GET /api/press` replaces what is held. Once the press is revealed it is
-   * numbered for the whole game, so the read marks switch to that numbering; the first time,
-   * everything held is marked read rather than the whole revealed history counted as unread.
+   * A whole feed from `GET /api/press` replaces what is held.
    */
   setFeed(gameId: string, feed: PressFeed): void {
     if (!inScope(gameId, feed.power)) return;
     const messages = [...feed.messages].sort((a, b) => a.seq - b.seq);
-    let lastRead = state.lastRead;
-    if (feed.revealed !== state.revealed) {
-      lastRead = loadReadMarks(gameId, feed.power, feed.revealed);
-      if (feed.revealed && Object.keys(lastRead).length === 0) {
-        lastRead = readUpToNow(messages);
-        saveReadMarks(gameId, feed.power, lastRead, true);
-      }
-    }
     set({
       ...state,
       messages,
-      revealed: feed.revealed,
-      lastRead,
       status: 'ready',
     });
   },
@@ -133,7 +117,7 @@ export const pressStore = {
     if (state.gameId === null) return;
     if ((state.lastRead[channel] ?? 0) >= seq) return;
     const lastRead = { ...state.lastRead, [channel]: seq };
-    saveReadMarks(state.gameId, state.power, lastRead, state.revealed);
+    saveReadMarks(state.gameId, state.power, lastRead);
     set({ ...state, lastRead });
   },
 

@@ -41,7 +41,6 @@ const PROVINCES = {
 const base = (extra: Partial<PressSectionProps> = {}): PressSectionProps => ({
   gameId: 'g1',
   power: 'FRANCE',
-  gameOver: false,
   surrendered: false,
   provinces: PROVINCES,
   units: [],
@@ -51,10 +50,10 @@ const base = (extra: Partial<PressSectionProps> = {}): PressSectionProps => ({
   ...extra,
 });
 
-const fill = (messages: PressMessage[], revealed = false) =>
+const fill = (messages: PressMessage[]) =>
   act(() => {
     pressStore.open('g1', 'FRANCE');
-    pressStore.setFeed('g1', { power: 'FRANCE', revealed, messages });
+    pressStore.setFeed('g1', { power: 'FRANCE', messages });
   });
 
 const bodies = () =>
@@ -342,30 +341,24 @@ describe('PressSection', () => {
     expect(screen.getByTestId('press-input')).toHaveValue('Spam');
   });
 
-  it('after the game shows every thread and author, and only the public box stays open', async () => {
-    render(<PressSection {...base({ gameOver: true })} />);
-    fill(
-      [
-        msg(1, 'GERMANY', 'Stab France in the fall', ['ENGLAND']),
-        msg(2, 'ENGLAND', 'It was me', ['FRANCE', 'GERMANY'], {
-          anonymous: true,
-        }),
-      ],
-      true,
-    );
-    // Private and anonymous press are closed.
-    expect(screen.queryByTestId('press-anonymous')).toBeNull();
+  it('keeps press visibility, anonymity, and private threads unchanged after game over', async () => {
+    render(<PressSection {...base()} />);
+    fill([
+      msg(1, 'GERMANY', 'Split Belgium?', ['FRANCE']),
+      msg(2, null, 'Mystery note', ['FRANCE', 'GERMANY'], {
+        anonymous: true,
+      }),
+    ]);
+    expect(screen.getByTestId('press-anonymous')).toBeEnabled();
     expect(screen.getByTestId('press-input')).toBeEnabled();
 
-    await userEvent.click(tab(threadKey(['ENGLAND', 'GERMANY'])));
-    expect(bodies()).toEqual(['Stab France in the fall']);
+    await userEvent.click(tab(threadKey(['FRANCE', 'GERMANY'])));
+    expect(bodies()).toEqual(['Split Belgium?', 'Mystery note']);
     expect(screen.getByTestId('press-channel-caption')).toHaveTextContent(
-      'Private thread between England, Germany (revealed)',
+      'Private thread with Germany',
     );
-    expect(screen.getByTestId('press-input')).toBeDisabled();
-
-    await userEvent.click(tab(threadKey(['ENGLAND', 'FRANCE', 'GERMANY'])));
-    expect(authors()).toEqual(['England']);
+    expect(screen.getByTestId('press-input')).toBeEnabled();
+    expect(authors()).toEqual(['Germany', 'Anonymous']);
   });
 
   it('lets a surrendered player read but not write', () => {
@@ -590,7 +583,6 @@ describe('PressSection while watching', () => {
       pressStore.open('g1', null);
       pressStore.setFeed('g1', {
         power: null,
-        revealed: false,
         messages: [msg(1, 'GERMANY', 'Hello all'), msg(2, null, 'Who?')],
       });
     });
@@ -624,7 +616,6 @@ describe('PressSection while watching', () => {
       pressStore.open('g1', null);
       pressStore.setFeed('g1', {
         power: null,
-        revealed: false,
         messages: [publicSuggestion],
       });
     });

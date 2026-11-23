@@ -183,6 +183,7 @@ export function buildFallbackCampaignStats(
       moves_bounced: 0,
       move_success_rate: 0,
       self_bounces: 0,
+      press_messages_sent: 0,
     };
   }
 

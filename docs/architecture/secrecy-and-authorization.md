@@ -137,8 +137,8 @@ Press (chat) has its own rules in `backend/security/press.py`, applied when mess
 - **Public** messages (no recipients) are readable by every seated player. **Private** messages are readable by the sender and the recipients only.
 - **Anonymous** messages keep the same readers, but the author is hidden from everyone except themself, the host included. In a group thread the recipients list is widened to the whole thread so the missing name is not deducible; a one-to-one anonymous message keeps just its recipient.
 - **Per-viewer numbering**: each player is sent `seq` numbers 1, 2, 3... of the messages *they* can read, so gaps never reveal how much private press others exchange.
-- **Reveal at game over**: once there is a winner, every seated player reads every message and sees every author, with the game-wide numbering.
-- **Spectators** (no seat) read only the public box, numbered by its own public counter. Anonymous public authors stay hidden until reveal, private messages are never readable (even after game over) and spectators cannot send.
+- **Unchanged at game over**: press visibility, anonymity, and per-viewer numbering never change when the game ends.
+- **Spectators** (no seat) read only the public box, numbered by its own public counter. Anonymous public authors stay hidden, private messages are never readable (even after game over) and spectators cannot send.
 
 ## Public summaries and PII
 
