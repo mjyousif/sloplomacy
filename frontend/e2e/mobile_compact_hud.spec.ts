@@ -62,7 +62,8 @@ test.describe('Scenario 06: Phone game screen', () => {
       await expect(page.locator('[data-testid="macro-sheet-peek"] [data-testid="btn-clear-all"]')).toHaveCount(0);
       await expect(page.locator('[data-testid="btn-finalize-orders"]')).toBeVisible();
       await expect(page.locator('[data-testid="btn-adjudicate-phase"]')).toBeVisible();
-      await expect(page.locator('[data-testid="macro-sheet-counts"]')).toContainText('3 units');
+      await expect(page.locator('[data-testid="macro-sheet-counts"]')).toHaveCount(0);
+      await expect(page.locator('[data-testid="macro-list-header"] [data-testid="macro-unit-counts"]')).toContainText('3 Units • 3 SCs');
 
       const peekMetrics = await page.evaluate(() => {
         const sheet = document.querySelector('[data-testid="macro-sidebar"]')!.getBoundingClientRect();

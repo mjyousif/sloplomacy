@@ -71,7 +71,7 @@ describe('UnitOrderList', () => {
     ).toHaveTextContent('ACTIVE ORDERS');
   });
 
-  it('shows the unit and center counts in the sticky header, not the phone sheet', () => {
+  it('shows the unit and center counts in the sticky header on both desktop and the phone sheet', () => {
     const { container } = list();
     const header = container.querySelector(
       '[data-testid="macro-list-header"]',
@@ -81,7 +81,13 @@ describe('UnitOrderList', () => {
       '3 Units • 3 SCs',
     );
     const sheet = list({ isSheet: true }).container;
-    expect(sheet.querySelector('[data-testid="macro-unit-counts"]')).toBeNull();
+    const sheetHeader = sheet.querySelector(
+      '[data-testid="macro-list-header"]',
+    ) as HTMLElement;
+    expect(sheetHeader.dataset.sticky).toBe('true');
+    expect(
+      within(sheetHeader).getByTestId('macro-unit-counts'),
+    ).toHaveTextContent('3 Units • 3 SCs');
   });
 
   it('adds the dislodged units to the count', () => {

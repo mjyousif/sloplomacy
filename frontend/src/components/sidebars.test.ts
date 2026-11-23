@@ -328,11 +328,9 @@ describe('MacroSidebar', () => {
       );
       const body = html.slice(html.indexOf('bottom-sheet-body'));
       expect(peek).toContain('France');
-      // The desktop rail only gives the unconfirmed count in a tooltip. React's text
-      // separators move whenever the JSX is re-wrapped, so compare the text without them.
-      expect(peek.replace(/<!-- -->/g, '')).toContain(
-        '2 units · 2 SCs · 1 unconfirmed',
-      );
+      expect(peek).not.toContain('data-testid="macro-sheet-counts"');
+      expect(peek).toContain('Finalize (1)');
+      expect(body.replace(/<!-- -->/g, '')).toContain('2 Units • 2 SCs');
       expect(peek).toContain('data-testid="sheet-power-switcher-trigger"');
       expect(peek).toContain('data-testid="btn-finalize-orders"');
       expect(peek).toContain('data-testid="btn-adjudicate-phase"');

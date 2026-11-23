@@ -73,3 +73,15 @@
     color: #fde047;
   }
 }
+
+@layer compact {
+  :global([data-layout="compact"]) .macro-list-header {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  /* In the phone sheet, .bottom-sheet-body is the scrollport (with 0 padding). */
+  :global([data-layout="compact"]) .macro-list-header[data-sticky="true"] {
+    top: 0;
+  }
+}

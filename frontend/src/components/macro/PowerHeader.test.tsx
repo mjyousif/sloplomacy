@@ -272,29 +272,14 @@ describe('PowerHeader', () => {
     expect(screen.queryByTestId('macro-sidebar-collapse-btn')).toBeNull();
   });
 
-  it('sheet: short name, counts with the unconfirmed number, and the status', () => {
+  it('sheet: short name and status only, without counts', () => {
     const c = header({ variant: 'sheet' });
     expect(
       c.querySelector('[data-testid="power-name-text"]'),
     ).toHaveTextContent('France');
-    expect(screen.getByTestId('macro-sheet-counts')).toHaveTextContent(
-      '3 units · 3 SCs · 3 unconfirmed',
-    );
+    expect(c.querySelector('[data-testid="macro-sheet-counts"]')).toBeNull();
     expect(c.querySelector('[data-testid="status-badge"]')).toHaveTextContent(
       'Drafting',
-    );
-  });
-
-  it('sheet: drops the unconfirmed count once everything is confirmed', () => {
-    const orders = Object.fromEntries(
-      Object.entries(progressFor().unitsByProv).map(([, u]) => [
-        u.id,
-        { unit_id: u.id, is_explicit: true },
-      ]),
-    );
-    header({ variant: 'sheet' }, progressFor({ orders: orders as never }));
-    expect(screen.getByTestId('macro-sheet-counts')).toHaveTextContent(
-      /^3 units · 3 SCs$/,
     );
   });
 

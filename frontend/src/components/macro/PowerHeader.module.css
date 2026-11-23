@@ -343,12 +343,6 @@
     color: #f8eed9;
   }
 
-  :global([data-layout="compact"]) .macro-sheet-counts {
-    font-size: 0.74rem;
-    line-height: 1.2;
-    color: var(--text-muted);
-  }
-
   :global([data-layout="compact"]) .macro-sheet-status-row .status-badge {
     padding: 3px 8px;
     font-size: 0.72rem;

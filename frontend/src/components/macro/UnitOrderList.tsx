@@ -175,19 +175,16 @@ export const UnitOrderList: React.FC<UnitOrderListProps> = ({
       <div
         className={styles.macroListHeader}
         data-testid="macro-list-header"
-        data-sticky={!isSheet}
+        data-sticky="true"
       >
         <span>
           {isAdjustmentPhase && buildCount < 0
             ? `DISBAND UNITS (${assignedDisbandsCount}/${neededDisbands} SELECTED)`
             : 'ACTIVE ORDERS'}
         </span>
-        {/* The phone sheet's peek already shows the counts. */}
-        {!isSheet && (
-          <span className={styles.macroCounts} data-testid="macro-unit-counts">
-            {countsText}
-          </span>
-        )}
+        <span className={styles.macroCounts} data-testid="macro-unit-counts">
+          {countsText}
+        </span>
         {!showBuildsSection && densityToggle ? densityToggle : hintLabel}
       </div>
 

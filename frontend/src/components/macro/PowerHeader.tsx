@@ -315,7 +315,7 @@ interface PowerHeaderProps {
   onTogglePowerSwitcher?: () => void;
 }
 
-/** Which power the player commands, its units and supply centers, and its status. */
+/** Which power the player commands and its status. */
 export const PowerHeader: React.FC<PowerHeaderProps> = ({
   variant,
   activePower,
@@ -329,13 +329,7 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
   onTogglePowerSwitcher,
 }) => {
   const powerMeta = POWER_METADATA[activePower];
-  const {
-    myActiveFieldUnits,
-    myDislodgedUnits,
-    myBlockingIssues,
-    scCountByPower,
-    unconfirmedCount,
-  } = progress;
+  const { myBlockingIssues } = progress;
   const statusBadge = (
     <StatusBadge
       isSurrendered={isSurrendered}
@@ -345,9 +339,6 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
   );
 
   if (variant === 'sheet') {
-    const countsText = `${myActiveFieldUnits.length} units · ${scCountByPower[activePower]} SCs${
-      unconfirmedCount > 0 ? ` · ${unconfirmedCount} unconfirmed` : ''
-    }`;
     return (
       <div
         className={styles.macroSheetStatusRow}
@@ -382,12 +373,6 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
                   aria-hidden="true"
                 />
               </span>
-              <span
-                className={styles.macroSheetCounts}
-                data-testid="macro-sheet-counts"
-              >
-                {countsText}
-              </span>
             </span>
           </button>
         ) : (
@@ -401,12 +386,6 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
                 data-testid="power-name-text"
               >
                 {powerMeta.shortName}
-              </span>
-              <span
-                className={styles.macroSheetCounts}
-                data-testid="macro-sheet-counts"
-              >
-                {countsText}
               </span>
             </div>
           </>
