@@ -1,11 +1,11 @@
-import { FlaskConical, Play } from 'lucide-react';
+import { Clock, FlaskConical, Play } from 'lucide-react';
 import type React from 'react';
 import type {
   AuthUser,
   MultiplayerGameSummary,
   Power,
 } from '../../types/diplomacy';
-import { describeMyGame } from '../../utils/heroGame';
+import { deadlineLabel, describeMyGame } from '../../utils/heroGame';
 import { PowerFlag } from '../ui/PowerFlag';
 import { GameActionsMenu } from './GameActionsMenu';
 import { MiniMap } from './MiniMap';
@@ -42,6 +42,9 @@ export const OtherGamesStrip: React.FC<OtherGamesStripProps> = ({
       <div className={styles.cards}>
         {games.map((game) => {
           const copy = describeMyGame(game, user, nowMs);
+          const live =
+            copy.urgency === 'your-move' || copy.urgency === 'waiting';
+          const due = live ? deadlineLabel(game.deadline, nowMs) : null;
           return (
             <article
               key={game.game_id}
@@ -76,6 +79,12 @@ export const OtherGamesStrip: React.FC<OtherGamesStripProps> = ({
                   <PowerFlag power={copy.power} width={18} height={12} />
                   <span>{copy.turn}</span>
                 </p>
+                {due && (
+                  <p className={styles.meta} data-testid="my-game-due">
+                    <Clock size={13} aria-hidden="true" />
+                    <span>{due}</span>
+                  </p>
+                )}
               </div>
               <div className={styles.actions}>
                 <button
