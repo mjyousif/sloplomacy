@@ -103,21 +103,18 @@ export interface PressSyncOptions {
   gameId: string | null;
   /** The seat, or null for a spectator, who reads the public box alone. */
   power: Power | null;
-  /** Whether the game is over. All press is shown then, so it is read again. */
-  gameOver: boolean;
   /** A private match's passcode, which a spectator needs to read its press. */
   passcode?: string | null;
 }
 
 /**
- * Keeps the press store filled for the match and seat on screen: reads it when they change
- * or the game ends, catches up when the socket comes back, and polls while it is down.
+ * Keeps the press store filled for the match and seat on screen: reads it when they change,
+ * catches up when the socket comes back, and polls while it is down.
  * New messages otherwise arrive on the game socket (see `useDiplomacyWebSocket`).
  */
 export function usePressSync({
   gameId,
   power,
-  gameOver,
   passcode = null,
 }: PressSyncOptions) {
   const socketOpen = useSyncExternalStore(
@@ -126,7 +123,6 @@ export function usePressSync({
     readSocketOpen,
   );
 
-  // `gameOver` is not read below: it is what makes the feed load again once all is revealed.
   useEffect(() => {
     if (!gameId) {
       pressStore.close();
@@ -134,7 +130,7 @@ export function usePressSync({
     }
     pressStore.open(gameId, power);
     loadAll({ gameId, power, passcode });
-  }, [gameId, power, gameOver, passcode]);
+  }, [gameId, power, passcode]);
 
   useEffect(() => () => pressStore.close(), []);
 

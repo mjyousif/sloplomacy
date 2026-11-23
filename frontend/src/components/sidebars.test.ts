@@ -254,7 +254,6 @@ describe('ToolsSidebar', () => {
         press: {
           gameId: 'mp_1',
           power: 'FRANCE',
-          gameOver: false,
           surrendered: false,
           provinces: mockProvinces,
           units: mockUnits,

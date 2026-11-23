@@ -40,29 +40,27 @@ An anonymous one-to-one message appears as a *backchannel* in the recipient's fe
 - body is trimmed; an empty body is only allowed when orders are attached; maximum 1000 characters;
 - the sender is dropped from the recipient list; sending only to yourself is refused;
 - every recipient power must actually be held by someone;
-- a sender may post at most 8 messages per 10 seconds per game (`429` beyond that);
-- once the game is over only *signed public* messages may be sent, because everything is already revealed.
+- a sender may post at most 8 messages per 10 seconds per game (`429` beyond that).
 
 ## Who sees what
 
 ```mermaid
 flowchart TD
-    M[Stored message: real sender, recipients, anonymous flag] --> R{Game over?}
-    R -- yes --> ALL["Every seated player reads everything, every author shown, game-wide numbering"]
-    R -- no --> K{Viewer kind}
+    M[Stored message: real sender, recipients, anonymous flag] --> K{Viewer kind}
     K -- Seated player --> P{"Sender or recipient, or public?"}
     P -- no --> HIDE[Not sent at all]
     P -- yes --> A{"Anonymous and viewer is not the sender?"}
     A -- no --> SHOWN[Sender shown]
     A -- yes --> MASK["Sender = null; group thread lists whole thread as recipients"]
-    K -- Spectator --> PUB["Public messages only, own numbering, anonymous authors hidden until game over"]
+    K -- Spectator --> PUB["Public messages only, own numbering, anonymous authors hidden"]
 ```
 
 Details that are easy to miss:
 
 - **Hidden authors** are hidden from everyone but themselves, the host included.
 - In an anonymous **group** thread the recipient list shown to others is the whole thread *including the author*, because the real list omits exactly the author and would give them away. In a **one-to-one** anonymous message the list stays just the recipient.
-- **Numbering is per reader.** Each message carries a per-reader number (1, 2, 3 …) rather than the game-wide counter, whose gaps would reveal how much private press others exchange. Spectators have a separate public-only numbering. After the game ends, seated players switch to the game-wide count while spectators keep the public-only numbering.
+- **Numbering is per reader.** Each message carries a per-reader number (1, 2, 3 …) rather than the game-wide counter, whose gaps would reveal how much private press others exchange. Spectators have a separate public-only numbering.
+- **Visibility never changes at game over.** Private threads stay private, anonymous authors stay hidden, and per-reader numbering stays unchanged after a winner is declared.
 - A spectator never reads a private message, even after the game ends.
 
 ## Move suggestions
@@ -116,7 +114,7 @@ Press is kept per game in memory, separate from `GameState`, and saved to a dedi
 
 ## Unread tracking and the client store
 
-The client keeps press in a small store outside React so the socket, the Press section, the rail and the phone top bar share it without props. Unread is tracked per channel (the public box and each thread) as how far the player has read; reading never moves backwards. When a game ends and the feed is renumbered game-wide, the first revealed load marks what is held as read instead of flagging the whole history as unread. Switching match or seat starts from empty.
+The client keeps press in a small store outside React so the socket, the Press section, the rail and the phone top bar share it without props. Unread is tracked per channel (the public box and each thread) as how far the player has read; reading never moves backwards. Switching match or seat starts from empty.
 
 ## Invariants
 

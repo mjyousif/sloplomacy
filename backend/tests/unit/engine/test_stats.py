@@ -495,3 +495,75 @@ def test_secrecy_invariant_ignores_live_unresolved_orders():
     assert ledger.powers[Power.GERMANY].foreign_supports_given == 0
     assert ledger.support_matrix[Power.GERMANY][Power.FRANCE] == 0
     assert ledger.attack_matrix[Power.FRANCE][Power.GERMANY] == 0
+
+
+def test_press_messages_award_counts_all_types_only_after_game_over():
+    from domain.press import PressMessage
+
+    messages = [
+        PressMessage(
+            id="p1",
+            seq=1,
+            sender=Power.FRANCE,
+            anonymous=False,
+            recipients=[],
+            body="Public",
+            sent_at="2026-11-15T00:00:00+00:00",
+            season="Spring",
+            year=1901,
+            phase="Movement",
+        ),
+        PressMessage(
+            id="p2",
+            seq=2,
+            sender=Power.GERMANY,
+            anonymous=False,
+            recipients=[Power.FRANCE],
+            body="Private",
+            sent_at="2026-11-15T00:01:00+00:00",
+            season="Spring",
+            year=1901,
+            phase="Movement",
+        ),
+        PressMessage(
+            id="p3",
+            seq=3,
+            sender=Power.GERMANY,
+            anonymous=True,
+            recipients=[],
+            body="Anon public",
+            sent_at="2026-11-15T00:02:00+00:00",
+            season="Spring",
+            year=1901,
+            phase="Movement",
+        ),
+        PressMessage(
+            id="p4",
+            seq=4,
+            sender=Power.GERMANY,
+            anonymous=True,
+            recipients=[Power.ENGLAND],
+            body="Anon private",
+            sent_at="2026-11-15T00:03:00+00:00",
+            season="Spring",
+            year=1901,
+            phase="Movement",
+        ),
+    ]
+
+    # Mid-game (winner is None): press counts stay 0 and award is omitted.
+    midgame = compute_campaign_stats([], _state(), press_messages=messages)
+    assert midgame.powers[Power.FRANCE].press_messages_sent == 0
+    assert midgame.powers[Power.GERMANY].press_messages_sent == 0
+    assert all(a.id != "silver_tongue" for a in midgame.awards)
+
+    # Game over (winner is set): public + private + anonymous messages are all counted.
+    finished_state = _state().model_copy(update={"winner": Power.FRANCE})
+    finished = compute_campaign_stats([], finished_state, press_messages=messages)
+    assert finished.powers[Power.FRANCE].press_messages_sent == 1
+    assert finished.powers[Power.GERMANY].press_messages_sent == 3
+    award = next((a for a in finished.awards if a.id == "silver_tongue"), None)
+    assert award is not None
+    assert award.power == Power.GERMANY
+    assert award.count == 3
+    assert award.value == "3 messages"

@@ -44,6 +44,7 @@ function makePowerStats(
     moves_bounced: 1,
     move_success_rate: 66.7,
     self_bounces: 0,
+    press_messages_sent: 0,
     ...overrides,
   };
 }
@@ -110,6 +111,14 @@ function makeStats(): CampaignStatsResponse {
       power: 'FRANCE',
       value: '6 dislodged',
       count: 6,
+    },
+    {
+      id: 'silver_tongue',
+      title: 'Silver Tongue',
+      subtitle: 'Most Press Messages Sent',
+      power: 'GERMANY',
+      value: '14 messages',
+      count: 14,
     },
   ];
 

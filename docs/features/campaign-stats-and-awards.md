@@ -38,7 +38,7 @@ For every Great Power (`PowerStats`), the engine tracks:
 
 - **Territory & Logistics**: `peak_scs`, `current_scs`, `scs_captured`, `scs_lost`, `units_built` (`armies_built`, `fleets_built`), `builds_waived`, `units_disbanded`, `units_destroyed`, `is_eliminated`, `is_surrendered`.
 - **Tactical**: `moves_succeeded`, `moves_bounced`, `move_success_rate`, `self_bounces`, `enemies_dislodged`, `convoys_executed`, `foreign_convoys`.
-- **Diplomacy**: `foreign_supports_given`, `foreign_supports_effective`, `foreign_supports_received`, `supports_cut`, plus directional `support_matrix` (`supporter -> beneficiary -> count`) and `attack_matrix` on `CampaignStatsResponse`.
+- **Diplomacy**: `foreign_supports_given`, `foreign_supports_effective`, `foreign_supports_received`, `supports_cut`, `press_messages_sent` (counted after game over from `GAME_PRESS`, including public, private, and anonymous messages), plus directional `support_matrix` (`supporter -> beneficiary -> count`) and `attack_matrix` on `CampaignStatsResponse`.
 
 ---
 
@@ -57,6 +57,7 @@ For every Great Power (`PowerStats`), the engine tracks:
   - **Iron Chancellor** (`iron_chancellor`): Most enemy units dislodged
   - **Grand Admiral** (`grand_admiral`): Most convoys executed
   - **Attrition Magnet** (`attrition_magnet`): Most units lost & disbanded
+  - **Silver Tongue** (`silver_tongue`): Most press messages sent (public, private, and anonymous; awarded only after game over)
 - **Fallback awards** (used if fewer than 4 primary awards have a positive leader):
   - **Imperial Expansionist** (`expansionist`): Most Supply Centers captured
   - **War Industrialist** (`industrialist`): Most units commissioned
@@ -66,7 +67,7 @@ For every Great Power (`PowerStats`), the engine tracks:
 
 ## Invariants & Access Control
 
-- **Resolved turns only**: Stats never read unrevealed live-turn `orders` from `GameState`, so inspecting `/api/history/stats` mid-match cannot leak another player's current-turn plans.
+- **Resolved turns only**: Stats never read unrevealed live-turn `orders` from `GameState`, so inspecting `/api/history/stats` mid-match cannot leak another player's current-turn plans. Similarly, `press_messages_sent` and the `silver_tongue` award are only populated once `game.winner` is set, so mid-match stats calls never leak private or anonymous press volume.
 - **View access**: `_resolve_accessible_history()` enforces `require_view_access` (including passcode checks on private matches) and rejects ephemeral `sbx_*` private sandboxes (`404`).
 
 ---

@@ -19,7 +19,8 @@ export type StatsSortKey =
   | 'enemies_dislodged'
   | 'foreign_supports_given'
   | 'foreign_supports_received'
-  | 'move_success_rate';
+  | 'move_success_rate'
+  | 'press_messages_sent';
 
 export interface StatsOverviewTableProps {
   powers: Record<Power, PowerStats>;
@@ -41,6 +42,7 @@ const COLUMNS: ColumnDef[] = [
   { key: 'foreign_supports_given', label: 'Supp. Given' },
   { key: 'foreign_supports_received', label: 'Supp. Recv' },
   { key: 'move_success_rate', label: 'Move %' },
+  { key: 'press_messages_sent', label: 'Press' },
 ];
 
 export const StatsOverviewTable: React.FC<StatsOverviewTableProps> = ({
@@ -196,6 +198,7 @@ export const StatsOverviewTable: React.FC<StatsOverviewTableProps> = ({
                       '—'
                     )}
                   </td>
+                  <td>{row.press_messages_sent}</td>
                 </tr>
               );
             })}

@@ -9,8 +9,10 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from security.auth import AuthUser, get_current_user
 from security.passcode import client_address
 from security.secrecy import require_view_access
+from storage.press import press_of
 from storage.profiles import resolve_participant_name
-from storage.store import GAME_HISTORY, GAME_SUMMARIES, PRIVATE_SANDBOXES, resolve_game
+from storage.store import GAME_HISTORY, GAME_PRESS, GAME_SUMMARIES, PRIVATE_SANDBOXES, resolve_game
+from storage.supabase import SupabaseUnavailable
 
 router = APIRouter(tags=["Turn History"])
 
@@ -75,7 +77,15 @@ async def get_campaign_stats(
     if summary:
         for part in summary.participants.values():
             player_names[part.power] = resolve_participant_name(part)
-    return compute_campaign_stats(history, game, player_names=player_names)
+    press_messages = None
+    if game.winner is not None:
+        try:
+            press_messages = await press_of(game.game_id)
+        except SupabaseUnavailable:
+            press_messages = GAME_PRESS.get(game.game_id, [])
+    return compute_campaign_stats(
+        history, game, player_names=player_names, press_messages=press_messages
+    )
 
 
 @router.get(

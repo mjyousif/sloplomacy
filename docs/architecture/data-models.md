@@ -196,16 +196,16 @@ The chat of a multiplayer match, in `backend/domain/press.py` and `frontend/src/
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `id` | `string` | Unique id. |
-| `seq` | `number` | The message's place among the messages this player may read (1, 2, 3…), so a client can ask for what it has not seen (`?after=`). Once the press is revealed, the game-wide count. The server keeps the game-wide `seq` and each reader's number (`PressMessage.numbers`) to itself. |
+| `seq` | `number` | The message's place among the messages this player may read (1, 2, 3…), so a client can ask for what it has not seen (`?after=`). The server keeps the game-wide `seq` and each reader's number (`PressMessage.numbers`) to itself. |
 | `sender` | `Power?` | The author. `null` while an anonymous author is hidden from this viewer. |
-| `anonymous` | `boolean` | Sent unsigned. Still `true` once the author is revealed. |
+| `anonymous` | `boolean` | Sent unsigned. |
 | `recipients` | `Power[]` | Empty for the public box. Otherwise the powers it was sent to, never the sender. While an anonymous author is hidden from this viewer, the whole thread instead, author included, since the real list leaves out exactly the author. |
 | `body` | `string` | Up to 1000 characters. |
 | `sent_at` | `string` | ISO time. |
 | `season`, `year`, `phase` | | The turn it was sent in. |
 | `orders` | `Order[]` | Suggested orders for the current phase (`Movement`, `Retreats`, or `Adjustments`). Empty for a plain message. Allowed in public press (signed or anonymous, any power), signed private threads (sender + recipients), or 1-to-1 anonymous backchannels (recipient only). |
 
-`PressFeed` (`GET /api/press`) is `{ power, revealed, messages }`: the seat it was read as (`null` for a spectator, whose feed is the public box alone, numbered by the stored `PressMessage.public_number`), whether the game is over and all press is shown, and the messages oldest first. `PressPostRequest` is `{ power, recipients, anonymous, body, orders? }`. `OrderSubmissionRequest` (`POST /api/orders/batch`) is `{ power, orders, turn? }`. `WebSocketPressUpdate` is `{ type: 'press', game_id, power, messages }`.
+`PressFeed` (`GET /api/press`) is `{ power, messages }`: the seat it was read as (`null` for a spectator, whose feed is the public box alone, numbered by the stored `PressMessage.public_number`), and the messages oldest first. `PressPostRequest` is `{ power, recipients, anonymous, body, orders? }`. `OrderSubmissionRequest` (`POST /api/orders/batch`) is `{ power, orders, turn? }`. `WebSocketPressUpdate` is `{ type: 'press', game_id, power, messages }`.
 
 Press is not part of `GameState`. See [Press in the API reference](../backend/api-reference.md#detailed-specifications-press).
 
@@ -393,7 +393,7 @@ interface WebSocketLobbyUpdate {
 
 Returned by `GET /api/history/stats` and rendered inside `GameOverModal` (`components/stats/`):
 
-- `PowerStats`: Per-power ledger (`power`, `player_name`, `is_eliminated`, `is_surrendered`, `current_scs`, `peak_scs`, `scs_captured`, `scs_lost`, `units_built`, `armies_built`, `fleets_built`, `units_disbanded`, `units_destroyed`, `enemies_dislodged`, `builds_waived`, `foreign_supports_given`, `foreign_supports_effective`, `foreign_supports_received`, `foreign_convoys`, `convoys_executed`, `supports_cut`, `moves_succeeded`, `moves_bounced`, `move_success_rate`, `self_bounces`).
+- `PowerStats`: Per-power ledger (`power`, `player_name`, `is_eliminated`, `is_surrendered`, `current_scs`, `peak_scs`, `scs_captured`, `scs_lost`, `units_built`, `armies_built`, `fleets_built`, `units_disbanded`, `units_destroyed`, `enemies_dislodged`, `builds_waived`, `foreign_supports_given`, `foreign_supports_effective`, `foreign_supports_received`, `foreign_convoys`, `convoys_executed`, `supports_cut`, `moves_succeeded`, `moves_bounced`, `move_success_rate`, `self_bounces`, `press_messages_sent`).
 - `SCTimelinePoint`: Checkpoint `{ label, season, year, counts: Record<Power, number> }`.
 - `CampaignAward`: End-of-campaign superlative `{ id, title, subtitle, power, value, count }`.
 - `CampaignStatsResponse`: Top-level payload `{ game_id, turns_resolved, powers, sc_timeline, support_matrix, attack_matrix, awards }`.

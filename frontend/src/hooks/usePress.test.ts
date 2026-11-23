@@ -27,9 +27,8 @@ const msg = (seq: number, sender: Power | null = 'GERMANY'): PressMessage => ({
   orders: [],
 });
 
-const feed = (messages: PressMessage[], revealed = false): PressFeed => ({
+const feed = (messages: PressMessage[]): PressFeed => ({
   power: 'FRANCE',
-  revealed,
   messages,
 });
 
@@ -48,9 +47,7 @@ afterEach(() => vi.useRealTimers());
 describe('usePressSync', () => {
   it('reads the press of the match for the seat on screen', async () => {
     authedFetch.mockReturnValue(answer(feed([msg(1)])));
-    renderHook(() =>
-      usePressSync({ gameId: 'g1', power: 'FRANCE', gameOver: false }),
-    );
+    renderHook(() => usePressSync({ gameId: 'g1', power: 'FRANCE' }));
     await waitFor(() => expect(pressStore.getState().status).toBe('ready'));
     expect(urls()[0]).toBe('/api/press?game_id=g1&power=FRANCE');
     expect(pressStore.getState().messages.map((m) => m.seq)).toEqual([1]);
@@ -63,7 +60,6 @@ describe('usePressSync', () => {
         usePressSync({
           gameId: props.gameId,
           power: 'FRANCE',
-          gameOver: false,
         }),
       { initialProps: { gameId: null as string | null } },
     );
@@ -75,27 +71,6 @@ describe('usePressSync', () => {
     unmount();
     expect(pressStore.getState().gameId).toBeNull();
     expect(pressStore.getState().messages).toEqual([]);
-  });
-
-  it('reads everything again when the game ends, because all press is revealed', async () => {
-    authedFetch.mockReturnValueOnce(answer(feed([msg(1)])));
-    const { rerender } = renderHook(
-      (props: { gameOver: boolean }) =>
-        usePressSync({
-          gameId: 'g1',
-          power: 'FRANCE',
-          gameOver: props.gameOver,
-        }),
-      { initialProps: { gameOver: false } },
-    );
-    await waitFor(() => expect(pressStore.getState().status).toBe('ready'));
-
-    authedFetch.mockReturnValueOnce(
-      answer(feed([msg(1), msg(2, 'ITALY')], true)),
-    );
-    rerender({ gameOver: true });
-    await waitFor(() => expect(pressStore.getState().revealed).toBe(true));
-    expect(pressStore.getState().messages.map((m) => m.seq)).toEqual([1, 2]);
   });
 
   it('drops a feed that answers for a seat the player has since left', async () => {
@@ -110,7 +85,6 @@ describe('usePressSync', () => {
         usePressSync({
           gameId: props.gameId,
           power: 'FRANCE',
-          gameOver: false,
         }),
       { initialProps: { gameId: 'g1' } },
     );
@@ -129,9 +103,7 @@ describe('usePressSync', () => {
 
   it('catches up from the newest message held when the socket comes back', async () => {
     authedFetch.mockReturnValueOnce(answer(feed([msg(1), msg(2)])));
-    renderHook(() =>
-      usePressSync({ gameId: 'g1', power: 'FRANCE', gameOver: false }),
-    );
+    renderHook(() => usePressSync({ gameId: 'g1', power: 'FRANCE' }));
     await waitFor(() => expect(pressStore.getState().status).toBe('ready'));
 
     authedFetch.mockReturnValueOnce(answer(feed([msg(3)])));
@@ -147,9 +119,7 @@ describe('usePressSync', () => {
   it('polls while the socket is down, and stops once it is up', async () => {
     vi.useFakeTimers();
     authedFetch.mockImplementation(() => answer(feed([])));
-    renderHook(() =>
-      usePressSync({ gameId: 'g1', power: 'FRANCE', gameOver: false }),
-    );
+    renderHook(() => usePressSync({ gameId: 'g1', power: 'FRANCE' }));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
@@ -173,9 +143,7 @@ describe('usePressSync', () => {
   it('reports a failed first read, and tries again on the next poll', async () => {
     vi.useFakeTimers();
     authedFetch.mockReturnValueOnce(answer({}, false, 503));
-    renderHook(() =>
-      usePressSync({ gameId: 'g1', power: 'FRANCE', gameOver: false }),
-    );
+    renderHook(() => usePressSync({ gameId: 'g1', power: 'FRANCE' }));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
@@ -212,14 +180,11 @@ describe('press store', () => {
 
 describe('press for a spectator', () => {
   it('reads the public feed with no power and the passcode of a private match', async () => {
-    authedFetch.mockReturnValue(
-      answer({ power: null, revealed: false, messages: [msg(1)] }),
-    );
+    authedFetch.mockReturnValue(answer({ power: null, messages: [msg(1)] }));
     renderHook(() =>
       usePressSync({
         gameId: 'g1',
         power: null,
-        gameOver: false,
         passcode: 'Secret',
       }),
     );

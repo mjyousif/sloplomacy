@@ -16,7 +16,7 @@ class PressMessage(BaseModel):
     # private press the others exchange.
     seq: int
     # The message's place in each reader's own feed (1, 2, 3...), set when it is sent. This is
-    # the `seq` a reader is sent until the press is revealed, when everyone reads everything.
+    # the `seq` a reader is sent.
     numbers: dict[Power, int] = Field(default_factory=dict)
     # A public message's place among the public messages alone (1, 2, 3...), which is the `seq` a
     # spectator is sent. 0 for a private message, which a spectator never reads.
@@ -39,7 +39,7 @@ class PressMessage(BaseModel):
     orders: list[Order] = Field(default_factory=list)
 
     def readers(self) -> set[Power]:
-        """Who may read it before the press is revealed."""
+        """Who may read it."""
         if not self.recipients:
             return set(Power)
         return {self.sender, *self.recipients}
@@ -66,8 +66,7 @@ class PressMessageView(BaseModel):
     """A message as one player sees it. `sender` is None while an anonymous author is hidden."""
 
     id: str
-    # Its place in this player's own feed, counting from 1. Once the press is revealed every
-    # player reads every message, so it is then the game-wide count.
+    # Its place in this player's own feed, counting from 1.
     seq: int
     sender: Power | None
     anonymous: bool
@@ -90,8 +89,6 @@ class PressFeed(BaseModel):
     """
 
     power: Power | None
-    # True once the game is over: every thread and every anonymous author is shown to the players.
-    revealed: bool
     messages: list[PressMessageView]
 
 

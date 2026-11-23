@@ -182,6 +182,7 @@ describe('GameOverModal', () => {
         moves_bounced: 2,
         move_success_rate: 83.3,
         self_bounces: 0,
+        press_messages_sent: 0,
       };
       emptyMatrix[p] = Object.fromEntries(
         ALL_POWERS.map((q) => [q, 0]),

@@ -8,36 +8,27 @@ An anonymous author is hidden from everyone but themself, the host included. In 
 (two or more recipients), a hidden author's message lists the whole thread as its recipients,
 author included, since the real list leaves out exactly the author. In a one-to-one anonymous
 message (one recipient), `recipients` stays just that recipient so the sender is not revealed.
-Once the game is over the press is `revealed`: every seated player may read every message and see
-every author.
 
 A spectator (someone watching with no seat) reads the public box alone, numbered by
 `PressMessage.public_number`, so the gaps private press would leave never show. An anonymous public
-author stays hidden from them until the press is revealed. A spectator never reads a private
-message, not even once the game is over, and never sends.
+author stays hidden from them. A spectator never reads a private message and never sends.
 
 The `seq` a player is sent numbers the messages they may read 1, 2, 3... (`PressMessage.numbers`),
 never the game-wide count, whose gaps would show how much private press the others exchange.
-Once the press is revealed everyone reads everything, so it is then the game-wide count.
+Press visibility, anonymity, and numbering never change when the game ends.
 """
 
 from domain.board import Power
-from domain.game_state import GameState
 from domain.press import PressMessage, PressMessageView
 
 
-def press_revealed(game: GameState) -> bool:
-    """True once the game is over, when all press becomes public to the players."""
-    return game.winner is not None
+def can_read(message: PressMessage, viewer: Power) -> bool:
+    return viewer in message.readers()
 
 
-def can_read(message: PressMessage, viewer: Power, revealed: bool) -> bool:
-    return revealed or viewer in message.readers()
-
-
-def number_for(message: PressMessage, viewer: Power, revealed: bool) -> int:
+def number_for(message: PressMessage, viewer: Power) -> int:
     """The `seq` `viewer` is sent for `message`: its place in their own feed."""
-    return message.seq if revealed else message.numbers.get(viewer, 0)
+    return message.numbers.get(viewer, 0)
 
 
 def _thread_of(message: PressMessage) -> list[Power]:
@@ -47,16 +38,16 @@ def _thread_of(message: PressMessage) -> list[Power]:
     return sorted({message.sender, *message.recipients}, key=lambda p: p.value)
 
 
-def view_of(message: PressMessage, viewer: Power, revealed: bool) -> PressMessageView:
+def view_of(message: PressMessage, viewer: Power) -> PressMessageView:
     """The copy of `message` that `viewer` may be sent. Call `can_read` first."""
-    author_shown = revealed or not message.anonymous or viewer == message.sender
+    author_shown = not message.anonymous or viewer == message.sender
     if not author_shown and len(message.recipients) >= 2:
         recipients = _thread_of(message)
     else:
         recipients = list(message.recipients)
     return PressMessageView(
         id=message.id,
-        seq=number_for(message, viewer, revealed),
+        seq=number_for(message, viewer),
         sender=message.sender if author_shown else None,
         anonymous=message.anonymous,
         recipients=recipients,
@@ -69,25 +60,23 @@ def view_of(message: PressMessage, viewer: Power, revealed: bool) -> PressMessag
     )
 
 
-def feed_for(
-    messages: list[PressMessage], viewer: Power, revealed: bool, after: int = 0
-) -> list[PressMessageView]:
+def feed_for(messages: list[PressMessage], viewer: Power, after: int = 0) -> list[PressMessageView]:
     """Every message `viewer` may read numbered after `after` in their own feed, oldest first."""
     return [
-        view_of(message, viewer, revealed)
+        view_of(message, viewer)
         for message in messages
-        if can_read(message, viewer, revealed) and number_for(message, viewer, revealed) > after
+        if can_read(message, viewer) and number_for(message, viewer) > after
     ]
 
 
-def spectator_view(message: PressMessage, revealed: bool) -> PressMessageView:
+def spectator_view(message: PressMessage) -> PressMessageView:
     """The copy of a public message a spectator may be sent. Never call it for a private one."""
     if message.recipients:
         raise ValueError("A spectator never reads a private message.")
     return PressMessageView(
         id=message.id,
         seq=message.public_number,
-        sender=message.sender if revealed or not message.anonymous else None,
+        sender=None if message.anonymous else message.sender,
         anonymous=message.anonymous,
         recipients=[],
         body=message.body,
@@ -99,12 +88,10 @@ def spectator_view(message: PressMessage, revealed: bool) -> PressMessageView:
     )
 
 
-def spectator_feed(
-    messages: list[PressMessage], revealed: bool, after: int = 0
-) -> list[PressMessageView]:
+def spectator_feed(messages: list[PressMessage], after: int = 0) -> list[PressMessageView]:
     """Every public message numbered after `after` among public messages, oldest first."""
     return [
-        spectator_view(message, revealed)
+        spectator_view(message)
         for message in messages
         if not message.recipients and message.public_number > after
     ]

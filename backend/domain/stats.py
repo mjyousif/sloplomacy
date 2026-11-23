@@ -32,6 +32,7 @@ class PowerStats(BaseModel):
     moves_bounced: int = 0
     move_success_rate: float = 0.0
     self_bounces: int = 0
+    press_messages_sent: int = 0
 
 
 class SCTimelinePoint(BaseModel):

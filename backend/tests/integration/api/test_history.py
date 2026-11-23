@@ -108,3 +108,72 @@ def test_history_stats_aggregates_resolved_turns_and_ignores_live_orders():
     assert stats["powers"]["GERMANY"]["moves_bounced"] == 1
     assert stats["powers"]["GERMANY"]["player_name"] == "Bob"
     assert len(stats["sc_timeline"]) == 2
+
+
+def test_history_stats_counts_press_only_after_game_over():
+    from domain.board import Power
+    from domain.press import PressMessage
+    from storage.press import add_press
+
+    game_id = _seated_game()
+    add_press(
+        game_id,
+        PressMessage(
+            id="m1",
+            seq=1,
+            sender=Power.FRANCE,
+            anonymous=False,
+            recipients=[],
+            body="Public",
+            sent_at="2026-11-15T00:00:00+00:00",
+            season="Spring",
+            year=1901,
+            phase="Movement",
+        ),
+    )
+    add_press(
+        game_id,
+        PressMessage(
+            id="m2",
+            seq=2,
+            sender=Power.GERMANY,
+            anonymous=True,
+            recipients=[Power.FRANCE],
+            body="Secret",
+            sent_at="2026-11-15T00:01:00+00:00",
+            season="Spring",
+            year=1901,
+            phase="Movement",
+        ),
+    )
+    add_press(
+        game_id,
+        PressMessage(
+            id="m3",
+            seq=3,
+            sender=Power.GERMANY,
+            anonymous=False,
+            recipients=[],
+            body="Public 2",
+            sent_at="2026-11-15T00:02:00+00:00",
+            season="Spring",
+            year=1901,
+            phase="Movement",
+        ),
+    )
+
+    # Mid-game: press counts are not exposed.
+    mid = client.get(f"/api/history/stats?game_id={game_id}").json()
+    assert mid["powers"]["FRANCE"]["press_messages_sent"] == 0
+    assert mid["powers"]["GERMANY"]["press_messages_sent"] == 0
+    assert all(a["id"] != "silver_tongue" for a in mid["awards"])
+
+    # After game over: all press (public + private + anonymous) is counted for Silver Tongue.
+    GAMES[game_id].winner = Power.FRANCE
+    end = client.get(f"/api/history/stats?game_id={game_id}").json()
+    assert end["powers"]["FRANCE"]["press_messages_sent"] == 1
+    assert end["powers"]["GERMANY"]["press_messages_sent"] == 2
+    award = next((a for a in end["awards"] if a["id"] == "silver_tongue"), None)
+    assert award is not None
+    assert award["power"] == "GERMANY"
+    assert award["count"] == 2

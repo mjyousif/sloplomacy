@@ -224,7 +224,6 @@ export function GameWorkspace({
   usePressSync({
     gameId: pressGameId,
     power: lockedPower,
-    gameOver,
     passcode: spectator?.passcode,
   });
   const suggestion = useSuggestionBoard({
@@ -247,7 +246,6 @@ export function GameWorkspace({
       ? {
           gameId: pressGameId,
           power: lockedPower,
-          gameOver,
           surrendered: lockedPower
             ? (gameState.surrendered_powers ?? []).includes(lockedPower)
             : false,
