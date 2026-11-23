@@ -82,6 +82,18 @@ describe('OtherGamesStrip', () => {
     expect(within(waiting).getByText('Fall 1901 · Movement')).toBeVisible();
   });
 
+  it('shows the phase clock under a live game, and nothing for an untimed one', () => {
+    const nowMs = 1_000_000_000_000;
+    const timed = { ...WAITING, deadline: nowMs / 1000 + 5 * 3600 };
+    setup({ games: [timed, MOVE], nowMs });
+    expect(
+      within(card('Balkan Powder Keg')).getByTestId('my-game-due'),
+    ).toHaveTextContent('Due in 5h');
+    expect(
+      within(card('The Quiet Cabal')).queryByTestId('my-game-due'),
+    ).toBeNull();
+  });
+
   it('gives a game a thumbnail without units, and a sandbox with no board an icon', () => {
     setup();
     const map = within(card('Balkan Powder Keg')).getByTestId('mini-map');
