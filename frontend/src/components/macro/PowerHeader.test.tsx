@@ -241,9 +241,7 @@ describe('PowerHeader', () => {
     expect(
       c.querySelector('[data-testid="power-banner-title"]'),
     ).toHaveTextContent('French Republic');
-    expect(
-      c.querySelector('[data-testid="power-banner-sub"]'),
-    ).toHaveTextContent('3 Units • 3 SCs');
+    expect(c.querySelector('[data-testid="power-banner-sub"]')).toBeNull();
     fireEvent.click(screen.getByTestId('macro-sidebar-collapse-btn'));
     expect(onToggleCollapse).toHaveBeenCalledTimes(1);
   });
@@ -272,17 +270,6 @@ describe('PowerHeader', () => {
   it('panel: leaves out the collapse button when nothing can collapse', () => {
     header();
     expect(screen.queryByTestId('macro-sidebar-collapse-btn')).toBeNull();
-  });
-
-  it('panel: adds the dislodged units to the count', () => {
-    const dislodged = unitAt('FRANCE', 'A', 'MAR', { is_dislodged: true });
-    const c = header(
-      {},
-      progressFor({ units: [A_PAR, dislodged], isRetreatPhase: true }),
-    );
-    expect(
-      c.querySelector('[data-testid="power-banner-sub"]'),
-    ).toHaveTextContent('1 Units (+1 Dislodged) • 3 SCs');
   });
 
   it('sheet: short name, counts with the unconfirmed number, and the status', () => {

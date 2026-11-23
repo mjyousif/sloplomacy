@@ -16,6 +16,30 @@
     color: var(--text-muted);
   }
 
+  /* The panel's list header stays put while the cards scroll under it. */
+  .macro-list-header[data-sticky="true"] {
+    position: sticky;
+    top: -10px;
+    z-index: 1;
+    margin: -10px -12px 0;
+    padding: 10px 12px 6px;
+    background: #171b22;
+  }
+
+  :global([data-spacing="compact"]) .macro-list-header[data-sticky="true"] {
+    top: -7px;
+    margin: -7px -10px 0;
+    padding: 7px 10px 4px;
+  }
+
+  .macro-counts {
+    margin-left: auto;
+    margin-right: 10px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--text-dim);
+  }
+
   .macro-hint {
     font-weight: 500;
     letter-spacing: 0;

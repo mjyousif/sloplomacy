@@ -361,7 +361,7 @@ describe('MacroSidebar', () => {
     it('keeps the unit cards in the body, and never shows a rail', () => {
       const html = sheet({ collapsed: true });
       const body = html.slice(html.indexOf('bottom-sheet-body'));
-      expect(body).toContain('ACTIVE FORCE ORDERS (2 UNITS)');
+      expect(body).toContain('ACTIVE ORDERS');
       expect(body).toContain('data-unit-id="A_PAR"');
       expect(html).not.toContain('data-testid="macro-sidebar-collapsed"');
       expect(html).not.toContain('data-testid="macro-sidebar-collapse-btn"');
@@ -398,7 +398,7 @@ describe('MacroSidebar', () => {
     expect(html).toContain('aria-label="Tactical Orders Collapsed"');
     expect(html).toContain('data-testid="macro-sidebar-collapsed"');
     expect(html).toContain('data-testid="rail-power-crest"');
-    expect(html).not.toContain('ACTIVE FORCE ORDERS');
+    expect(html).not.toContain('ACTIVE ORDERS');
   });
 
   it('renders expanded gameplay view with units and turn resolution actions', () => {
@@ -407,7 +407,7 @@ describe('MacroSidebar', () => {
     );
     expect(html).toContain('aria-label="Tactical Command &amp; Orders"');
     expect(html).toContain('France');
-    expect(html).toContain('ACTIVE FORCE ORDERS (2 UNITS)');
+    expect(html).toContain('ACTIVE ORDERS');
     expect(html).toContain('Paris');
     expect(html).toContain('Brest');
     expect(html).toContain('Finalize');

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import {
   A_BRE,
@@ -68,7 +68,28 @@ describe('UnitOrderList', () => {
     ]);
     expect(
       container.querySelector('[data-testid="macro-list-header"]'),
-    ).toHaveTextContent('ACTIVE FORCE ORDERS (3 UNITS)');
+    ).toHaveTextContent('ACTIVE ORDERS');
+  });
+
+  it('shows the unit and center counts in the sticky header, not the phone sheet', () => {
+    const { container } = list();
+    const header = container.querySelector(
+      '[data-testid="macro-list-header"]',
+    ) as HTMLElement;
+    expect(header.dataset.sticky).toBe('true');
+    expect(within(header).getByTestId('macro-unit-counts')).toHaveTextContent(
+      '3 Units • 3 SCs',
+    );
+    const sheet = list({ isSheet: true }).container;
+    expect(sheet.querySelector('[data-testid="macro-unit-counts"]')).toBeNull();
+  });
+
+  it('adds the dislodged units to the count', () => {
+    const dislodged = unitAt('FRANCE', 'A', 'MAR', { is_dislodged: true });
+    list({}, { units: [A_PAR, dislodged], isRetreatPhase: true });
+    expect(screen.getAllByTestId('macro-unit-counts')[0]).toHaveTextContent(
+      '1 Units (+1 Dislodged) • 3 SCs',
+    );
   });
 
   it('words the hint for a finger on the phone sheet', () => {
@@ -233,7 +254,7 @@ describe('UnitOrderList', () => {
           ),
         ).map((c) => c.dataset.homeProvince),
       ).toEqual(['MAR', 'BRE']);
-      expect(headers[1]).toHaveTextContent('ACTIVE FORCE ORDERS (3 UNITS)');
+      expect(headers[1]).toHaveTextContent('ACTIVE ORDERS');
     });
 
     it('words the build hint for a finger on the phone sheet', () => {

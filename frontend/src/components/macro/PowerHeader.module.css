@@ -19,12 +19,6 @@
     gap: 7px;
   }
 
-  .power-banner-sub {
-    font-size: 0.73rem;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
-
   .power-banner-actions-right {
     display: flex;
     align-items: center;

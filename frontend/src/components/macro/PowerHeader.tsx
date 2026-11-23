@@ -439,13 +439,6 @@ export const PowerHeader: React.FC<PowerHeaderProps> = ({
           </span>
           <span className={styles.powerNameText}>{powerMeta.name}</span>
         </div>
-        <div className={styles.powerBannerSub} data-testid="power-banner-sub">
-          {myActiveFieldUnits.length} Units
-          {myDislodgedUnits.length > 0
-            ? ` (+${myDislodgedUnits.length} Dislodged)`
-            : ''}{' '}
-          • {scCountByPower[activePower]} SCs
-        </div>
       </div>
 
       <div className={styles.powerBannerActionsRight}>{statusBadge}</div>
