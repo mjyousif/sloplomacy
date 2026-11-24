@@ -23,10 +23,10 @@ frontend/
     ├── main.tsx                 # React DOM bootstrapping; its first import is styles/index.css
     ├── App.tsx                  # Root state coordinator and viewMode router ('lobby' | 'multiplayer' | 'sandbox')
     ├── App.module.css           # The app shell, loading and error screens (components / compact layers)
-    ├── styles/                  # Cascade layers (index.css), tokens.css, base.css, and layerOrder.test.ts
+    ├── styles/                  # Cascade layers (index.css), tokens.css, base.css, cssGuard.test.ts, and layerOrder.test.ts
     ├── components/              # App & feature entrypoints (with co-located *.module.css & *.test.ts[x])
     │   ├── header/              # Desktop/compact top bars, display settings menu, turn chronicle, version badge
-    │   ├── ui/                  # Shared UI primitives (BottomSheet, CollapsibleSection, BrandEmblem, PowerFlag, chrome/form styles)
+    │   ├── ui/                  # Shared UI primitives (Button, IconSelectDropdown, PowerFlagDropdown, SegmentedControl, CountBadge, StatusBadge, BottomSheet, CollapsibleSection, BrandEmblem, PowerFlag, chrome/form/scrollbar styles)
     │   ├── map/                 # Interactive SVG board: hooks/, hud/, layers/ (orders/, units/), and curve geometry
     │   ├── tools/               # Left ToolsSidebar sections (incl. PressSection and press/), filter chips (TurnHistorySelector), SaveSandboxModal, and collapsed rail
     │   ├── macro/               # Right MacroSidebar order sheet, controls/, admin sidebars, build slots, and the spectator Watching bar
@@ -39,7 +39,7 @@ frontend/
     │   └── pieces/              # Map piece geometry, outlines, marks, and styles/ (classic, seated, compact, flag, nameplate)
     ├── data/                    # Static SVG map paths (europeMapGeometry), piece placements (mapLayouts), text metrics
     ├── hooks/                   # App state hooks (session, sync, sandbox, match/seat actions, auth, layout, history, display prefs)
-    ├── lib/                     # Supabase client singleton & auth helpers, and the press (chat) store
+    ├── lib/                     # Shared API transport (api.ts), Supabase client singleton & auth helpers, and the press/suggestion stores
     ├── test/                    # Vitest setup (jest-dom + cleanup) and shared map/macro/DOM fixtures
     ├── types/                   # TypeScript contracts synchronized with backend/domain/*.py
     └── utils/                   # Pure helpers: order builders/reachability/progress, history, rankings, sheet math, cx()
