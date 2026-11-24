@@ -100,33 +100,7 @@
   }
 
   .auth-tabs {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
     margin-bottom: 14px;
-    background: var(--surface-deep);
-    padding: 4px;
-    border-radius: var(--radius-md);
-  }
-
-  .auth-tab {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    padding: 7px 8px;
-    border-radius: var(--radius-sm);
-    border: none;
-    background: transparent;
-    color: #9ca3af;
-    font-size: 0.74rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .auth-tab[data-active="true"] {
-    background: #262e3e;
-    color: var(--gold-text);
   }
 
   .auth-form {

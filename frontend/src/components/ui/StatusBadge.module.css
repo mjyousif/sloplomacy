@@ -1,0 +1,34 @@
+@layer components {
+  .badge {
+    display: inline-block;
+    border-radius: var(--radius-pill);
+    font-weight: 800;
+    background: var(--surface-raised);
+    border: 1px solid #3c4454;
+    color: var(--text-secondary);
+  }
+
+  .badge[data-size="md"] {
+    align-self: flex-start;
+    padding: 4px 12px;
+    font-size: 0.76rem;
+    letter-spacing: 0.02em;
+  }
+
+  .badge[data-size="sm"] {
+    padding: 2px 9px;
+    font-size: 0.7rem;
+  }
+
+  .badge[data-status="your-move"] {
+    background: rgba(200, 150, 62, 0.2);
+    border-color: #e5b964;
+    color: var(--gold-text);
+  }
+
+  .badge[data-status="finished"] {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: var(--info-sky);
+    color: #bae6fd;
+  }
+}

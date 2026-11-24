@@ -1,6 +1,8 @@
 import { MessagesSquare, X } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useOverlayFocusEscape } from '../../../hooks/useOverlayFocusEscape';
+import { cx } from '../../../utils/cx';
 import chromeStyles from '../../ui/SidebarChrome.module.css';
 import { PressSection, type PressSectionProps } from '../PressSection';
 import styles from './MobilePressSheet.module.css';
@@ -66,15 +68,11 @@ export const MobilePressSheet: React.FC<MobilePressSheetProps> = ({
 }) => {
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    closeButtonRef.current?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, onClose]);
+  useOverlayFocusEscape({
+    open,
+    focusRef: closeButtonRef,
+    onClose,
+  });
 
   return (
     <div
@@ -86,16 +84,19 @@ export const MobilePressSheet: React.FC<MobilePressSheetProps> = ({
       aria-label="Press & Diplomacy"
       inert={!open}
     >
-      <div className={styles.mobilePressHeader}>
-        <div className={styles.mobilePressTitle}>
-          <MessagesSquare size={16} className={styles.mobilePressIcon} />
+      <div className={chromeStyles.panelHeader} data-surface="sheet">
+        <div className={chromeStyles.panelHeaderTitle}>
+          <MessagesSquare size={16} className={chromeStyles.panelHeaderIcon} />
           <h3>PRESS &amp; DIPLOMACY</h3>
         </div>
         <button
           ref={closeButtonRef}
           type="button"
           data-testid="press-sheet-close-btn"
-          className={chromeStyles.sidebarCollapseToggleBtn}
+          className={cx(
+            chromeStyles.sidebarCollapseToggleBtn,
+            chromeStyles.panelCloseBtn,
+          )}
           onClick={onClose}
           aria-label="Close press"
         >

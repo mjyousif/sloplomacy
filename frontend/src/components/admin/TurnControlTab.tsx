@@ -9,11 +9,11 @@ import {
 import type React from 'react';
 import type { TurnHistoryEntry } from '../../types/diplomacy';
 import { turnLabel } from '../../utils/turnFormat';
+import { Button } from '../ui/Button';
 import {
   IconSelectDropdown,
   type IconSelectOption,
-} from '../map/hud/IconSelectDropdown';
-import { Button } from '../ui/Button';
+} from '../ui/IconSelectDropdown';
 import styles from './TurnControlTab.module.css';
 
 const SEASON_OPTIONS: IconSelectOption[] = [
@@ -62,6 +62,7 @@ export interface TurnControlTabProps {
   selectedPhase: string;
   setSelectedPhase: (val: string) => void;
   handleSetTurn: () => void;
+  useNativeSelect?: boolean;
 }
 
 export const TurnControlTab: React.FC<TurnControlTabProps> = ({
@@ -78,6 +79,7 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
   selectedPhase,
   setSelectedPhase,
   handleSetTurn,
+  useNativeSelect = false,
 }) => {
   const snapshotOptions: IconSelectOption[] = [...historyEntries]
     .reverse()
@@ -101,7 +103,11 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
         <div className={styles.adminRollbackActionBox}>
           <div className={styles.adminRollbackSelectGroup}>
             <IconSelectDropdown
-              classNames={{ trigger: styles.adminSelectTrigger }}
+              useNative={useNativeSelect}
+              classNames={{
+                trigger: styles.adminSelectTrigger,
+                native: styles.adminSelectNative,
+              }}
               id="admin-rollback-snapshot-select"
               testId="select-admin-rollback-snapshot"
               value={
@@ -151,7 +157,11 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
           <div className={styles.adminFormGroup}>
             <label htmlFor="admin-clock-season-select">Season</label>
             <IconSelectDropdown
-              classNames={{ trigger: styles.adminSelectTrigger }}
+              useNative={useNativeSelect}
+              classNames={{
+                trigger: styles.adminSelectTrigger,
+                native: styles.adminSelectNative,
+              }}
               id="admin-clock-season-select"
               testId="select-admin-season"
               value={selectedSeason}
@@ -207,7 +217,11 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
           <div className={styles.adminFormGroup}>
             <label htmlFor="admin-clock-phase-select">Phase</label>
             <IconSelectDropdown
-              classNames={{ trigger: styles.adminSelectTrigger }}
+              useNative={useNativeSelect}
+              classNames={{
+                trigger: styles.adminSelectTrigger,
+                native: styles.adminSelectNative,
+              }}
               id="admin-clock-phase-select"
               testId="select-admin-phase"
               value={selectedPhase}

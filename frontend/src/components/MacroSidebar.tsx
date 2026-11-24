@@ -21,6 +21,7 @@ import { UnitOrderList } from './macro/UnitOrderList';
 import { useCompactOrders } from './macro/useCompactOrders';
 import { usePanelCardScroll } from './macro/usePanelCardScroll';
 import scrollbarStyles from './ui/Scrollbars.module.css';
+import chromeStyles from './ui/SidebarChrome.module.css';
 
 export type { MacroSidebarProps } from './macro/macroSidebarProps';
 
@@ -286,7 +287,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   if (collapsed && variant !== 'sheet') {
     return (
       <aside
-        className={styles.macroSidebar}
+        className={cx(chromeStyles.sidebarShell, styles.macroSidebar)}
+        data-side="right"
         data-collapsed="true"
         data-testid="macro-sidebar-collapsed"
         aria-label="Tactical Orders Collapsed"
@@ -369,7 +371,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   // Expanded Core-Gameplay Sidebar
   return (
     <aside
-      className={styles.macroSidebar}
+      className={cx(chromeStyles.sidebarShell, styles.macroSidebar)}
+      data-side="right"
       data-expanded="true"
       data-testid="macro-sidebar"
       data-history-locked={locked ? 'true' : undefined}

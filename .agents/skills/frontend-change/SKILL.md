@@ -21,11 +21,15 @@ Check these shared primitives before writing new component CSS, overlays, forms,
 | `<BottomSheet>` | `components/ui/BottomSheet.tsx` | Phone pull-up panel (`peek` / `half` / `full`) |
 | `<CollapsibleSection>` | `components/ui/CollapsibleSection.tsx` | Sidebar collapsible sections |
 | `<ConfirmModal>` / `useConfirm` | `components/modal/ConfirmModal.tsx` | In-app confirmation for destructive actions |
-| `SidebarChrome.module.css` | `components/ui/SidebarChrome.module.css` | Sidebar collapse toggles and collapsed rail buttons |
+| `SidebarChrome.module.css` | `components/ui/SidebarChrome.module.css` | Floating `<aside>` sidebar shells (`sidebarShell`, `data-side="left" \| "right"`, `data-expanded`, `data-collapsed`), dark panel headers (`panelHeader`, `panelHeaderTitle`, `panelHeaderIcon`, `panelCloseBtn`), collapse toggles, and collapsed rail buttons |
 | `<PowerFlag>` / `<BrandEmblem>` | `components/ui/PowerFlag.tsx`, `BrandEmblem.tsx` | Great Power flags and brand crest |
-| `<IconSelectDropdown>` | `components/map/hud/IconSelectDropdown.tsx` | Custom icon select menus (pass `useNativeSelect={isSheet}` on phone sheets) |
+| `<IconSelectDropdown>` / `<PowerFlagDropdown>` | `components/ui/IconSelectDropdown.tsx`, `PowerFlagDropdown.tsx` | Custom icon select menus with keyboard nav (`ArrowUp`/`ArrowDown`/`Home`/`End`) and `useNative` `<select>` fallback (pass `useNative={isSheet}` / `useNativeSelect={isSheet}` on phone sheets) |
+| `<SegmentedControl>` | `components/ui/SegmentedControl.tsx` (`SegmentedControl.module.css`) | Nested-pill toggles (`semantics="toggle"`, `aria-pressed`) and tab strips (`semantics="tabs"`, `role="tablist"`, arrow keys) across `gold`, `sky`, and `neutral` tones |
+| `<CountBadge>` / `countBadgeAnchor` | `components/ui/CountBadge.tsx` (`CountBadge.module.css`) | Amber unread-count pills (`inline` or `floating` over `countBadgeAnchor`) |
+| `<StatusBadge>` | `components/ui/StatusBadge.tsx` (`StatusBadge.module.css`) | Campaign urgency status pills (`your-move`, `waiting`, `finished`) in `sm` and `md` sizes |
+| `useOverlayFocusEscape` | `hooks/useOverlayFocusEscape.ts` | Focuses close control on open and dismisses on `Escape` for mounted mobile overlays (`ToolsSidebar` drawer, `MobilePressSheet`) |
 
-*Non-goals (keep separate)*: Do **not** force domain-specific tactical controls into `<Button>` (`OrderFooter` finalize/unfinalize & `ClearAllButton`, `SandboxToolsSection` sky Hypothetical Mode toggle, `PhaseTimerWidget` bronze countdown pill, `PressSuggestion` amber cards).
+*Non-goals (keep separate)*: Do **not** force domain-specific tactical controls into `<Button>` (`OrderFooter` finalize/unfinalize & `ClearAllButton`, `SandboxToolsSection` sky Hypothetical Mode toggle, `PhaseTimerWidget` bronze countdown pill, `PressSuggestion` amber cards); do **not** build a universal `<PowerSelector>` across power-picking surfaces; do **not** merge `OrderTypeTabs` into `<SegmentedControl>`; and do **not** merge `<BottomSheet>`, `ToolsSidebar` drawer, and `MobilePressSheet`.
 
 ## Rules that have bitten before
 

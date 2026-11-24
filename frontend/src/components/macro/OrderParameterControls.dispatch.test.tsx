@@ -50,12 +50,16 @@ describe('OrderParameterControls picks the control for the order type', () => {
   });
 
   it('shows the army and coast selects for a CONVOY', () => {
-    const c = controls(F_ENG, 'CONVOY', false, {
+    controls(F_ENG, 'CONVOY', false, {
       aux_unit_origin: 'BRE',
       target: 'LON',
     });
-    expect(c.querySelectorAll('select')).toHaveLength(2);
-    expect(c.textContent).toContain('Army:');
+    expect(
+      screen.getByRole('button', { name: 'Convoyed army' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Convoy destination coast' }),
+    ).toBeInTheDocument();
   });
 
   it('shows nothing for a HOLD, a DISBAND, or no order at all', () => {

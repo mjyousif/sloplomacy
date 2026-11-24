@@ -116,8 +116,40 @@ describe('StandingsSection: choosing a power', () => {
       'title',
       'Click to command German Empire',
     );
+    expect(card('GERMANY')).toHaveAttribute('role', 'button');
+    expect(card('GERMANY')).toHaveAttribute('tabindex', '0');
+    expect(card('GERMANY')).toHaveAttribute('aria-pressed', 'false');
+    expect(card('FRANCE')).toHaveAttribute('aria-pressed', 'true');
     await userEvent.click(card('GERMANY'));
     expect(onSelectPower).toHaveBeenCalledExactlyOnceWith('GERMANY');
+  });
+
+  it('supports Enter and Space keyboard selection without triggering on nested PressPickButton', async () => {
+    const onSelectPower = vi.fn();
+    pressStore.open('mp_1', 'FRANCE');
+    render(
+      <StandingsSection
+        {...base({
+          onSelectPower,
+          isMultiplayer: true,
+          sandboxMode: true,
+          pressPower: 'FRANCE',
+        })}
+      />,
+    );
+
+    const germany = card('GERMANY');
+    germany.focus();
+    await userEvent.keyboard('{Enter}');
+    await userEvent.keyboard(' ');
+    expect(onSelectPower).toHaveBeenNthCalledWith(1, 'GERMANY');
+    expect(onSelectPower).toHaveBeenNthCalledWith(2, 'GERMANY');
+
+    onSelectPower.mockClear();
+    const pressBtn = within(germany).getByTestId('press-recipient-GERMANY');
+    pressBtn.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(onSelectPower).not.toHaveBeenCalled();
   });
 
   it('does not let anyone pick in a multiplayer match', async () => {
@@ -127,6 +159,8 @@ describe('StandingsSection: choosing a power', () => {
     );
     expect(screen.getByText('DIPLOMATIC STANDING')).toBeInTheDocument();
     expect(card('GERMANY')).not.toHaveAttribute('data-clickable', 'true');
+    expect(card('GERMANY')).not.toHaveAttribute('role');
+    expect(card('GERMANY')).not.toHaveAttribute('tabindex');
     await userEvent.click(card('GERMANY'));
     expect(onSelectPower).not.toHaveBeenCalled();
   });

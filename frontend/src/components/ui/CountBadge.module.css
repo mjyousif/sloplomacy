@@ -1,0 +1,50 @@
+@layer components {
+  .anchor {
+    position: relative;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    background: var(--amber-hover);
+    color: var(--color-white);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+
+  .badge[data-size="xs"] {
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    border-radius: 7px;
+    font-size: 0.55rem;
+  }
+
+  .badge[data-size="sm"] {
+    min-width: 15px;
+    height: 15px;
+    border-radius: var(--radius-md);
+    font-size: 0.58rem;
+  }
+
+  .badge[data-size="md"] {
+    min-width: 16px;
+    height: 16px;
+    border-radius: var(--radius-md);
+    font-size: 0.6rem;
+  }
+
+  .badge[data-placement="floating"] {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    pointer-events: none;
+  }
+
+  .badge[data-placement="floating"][data-size="xs"] {
+    right: -5px;
+  }
+}

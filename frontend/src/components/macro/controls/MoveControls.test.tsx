@@ -16,7 +16,7 @@ const REACHABLE = [
   { province: 'GAS', coasts: [] },
 ];
 
-const controls = (
+const nativeControls = (
   over: Partial<Parameters<typeof MoveControls>[0]> = {},
   onUpdateOrder = vi.fn(),
 ) => {
@@ -27,6 +27,7 @@ const controls = (
       provinces={MACRO_PROVINCES}
       reachable={REACHABLE}
       unitOptions={OPTIONS_A_BRE}
+      useNativeSelect
       onUpdateOrder={onUpdateOrder}
       {...over}
     />,
@@ -44,32 +45,30 @@ const labels = (select: HTMLSelectElement) =>
   }));
 
 describe('MoveControls', () => {
-  it('groups the reachable provinces and the coastal via-convoy ones', () => {
-    const { select } = controls();
+  it('groups the reachable provinces and the coastal via-convoy ones in native mode', () => {
+    const { select } = nativeControls();
     expect(select.value).toBe('PAR');
     expect(labels(select)).toEqual([
       {
         label: 'Reachable Provinces',
-        options: ['Paris (PAR)', 'Gascony (GAS)'],
+        options: ['Paris', 'Gascony'],
       },
       {
         label: 'Coastal (via Convoy)',
-        options: ['Marseilles (MAR) — via Convoy'],
+        options: ['Marseilles (Convoy)'],
       },
     ]);
   });
 
   it('marks a convoy that is ready', () => {
-    const { select } = controls({
+    const { select } = nativeControls({
       unitOptions: { ...OPTIONS_A_BRE, active_convoys: ['MAR'] },
     });
-    expect(labels(select)[1].options).toEqual([
-      'Marseilles (MAR) — via Convoy [Ready]',
-    ]);
+    expect(labels(select)[1].options).toEqual(['Marseilles (Convoy ✓)']);
   });
 
   it('has no via-convoy group for a fleet or an inland army', () => {
-    const fleet = controls({
+    const fleet = nativeControls({
       unit: F_ENG,
       order: moveOrder(F_ENG, 'BRE', null, false),
       reachable: [{ province: 'BRE', coasts: [] }],
@@ -80,7 +79,7 @@ describe('MoveControls', () => {
   });
 
   it('moves an adjacent target directly and a far one by convoy', () => {
-    const { select, onUpdateOrder } = controls({ unitOptions: null });
+    const { select, onUpdateOrder } = nativeControls({ unitOptions: null });
     const order = moveOrder(A_BRE, 'PAR', null, false);
     fireEvent.change(select, { target: { value: 'GAS' } });
     expect(onUpdateOrder).toHaveBeenLastCalledWith({
@@ -102,7 +101,7 @@ describe('MoveControls', () => {
   });
 
   it('sends a fleet to a coast of the province', () => {
-    const { select, onUpdateOrder } = controls({
+    const { select, onUpdateOrder } = nativeControls({
       unit: F_ENG,
       order: moveOrder(F_ENG, 'BRE', null, false),
       reachable: [{ province: 'MAR', coasts: ['NC', 'SC'] }],
@@ -128,7 +127,7 @@ describe('MoveControls', () => {
       active_convoys: ['GAS'],
       potential_convoys: [],
     };
-    const { select } = controls({
+    const { select } = nativeControls({
       order: moveOrder(A_BRE, 'GAS', null, true),
       unitOptions: options,
     });
@@ -136,7 +135,7 @@ describe('MoveControls', () => {
   });
 
   it('keeps the chosen via-convoy target in the list even when the server dropped it', () => {
-    const { select } = controls({
+    const { select } = nativeControls({
       order: moveOrder(A_BRE, 'MAR', null, true),
       unitOptions: { ...OPTIONS_A_BRE, potential_convoys: [] },
     });
@@ -168,7 +167,7 @@ describe('MoveControls', () => {
   });
 
   it('shows the placeholder while the order is still a hold', () => {
-    const { select } = controls({ order: holdOrder(A_BRE) });
+    const { select } = nativeControls({ order: holdOrder(A_BRE) });
     expect(select.value).toBe('');
   });
 
@@ -190,5 +189,40 @@ describe('MoveControls', () => {
     ) as HTMLSelectElement;
     expect(select).not.toHaveClass('unit-compact-select');
     expect(select).toHaveAttribute('data-compact', 'true');
+  });
+
+  it('renders custom IconSelectDropdown on desktop and previews hovered options', () => {
+    const onUpdateOrder = vi.fn();
+    const onHoverProvince = vi.fn();
+    render(
+      <MoveControls
+        unit={A_BRE}
+        order={moveOrder(A_BRE, 'PAR', null, false)}
+        provinces={MACRO_PROVINCES}
+        reachable={REACHABLE}
+        unitOptions={OPTIONS_A_BRE}
+        compact
+        onUpdateOrder={onUpdateOrder}
+        onHoverProvince={onHoverProvince}
+      />,
+    );
+
+    const trigger = screen.getByTestId('select-order-target');
+    expect(trigger.tagName).toBe('BUTTON');
+    expect(trigger).toHaveAttribute('data-compact', 'true');
+
+    fireEvent.click(trigger);
+    const marOpt = screen.getByRole('option', { name: 'Marseilles (Convoy)' });
+    fireEvent.pointerEnter(marOpt, { pointerType: 'mouse' });
+    expect(onHoverProvince).toHaveBeenLastCalledWith('MAR');
+
+    fireEvent.click(marOpt);
+    expect(onUpdateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: 'MAR',
+        via_convoy: true,
+        is_explicit: true,
+      }),
+    );
   });
 });

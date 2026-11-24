@@ -25,13 +25,13 @@ import {
 } from '../../../utils/adminHelpers';
 import { cx } from '../../../utils/cx';
 import { Button } from '../../ui/Button';
-import styles from './AdminTileInspector.module.css';
-import floatingStyles from './FloatingMenu.module.css';
 import {
   IconSelectDropdown,
   type IconSelectOption,
-} from './IconSelectDropdown';
-import { PowerFlagDropdown } from './PowerFlagDropdown';
+} from '../../ui/IconSelectDropdown';
+import { PowerFlagDropdown } from '../../ui/PowerFlagDropdown';
+import styles from './AdminTileInspector.module.css';
+import floatingStyles from './FloatingMenu.module.css';
 
 interface PendingSpawnChoice {
   unitType: UnitType;
@@ -230,6 +230,7 @@ export function AdminTileInspector({
                 value={owner}
                 includeNeutral
                 neutralLabel="Neutral (Unowned)"
+                useNative={compact}
                 onChange={(selectedPower) =>
                   onStageOwnership(provinceId, selectedPower)
                 }
@@ -343,6 +344,7 @@ export function AdminTileInspector({
                   id="admin-inspector-unit-power"
                   testId="admin-inspector-unit-power"
                   value={unit.power}
+                  useNative={compact}
                   onChange={(selectedPower) => {
                     if (selectedPower) {
                       onStageSpawnOrUpdateUnit(
@@ -370,6 +372,7 @@ export function AdminTileInspector({
                   testId="admin-inspector-order-type"
                   value={order?.order_type ?? 'HOLD'}
                   options={ADMIN_ORDER_OPTIONS}
+                  useNative={compact}
                   onChange={(nextType) => {
                     if (!nextType) return;
                     onStageUnitOrder({
@@ -391,6 +394,7 @@ export function AdminTileInspector({
                     id="admin-inspector-order-target"
                     testId="admin-inspector-order-target"
                     value={order.target ?? null}
+                    useNative={compact}
                     options={compatibleMoveProvinces.map((p) => ({
                       value: p.id,
                       label: `${p.name} (${p.id})`,
@@ -472,6 +476,7 @@ export function AdminTileInspector({
                   value={null}
                   disabled={!pendingSpawn}
                   placeholder="Select Owner…"
+                  useNative={compact}
                   onChange={(selectedPower) => {
                     if (selectedPower && pendingSpawn) {
                       onStageSpawnOrUpdateUnit(

@@ -320,7 +320,8 @@ export function AdminDirectEditSidebar({
   if (collapsed) {
     return (
       <aside
-        className={macroStyles.macroSidebar}
+        className={cx(chromeStyles.sidebarShell, macroStyles.macroSidebar)}
+        data-side="right"
         data-collapsed="true"
         aria-label="Edit Board Collapsed"
       >
@@ -337,7 +338,12 @@ export function AdminDirectEditSidebar({
 
   return (
     <aside
-      className={cx(macroStyles.macroSidebar, 'admin-direct-edit-sidebar')}
+      className={cx(
+        chromeStyles.sidebarShell,
+        macroStyles.macroSidebar,
+        'admin-direct-edit-sidebar',
+      )}
+      data-side="right"
       data-expanded="true"
       data-testid="macro-sidebar"
       aria-label="Edit Board"

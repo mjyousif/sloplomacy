@@ -31,6 +31,7 @@ describe('OrderParameterControls with UnitMoveOptions', () => {
         validRetreats={[]}
         unitOptions={unitOptions}
         isRetreatPhase={false}
+        useNativeSelect
         onUpdateOrder={onUpdateOrder}
       />,
     );
@@ -58,6 +59,7 @@ describe('OrderParameterControls with UnitMoveOptions', () => {
         validRetreats={[]}
         unitOptions={unitOptions}
         isRetreatPhase={false}
+        useNativeSelect
         onUpdateOrder={onUpdateOrder}
       />,
     );
@@ -97,6 +99,7 @@ describe('OrderParameterControls with UnitMoveOptions', () => {
         validRetreats={[]}
         unitOptions={unitOptions}
         isRetreatPhase={false}
+        useNativeSelect
         onUpdateOrder={vi.fn()}
       />,
     );

@@ -23,6 +23,7 @@ import { BottomSheet } from '../ui/BottomSheet';
 import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
 import scrollbarStyles from '../ui/Scrollbars.module.css';
+import chromeStyles from '../ui/SidebarChrome.module.css';
 import { HistoryOwnershipSection } from './HistoryOwnershipSection';
 import {
   HistoryPeekSelection,
@@ -439,7 +440,8 @@ export const HistoryTurnPanel: React.FC<HistoryTurnPanelProps> = ({
 
   return (
     <aside
-      className={macroStyles.macroSidebar}
+      className={cx(chromeStyles.sidebarShell, macroStyles.macroSidebar)}
+      data-side="right"
       data-expanded="true"
       data-testid="macro-sidebar"
       data-history-view="true"

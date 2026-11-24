@@ -21,6 +21,7 @@ import type { AuthUser } from '../../types/diplomacy';
 import { Modal, ModalCloseButton } from '../modal/Modal';
 import { Button } from '../ui/Button';
 import fieldStyles from '../ui/FormField.module.css';
+import { SegmentedControl } from '../ui/SegmentedControl';
 import styles from './AuthModal.module.css';
 
 interface AuthModalProps {
@@ -201,50 +202,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       </div>
 
       {/* Mode Switcher Tabs */}
-      <div className={styles.authTabs}>
-        <button
-          type="button"
-          data-testid="auth-tab-signin"
-          data-active={tab === 'signin'}
-          className={styles.authTab}
-          onClick={() => {
-            setTab('signin');
-            setError(null);
-            setInfoMessage(null);
-          }}
-        >
-          <LogIn size={14} />
-          Sign In
-        </button>
-        <button
-          type="button"
-          data-testid="auth-tab-signup"
-          data-active={tab === 'signup'}
-          className={styles.authTab}
-          onClick={() => {
-            setTab('signup');
-            setError(null);
-            setInfoMessage(null);
-          }}
-        >
-          <UserPlus size={14} />
-          Create Account
-        </button>
-        <button
-          type="button"
-          data-testid="auth-tab-magic"
-          data-active={tab === 'magic'}
-          className={styles.authTab}
-          onClick={() => {
-            setTab('magic');
-            setError(null);
-            setInfoMessage(null);
-          }}
-        >
-          <Sparkles size={14} />
-          Magic Link
-        </button>
-      </div>
+      <SegmentedControl<'signin' | 'signup' | 'magic'>
+        value={tab}
+        onChange={(nextTab) => {
+          setTab(nextTab);
+          setError(null);
+          setInfoMessage(null);
+        }}
+        ariaLabel="Authentication method"
+        semantics="tabs"
+        tone="gold"
+        size="md"
+        fullWidth
+        className={styles.authTabs}
+        options={[
+          {
+            value: 'signin',
+            label: 'Sign In',
+            icon: <LogIn size={14} />,
+            testId: 'auth-tab-signin',
+          },
+          {
+            value: 'signup',
+            label: 'Create Account',
+            icon: <UserPlus size={14} />,
+            testId: 'auth-tab-signup',
+          },
+          {
+            value: 'magic',
+            label: 'Magic Link',
+            icon: <Sparkles size={14} />,
+            testId: 'auth-tab-magic',
+          },
+        ]}
+      />
 
       <form onSubmit={handleSubmit} className={styles.authForm}>
         {tab === 'signup' && (

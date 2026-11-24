@@ -112,10 +112,6 @@
 }
 
 @layer compact {
-  :global([data-layout="compact"]) .admin-tile-inspector {
-    margin-bottom: 140px;
-  }
-
   :global([data-layout="compact"]) .admin-inspector-card-header button {
     gap: 4px;
     min-height: 38px;

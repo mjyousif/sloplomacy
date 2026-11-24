@@ -1,4 +1,76 @@
 @layer components {
+  /* Floats over the map's left or right edge, so opening or collapsing never resizes the map. */
+  .sidebar-shell {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    height: 100%;
+    background: #171b22;
+    display: flex;
+    flex-direction: column;
+    z-index: var(--z-sidebar);
+    transition:
+      width 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+      min-width 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar-shell[data-side="left"] {
+    left: 0;
+    border-right: 1px solid #282f3d;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.35);
+  }
+
+  .sidebar-shell[data-side="right"] {
+    right: 0;
+    border-left: 1px solid #282f3d;
+    box-shadow: -2px 0 12px rgba(0, 0, 0, 0.35);
+  }
+
+  .sidebar-shell[data-expanded="true"] {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+  }
+
+  .sidebar-shell[data-collapsed="true"] {
+    width: var(--sidebar-rail-width);
+    min-width: var(--sidebar-rail-width);
+    max-width: var(--sidebar-rail-width);
+    align-items: center;
+    padding: 8px 0;
+    background: #13161c;
+  }
+
+  .panel-header {
+    padding: 10px 14px;
+    background: #1f2530;
+    border-bottom: 1px solid #2d3646;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-header-icon {
+    color: #d4a349;
+    flex-shrink: 0;
+  }
+
+  .panel-header-title h3 {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #f8eed9;
+    margin: 0;
+    line-height: 1.15;
+  }
+
   .sidebar-collapse-toggle-btn {
     flex-shrink: 0;
     background: transparent;
@@ -68,5 +140,21 @@
 
   .rail-expand-chevron:hover {
     opacity: 1;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .panel-header[data-surface="sheet"] {
+    flex-shrink: 0;
+    padding: 8px 12px;
+  }
+
+  :global([data-layout="compact"]) .panel-header[data-surface="sheet"] h3 {
+    font-size: 0.85rem;
+  }
+
+  :global([data-layout="compact"]) .panel-close-btn {
+    width: 44px;
+    height: 44px;
   }
 }

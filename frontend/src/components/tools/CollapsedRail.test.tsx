@@ -18,12 +18,8 @@ const props = (
 });
 
 describe('CollapsedRail', () => {
-  it('is a labelled rail that shows the zoom level', () => {
+  it('renders the zoom group with the current zoom level', () => {
     render(<CollapsedRail {...props()} />);
-    expect(screen.getByLabelText('Tools Sidebar Collapsed')).toHaveAttribute(
-      'data-testid',
-      'tools-sidebar-collapsed',
-    );
     expect(screen.getByTitle('Current Zoom: 120%')).toBeInTheDocument();
   });
 

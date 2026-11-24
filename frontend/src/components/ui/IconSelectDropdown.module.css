@@ -8,13 +8,9 @@
     z-index: var(--z-dropdown);
   }
 
-  .icon-select-dropdown-trigger {
+  .icon-select-dropdown-trigger,
+  .icon-select-native {
     width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 6px 8px;
     border-radius: var(--radius-sm);
     border: 1px solid #3b4456;
     background: var(--surface-deep);
@@ -22,17 +18,40 @@
     font-size: 0.76rem;
     font-weight: 500;
     cursor: pointer;
-    text-align: left;
     transition:
       border-color 0.12s ease,
       opacity 0.12s ease;
   }
 
-  .icon-select-dropdown-trigger:hover:not(:disabled) {
+  .icon-select-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    text-align: left;
+  }
+
+  .icon-select-native {
+    padding: 6px 8px;
+    min-width: 0;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .icon-select-dropdown-trigger:hover:not(:disabled),
+  .icon-select-native:hover:not(:disabled) {
     border-color: var(--text-dim);
   }
 
-  .icon-select-dropdown-trigger:disabled {
+  .icon-select-native:focus {
+    outline: none;
+    border-color: var(--info-sky);
+  }
+
+  .icon-select-dropdown-trigger:disabled,
+  .icon-select-native:disabled {
     background: #1a202c;
     border-color: #2b3342;
     color: var(--text-dim);
@@ -95,9 +114,11 @@
     cursor: pointer;
   }
 
-  .icon-select-dropdown-option:hover {
+  .icon-select-dropdown-option:hover,
+  .icon-select-dropdown-option:focus-visible {
     background: #1e2636;
     color: var(--text-bright);
+    outline: none;
   }
 
   .icon-select-dropdown-option[data-selected="true"] {
@@ -112,6 +133,13 @@
     min-height: 40px;
     padding: 8px 10px;
     font-size: 0.85rem;
+  }
+
+  :global([data-layout="compact"]) .icon-select-native {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 16px;
+    border-radius: var(--radius-sm);
   }
 
   :global([data-layout="compact"]) .icon-select-dropdown-option {

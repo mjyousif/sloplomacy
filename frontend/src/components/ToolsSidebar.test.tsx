@@ -47,20 +47,30 @@ describe('ToolsSidebar panel', () => {
     expect(screen.queryByText('Intel, Camera & War Room')).toBeNull();
   });
 
-  it('collapses with its header button and folds to the rail', async () => {
+  it('collapses with its header button and keeps one <aside> across collapse and expand', async () => {
     const onToggleCollapse = vi.fn();
-    const { rerender } = render(
+    const { container, rerender } = render(
       <ToolsSidebar {...props({ onToggleCollapse })} />,
     );
+    const aside = container.querySelector('aside');
+    expect(aside).toHaveAttribute('data-testid', 'tools-sidebar');
     await userEvent.click(screen.getByTestId('tools-sidebar-collapse-btn'));
     expect(onToggleCollapse).toHaveBeenCalledTimes(1);
     rerender(
       <ToolsSidebar {...props({ onToggleCollapse, collapsed: true })} />,
     );
+    expect(container.querySelector('aside')).toBe(aside);
+    expect(aside).toHaveAttribute('data-testid', 'tools-sidebar-collapsed');
     expect(
       screen.getByLabelText('Tools Sidebar Collapsed'),
     ).toBeInTheDocument();
     expect(screen.queryByText('CHANCELLERY TOOLS')).toBeNull();
+
+    rerender(
+      <ToolsSidebar {...props({ onToggleCollapse, collapsed: false })} />,
+    );
+    expect(container.querySelector('aside')).toBe(aside);
+    expect(aside).toHaveAttribute('data-testid', 'tools-sidebar');
   });
 
   it('does not render any creator admin section in the left sidebar', () => {

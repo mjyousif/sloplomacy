@@ -24,6 +24,7 @@ import { useCampaignStats } from '../stats/useCampaignStats';
 import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
 import scrollbarStyles from '../ui/Scrollbars.module.css';
+import { SegmentedControl } from '../ui/SegmentedControl';
 import styles from './GameOverModal.module.css';
 
 export interface GameOverModalProps {
@@ -175,48 +176,35 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
       <div className={styles.gameOverLedger}>
         <div className={styles.gameOverLedgerHeader}>
-          <div
+          <SegmentedControl<WarLedgerTab>
+            value={activeTab}
+            onChange={setActiveTab}
+            ariaLabel="Campaign War Ledger views"
+            semantics="tabs"
+            tone="gold"
+            size="md"
             className={styles.gameOverTabs}
-            role="tablist"
-            aria-label="Campaign War Ledger views"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'overview'}
-              data-active={String(activeTab === 'overview')}
-              data-testid="game-over-tab-overview"
-              className={styles.gameOverTabBtn}
-              onClick={() => setActiveTab('overview')}
-            >
-              <Table size={14} aria-hidden="true" />
-              <span>War Ledger & Standings</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'timeline'}
-              data-active={String(activeTab === 'timeline')}
-              data-testid="game-over-tab-timeline"
-              className={styles.gameOverTabBtn}
-              onClick={() => setActiveTab('timeline')}
-            >
-              <BarChart3 size={14} aria-hidden="true" />
-              <span>SC Timeline</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'diplomacy'}
-              data-active={String(activeTab === 'diplomacy')}
-              data-testid="game-over-tab-diplomacy"
-              className={styles.gameOverTabBtn}
-              onClick={() => setActiveTab('diplomacy')}
-            >
-              <Handshake size={14} aria-hidden="true" />
-              <span>Diplomatic Matrix</span>
-            </button>
-          </div>
+            options={[
+              {
+                value: 'overview',
+                label: 'War Ledger & Standings',
+                icon: <Table size={14} aria-hidden="true" />,
+                testId: 'game-over-tab-overview',
+              },
+              {
+                value: 'timeline',
+                label: 'SC Timeline',
+                icon: <BarChart3 size={14} aria-hidden="true" />,
+                testId: 'game-over-tab-timeline',
+              },
+              {
+                value: 'diplomacy',
+                label: 'Diplomatic Matrix',
+                icon: <Handshake size={14} aria-hidden="true" />,
+                testId: 'game-over-tab-diplomacy',
+              },
+            ]}
+          />
           <span className={styles.gameOverLedgerMeta}>
             {loading
               ? 'Compiling war ledger…'

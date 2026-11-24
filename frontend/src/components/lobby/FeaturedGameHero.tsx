@@ -14,6 +14,7 @@ import {
 } from '../../utils/heroGame';
 import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
+import { StatusBadge } from '../ui/StatusBadge';
 import styles from './FeaturedGameHero.module.css';
 import { GameActionsMenu } from './GameActionsMenu';
 import { MiniMap } from './MiniMap';
@@ -69,13 +70,9 @@ export const FeaturedGameHero: React.FC<FeaturedGameHeroProps> = ({
       </div>
 
       <div className={styles.panel}>
-        <span
-          className={styles.status}
-          data-status={copy.urgency}
-          data-testid="hero-status"
-        >
+        <StatusBadge status={copy.urgency} size="md" testId="hero-status">
           {copy.status}
-        </span>
+        </StatusBadge>
         <h2 className={styles.name} data-testid="hero-game-name">
           {game.name}
           {game.is_private && (

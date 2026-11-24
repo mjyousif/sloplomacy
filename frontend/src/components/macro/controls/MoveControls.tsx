@@ -11,8 +11,8 @@ import {
   IconSelectDropdown,
   type IconSelectDropdownClassNames,
   type IconSelectOption,
-} from '../../map/hud/IconSelectDropdown';
-import styles from '../OrderParameterControls.module.css';
+} from '../../ui/IconSelectDropdown';
+import { orderParamDropdownClassNames } from './orderParamDropdown';
 
 interface MoveControlsProps {
   unit: Unit;
@@ -121,108 +121,49 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
     });
   };
 
-  if (compact) {
-    const compactOptions: IconSelectOption[] = [
-      ...reachable.flatMap((r): IconSelectOption[] => {
-        if (r.coasts.length > 0 && unit.unit_type === 'F') {
-          return r.coasts.map((c) => ({
-            value: `${r.province}/${c}`,
-            label: `${provinceName(provinces, r.province)} (${c})`,
-          }));
-        }
-        return [
-          {
-            value: r.province,
-            label: provinceName(provinces, r.province),
-          },
-        ];
-      }),
-      ...convoyProvinces.map((pid): IconSelectOption => {
-        const isReady = unitOptions?.active_convoys.includes(pid);
-        return {
-          value: `VIA:${pid}`,
-          label: `${provinceName(provinces, pid)} (Convoy${isReady ? ' ✓' : ''})`,
-        };
-      }),
-    ];
-
-    if (useNativeSelect) {
-      return (
-        <select
-          className={styles.compactNativeSelect}
-          data-compact="true"
-          data-testid="select-order-target"
-          value={selectValue}
-          onChange={(e) => handleTargetChange(e.target.value)}
-          title={`Target for ${provinceName(provinces, unit.province)}`}
-        >
-          {!selectValue && <option value="">Move to…</option>}
-          {compactOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      );
-    }
-
-    return (
-      <IconSelectDropdown
-        classNames={dropdownClassNames}
-        testId="select-order-target"
-        value={selectValue || null}
-        options={compactOptions}
-        placeholder="Move to…"
-        title={`Target for ${provinceName(provinces, unit.province)}`}
-        onHoverOption={(val) =>
-          onHoverProvince?.(
-            val ? (val.startsWith('VIA:') ? val.slice(4) : val) : null,
-          )
-        }
-        onChange={(val) => handleTargetChange(val ?? '')}
-      />
-    );
-  }
+  const options: IconSelectOption[] = [
+    ...reachable.flatMap((r): IconSelectOption[] => {
+      if (r.coasts.length > 0 && unit.unit_type === 'F') {
+        return r.coasts.map((c) => ({
+          value: `${r.province}/${c}`,
+          label: `${provinceName(provinces, r.province)} (${c})`,
+          group: 'Reachable Provinces',
+        }));
+      }
+      return [
+        {
+          value: r.province,
+          label: provinceName(provinces, r.province),
+          group: 'Reachable Provinces',
+        },
+      ];
+    }),
+    ...convoyProvinces.map((pid): IconSelectOption => {
+      const isReady = unitOptions?.active_convoys.includes(pid);
+      return {
+        value: `VIA:${pid}`,
+        label: `${provinceName(provinces, pid)} (Convoy${isReady ? ' ✓' : ''})`,
+        group: 'Coastal (via Convoy)',
+      };
+    }),
+  ];
 
   return (
-    <div className={styles.orderParamRow}>
-      <label>Destination:</label>
-      <select
-        data-testid="select-order-target"
-        value={selectValue}
-        onChange={(e) => handleTargetChange(e.target.value)}
-      >
-        {!selectValue && <option value="">Choose a destination…</option>}
-        <optgroup label="Reachable Provinces">
-          {reachable.flatMap((r) => {
-            if (r.coasts.length > 0 && unit.unit_type === 'F') {
-              return r.coasts.map((c) => (
-                <option key={`${r.province}/${c}`} value={`${r.province}/${c}`}>
-                  {`${provinceName(provinces, r.province)} (${c} Coast) [${r.province}/${c}]`}
-                </option>
-              ));
-            }
-            return (
-              <option key={r.province} value={r.province}>
-                {`${provinceName(provinces, r.province)} (${r.province})`}
-              </option>
-            );
-          })}
-        </optgroup>
-        {convoyProvinces.length > 0 && (
-          <optgroup label="Coastal (via Convoy)">
-            {convoyProvinces.map((pid) => {
-              const isReady = unitOptions?.active_convoys.includes(pid);
-              return (
-                <option key={`VIA:${pid}`} value={`VIA:${pid}`}>
-                  {provinceName(provinces, pid)} ({pid}) — via Convoy
-                  {isReady ? ' [Ready]' : ''}
-                </option>
-              );
-            })}
-          </optgroup>
-        )}
-      </select>
-    </div>
+    <IconSelectDropdown
+      useNative={useNativeSelect}
+      compact={compact}
+      classNames={dropdownClassNames ?? orderParamDropdownClassNames}
+      testId="select-order-target"
+      value={selectValue || null}
+      options={options}
+      placeholder="Move to…"
+      title={`Target for ${provinceName(provinces, unit.province)}`}
+      onHoverOption={(val) =>
+        onHoverProvince?.(
+          val ? (val.startsWith('VIA:') ? val.slice(4) : val) : null,
+        )
+      }
+      onChange={(val) => handleTargetChange(val ?? '')}
+    />
   );
 };
