@@ -15,6 +15,7 @@ import type {
 } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
 import { isOrderIncomplete } from '../../utils/orderHelpers';
+import { provinceName } from '../../utils/turnFormat';
 import { OrderParameterControls } from './OrderParameterControls';
 import { OrderTypeTabs } from './OrderTypeTabs';
 import styles from './UnitMacroCard.module.css';
@@ -93,7 +94,7 @@ export function UnitCardDetail({
           </span>
           <div>
             <div className={styles.unitProvTitle} data-testid="unit-prov-title">
-              {provinces[unit.province]?.name}
+              {provinceName(provinces, unit.province)}
               <span className={styles.unitProvCode}>
                 {unit.province}
                 {unit.coast ? `/${unit.coast}` : ''}
@@ -178,7 +179,7 @@ export function UnitCardDetail({
           data-testid="behavior-target-text"
         >
           {isAdjustmentPhase && !isDisbanding
-            ? `Retained in ${provinces[unit.province]?.name}`
+            ? `Retained in ${provinceName(provinces, unit.province)}`
             : summary.targetText}
         </span>
       </div>

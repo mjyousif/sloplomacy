@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { API_BASE } from '../lib/api';
-import { getAuthHeaders } from '../lib/supabase';
+import { apiFetch } from '../lib/api';
 import type {
   AuthUser,
   GameState,
@@ -42,13 +41,9 @@ export function useGameOverModal({
 
     ackedGamesRef.current.add(gid);
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(
-        `${API_BASE}/games/${encodeURIComponent(gid)}/acknowledge-game-over`,
-        {
-          method: 'POST',
-          headers: { ...authHeaders },
-        },
+      const res = await apiFetch(
+        `/games/${encodeURIComponent(gid)}/acknowledge-game-over`,
+        { method: 'POST' },
       );
       if (res.ok) {
         const data = (await res.json()) as {

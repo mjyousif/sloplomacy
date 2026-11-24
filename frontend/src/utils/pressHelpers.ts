@@ -125,9 +125,7 @@ export function mergeMessages(
   return [...current, ...fresh].sort((a, b) => a.seq - b.seq);
 }
 
-export function sameTurn(a: PressMessage, b: PressMessage): boolean {
-  return a.season === b.season && a.year === b.year && a.phase === b.phase;
-}
+export { sameTurn } from './turnFormat';
 
 export type PressBodyPart =
   | { kind: 'text'; text: string }

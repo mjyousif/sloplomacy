@@ -8,9 +8,21 @@ import type {
 } from '../types/diplomacy';
 import { useGameOverModal } from './useGameOverModal';
 
-vi.mock('../lib/supabase', () => ({
-  getAuthHeaders: vi.fn(async () => ({ Authorization: 'Bearer tok' })),
-}));
+vi.mock('../lib/supabase', () => {
+  const getAuthHeaders = vi.fn(async () => ({ Authorization: 'Bearer tok' }));
+  return {
+    getAuthHeaders,
+    authedFetch: vi.fn(async (url: string, init: RequestInit = {}) =>
+      fetch(url, {
+        ...init,
+        headers: {
+          ...(init.headers as Record<string, string> | undefined),
+          ...(await getAuthHeaders()),
+        },
+      }),
+    ),
+  };
+});
 
 const USER: AuthUser = {
   id: 'u1',

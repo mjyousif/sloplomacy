@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { API_BASE } from '../lib/api';
+import { apiFetch } from '../lib/api';
 import type {
   AuthUser,
   GameState,
@@ -8,7 +8,6 @@ import type {
   ProvinceInfo,
 } from '../types/diplomacy';
 import { myPowerIn } from '../utils/heroGame';
-import { gameReadHeaders } from './useGameSession';
 
 type ViewMode = 'lobby' | 'sandbox' | 'multiplayer';
 
@@ -100,9 +99,9 @@ export function useSpectate({
 
   const openToWatch = async (gameId: string, passcode?: string) => {
     const typed = passcode?.trim() || matchPasscodes[gameId] || '';
-    const params = new URLSearchParams({ game_id: gameId });
-    const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
-      headers: await gameReadHeaders(typed),
+    const res = await apiFetch('/game', {
+      query: { game_id: gameId },
+      passcode: typed,
     });
     if (!res.ok) throw new Error(watchRefusal(res.status));
     const data = await res.json();

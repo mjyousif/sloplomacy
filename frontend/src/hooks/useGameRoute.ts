@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { API_BASE } from '../lib/api';
+import { apiUrl } from '../lib/api';
 import type {
   AuthUser,
   MultiplayerGameSummary,
@@ -81,9 +81,7 @@ export function useGameRoute(options: GameRouteOptions) {
     const o = latest.current;
     let summary: MultiplayerGameSummary;
     try {
-      const res = await fetch(
-        `${API_BASE}/games/${encodeURIComponent(gameId)}`,
-      );
+      const res = await fetch(apiUrl(`/games/${encodeURIComponent(gameId)}`));
       if (!res.ok) {
         o.triggerToast(watchRefusal(res.status));
         return false;

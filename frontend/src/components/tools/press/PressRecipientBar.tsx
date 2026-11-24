@@ -3,9 +3,13 @@ import type React from 'react';
 import {
   ALL_POWERS,
   type GameParticipant,
-  POWER_METADATA,
   type Power,
 } from '../../../types/diplomacy';
+import {
+  accessiblePowerColor,
+  powerCode,
+  powerShortName,
+} from '../../../utils/powerHelpers';
 import { threadKey } from '../../../utils/pressHelpers';
 import { PowerFlag } from '../../ui/PowerFlag';
 import styles from './PressRecipientBar.module.css';
@@ -55,15 +59,15 @@ export const PressRecipientBar: React.FC<PressRecipientBarProps> = ({
         <span>Public</span>
       </button>
       {others.map((power) => {
-        const meta = POWER_METADATA[power];
+        const shortName = powerShortName(power);
         const picked = recipients.includes(power);
         const vacant = participants !== undefined && !participants[power];
         const unread = unreadByThread[threadKey([viewer, power])] ?? 0;
         const label = vacant
-          ? `${meta.shortName} has no player to write to`
+          ? `${shortName} has no player to write to`
           : picked
-            ? `Stop sending privately to ${meta.shortName}`
-            : `Send privately to ${meta.shortName}`;
+            ? `Stop sending privately to ${shortName}`
+            : `Send privately to ${shortName}`;
 
         return (
           <button
@@ -76,7 +80,9 @@ export const PressRecipientBar: React.FC<PressRecipientBarProps> = ({
             aria-label={unread ? `${label}, ${unread} unread` : label}
             title={label}
             disabled={vacant && !picked}
-            style={picked ? { borderColor: meta.color } : undefined}
+            style={
+              picked ? { borderColor: accessiblePowerColor(power) } : undefined
+            }
             onClick={() => onTogglePower(power)}
           >
             <PowerFlag
@@ -85,7 +91,7 @@ export const PressRecipientBar: React.FC<PressRecipientBarProps> = ({
               height={11}
               aria-hidden="true"
             />
-            <span>{meta.shortName.slice(0, 3).toUpperCase()}</span>
+            <span>{powerCode(power)}</span>
             {unread > 0 && (
               <span
                 className={styles.chipUnread}

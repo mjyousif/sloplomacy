@@ -1,10 +1,7 @@
-import {
-  type GameState,
-  type PhaseTimer,
-  POWER_METADATA,
-  type Power,
-  type TimerChoice,
-} from '../types/diplomacy';
+import type { PhaseTimer, Power, TimerChoice } from '../types/diplomacy';
+
+export { formatPowerList as powerNames } from './powerHelpers';
+export { turnLabel } from './turnFormat';
 
 export const TIMER_OPTIONS: { choice: TimerChoice; label: string }[] = [
   { choice: '15', label: '15 min' },
@@ -12,16 +9,6 @@ export const TIMER_OPTIONS: { choice: TimerChoice; label: string }[] = [
   { choice: '30', label: '30 min' },
   { choice: 'pause', label: 'Pause' },
 ];
-
-/** Identifies a turn to the server, which refuses orders meant for one that has resolved. */
-export function turnLabel(
-  state: Pick<GameState, 'season' | 'year' | 'phase'>,
-): string {
-  if (state.phase === 'Admin') {
-    return `${state.season} ${state.year} — Admin Edit`;
-  }
-  return `${state.season} ${state.year} ${state.phase}`;
-}
 
 export function formatClock(totalSeconds: number): string {
   const seconds = Math.max(0, Math.ceil(totalSeconds));
@@ -56,8 +43,4 @@ export function powersNotReady(timer: PhaseTimer): Power[] {
 
 export function countVotes(timer: PhaseTimer, choice: TimerChoice): number {
   return Object.values(timer.votes).filter((vote) => vote === choice).length;
-}
-
-export function powerNames(powers: Power[]): string {
-  return powers.map((power) => POWER_METADATA[power].shortName).join(', ');
 }

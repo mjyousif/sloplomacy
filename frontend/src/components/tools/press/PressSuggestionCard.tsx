@@ -8,6 +8,7 @@ import type {
   ProvinceInfo,
   Unit,
 } from '../../../types/diplomacy';
+import { turnLabel } from '../../../utils/turnFormat';
 import styles from './PressSuggestion.module.css';
 import { SuggestedOrders } from './SuggestedOrders';
 
@@ -47,7 +48,7 @@ export const PressSuggestionCard: React.FC<PressSuggestionCardProps> = ({
 }) => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const current = `${message.season} ${message.year} ${message.phase}` === turn;
+  const current = turnLabel(message) === turn;
   const shown = viewingId === message.id;
   const mine = viewer
     ? message.orders.filter((order) => order.power === viewer)

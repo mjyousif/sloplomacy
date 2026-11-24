@@ -1,4 +1,41 @@
-import { ALL_POWERS, type Power, type ProvinceInfo } from '../types/diplomacy';
+import {
+  ALL_POWERS,
+  POWER_METADATA,
+  type Power,
+  type ProvinceInfo,
+} from '../types/diplomacy';
+
+/** Human-readable short name for a power (e.g. `"France"`). */
+export function powerShortName(power: Power): string {
+  return POWER_METADATA[power]?.shortName ?? power;
+}
+
+/** Human-readable short name for a power, or `"Neutral"` when unowned. */
+export function powerShortNameOrNeutral(
+  power: Power | null | undefined,
+): string {
+  return power ? powerShortName(power) : 'Neutral';
+}
+
+/** Comma-separated short names for a list of powers. */
+export function formatPowerList(powers: readonly Power[]): string {
+  return powers.map(powerShortName).join(', ');
+}
+
+/** Three-letter uppercase power code (e.g. `"FRA"`, `"ENG"`). */
+export function powerCode(power: Power): string {
+  return powerShortName(power).slice(0, 3).toUpperCase();
+}
+
+/**
+ * Lifts very dark map colors (England navy, Germany charcoal) so borders and accents
+ * stay readable on dark UI panels.
+ */
+export function accessiblePowerColor(power: Power): string {
+  if (power === 'ENGLAND') return '#4f7fd8';
+  if (power === 'GERMANY') return '#8c96a6';
+  return POWER_METADATA[power].color;
+}
 
 /**
  * Only the supply centers in `ownership`. The server also records who last stood in each land

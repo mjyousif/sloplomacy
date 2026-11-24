@@ -16,18 +16,10 @@ import {
   toggleHistoryAction,
   toggleHistoryPower,
 } from '../../utils/historyHelpers';
+import { accessiblePowerColor, powerCode } from '../../utils/powerHelpers';
 import styles from './TurnHistorySelector.module.css';
 
-/** "AUS", "ENG" …: the nation chips' labels. */
-export const powerCode = (power: Power) =>
-  POWER_METADATA[power].shortName.slice(0, 3).toUpperCase();
-
-/** Lift very dark map colors (England navy, Germany charcoal) so chip borders stay readable on dark UI panels. */
-function chipColorForPower(power: Power): string {
-  if (power === 'ENGLAND') return '#4f7fd8';
-  if (power === 'GERMANY') return '#8c96a6';
-  return POWER_METADATA[power].color;
-}
+export { powerCode };
 
 export interface PowerFilterChipsProps {
   /** Selected nation filters. Empty means every nation is shown. */
@@ -86,7 +78,7 @@ export const PowerFilterChips: React.FC<PowerFilterChipsProps> = ({
           }
           style={
             {
-              '--chip-color': chipColorForPower(p),
+              '--chip-color': accessiblePowerColor(p),
             } as React.CSSProperties
           }
           onClick={() => onSelectPowers(toggleHistoryPower(powers, p))}

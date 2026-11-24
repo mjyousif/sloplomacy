@@ -2,6 +2,7 @@ import { Anchor, GripHorizontal, PlusCircle, Swords, X } from 'lucide-react';
 import type { Order, Power, ProvinceInfo } from '../../../types/diplomacy';
 import { cx } from '../../../utils/cx';
 import { buildOrder, waiveOrder } from '../../../utils/orderBuilders';
+import { provinceName } from '../../../utils/turnFormat';
 import type { UnitMenuPlacement } from '../hooks/useUnitMenuPlacement';
 import floatingStyles from './FloatingMenu.module.css';
 
@@ -63,7 +64,7 @@ export function BuildMenu({
             className={floatingStyles.floatingDragGrip}
           />
           <PlusCircle size={13} style={{ color: '#4ade80' }} />
-          <strong>Build in {provinces[home]?.name}</strong>
+          <strong>Build in {provinceName(provinces, home)}</strong>
         </div>
         <button
           className={floatingStyles.floatingCloseBtn}
@@ -146,7 +147,7 @@ export function BuildMenu({
         className={floatingStyles.floatingMenuHint}
         data-testid="floating-menu-hint"
       >
-        Choose unit type to build in {provinces[home]?.name} or Waive
+        Choose unit type to build in {provinceName(provinces, home)} or Waive
       </div>
     </div>
   );
