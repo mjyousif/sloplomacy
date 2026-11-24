@@ -215,6 +215,38 @@ describe('useMapInteraction in a movement phase', () => {
     expect(onUpdateOrder).toHaveBeenCalledTimes(1);
   });
 
+  it("moves onto the player's own unit in a reachable province instead of picking it up (#391)", () => {
+    const { r, clickUnit, onUpdateOrder } = setup({ units: [A_PAR, A_BUR] });
+    clickUnit(A_PAR);
+    clickUnit(A_BUR);
+    expect(onUpdateOrder).toHaveBeenCalledExactlyOnceWith(
+      moveOrder(A_PAR, 'BUR', null, false),
+    );
+    expect(r().selectedUnitId).toBeNull();
+  });
+
+  it("moves by convoy onto the player's own unit in a shore the army can reach by sea (#391)", () => {
+    const A_MAR = unitAt('FRANCE', 'A', 'MAR');
+    const { clickUnit, onUpdateOrder } = setup({
+      units: [A_BRE, F_MAO, A_MAR],
+    });
+    clickUnit(A_BRE);
+    clickUnit(A_MAR);
+    expect(onUpdateOrder).toHaveBeenCalledExactlyOnceWith(
+      moveOrder(A_BRE, 'MAR', null, true),
+    );
+  });
+
+  it("still picks up the player's own unit outside the selected unit's targets", () => {
+    const A_MAR = unitAt('FRANCE', 'A', 'MAR');
+    const { r, clickUnit, onUpdateOrder } = setup({ units: [A_PAR, A_MAR] });
+    clickUnit(A_PAR);
+    clickUnit(A_MAR);
+    expect(r().selectedUnitId).toBe(A_MAR.id);
+    expect(r().interaction.interactionMode).toBe('MOVE');
+    expect(onUpdateOrder).not.toHaveBeenCalled();
+  });
+
   it("lets the sandbox pick up any power's unit", () => {
     const { r, clickUnit } = setup({
       units: [A_PAR, A_PIC_GER],
