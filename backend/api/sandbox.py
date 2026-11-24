@@ -9,6 +9,7 @@ from engine.order_utils import (
     refresh_diagnostics_and_simulation,
     reset_foreign_orders,
 )
+from engine.turn_service import publish_game_state
 from fastapi import APIRouter, Depends, HTTPException, Query
 from scenarios.presets import SCENARIO_IDS, build_scenario
 from security.auth import AuthUser, get_current_user
@@ -37,13 +38,7 @@ from storage.store import (
     clear_ephemeral_sandboxes_for,
     evict_game,
     is_multiplayer_match,
-    persist_game,
     resolve_game,
-    sync_summary,
-)
-from ws.connection_manager import (
-    broadcast_game_update,
-    broadcast_lobby_update,
 )
 
 router = APIRouter(tags=["Sandbox"])
@@ -128,8 +123,7 @@ async def enter_sandbox_mode(
     else:
         SANDBOX_BRANCHES.pop(gid, None)
         game.active_power = req.power
-    refresh_diagnostics_and_simulation(game)
-    await broadcast_game_update(gid, game)
+    await publish_game_state(game, persist=False)
     return with_sanitized_admin_log(game, current_user)
 
 
@@ -179,11 +173,7 @@ async def exit_sandbox_mode(
     else:
         reset_foreign_orders(game, req.power)
 
-    refresh_diagnostics_and_simulation(game)
-    sync_summary(gid)
-    await persist_game(gid)
-    await broadcast_game_update(gid, game)
-    await broadcast_lobby_update()
+    await publish_game_state(game, lobby=True)
     return with_sanitized_admin_log(game, current_user)
 
 
@@ -201,9 +191,7 @@ async def clear_foreign_pre_moves(
     game = await resolve_game(game_id)
     reject_on_multiplayer_match(game.game_id)
     reset_foreign_orders(game, req.power)
-    refresh_diagnostics_and_simulation(game)
-    await persist_game(game.game_id)
-    await broadcast_game_update(game.game_id, game)
+    await publish_game_state(game)
     return with_sanitized_admin_log(game, current_user)
 
 
@@ -232,8 +220,5 @@ async def load_scenario(
     new_game.state_revision = current.state_revision + 1
     new_game.board_revision = current.board_revision + 1
     GAMES[gid] = new_game
-    sync_summary(gid)
-    await persist_game(gid)
-    await broadcast_game_update(gid, GAMES[gid])
-    await broadcast_lobby_update()
+    await publish_game_state(GAMES[gid], refresh=False, lobby=True)
     return GAMES[gid]

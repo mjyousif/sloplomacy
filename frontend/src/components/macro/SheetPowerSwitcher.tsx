@@ -1,6 +1,7 @@
 import { CheckCircle2 } from 'lucide-react';
 import type React from 'react';
 import { ALL_POWERS, POWER_METADATA, type Power } from '../../types/diplomacy';
+import { accessiblePowerColor, powerCode } from '../../utils/powerHelpers';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './SheetPowerSwitcher.module.css';
 
@@ -49,7 +50,10 @@ export const SheetPowerSwitcher: React.FC<SheetPowerSwitcherProps> = ({
           className={styles.switcherOption}
           style={
             isActive
-              ? { borderColor: meta.color, background: meta.lightBg }
+              ? {
+                  borderColor: accessiblePowerColor(power),
+                  background: meta.lightBg,
+                }
               : undefined
           }
           onClick={() => {
@@ -58,9 +62,7 @@ export const SheetPowerSwitcher: React.FC<SheetPowerSwitcherProps> = ({
           }}
         >
           <PowerFlag power={power} width={20} height={13} />
-          <span className={styles.switcherCode}>
-            {meta.shortName.slice(0, 3).toUpperCase()}
-          </span>
+          <span className={styles.switcherCode}>{powerCode(power)}</span>
           {isFinalized && (
             <CheckCircle2
               size={10}

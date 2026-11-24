@@ -1,6 +1,7 @@
 import type React from 'react';
 import type { Order, ProvinceInfo, Unit } from '../../../types/diplomacy';
 import { splitProvinceCode } from '../../../utils/orderHelpers';
+import { provinceName } from '../../../utils/turnFormat';
 import styles from '../OrderParameterControls.module.css';
 
 interface RetreatControlsProps {
@@ -52,13 +53,14 @@ export const RetreatControls: React.FC<RetreatControlsProps> = ({
           if (r.coasts.length > 0 && unit.unit_type === 'F') {
             return r.coasts.map((c) => (
               <option key={`${r.province}/${c}`} value={`${r.province}/${c}`}>
-                {provinces[r.province]?.name} ({c} Coast) [{r.province}/{c}]
+                {provinceName(provinces, r.province)} ({c} Coast) [{r.province}/
+                {c}]
               </option>
             ));
           }
           return (
             <option key={r.province} value={r.province}>
-              {provinces[r.province]?.name} ({r.province})
+              {provinceName(provinces, r.province)} ({r.province})
             </option>
           );
         })}

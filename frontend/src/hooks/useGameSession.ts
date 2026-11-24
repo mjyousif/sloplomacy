@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { API_BASE } from '../lib/api';
+import { apiFetch, apiUrl } from '../lib/api';
 import { getAuthHeaders } from '../lib/supabase';
 import type {
   GameState,
@@ -196,7 +196,7 @@ export function useGameSession({
         setMyGamesList([]);
         return;
       }
-      const res = await fetch(`${API_BASE}/games/mine`, {
+      const res = await fetch(apiUrl('/games/mine'), {
         headers: { ...authHeaders },
       });
       if (res.ok) {
@@ -213,7 +213,7 @@ export function useGameSession({
     try {
       setLoadingGames(true);
       const [res] = await Promise.all([
-        fetch(`${API_BASE}/games`),
+        fetch(apiUrl('/games')),
         fetchMyGames(),
       ]);
       if (res.ok) {
@@ -245,12 +245,12 @@ export function useGameSession({
           : isSpectator
             ? null
             : playerPower;
-      const params = new URLSearchParams({ game_id: gid });
-      if (effectivePower) {
-        params.set('power', effectivePower);
-      }
-      const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
-        headers: await gameReadHeaders(matchPasscodes[gid]),
+      const res = await apiFetch('/game', {
+        query: {
+          game_id: gid,
+          power: effectivePower || undefined,
+        },
+        passcode: matchPasscodes[gid],
       });
       if (!res.ok) {
         if (gid !== DEFAULT_GAME_ID && gid === readStoredSoloSandboxId()) {
@@ -324,13 +324,4 @@ export function mergeGames(
 ): MultiplayerGameSummary[] {
   const own = new Set(mine.map((g) => g.game_id));
   return [...mine, ...lobby.filter((g) => !own.has(g.game_id))];
-}
-
-/** The headers for reading a game: the player's token, and a private match's passcode. */
-export async function gameReadHeaders(
-  passcode?: string | null,
-): Promise<Record<string, string>> {
-  const headers: Record<string, string> = { ...(await getAuthHeaders()) };
-  if (passcode) headers['X-Passcode'] = passcode;
-  return headers;
 }

@@ -25,14 +25,14 @@ const fromUnit = (unit: Unit) => ({
 });
 
 /** Hold in place (also how a unit is kept in a winter adjustment). */
-export const holdOrder = (unit: Unit): Order => ({
+export const holdOrder = (unit: Unit, isExplicit = true): Order => ({
   ...fromUnit(unit),
   order_type: 'HOLD',
   target: null,
   target_coast: null,
   aux_unit_origin: null,
   via_convoy: false,
-  is_explicit: true,
+  is_explicit: isExplicit,
 });
 
 /** Move to `target`. An army sent somewhere it can't walk goes by convoy. */

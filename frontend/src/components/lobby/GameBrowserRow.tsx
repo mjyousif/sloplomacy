@@ -13,6 +13,7 @@ import {
   seatState,
   shortTurn,
 } from '../../utils/lobbyBrowse';
+import { turnMiddotLabel } from '../../utils/turnFormat';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './GameBrowserRow.module.css';
 
@@ -70,10 +71,7 @@ export const GameBrowserRow: React.FC<GameBrowserRowProps> = ({
             by {row.host_name} · {relativeTime(row.last_moved_at, now)}
           </span>
         </div>
-        <span
-          className={styles.turn}
-          title={`${row.season} ${row.year} · ${row.phase}`}
-        >
+        <span className={styles.turn} title={turnMiddotLabel(row)}>
           {shortTurn(row.season, row.year, row.phase)}
         </span>
         <ul className={styles.seats} aria-label="Seats">

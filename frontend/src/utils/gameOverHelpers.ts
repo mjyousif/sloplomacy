@@ -9,6 +9,7 @@ import {
   type PowerStats,
   type ProvinceInfo,
 } from '../types/diplomacy';
+import { supplyCenterOwners } from './powerHelpers';
 
 export const GRACE_PERIOD_MS = 24 * 60 * 60 * 1000;
 
@@ -102,12 +103,13 @@ export function getSupplyCenterCounts(
     TURKEY: 0,
   };
 
-  for (const [provId, owner] of Object.entries(gameState.ownership || {})) {
-    const prov = provinces[provId];
-    if (prov ? prov.is_supply_center : true) {
-      if (owner in counts) {
-        counts[owner] += 1;
-      }
+  const owners =
+    Object.keys(provinces).length > 0
+      ? supplyCenterOwners(gameState.ownership || {}, provinces)
+      : gameState.ownership || {};
+  for (const owner of Object.values(owners)) {
+    if (owner in counts) {
+      counts[owner] += 1;
     }
   }
 

@@ -11,7 +11,21 @@ import type {
 import { SOLO_SANDBOX_STORAGE_KEY } from '../utils/soloSandboxStorage';
 import { type GameSyncOptions, IDLE_POLL_MS, useGameSync } from './useGameSync';
 
-const supabase = vi.hoisted(() => ({ getAuthHeaders: vi.fn() }));
+const supabase = vi.hoisted(() => {
+  const getAuthHeaders = vi.fn();
+  return {
+    getAuthHeaders,
+    authedFetch: vi.fn(async (url: string, init: RequestInit = {}) =>
+      fetch(url, {
+        ...init,
+        headers: {
+          ...(init.headers as Record<string, string> | undefined),
+          ...(await getAuthHeaders()),
+        },
+      }),
+    ),
+  };
+});
 vi.mock('../lib/supabase', () => supabase);
 
 /** The socket hook, replaced so a test can deliver messages and pick whether it is up. */

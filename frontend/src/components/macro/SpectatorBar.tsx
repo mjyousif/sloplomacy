@@ -4,9 +4,9 @@ import type { SpectatorControls } from '../../hooks/useSpectate';
 import {
   ALL_POWERS,
   type GameParticipant,
-  POWER_METADATA,
   type Power,
 } from '../../types/diplomacy';
+import { accessiblePowerColor, powerShortName } from '../../utils/powerHelpers';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './SpectatorBar.module.css';
 
@@ -32,7 +32,6 @@ export const SpectatorBar: React.FC<SpectatorBarProps> = ({
   gameOver,
   onSelectPower,
 }) => {
-  const meta = POWER_METADATA[activePower];
   const seatFree = !Object.values(participants ?? {}).some(
     (seat) => seat.power === activePower,
   );
@@ -55,12 +54,12 @@ export const SpectatorBar: React.FC<SpectatorBarProps> = ({
               className={styles.power}
               data-active={power === activePower ? 'true' : undefined}
               aria-pressed={power === activePower}
-              aria-label={`Show ${POWER_METADATA[power].shortName}'s units`}
-              title={POWER_METADATA[power].shortName}
+              aria-label={`Show ${powerShortName(power)}'s units`}
+              title={powerShortName(power)}
               onClick={() => onSelectPower?.(power)}
               style={
                 {
-                  '--seat-color': POWER_METADATA[power].color,
+                  '--seat-color': accessiblePowerColor(power),
                 } as React.CSSProperties
               }
             >
@@ -78,7 +77,7 @@ export const SpectatorBar: React.FC<SpectatorBarProps> = ({
               onClick={() => controls.onClaimSeat(activePower)}
             >
               <Plus size={12} />
-              <span>Claim {meta.shortName}</span>
+              <span>Claim {powerShortName(activePower)}</span>
             </button>
           )}
           <button

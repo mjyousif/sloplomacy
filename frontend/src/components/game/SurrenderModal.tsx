@@ -7,6 +7,7 @@ import {
   type Power,
 } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
+import { turnMiddotLabel } from '../../utils/turnFormat';
 import { Modal, ModalCloseButton, ModalFooter } from '../modal/Modal';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './SurrenderModal.module.css';
@@ -130,8 +131,7 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
             {meta.name} ({meta.shortName})
           </strong>
           <span className={styles.surrenderCampaignName}>
-            Campaign: <strong>{game.name}</strong> ({game.season} {game.year} ·{' '}
-            {game.phase})
+            Campaign: <strong>{game.name}</strong> ({turnMiddotLabel(game)})
           </span>
         </div>
       </div>

@@ -5,6 +5,7 @@ import type {
   Unit,
   UnitMoveOptions,
 } from '../../../types/diplomacy';
+import { provinceName } from '../../../utils/turnFormat';
 import {
   IconSelectDropdown,
   type IconSelectOption,
@@ -92,8 +93,8 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
               {directArmies.map((pid) => (
                 <option key={pid} value={pid}>
                   {compact
-                    ? `A ${provinces[pid]?.name ?? pid}`
-                    : `A ${provinces[pid]?.name ?? pid} (${pid})`}
+                    ? `A ${provinceName(provinces, pid)}`
+                    : `A ${provinceName(provinces, pid)} (${pid})`}
                 </option>
               ))}
             </optgroup>
@@ -103,8 +104,8 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
               {chainedArmies.map((pid) => (
                 <option key={pid} value={pid}>
                   {compact
-                    ? `A ${provinces[pid]?.name ?? pid}`
-                    : `A ${provinces[pid]?.name ?? pid} (${pid})`}
+                    ? `A ${provinceName(provinces, pid)}`
+                    : `A ${provinceName(provinces, pid)} (${pid})`}
                 </option>
               ))}
             </optgroup>
@@ -114,8 +115,8 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
         fallbackArmies.map((pid) => (
           <option key={pid} value={pid}>
             {compact
-              ? `A ${provinces[pid]?.name ?? pid}`
-              : `A ${provinces[pid]?.name ?? pid} (${pid})`}
+              ? `A ${provinceName(provinces, pid)}`
+              : `A ${provinceName(provinces, pid)} (${pid})`}
           </option>
         ))
       )}
@@ -142,8 +143,8 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
               {directTargets.map((pid) => (
                 <option key={pid} value={pid}>
                   {compact
-                    ? (provinces[pid]?.name ?? pid)
-                    : `${provinces[pid]?.name ?? pid} (${pid})`}
+                    ? provinceName(provinces, pid)
+                    : `${provinceName(provinces, pid)} (${pid})`}
                 </option>
               ))}
             </optgroup>
@@ -153,8 +154,8 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
               {chainedTargets.map((pid) => (
                 <option key={pid} value={pid}>
                   {compact
-                    ? (provinces[pid]?.name ?? pid)
-                    : `${provinces[pid]?.name ?? pid} (${pid})`}
+                    ? provinceName(provinces, pid)
+                    : `${provinceName(provinces, pid)} (${pid})`}
                 </option>
               ))}
             </optgroup>
@@ -164,8 +165,8 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
         fallbackTargets.map((pid) => (
           <option key={pid} value={pid}>
             {compact
-              ? (provinces[pid]?.name ?? pid)
-              : `${provinces[pid]?.name ?? pid} (${pid})`}
+              ? provinceName(provinces, pid)
+              : `${provinceName(provinces, pid)} (${pid})`}
           </option>
         ))
       )}
@@ -181,11 +182,11 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
       : fallbackTargets;
     const armyOpts: IconSelectOption[] = armyIds.map((pid) => ({
       value: pid,
-      label: `A ${provinces[pid]?.name ?? pid}`,
+      label: `A ${provinceName(provinces, pid)}`,
     }));
     const targetOpts: IconSelectOption[] = targetIds.map((pid) => ({
       value: pid,
-      label: provinces[pid]?.name ?? pid,
+      label: provinceName(provinces, pid),
     }));
     return (
       <div className={styles.orderParamInline}>

@@ -1,10 +1,11 @@
 import { Megaphone, VenetianMask } from 'lucide-react';
 import type React from 'react';
 import type { Power } from '../../../types/diplomacy';
+import { formatPowerList } from '../../../utils/powerHelpers';
 import type { PressChannel } from '../../../utils/pressHelpers';
 import { PowerFlag } from '../../ui/PowerFlag';
 import styles from '../PressSection.module.css';
-import { channelLabel, listPowers } from './pressLabels';
+import { channelLabel } from './pressLabels';
 
 export interface PressChannelTabsProps {
   channels: PressChannel[];
@@ -26,7 +27,7 @@ export const PressChannelTabs: React.FC<PressChannelTabsProps> = ({
       const shown = channel.members.includes(viewer)
         ? channel.members.filter((p) => p !== viewer)
         : channel.members;
-      const title = channel.kind === 'thread' ? listPowers(shown) : label;
+      const title = channel.kind === 'thread' ? formatPowerList(shown) : label;
       return (
         <button
           key={channel.key}

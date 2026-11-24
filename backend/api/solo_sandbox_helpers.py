@@ -33,7 +33,7 @@ from storage.store import (
     PRIVATE_SANDBOXES,
     SANDBOX_CHECKPOINTS,
     check_game_capacity,
-    evict_game,
+    delete_game_everywhere,
     load_saved_game,
     persist_game,
     resolve_game,
@@ -126,9 +126,7 @@ async def clear_caller_draft_sandboxes(
             if s.is_sandbox and s.is_draft and _draft_belongs_to_user(s, current_user):
                 draft_ids.add(gid_cand)
     for old_gid in draft_ids:
-        evict_game(old_gid)
-        if supabase.is_persistence_enabled():
-            await supabase.delete_game_from_db(old_gid)
+        await delete_game_everywhere(old_gid)
 
 
 async def export_game_to_solo_sandbox(

@@ -7,6 +7,7 @@ import type {
   UnitMoveOptions,
 } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
+import { provinceName, unitTypeName } from '../../utils/turnFormat';
 import { MoveControls } from './controls/MoveControls';
 import { RetreatControls } from './controls/RetreatControls';
 import { OrderParameterControls } from './OrderParameterControls';
@@ -76,16 +77,16 @@ export function UnitCardCompactRow({
                 ? '#dc2626'
                 : powerColor,
           }}
-          title={`${unit.unit_type === 'A' ? 'Army' : 'Fleet'} in ${provinces[unit.province]?.name ?? unit.province}`}
+          title={`${unitTypeName(unit.unit_type)} in ${provinceName(provinces, unit.province)}`}
         >
           {unit.unit_type === 'A' ? <Swords size={10} /> : <Anchor size={10} />}
           {unit.unit_type}
         </span>
         <span
           className={styles.unitCompactProv}
-          title={`${provinces[unit.province]?.name ?? unit.province} (${unit.province}${unit.coast ? `/${unit.coast}` : ''})`}
+          title={`${provinceName(provinces, unit.province)} (${unit.province}${unit.coast ? `/${unit.coast}` : ''})`}
         >
-          {provinces[unit.province]?.name ?? unit.province}
+          {provinceName(provinces, unit.province)}
         </span>
         <div
           className={styles.unitCompactControls}

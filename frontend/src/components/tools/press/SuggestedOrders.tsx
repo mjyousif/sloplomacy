@@ -11,9 +11,9 @@ import {
   formatOrderSummary,
   isOrderIncomplete,
 } from '../../../utils/orderHelpers';
+import { powerShortName } from '../../../utils/powerHelpers';
 import { PowerFlag } from '../../ui/PowerFlag';
 import styles from './PressSuggestion.module.css';
-import { powerName } from './pressLabels';
 
 export interface SuggestedOrdersProps {
   orders: Order[];
@@ -47,7 +47,7 @@ export const SuggestedOrders: React.FC<SuggestedOrdersProps> = ({
               height={10}
               aria-hidden="true"
             />
-            {power === viewer ? 'Your units' : powerName(power)}
+            {power === viewer ? 'Your units' : powerShortName(power)}
           </div>
           <ul className={styles.orderLines}>
             {orders

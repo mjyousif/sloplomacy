@@ -6,6 +6,7 @@ import type {
   UnitMoveOptions,
 } from '../../../types/diplomacy';
 import { splitProvinceCode } from '../../../utils/orderHelpers';
+import { provinceName } from '../../../utils/turnFormat';
 import {
   IconSelectDropdown,
   type IconSelectDropdownClassNames,
@@ -126,13 +127,13 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
         if (r.coasts.length > 0 && unit.unit_type === 'F') {
           return r.coasts.map((c) => ({
             value: `${r.province}/${c}`,
-            label: `${provinces[r.province]?.name ?? r.province} (${c})`,
+            label: `${provinceName(provinces, r.province)} (${c})`,
           }));
         }
         return [
           {
             value: r.province,
-            label: provinces[r.province]?.name ?? r.province,
+            label: provinceName(provinces, r.province),
           },
         ];
       }),
@@ -140,7 +141,7 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
         const isReady = unitOptions?.active_convoys.includes(pid);
         return {
           value: `VIA:${pid}`,
-          label: `${provinces[pid]?.name ?? pid} (Convoy${isReady ? ' ✓' : ''})`,
+          label: `${provinceName(provinces, pid)} (Convoy${isReady ? ' ✓' : ''})`,
         };
       }),
     ];
@@ -153,7 +154,7 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
           data-testid="select-order-target"
           value={selectValue}
           onChange={(e) => handleTargetChange(e.target.value)}
-          title={`Target for ${provinces[unit.province]?.name ?? unit.province}`}
+          title={`Target for ${provinceName(provinces, unit.province)}`}
         >
           {!selectValue && <option value="">Move to…</option>}
           {compactOptions.map((opt) => (
@@ -172,7 +173,7 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
         value={selectValue || null}
         options={compactOptions}
         placeholder="Move to…"
-        title={`Target for ${provinces[unit.province]?.name ?? unit.province}`}
+        title={`Target for ${provinceName(provinces, unit.province)}`}
         onHoverOption={(val) =>
           onHoverProvince?.(
             val ? (val.startsWith('VIA:') ? val.slice(4) : val) : null,
@@ -197,13 +198,13 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
             if (r.coasts.length > 0 && unit.unit_type === 'F') {
               return r.coasts.map((c) => (
                 <option key={`${r.province}/${c}`} value={`${r.province}/${c}`}>
-                  {`${provinces[r.province]?.name} (${c} Coast) [${r.province}/${c}]`}
+                  {`${provinceName(provinces, r.province)} (${c} Coast) [${r.province}/${c}]`}
                 </option>
               ));
             }
             return (
               <option key={r.province} value={r.province}>
-                {`${provinces[r.province]?.name} (${r.province})`}
+                {`${provinceName(provinces, r.province)} (${r.province})`}
               </option>
             );
           })}
@@ -214,7 +215,7 @@ export const MoveControls: React.FC<MoveControlsProps> = ({
               const isReady = unitOptions?.active_convoys.includes(pid);
               return (
                 <option key={`VIA:${pid}`} value={`VIA:${pid}`}>
-                  {provinces[pid]?.name ?? pid} ({pid}) — via Convoy
+                  {provinceName(provinces, pid)} ({pid}) — via Convoy
                   {isReady ? ' [Ready]' : ''}
                 </option>
               );

@@ -259,10 +259,9 @@ def test_sanitize_game_state_scrubs_email_from_admin_log_actor_to_envoy(game):
     assert "@" not in seen.admin_log[0].actor
 
 
-def test_public_host_name_and_sanitize_summary_prefer_profile_names_and_fallback():
+def test_resolve_host_name_and_sanitize_summary_prefer_profile_names_and_fallback():
     from domain.game_state import GameParticipant, MultiplayerGameSummary
-    from security.secrecy import public_host_name
-    from storage.profiles import PROFILE_NAMES
+    from storage.profiles import PROFILE_NAMES, resolve_host_name
 
     uid = "22222222-2222-2222-2222-222222222222"
     summary = MultiplayerGameSummary(
@@ -283,16 +282,65 @@ def test_public_host_name_and_sanitize_summary_prefer_profile_names_and_fallback
 
     try:
         PROFILE_NAMES.pop(uid, None)
-        assert public_host_name(summary) == "Envoy"
+        assert resolve_host_name(summary) == "Envoy"
         no_profile = sanitize_summary_for_viewer(summary)
         assert no_profile.created_by == "Envoy"
         assert no_profile.participants[Power.FRANCE.value].display_name == "Envoy"
         assert "secret" not in no_profile.model_dump_json()
 
         PROFILE_NAMES[uid] = "Freetvs"
-        assert public_host_name(summary) == "Freetvs"
+        assert resolve_host_name(summary) == "Freetvs"
         with_profile = sanitize_summary_for_viewer(summary)
         assert with_profile.created_by == "Freetvs"
         assert with_profile.participants[Power.FRANCE.value].display_name == "Freetvs"
     finally:
         PROFILE_NAMES.pop(uid, None)
+
+
+def test_require_seat_holder_enforces_account_and_guest_ownership():
+    from domain.game_state import GameParticipant, MultiplayerGameSummary
+    from fastapi import HTTPException
+    from security.auth import AuthUser
+    from security.secrecy import require_seat_holder
+
+    uid_alice = "11111111-1111-1111-1111-111111111111"
+    uid_bob = "22222222-2222-2222-2222-222222222222"
+    summary = MultiplayerGameSummary(
+        game_id="g_seat_holder",
+        name="Seat Holder",
+        created_at="2026-11-13T00:00:00Z",
+        participants={
+            Power.FRANCE.value: GameParticipant(
+                user_id=uid_alice,
+                power=Power.FRANCE,
+                joined_at="2026-11-13T00:00:00Z",
+            ),
+            Power.GERMANY.value: GameParticipant(
+                user_id="guest_germany",
+                power=Power.GERMANY,
+                joined_at="2026-11-13T00:00:00Z",
+            ),
+        },
+    )
+    alice = AuthUser(user_id=uid_alice, is_authenticated=True)
+    bob = AuthUser(user_id=uid_bob, is_authenticated=True)
+
+    # Empty summary or unclaimed seat passes
+    require_seat_holder(None, Power.FRANCE, None)
+    require_seat_holder(summary, Power.ENGLAND, bob)
+
+    # Authenticated owner passes; rival gets 403; unauthenticated gets 401 with custom verb
+    require_seat_holder(summary, Power.FRANCE, alice)
+    with pytest.raises(HTTPException) as exc_403:
+        require_seat_holder(summary, Power.FRANCE, bob)
+    assert exc_403.value.status_code == 403
+    with pytest.raises(HTTPException) as exc_401:
+        require_seat_holder(summary, Power.FRANCE, None, action="vacate FRANCE")
+    assert exc_401.value.status_code == 401
+    assert "vacate FRANCE" in exc_401.value.detail
+
+    # Guest seat matches guest_user_id and refuses mismatched guest_user_id
+    require_seat_holder(summary, Power.GERMANY, None, guest_user_id="guest_germany")
+    with pytest.raises(HTTPException) as exc_guest:
+        require_seat_holder(summary, Power.GERMANY, None, guest_user_id="guest_other")
+    assert exc_guest.value.status_code == 403

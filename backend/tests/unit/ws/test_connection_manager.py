@@ -8,7 +8,11 @@ from domain.board import Power
 from scenarios.presets import build_scenario
 from starlette.websockets import WebSocketDisconnect
 from ws import connection_manager as cm
-from ws.connection_manager import ConnectionManager
+from ws.connection_manager import (
+    ConnectionManager,
+    build_game_update_payload,
+    build_lobby_update_payload,
+)
 
 
 class FakeSocket:
@@ -157,3 +161,31 @@ def test_lobby_broadcast_also_survives_a_stalled_client(monkeypatch):
 
     assert fast.sent and fast.sent[0]["type"] == "lobby_update"
     assert stalled not in manager.lobby_connections
+
+
+def test_payload_builders_produce_sanitized_game_and_lobby_updates(monkeypatch):
+    from domain.game_state import MultiplayerGameSummary
+    from storage.store import GAME_SUMMARIES, GAMES
+
+    gid = "mp_ws_builder"
+    game = build_scenario("standard_1901", Power.FRANCE, gid)
+    summary = MultiplayerGameSummary(
+        game_id=gid,
+        name="Builder Match",
+        created_by="secret@example.com",
+        creator_id="22222222-2222-2222-2222-222222222222",
+        created_at="2026-11-13T00:00:00Z",
+    )
+    monkeypatch.setitem(GAMES, gid, game)
+    monkeypatch.setitem(GAME_SUMMARIES, gid, summary)
+
+    game_payload = build_game_update_payload(gid, game, summary, Power.FRANCE)
+    assert game_payload["type"] == "game_update"
+    assert game_payload["game_id"] == gid
+    assert game_payload["summary"]["created_by"] == "Envoy"
+    assert game_payload["summary"]["board"] is None
+
+    lobby_payload = build_lobby_update_payload()
+    assert lobby_payload["type"] == "lobby_update"
+    match_entry = next(g for g in lobby_payload["games"] if g["game_id"] == gid)
+    assert match_entry["created_by"] == "Envoy"

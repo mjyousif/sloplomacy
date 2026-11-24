@@ -3,15 +3,16 @@
 import asyncio
 import time
 
-import api.turns as turns_api
+import engine.turn_service as turn_service
 import pytest
-from api.turns import tick_timer
+import storage.store as store
 from domain.board import Power
 from domain.game_state import GameState, TimerChoice, TimerStage
 from engine.phase_timer import (
     FIXED_PHASE_MINUTES,
     start_phase_clock,
 )
+from engine.turn_service import tick_timer
 from storage.store import GAME_HISTORY, GAME_SUMMARIES, GAMES, PRIVATE_SANDBOXES
 from tests.integration.api.turn_clock.helpers import (
     host_headers,
@@ -56,13 +57,13 @@ def test_two_requests_cannot_resolve_one_deadline_twice(client, monkeypatch):
     run_vote(client, gid)
     run_out(gid)
 
-    real_persist = turns_api.persist_game
+    real_persist = store.persist_game
 
     async def slow_persist(game_id):
         await asyncio.sleep(0)
         await real_persist(game_id)
 
-    monkeypatch.setattr(turns_api, "persist_game", slow_persist)
+    monkeypatch.setattr(store, "persist_game", slow_persist)
 
     async def both():
         await asyncio.gather(tick_timer(GAMES[gid]), tick_timer(GAMES[gid]))
@@ -101,14 +102,14 @@ def test_a_deadline_that_cannot_resolve_pauses_and_is_saved(client, monkeypatch)
         raise RuntimeError("adjudicator exploded")
 
     saved = []
-    real_persist = turns_api.persist_game
+    real_persist = store.persist_game
 
     async def recording_persist(game_id):
         saved.append(GAMES[game_id].timer.stage if GAMES[game_id].timer else None)
         await real_persist(game_id)
 
-    monkeypatch.setattr(turns_api, "execute_adjudication", broken)
-    monkeypatch.setattr(turns_api, "persist_game", recording_persist)
+    monkeypatch.setattr(turn_service, "execute_adjudication", broken)
+    monkeypatch.setattr(store, "persist_game", recording_persist)
     asyncio.run(tick_timer(GAMES[gid]))
 
     assert GAMES[gid].timer.stage == TimerStage.PAUSED

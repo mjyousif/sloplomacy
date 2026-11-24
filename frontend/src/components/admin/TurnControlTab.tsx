@@ -9,6 +9,7 @@ import {
 import type React from 'react';
 import type { TurnHistoryEntry } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
+import { turnLabel } from '../../utils/turnFormat';
 import {
   IconSelectDropdown,
   type IconSelectOption,
@@ -82,7 +83,7 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
     .reverse()
     .map((entry) => ({
       value: String(entry.index),
-      label: `${entry.season} ${entry.year} ${entry.phase}`,
+      label: turnLabel(entry),
       testId: `select-admin-rollback-snapshot-option-${entry.index}`,
     }));
 

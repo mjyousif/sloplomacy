@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import type { Power, ProvinceInfo } from '../types/diplomacy';
-import { rankPowers, supplyCenterOwners } from './powerHelpers';
+import { ALL_POWERS, type Power, type ProvinceInfo } from '../types/diplomacy';
+import {
+  accessiblePowerColor,
+  formatPowerList,
+  powerCode,
+  powerShortName,
+  powerShortNameOrNeutral,
+  rankPowers,
+  supplyCenterOwners,
+} from './powerHelpers';
 
 describe('rankPowers', () => {
   const baseCounts = (): Record<Power, number> => ({
@@ -150,5 +158,35 @@ describe('supplyCenterOwners', () => {
     expect(supplyCenterOwners(ownership, provinces)).toEqual({
       VIE: 'AUSTRIA',
     });
+  });
+});
+
+describe('power formatting helpers', () => {
+  it('returns short names for powers and Neutral when nullish', () => {
+    expect(powerShortName('FRANCE')).toBe('France');
+    expect(powerShortName('AUSTRIA')).toBe('Austria');
+    expect(powerShortNameOrNeutral('GERMANY')).toBe('Germany');
+    expect(powerShortNameOrNeutral(null)).toBe('Neutral');
+    expect(powerShortNameOrNeutral(undefined)).toBe('Neutral');
+  });
+
+  it('formats a list of powers as comma-separated short names', () => {
+    expect(formatPowerList([])).toBe('');
+    expect(formatPowerList(['FRANCE', 'ITALY'])).toBe('France, Italy');
+  });
+
+  it('returns 3-letter uppercase power codes', () => {
+    expect(powerCode('FRANCE')).toBe('FRA');
+    expect(powerCode('AUSTRIA')).toBe('AUS');
+    expect(powerCode('TURKEY')).toBe('TUR');
+  });
+
+  it('lifts dark England and Germany colors while preserving others', () => {
+    expect(accessiblePowerColor('ENGLAND')).toBe('#4f7fd8');
+    expect(accessiblePowerColor('GERMANY')).toBe('#8c96a6');
+    for (const p of ALL_POWERS) {
+      expect(accessiblePowerColor(p)).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+    expect(accessiblePowerColor('FRANCE')).not.toBe('#4f7fd8');
   });
 });

@@ -191,7 +191,7 @@ describe('useSeatActions: picking a power', () => {
     const { result } = renderSeats(o);
     await act(() => result.current.handleSelectPower('GERMANY'));
     expect(sent()).toEqual({
-      url: '/api/power?game_id=solo%201',
+      url: '/api/power?game_id=solo+1',
       method: 'POST',
       body: { power: 'GERMANY' },
     });

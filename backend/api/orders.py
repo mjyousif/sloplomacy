@@ -1,6 +1,6 @@
 """FastAPI router for tactical orders."""
 
-from domain.board import Power, UnitType
+from domain.board import UnitType
 from domain.game_state import GameState
 from domain.orders import OrderType
 from domain.requests import OrderSubmissionRequest, SetPowerRequest, SingleOrderUpdateRequest
@@ -10,10 +10,12 @@ from engine.order_utils import (
     normalize_unit_order,
     refresh_diagnostics_and_simulation,
     reject_if_game_over,
+    reject_if_surrendered,
     reject_stale_turn,
     validate_build_slot,
     validate_order_references,
 )
+from engine.turn_service import publish_game_state
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
@@ -22,25 +24,10 @@ from security.secrecy import (
 )
 from storage.store import (
     is_multiplayer_match,
-    persist_game,
     resolve_game,
-    sync_summary,
-)
-from ws.connection_manager import (
-    broadcast_game_update,
-    broadcast_lobby_update,
 )
 
 router = APIRouter(tags=["Match & Tactical Operations"])
-
-
-def reject_if_surrendered(game: GameState, power: Power) -> None:
-    """A surrendered power is in Civil Disorder, so a live match takes no orders for it."""
-    if power in game.surrendered_powers and is_multiplayer_match(game.game_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"{power.value} has surrendered and is in Civil Disorder.",
-        )
 
 
 @router.post(
@@ -142,13 +129,8 @@ async def update_single_order(
     if req.active_power:
         game.active_power = req.active_power
 
-    game.state_revision += 1
-    refresh_diagnostics_and_simulation(game)
-    sync_summary(game.game_id)
-    viewer_state = sanitize_game_state_for_viewer(game, target_power)
-    background_tasks.add_task(broadcast_game_update, game.game_id, game)
-    background_tasks.add_task(persist_game, game.game_id)
-    return viewer_state
+    await publish_game_state(game, background_tasks=background_tasks, bump_revision=True)
+    return sanitize_game_state_for_viewer(game, target_power)
 
 
 @router.post(
@@ -203,14 +185,10 @@ async def update_batch_orders(
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)
 
-    game.state_revision += 1
-    refresh_diagnostics_and_simulation(game)
-    sync_summary(game.game_id)
-    viewer_state = sanitize_game_state_for_viewer(game, req.power)
-    background_tasks.add_task(broadcast_game_update, game.game_id, game)
-    background_tasks.add_task(broadcast_lobby_update)
-    background_tasks.add_task(persist_game, game.game_id)
-    return viewer_state
+    await publish_game_state(
+        game, lobby=True, background_tasks=background_tasks, bump_revision=True
+    )
+    return sanitize_game_state_for_viewer(game, req.power)
 
 
 @router.post(
@@ -240,11 +218,7 @@ async def clear_all_power_orders(
             game.orders[key] = default
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)
-    game.state_revision += 1
-    refresh_diagnostics_and_simulation(game)
-    sync_summary(game.game_id)
-    viewer_state = sanitize_game_state_for_viewer(game, req.power)
-    background_tasks.add_task(broadcast_game_update, game.game_id, game)
-    background_tasks.add_task(broadcast_lobby_update)
-    background_tasks.add_task(persist_game, game.game_id)
-    return viewer_state
+    await publish_game_state(
+        game, lobby=True, background_tasks=background_tasks, bump_revision=True
+    )
+    return sanitize_game_state_for_viewer(game, req.power)

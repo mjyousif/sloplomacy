@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { AuthUser } from '../types/diplomacy';
-import { API_BASE } from './api';
+import { apiUrl, readErrorDetail } from './api';
 
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
@@ -454,19 +454,18 @@ export async function updateAccountDisplayName(
   }
 
   try {
-    const res = await authedFetch(`${API_BASE}/account/profile`, {
+    const res = await authedFetch(apiUrl('/account/profile'), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ display_name: clean }),
     });
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
       return {
         user: updatedUser,
-        error:
-          typeof data?.detail === 'string'
-            ? data.detail
-            : 'Saved locally, but failed to sync active games.',
+        error: await readErrorDetail(
+          res,
+          'Saved locally, but failed to sync active games.',
+        ),
       };
     }
   } catch {

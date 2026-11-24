@@ -7,14 +7,15 @@ import {
   type PressMessage,
   type ProvinceInfo,
 } from '../../../types/diplomacy';
+import { powerShortName } from '../../../utils/powerHelpers';
 import { sameTurn, splitProvinceRefs } from '../../../utils/pressHelpers';
+import { provinceName, turnMiddotLabel } from '../../../utils/turnFormat';
 import { PowerFlag } from '../../ui/PowerFlag';
 import styles from '../PressSection.module.css';
 import {
   PressSuggestionCard,
   type PressSuggestionContext,
 } from './PressSuggestionCard';
-import { powerName } from './pressLabels';
 
 export interface PressMessageListProps {
   messages: PressMessage[];
@@ -60,7 +61,7 @@ const PressBody: React.FC<
             className={styles.provinceLink}
             data-testid="press-province-link"
             data-province={part.province}
-            title={`Show ${provinces[part.province]?.name ?? part.province} on the map`}
+            title={`Show ${provinceName(provinces, part.province)} on the map`}
             onPointerEnter={(e) => {
               if (e.pointerType === 'touch') return;
               pinned.current = false;
@@ -128,9 +129,7 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
           <div key={message.id} className={styles.messageWrap}>
             {(!previous || !sameTurn(previous, message)) && (
               <div className={styles.turnDivider}>
-                <span>
-                  {message.season} {message.year} · {message.phase}
-                </span>
+                <span>{turnMiddotLabel(message)}</span>
               </div>
             )}
             <article
@@ -157,7 +156,7 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
                       ? 'Anonymous'
                       : mine
                         ? 'You'
-                        : powerName(message.sender as Power)}
+                        : powerShortName(message.sender as Power)}
                   </span>
                   {message.anonymous && !hidden && (
                     <span

@@ -1,6 +1,7 @@
 import type { AdminTurnClockSettings } from '../components/macro/AdminTurnClockSidebar';
 import type { ConfirmOptions } from '../components/modal/ConfirmModal';
 import type { AuthUser, GameState } from '../types/diplomacy';
+import { turnLabel } from '../utils/turnFormat';
 import type { ViewMode } from '../utils/viewMode';
 import type { useAdminMode } from './useAdminMode';
 import type { useTurnHistory } from './useTurnHistory';
@@ -108,8 +109,8 @@ export function useAdminActions({
       {
         title: 'Force-Resolve Turn?',
         message: isMp
-          ? `Force-resolve ${boardState.season} ${boardState.year} ${boardState.phase} and advance to the next phase? Other players will be notified of this admin action.`
-          : `Resolve ${boardState.season} ${boardState.year} ${boardState.phase} and advance to the next phase?`,
+          ? `Force-resolve ${turnLabel(boardState)} and advance to the next phase? Other players will be notified of this admin action.`
+          : `Resolve ${turnLabel(boardState)} and advance to the next phase?`,
         confirmLabel: 'Resolve Turn',
       },
       event,

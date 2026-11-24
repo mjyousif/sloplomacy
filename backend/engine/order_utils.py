@@ -12,7 +12,7 @@ from engine.adjudicator.resolver import (
 from engine.reachability import compute_unit_options
 from engine.topology.provinces import PROVINCES
 from engine.validator.orchestrator import validate_orders
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 
 def validate_order_references(order: Order) -> None:
@@ -310,9 +310,14 @@ def build_slot_power(slot_id: str) -> Power | None:
         return None
 
 
+def turn_label(game: GameState) -> str:
+    """Human-readable label for a game's current turn (e.g. 'Spring 1901 Movement')."""
+    return f"{game.season} {game.year} {game.phase}"
+
+
 def reject_stale_turn(game: GameState, turn: str | None) -> None:
     """Refuse a request made for a turn that has since resolved."""
-    current = f"{game.season} {game.year} {game.phase}"
+    current = turn_label(game)
     if turn and turn != current:
         raise HTTPException(
             status_code=409, detail=f"Too late: the game has moved on to {current}."
@@ -325,4 +330,15 @@ def reject_if_game_over(game: GameState) -> None:
         raise HTTPException(
             status_code=409,
             detail=f"Game over: {game.winner.value} has already won.",
+        )
+
+
+def reject_if_surrendered(game: GameState, power: Power) -> None:
+    """A surrendered power is in Civil Disorder, so a live match takes no orders for it."""
+    from storage.store import is_multiplayer_match
+
+    if power in game.surrendered_powers and is_multiplayer_match(game.game_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"{power.value} has surrendered and is in Civil Disorder.",
         )
