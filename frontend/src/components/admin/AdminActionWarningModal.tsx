@@ -1,6 +1,7 @@
 import { ShieldAlert } from 'lucide-react';
 import type React from 'react';
 import type { AdminActionLogEntry } from '../../types/diplomacy';
+import { turnLabel } from '../../utils/turnFormat';
 import sanityStyles from '../game/SanityCheckModal.module.css';
 import { Modal, ModalFooter } from '../modal/Modal';
 import styles from './AdminActionWarningModal.module.css';
@@ -70,7 +71,7 @@ export const AdminActionWarningModal: React.FC<
             >
               <div className={sanityStyles.adminWarningEntryHeader}>
                 <span className={sanityStyles.adminWarningTurnBadge}>
-                  {entry.season} {entry.year} {entry.phase}
+                  {turnLabel(entry)}
                 </span>
                 <span>
                   By <strong>{entry.actor}</strong>

@@ -5,12 +5,7 @@ import {
   type TurnHistoryEntry,
 } from '../types/diplomacy';
 
-type TurnLike = Pick<TurnHistoryEntry, 'season' | 'year' | 'phase'>;
-
-/** Same phase of the same year, so a turn can be found again after the list is refetched. */
-export function sameTurn(a: TurnLike, b: TurnLike): boolean {
-  return a.season === b.season && a.year === b.year && a.phase === b.phase;
-}
+export { sameTurn } from './turnFormat';
 
 /**
  * The turn one step from `current` (null = the live turn, which sits after the newest entry).

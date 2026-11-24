@@ -4,9 +4,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TurnHistoryEntry, TurnRecord } from '../types/diplomacy';
 import { useTurnHistory } from './useTurnHistory';
 
-vi.mock('../lib/supabase', () => ({
-  getAuthHeaders: vi.fn(async () => ({ Authorization: 'Bearer test-token' })),
-}));
+vi.mock('../lib/supabase', () => {
+  const getAuthHeaders = vi.fn(async () => ({
+    Authorization: 'Bearer test-token',
+  }));
+  return {
+    getAuthHeaders,
+    authedFetch: vi.fn(async (url: string, init: RequestInit = {}) =>
+      fetch(url, {
+        ...init,
+        headers: {
+          ...(init.headers as Record<string, string> | undefined),
+          ...(await getAuthHeaders()),
+        },
+      }),
+    ),
+  };
+});
 
 const S1901M: TurnHistoryEntry = {
   index: 0,

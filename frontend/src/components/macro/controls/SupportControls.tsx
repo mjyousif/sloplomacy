@@ -1,11 +1,12 @@
 import type React from 'react';
-import {
-  type Order,
-  POWER_METADATA,
-  type ProvinceInfo,
-  type Unit,
-  type UnitMoveOptions,
+import type {
+  Order,
+  ProvinceInfo,
+  Unit,
+  UnitMoveOptions,
 } from '../../../types/diplomacy';
+import { powerShortName } from '../../../utils/powerHelpers';
+import { provinceName } from '../../../utils/turnFormat';
 import {
   IconSelectDropdown,
   type IconSelectOption,
@@ -87,7 +88,7 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
   if (compact && !useNativeSelect) {
     const unitOptionsList: IconSelectOption[] = supportableUnits.map((u2) => ({
       value: u2.province,
-      label: `${u2.unit_type} ${provinces[u2.province]?.name ?? u2.province}`,
+      label: `${u2.unit_type} ${provinceName(provinces, u2.province)}`,
       icon: <PowerFlag power={u2.power} width={14} height={10} />,
     }));
     const targetOptionsList: IconSelectOption[] = [
@@ -95,13 +96,13 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
         ? [
             {
               value: order.aux_unit_origin,
-              label: `Hold (${provinces[order.aux_unit_origin]?.name ?? order.aux_unit_origin})`,
+              label: `Hold (${provinceName(provinces, order.aux_unit_origin)})`,
             },
           ]
         : []),
       ...moveTargets.map((pid) => ({
         value: pid,
-        label: provinces[pid]?.name ?? pid,
+        label: provinceName(provinces, pid),
       })),
     ];
 
@@ -152,8 +153,8 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
       {supportableUnits.map((u2) => (
         <option key={u2.id} value={u2.province}>
           {compact
-            ? `${u2.unit_type} ${provinces[u2.province]?.name ?? u2.province}`
-            : `[${POWER_METADATA[u2.power].shortName}] ${u2.unit_type} ${provinces[u2.province]?.name} (${u2.province})`}
+            ? `${u2.unit_type} ${provinceName(provinces, u2.province)}`
+            : `[${powerShortName(u2.power)}] ${u2.unit_type} ${provinceName(provinces, u2.province)} (${u2.province})`}
         </option>
       ))}
     </select>
@@ -175,8 +176,8 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
       {order.aux_unit_origin && canHoldSupport && (
         <option value={order.aux_unit_origin}>
           {compact
-            ? `Hold (${provinces[order.aux_unit_origin]?.name ?? order.aux_unit_origin})`
-            : `HOLD in ${provinces[order.aux_unit_origin]?.name} (${order.aux_unit_origin})`}
+            ? `Hold (${provinceName(provinces, order.aux_unit_origin)})`
+            : `HOLD in ${provinceName(provinces, order.aux_unit_origin)} (${order.aux_unit_origin})`}
         </option>
       )}
       {moveTargets.length > 0 && (
@@ -184,8 +185,8 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
           {moveTargets.map((pid) => (
             <option key={pid} value={pid}>
               {compact
-                ? (provinces[pid]?.name ?? pid)
-                : `→ ${provinces[pid]?.name ?? pid} (${pid})`}
+                ? provinceName(provinces, pid)
+                : `→ ${provinceName(provinces, pid)} (${pid})`}
             </option>
           ))}
         </optgroup>

@@ -1,6 +1,5 @@
 import type { ConfirmOptions } from '../components/modal/ConfirmModal';
-import { API_BASE } from '../lib/api';
-import { authedFetch } from '../lib/supabase';
+import { apiFetch, readErrorDetail } from '../lib/api';
 import {
   type AdminActionLogEntry,
   ALL_POWERS,
@@ -19,6 +18,8 @@ import {
   mergeLiveUnitOrders,
   ordersHaveSameParameters,
 } from './adminStagedChanges';
+import { holdOrder } from './orderBuilders';
+import { sameTurn } from './turnFormat';
 
 /**
  * The power this browser is playing. In multiplayer that is the seat the player claimed:
@@ -147,16 +148,16 @@ export function buildDefaultHoldOrder(
   origin: string,
   originCoast: string | null,
 ): Order {
-  return {
-    unit_id: unitId,
-    power,
-    unit_type: unitType,
-    origin,
-    origin_coast: originCoast,
-    order_type: 'HOLD',
-    via_convoy: false,
-    is_explicit: false,
-  };
+  return holdOrder(
+    {
+      id: unitId,
+      power,
+      unit_type: unitType,
+      province: origin,
+      coast: originCoast,
+    },
+    false,
+  );
 }
 
 export function mintStagedUnitId(
@@ -209,19 +210,16 @@ export async function acknowledgeAdminEntriesRequest(
   authUser: AuthUser | null,
   lockedPower: Power | null,
 ): Promise<AdminAcknowledgeResponse | null> {
-  const res = await authedFetch(
-    `${API_BASE}/admin/acknowledge?game_id=${encodeURIComponent(activeGameId)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        entry_ids: entryIds,
-        // Who is acknowledging comes from the token. A guest names its seat; the server
-        // believes it only for a seat claimed without an account.
-        power: authUser ? undefined : lockedPower,
-      }),
+  const res = await apiFetch('/admin/acknowledge', {
+    method: 'POST',
+    query: { game_id: activeGameId },
+    json: {
+      entry_ids: entryIds,
+      // Who is acknowledging comes from the token. A guest names its seat; the server
+      // believes it only for a seat claimed without an account.
+      power: authUser ? undefined : lockedPower,
     },
-  );
+  });
   if (!res.ok) return null;
   return res.json();
 }
@@ -230,14 +228,11 @@ export async function postAdminBoardEditRequest(
   activeGameId: string,
   payload: Record<string, unknown>,
 ): Promise<Response> {
-  return authedFetch(
-    `${API_BASE}/admin/board-edit?game_id=${encodeURIComponent(activeGameId)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    },
-  );
+  return apiFetch('/admin/board-edit', {
+    method: 'POST',
+    query: { game_id: activeGameId },
+    json: payload,
+  });
 }
 
 export type AdminBoardSnapshot = Pick<
@@ -322,11 +317,7 @@ export function hasLiveBoardDiverged(
   const liveRev = gameState.board_revision ?? gameState.state_revision ?? 1;
   if (liveRev > baseRevision) return true;
   if (liveRev < baseRevision) return false;
-  return (
-    gameState.season !== baseTurn.season ||
-    gameState.year !== baseTurn.year ||
-    gameState.phase !== baseTurn.phase
-  );
+  return !sameTurn(gameState, baseTurn);
 }
 
 export function buildBoardConflictConfirmOptions(detail?: string) {
@@ -431,14 +422,16 @@ export async function commitAdminBoardEdit(
   try {
     const res = await postAdminBoardEditRequest(activeGameId, payload);
     if (res.status === 409) {
-      const errData = await res.json().catch(() => ({}));
-      return { kind: 'conflict', detail: errData.detail };
+      const detail = await readErrorDetail(res, '');
+      return { kind: 'conflict', detail: detail || undefined };
     }
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
       return {
         kind: 'error',
-        message: errData.detail || 'Failed to apply admin board edits.',
+        message: await readErrorDetail(
+          res,
+          'Failed to apply admin board edits.',
+        ),
       };
     }
     return { kind: 'ok', state: (await res.json()) as GameState };

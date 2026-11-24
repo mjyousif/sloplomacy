@@ -7,8 +7,10 @@ import {
 } from '../types/diplomacy';
 import {
   getCompletedCampaignStatus,
+  getMyParticipant,
   isVisibleInMyActiveCampaigns,
 } from './gameOverHelpers';
+import { turnMiddotLabel } from './turnFormat';
 
 /**
  * What one of a player's own games wants from them, most pressing first: orders to give,
@@ -28,11 +30,7 @@ export function myPowerIn(
   game: MultiplayerGameSummary,
   user: AuthUser | null,
 ): Power | null {
-  if (!user) return null;
-  const seat = Object.values(game.participants || {}).find(
-    (p) => p.user_id === user.id,
-  );
-  return seat?.power ?? null;
+  return getMyParticipant(game, user)?.power ?? null;
 }
 
 export function gameUrgency(
@@ -104,9 +102,7 @@ export function filterAndSortMyGames(
   return sortMyGames(
     games.filter(
       (g) =>
-        (Object.values(g.participants || {}).some(
-          (p) => p.user_id === user.id,
-        ) ||
+        (Boolean(getMyParticipant(g, user)) ||
           (g.is_sandbox && g.creator_id === user.id)) &&
         isVisibleInMyActiveCampaigns(g, user, nowMs),
     ),
@@ -196,7 +192,7 @@ export function describeMyGame(
     urgency,
     power,
     status,
-    turn: `${game.season} ${game.year} · ${game.phase}`,
+    turn: turnMiddotLabel(game),
     enterLabel:
       urgency === 'finished'
         ? 'Review board'

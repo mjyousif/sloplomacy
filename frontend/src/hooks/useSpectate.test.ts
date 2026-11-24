@@ -9,7 +9,21 @@ import {
   watchRefusal,
 } from './useSpectate';
 
-const supabase = vi.hoisted(() => ({ getAuthHeaders: vi.fn() }));
+const supabase = vi.hoisted(() => {
+  const getAuthHeaders = vi.fn();
+  return {
+    getAuthHeaders,
+    authedFetch: vi.fn(async (url: string, init: RequestInit = {}) =>
+      fetch(url, {
+        ...init,
+        headers: {
+          ...(init.headers as Record<string, string> | undefined),
+          ...(await getAuthHeaders()),
+        },
+      }),
+    ),
+  };
+});
 vi.mock('../lib/supabase', () => supabase);
 const plainFetch = vi.fn();
 vi.stubGlobal('fetch', plainFetch);

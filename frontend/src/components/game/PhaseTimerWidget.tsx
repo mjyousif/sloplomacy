@@ -2,11 +2,11 @@ import { ChevronUp, Clock, Pause, Play, Plus } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import type { PhaseTimer, Power, TimerChoice } from '../../types/diplomacy';
+import { formatPowerList } from '../../utils/powerHelpers';
 import {
   clockPillLabel,
   countVotes,
   formatClock,
-  powerNames,
   powersNotReady,
   powersYetToVote,
   TIMER_OPTIONS,
@@ -149,7 +149,7 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
             ))}
           </div>
           <p className={styles.phaseTimerNote}>
-            <strong>Yet to vote:</strong> {powerNames(pending)}
+            <strong>Yet to vote:</strong> {formatPowerList(pending)}
           </p>
         </>
       );
@@ -178,8 +178,8 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
             <strong>
               Ready {timer.ready_powers.length}/{timer.players.length}.
             </strong>{' '}
-            Waiting on: {powerNames(pending)}. A new vote opens once everyone is
-            ready.
+            Waiting on: {formatPowerList(pending)}. A new vote opens once
+            everyone is ready.
           </p>
         </>
       );

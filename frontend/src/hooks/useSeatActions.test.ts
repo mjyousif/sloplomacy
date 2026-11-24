@@ -15,18 +15,12 @@ import {
 
 const supabase = vi.hoisted(() => ({
   authedFetch: vi.fn(),
-  getAuthHeaders: vi.fn(),
 }));
 vi.mock('../lib/supabase', () => supabase);
-const plainFetch = vi.fn();
-vi.stubGlobal('fetch', plainFetch);
 const sent = makeSent(supabase.authedFetch);
 
 beforeEach(() => {
   supabase.authedFetch.mockReset();
-  supabase.getAuthHeaders.mockReset();
-  supabase.getAuthHeaders.mockResolvedValue({ Authorization: 'Bearer t' });
-  plainFetch.mockReset();
   localStorage.clear();
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
@@ -175,26 +169,26 @@ describe('useSeatActions: creating and joining', () => {
       'Please sign in to create a multiplayer game.',
       'signup',
     );
-    expect(plainFetch).not.toHaveBeenCalled();
+    expect(supabase.authedFetch).not.toHaveBeenCalled();
   });
 
   it('creates a public match and takes the creator to its board', async () => {
-    plainFetch.mockResolvedValue(reply(200, summary({ game_id: 'mp_9' })));
-    supabase.authedFetch.mockResolvedValue(
-      reply(200, { ...joined, summary: summary({ game_id: 'mp_9' }) }),
-    );
+    supabase.authedFetch
+      .mockResolvedValueOnce(reply(200, summary({ game_id: 'mp_9' })))
+      .mockResolvedValueOnce(
+        reply(200, { ...joined, summary: summary({ game_id: 'mp_9' }) }),
+      );
     const o = makeOptions();
     const { result } = renderSeats(o);
     let out: unknown;
     await act(async () => {
       out = await result.current.handleCreateMultiplayerGame('G', 'FRANCE');
     });
-    const [url, init] = plainFetch.mock.calls[0];
+    const [url, init] = supabase.authedFetch.mock.calls[0];
     expect(url).toBe('/api/games');
     expect(init.method).toBe('POST');
     expect(init.headers).toEqual({
       'Content-Type': 'application/json',
-      Authorization: 'Bearer t',
     });
     expect(JSON.parse(init.body)).toEqual({
       name: 'G',
@@ -204,7 +198,7 @@ describe('useSeatActions: creating and joining', () => {
       is_private: false,
       passcode: null,
     });
-    expect(sent().url).toBe('/api/games/mp_9/join');
+    expect(sent(1).url).toBe('/api/games/mp_9/join');
     expect(o.setViewMode).toHaveBeenCalledWith('multiplayer');
     expect(o.triggerToast).toHaveBeenCalledWith(
       'Created "Friday Night" — You are commanding France!',
@@ -213,35 +207,38 @@ describe('useSeatActions: creating and joining', () => {
   });
 
   it('leaves a private match with a passcode in the lobby for its host to share', async () => {
-    plainFetch.mockResolvedValue(reply(200, summary()));
+    supabase.authedFetch.mockResolvedValueOnce(reply(200, summary()));
     const o = makeOptions();
     const { result } = renderSeats(o);
     await act(() =>
       result.current.handleCreateMultiplayerGame('G', 'FRANCE', true, ' pw '),
     );
-    const body = JSON.parse(plainFetch.mock.calls[0][1].body);
+    expect(supabase.authedFetch).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(supabase.authedFetch.mock.calls[0][1].body);
     expect(body.is_private).toBe(true);
     expect(body.passcode).toBe('pw');
-    expect(supabase.authedFetch).not.toHaveBeenCalled();
     expect(o.fetchGamesList).toHaveBeenCalledTimes(1);
     expect(o.triggerToast).not.toHaveBeenCalled();
   });
 
   it('joins a private match with no passcode at once', async () => {
-    plainFetch.mockResolvedValue(reply(200, summary()));
-    supabase.authedFetch.mockResolvedValue(
-      reply(200, { state: STATE, provinces: PROVINCES, summary: summary() }),
-    );
+    supabase.authedFetch
+      .mockResolvedValueOnce(reply(200, summary()))
+      .mockResolvedValueOnce(
+        reply(200, { state: STATE, provinces: PROVINCES, summary: summary() }),
+      );
     const { result } = renderSeats(makeOptions());
     await act(() =>
       result.current.handleCreateMultiplayerGame('G', 'FRANCE', true, ''),
     );
-    expect(sent().url).toBe('/api/games/mp_1/join');
+    expect(sent(1).url).toBe('/api/games/mp_1/join');
   });
 
   it("shows the server's reason when a match cannot be created", async () => {
-    plainFetch.mockResolvedValueOnce(reply(400, { detail: 'Name taken' }));
-    plainFetch.mockResolvedValueOnce(broken);
+    supabase.authedFetch.mockResolvedValueOnce(
+      reply(400, { detail: 'Name taken' }),
+    );
+    supabase.authedFetch.mockResolvedValueOnce(broken);
     const o = makeOptions();
     const { result } = renderSeats(o);
     await act(() => result.current.handleCreateMultiplayerGame('G', 'FRANCE'));

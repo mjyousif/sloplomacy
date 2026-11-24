@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { API_BASE } from '../lib/api';
-import { getAuthHeaders } from '../lib/supabase';
+import { apiFetch } from '../lib/api';
 import type { Power, TurnHistoryEntry, TurnRecord } from '../types/diplomacy';
 import {
   type HistoryActionType,
@@ -43,12 +42,10 @@ async function fetchJson<T>(
   gameId: string,
   passcode: string | null,
 ): Promise<T> {
-  const headers: Record<string, string> = { ...(await getAuthHeaders()) };
-  if (passcode) headers['X-Passcode'] = passcode;
-  const res = await fetch(
-    `${API_BASE}${path}?game_id=${encodeURIComponent(gameId)}`,
-    { headers },
-  );
+  const res = await apiFetch(path, {
+    query: { game_id: gameId },
+    passcode,
+  });
   if (!res.ok) throw new Error(`Backend returned ${res.status}`);
   return res.json();
 }
