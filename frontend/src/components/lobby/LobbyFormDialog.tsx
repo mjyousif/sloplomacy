@@ -29,20 +29,10 @@ export const LobbyFormDialog: React.FC<LobbyFormDialogProps> = ({
     bodyRef.current?.querySelector<HTMLElement>('input')?.focus();
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [onClose]);
-
   return (
     <Modal
       onBackdropClick={onClose}
+      onEscape={onClose}
       cardClassName={styles.card}
       backdropProps={{ 'data-testid': testId }}
       cardProps={{ role: 'dialog', 'aria-modal': true, 'aria-label': label }}

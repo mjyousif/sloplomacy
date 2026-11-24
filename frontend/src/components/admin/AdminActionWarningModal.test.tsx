@@ -94,4 +94,19 @@ describe('AdminActionWarningModal', () => {
     const btn = screen.getByRole('button', { name: 'Acknowledging...' });
     expect(btn).toBeDisabled();
   });
+
+  it('is not dismissed by Escape or backdrop clicks', () => {
+    const handleAck = vi.fn();
+    render(
+      <AdminActionWarningModal
+        isOpen={true}
+        entries={ENTRIES}
+        onAcknowledge={handleAck}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('admin-warning-modal-backdrop'));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(handleAck).not.toHaveBeenCalled();
+  });
 });

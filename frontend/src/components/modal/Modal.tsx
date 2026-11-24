@@ -1,6 +1,18 @@
 import type React from 'react';
+import { useEffect, useRef } from 'react';
 import { cx } from '../../utils/cx';
 import styles from './Modal.module.css';
+
+const escapeStack: Array<() => void> = [];
+
+function handleWindowEscape(event: KeyboardEvent) {
+  if (event.key !== 'Escape') return;
+  const top = escapeStack[escapeStack.length - 1];
+  if (top) {
+    event.stopPropagation();
+    top();
+  }
+}
 
 /** Native attributes for the backdrop or the card, plus `data-*` such as a test id. */
 type DivProps = Omit<
@@ -27,6 +39,8 @@ interface ModalProps {
   phone?: ModalPhoneFit;
   /** A click on the dimmed area outside the card. */
   onBackdropClick?: () => void;
+  /** Called when pressing Escape while this modal is the topmost dismissible modal. */
+  onEscape?: () => void;
   /** Keep clicks inside the card from reaching the page behind it. Defaults to `true` when
    * there is an `onBackdropClick`, which the click would otherwise trigger. */
   isolateClicks?: boolean;
@@ -45,28 +59,51 @@ export const Modal: React.FC<ModalProps> = ({
   scrim = 'standard',
   phone = 'scroll',
   onBackdropClick,
+  onEscape,
   isolateClicks = Boolean(onBackdropClick),
   cardClassName,
   backdropProps,
   cardProps,
   children,
-}) => (
-  <div
-    className={styles.backdrop}
-    data-scrim={scrim}
-    onClick={onBackdropClick}
-    {...backdropProps}
-  >
+}) => {
+  const onEscapeRef = useRef(onEscape);
+  onEscapeRef.current = onEscape;
+  const hasEscape = Boolean(onEscape);
+
+  useEffect(() => {
+    if (!hasEscape) return;
+    const invoke = () => onEscapeRef.current?.();
+    escapeStack.push(invoke);
+    if (escapeStack.length === 1) {
+      window.addEventListener('keydown', handleWindowEscape, true);
+    }
+    return () => {
+      const idx = escapeStack.lastIndexOf(invoke);
+      if (idx !== -1) escapeStack.splice(idx, 1);
+      if (escapeStack.length === 0) {
+        window.removeEventListener('keydown', handleWindowEscape, true);
+      }
+    };
+  }, [hasEscape]);
+
+  return (
     <div
-      className={cx(styles.card, cardClassName)}
-      data-phone={phone}
-      onClick={isolateClicks ? (e) => e.stopPropagation() : undefined}
-      {...cardProps}
+      className={styles.backdrop}
+      data-scrim={scrim}
+      onClick={onBackdropClick}
+      {...backdropProps}
     >
-      {children}
+      <div
+        className={cx(styles.card, cardClassName)}
+        data-phone={phone}
+        onClick={isolateClicks ? (e) => e.stopPropagation() : undefined}
+        {...cardProps}
+      >
+        {children}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /** The ✕ in a dialog's header. `className` carries the dialog's own look. */
 export const ModalCloseButton: React.FC<

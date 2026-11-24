@@ -37,7 +37,7 @@ export const PrivateCampaignCreatedModal: React.FC<
   const link = gameLink(createdPrivateModal.gameId);
 
   return (
-    <Modal cardClassName={promptStyles.card}>
+    <Modal cardClassName={promptStyles.card} onEscape={onClose}>
       <div className={promptStyles.header}>
         <div className={promptStyles.title}>
           <KeyRound size={22} />

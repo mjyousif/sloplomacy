@@ -11,14 +11,17 @@ import {
   UserCog,
   User as UserIcon,
 } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import { useDismissableLayer } from '../../hooks/useDismissableLayer';
 import type { DisplayPrefsSaveState } from '../../hooks/useDisplayPrefs';
 import type { AuthUser, MultiplayerGameSummary } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import type { DisplayPrefs } from '../../utils/displayPrefs';
 import { describeMyGame, myPowerIn } from '../../utils/heroGame';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './AccountDropdownMenu.module.css';
 import { DisplaySettingsOptions } from './DisplaySettingsMenu';
+import popoverStyles from './HeaderPopover.module.css';
 
 export interface AccountDropdownMenuProps {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -76,28 +79,12 @@ export function AccountDropdownMenu({
     setChangeGameOpen(false);
   };
 
-  useEffect(() => {
-    if (!open) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        closeMenu();
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeMenu();
-        toggleRef.current?.focus();
-      }
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open]);
+  useDismissableLayer({
+    open,
+    rootRef,
+    onDismiss: closeMenu,
+    restoreFocusRef: toggleRef,
+  });
 
   const isInSoloDraft =
     viewMode === 'sandbox' &&
@@ -118,12 +105,12 @@ export function AccountDropdownMenu({
       : null;
 
   return (
-    <div className={styles.accountMenu} ref={rootRef}>
+    <div className={popoverStyles.root} ref={rootRef}>
       <button
         ref={toggleRef}
         type="button"
         data-testid="account-menu-trigger"
-        className={styles.accountMenuTrigger}
+        className={cx(popoverStyles.trigger, styles.accountMenuTrigger)}
         data-open={open}
         data-signed-in={Boolean(authUser)}
         aria-label={
@@ -142,7 +129,7 @@ export function AccountDropdownMenu({
       {open && (
         <div
           id={panelId}
-          className={styles.accountMenuPanel}
+          className={popoverStyles.panel}
           data-testid="account-menu-panel"
           role="dialog"
           aria-label={authUser ? 'Account and settings' : 'Guest menu'}
@@ -150,13 +137,13 @@ export function AccountDropdownMenu({
           {activeView === 'display' ? (
             <div
               key="display"
-              className={styles.accountMenuView}
+              className={popoverStyles.view}
               data-view="display"
             >
               <button
                 type="button"
                 data-testid="account-menu-back"
-                className={styles.subviewBackBtn}
+                className={popoverStyles.subviewBackBtn}
                 onClick={() => setMenuView('main')}
               >
                 <ChevronLeft size={15} />
@@ -169,7 +156,7 @@ export function AccountDropdownMenu({
               />
             </div>
           ) : (
-            <div key="main" className={styles.accountMenuView} data-view="main">
+            <div key="main" className={popoverStyles.view} data-view="main">
               <div
                 className={styles.accountProfileHeader}
                 data-testid="account-menu-profile"
@@ -215,24 +202,27 @@ export function AccountDropdownMenu({
                 )}
               </div>
 
-              <div className={styles.menuDivider} />
+              <div className={popoverStyles.divider} />
 
-              <div className={styles.menuList}>
+              <div className={popoverStyles.menuList}>
                 {inGame && (
                   <button
                     type="button"
                     data-testid="account-menu-display-settings"
-                    className={styles.menuItem}
+                    className={popoverStyles.menuItem}
                     onClick={() => setMenuView('display')}
                   >
                     <SlidersHorizontal
                       size={15}
-                      className={styles.menuItemIcon}
+                      className={popoverStyles.menuItemIcon}
                     />
                     <span>Display Settings</span>
                     <ChevronRight
                       size={15}
-                      className={styles.menuItemChevron}
+                      className={cx(
+                        popoverStyles.menuItemChevron,
+                        styles.accountMenuChevron,
+                      )}
                     />
                   </button>
                 )}
@@ -241,13 +231,13 @@ export function AccountDropdownMenu({
                   <button
                     type="button"
                     data-testid="account-menu-account-settings"
-                    className={styles.menuItem}
+                    className={popoverStyles.menuItem}
                     onClick={() => {
                       closeMenu();
                       onOpenAccount();
                     }}
                   >
-                    <UserCog size={15} className={styles.menuItemIcon} />
+                    <UserCog size={15} className={popoverStyles.menuItemIcon} />
                     <span>Account Settings</span>
                   </button>
                 )}
@@ -255,12 +245,15 @@ export function AccountDropdownMenu({
                 <button
                   type="button"
                   data-testid="account-menu-change-game"
-                  className={styles.menuItem}
+                  className={cx(popoverStyles.menuItem, styles.accountMenuItem)}
                   data-expanded={changeGameOpen}
                   aria-expanded={changeGameOpen}
                   onClick={() => setChangeGameOpen((isOpen) => !isOpen)}
                 >
-                  <ArrowLeftRight size={15} className={styles.menuItemIcon} />
+                  <ArrowLeftRight
+                    size={15}
+                    className={popoverStyles.menuItemIcon}
+                  />
                   <span className={styles.menuItemTitle}>Switch Game</span>
                   <span
                     className={styles.menuItemSubtext}
@@ -268,7 +261,13 @@ export function AccountDropdownMenu({
                   >
                     {currentGameLabel}
                   </span>
-                  <ChevronDown size={15} className={styles.menuItemChevron} />
+                  <ChevronDown
+                    size={15}
+                    className={cx(
+                      popoverStyles.menuItemChevron,
+                      styles.accountMenuChevron,
+                    )}
+                  />
                 </button>
 
                 {changeGameOpen && (
@@ -349,7 +348,7 @@ export function AccountDropdownMenu({
                 )}
               </div>
 
-              <div className={styles.menuDivider} />
+              <div className={popoverStyles.divider} />
 
               {authUser ? (
                 <button

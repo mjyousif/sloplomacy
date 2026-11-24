@@ -30,18 +30,6 @@ export const SaveSandboxModal: React.FC<SaveSandboxModalProps> = ({
     }
   }, [isOpen, defaultName]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !saving) {
-        e.stopPropagation();
-        onCancel();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen, saving, onCancel]);
-
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -54,6 +42,7 @@ export const SaveSandboxModal: React.FC<SaveSandboxModalProps> = ({
   return (
     <Modal
       onBackdropClick={saving ? undefined : onCancel}
+      onEscape={saving ? undefined : onCancel}
       isolateClicks
       cardClassName={promptStyles.card}
       backdropProps={{ 'data-testid': 'save-sandbox-modal' }}

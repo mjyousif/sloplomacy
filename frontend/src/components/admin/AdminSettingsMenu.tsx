@@ -1,7 +1,6 @@
-import { Clock, LogOut, Pencil, Play, Wrench } from 'lucide-react';
+import { Clock, LogOut, Pencil, Play } from 'lucide-react';
 import type React from 'react';
 import type { ReactNode } from 'react';
-import { useEffect, useId, useRef, useState } from 'react';
 import { cx } from '../../utils/cx';
 import displayStyles from '../header/DisplaySettings.module.css';
 import styles from './AdminSettingsMenu.module.css';
@@ -36,8 +35,8 @@ export interface AdminSettingsOptionsProps extends AdminSettingsMenuProps {
 }
 
 /**
- * The Administrator mode choices themselves. Reused by both the standalone `AdminSettingsMenu`
- * and the unified top-bar `AccountDropdownMenu`.
+ * The Administrator mode choices rendered inside the top bar `GameSettingsMenu`
+ * "Administrator" subview.
  */
 export function AdminSettingsOptions({
   onOpenAdminTools,
@@ -145,87 +144,5 @@ export function AdminSettingsOptions({
         </button>
       )}
     </>
-  );
-}
-
-/**
- * The top bar dropdown for the match creator/administrator, placed right beside DisplaySettingsMenu
- * and sharing its button, popover and option-card styling.
- */
-export function AdminSettingsMenu({
-  onOpenAdminTools,
-  adminOverrideActive = false,
-  onToggleAdminOverride,
-  turnClockOpen = false,
-  onResolveTurn,
-  gameOver = false,
-  onExitAdmin,
-}: AdminSettingsMenuProps) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const toggleRef = useRef<HTMLButtonElement | null>(null);
-  const panelId = useId();
-  const anyModeActive = adminOverrideActive || turnClockOpen;
-
-  useEffect(() => {
-    if (!open) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-        toggleRef.current?.focus();
-      }
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open]);
-
-  return (
-    <div className={displayStyles.displaySettings} ref={rootRef}>
-      <button
-        ref={toggleRef}
-        type="button"
-        data-testid="btn-admin-menu"
-        className={displayStyles.displaySettingsToggle}
-        data-open={open}
-        data-admin-active={anyModeActive}
-        aria-label="Administrator tools"
-        aria-expanded={open}
-        aria-controls={open ? panelId : undefined}
-        title="Administrator tools"
-        onClick={() => setOpen((isOpen) => !isOpen)}
-      >
-        <Wrench size={15} />
-      </button>
-
-      {open && (
-        <div
-          id={panelId}
-          className={displayStyles.displaySettingsPanel}
-          data-testid="admin-settings-panel"
-          role="dialog"
-          aria-label="Administrator tools"
-        >
-          <AdminSettingsOptions
-            onOpenAdminTools={onOpenAdminTools}
-            adminOverrideActive={adminOverrideActive}
-            onToggleAdminOverride={onToggleAdminOverride}
-            turnClockOpen={turnClockOpen}
-            onResolveTurn={onResolveTurn}
-            gameOver={gameOver}
-            onExitAdmin={onExitAdmin}
-            onActionSelected={() => setOpen(false)}
-          />
-        </div>
-      )}
-    </div>
   );
 }

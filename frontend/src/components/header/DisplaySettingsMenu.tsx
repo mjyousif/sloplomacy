@@ -1,11 +1,4 @@
-import {
-  LayoutList,
-  Rows3,
-  SlidersHorizontal,
-  Volume2,
-  VolumeX,
-} from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { LayoutList, Rows3, Volume2, VolumeX } from 'lucide-react';
 import type { DisplayPrefsSaveState } from '../../hooks/useDisplayPrefs';
 import {
   type DisplayPrefs,
@@ -127,8 +120,7 @@ interface DisplaySettingsMenuProps {
 }
 
 /**
- * The choices themselves. The desktop top bar shows them in its own popover, and the
- * phone top bar shows them inside its ⋯ menu.
+ * The Display Settings choices rendered inside the top bar `AccountDropdownMenu`.
  */
 export function DisplaySettingsOptions({
   prefs,
@@ -256,75 +248,5 @@ export function DisplaySettingsOptions({
         {SAVE_MESSAGES[saveState]}
       </p>
     </>
-  );
-}
-
-/** The top bar control for this player's own map display. It stays open so changes show live. */
-export function DisplaySettingsMenu({
-  prefs,
-  saveState,
-  onChange,
-}: DisplaySettingsMenuProps) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const toggleRef = useRef<HTMLButtonElement | null>(null);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const panelId = useId();
-
-  useEffect(() => {
-    if (!open) return;
-
-    panelRef.current?.querySelector<HTMLInputElement>('input:checked')?.focus();
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-        toggleRef.current?.focus();
-      }
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open]);
-
-  return (
-    <div className={styles.displaySettings} ref={rootRef}>
-      <button
-        ref={toggleRef}
-        type="button"
-        className={styles.displaySettingsToggle}
-        data-open={open}
-        aria-label="Display settings"
-        aria-expanded={open}
-        aria-controls={open ? panelId : undefined}
-        title="Display settings"
-        onClick={() => setOpen((isOpen) => !isOpen)}
-      >
-        <SlidersHorizontal size={15} />
-      </button>
-
-      {open && (
-        <div
-          ref={panelRef}
-          id={panelId}
-          className={styles.displaySettingsPanel}
-          role="dialog"
-          aria-label="Display settings"
-        >
-          <DisplaySettingsOptions
-            prefs={prefs}
-            saveState={saveState}
-            onChange={onChange}
-          />
-        </div>
-      )}
-    </div>
   );
 }

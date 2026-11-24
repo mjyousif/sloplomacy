@@ -100,6 +100,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
       scrim="raised"
       phone="scroll"
       onBackdropClick={onInspectBoard}
+      onEscape={onInspectBoard}
       cardClassName={styles.gameOverModalCard}
       backdropProps={{ 'data-testid': 'game-over-modal-backdrop' }}
       cardProps={{

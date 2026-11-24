@@ -1,6 +1,7 @@
 import { Flag, MoreHorizontal } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useDismissableLayer } from '../../hooks/useDismissableLayer';
 import styles from './GameActionsMenu.module.css';
 
 export interface GameActionsMenuProps {
@@ -22,26 +23,19 @@ export const GameActionsMenu: React.FC<GameActionsMenuProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('pointerdown', handlePointerDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('pointerdown', handlePointerDown);
-    };
-  }, [open]);
+  useDismissableLayer({
+    open,
+    rootRef,
+    onDismiss: () => setOpen(false),
+    restoreFocusRef: triggerRef,
+  });
 
   return (
     <div className={styles.root} ref={rootRef}>
       <button
+        ref={triggerRef}
         type="button"
         className={styles.trigger}
         aria-label={`More actions for ${gameName}`}

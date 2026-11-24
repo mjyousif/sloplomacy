@@ -13,14 +13,17 @@ import {
   Wrench,
 } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { useCopyFeedback } from '../../hooks/useCopyFeedback';
+import { useDismissableLayer } from '../../hooks/useDismissableLayer';
 import type { MultiplayerGameSummary, Power } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import { gameLink, isLinkableGameId } from '../../utils/gameRoute';
 import { AdminSettingsOptions } from '../admin/AdminSettingsMenu';
 import { PowerFlag } from '../ui/PowerFlag';
 import displayStyles from './DisplaySettings.module.css';
 import styles from './GameSettingsMenu.module.css';
+import popoverStyles from './HeaderPopover.module.css';
 
 export interface GameSettingsMenuProps {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -123,36 +126,20 @@ export function GameSettingsMenu({
     setMenuView('main');
   };
 
-  useEffect(() => {
-    if (!open) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        closeMenu();
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeMenu();
-        toggleRef.current?.focus();
-      }
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open]);
+  useDismissableLayer({
+    open,
+    rootRef,
+    onDismiss: closeMenu,
+    restoreFocusRef: toggleRef,
+  });
 
   return (
-    <div className={styles.gameSettingsMenu} ref={rootRef}>
+    <div className={popoverStyles.root} ref={rootRef}>
       <button
         ref={toggleRef}
         type="button"
         data-testid="game-settings-trigger"
-        className={styles.gameSettingsTrigger}
+        className={cx(popoverStyles.trigger, styles.gameSettingsTrigger)}
         data-open={open}
         data-solo-sandbox={isSandbox}
         data-icon={isSandbox ? 'flask' : 'crown'}
@@ -169,17 +156,20 @@ export function GameSettingsMenu({
       {open && (
         <div
           id={panelId}
-          className={styles.gameSettingsPanel}
+          className={cx(popoverStyles.panel, styles.gameSettingsPanel)}
           data-testid="game-settings-panel"
           role="dialog"
           aria-label="Game Settings"
         >
           {activeView === 'admin' ? (
-            <div key="admin" className={styles.gameMenuView} data-view="admin">
+            <div key="admin" className={popoverStyles.view} data-view="admin">
               <button
                 type="button"
                 data-testid="game-settings-back"
-                className={styles.gameSubviewBack}
+                className={cx(
+                  popoverStyles.subviewBackBtn,
+                  styles.gameSubviewBack,
+                )}
                 onClick={() => setMenuView('main')}
               >
                 <ChevronLeft size={15} />
@@ -199,7 +189,7 @@ export function GameSettingsMenu({
               </div>
             </div>
           ) : (
-            <div key="main" className={styles.gameMenuView} data-view="main">
+            <div key="main" className={popoverStyles.view} data-view="main">
               <h2
                 className={`${displayStyles.displaySettingsTitle} ${styles.gameSettingsTitle}`}
               >
@@ -243,18 +233,30 @@ export function GameSettingsMenu({
                 <span>{gameTypeLabel}</span>
               </p>
 
-              <div className={styles.gameMenuList}>
+              <div className={cx(popoverStyles.menuList, styles.gameMenuList)}>
                 {linkGameId && (
                   <button
                     type="button"
                     data-testid="game-settings-copy-link"
-                    className={styles.gameMenuItem}
+                    className={cx(popoverStyles.menuItem, styles.gameMenuItem)}
                     onClick={() => copy(gameLink(linkGameId), 'link')}
                   >
                     {linkCopied ? (
-                      <Check size={15} className={styles.gameMenuItemIcon} />
+                      <Check
+                        size={15}
+                        className={cx(
+                          popoverStyles.menuItemIcon,
+                          styles.gameMenuItemIcon,
+                        )}
+                      />
                     ) : (
-                      <Link size={15} className={styles.gameMenuItemIcon} />
+                      <Link
+                        size={15}
+                        className={cx(
+                          popoverStyles.menuItemIcon,
+                          styles.gameMenuItemIcon,
+                        )}
+                      />
                     )}
                     <span aria-live="polite">
                       {linkCopied
@@ -270,7 +272,7 @@ export function GameSettingsMenu({
                   <button
                     type="button"
                     data-testid="game-settings-solo-sandbox"
-                    className={styles.gameMenuItem}
+                    className={cx(popoverStyles.menuItem, styles.gameMenuItem)}
                     onClick={(event) => {
                       closeMenu();
                       onEnterSoloSandbox(event);
@@ -278,7 +280,10 @@ export function GameSettingsMenu({
                   >
                     <FlaskConical
                       size={15}
-                      className={styles.gameMenuItemIcon}
+                      className={cx(
+                        popoverStyles.menuItemIcon,
+                        styles.gameMenuItemIcon,
+                      )}
                     />
                     <span>Open in Local Sandbox</span>
                   </button>
@@ -288,11 +293,17 @@ export function GameSettingsMenu({
                   <button
                     type="button"
                     data-testid="game-settings-admin-settings"
-                    className={styles.gameMenuItem}
+                    className={cx(popoverStyles.menuItem, styles.gameMenuItem)}
                     data-admin-active={anyAdminModeActive}
                     onClick={() => setMenuView('admin')}
                   >
-                    <Wrench size={15} className={styles.gameMenuItemIcon} />
+                    <Wrench
+                      size={15}
+                      className={cx(
+                        popoverStyles.menuItemIcon,
+                        styles.gameMenuItemIcon,
+                      )}
+                    />
                     <span>Administrator</span>
                     {anyAdminModeActive && (
                       <span
@@ -304,7 +315,10 @@ export function GameSettingsMenu({
                     )}
                     <ChevronRight
                       size={15}
-                      className={styles.gameMenuChevron}
+                      className={cx(
+                        popoverStyles.menuItemChevron,
+                        styles.gameMenuChevron,
+                      )}
                     />
                   </button>
                 )}
@@ -313,13 +327,19 @@ export function GameSettingsMenu({
                   <button
                     type="button"
                     data-testid="game-settings-save-sandbox"
-                    className={styles.gameMenuItem}
+                    className={cx(popoverStyles.menuItem, styles.gameMenuItem)}
                     onClick={() => {
                       closeMenu();
                       onSaveSandbox?.();
                     }}
                   >
-                    <Save size={15} className={styles.gameMenuItemIcon} />
+                    <Save
+                      size={15}
+                      className={cx(
+                        popoverStyles.menuItemIcon,
+                        styles.gameMenuItemIcon,
+                      )}
+                    />
                     <span>{saveSandboxLabel}</span>
                   </button>
                 )}
@@ -328,13 +348,19 @@ export function GameSettingsMenu({
                   <button
                     type="button"
                     data-testid="game-settings-reset-sandbox"
-                    className={styles.gameMenuItem}
+                    className={cx(popoverStyles.menuItem, styles.gameMenuItem)}
                     onClick={(event) => {
                       closeMenu();
                       onResetSandbox?.(event);
                     }}
                   >
-                    <RotateCcw size={15} className={styles.gameMenuItemIcon} />
+                    <RotateCcw
+                      size={15}
+                      className={cx(
+                        popoverStyles.menuItemIcon,
+                        styles.gameMenuItemIcon,
+                      )}
+                    />
                     <span>Reset Sandbox</span>
                   </button>
                 )}
@@ -344,13 +370,19 @@ export function GameSettingsMenu({
                     type="button"
                     data-testid="game-settings-delete-sandbox"
                     data-variant="danger"
-                    className={styles.gameMenuItem}
+                    className={cx(popoverStyles.menuItem, styles.gameMenuItem)}
                     onClick={(event) => {
                       closeMenu();
                       onDeleteSandbox?.(event);
                     }}
                   >
-                    <Trash2 size={15} className={styles.gameMenuItemIcon} />
+                    <Trash2
+                      size={15}
+                      className={cx(
+                        popoverStyles.menuItemIcon,
+                        styles.gameMenuItemIcon,
+                      )}
+                    />
                     <span>Delete Sandbox</span>
                   </button>
                 )}
@@ -359,13 +391,19 @@ export function GameSettingsMenu({
                   <button
                     type="button"
                     data-testid="game-settings-return-previous"
-                    className={styles.gameMenuItem}
+                    className={cx(popoverStyles.menuItem, styles.gameMenuItem)}
                     onClick={() => {
                       closeMenu();
                       onReturnToPreviousGame?.();
                     }}
                   >
-                    <Undo2 size={15} className={styles.gameMenuItemIcon} />
+                    <Undo2
+                      size={15}
+                      className={cx(
+                        popoverStyles.menuItemIcon,
+                        styles.gameMenuItemIcon,
+                      )}
+                    />
                     <span>Return to Previous Game</span>
                   </button>
                 )}
@@ -373,19 +411,33 @@ export function GameSettingsMenu({
                 {showSurrender && (
                   <>
                     {(linkGameId || showExportToSandbox || showAdmin) && (
-                      <div className={styles.gameMenuDivider} />
+                      <div
+                        className={cx(
+                          popoverStyles.divider,
+                          styles.gameMenuDivider,
+                        )}
+                      />
                     )}
                     <button
                       type="button"
                       data-testid="game-settings-surrender"
                       data-variant="danger"
-                      className={styles.gameMenuItem}
+                      className={cx(
+                        popoverStyles.menuItem,
+                        styles.gameMenuItem,
+                      )}
                       onClick={() => {
                         closeMenu();
                         onSurrenderClick?.();
                       }}
                     >
-                      <Flag size={15} className={styles.gameMenuItemIcon} />
+                      <Flag
+                        size={15}
+                        className={cx(
+                          popoverStyles.menuItemIcon,
+                          styles.gameMenuItemIcon,
+                        )}
+                      />
                       <span>Surrender</span>
                     </button>
                   </>

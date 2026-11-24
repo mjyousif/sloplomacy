@@ -102,4 +102,12 @@ describe('AuthModal', () => {
     expect(usernameInput).toHaveAttribute('minlength', '2');
     expect(usernameInput).toHaveAttribute('maxlength', '24');
   });
+
+  it('closes on Escape when idle', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<AuthModal isOpen={true} onClose={onClose} onSuccess={vi.fn()} />);
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });

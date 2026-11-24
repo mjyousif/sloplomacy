@@ -1,6 +1,6 @@
-/* The Administrator menu: the Display settings menu's panel, group and option cards
-   (DisplaySettings.module.css) with the mode cards and the exit button on top. The type selector
-   on the card keeps it above `.display-option-card` whatever the order the two modules load in. */
+/* The Administrator subview: reuses the title, group and option cards from DisplaySettings.module.css
+   with the mode cards and exit button on top. The type selector on the card keeps it above
+   `.display-option-card` whatever the order the two modules load in. */
 @layer components {
   .display-admin-actions:last-child {
     margin-bottom: 0;

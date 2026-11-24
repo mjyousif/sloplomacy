@@ -1,5 +1,6 @@
 import { ChevronDown } from 'lucide-react';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { useDismissableLayer } from '../../../hooks/useDismissableLayer';
 import { cx } from '../../../utils/cx';
 import styles from './IconSelectDropdown.module.css';
 
@@ -64,12 +65,15 @@ export function IconSelectDropdown<T extends string = string>({
 }: IconSelectDropdownProps<T>) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const onHoverOptionRef = useRef(onHoverOption);
   onHoverOptionRef.current = onHoverOption;
 
+  const isMenuOpen = open && !disabled;
+
   useEffect(() => {
-    onOpenChange?.(open && !disabled);
-  }, [open, disabled, onOpenChange]);
+    onOpenChange?.(isMenuOpen);
+  }, [isMenuOpen, onOpenChange]);
 
   useEffect(() => {
     if (disabled && open) {
@@ -77,33 +81,12 @@ export function IconSelectDropdown<T extends string = string>({
     }
   }, [disabled, open]);
 
-  useEffect(() => {
-    if (!open) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open]);
-
-  const isMenuOpen = open && !disabled;
+  useDismissableLayer({
+    open: isMenuOpen,
+    rootRef: containerRef,
+    onDismiss: () => setOpen(false),
+    restoreFocusRef: triggerRef,
+  });
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -125,6 +108,7 @@ export function IconSelectDropdown<T extends string = string>({
       ref={containerRef}
     >
       <button
+        ref={triggerRef}
         type="button"
         id={id}
         data-testid={testId}
