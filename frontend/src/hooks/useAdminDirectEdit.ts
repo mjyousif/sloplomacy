@@ -27,10 +27,9 @@ import {
   applyStageSpawnOrUpdate,
   applyUndoStagedChange,
   computeStagedChanges,
-  computeStagedDiffLines,
   mergeLiveUnitOrders,
-  type StagedChangeEntry,
 } from '../utils/adminStagedChanges';
+import { sameTurn, type TurnLike } from '../utils/turnFormat';
 import { useAdminAcknowledgement } from './useAdminAcknowledgement';
 import { useBeforeUnload } from './useBeforeUnload';
 import { useBoardConflictPrompt } from './useBoardConflictPrompt';
@@ -39,8 +38,8 @@ export {
   computeStagedChanges,
   computeStagedDiffLines,
   type StagedChangeEntry,
-  type UseAdminDirectEditParams,
-};
+} from '../utils/adminStagedChanges';
+export type { UseAdminDirectEditParams };
 
 export function useAdminDirectEdit({
   activeGameId,
@@ -65,11 +64,7 @@ export function useAdminDirectEdit({
     () => new Set(),
   );
   const [baseRevision, setBaseRevision] = useState<number>(1);
-  const [baseTurn, setBaseTurn] = useState<{
-    season: string;
-    year: number;
-    phase: string;
-  }>({
+  const [baseTurn, setBaseTurn] = useState<TurnLike>({
     season: 'Spring',
     year: 1901,
     phase: 'Movement',
@@ -92,9 +87,7 @@ export function useAdminDirectEdit({
     setStagedOrderIds(new Set());
     setBaseRevision(state.board_revision ?? state.state_revision ?? 1);
     setBaseTurn((prev) =>
-      prev.season === state.season &&
-      prev.year === state.year &&
-      prev.phase === state.phase
+      sameTurn(prev, state)
         ? prev
         : { season: state.season, year: state.year, phase: state.phase },
     );
@@ -102,9 +95,9 @@ export function useAdminDirectEdit({
 
   const stagedChanges = useMemo(
     () =>
-      directEditActive
+      directEditActive && baseState
         ? computeStagedChanges(
-            baseState ?? gameState,
+            baseState,
             stagedUnits,
             stagedOwnership,
             stagedOrders,
@@ -114,7 +107,6 @@ export function useAdminDirectEdit({
     [
       baseState,
       directEditActive,
-      gameState,
       provinces,
       stagedUnits,
       stagedOwnership,
@@ -138,13 +130,17 @@ export function useAdminDirectEdit({
   const prevDirectEditRef = useRef(false);
   const prevGameIdRef = useRef(activeGameId);
 
+  const clearSelection = useCallback(() => {
+    setInspectedProvince(null);
+    setRelocatingUnitId(null);
+  }, []);
+
   const handleReloadLatest = useCallback(
     (latest: GameState) => {
       syncFromState(latest);
-      setInspectedProvince(null);
-      setRelocatingUnitId(null);
+      clearSelection();
     },
-    [syncFromState],
+    [clearSelection, syncFromState],
   );
 
   const { promptBoardConflictReload, resetPromptedConflict } =
@@ -163,8 +159,8 @@ export function useAdminDirectEdit({
     if (!directEditActive) {
       prevDirectEditRef.current = false;
       lastSyncedGameStateRef.current = null;
-      setInspectedProvince(null);
-      setRelocatingUnitId(null);
+      setBaseState(null);
+      clearSelection();
       return;
     }
     const justEntered = !prevDirectEditRef.current;
@@ -199,10 +195,11 @@ export function useAdminDirectEdit({
       );
     }
   }, [
-    directEditActive,
     activeGameId,
     baseRevision,
     baseTurn,
+    clearSelection,
+    directEditActive,
     gameState,
     resetPromptedConflict,
     syncFromState,
@@ -223,9 +220,8 @@ export function useAdminDirectEdit({
     if (gameState) {
       syncFromState(gameState);
     }
-    setInspectedProvince(null);
-    setRelocatingUnitId(null);
-  }, [gameState, syncFromState]);
+    clearSelection();
+  }, [clearSelection, gameState, syncFromState]);
 
   const stageRelocateUnit = useCallback(
     (
@@ -407,14 +403,21 @@ export function useAdminDirectEdit({
   }, [confirmIfDirty, directEditActive, setDirectEditActive]);
 
   const effectiveGameState = useMemo(() => {
-    if (!gameState || !directEditActive) return gameState;
+    if (!gameState || !directEditActive || !baseState) return gameState;
     return {
       ...gameState,
       units: stagedUnits,
       ownership: stagedOwnership,
       orders: stagedOrders,
     };
-  }, [directEditActive, gameState, stagedOrders, stagedOwnership, stagedUnits]);
+  }, [
+    baseState,
+    directEditActive,
+    gameState,
+    stagedOrders,
+    stagedOwnership,
+    stagedUnits,
+  ]);
 
   const {
     unacknowledgedAdminEntries,
