@@ -221,7 +221,26 @@ export function useMapInteraction({
       return;
     }
 
-    // 7. Select controllable unit
+    // 7. The player's own unit in one of the selected unit's lit targets: its token covers the
+    // target's ring, so the click is a move there (BER-KIE with the fleet still in Kiel, #391).
+    // To pick that unit up instead, the player lets go of the selected one first.
+    if (
+      selectedUnit &&
+      interactionMode === 'MOVE' &&
+      (reachableMap[u.province] ||
+        canArmyConvoyMoveTo(
+          selectedUnit,
+          u.province,
+          provinces,
+          units,
+          selectedUnitOptions,
+        ))
+    ) {
+      handleProvinceClick(u.province);
+      return;
+    }
+
+    // 8. Select controllable unit
     onSelectUnit(u.id);
     setInteractionMode('MOVE');
     setPendingAuxOrigin(null);

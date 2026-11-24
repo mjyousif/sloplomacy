@@ -223,6 +223,11 @@ The map supports direct board-level order entry across all phases:
 ### 1. Movement Phase
 1. **Select Unit**: Clicking an army or fleet sets `selectedUnitId` and displays valid move destinations as highlighted pulses.
 2. **Click Destination (Move)**: Clicking any valid adjacent province immediately dispatches a `MOVE` order. If the destination has split coasts (e.g. `STP`), a coast-selection popup appears.
+   - **A unit standing in a target**: its token covers the target's ring, so clicking the token counts as clicking that province.
+     - **A foreign unit:** the click attacks it.
+     - **One of the player's own units in a lit target** (in direct reach or by convoy): the click moves there too, as in `A BER - KIE` with the fleet still in Kiel.
+     - **To select that unit instead,** let go of the selected one first (click it again, Escape or ×) or use its card.
+     - **The player's own unit outside the lit targets:** the click still switches the selection to it.
 3. **Support Mode**:
    - Step 1: Select supporting unit and click **Support**.
    - Step 2: Click the friendly or foreign unit to be supported.
