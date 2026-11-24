@@ -43,6 +43,7 @@ export const SanityCheckModal: React.FC<SanityCheckModalProps> = ({
     <Modal
       phone="fit"
       onBackdropClick={onClose}
+      onEscape={onClose}
       cardClassName={sanityStyles.sanityModalCard}
       backdropProps={{ 'data-testid': 'sanity-modal-backdrop' }}
       cardProps={{ 'data-testid': 'sanity-check-modal' }}

@@ -123,4 +123,21 @@ describe('AccountModal', () => {
     ).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it('closes on Escape when not submitting', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <AccountModal
+        isOpen={true}
+        user={baseUser}
+        onboarding={false}
+        onClose={onClose}
+        onUpdated={vi.fn()}
+        onSignOut={vi.fn()}
+      />,
+    );
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });

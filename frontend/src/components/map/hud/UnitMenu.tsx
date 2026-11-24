@@ -85,7 +85,7 @@ export function UnitMenu({
       data-docked={docked ? 'true' : undefined}
       data-testid={compact ? 'unit-docked-bar' : 'unit-floating-menu'}
       style={floatingStyle}
-      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
       <div

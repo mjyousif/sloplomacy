@@ -133,7 +133,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <Modal
-      onBackdropClick={onClose}
+      onBackdropClick={submitting ? undefined : onClose}
+      onEscape={submitting ? undefined : onClose}
       cardClassName={styles.authModalCard}
       cardProps={{
         role: 'dialog',

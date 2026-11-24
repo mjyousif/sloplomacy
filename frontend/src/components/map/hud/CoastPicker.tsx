@@ -34,7 +34,7 @@ export function CoastPicker({
       )}
       data-testid="coast-picker"
       data-docked={compact ? 'true' : undefined}
-      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
       <div className={styles.coastPickerTitle}>

@@ -254,4 +254,24 @@ describe('GameOverModal', () => {
       '3',
     );
   });
+
+  it('dismisses via onInspectBoard when pressing Escape', async () => {
+    const user = userEvent.setup();
+    const onInspectBoard = vi.fn();
+    render(
+      <GameOverModal
+        isOpen
+        gameState={WON_STATE}
+        provinces={PROVINCES}
+        summary={SUMMARY}
+        authUser={null}
+        viewMode="multiplayer"
+        onInspectBoard={onInspectBoard}
+        onReturnToLobby={vi.fn()}
+      />,
+    );
+
+    await user.keyboard('{Escape}');
+    expect(onInspectBoard).toHaveBeenCalledTimes(1);
+  });
 });

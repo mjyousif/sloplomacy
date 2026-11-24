@@ -70,7 +70,8 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
   return (
     <Modal
       scrim="emphatic"
-      onBackdropClick={onClose}
+      onBackdropClick={loading ? undefined : onClose}
+      onEscape={loading ? undefined : onClose}
       cardClassName={styles.surrenderModalCard}
     >
       {/* Modal Header */}

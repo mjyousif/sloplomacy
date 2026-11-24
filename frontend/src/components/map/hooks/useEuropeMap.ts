@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { useImperativeHandle, useRef, useState } from 'react';
 import type { Power, Unit } from '../../../types/diplomacy';
 import { canPlaceUnitTypeInProvince } from '../../../utils/adminHelpers';
 import type { HistoryActionType } from '../../../utils/historyHelpers';
@@ -9,6 +9,7 @@ import type { UnitLayerContext } from '../layers/units/unitLayerContext';
 import { useBuildHomes } from './useBuildHomes';
 import { useKeepSelectionInView, useMapCamera } from './useMapCamera';
 import { useMapGestures } from './useMapGestures';
+import { resolveMapHudDismiss, useMapHudEscape } from './useMapHudEscape';
 import { useMapInteraction } from './useMapInteraction';
 import { useMapSelection } from './useMapSelection';
 import { useOrderOverlay } from './useOrderOverlay';
@@ -228,11 +229,8 @@ export function useEuropeMap(
     coasts: string[];
   } | null>(null);
 
-  useEffect(() => {
-    if (!directEditActive) {
-      setDirectEditCoastChoice(null);
-    }
-  }, [directEditActive]);
+  if (!directEditActive && directEditCoastChoice)
+    setDirectEditCoastChoice(null);
 
   const inspectedProvince =
     directEditActive && directEdit ? directEdit.inspectedProvince : null;
@@ -334,6 +332,18 @@ export function useEuropeMap(
     onDockedBarChange,
   });
   const { dockRef, showBuildMenu, showUnitMenu } = menuPlacement;
+
+  useMapHudEscape(
+    resolveMapHudDismiss({
+      directEditActive,
+      hasDirectEditCoastChoice: Boolean(directEdit && directEditCoastChoice),
+      onCancelDirectEditCoast: () => setDirectEditCoastChoice(null),
+      hasCoastChoice: Boolean(selectedUnit && pendingCoastChoice),
+      onCancelCoast: interaction.cancelCoastChoice,
+      hasUnitOrBuildMenu: showBuildMenu || showUnitMenu,
+      onClearSelection: clearSelection,
+    }),
+  );
 
   useKeepSelectionInView(camera, {
     svgRef,

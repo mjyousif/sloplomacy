@@ -36,20 +36,13 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   useEffect(() => {
     confirmRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onCancel();
-      }
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [onCancel]);
+  }, []);
 
   return (
     <Modal
       scrim="blocking"
       onBackdropClick={onCancel}
+      onEscape={onCancel}
       cardClassName={styles.confirmModalCard}
       cardProps={{
         role: 'alertdialog',

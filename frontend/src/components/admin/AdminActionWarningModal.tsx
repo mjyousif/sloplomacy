@@ -24,6 +24,7 @@ export const AdminActionWarningModal: React.FC<
   if (!isOpen || entries.length === 0) return null;
 
   return (
+    /* Intentionally non-dismissible (no onBackdropClick / onEscape): participants must click Acknowledge & Continue. */
     <Modal
       phone="fit"
       cardClassName={sanityStyles.sanityModalCard}

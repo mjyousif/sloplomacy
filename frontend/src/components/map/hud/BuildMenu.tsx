@@ -50,7 +50,7 @@ export function BuildMenu({
         ...floatingStyle,
         borderColor: '#22c55e',
       }}
-      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
       <div
