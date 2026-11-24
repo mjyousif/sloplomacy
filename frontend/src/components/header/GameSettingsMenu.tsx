@@ -21,6 +21,7 @@ import { cx } from '../../utils/cx';
 import { gameLink, isLinkableGameId } from '../../utils/gameRoute';
 import { AdminSettingsOptions } from '../admin/AdminSettingsMenu';
 import { PowerFlag } from '../ui/PowerFlag';
+import scrollbarStyles from '../ui/Scrollbars.module.css';
 import displayStyles from './DisplaySettings.module.css';
 import styles from './GameSettingsMenu.module.css';
 import popoverStyles from './HeaderPopover.module.css';
@@ -156,7 +157,11 @@ export function GameSettingsMenu({
       {open && (
         <div
           id={panelId}
-          className={cx(popoverStyles.panel, styles.gameSettingsPanel)}
+          className={cx(
+            popoverStyles.panel,
+            styles.gameSettingsPanel,
+            scrollbarStyles.thin,
+          )}
           data-testid="game-settings-panel"
           role="dialog"
           aria-label="Game Settings"

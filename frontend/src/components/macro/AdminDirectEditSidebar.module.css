@@ -84,34 +84,12 @@
     word-break: break-word;
   }
 
-  .admin-staged-undo-btn {
-    display: inline-flex;
-    align-items: center;
+  button.admin-staged-undo-btn {
     gap: 4px;
     flex-shrink: 0;
     padding: 3px 7px;
     border-radius: 5px;
-    border: 1px solid var(--border-slate-strong);
-    background: #1e2636;
-    color: var(--danger-text);
     font-size: 0.68rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition:
-      background-color 0.12s ease,
-      border-color 0.12s ease,
-      color 0.12s ease;
-  }
-
-  .admin-staged-undo-btn:hover:not(:disabled) {
-    border-color: var(--danger-strong);
-    background: rgba(185, 28, 28, 0.25);
-    color: var(--color-white);
-  }
-
-  .admin-staged-undo-btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
   }
 
   .admin-apply-btn {
@@ -138,20 +116,14 @@
     cursor: not-allowed;
   }
 
-  .admin-exit-btn {
+  button.admin-exit-btn {
     flex-shrink: 0;
     padding: 5px 10px;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border-slate-strong);
-    background: #1e293b;
-    color: var(--text-primary);
     font-size: 0.72rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: var(--transition-base);
   }
 
-  .admin-exit-btn:hover:not(:disabled) {
+  button.admin-exit-btn:hover:not(:disabled) {
     border-color: var(--danger-light);
     background: rgba(185, 28, 28, 0.28);
     color: var(--color-white);
@@ -198,8 +170,8 @@
 
   :global([data-layout="compact"]) .admin-staged-count,
   :global([data-layout="compact"]) .admin-apply-btn,
-  :global([data-layout="compact"]) .admin-exit-btn,
-  :global([data-layout="compact"]) .admin-staged-undo-btn {
+  :global([data-layout="compact"]) button.admin-exit-btn,
+  :global([data-layout="compact"]) button.admin-staged-undo-btn {
     min-height: 38px;
     padding: 0 12px;
     font-size: 0.8rem;

@@ -93,24 +93,14 @@
     margin-top: auto;
   }
 
-  .enter {
+  button.enter {
     flex: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
     height: 36px;
     padding: 0 12px;
-    border-radius: var(--radius-md);
-    background: var(--surface-raised);
-    border: 1px solid #3c4454;
-    color: var(--text-bright);
     font-size: 0.8rem;
-    font-weight: 700;
-    cursor: pointer;
   }
 
-  .enter:hover {
+  button.enter:hover {
     background: #303847;
     border-color: #e5b964;
   }
@@ -149,12 +139,12 @@
     gap: 12px;
   }
 
-  :global([data-layout="compact"]) .enter {
+  :global([data-layout="compact"]) button.enter {
     height: 44px;
   }
 
   /* The wide hover state, restated so the phone rule above does not drop it. */
-  :global([data-layout="compact"]) .enter:hover {
+  :global([data-layout="compact"]) button.enter:hover {
     background: #303847;
     border-color: #e5b964;
   }

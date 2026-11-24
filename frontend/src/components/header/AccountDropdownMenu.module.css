@@ -104,21 +104,6 @@
     max-height: 220px;
     overflow-y: auto;
     animation: accountSwitchExpand 0.14s cubic-bezier(0.16, 1, 0.3, 1);
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-  }
-
-  .change-game-list::-webkit-scrollbar {
-    width: 5px;
-  }
-
-  .change-game-list::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .change-game-list::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: var(--radius-xs);
   }
 
   .change-game-item {
@@ -218,26 +203,10 @@
     color: var(--danger-text);
   }
 
-  .signin-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
+  button.signin-btn {
     padding: 8px 12px;
-    border-radius: var(--radius-md);
-    background: var(--gold-gradient);
-    border: 1px solid #e0b25b;
-    color: var(--surface-page);
-    font-family: inherit;
     font-size: 0.78rem;
     font-weight: 700;
-    cursor: pointer;
-    transition: var(--transition-base);
-  }
-
-  .signin-btn:hover {
-    filter: brightness(1.08);
   }
 }
 
@@ -255,7 +224,7 @@
   }
 
   :global([data-layout="compact"]) .signout-btn,
-  :global([data-layout="compact"]) .signin-btn {
+  :global([data-layout="compact"]) button.signin-btn {
     min-height: 44px;
     font-size: 0.88rem;
   }

@@ -67,21 +67,6 @@
     line-height: 1.3;
   }
 
-  .lobby-create-submit-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 11px 16px;
-    border-radius: var(--radius-md);
-    background: var(--gold-gradient);
-    border: 1px solid #e5b964;
-    color: var(--surface-page);
-    font-size: 0.82rem;
-    font-weight: 800;
-    cursor: pointer;
-  }
-
   .lobby-join-submit-btn {
     display: inline-flex;
     align-items: center;
@@ -107,31 +92,6 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
-
-  .lobby-watch-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 9px 16px;
-    border-radius: var(--radius-md);
-    background: transparent;
-    border: 1px solid var(--border-slate-strong);
-    color: var(--text-secondary);
-    font-size: 0.78rem;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .lobby-watch-btn:hover:not(:disabled) {
-    border-color: var(--info-sky);
-    color: #e0f2fe;
-  }
-
-  .lobby-watch-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
 }
 
 @layer compact {
@@ -139,9 +99,7 @@
     padding: 16px 14px;
   }
 
-  :global([data-layout="compact"]) .lobby-create-submit-btn,
   :global([data-layout="compact"]) .lobby-join-submit-btn,
-  :global([data-layout="compact"]) .lobby-watch-btn,
   :global([data-layout="compact"]) .privacy-toggle-btn {
     min-height: 44px;
   }

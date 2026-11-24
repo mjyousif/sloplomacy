@@ -10,17 +10,20 @@ import {
   type Power,
   type ProvinceInfo,
 } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import {
   getMyParticipant,
   getSupplyCenterCounts,
 } from '../../utils/gameOverHelpers';
-import { Modal } from '../modal/Modal';
+import { Modal, ModalCloseButton } from '../modal/Modal';
 import { CampaignAwardsRow } from '../stats/CampaignAwardsRow';
 import { DiplomaticSupportMatrix } from '../stats/DiplomaticSupportMatrix';
 import { StatsOverviewTable } from '../stats/StatsOverviewTable';
 import { SupplyCenterTimelineChart } from '../stats/SupplyCenterTimelineChart';
 import { useCampaignStats } from '../stats/useCampaignStats';
+import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
+import scrollbarStyles from '../ui/Scrollbars.module.css';
 import styles from './GameOverModal.module.css';
 
 export interface GameOverModalProps {
@@ -101,7 +104,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
       phone="scroll"
       onBackdropClick={onInspectBoard}
       onEscape={onInspectBoard}
-      cardClassName={styles.gameOverModalCard}
+      cardClassName={cx(styles.gameOverModalCard, scrollbarStyles.thin)}
       backdropProps={{ 'data-testid': 'game-over-modal-backdrop' }}
       cardProps={{
         'data-testid': 'game-over-modal',
@@ -116,14 +119,12 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           <Crown size={14} />
           <span>{badgeText}</span>
         </span>
-        <button
-          type="button"
-          className={styles.gameOverCloseBtn}
+        <ModalCloseButton
           aria-label="Close Game Over modal"
           onClick={onInspectBoard}
         >
           <X size={18} />
-        </button>
+        </ModalCloseButton>
       </div>
 
       <div className={styles.gameOverHero}>
@@ -253,15 +254,14 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           <Eye size={15} />
           <span>{inspectLabel}</span>
         </button>
-        <button
-          type="button"
-          className={styles.gameOverSecondaryBtn}
+        <Button
+          variant="secondary"
           data-testid="game-over-lobby-btn"
           onClick={onReturnToLobby}
         >
           <Home size={15} />
           <span>Return to Chancellery</span>
-        </button>
+        </Button>
       </div>
     </Modal>
   );

@@ -6,7 +6,9 @@ import {
   type Power,
   type PowerStats,
 } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import { PowerFlag } from '../ui/PowerFlag';
+import scrollbarStyles from '../ui/Scrollbars.module.css';
 import styles from './CampaignStats.module.css';
 
 export interface DiplomaticSupportMatrixProps {
@@ -78,7 +80,7 @@ export const DiplomaticSupportMatrix: React.FC<
         </div>
       </div>
 
-      <div className={styles.tableScroll}>
+      <div className={cx(styles.tableScroll, scrollbarStyles.thin)}>
         <table className={styles.matrixTable}>
           <thead>
             <tr>

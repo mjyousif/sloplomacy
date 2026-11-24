@@ -45,21 +45,6 @@
     color: var(--text-primary);
     transform-origin: top right;
     animation: headerPopoverEnter 0.14s cubic-bezier(0.16, 1, 0.3, 1);
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-  }
-
-  .panel::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .panel::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .panel::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: var(--radius-xs);
   }
 
   .view[data-view="main"] {

@@ -86,22 +86,6 @@
   .table-scroll {
     width: 100%;
     overflow-x: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-  }
-
-  .table-scroll::-webkit-scrollbar {
-    height: 6px;
-    width: 6px;
-  }
-
-  .table-scroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .table-scroll::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: var(--radius-pill);
   }
 
   .ledger-table {

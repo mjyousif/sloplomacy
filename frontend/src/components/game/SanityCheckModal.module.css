@@ -59,13 +59,6 @@
     margin-top: 2px;
   }
 
-  .sanity-close-x {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
   .sanity-summary-banner {
     padding: 12px 22px;
     background: var(--surface-subtle);
@@ -163,22 +156,11 @@
     line-height: 1.4;
   }
 
-  .sanity-inspect-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border-slate-strong);
-    background: #1b2029;
-    color: var(--text-primary);
-    font-size: 0.73rem;
-    font-weight: 600;
-    cursor: pointer;
+  button.sanity-inspect-btn {
     white-space: nowrap;
   }
 
-  .sanity-inspect-btn:hover {
+  button.sanity-inspect-btn:hover {
     background: #2d3748;
     border-color: #eab308;
   }
@@ -191,21 +173,6 @@
     padding: 15px 22px;
     background: var(--surface-subtle);
     border-top: 1px solid #2d3545;
-  }
-
-  .sanity-back-btn {
-    padding: 10px 18px;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--text-dim);
-    background: #283140;
-    color: var(--color-white);
-    font-size: 0.82rem;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .sanity-back-btn:hover {
-    background: #364154;
   }
 
   .sanity-force-confirm-btn {
@@ -308,7 +275,7 @@
     min-width: 0;
   }
 
-  :global([data-layout="compact"]) .sanity-inspect-btn {
+  :global([data-layout="compact"]) button.sanity-inspect-btn {
     flex: 1 1 100%;
     justify-content: center;
     min-height: 44px;

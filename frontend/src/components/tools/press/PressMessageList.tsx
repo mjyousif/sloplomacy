@@ -7,10 +7,12 @@ import {
   type PressMessage,
   type ProvinceInfo,
 } from '../../../types/diplomacy';
+import { cx } from '../../../utils/cx';
 import { powerShortName } from '../../../utils/powerHelpers';
 import { sameTurn, splitProvinceRefs } from '../../../utils/pressHelpers';
 import { provinceName, turnMiddotLabel } from '../../../utils/turnFormat';
 import { PowerFlag } from '../../ui/PowerFlag';
+import scrollbarStyles from '../../ui/Scrollbars.module.css';
 import styles from '../PressSection.module.css';
 import {
   PressSuggestionCard,
@@ -107,7 +109,7 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
 
   return (
     <div
-      className={styles.messageList}
+      className={cx(styles.messageList, scrollbarStyles.thin)}
       data-testid="press-messages"
       role="log"
       aria-live="polite"

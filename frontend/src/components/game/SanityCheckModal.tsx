@@ -14,6 +14,7 @@ import {
   type ValidationIssue,
 } from '../../types/diplomacy';
 import { Modal, ModalCloseButton, ModalFooter } from '../modal/Modal';
+import { Button } from '../ui/Button';
 import sanityStyles from './SanityCheckModal.module.css';
 
 interface SanityCheckModalProps {
@@ -64,10 +65,7 @@ export const SanityCheckModal: React.FC<SanityCheckModalProps> = ({
             </h2>
           </div>
         </div>
-        <ModalCloseButton
-          className={sanityStyles.sanityCloseX}
-          onClick={onClose}
-        >
+        <ModalCloseButton onClick={onClose}>
           <X size={18} />
         </ModalCloseButton>
       </div>
@@ -127,7 +125,9 @@ export const SanityCheckModal: React.FC<SanityCheckModalProps> = ({
                   {issue.message}
                 </p>
               </div>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 className={sanityStyles.sanityInspectBtn}
                 data-testid="btn-sanity-inspect"
                 onClick={() => onInspectIssue(issue)}
@@ -135,7 +135,7 @@ export const SanityCheckModal: React.FC<SanityCheckModalProps> = ({
               >
                 <Crosshair size={14} />
                 <span>Fix Order</span>
-              </button>
+              </Button>
             </div>
           );
         })}
@@ -143,13 +143,13 @@ export const SanityCheckModal: React.FC<SanityCheckModalProps> = ({
 
       {/* Modal Footer */}
       <ModalFooter className={sanityStyles.sanityModalFooter}>
-        <button
-          className={sanityStyles.sanityBackBtn}
+        <Button
+          variant="secondary"
           data-testid="btn-sanity-back"
           onClick={onClose}
         >
           Go Back &amp; Revise Orders
-        </button>
+        </Button>
         <button
           className={sanityStyles.sanityForceConfirmBtn}
           data-testid="btn-sanity-force-confirm"

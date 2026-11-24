@@ -5,43 +5,19 @@
     gap: 10px;
   }
 
-  .action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  button.action {
     gap: 8px;
-    padding: 9px 16px;
-    border-radius: var(--radius-md);
-    font-size: 0.82rem;
     font-weight: 800;
-    cursor: pointer;
   }
 
-  .action[data-variant="host"] {
-    background: var(--gold-gradient);
-    border: 1px solid #e5b964;
-    color: var(--surface-page);
-  }
-
-  .action[data-variant="host"]:hover {
+  button.action[data-variant="primary"]:hover {
     border-color: var(--gold-text);
     box-shadow: 0 0 12px rgba(229, 185, 100, 0.25);
-  }
-
-  .action[data-variant="join"] {
-    background: var(--surface-raised);
-    border: 1px solid #3c4454;
-    color: var(--text-secondary);
-  }
-
-  .action[data-variant="join"]:hover {
-    background: #303847;
   }
 }
 
 @layer compact {
-  :global([data-layout="compact"]) .action {
+  :global([data-layout="compact"]) button.action {
     flex: 1;
-    min-height: 44px;
   }
 }

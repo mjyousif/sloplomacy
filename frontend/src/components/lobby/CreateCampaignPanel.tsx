@@ -5,6 +5,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../../types/diplomacy';
+import { Button } from '../ui/Button';
 import fieldStyles from '../ui/FormField.module.css';
 import styles from './LobbyFormCard.module.css';
 import { PowerPicker } from './PowerPicker';
@@ -51,7 +52,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
       </p>
 
       <form onSubmit={handleCreateMatch} className={styles.lobbyCreateForm}>
-        <div className={fieldStyles.lobbyField}>
+        <div className={fieldStyles.field}>
           <label htmlFor="new-game-name">Campaign Name</label>
           <input
             id="new-game-name"
@@ -63,7 +64,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
         </div>
 
         {/* Public vs Private Campaign Toggle */}
-        <div className={fieldStyles.lobbyField}>
+        <div className={fieldStyles.field}>
           <label>Campaign Access</label>
           <div className={styles.privacyToggleRow}>
             <button
@@ -91,7 +92,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
         </div>
 
         {isPrivate && (
-          <div className={fieldStyles.lobbyField}>
+          <div className={fieldStyles.field}>
             <label htmlFor="private-passcode">Campaign Passcode / PIN</label>
             <input
               id="private-passcode"
@@ -108,7 +109,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
           </div>
         )}
 
-        <div className={fieldStyles.lobbyField}>
+        <div className={fieldStyles.field}>
           <label>Pick Your Sovereign Country</label>
           <PowerPicker
             selected={selectedCreatePower}
@@ -118,7 +119,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
 
         {createError && (
           <div
-            className={fieldStyles.lobbyErrorAlert}
+            className={fieldStyles.errorAlert}
             data-testid="create-campaign-error"
           >
             <AlertTriangle size={14} />
@@ -126,11 +127,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
           </div>
         )}
 
-        <button
-          type="submit"
-          className={styles.lobbyCreateSubmitBtn}
-          disabled={creating}
-        >
+        <Button type="submit" variant="primary" disabled={creating}>
           <PlusCircle size={16} />
           <span>
             {creating
@@ -139,7 +136,7 @@ export const CreateCampaignPanel: React.FC<CreateCampaignPanelProps> = ({
                 ? `Create ${isPrivate ? 'Private' : ''} & Play as ${POWER_METADATA[selectedCreatePower].shortName}`
                 : 'Sign In to Host Campaign'}
           </span>
-        </button>
+        </Button>
       </form>
     </div>
   );

@@ -68,12 +68,22 @@
   --info-sky: #38bdf8;
 
   /* Z-index Layering */
+  --z-map-timer: 10;
   --z-sidebar: 20;
   --z-map-pill: 21;
   --z-map-hud: 25;
+  --z-map-overlays: 26;
   --z-header-bar: 30;
+  --z-drawer: 45;
+  --z-mobile-sheet: 46;
+  --z-compact-bar: 50;
   --z-header-popover: 60;
+  --z-toast: 90;
   --z-dropdown: 95;
+  --z-modal: 100;
+  --z-modal-raised: 110;
+  --z-modal-emphatic: 120;
+  --z-modal-blocking: 160;
 
   /* Radii, Transitions & Elevation */
   --radius-xs: 4px;

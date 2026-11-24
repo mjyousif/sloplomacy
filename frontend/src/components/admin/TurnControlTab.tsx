@@ -8,12 +8,12 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import type { TurnHistoryEntry } from '../../types/diplomacy';
-import { cx } from '../../utils/cx';
 import { turnLabel } from '../../utils/turnFormat';
 import {
   IconSelectDropdown,
   type IconSelectOption,
 } from '../map/hud/IconSelectDropdown';
+import { Button } from '../ui/Button';
 import styles from './TurnControlTab.module.css';
 
 const SEASON_OPTIONS: IconSelectOption[] = [
@@ -119,10 +119,11 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
               }}
             />
           </div>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            fullWidth
             data-testid="btn-admin-rollback"
-            className={cx(styles.adminSecondaryBtn, styles.rollback)}
+            className={styles.rollback}
             disabled={
               !canRollback ||
               loading ||
@@ -132,7 +133,7 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
           >
             <RotateCcw size={15} />
             <span>Revert</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -219,15 +220,15 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
         </div>
 
         <div className={styles.adminFormActionsRow}>
-          <button
-            type="button"
-            className={styles.adminSecondaryBtn}
+          <Button
+            variant="secondary"
+            fullWidth
             disabled={loading}
             onClick={handleSetTurn}
           >
             <Check size={14} />
             <span>Apply</span>
-          </button>
+          </Button>
         </div>
       </div>
     </div>

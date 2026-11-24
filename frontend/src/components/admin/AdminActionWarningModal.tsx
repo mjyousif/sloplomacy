@@ -4,7 +4,7 @@ import type { AdminActionLogEntry } from '../../types/diplomacy';
 import { turnLabel } from '../../utils/turnFormat';
 import sanityStyles from '../game/SanityCheckModal.module.css';
 import { Modal, ModalFooter } from '../modal/Modal';
-import styles from './AdminActionWarningModal.module.css';
+import { Button } from '../ui/Button';
 
 export interface AdminActionWarningModalProps {
   isOpen: boolean;
@@ -101,15 +101,14 @@ export const AdminActionWarningModal: React.FC<
 
       {/* Footer */}
       <ModalFooter className={sanityStyles.sanityModalFooter}>
-        <button
-          type="button"
-          className={styles.adminPrimaryBtn}
+        <Button
+          variant="danger"
           data-testid="admin-warning-acknowledge-btn"
           onClick={onAcknowledge}
           disabled={loading}
         >
           {loading ? 'Acknowledging...' : 'Acknowledge & Continue'}
-        </button>
+        </Button>
       </ModalFooter>
     </Modal>
   );

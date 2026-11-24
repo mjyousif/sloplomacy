@@ -6,6 +6,7 @@ import type {
   Power,
 } from '../../types/diplomacy';
 import { deadlineLabel, describeMyGame } from '../../utils/heroGame';
+import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
 import { GameActionsMenu } from './GameActionsMenu';
 import { MiniMap } from './MiniMap';
@@ -87,14 +88,14 @@ export const OtherGamesStrip: React.FC<OtherGamesStripProps> = ({
                 )}
               </div>
               <div className={styles.actions}>
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   className={styles.enter}
                   onClick={() => onEnterGame(game, copy.power)}
                 >
                   <Play size={13} />
                   <span>{copy.enterLabel}</span>
-                </button>
+                </Button>
                 <GameActionsMenu
                   gameName={game.name}
                   leaveLabel={copy.leaveLabel}

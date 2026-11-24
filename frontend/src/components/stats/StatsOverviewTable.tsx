@@ -7,7 +7,9 @@ import {
   type Power,
   type PowerStats,
 } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import { PowerFlag } from '../ui/PowerFlag';
+import scrollbarStyles from '../ui/Scrollbars.module.css';
 import styles from './CampaignStats.module.css';
 
 export type StatsSortKey =
@@ -80,7 +82,7 @@ export const StatsOverviewTable: React.FC<StatsOverviewTableProps> = ({
 
   return (
     <div className={styles.sectionCard} data-testid="stats-overview-table">
-      <div className={styles.tableScroll}>
+      <div className={cx(styles.tableScroll, scrollbarStyles.thin)}>
         <table className={styles.ledgerTable}>
           <thead>
             <tr>

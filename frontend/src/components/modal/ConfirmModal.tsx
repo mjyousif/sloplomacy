@@ -1,6 +1,7 @@
 import { AlertTriangle, X } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Button } from '../ui/Button';
 import styles from './ConfirmModal.module.css';
 import { Modal, ModalCloseButton, ModalFooter } from './Modal';
 
@@ -56,11 +57,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <AlertTriangle size={20} className={styles.confirmModalIcon} />
           <h3 id="confirm-modal-title">{title}</h3>
         </div>
-        <ModalCloseButton
-          className={styles.confirmModalClose}
-          onClick={onCancel}
-          aria-label="Cancel"
-        >
+        <ModalCloseButton onClick={onCancel} aria-label="Cancel">
           <X size={16} />
         </ModalCloseButton>
       </div>
@@ -71,22 +68,22 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         Tip: hold <kbd>Shift</kbd> while clicking to skip this confirmation.
       </p>
       <ModalFooter className={styles.confirmModalFooter}>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           className={styles.confirmModalCancel}
           onClick={onCancel}
         >
           Cancel
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
           ref={confirmRef}
+          variant="danger"
           data-testid="btn-confirm-modal-confirm"
           className={styles.confirmModalConfirm}
           onClick={onConfirm}
         >
           {confirmLabel}
-        </button>
+        </Button>
       </ModalFooter>
     </Modal>
   );

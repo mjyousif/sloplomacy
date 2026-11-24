@@ -7,6 +7,7 @@ import {
   type Power,
 } from '../../types/diplomacy';
 import { accessiblePowerColor, powerShortName } from '../../utils/powerHelpers';
+import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './SpectatorBar.module.css';
 
@@ -69,26 +70,28 @@ export const SpectatorBar: React.FC<SpectatorBarProps> = ({
         </fieldset>
         <div className={styles.actions}>
           {seatFree && !gameOver && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               className={styles.action}
-              data-variant="claim"
+              data-claim="true"
               data-testid="spectator-claim"
               onClick={() => controls.onClaimSeat(activePower)}
             >
               <Plus size={12} />
               <span>Claim {powerShortName(activePower)}</span>
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             className={styles.action}
             data-testid="spectator-leave"
             onClick={controls.onLeave}
           >
             <LogOut size={12} />
             <span>Leave</span>
-          </button>
+          </Button>
         </div>
       </div>
     </div>

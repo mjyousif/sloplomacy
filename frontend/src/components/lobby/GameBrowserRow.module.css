@@ -89,7 +89,7 @@
     gap: 6px;
   }
 
-  .button {
+  button.button {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -101,37 +101,20 @@
     white-space: nowrap;
   }
 
-  .button[data-variant="join"] {
+  button.button[data-variant="join"] {
     background: var(--surface-raised);
     border: 1px solid var(--gold-primary);
     color: var(--gold-text);
   }
 
-  .button[data-variant="join"]:hover:not(:disabled) {
+  button.button[data-variant="join"]:hover:not(:disabled) {
     background: #303847;
   }
 
-  .button[data-variant="join"]:disabled {
+  button.button[data-variant="join"]:disabled {
     border-color: #3c4454;
     color: var(--text-dim);
     cursor: not-allowed;
-  }
-
-  .button[data-variant="watch"] {
-    background: transparent;
-    border: 1px solid var(--border-slate-strong);
-    color: var(--text-secondary);
-  }
-
-  .button[data-variant="watch"]:hover {
-    border-color: var(--info-sky);
-    color: #e0f2fe;
-  }
-
-  .button[data-variant="resume"] {
-    background: var(--gold-gradient);
-    border: 1px solid #e2b55f;
-    color: var(--surface-page);
   }
 
   .claim-grid {
@@ -210,7 +193,7 @@
     justify-content: flex-end;
   }
 
-  :global([data-layout="compact"]) .button {
+  :global([data-layout="compact"]) button.button {
     min-height: 44px;
     padding: 0 14px;
   }

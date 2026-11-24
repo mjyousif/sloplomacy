@@ -2,7 +2,7 @@
   :global([data-layout="compact"]) .mobile-press-layer {
     position: absolute;
     inset: 0;
-    z-index: 46;
+    z-index: var(--z-mobile-sheet);
     display: flex;
     flex-direction: column;
     background: #141820;

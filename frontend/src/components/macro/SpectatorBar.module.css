@@ -90,26 +90,13 @@
     gap: 6px;
   }
 
-  .action {
-    display: inline-flex;
-    align-items: center;
+  button.action {
     gap: 4px;
     padding: 4px 9px;
-    border: 1px solid var(--border-slate-strong);
-    border-radius: 5px;
-    background: transparent;
-    color: var(--text-secondary);
     font-size: 0.7rem;
-    font-weight: 700;
-    cursor: pointer;
   }
 
-  .action:hover {
-    border-color: var(--info-sky);
-    color: #e0f2fe;
-  }
-
-  .action[data-variant="claim"] {
+  button.action[data-claim="true"] {
     border-color: var(--gold-primary);
     color: var(--gold-text);
   }
@@ -151,7 +138,7 @@
     padding: 2px;
   }
 
-  :global([data-layout="compact"]) .action {
+  :global([data-layout="compact"]) button.action {
     min-height: 36px;
     padding: 0 12px;
   }

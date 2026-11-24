@@ -105,7 +105,7 @@ export const Modal: React.FC<ModalProps> = ({
   );
 };
 
-/** The ✕ in a dialog's header. `className` carries the dialog's own look. */
+/** The ✕ in a dialog's header. `className` is optional for positioning overrides. */
 export const ModalCloseButton: React.FC<
   React.ButtonHTMLAttributes<HTMLButtonElement>
 > = ({ className, ...props }) => (
