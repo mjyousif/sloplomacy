@@ -5,7 +5,17 @@ description: Use when adding or changing any backend endpoint, WebSocket message
 
 # Secrecy and authorization review
 
-Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #91, #101): each time a *new* path returned or accepted raw state. Walk every item below for any code that reads or writes a `GameState`. The helpers live in `backend/main.py`: `sanitize_game_state_for_viewer`, `viewer_power_for`, `caller_holds_seat`, `require_own_seat`, `require_timer_player`, `persist_game`.
+Hidden orders (fog of war) and seat ownership have broken repeatedly (PRs #90, #91, #101): each time a *new* path returned or accepted raw state. Walk every item below for any code that reads or writes a `GameState`.
+
+## Backend Shared-Helpers Catalog
+
+| Responsibility | Module | Key Helpers |
+| :--- | :--- | :--- |
+| Viewer masking & seat guards | `backend/security/secrecy.py` | `sanitize_game_state_for_viewer`, `sanitize_summary_for_viewer`, `viewer_power_for`, `caller_holds_seat`, `require_own_seat`, `require_seat_holder`, `verify_power_authorization`, `verify_admin_access`, `require_view_access`, `with_sanitized_admin_log` |
+| Passcode & press secrecy | `backend/security/passcode.py`, `backend/security/press.py`, `backend/security/creator.py` | `require_passcode`, `check_passcode`, `can_read`, `view_of`, `spectator_feed`, `spectator_view`, `is_creator` |
+| Store & persistence | `backend/storage/store.py` | `resolve_game`, `resolve_game_with_summary`, `delete_game_everywhere`, `is_private_sandbox`, `is_multiplayer_match`, `lacks_summary`, `persist_game`, `sync_summary`, `evict_game` |
+| Turn lifecycle & publishing | `backend/engine/turn_service.py`, `backend/api/turns.py` | `publish_game_state`, `execute_adjudication`, `tick_timer`, `refresh_timer`, `timer_players`, `require_timer_player` |
+| Order & turn guards | `backend/engine/order_utils.py` | `turn_label`, `reject_stale_turn`, `reject_if_game_over`, `reject_if_surrendered`, `refresh_diagnostics_and_simulation` |
 
 ## Reads: does anything return or broadcast state?
 

@@ -192,13 +192,13 @@ def test_unexpected_socket_failure_is_logged_and_the_socket_dropped(monkeypatch,
     import contextlib
     import logging
 
-    import api.websocket as websocket_api
+    import ws.connection_manager as cm
     from ws.connection_manager import manager
 
     def broken(*args, **kwargs):
         raise ValueError("masking blew up")
 
-    monkeypatch.setattr(websocket_api, "sanitize_game_state_for_viewer", broken)
+    monkeypatch.setattr(cm, "sanitize_game_state_for_viewer", broken)
     client = TestClient(app)
     with caplog.at_level(logging.WARNING, logger="diplomacy.ws"):
         # The server closes the socket on the failure, so the client sees it end.

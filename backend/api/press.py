@@ -32,8 +32,8 @@ from security.secrecy import require_view_access, viewer_power_for
 from storage.press import add_press, next_press_seq, persist_press, press_of
 from storage.store import (
     GAME_SUMMARIES,
-    PRIVATE_SANDBOXES,
     is_multiplayer_match,
+    is_private_sandbox,
     resolve_game,
 )
 from storage.supabase import SupabaseUnavailable
@@ -58,7 +58,7 @@ SUGGESTABLE_ORDER_TYPES = set().union(*PHASE_UNIT_ORDER_TYPES.values()) | BUILD_
 
 async def _press_match(game_id: str | None) -> GameState:
     """The multiplayer match whose press is asked for. A sandbox has none."""
-    if game_id and (game_id.startswith("sbx_") or game_id in PRIVATE_SANDBOXES):
+    if is_private_sandbox(game_id):
         raise HTTPException(status_code=404, detail="A private sandbox has no press.")
     game = await resolve_game(game_id)
     if not is_multiplayer_match(game.game_id):

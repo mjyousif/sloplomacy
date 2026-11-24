@@ -173,12 +173,14 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
 - **Application Assembler (`backend/main.py`)**: Root FastAPI application initialization, CORS configuration, security headers, lifespan hooks, and router inclusion.
   - **Invariant**: `main.py` is an assembler (< 350 lines); never add route handlers (`@app.get`, `@app.post`) directly here, and never re-export names from it. Tests import and patch a name in the module that owns it (`storage.supabase.<fn>` for every Supabase call).
 - **API Routers (`backend/api/`)**: Domain-partitioned FastAPI routers. Every HTTP endpoint and WebSocket connection belongs in its domain router:
+  - `account.py`: Account profile management (public display name updates and syncing active games).
   - `games.py`: Match lifecycle: lobby list, creation, loading, deletion, and saving a sandbox to an account.
   - `lobby.py`: The lobby browser (`/api/games/browse`, paged and filtered public matches) and the caller's own games (`/api/games/mine`). Included before `games.py` so those paths are not read as a game id.
   - `seats.py`: Seat claiming (join), leaving, surrender, and picking the active power.
   - `orders.py`: Move/retreat/build order submission, atomic batch updates, and order confirmation.
   - `turns.py`: Finalization, turn adjudication, phase timer voting, and extension requests.
   - `sandbox.py`: Sandbox sessions, speculative simulation, and scenario loading.
+  - `solo_sandbox_helpers.py`: Helpers for creating, exporting, resuming, and cleaning up personal draft Solo Sandboxes.
   - `admin.py`: Creator/admin turn controls (status, rollback, set-turn, acknowledge, test seeding).
   - `admin_units.py`: Creator/admin Direct-Edit board commit (`board-edit`: units, ownership and orders in one batch with optimistic concurrency).
   - `admin_utils.py`: Admin audit log recording (`AdminActionLogEntry`), consolidated `"Admin"` phase snapshots in `GAME_HISTORY`, and before/after diff order generation.
@@ -186,7 +188,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - `press.py`: Press (chat): reading a seat's press and sending public and private thread messages, signed or anonymous (a signed private one may carry suggested moves).
   - `websocket.py`: Live turn synchronization and WebSocket subscriptions.
 - **Domain Models (`backend/domain/`)**: Authoritative Pydantic v2 schemas: `board.py` (powers, provinces, units), `orders.py` (orders and adjudication results), `issues.py` (validation issues), `game_state.py` (`GameState`, `UnitMoveOptions`, clock, history, seats), `ids.py` (`DEFAULT_GAME_ID`, the shared default game's id), `press.py` (the stored `PressMessage` and the `PressMessageView` a player is sent), `stats.py` (`PowerStats`, `SCTimelinePoint`, `CampaignAward`, `CampaignStatsResponse`), and `requests.py` (request/response DTOs and WebSocket messages).
-- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator/`, one module per phase), DATC/rulebook validation (`validator/`, one module per phase or concern), authoritative unit reachability (`reachability/`: direct moves, active/potential convoy chains, simple-path sea routing, fleet convoy options, and valid supports), map topology (`topology/`: `provinces.py` data, `graph.py` movement rules), phase timer (`phase_timer.py`), campaign statistics (`stats.py`), and order helpers (`order_utils.py`). Completely decoupled from HTTP transport.
+- **Core Rules Engine (`backend/engine/`)**: Pure adjudication (`adjudicator/`, one module per phase), DATC/rulebook validation (`validator/`, one module per phase or concern), authoritative unit reachability (`reachability/`: direct moves, active/potential convoy chains, simple-path sea routing, fleet convoy options, and valid supports), map topology (`topology/`: `provinces.py` data, `graph.py` movement rules), turn lifecycle orchestration (`turn_service.py`), phase timer (`phase_timer.py`), campaign statistics (`stats.py`), and order helpers (`order_utils.py`). Completely decoupled from HTTP transport.
 - **Persistence Layer (`backend/storage/`)**: Authoritative in-memory state store (`store.py`), centralized UUID-based profile resolution (`profiles.py`), which games the lobby lists (`lobby.py`), press and its own Supabase column (`press.py`), Supabase PostgREST client (`supabase.py`), and JSONB stripping/row-decoding codec (`supabase_codec.py`).
 - **Security & Authorization (`backend/security/`)**: JWT verification and auth dependencies (`auth.py`), viewer state secrecy sanitization (`secrecy.py`), the one "is this caller the creator" check (`creator.py`, `is_creator`: strictly by `creator_id` UUID), who may read a press message and see its author (`press.py`), and a private match's passcode check with its wrong-guess limit (`passcode.py`).
 - **Scenarios & Presets (`backend/scenarios/`)**: Scenario definitions and match presets (`presets.py`).
@@ -398,6 +400,7 @@ Reusable playbooks live in `.agents/skills/`. Read the matching `SKILL.md` befor
 | `secrecy-review` | Adding or changing an endpoint, WebSocket message, broadcast, save path, sandbox or admin action (fog of war and seat authorization) |
 | `frontend-change` | Editing the map, sidebars, top bar, modals, CSS, display settings or phone layout |
 | `open-pr` | Committing, opening or updating a PR, or resolving conflicts on a stacked PR |
+| `db-persistence` | Modifying Supabase persistence (`backend/storage/supabase.py`), database migrations, profile resolution, or lobby/game serialization |
 | `supabase`, `supabase-postgres-best-practices` | Anything touching the database, RLS, migrations or Supabase Auth |
 
 Working rules for agents:

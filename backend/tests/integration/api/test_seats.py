@@ -256,3 +256,29 @@ def test_surrendered_power_cannot_submit_orders():
         "/api/finalize", params={"game_id": gid}, json={"power": "GERMANY", "force": True}
     )
     assert fin.status_code == 403
+
+
+def test_leave_game_bumps_state_revision_once():
+    """Leaving a multiplayer match must bump `state_revision` exactly once, not twice."""
+    client = TestClient(app)
+    create_res = client.post(
+        "/api/games",
+        json={"name": "Rev Check", "creator_power": "FRANCE", "user_id": "host_rev"},
+    )
+    assert create_res.status_code == 200
+    gid = create_res.json()["game_id"]
+
+    join_res = client.post(
+        f"/api/games/{gid}/join",
+        json={"power": "GERMANY", "user_id": "guest_ger"},
+    )
+    assert join_res.status_code == 200
+    before_rev = GAMES[gid].state_revision
+
+    leave_res = client.post(
+        f"/api/games/{gid}/leave",
+        json={"power": "GERMANY", "user_id": "guest_ger"},
+    )
+    assert leave_res.status_code == 200
+    assert GAMES[gid].state_revision == before_rev + 1
+    assert leave_res.json()["state"]["state_revision"] == before_rev + 1

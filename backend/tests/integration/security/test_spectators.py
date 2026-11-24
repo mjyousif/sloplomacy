@@ -106,7 +106,7 @@ def test_loading_a_private_match_without_the_passcode_uses_no_try():
 
 
 def test_a_refused_viewer_cannot_tick_the_clock(monkeypatch):
-    import api.turns
+    import engine.turn_service as turn_service
 
     gid = secret_plan_match(private=True)
     ticked: list[str] = []
@@ -114,7 +114,7 @@ def test_a_refused_viewer_cannot_tick_the_clock(monkeypatch):
     async def record(game):
         ticked.append(game.game_id)
 
-    monkeypatch.setattr(api.turns, "tick_timer", record)
+    monkeypatch.setattr(turn_service, "tick_timer", record)
     assert client.get(f"/api/game?game_id={gid}").status_code == 403
     assert ticked == []
     assert client.get(f"/api/game?game_id={gid}", headers=RIGHT).status_code == 200

@@ -9,6 +9,7 @@ from api.solo_sandbox_helpers import create_or_resume_solo_sandbox
 from domain.board import Power
 from domain.game_state import GameParticipant, MultiplayerGameSummary
 from domain.requests import CreateGameRequest, GameBootstrapResponse, SaveSandboxRequest
+from engine import turn_service
 from engine.order_utils import (
     refresh_diagnostics_and_simulation,
 )
@@ -36,6 +37,7 @@ from storage.store import (
     SANDBOX_CHECKPOINTS,
     cache_loaded_game,
     check_game_capacity,
+    delete_game_everywhere,
     evict_game,
     has_unsaved_work,
     hydrate_summary_profiles,
@@ -197,9 +199,7 @@ async def delete_game(
                     status_code=403, detail="Only the host can delete this campaign."
                 )
 
-    evict_game(game_id)
-    if supabase.is_persistence_enabled():
-        await supabase.delete_game_from_db(game_id)
+    await delete_game_everywhere(game_id)
 
     await manager.broadcast_lobby()
     return {"status": "deleted", "game_id": game_id}
@@ -374,13 +374,11 @@ async def get_game(
     x_passcode: str | None = Header(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    from api.turns import tick_timer
-
     game = await resolve_game(game_id)
     gid = game.game_id
     # Before the clock is ticked, so a caller who may not see the match cannot resolve its turn.
     require_view_access(gid, current_user, x_passcode, client=client_address(request))
-    await tick_timer(game)
+    await turn_service.tick_timer(game)
     refresh_diagnostics_and_simulation(game)
     sync_summary(gid)
     summary = GAME_SUMMARIES.get(gid)
