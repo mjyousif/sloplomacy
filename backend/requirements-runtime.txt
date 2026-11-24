@@ -2,7 +2,7 @@
 # the hash-pinned requirements-runtime.lock made from this file (scripts/lock-requirements.sh).
 # Each package is capped below its next major version, so a breaking release
 # is never picked up by a fresh install or image build.
-fastapi>=0.163.0,<1.0
+fastapi>=0.165.0,<1.0
 uvicorn[standard]>=0.54.0,<1.0
 pydantic>=2.14.4,<3.0
 httpx>=0.28.1,<1.0
