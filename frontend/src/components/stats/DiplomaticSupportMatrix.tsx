@@ -6,7 +6,10 @@ import {
   type Power,
   type PowerStats,
 } from '../../types/diplomacy';
+import { cx } from '../../utils/cx';
 import { PowerFlag } from '../ui/PowerFlag';
+import scrollbarStyles from '../ui/Scrollbars.module.css';
+import { SegmentedControl } from '../ui/SegmentedControl';
 import styles from './CampaignStats.module.css';
 
 export interface DiplomaticSupportMatrixProps {
@@ -56,29 +59,29 @@ export const DiplomaticSupportMatrix: React.FC<
             : 'Bilateral Offensive Conflict Matrix (Row → Column)'}
         </span>
 
-        <div className={styles.modeToggle}>
-          <button
-            type="button"
-            className={styles.modeBtn}
-            data-active={String(mode === 'support')}
-            data-testid="matrix-mode-support"
-            onClick={() => setMode('support')}
-          >
-            Support Ledger
-          </button>
-          <button
-            type="button"
-            className={styles.modeBtn}
-            data-active={String(mode === 'attack')}
-            data-testid="matrix-mode-attack"
-            onClick={() => setMode('attack')}
-          >
-            Conflict Ledger
-          </button>
-        </div>
+        <SegmentedControl<'support' | 'attack'>
+          value={mode}
+          onChange={setMode}
+          ariaLabel="Matrix view"
+          semantics="toggle"
+          tone="neutral"
+          size="md"
+          options={[
+            {
+              value: 'support',
+              label: 'Support Ledger',
+              testId: 'matrix-mode-support',
+            },
+            {
+              value: 'attack',
+              label: 'Conflict Ledger',
+              testId: 'matrix-mode-attack',
+            },
+          ]}
+        />
       </div>
 
-      <div className={styles.tableScroll}>
+      <div className={cx(styles.tableScroll, scrollbarStyles.thin)}>
         <table className={styles.matrixTable}>
           <thead>
             <tr>

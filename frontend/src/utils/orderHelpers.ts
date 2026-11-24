@@ -1,12 +1,13 @@
-import {
-  type GameParticipant,
-  type Order,
-  POWER_METADATA,
-  type Power,
-  type ProvinceInfo,
-  type Unit,
-  type UnitMoveOptions,
+import type {
+  GameParticipant,
+  Order,
+  Power,
+  ProvinceInfo,
+  Unit,
+  UnitMoveOptions,
 } from '../types/diplomacy';
+import { formatPowerList } from './powerHelpers';
+import { provinceName, unitTypeName } from './turnFormat';
 
 export function splitProvinceCode(code: string): {
   base: string;
@@ -136,13 +137,10 @@ export function formatOrderSummary(
   badgeColor: string;
   fullSymbolic: string;
 } {
-  const pName = (code?: string | null) =>
-    code && provinces[code] ? provinces[code].name : code || '';
-
   if (!order || order.order_type === 'HOLD') {
     return {
       verb: 'HOLD',
-      targetText: `Defending ${pName(order?.origin)}`,
+      targetText: `Defending ${provinceName(provinces, order?.origin)}`,
       badgeColor: '#64748b',
       fullSymbolic: `${order?.unit_type || 'A'} ${order?.origin || ''} HOLD`,
     };
@@ -169,7 +167,7 @@ export function formatOrderSummary(
   if (order.order_type === 'SUPPORT' && !order.target) {
     return {
       verb: 'SUPPORT',
-      targetText: `Supports ${pName(order.aux_unit_origin)} → choose where`,
+      targetText: `Supports ${provinceName(provinces, order.aux_unit_origin)} → choose where`,
       badgeColor: '#0d9488',
       fullSymbolic: `${order.unit_type} ${order.origin} S ${order.aux_unit_origin} ──► ?`,
     };
@@ -185,7 +183,7 @@ export function formatOrderSummary(
   if (order.order_type === 'CONVOY' && !order.target) {
     return {
       verb: 'CONVOY',
-      targetText: `Convoys A ${pName(order.aux_unit_origin)} → choose where`,
+      targetText: `Convoys A ${provinceName(provinces, order.aux_unit_origin)} → choose where`,
       badgeColor: '#7c3aed',
       fullSymbolic: `F ${order.origin} C A ${order.aux_unit_origin} ──► ?`,
     };
@@ -196,7 +194,7 @@ export function formatOrderSummary(
     const convoySuffix = order.via_convoy ? ' [via Convoy]' : '';
     return {
       verb: 'MOVE',
-      targetText: `→ ${pName(order.target)}${coastSuffix}${convoySuffix}`,
+      targetText: `→ ${provinceName(provinces, order.target)}${coastSuffix}${convoySuffix}`,
       badgeColor: '#2563eb',
       fullSymbolic: `${order.unit_type} ${order.origin} ──► ${order.target || '?'}${coastSuffix}`,
     };
@@ -211,14 +209,14 @@ export function formatOrderSummary(
     if (isHoldSupport) {
       return {
         verb: 'SUPPORT HOLD',
-        targetText: `Supports ${uType} ${pName(order.aux_unit_origin)} (Hold)`,
+        targetText: `Supports ${uType} ${provinceName(provinces, order.aux_unit_origin)} (Hold)`,
         badgeColor: '#0d9488',
         fullSymbolic: `${order.unit_type} ${order.origin} S ${uType} ${order.aux_unit_origin} H`,
       };
     }
     return {
       verb: 'SUPPORT MOVE',
-      targetText: `Supports ${uType} ${pName(order.aux_unit_origin)} → ${pName(order.target)}`,
+      targetText: `Supports ${uType} ${provinceName(provinces, order.aux_unit_origin)} → ${provinceName(provinces, order.target)}`,
       badgeColor: '#0d9488',
       fullSymbolic: `${order.unit_type} ${order.origin} S ${uType} ${order.aux_unit_origin} ──► ${order.target}`,
     };
@@ -227,7 +225,7 @@ export function formatOrderSummary(
   if (order.order_type === 'CONVOY') {
     return {
       verb: 'CONVOY',
-      targetText: `Convoys A ${pName(order.aux_unit_origin)} → ${pName(order.target)}`,
+      targetText: `Convoys A ${provinceName(provinces, order.aux_unit_origin)} → ${provinceName(provinces, order.target)}`,
       badgeColor: '#7c3aed',
       fullSymbolic: `F ${order.origin} C A ${order.aux_unit_origin} ──► ${order.target}`,
     };
@@ -238,7 +236,7 @@ export function formatOrderSummary(
     const coastSuffix = order.unit_type === 'F' && cst ? ` (${cst})` : '';
     return {
       verb: 'BUILD',
-      targetText: `Build ${order.unit_type === 'A' ? 'Army' : 'Fleet'} in ${pName(order.origin)}${coastSuffix}`,
+      targetText: `Build ${unitTypeName(order.unit_type)} in ${provinceName(provinces, order.origin)}${coastSuffix}`,
       badgeColor: '#16a34a',
       fullSymbolic: `+ ${order.unit_type} ${order.origin}${coastSuffix} BUILD`,
     };
@@ -257,7 +255,7 @@ export function formatOrderSummary(
   if (order.order_type === 'DISBAND') {
     return {
       verb: 'DISBAND',
-      targetText: `Disband ${order.unit_type === 'A' ? 'Army' : 'Fleet'} in ${pName(order.origin)}`,
+      targetText: `Disband ${unitTypeName(order.unit_type)} in ${provinceName(provinces, order.origin)}`,
       badgeColor: '#dc2626',
       fullSymbolic: `- ${order.unit_type} ${order.origin} DISBAND`,
     };
@@ -266,7 +264,7 @@ export function formatOrderSummary(
   if (order.order_type === 'WAIVE') {
     return {
       verb: 'WAIVE',
-      targetText: `Waive build in ${pName(order.origin)}`,
+      targetText: `Waive build in ${provinceName(provinces, order.origin)}`,
       badgeColor: '#64748b',
       fullSymbolic: `WAIVE ${order.origin}`,
     };
@@ -276,7 +274,7 @@ export function formatOrderSummary(
     const coastSuffix = order.target_coast ? ` (${order.target_coast})` : '';
     return {
       verb: 'RETREAT',
-      targetText: `Retreat → ${pName(order.target)}${coastSuffix}`,
+      targetText: `Retreat → ${provinceName(provinces, order.target)}${coastSuffix}`,
       badgeColor: '#ea580c',
       fullSymbolic: `RETREAT ${order.unit_type} ${order.origin} ──► ${order.target}${coastSuffix}`,
     };
@@ -372,9 +370,7 @@ export function getConsensusStatusInfo({
     return {
       isWaitingForPlayers: false,
       title: `Resolution Progress: ${finalizedCount}/${totalRequiredCount} Ready`,
-      description: `Waiting on: ${missingPowers
-        .map((p) => POWER_METADATA[p]?.shortName || p)
-        .join(', ')}`,
+      description: `Waiting on: ${formatPowerList(missingPowers)}`,
     };
   }
 

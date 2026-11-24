@@ -501,4 +501,48 @@ describe('useAdminDirectEdit.clearStagedChanges', () => {
 
     fetchSpy.mockRestore();
   });
+
+  it('does not trigger a false 409 conflict when entering or re-entering Edit Board on a progressed turn', () => {
+    const confirm = vi.fn().mockResolvedValue(false);
+    const fallState: GameState = {
+      ...makeGameState(),
+      season: 'Fall',
+      year: 1901,
+      phase: 'Movement',
+      state_revision: 5,
+      board_revision: 3,
+    };
+
+    const { result, rerender } = renderHook(
+      ({ state, active }: { state: GameState; active: boolean }) =>
+        useAdminDirectEdit({
+          activeGameId: 'proto_1901',
+          gameState: state,
+          provinces: FRANCE_PROVINCES,
+          directEditActive: active,
+          setDirectEditActive: vi.fn(),
+          authUser: null,
+          onUpdateGameState: vi.fn(),
+          showToast: vi.fn(),
+          confirm,
+        }),
+      { initialProps: { state: fallState, active: false } },
+    );
+
+    rerender({ state: fallState, active: true });
+    expect(confirm).not.toHaveBeenCalled();
+    expect(result.current.isDirty).toBe(false);
+
+    rerender({ state: fallState, active: false });
+    const winterState: GameState = {
+      ...fallState,
+      season: 'Winter',
+      phase: 'Adjustments',
+      state_revision: 6,
+      board_revision: 4,
+    };
+    rerender({ state: winterState, active: true });
+    expect(confirm).not.toHaveBeenCalled();
+    expect(result.current.isDirty).toBe(false);
+  });
 });

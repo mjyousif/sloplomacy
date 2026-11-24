@@ -19,6 +19,7 @@ import {
   getActiveOrderButton,
   isChosenDisband,
 } from '../../../utils/orderHelpers';
+import { provinceName, unitTypeName } from '../../../utils/turnFormat';
 import type { MapInteraction } from '../hooks/useMapInteraction';
 import type { UnitMenuPlacement } from '../hooks/useUnitMenuPlacement';
 import floatingStyles from './FloatingMenu.module.css';
@@ -84,7 +85,7 @@ export function UnitMenu({
       data-docked={docked ? 'true' : undefined}
       data-testid={compact ? 'unit-docked-bar' : 'unit-floating-menu'}
       style={floatingStyle}
-      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
       <div
@@ -105,8 +106,8 @@ export function UnitMenu({
           />
           <strong>
             {unit.is_dislodged ? 'Dislodged ' : ''}
-            {unit.unit_type === 'A' ? 'Army' : 'Fleet'}{' '}
-            {provinces[unit.province]?.name}
+            {unitTypeName(unit.unit_type)}{' '}
+            {provinceName(provinces, unit.province)}
           </strong>
         </div>
         <button

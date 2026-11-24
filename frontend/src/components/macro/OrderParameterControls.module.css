@@ -6,8 +6,40 @@
     min-width: 0;
   }
 
-  .orderParamInline select {
+  .orderParamDropdown {
+    min-width: 0;
+  }
+
+  .orderParamInline .orderParamDropdown {
     flex: 1 1 0;
+  }
+
+  button.orderParamTrigger {
+    height: 22px;
+    padding: 0 6px;
+    border-radius: var(--radius-xs);
+    font-size: 0.7rem;
+    font-weight: 600;
+    gap: 4px;
+  }
+
+  span.orderParamValue {
+    gap: 5px;
+    overflow: hidden;
+  }
+
+  span.orderParamValue > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  div.orderParamMenu {
+    min-width: 148px;
+  }
+
+  select.orderParamNative {
+    width: 100%;
     min-width: 0;
     height: 22px;
     line-height: 20px;
@@ -24,38 +56,14 @@
     text-overflow: ellipsis;
   }
 
-  .orderParamInline select:focus {
+  select.orderParamNative:focus {
     outline: none;
     border-color: #eab308;
   }
 
-  .orderParamInline .orderParamDropdown {
+  .orderParamInline select.orderParamNative {
     flex: 1 1 0;
-    min-width: 0;
-  }
-
-  .orderParamInline .orderParamTrigger {
-    height: 22px;
-    padding: 0 6px;
-    border-radius: var(--radius-xs);
-    font-size: 0.7rem;
-    font-weight: 600;
-    gap: 4px;
-  }
-
-  .orderParamInline .orderParamValue {
-    gap: 5px;
-    overflow: hidden;
-  }
-
-  .orderParamInline .orderParamValue > span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .orderParamInline .orderParamMenu {
-    min-width: 148px;
+    width: auto;
   }
 
   .orderParamArrow {
@@ -65,67 +73,9 @@
     color: var(--text-dim);
   }
 
-  .orderParamGrid {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    min-width: 0;
-    width: 100%;
-  }
-
-  .orderParamRow {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.73rem;
-    min-width: 0;
-    width: 100%;
-  }
-
-  .orderParamRow label {
-    width: 72px;
-    color: var(--text-muted);
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-
-  .orderParamRow select {
-    flex: 1;
-    min-width: 0;
-    width: 100%;
-    padding: 5px 8px;
-    border-radius: 5px;
-    background: var(--surface-subtle);
-    border: 1px solid #3b4456;
-    color: var(--text-soft);
-    font-size: 0.74rem;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-  }
-
-  .compactNativeSelect {
-    width: 100%;
-    min-width: 0;
-    height: 22px;
-    line-height: 20px;
-    padding: 0 5px;
-    border-radius: var(--radius-xs);
-    border: 1px solid #353f52;
-    background: #191d25;
-    color: var(--text-primary);
-    font-size: 0.7rem;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .compactNativeSelect:focus {
-    outline: none;
-    border-color: #eab308;
+  .retreatDisbandMsg {
+    font-size: 11px;
+    color: #f87171;
   }
 }
 
@@ -134,9 +84,7 @@
     gap: 6px;
   }
 
-  :global([data-layout="compact"]) .orderParamInline select,
-  :global([data-layout="compact"]) .compactNativeSelect,
-  :global([data-layout="compact"]) .orderParamRow select {
+  :global([data-layout="compact"]) select.orderParamNative {
     height: 40px;
     min-height: 40px;
     line-height: 1.25;

@@ -1,5 +1,6 @@
 import { KeyRound, PlusCircle } from 'lucide-react';
 import type React from 'react';
+import { Button } from '../ui/Button';
 import styles from './LobbyActionRow.module.css';
 
 export interface LobbyActionRowProps {
@@ -13,23 +14,17 @@ export const LobbyActionRow: React.FC<LobbyActionRowProps> = ({
   onJoinWithCode,
 }) => (
   <div className={styles.row} data-testid="lobby-action-row">
-    <button
-      type="button"
+    <Button
+      variant="secondary"
       className={styles.action}
-      data-variant="join"
       onClick={onJoinWithCode}
     >
       <KeyRound size={15} />
       <span>Join with code</span>
-    </button>
-    <button
-      type="button"
-      className={styles.action}
-      data-variant="host"
-      onClick={onHostGame}
-    >
+    </Button>
+    <Button variant="primary" className={styles.action} onClick={onHostGame}>
       <PlusCircle size={16} />
       <span>Host game</span>
-    </button>
+    </Button>
   </div>
 );

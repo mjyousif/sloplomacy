@@ -364,7 +364,7 @@ describe('useMatchActions: resolve', () => {
     const { result } = renderActions(o);
     await act(() => result.current.handleAdjudicateTurn());
     expect(sent()).toEqual({
-      url: '/api/adjudicate?game_id=mp_1&turn=Spring%201901%20Movement',
+      url: '/api/adjudicate?game_id=mp_1&turn=Spring+1901+Movement',
       method: 'POST',
       body: undefined,
     });
@@ -394,7 +394,7 @@ describe('useMatchActions: resolve', () => {
     await act(() => result.current.handleAdjudicateTurn());
     expect(requireRealBoard).not.toHaveBeenCalled();
     expect(sent()).toEqual({
-      url: '/api/adjudicate?game_id=sbx_9&turn=Spring%201901%20Movement',
+      url: '/api/adjudicate?game_id=sbx_9&turn=Spring+1901+Movement',
       method: 'POST',
       body: undefined,
     });

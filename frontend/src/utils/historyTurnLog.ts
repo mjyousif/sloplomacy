@@ -17,7 +17,9 @@ import {
   collectOwnershipChanges,
   type HistoryOwnershipChange,
 } from './historyOwnershipChanges';
+import { holdOrder } from './orderBuilders';
 import { formatOrderSummary, splitProvinceCode } from './orderHelpers';
+import { provinceName, unitTypeName } from './turnFormat';
 
 export type { HistoryOwnershipChange };
 
@@ -63,21 +65,13 @@ export interface HistoryTurnLog {
   totalCount: number;
 }
 
-function provName(
-  code: string | null | undefined,
-  provinces: Record<string, ProvinceInfo>,
-): string {
-  if (!code) return '';
-  return provinces[code]?.name ?? code;
-}
-
 function formatLocationLabel(
   province: string,
   coast: string | null | undefined,
   provinces: Record<string, ProvinceInfo>,
 ): string {
   const coastSuffix = coast ? ` (${coast})` : '';
-  return `${provName(province, provinces)}${coastSuffix}`;
+  return `${provinceName(provinces, province)}${coastSuffix}`;
 }
 
 function collectProvinces(...codes: (string | null | undefined)[]): string[] {
@@ -136,7 +130,7 @@ function addAdminTurnEntries(
     if (!matchesHistoryPowers(order.power, selectedPowers)) continue;
     if (order.order_type === 'HOLD' && !order.is_explicit) continue;
     const coast = order.origin_coast || order.target_coast;
-    const unitWord = order.unit_type === 'A' ? 'Army' : 'Fleet';
+    const unitWord = unitTypeName(order.unit_type);
     const locationLabel = formatLocationLabel(order.origin, coast, provinces);
     if (order.order_type === 'BUILD') {
       pushGrouped(buckets, {
@@ -145,7 +139,7 @@ function addAdminTurnEntries(
         unitType: order.unit_type,
         locationLabel,
         verb: 'SPAWN',
-        detail: `Spawned ${unitWord} in ${provName(order.origin, provinces)}${coast ? ` (${coast})` : ''}`,
+        detail: `Spawned ${unitWord} in ${provinceName(provinces, order.origin)}${coast ? ` (${coast})` : ''}`,
         outcomeLabel: 'Added',
         outcomeTone: 'admin',
         highlightUnitId: order.unit_id,
@@ -158,7 +152,7 @@ function addAdminTurnEntries(
         unitType: order.unit_type,
         locationLabel,
         verb: 'REMOVE',
-        detail: `Removed ${unitWord} in ${provName(order.origin, provinces)}`,
+        detail: `Removed ${unitWord} in ${provinceName(provinces, order.origin)}`,
         outcomeLabel: 'Removed',
         outcomeTone: 'danger',
         highlightUnitId: order.unit_id,
@@ -172,7 +166,7 @@ function addAdminTurnEntries(
         unitType: order.unit_type,
         locationLabel,
         verb: 'RELOCATE',
-        detail: `Relocated → ${provName(order.target, provinces)}${targetCoast}`,
+        detail: `Relocated → ${provinceName(provinces, order.target)}${targetCoast}`,
         outcomeLabel: 'Moved',
         outcomeTone: 'admin',
         highlightUnitId: order.unit_id,
@@ -212,7 +206,7 @@ function addAdjustmentEntries(
     if (!matchesHistoryActions(order.order_type, selectedActions)) continue;
     const res = resMap[order.unit_id];
     const coast = order.origin_coast || order.target_coast;
-    const unitWord = order.unit_type === 'A' ? 'Army' : 'Fleet';
+    const unitWord = unitTypeName(order.unit_type);
     if (order.order_type === 'BUILD') {
       const buildCoast = order.unit_type === 'F' ? coast : null;
       pushGrouped(buckets, {
@@ -221,7 +215,7 @@ function addAdjustmentEntries(
         unitType: order.unit_type,
         locationLabel: formatLocationLabel(order.origin, buildCoast, provinces),
         verb: 'BUILD',
-        detail: `Built ${unitWord} in ${provName(order.origin, provinces)}${
+        detail: `Built ${unitWord} in ${provinceName(provinces, order.origin)}${
           order.unit_type === 'F' && coast ? ` (${coast})` : ''
         }`,
         outcomeLabel: res && !res.succeeded ? 'Waived' : 'Built',
@@ -230,14 +224,14 @@ function addAdjustmentEntries(
         highlightProvinces: collectProvinces(order.origin),
       });
     } else {
-      const homeLabel = `Home SC (${provName(order.origin, provinces)})`;
+      const homeLabel = `Home SC (${provinceName(provinces, order.origin)})`;
       pushGrouped(buckets, {
         id: order.unit_id,
         power: order.power,
         unitType: null,
         locationLabel: homeLabel,
         verb: 'WAIVE',
-        detail: `Waived build in ${provName(order.origin, provinces)}`,
+        detail: `Waived build in ${provinceName(provinces, order.origin)}`,
         outcomeLabel: 'Waived',
         outcomeTone: 'neutral',
         highlightUnitId: order.unit_id,
@@ -255,14 +249,15 @@ function addAdjustmentEntries(
     const inferredType: UnitType = res.reason.toLowerCase().includes('fleet')
       ? 'F'
       : 'A';
-    const loc = provName(res.origin, provinces);
+    const loc = provinceName(provinces, res.origin);
     pushGrouped(buckets, {
       id: key,
       power: inferredPower,
       unitType: inferredType,
       locationLabel: loc,
       verb: 'BUILD',
-      detail: res.reason || `Built unit in ${provName(res.origin, provinces)}`,
+      detail:
+        res.reason || `Built unit in ${provinceName(provinces, res.origin)}`,
       outcomeLabel: 'Built',
       outcomeTone: 'success',
       highlightUnitId: key,
@@ -278,7 +273,7 @@ function addAdjustmentEntries(
       order?.order_type === 'DISBAND' || res?.order_type === 'DISBAND';
     if (!isDisband) continue;
     if (!matchesHistoryActions('DISBAND', selectedActions)) continue;
-    const unitWord = unit.unit_type === 'A' ? 'Army' : 'Fleet';
+    const unitWord = unitTypeName(unit.unit_type);
     const wasExplicit = order?.order_type === 'DISBAND';
     pushGrouped(buckets, {
       id: unit.id,
@@ -286,7 +281,7 @@ function addAdjustmentEntries(
       unitType: unit.unit_type,
       locationLabel: formatLocationLabel(unit.province, unit.coast, provinces),
       verb: 'DISBAND',
-      detail: `Disbanded ${unitWord} in ${provName(unit.province, provinces)}`,
+      detail: `Disbanded ${unitWord} in ${provinceName(provinces, unit.province)}`,
       outcomeLabel: wasExplicit ? 'Disbanded' : 'Auto-disband',
       outcomeTone: 'danger',
       reason: !wasExplicit ? res?.reason : undefined,
@@ -334,7 +329,7 @@ function addRetreatEntries(
         unitType: unit.unit_type,
         locationLabel,
         verb: 'RETREAT',
-        detail: `Retreat → ${provName(target, provinces)}${targetCoast}`,
+        detail: `Retreat → ${provinceName(provinces, target)}${targetCoast}`,
         outcomeLabel,
         outcomeTone: res?.succeeded ? 'success' : 'danger',
         reason: !res?.succeeded ? res?.reason : undefined,
@@ -348,7 +343,7 @@ function addRetreatEntries(
         unitType: unit.unit_type,
         locationLabel,
         verb: 'DISBAND',
-        detail: `Disbanded in ${provName(unit.province, provinces)}`,
+        detail: `Disbanded in ${provinceName(provinces, unit.province)}`,
         outcomeLabel: 'Disbanded',
         outcomeTone: 'danger',
         reason:
@@ -381,16 +376,7 @@ function addMovementEntries(
     const orderType = order?.order_type ?? 'HOLD';
     if (!matchesHistoryActions(orderType, selectedActions)) continue;
     const summary = formatOrderSummary(
-      order ?? {
-        unit_id: unit.id,
-        power: unit.power,
-        unit_type: unit.unit_type,
-        origin: unit.province,
-        origin_coast: unit.coast,
-        order_type: 'HOLD',
-        via_convoy: false,
-        is_explicit: false,
-      },
+      order ?? holdOrder(unit, false),
       provinces,
       unitsByProv,
     );

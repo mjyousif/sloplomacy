@@ -118,9 +118,26 @@ describe('AccountModal', () => {
     await user.type(screen.getByLabelText('Public Username'), 'AB');
     await user.click(screen.getByRole('button', { name: /Set Username/i }));
 
-    expect(
-      screen.getByText('Username must be between 2 and 24 characters.'),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Username must be between 2 and 24 characters.',
+    );
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('closes on Escape when not submitting', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <AccountModal
+        isOpen={true}
+        user={baseUser}
+        onboarding={false}
+        onClose={onClose}
+        onUpdated={vi.fn()}
+        onSignOut={vi.fn()}
+      />,
+    );
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

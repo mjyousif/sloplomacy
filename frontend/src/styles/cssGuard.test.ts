@@ -128,4 +128,32 @@ describe('stylesheets', () => {
     );
     expect(invalid).toEqual([]);
   });
+
+  it('forbids width @media queries in *.module.css', () => {
+    // Breakpoints belong solely in COMPACT_LAYOUT_QUERY (useCompactLayout.ts) via [data-layout='compact'].
+    const widthQuery =
+      /@media\s*[^{]*\b(?:(?:min|max)-)?(?:device-)?width\b[^{]*/gi;
+    const violations = paths
+      .filter(isModule)
+      .flatMap((path) =>
+        Array.from(
+          stripComments(sheets[path]).matchAll(widthQuery),
+          (m) => `${path}: ${m[0].trim()}`,
+        ),
+      );
+    expect(violations).toEqual([]);
+  });
+
+  it('forbids raw numeric z-index >= 10 without var(--z-...) in *.module.css', () => {
+    const zIndexDecl = /\bz-index\s*:\s*([^;}\n]+)/gi;
+    const violations = paths.filter(isModule).flatMap((path) =>
+      Array.from(stripComments(sheets[path]).matchAll(zIndexDecl), (m) => {
+        const raw = m[1].replace(/\s*!important\s*$/i, '').trim();
+        return /^\d+$/.test(raw) && Number(raw) >= 10
+          ? [`${path}: z-index: ${raw}`]
+          : [];
+      }).flat(),
+    );
+    expect(violations).toEqual([]);
+  });
 });

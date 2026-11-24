@@ -1,6 +1,5 @@
 import type { ConfirmOptions } from '../components/modal/ConfirmModal';
-import { API_BASE } from '../lib/api';
-import { authedFetch } from '../lib/supabase';
+import { apiFetch } from '../lib/api';
 import { DEFAULT_GAME_ID } from '../utils/gameIds';
 import { writeStoredSoloSandboxId } from '../utils/soloSandboxStorage';
 
@@ -28,10 +27,9 @@ export async function confirmAndDeleteLocalSandbox(opts: {
     !opts.activeGameId.startsWith('local_') &&
     opts.activeGameId !== DEFAULT_GAME_ID
   ) {
-    await authedFetch(
-      `${API_BASE}/games/${encodeURIComponent(opts.activeGameId)}`,
-      { method: 'DELETE' },
-    ).catch(() => {});
+    await apiFetch(`/games/${encodeURIComponent(opts.activeGameId)}`, {
+      method: 'DELETE',
+    }).catch(() => {});
   }
   return true;
 }

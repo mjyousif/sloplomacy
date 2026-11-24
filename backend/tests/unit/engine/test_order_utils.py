@@ -9,8 +9,10 @@ from engine.order_utils import (
     create_default_orders,
     default_build_slot,
     fleet_coast,
+    reject_if_surrendered,
     reject_stale_turn,
     reset_foreign_orders,
+    turn_label,
     validate_order_references,
 )
 from engine.topology.provinces import PROVINCES, get_initial_1901_units
@@ -189,3 +191,32 @@ def test_resetting_foreign_orders_keeps_only_the_players_own():
         else:
             assert o.order_type == OrderType.HOLD
             assert not o.is_explicit
+
+
+def test_turn_label_formats_season_year_and_phase():
+    assert turn_label(board("Fall", 1903, "Retreats")) == "Fall 1903 Retreats"
+
+
+def test_reject_if_surrendered_enforces_only_in_multiplayer(monkeypatch):
+    from domain.game_state import MultiplayerGameSummary
+    from storage.store import GAME_SUMMARIES
+
+    gid = "mp_surrender_unit"
+    g = board()
+    g.game_id = gid
+    g.surrendered_powers = [Power.FRANCE]
+    monkeypatch.setitem(
+        GAME_SUMMARIES,
+        gid,
+        MultiplayerGameSummary(
+            game_id=gid, name="Surrender Unit", created_at="2026-11-13T00:00:00Z", is_sandbox=False
+        ),
+    )
+    with pytest.raises(HTTPException) as exc:
+        reject_if_surrendered(g, Power.FRANCE)
+    assert exc.value.status_code == 403
+    reject_if_surrendered(g, Power.GERMANY)
+
+    # Sandboxes allow orders even if a power is marked surrendered.
+    GAME_SUMMARIES[gid].is_sandbox = True
+    reject_if_surrendered(g, Power.FRANCE)

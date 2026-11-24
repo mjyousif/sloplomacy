@@ -1,9 +1,8 @@
-import logging
+"""FastAPI router for turn finalization, simulation, adjudication, and phase clock actions."""
+
 import time
-from datetime import datetime, timezone
 
 from api.admin_utils import create_admin_log_entry, resolve_admin_actor
-from api.orders import reject_if_surrendered
 from domain.board import Power
 from domain.game_state import AdminActionLogEntry, GameState, TimerStage
 from domain.issues import IssueSeverity
@@ -15,24 +14,28 @@ from domain.requests import (
     TimerToggleRequest,
     TimerVoteRequest,
 )
-from engine.adjudicator.resolver import adjudicate_turn
-from engine.adjudicator.territory import supply_center_owners
 from engine.order_utils import (
-    create_default_orders,
     everyone_is_ready,
     refresh_diagnostics_and_simulation,
     reject_if_game_over,
+    reject_if_surrendered,
+    reject_stale_turn,
+    turn_label,
 )
 from engine.phase_timer import (
-    close_vote,
-    has_expired,
     settle_timer,
     start_phase_clock,
+)
+from engine.turn_service import (
+    execute_adjudication,
+    publish_game_state,
+    timer_players,
 )
 from engine.validator.orchestrator import validate_orders
 from fastapi import APIRouter, Depends, HTTPException, Query
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
+    require_seat_holder,
     sanitize_game_state_for_viewer,
     verify_admin_access,
     verify_power_authorization,
@@ -42,192 +45,11 @@ from security.secrecy import (
 from storage.profiles import ensure_profile_loaded
 from storage.store import (
     DEFAULT_GAME_ID,
-    GAME_HISTORY,
     GAME_SUMMARIES,
-    HISTORY_UNSAVED,
-    PRIVATE_SANDBOXES,
-    SANDBOX_CHECKPOINTS,
-    adjudication_lock,
-    clear_ephemeral_sandboxes_for,
-    persist_game,
     resolve_game,
-    sync_summary,
 )
-from storage.supabase_codec import is_valid_uuid
-from ws.connection_manager import (
-    broadcast_game_update,
-    broadcast_lobby_update,
-)
-
-logger = logging.getLogger("diplomacy.server")
 
 router = APIRouter()
-
-
-def timer_players(game: GameState) -> list[Power]:
-    """The powers that vote on and share the clock: everyone seated and still in the game."""
-    summary = GAME_SUMMARIES.get(game.game_id)
-    if not summary or summary.is_sandbox or summary.status != "active":
-        return []
-    in_game = {u.power for u in game.units} | set(supply_center_owners(game.ownership).values())
-    return [
-        part.power
-        for part in summary.participants.values()
-        if not part.surrendered
-        and part.power not in game.surrendered_powers
-        and part.power in in_game
-    ]
-
-
-def refresh_timer(game: GameState) -> None:
-    """Bring the clock up to date after players join or go."""
-    if game.timer is None:
-        return
-    players = timer_players(game)
-    if players:
-        settle_timer(game, players, time.time())
-    else:
-        game.timer = None
-
-
-async def publish_timer(game: GameState) -> GameState:
-    await persist_game(game.game_id)
-    await broadcast_game_update(game.game_id, game)
-    return game
-
-
-def reject_stale_turn(game: GameState, turn: str | None) -> None:
-    """Refuse a request made for a turn that has since resolved."""
-    current = f"{game.season} {game.year} {game.phase}"
-    if turn and turn != current:
-        raise HTTPException(
-            status_code=409, detail=f"Too late: the game has moved on to {current}."
-        )
-
-
-def turn_label(game: GameState) -> str:
-    return f"{game.season} {game.year} {game.phase}"
-
-
-async def execute_adjudication(
-    game: GameState,
-    admin_entry: AdminActionLogEntry | None = None,
-    *,
-    expected_turn: str | None = None,
-) -> GameState:
-    """Resolve the phase being played, then any phase nobody is left to wait for.
-
-    Resolving a phase persists and broadcasts, so it awaits, and a second caller could arrive
-    meanwhile. Two guards make sure a phase is resolved once and only once:
-
-    - A per-game lock admits one resolver at a time. The loop below runs inside it, so a phase
-      that follows by itself never needs to take the lock again.
-    - `expected_turn` is the turn label the caller decided to resolve (default: the one on the
-      board when it called). A caller that waited for the lock while another resolved that turn
-      finds the board has moved on and does nothing, rather than resolving the next turn too.
-      A caller that awaits anything between deciding and calling passes the label it decided on.
-    """
-    expected = expected_turn or turn_label(game)
-    async with adjudication_lock(game.game_id):
-        if turn_label(game) != expected:
-            return game
-        await _resolve_phase(game, admin_entry)
-        while everyone_is_ready(game):
-            await _resolve_phase(game)
-    return game
-
-
-async def _resolve_phase(game: GameState, admin_entry: AdminActionLogEntry | None = None) -> None:
-    """Resolve the current phase. Only `execute_adjudication` calls it, holding the game's lock."""
-    gid = game.game_id
-
-    if game.winner:
-        raise HTTPException(
-            status_code=409, detail=f"Game over: {game.winner.value} has already won."
-        )
-
-    if gid not in GAME_HISTORY:
-        GAME_HISTORY[gid] = []
-    GAME_HISTORY[gid].append(
-        game.model_copy(deep=True, update={"preview": None, "issues": [], "timer": None})
-    )
-    if len(GAME_HISTORY[gid]) > 30:
-        GAME_HISTORY[gid].pop(0)
-    HISTORY_UNSAVED.add(gid)
-
-    result = adjudicate_turn(
-        game.units,
-        game.orders,
-        game.ownership,
-        game.season,
-        game.year,
-        game.phase,
-        retreats=game.retreats,
-    )
-    prev_label = f"{game.season} {game.year} {game.phase}"
-    next_season = result.next_season or ("Fall" if game.season == "Spring" else "Spring")
-    next_year = result.next_year or (game.year if game.season == "Spring" else game.year + 1)
-    next_phase = result.next_phase or "Movement"
-
-    new_orders = create_default_orders(result.new_units, next_phase, result.builds)
-    history_entry = (
-        f"[ADMIN OVERRIDE] Force-resolved {prev_label}: "
-        f"{len(result.summary)} tactical actions processed."
-        if admin_entry
-        else f"Resolved {prev_label}: {len(result.summary)} tactical actions processed."
-    )
-    game.season = next_season
-    game.year = next_year
-    game.phase = next_phase
-    game.units = result.new_units
-    game.orders = new_orders
-    game.ownership = result.new_ownership
-    game.builds = result.builds
-    game.retreats = result.retreats
-    game.finalized_powers = []
-    game.state_revision += 1
-    game.board_revision += 1
-    game.turn_history.insert(0, history_entry)
-    if admin_entry:
-        game.admin_log.append(admin_entry)
-    if result.winner:
-        game.winner = result.winner
-        game.timer = None
-        game.turn_history.insert(0, f"{result.winner.value} has won the game in {prev_label}.")
-        if summary := GAME_SUMMARIES.get(gid):
-            summary.winner = result.winner
-            summary.status = "completed"
-            if not summary.completed_at:
-                summary.completed_at = datetime.now(timezone.utc).isoformat()
-    if game.timer:
-        start_phase_clock(game, timer_players(game), time.time())
-    refresh_diagnostics_and_simulation(game)
-    if summary := GAME_SUMMARIES.get(gid):
-        summary.last_moved_at = datetime.now(timezone.utc).isoformat()
-    if gid not in PRIVATE_SANDBOXES and SANDBOX_CHECKPOINTS.get(gid) is None:
-        clear_ephemeral_sandboxes_for(gid)
-    sync_summary(game.game_id)
-    await persist_game(game.game_id)
-    await broadcast_game_update(game.game_id, game)
-    await broadcast_lobby_update()
-
-
-async def tick_timer(game: GameState) -> None:
-    """Act on a deadline that has passed."""
-    timer = game.timer
-    if not has_expired(timer, time.time()):
-        return
-    if timer.stage == TimerStage.RUNNING:
-        try:
-            await execute_adjudication(game)
-        except Exception:
-            logger.exception("Could not resolve %s when its clock ran out.", game.game_id)
-            timer.stage = TimerStage.PAUSED
-            timer.deadline = None
-            await publish_timer(game)
-        return
-    close_vote(timer, time.time())
-    await publish_timer(game)
 
 
 async def require_timer_player(
@@ -246,17 +68,7 @@ async def require_timer_player(
 
     summary = GAME_SUMMARIES.get(game_id)
     if summary and not summary.is_sandbox:
-        part = summary.participants.get(power.value)
-        if part:
-            if current_user:
-                if part.user_id != current_user.user_id:
-                    raise HTTPException(
-                        status_code=403, detail=f"You do not command {power.value} in this match."
-                    )
-            elif is_valid_uuid(part.user_id):
-                raise HTTPException(
-                    status_code=401, detail=f"Authentication required to act for {power.value}."
-                )
+        require_seat_holder(summary, power, current_user, action=f"act for {power.value}")
 
     return game
 
@@ -303,17 +115,13 @@ async def finalize_power_orders(
 
     if req.power not in game.finalized_powers:
         game.finalized_powers.append(req.power)
-    game.state_revision += 1
 
     refresh_diagnostics_and_simulation(game)
-    sync_summary(game.game_id)
-    await broadcast_game_update(game.game_id, game)
-    await broadcast_lobby_update()
+    ready = everyone_is_ready(game)
+    await publish_game_state(game, refresh=False, lobby=True, persist=not ready, bump_revision=True)
 
-    if everyone_is_ready(game):
+    if ready:
         await execute_adjudication(game)
-    else:
-        await persist_game(game.game_id)
     return FinalizeResponse(
         finalized=True,
         requires_confirmation=False,
@@ -339,12 +147,7 @@ async def unfinalize_power_orders(
     reject_if_surrendered(game, req.power)
     if req.power in game.finalized_powers:
         game.finalized_powers.remove(req.power)
-    game.state_revision += 1
-    refresh_diagnostics_and_simulation(game)
-    sync_summary(game.game_id)
-    await persist_game(game.game_id)
-    await broadcast_game_update(game.game_id, game)
-    await broadcast_lobby_update()
+    await publish_game_state(game, lobby=True, bump_revision=True)
     return sanitize_game_state_for_viewer(game, req.power)
 
 
@@ -389,7 +192,7 @@ async def adjudicate_and_advance(
         if summary and not summary.is_sandbox:
             actor_id = resolve_admin_actor(gid, current_user)
             await ensure_profile_loaded(actor_id)
-            prev_label = f"{game.season} {game.year} {game.phase}"
+            prev_label = turn_label(game)
             admin_entry = create_admin_log_entry(
                 gid,
                 season=game.season,
@@ -422,9 +225,8 @@ async def start_timer(game_id: str, current_user: AuthUser | None = Depends(get_
             status_code=409, detail="The clock can only start in a match being played."
         )
     start_phase_clock(game, players, time.time())
-    return sanitize_game_state_for_viewer(
-        await publish_timer(game), viewer_power_for(game.game_id, current_user)
-    )
+    await publish_game_state(game, refresh=False)
+    return sanitize_game_state_for_viewer(game, viewer_power_for(game.game_id, current_user))
 
 
 @router.post(
@@ -441,7 +243,8 @@ async def vote_on_timer(
     game = await require_timer_player(game_id, req.power, TimerStage.VOTING, current_user)
     game.timer.votes[req.power] = req.choice
     settle_timer(game, timer_players(game), time.time())
-    return sanitize_game_state_for_viewer(await publish_timer(game), req.power)
+    await publish_game_state(game, refresh=False)
+    return sanitize_game_state_for_viewer(game, req.power)
 
 
 @router.post(
@@ -462,7 +265,8 @@ async def request_timer_extension(
     elif not req.active and req.power in requests:
         requests.remove(req.power)
     settle_timer(game, timer_players(game), time.time())
-    return sanitize_game_state_for_viewer(await publish_timer(game), req.power)
+    await publish_game_state(game, refresh=False)
+    return sanitize_game_state_for_viewer(game, req.power)
 
 
 @router.post(
@@ -483,4 +287,5 @@ async def ready_up_timer(
     elif not req.active and req.power in ready:
         ready.remove(req.power)
     settle_timer(game, timer_players(game), time.time())
-    return sanitize_game_state_for_viewer(await publish_timer(game), req.power)
+    await publish_game_state(game, refresh=False)
+    return sanitize_game_state_for_viewer(game, req.power)

@@ -19,7 +19,7 @@ const REACHABLE = [
   { province: 'PIC', coasts: [] },
 ];
 
-const controls = (
+const nativeControls = (
   over: Partial<Parameters<typeof SupportControls>[0]> = {},
   onUpdateOrder = vi.fn<(o: Order) => void>(),
 ) => {
@@ -33,6 +33,7 @@ const controls = (
       orders={{}}
       reachable={REACHABLE}
       unitOptions={null}
+      useNativeSelect
       onUpdateOrder={onUpdateOrder}
       {...over}
     />,
@@ -59,33 +60,33 @@ const SERVER_OPTIONS: UnitMoveOptions = {
 };
 
 describe('SupportControls', () => {
-  it('without server options offers every other standing unit, tagged by power', () => {
-    const { unitSelect } = controls();
+  it('without server options offers every other standing unit in native mode', () => {
+    const { unitSelect } = nativeControls();
     expect(Array.from(unitSelect.options).map((o) => o.textContent)).toEqual([
-      '[France] A Paris (PAR)',
-      '[France] F English Channel (ENG)',
-      '[England] A Picardy (PIC)',
+      'A Paris',
+      'F English Channel',
+      'A Picardy',
     ]);
     expect(unitSelect.value).toBe('PAR');
   });
 
   it('without server options leaves out dislodged units', () => {
     const dislodged = { ...A_PAR, is_dislodged: true };
-    const { unitSelect } = controls({ units: [dislodged, A_BRE] });
+    const { unitSelect } = nativeControls({ units: [dislodged, A_BRE] });
     expect(unitSelect.options).toHaveLength(0);
   });
 
   it('offers a hold and moves into the neighbours the unit can reach', () => {
-    const { intoSelect } = controls();
+    const { intoSelect } = nativeControls();
     expect(Array.from(intoSelect.options).map((o) => o.textContent)).toEqual([
-      'HOLD in Paris (PAR)',
-      '→ Gascony (GAS)',
-      '→ Picardy (PIC)',
+      'Hold (Paris)',
+      'Gascony',
+      'Picardy',
     ]);
   });
 
   it("takes the server's supportable units and the moves it allows", () => {
-    const { unitSelect, intoSelect } = controls({
+    const { unitSelect, intoSelect } = nativeControls({
       order: supportOrder(A_BRE, 'PIC', 'PAR'),
       unitOptions: SERVER_OPTIONS,
     });
@@ -98,7 +99,7 @@ describe('SupportControls', () => {
   });
 
   it('picking a unit that is moving supports that move', () => {
-    const { unitSelect, onUpdateOrder } = controls({
+    const { unitSelect, onUpdateOrder } = nativeControls({
       orders: { [A_PAR.id]: moveOrder(A_PAR, 'GAS', null, false) },
     });
     fireEvent.change(unitSelect, { target: { value: 'PAR' } });
@@ -112,7 +113,7 @@ describe('SupportControls', () => {
   });
 
   it('picking a unit that holds supports it to hold', () => {
-    const { unitSelect, onUpdateOrder } = controls({
+    const { unitSelect, onUpdateOrder } = nativeControls({
       order: supportOrder(A_BRE, 'PAR', 'GAS'),
       orders: { [A_PAR.id]: orderFor(A_PAR, 'HOLD') },
     });
@@ -123,7 +124,7 @@ describe('SupportControls', () => {
   });
 
   it('ignores a move the server does not allow, and falls back to its first move', () => {
-    const { unitSelect, onUpdateOrder } = controls({
+    const { unitSelect, onUpdateOrder } = nativeControls({
       order: supportOrder(A_BRE, 'PAR', 'GAS'),
       orders: {
         ENGLAND_A_PIC: orderFor(ALL_UNITS[3], 'MOVE', { target: 'BUR' }),
@@ -138,7 +139,7 @@ describe('SupportControls', () => {
   });
 
   it('changes only the target from the Into select', () => {
-    const { intoSelect, onUpdateOrder } = controls();
+    const { intoSelect, onUpdateOrder } = nativeControls();
     const order = supportOrder(A_BRE, 'PAR', 'PAR');
     fireEvent.change(intoSelect, { target: { value: 'GAS' } });
     expect(onUpdateOrder).toHaveBeenCalledWith({
@@ -154,10 +155,41 @@ describe('SupportControls', () => {
       aux_unit_origin: null,
       target: null,
     };
-    const { unitSelect, intoSelect } = controls({ order: blank });
+    const { unitSelect, intoSelect } = nativeControls({ order: blank });
     expect(unitSelect.value).toBe('');
-    expect(unitSelect.selectedOptions[0].textContent).toMatch(/choose/i);
+    expect(unitSelect.selectedOptions[0].textContent).toMatch(/unit/i);
     expect(intoSelect.value).toBe('');
-    expect(intoSelect.selectedOptions[0].textContent).toMatch(/choose/i);
+    expect(intoSelect.selectedOptions[0].textContent).toMatch(/into/i);
+  });
+
+  it('renders custom IconSelectDropdown with hover preview in desktop mode', () => {
+    const onUpdateOrder = vi.fn();
+    const onHoverProvince = vi.fn();
+    render(
+      <SupportControls
+        unit={A_BRE}
+        order={supportOrder(A_BRE, 'PAR', 'PAR')}
+        provinces={MACRO_PROVINCES}
+        units={ALL_UNITS}
+        unitsByProv={unitsByProvince(ALL_UNITS)}
+        orders={{}}
+        reachable={REACHABLE}
+        unitOptions={SERVER_OPTIONS}
+        compact
+        onUpdateOrder={onUpdateOrder}
+        onHoverProvince={onHoverProvince}
+      />,
+    );
+
+    const unitTrigger = screen.getByTestId('select-support-unit');
+    expect(unitTrigger.tagName).toBe('BUTTON');
+    fireEvent.click(unitTrigger);
+    const picOpt = screen.getByRole('option', { name: /A Picardy/ });
+    fireEvent.pointerEnter(picOpt, { pointerType: 'mouse' });
+    expect(onHoverProvince).toHaveBeenLastCalledWith('PIC');
+    fireEvent.click(picOpt);
+    expect(onUpdateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ aux_unit_origin: 'PIC', target: 'PAR' }),
+    );
   });
 });

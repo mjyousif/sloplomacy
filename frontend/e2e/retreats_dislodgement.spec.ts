@@ -39,7 +39,8 @@ test.describe('Scenario 04: Dislodgement & Retreat Resolution', () => {
 
       const targetSelect = page.locator('[data-testid="select-retreat-target"]');
       await expect(targetSelect).toBeVisible();
-      await targetSelect.selectOption('RUH');
+      await targetSelect.click();
+      await page.getByRole('option', { name: 'Ruhr' }).click();
 
       // Verify retreat order arrow is drawn on the map pointing to RUH
       const retreatArrow = page.locator(

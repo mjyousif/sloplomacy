@@ -8,7 +8,7 @@
   }
 
   .backdrop[data-scrim="standard"] {
-    z-index: 100;
+    z-index: var(--z-modal);
     background: rgba(10, 13, 18, 0.78);
     backdrop-filter: blur(6px);
     padding: 20px;
@@ -16,7 +16,7 @@
 
   /* The game-over notice sits above the standard scrim. */
   .backdrop[data-scrim="raised"] {
-    z-index: 110;
+    z-index: var(--z-modal-raised);
     background: rgba(10, 13, 18, 0.78);
     backdrop-filter: blur(6px);
     padding: 20px;
@@ -24,7 +24,7 @@
 
   /* Surrender and leave sit above the standard scrim. */
   .backdrop[data-scrim="emphatic"] {
-    z-index: 120;
+    z-index: var(--z-modal-emphatic);
     background: rgba(10, 13, 18, 0.82);
     backdrop-filter: blur(6px);
     padding: 20px;
@@ -32,13 +32,40 @@
 
   /* In-app confirmation (ConfirmModal), shown above every other modal. */
   .backdrop[data-scrim="blocking"] {
-    z-index: 160;
+    z-index: var(--z-modal-blocking);
     background: rgba(8, 10, 15, 0.7);
     padding: 16px;
   }
 
   .card {
     width: 100%;
+  }
+
+  .close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .close:hover:not(:disabled) {
+    color: var(--text-bright);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--border-slate);
+  }
+
+  .close:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
@@ -74,9 +101,6 @@
   :global([data-layout="compact"]) .close {
     min-width: 44px;
     min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     flex-shrink: 0;
   }
 }

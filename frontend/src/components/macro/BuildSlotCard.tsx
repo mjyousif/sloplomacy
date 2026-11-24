@@ -3,6 +3,7 @@ import type React from 'react';
 import type { Order, Power, ProvinceInfo, Unit } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
 import { formatOrderSummary } from '../../utils/orderHelpers';
+import { unitTypeName } from '../../utils/turnFormat';
 import tabStyles from './OrderTypeTabs.module.css';
 import styles from './UnitMacroCard.module.css';
 
@@ -280,7 +281,7 @@ export const BuildSlotCard: React.FC<BuildSlotCardProps> = ({
               ) : (
                 <span className={cx(styles.unitMiniPill, styles.confirmed)}>
                   <CheckCircle2 size={11} /> Build{' '}
-                  {buildOrder?.unit_type === 'F' ? 'Fleet' : 'Army'}
+                  {unitTypeName(buildOrder?.unit_type ?? 'A')}
                 </span>
               )}
             </div>

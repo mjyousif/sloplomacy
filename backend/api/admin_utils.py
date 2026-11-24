@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from domain.board import Power, Unit
 from domain.game_state import AdminActionLogEntry, GameState
 from domain.orders import Order, OrderType, SimulationResult
+from engine.turn_service import publish_game_state
 from security.auth import AuthUser
 from storage.profiles import participant_name_for_id, resolve_display_name
 from storage.store import (
@@ -14,14 +15,8 @@ from storage.store import (
     GAME_SUMMARIES,
     HISTORY_UNSAVED,
     clear_ephemeral_sandboxes_for,
-    persist_game,
-    sync_summary,
 )
 from storage.supabase_codec import is_valid_uuid
-from ws.connection_manager import (
-    broadcast_game_update,
-    broadcast_lobby_update,
-)
 
 
 def resolve_admin_actor(
@@ -328,7 +323,4 @@ async def record_admin_history_and_log(
     ):
         clear_ephemeral_sandboxes_for(game_id)
     HISTORY_UNSAVED.add(game_id)
-    sync_summary(game_id)
-    await persist_game(game_id)
-    await broadcast_game_update(game_id, after_state)
-    await broadcast_lobby_update()
+    await publish_game_state(after_state, refresh=False, lobby=True)

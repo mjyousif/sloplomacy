@@ -180,7 +180,7 @@ test.describe('Scenario 02: Sandbox War Room Mode & Foreign Pre-Move Isolation',
 
       // 10. Switch to Sign In and authenticate via dev credentials
       await authModal
-        .getByRole('button', { name: 'Sign In', exact: true })
+        .getByRole('tab', { name: 'Sign In', exact: true })
         .click();
       await page.fill('#auth-email', 'tactician@slop.eu');
       await page.fill('#auth-password', 'password123');

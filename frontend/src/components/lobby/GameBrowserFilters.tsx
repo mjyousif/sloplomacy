@@ -1,7 +1,7 @@
 import { ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
-import { ALL_POWERS, POWER_METADATA } from '../../types/diplomacy';
+import { ALL_POWERS } from '../../types/diplomacy';
 import {
   activeFilterCount,
   BROWSE_SEASONS,
@@ -15,6 +15,11 @@ import {
   type TurnOp,
   toggleCountry,
 } from '../../utils/lobbyBrowse';
+import {
+  accessiblePowerColor,
+  powerCode,
+  powerShortName,
+} from '../../utils/powerHelpers';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './GameBrowserFilters.module.css';
 
@@ -110,22 +115,25 @@ export const GameBrowserFilters: React.FC<GameBrowserFiltersProps> = ({
             <span className={styles.label}>Countries open</span>
             {ALL_POWERS.map((power) => {
               const on = filters.countries.includes(power);
-              const meta = POWER_METADATA[power];
               return (
                 <button
                   key={power}
                   type="button"
                   aria-pressed={on}
-                  title={`${meta.shortName} must be unclaimed`}
+                  title={`${powerShortName(power)} must be unclaimed`}
                   className={styles.chip}
                   data-active={on}
-                  style={on ? { borderColor: meta.color } : undefined}
+                  style={
+                    on
+                      ? { borderColor: accessiblePowerColor(power) }
+                      : undefined
+                  }
                   onClick={() =>
                     set({ countries: toggleCountry(filters.countries, power) })
                   }
                 >
                   <PowerFlag power={power} width={16} height={11} />
-                  <span>{meta.shortName.slice(0, 3).toUpperCase()}</span>
+                  <span>{powerCode(power)}</span>
                 </button>
               );
             })}

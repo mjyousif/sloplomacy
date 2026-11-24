@@ -11,6 +11,7 @@ import type {
   ProvinceInfo,
   Unit,
 } from '../../types/diplomacy';
+import { formatPowerList } from '../../utils/powerHelpers';
 import {
   BACKCHANNEL,
   buildChannels,
@@ -24,7 +25,7 @@ import { PressComposer } from './press/PressComposer';
 import { PressMessageList } from './press/PressMessageList';
 import { PressRecipientBar } from './press/PressRecipientBar';
 import { PressSuggestionDraft } from './press/PressSuggestionDraft';
-import { channelLabel, listPowers } from './press/pressLabels';
+import { channelLabel } from './press/pressLabels';
 import { SpectatorPress } from './press/SpectatorPress';
 
 export interface PressSectionProps {
@@ -187,12 +188,12 @@ const PlayerPressSection: React.FC<PressSectionProps & { power: Power }> = ({
     : 'To everyone, in the public box.';
   if (recipients.length === 1) {
     destination = sendAnonymous
-      ? `Unsigned, to ${listPowers(recipients)} (one-way backchannel).`
-      : `Private to ${listPowers(recipients)}.`;
+      ? `Unsigned, to ${formatPowerList(recipients)} (one-way backchannel).`
+      : `Private to ${formatPowerList(recipients)}.`;
   } else if (recipients.length > 1) {
     destination = sendAnonymous
-      ? `Unsigned, to the thread with ${listPowers(recipients)}.`
-      : `Private to ${listPowers(recipients)}.`;
+      ? `Unsigned, to the thread with ${formatPowerList(recipients)}.`
+      : `Private to ${formatPowerList(recipients)}.`;
   }
 
   const unitsByProvince = useMemo(() => {

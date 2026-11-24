@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { updateAccountDisplayName } from '../../lib/supabase';
 import type { AuthUser } from '../../types/diplomacy';
 import { Modal, ModalCloseButton } from '../modal/Modal';
+import { Button } from '../ui/Button';
+import fieldStyles from '../ui/FormField.module.css';
 import styles from './AccountModal.module.css';
 import authStyles from './AuthModal.module.css';
 
@@ -71,7 +73,8 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
   return (
     <Modal
-      onBackdropClick={onClose}
+      onBackdropClick={submitting ? undefined : onClose}
+      onEscape={submitting ? undefined : onClose}
       cardClassName={authStyles.authModalCard}
       cardProps={{
         role: 'dialog',
@@ -86,11 +89,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
             {onboarding ? 'Choose Your Public Username' : 'Account Settings'}
           </h2>
         </div>
-        <ModalCloseButton
-          className={authStyles.authCloseBtn}
-          onClick={onClose}
-          aria-label="Close account modal"
-        >
+        <ModalCloseButton onClick={onClose} aria-label="Close account modal">
           <X size={18} />
         </ModalCloseButton>
       </div>
@@ -107,7 +106,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         onSubmit={handleSubmit}
         autoComplete="off"
       >
-        <div className={authStyles.authField}>
+        <div className={fieldStyles.field}>
           <span className={styles.accountFieldLabel}>
             Signed-in Email (Private)
           </span>
@@ -120,7 +119,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           </div>
         </div>
 
-        <div className={authStyles.authField}>
+        <div className={fieldStyles.field}>
           <label htmlFor="account-handle">Public Username</label>
           <input
             id="account-handle"
@@ -144,10 +143,15 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           </span>
         </div>
 
-        {error && <div>{error}</div>}
+        {error && (
+          <div className={fieldStyles.errorAlert} role="alert">
+            {error}
+          </div>
+        )}
 
-        <button
+        <Button
           type="submit"
+          variant="primary"
           className={authStyles.authSubmitBtn}
           disabled={submitting}
         >
@@ -159,11 +163,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 ? 'Set Username'
                 : 'Save Username'}
           </span>
-        </button>
+        </Button>
 
         {!onboarding && (
-          <button
-            type="button"
+          <Button
+            variant="danger-soft"
             className={styles.accountSignoutBtn}
             onClick={() => {
               onClose();
@@ -173,7 +177,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           >
             <LogOut size={14} />
             <span>Sign Out</span>
-          </button>
+          </Button>
         )}
       </form>
     </Modal>

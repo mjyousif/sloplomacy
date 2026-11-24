@@ -7,7 +7,7 @@
     /* Centered: the bottom-left corner of the map holds the phase timer */
     transform: translateX(-50%);
     max-width: 360px;
-    z-index: 90;
+    z-index: var(--z-toast);
     display: flex;
     align-items: center;
     gap: 8px;

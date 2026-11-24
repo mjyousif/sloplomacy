@@ -5,10 +5,11 @@ import type {
   Unit,
   UnitMoveOptions,
 } from '../../../types/diplomacy';
+import { provinceName } from '../../../utils/turnFormat';
 import {
   IconSelectDropdown,
   type IconSelectOption,
-} from '../../map/hud/IconSelectDropdown';
+} from '../../ui/IconSelectDropdown';
 import styles from '../OrderParameterControls.module.css';
 import { orderParamDropdownClassNames } from './orderParamDropdown';
 
@@ -60,206 +61,98 @@ export const ConvoyControls: React.FC<ConvoyControlsProps> = ({
         .map((p) => p.id)
     : [];
 
-  const armySelect = (
-    <select
-      aria-label={compact ? 'Convoyed army' : undefined}
-      value={order.aux_unit_origin || ''}
-      onChange={(e) => {
-        const nextOrigin = e.target.value;
-        const nextReach = unitOptions?.convoy_targets[nextOrigin];
-        const allowedNext = nextReach
-          ? [...nextReach.direct, ...nextReach.chained]
-          : Object.values(provinces)
-              .filter((p) => p.type === 'COAST' && p.id !== nextOrigin)
-              .map((p) => p.id);
-        const nextTarget =
-          order.target && allowedNext.includes(order.target)
-            ? order.target
-            : (allowedNext[0] ?? null);
-        onUpdateOrder({
-          ...order,
-          aux_unit_origin: nextOrigin,
-          target: nextTarget,
-          is_explicit: true,
-        });
-      }}
-    >
-      {!order.aux_unit_origin && <option value="">Choose an army…</option>}
-      {armyReach ? (
-        <>
-          {directArmies.length > 0 && (
-            <optgroup label="Adjacent Shore">
-              {directArmies.map((pid) => (
-                <option key={pid} value={pid}>
-                  {compact
-                    ? `A ${provinces[pid]?.name ?? pid}`
-                    : `A ${provinces[pid]?.name ?? pid} (${pid})`}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {chainedArmies.length > 0 && (
-            <optgroup label="Via Fleet Chain">
-              {chainedArmies.map((pid) => (
-                <option key={pid} value={pid}>
-                  {compact
-                    ? `A ${provinces[pid]?.name ?? pid}`
-                    : `A ${provinces[pid]?.name ?? pid} (${pid})`}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </>
-      ) : (
-        fallbackArmies.map((pid) => (
-          <option key={pid} value={pid}>
-            {compact
-              ? `A ${provinces[pid]?.name ?? pid}`
-              : `A ${provinces[pid]?.name ?? pid} (${pid})`}
-          </option>
-        ))
-      )}
-    </select>
-  );
+  const handleArmyChange = (nextOrigin: string) => {
+    const nextReach = unitOptions?.convoy_targets[nextOrigin];
+    const allowedNext = nextReach
+      ? [...nextReach.direct, ...nextReach.chained]
+      : Object.values(provinces)
+          .filter((p) => p.type === 'COAST' && p.id !== nextOrigin)
+          .map((p) => p.id);
+    const nextTarget =
+      order.target && allowedNext.includes(order.target)
+        ? order.target
+        : (allowedNext[0] ?? null);
+    onUpdateOrder({
+      ...order,
+      aux_unit_origin: nextOrigin,
+      target: nextTarget,
+      is_explicit: true,
+    });
+  };
 
-  const targetSelect = (
-    <select
-      aria-label={compact ? 'Convoy destination coast' : undefined}
-      value={order.target || ''}
-      onChange={(e) =>
-        onUpdateOrder({
-          ...order,
-          target: e.target.value,
-          is_explicit: true,
-        })
-      }
-    >
-      {!order.target && <option value="">Choose a destination…</option>}
-      {unitOptions ? (
-        <>
-          {directTargets.length > 0 && (
-            <optgroup label="Direct / Ready Chain">
-              {directTargets.map((pid) => (
-                <option key={pid} value={pid}>
-                  {compact
-                    ? (provinces[pid]?.name ?? pid)
-                    : `${provinces[pid]?.name ?? pid} (${pid})`}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {chainedTargets.length > 0 && (
-            <optgroup label="Multi-Ship Chain">
-              {chainedTargets.map((pid) => (
-                <option key={pid} value={pid}>
-                  {compact
-                    ? (provinces[pid]?.name ?? pid)
-                    : `${provinces[pid]?.name ?? pid} (${pid})`}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </>
-      ) : (
-        fallbackTargets.map((pid) => (
-          <option key={pid} value={pid}>
-            {compact
-              ? (provinces[pid]?.name ?? pid)
-              : `${provinces[pid]?.name ?? pid} (${pid})`}
-          </option>
-        ))
-      )}
-    </select>
-  );
+  const armyOpts: IconSelectOption[] = armyReach
+    ? [
+        ...directArmies.map((pid) => ({
+          value: pid,
+          label: `A ${provinceName(provinces, pid)}`,
+          group: 'Adjacent Shore',
+        })),
+        ...chainedArmies.map((pid) => ({
+          value: pid,
+          label: `A ${provinceName(provinces, pid)}`,
+          group: 'Via Fleet Chain',
+        })),
+      ]
+    : fallbackArmies.map((pid) => ({
+        value: pid,
+        label: `A ${provinceName(provinces, pid)}`,
+      }));
 
-  if (compact && !useNativeSelect) {
-    const armyIds = armyReach
-      ? [...directArmies, ...chainedArmies]
-      : fallbackArmies;
-    const targetIds = unitOptions
-      ? [...directTargets, ...chainedTargets]
-      : fallbackTargets;
-    const armyOpts: IconSelectOption[] = armyIds.map((pid) => ({
-      value: pid,
-      label: `A ${provinces[pid]?.name ?? pid}`,
-    }));
-    const targetOpts: IconSelectOption[] = targetIds.map((pid) => ({
-      value: pid,
-      label: provinces[pid]?.name ?? pid,
-    }));
-    return (
-      <div className={styles.orderParamInline}>
-        <IconSelectDropdown
-          classNames={orderParamDropdownClassNames}
-          value={order.aux_unit_origin || null}
-          options={armyOpts}
-          placeholder="Army…"
-          onHoverOption={(val) => onHoverProvince?.(val)}
-          onChange={(nextOrigin) => {
-            if (!nextOrigin) return;
-            const nextReach = unitOptions?.convoy_targets[nextOrigin];
-            const allowedNext = nextReach
-              ? [...nextReach.direct, ...nextReach.chained]
-              : Object.values(provinces)
-                  .filter((p) => p.type === 'COAST' && p.id !== nextOrigin)
-                  .map((p) => p.id);
-            const nextTarget =
-              order.target && allowedNext.includes(order.target)
-                ? order.target
-                : (allowedNext[0] ?? null);
-            onUpdateOrder({
-              ...order,
-              aux_unit_origin: nextOrigin,
-              target: nextTarget,
-              is_explicit: true,
-            });
-          }}
-        />
-        <span className={styles.orderParamArrow} aria-hidden="true">
-          →
-        </span>
-        <IconSelectDropdown
-          classNames={orderParamDropdownClassNames}
-          value={order.target || null}
-          options={targetOpts}
-          placeholder="To…"
-          onHoverOption={(val) => onHoverProvince?.(val)}
-          onChange={(val) => {
-            if (val) {
-              onUpdateOrder({
-                ...order,
-                target: val,
-                is_explicit: true,
-              });
-            }
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (compact) {
-    return (
-      <div className={styles.orderParamInline}>
-        {armySelect}
-        <span className={styles.orderParamArrow} aria-hidden="true">
-          →
-        </span>
-        {targetSelect}
-      </div>
-    );
-  }
+  const targetOpts: IconSelectOption[] = unitOptions
+    ? [
+        ...directTargets.map((pid) => ({
+          value: pid,
+          label: provinceName(provinces, pid),
+          group: 'Direct / Ready Chain',
+        })),
+        ...chainedTargets.map((pid) => ({
+          value: pid,
+          label: provinceName(provinces, pid),
+          group: 'Multi-Ship Chain',
+        })),
+      ]
+    : fallbackTargets.map((pid) => ({
+        value: pid,
+        label: provinceName(provinces, pid),
+      }));
 
   return (
-    <div className={styles.orderParamGrid}>
-      <div className={styles.orderParamRow}>
-        <label>Army:</label>
-        {armySelect}
-      </div>
-      <div className={styles.orderParamRow}>
-        <label>To Coast:</label>
-        {targetSelect}
-      </div>
+    <div className={styles.orderParamInline}>
+      <IconSelectDropdown
+        useNative={useNativeSelect}
+        compact={compact}
+        ariaLabel="Convoyed army"
+        classNames={orderParamDropdownClassNames}
+        value={order.aux_unit_origin || null}
+        options={armyOpts}
+        placeholder="Army…"
+        onHoverOption={(val) => onHoverProvince?.(val)}
+        onChange={(nextOrigin) => {
+          if (nextOrigin) handleArmyChange(nextOrigin);
+        }}
+      />
+      <span className={styles.orderParamArrow} aria-hidden="true">
+        →
+      </span>
+      <IconSelectDropdown
+        useNative={useNativeSelect}
+        compact={compact}
+        ariaLabel="Convoy destination coast"
+        classNames={orderParamDropdownClassNames}
+        value={order.target || null}
+        options={targetOpts}
+        placeholder="To…"
+        onHoverOption={(val) => onHoverProvince?.(val)}
+        onChange={(val) => {
+          if (val) {
+            onUpdateOrder({
+              ...order,
+              target: val,
+              is_explicit: true,
+            });
+          }
+        }}
+      />
     </div>
   );
 };

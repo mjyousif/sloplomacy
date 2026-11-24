@@ -2,13 +2,10 @@ import type React from 'react';
 import { POWER_METADATA, type Power } from '../../types/diplomacy';
 import type { HistoryOwnershipChange } from '../../utils/historyOwnershipChanges';
 import type { HistoryPhaseKind } from '../../utils/historyTurnLog';
+import { powerShortNameOrNeutral } from '../../utils/powerHelpers';
 import { SupplyStar } from '../MapPiece';
 import type { HistoryHighlightFocus } from './HistoryTurnPanel';
 import styles from './HistoryTurnPanel.module.css';
-
-function powerLabel(power: Power | null): string {
-  return power ? POWER_METADATA[power].shortName : 'Neutral';
-}
 
 const OwnerTag: React.FC<{ power: Power | null }> = ({ power }) => (
   <span className={styles.historyOwnerTag}>
@@ -22,7 +19,7 @@ const OwnerTag: React.FC<{ power: Power | null }> = ({ power }) => (
           : undefined
       }
     />
-    <span>{powerLabel(power)}</span>
+    <span>{powerShortNameOrNeutral(power)}</span>
   </span>
 );
 

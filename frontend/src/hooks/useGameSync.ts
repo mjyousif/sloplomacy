@@ -5,7 +5,7 @@ import {
   useEffect,
   useRef,
 } from 'react';
-import { API_BASE } from '../lib/api';
+import { apiFetch } from '../lib/api';
 import type {
   GameState,
   MultiplayerGameSummary,
@@ -19,7 +19,6 @@ import { DEFAULT_GAME_ID } from '../utils/gameIds';
 import { readStoredSoloSandboxId } from '../utils/soloSandboxStorage';
 import { turnLabel } from '../utils/timerHelpers';
 import { useDiplomacyWebSocket } from './useDiplomacyWebSocket';
-import { gameReadHeaders } from './useGameSession';
 
 export const FALLBACK_POLL_MS = 4000;
 export const IDLE_POLL_MS = 60_000;
@@ -213,13 +212,12 @@ export function useGameSync({
       if (typeof document !== 'undefined' && document.hidden) return;
 
       try {
-        const effectivePower = playerPower;
-        const params = new URLSearchParams({ game_id: activeGameId });
-        if (effectivePower) {
-          params.set('power', effectivePower);
-        }
-        const res = await fetch(`${API_BASE}/game?${params.toString()}`, {
-          headers: await gameReadHeaders(matchPasscodes[activeGameId]),
+        const res = await apiFetch('/game', {
+          query: {
+            game_id: activeGameId,
+            power: playerPower || undefined,
+          },
+          passcode: matchPasscodes[activeGameId],
         });
         if (!res.ok) return;
         const data = await res.json();

@@ -2,7 +2,7 @@
   :global([data-layout="compact"]) .mobile-press-layer {
     position: absolute;
     inset: 0;
-    z-index: 46;
+    z-index: var(--z-mobile-sheet);
     display: flex;
     flex-direction: column;
     background: #141820;
@@ -27,42 +27,6 @@
     :global([data-layout="compact"]) .mobile-press-layer {
       transition: none;
     }
-  }
-
-  :global([data-layout="compact"]) .mobile-press-header {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    background: #1f2530;
-    border-bottom: 1px solid #2d3646;
-  }
-
-  :global([data-layout="compact"]) .mobile-press-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  :global([data-layout="compact"]) .mobile-press-icon {
-    color: #d4a349;
-    flex-shrink: 0;
-  }
-
-  :global([data-layout="compact"]) .mobile-press-title h3 {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: 0.85rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    color: #f8eed9;
-    line-height: 1.15;
-  }
-
-  :global([data-layout="compact"]) .mobile-press-header button {
-    width: 44px;
-    height: 44px;
   }
 
   :global([data-layout="compact"]) .mobile-press-body {

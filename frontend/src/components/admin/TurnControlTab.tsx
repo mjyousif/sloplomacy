@@ -8,11 +8,12 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import type { TurnHistoryEntry } from '../../types/diplomacy';
-import { cx } from '../../utils/cx';
+import { turnLabel } from '../../utils/turnFormat';
+import { Button } from '../ui/Button';
 import {
   IconSelectDropdown,
   type IconSelectOption,
-} from '../map/hud/IconSelectDropdown';
+} from '../ui/IconSelectDropdown';
 import styles from './TurnControlTab.module.css';
 
 const SEASON_OPTIONS: IconSelectOption[] = [
@@ -61,6 +62,7 @@ export interface TurnControlTabProps {
   selectedPhase: string;
   setSelectedPhase: (val: string) => void;
   handleSetTurn: () => void;
+  useNativeSelect?: boolean;
 }
 
 export const TurnControlTab: React.FC<TurnControlTabProps> = ({
@@ -77,12 +79,13 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
   selectedPhase,
   setSelectedPhase,
   handleSetTurn,
+  useNativeSelect = false,
 }) => {
   const snapshotOptions: IconSelectOption[] = [...historyEntries]
     .reverse()
     .map((entry) => ({
       value: String(entry.index),
-      label: `${entry.season} ${entry.year} ${entry.phase}`,
+      label: turnLabel(entry),
       testId: `select-admin-rollback-snapshot-option-${entry.index}`,
     }));
 
@@ -100,7 +103,11 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
         <div className={styles.adminRollbackActionBox}>
           <div className={styles.adminRollbackSelectGroup}>
             <IconSelectDropdown
-              classNames={{ trigger: styles.adminSelectTrigger }}
+              useNative={useNativeSelect}
+              classNames={{
+                trigger: styles.adminSelectTrigger,
+                native: styles.adminSelectNative,
+              }}
               id="admin-rollback-snapshot-select"
               testId="select-admin-rollback-snapshot"
               value={
@@ -118,10 +125,11 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
               }}
             />
           </div>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            fullWidth
             data-testid="btn-admin-rollback"
-            className={cx(styles.adminSecondaryBtn, styles.rollback)}
+            className={styles.rollback}
             disabled={
               !canRollback ||
               loading ||
@@ -131,7 +139,7 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
           >
             <RotateCcw size={15} />
             <span>Revert</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -149,7 +157,11 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
           <div className={styles.adminFormGroup}>
             <label htmlFor="admin-clock-season-select">Season</label>
             <IconSelectDropdown
-              classNames={{ trigger: styles.adminSelectTrigger }}
+              useNative={useNativeSelect}
+              classNames={{
+                trigger: styles.adminSelectTrigger,
+                native: styles.adminSelectNative,
+              }}
               id="admin-clock-season-select"
               testId="select-admin-season"
               value={selectedSeason}
@@ -205,7 +217,11 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
           <div className={styles.adminFormGroup}>
             <label htmlFor="admin-clock-phase-select">Phase</label>
             <IconSelectDropdown
-              classNames={{ trigger: styles.adminSelectTrigger }}
+              useNative={useNativeSelect}
+              classNames={{
+                trigger: styles.adminSelectTrigger,
+                native: styles.adminSelectNative,
+              }}
               id="admin-clock-phase-select"
               testId="select-admin-phase"
               value={selectedPhase}
@@ -218,15 +234,15 @@ export const TurnControlTab: React.FC<TurnControlTabProps> = ({
         </div>
 
         <div className={styles.adminFormActionsRow}>
-          <button
-            type="button"
-            className={styles.adminSecondaryBtn}
+          <Button
+            variant="secondary"
+            fullWidth
             disabled={loading}
             onClick={handleSetTurn}
           >
             <Check size={14} />
             <span>Apply</span>
-          </button>
+          </Button>
         </div>
       </div>
     </div>

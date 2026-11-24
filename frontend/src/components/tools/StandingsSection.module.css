@@ -1,41 +1,6 @@
 @layer components {
-  .powers-sort-segmented {
-    display: flex;
-    background: var(--surface-panel);
-    border: 1px solid #28303e;
-    border-radius: 5px;
-    padding: 2px;
+  .powers-sort-track {
     margin-bottom: 6px;
-    gap: 2px;
-  }
-
-  .powers-sort-pill {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 3px 6px;
-    border-radius: 3px;
-    border: none;
-    background: transparent;
-    color: var(--text-subtle);
-    font-size: 0.64rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition-fast);
-  }
-
-  .powers-sort-pill:hover {
-    color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.04);
-  }
-
-  .powers-sort-pill[data-active="true"] {
-    background: #262f3e;
-    color: #60a5fa;
-    font-weight: 700;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   }
 
   .powers-filter-row {
@@ -54,7 +19,6 @@
 
   .powers-filter-segmented {
     flex: 1;
-    margin-bottom: 0;
   }
 
   .powers-standing-list {
@@ -83,6 +47,11 @@
   .power-standing-card[data-clickable="true"]:hover {
     background: #252d3a;
     border-color: #3a475c;
+  }
+
+  .power-standing-card[data-clickable="true"]:focus-visible {
+    outline: 2px solid var(--info-sky);
+    outline-offset: 1px;
   }
 
   .power-standing-card[data-selected="true"] {
@@ -243,26 +212,6 @@
   .press-pick-btn:disabled {
     opacity: 0.35;
     cursor: not-allowed;
-  }
-
-  .press-pick-unread {
-    position: absolute;
-    /* Inside the row's padding: the row clips what leaves it. */
-    top: -4px;
-    right: -5px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 14px;
-    height: 14px;
-    padding: 0 3px;
-    border-radius: 7px;
-    background: var(--amber-hover);
-    color: var(--color-white);
-    font-size: 0.55rem;
-    font-weight: 700;
-    line-height: 1;
-    pointer-events: none;
   }
 
   .mini-status-tag {

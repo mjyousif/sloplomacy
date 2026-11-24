@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { API_BASE } from '../../lib/api';
-import { getAuthHeaders } from '../../lib/supabase';
+import { apiFetch } from '../../lib/api';
 import type {
   CampaignStatsResponse,
   GameState,
@@ -46,14 +45,10 @@ export function useCampaignStats(
 
     (async () => {
       try {
-        const headers: Record<string, string> = { ...(await getAuthHeaders()) };
-        if (passcode) {
-          headers['X-Passcode'] = passcode;
-        }
-        const res = await fetch(
-          `${API_BASE}/history/stats?game_id=${encodeURIComponent(gameState.game_id)}`,
-          { headers },
-        );
+        const res = await apiFetch('/history/stats', {
+          query: { game_id: gameState.game_id },
+          passcode,
+        });
         if (!cancelled && res && res.ok) {
           const data = (await res.json()) as CampaignStatsResponse;
           if (!cancelled && data && data.powers) {

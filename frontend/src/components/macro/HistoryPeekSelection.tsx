@@ -1,11 +1,11 @@
 import { X } from 'lucide-react';
 import type React from 'react';
-import { POWER_METADATA, type Power } from '../../types/diplomacy';
 import type { HistoryOwnershipChange } from '../../utils/historyOwnershipChanges';
 import type {
   HistoryOrderEntry,
   HistoryTurnLog,
 } from '../../utils/historyTurnLog';
+import { powerShortNameOrNeutral } from '../../utils/powerHelpers';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './HistoryPeekSelection.module.css';
 import type { HistoryHighlightFocus } from './HistoryTurnPanel';
@@ -16,10 +16,6 @@ export interface HistoryPeekSelectionProps {
   selectedOwnership: HistoryOwnershipChange | null;
   onExpand: () => void;
   onClear: () => void;
-}
-
-function ownerShortName(power: Power | null): string {
-  return power ? POWER_METADATA[power].shortName : 'Neutral';
 }
 
 /** Resolves the pinned past-turn item and its clear focus for the phone sheet peek. */
@@ -108,8 +104,8 @@ export const HistoryPeekSelection: React.FC<HistoryPeekSelectionProps> = ({
                 {selectedOwnership.provinceName}
               </span>
               <span className={styles.peekSelectionDetail}>
-                {ownerShortName(selectedOwnership.prevPower)} →{' '}
-                {ownerShortName(selectedOwnership.nextPower)}
+                {powerShortNameOrNeutral(selectedOwnership.prevPower)} →{' '}
+                {powerShortNameOrNeutral(selectedOwnership.nextPower)}
               </span>
             </>
           )

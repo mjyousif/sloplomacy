@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { cx } from '../../utils/cx';
 import {
   clampSheetHeight,
   nearestSnap,
@@ -16,6 +17,7 @@ import {
   snapHeights,
 } from '../../utils/sheetHelpers';
 import styles from './BottomSheet.module.css';
+import scrollbarStyles from './Scrollbars.module.css';
 
 export interface BottomSheetProps {
   snap: SheetSnap;
@@ -242,7 +244,7 @@ export function BottomSheet({
         {/* Padding as tall as the part below the screen's edge, so the last card can scroll into
             view. While lowered, the body is off screen, so it is inert: no focus, taps or reading. */}
         <div
-          className={styles.bottomSheetBody}
+          className={cx(styles.bottomSheetBody, scrollbarStyles.thin)}
           data-testid="bottom-sheet-body"
           style={{ paddingBottom: settledHidden }}
           inert={snap === 'peek' && dragVisible === null}

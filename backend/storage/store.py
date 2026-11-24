@@ -79,6 +79,11 @@ def lacks_summary(game_id: str) -> bool:
     )
 
 
+def is_private_sandbox(game_id: str | None) -> bool:
+    """True when `game_id` names an ephemeral multiplayer hypothetical sandbox."""
+    return bool(game_id and (game_id.startswith("sbx_") or game_id in PRIVATE_SANDBOXES))
+
+
 def is_multiplayer_match(game_id: str) -> bool:
     """True for a game shared by several players, as opposed to a solo or saved sandbox.
 
@@ -264,6 +269,24 @@ async def resolve_game(game_id: str | None = None) -> GameState:
             return cache_loaded_game(gid, loaded)
 
     raise HTTPException(status_code=404, detail=f"Game '{gid}' not found.")
+
+
+async def resolve_game_with_summary(
+    game_id: str | None = None,
+) -> tuple[GameState, MultiplayerGameSummary]:
+    """Resolve a game and its lobby summary, raising 404 if either is missing."""
+    game = await resolve_game(game_id)
+    summary = GAME_SUMMARIES.get(game.game_id)
+    if not summary:
+        raise HTTPException(status_code=404, detail=f"Game lobby '{game.game_id}' not found.")
+    return game, summary
+
+
+async def delete_game_everywhere(game_id: str) -> None:
+    """Evict a game from memory and remove its persisted row from Supabase if enabled."""
+    evict_game(game_id)
+    if supabase.is_persistence_enabled():
+        await supabase.delete_game_from_db(game_id)
 
 
 def check_game_capacity() -> None:

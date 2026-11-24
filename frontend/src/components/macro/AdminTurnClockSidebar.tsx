@@ -1,8 +1,7 @@
 import { AlertTriangle, PanelRightClose, Wrench } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { API_BASE } from '../../lib/api';
-import { getAuthHeaders } from '../../lib/supabase';
+import { apiFetch, readErrorDetail } from '../../lib/api';
 import type {
   AdminStatusResponse,
   AuthUser,
@@ -13,10 +12,12 @@ import type {
 import { cx } from '../../utils/cx';
 import type { OrderProgress } from '../../utils/orderProgress';
 import type { SheetSnap } from '../../utils/sheetHelpers';
+import { turnLabel } from '../../utils/turnFormat';
 import { TurnControlTab } from '../admin/TurnControlTab';
 import macroStyles from '../MacroSidebar.module.css';
 import { useConfirm } from '../modal/ConfirmModal';
 import { BottomSheet } from '../ui/BottomSheet';
+import scrollbarStyles from '../ui/Scrollbars.module.css';
 import chromeStyles from '../ui/SidebarChrome.module.css';
 import adminSidebarStyles from './AdminSidebar.module.css';
 import styles from './AdminTurnClockSidebar.module.css';
@@ -74,20 +75,11 @@ export function AdminTurnClockSidebar({
   const [selectedYear, setSelectedYear] = useState<number>(gameState.year);
   const [selectedPhase, setSelectedPhase] = useState<string>(gameState.phase);
 
-  const getHeaders = useCallback(async () => {
-    const authHeaders = await getAuthHeaders();
-    return {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-    };
-  }, []);
-
   const fetchAdminStatus = useCallback(async () => {
     try {
-      const res = await fetch(
-        `${API_BASE}/admin/status?game_id=${encodeURIComponent(gameId)}`,
-        { headers: await getHeaders() },
-      );
+      const res = await apiFetch('/admin/status', {
+        query: { game_id: gameId },
+      });
       if (res.ok) {
         const data: AdminStatusResponse = await res.json();
         const entries = data.history_entries ?? [];
@@ -100,7 +92,7 @@ export function AdminTurnClockSidebar({
     } catch (e) {
       console.error('Failed to fetch admin status:', e);
     }
-  }, [gameId, getHeaders]);
+  }, [gameId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -123,9 +115,7 @@ export function AdminTurnClockSidebar({
     const selectedEntry = historyEntries.find(
       (entry) => entry.index === selectedSnapshotIndex,
     );
-    const targetLabel = selectedEntry
-      ? `${selectedEntry.season} ${selectedEntry.year} ${selectedEntry.phase}`
-      : null;
+    const targetLabel = selectedEntry ? turnLabel(selectedEntry) : null;
     const ok = await confirm(
       {
         title: targetLabel
@@ -142,26 +132,21 @@ export function AdminTurnClockSidebar({
     setLoading(true);
     setActionError(null);
     try {
-      const res = await fetch(
-        `${API_BASE}/admin/rollback?game_id=${encodeURIComponent(gameId)}`,
-        {
-          method: 'POST',
-          headers: await getHeaders(),
-          body: JSON.stringify({
-            ...(selectedSnapshotIndex !== null
-              ? { snapshot_index: selectedSnapshotIndex }
-              : {}),
-          }),
-        },
-      );
+      const res = await apiFetch('/admin/rollback', {
+        method: 'POST',
+        query: { game_id: gameId },
+        json:
+          selectedSnapshotIndex !== null
+            ? { snapshot_index: selectedSnapshotIndex }
+            : {},
+      });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setActionError(err.detail || 'Rollback failed.');
+        setActionError(await readErrorDetail(res, 'Rollback failed.'));
         return;
       }
       const st: GameState = await res.json();
       onStateUpdated(st);
-      onToast(`Turn rolled back to ${st.season} ${st.year} ${st.phase}!`);
+      onToast(`Turn rolled back to ${turnLabel(st)}!`);
       fetchAdminStatus();
     } catch (e: unknown) {
       setActionError(
@@ -176,21 +161,19 @@ export function AdminTurnClockSidebar({
     setLoading(true);
     setActionError(null);
     try {
-      const res = await fetch(
-        `${API_BASE}/admin/set-turn?game_id=${encodeURIComponent(gameId)}`,
-        {
-          method: 'POST',
-          headers: await getHeaders(),
-          body: JSON.stringify({
-            season: selectedSeason,
-            year: selectedYear,
-            phase: selectedPhase,
-          }),
+      const res = await apiFetch('/admin/set-turn', {
+        method: 'POST',
+        query: { game_id: gameId },
+        json: {
+          season: selectedSeason,
+          year: selectedYear,
+          phase: selectedPhase,
         },
-      );
+      });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setActionError(err.detail || 'Failed to adjust turn clock.');
+        setActionError(
+          await readErrorDetail(res, 'Failed to adjust turn clock.'),
+        );
         return;
       }
       const st: GameState = await res.json();
@@ -230,6 +213,7 @@ export function AdminTurnClockSidebar({
         selectedPhase={selectedPhase}
         setSelectedPhase={setSelectedPhase}
         handleSetTurn={handleSetTurn}
+        useNativeSelect={variant === 'sheet'}
       />
       {confirmModal}
     </div>
@@ -260,7 +244,14 @@ export function AdminTurnClockSidebar({
         }
       >
         <div className={macroStyles.macroSheetBody}>
-          <div className={macroStyles.macroUnitsScrollArea}>{bodyContent}</div>
+          <div
+            className={cx(
+              macroStyles.macroUnitsScrollArea,
+              scrollbarStyles.thin,
+            )}
+          >
+            {bodyContent}
+          </div>
         </div>
       </BottomSheet>
     );
@@ -269,7 +260,8 @@ export function AdminTurnClockSidebar({
   if (collapsed) {
     return (
       <aside
-        className={macroStyles.macroSidebar}
+        className={cx(chromeStyles.sidebarShell, macroStyles.macroSidebar)}
+        data-side="right"
         data-collapsed="true"
         aria-label="Turn and Clock Settings Collapsed"
       >
@@ -286,10 +278,12 @@ export function AdminTurnClockSidebar({
   return (
     <aside
       className={cx(
+        chromeStyles.sidebarShell,
         macroStyles.macroSidebar,
         'admin-direct-edit-sidebar',
         'admin-turn-clock-sidebar',
       )}
+      data-side="right"
       data-expanded="true"
       data-testid="macro-sidebar"
       aria-label="Turn and Clock Settings"
@@ -322,7 +316,11 @@ export function AdminTurnClockSidebar({
         </div>
       </div>
 
-      <div className={macroStyles.macroUnitsScrollArea}>{bodyContent}</div>
+      <div
+        className={cx(macroStyles.macroUnitsScrollArea, scrollbarStyles.thin)}
+      >
+        {bodyContent}
+      </div>
     </aside>
   );
 }

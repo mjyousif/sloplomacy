@@ -20,7 +20,10 @@ import type { SheetSnap } from '../../utils/sheetHelpers';
 import macroStyles from '../MacroSidebar.module.css';
 import { getPieceFrame, MapPiece } from '../MapPiece';
 import { BottomSheet } from '../ui/BottomSheet';
+import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
+import scrollbarStyles from '../ui/Scrollbars.module.css';
+import chromeStyles from '../ui/SidebarChrome.module.css';
 import { HistoryOwnershipSection } from './HistoryOwnershipSection';
 import {
   HistoryPeekSelection,
@@ -115,8 +118,9 @@ const HistoryOrdersContent: React.FC<{
       <div className={styles.historyEmptyState} data-testid="history-empty">
         <span>{emptyLabel(log.phaseKind, filtered)}</span>
         {filtered && (onSelectHistoryPowers || onSelectHistoryActions) && (
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             className={styles.historyFilterClear}
             data-testid="history-empty-clear-filter"
             onClick={() => {
@@ -125,7 +129,7 @@ const HistoryOrdersContent: React.FC<{
             }}
           >
             Show all
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -436,14 +440,15 @@ export const HistoryTurnPanel: React.FC<HistoryTurnPanelProps> = ({
 
   return (
     <aside
-      className={macroStyles.macroSidebar}
+      className={cx(chromeStyles.sidebarShell, macroStyles.macroSidebar)}
+      data-side="right"
       data-expanded="true"
       data-testid="macro-sidebar"
       data-history-view="true"
       aria-label="Past Turn Log"
     >
       <div
-        className={styles.historyScrollPanel}
+        className={cx(styles.historyScrollPanel, scrollbarStyles.thin)}
         data-testid="history-panel-scroll"
       >
         <HistoryLockBar

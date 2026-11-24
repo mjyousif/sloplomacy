@@ -5,13 +5,13 @@ import {
   ALL_POWERS,
   type GameState,
   type Order,
-  POWER_METADATA,
   type Power,
   type PressMessage,
 } from '../types/diplomacy';
 import { holdOrder, waiveOrder } from '../utils/orderBuilders';
 import { isOrderIncomplete } from '../utils/orderHelpers';
-import { turnLabel } from '../utils/timerHelpers';
+import { formatPowerList, powerShortName } from '../utils/powerHelpers';
+import { sameTurn, turnLabel } from '../utils/turnFormat';
 
 export function useSuggestionState(): SuggestionState {
   return useSyncExternalStore(
@@ -21,18 +21,12 @@ export function useSuggestionState(): SuggestionState {
   );
 }
 
-const nameOf = (power: Power) => POWER_METADATA[power]?.shortName ?? power;
-
 /** Whether a message's suggestion is for the turn being played, so it can still be used. */
 export function isSuggestionCurrent(
   message: Pick<PressMessage, 'season' | 'year' | 'phase'>,
   game: Pick<GameState, 'season' | 'year' | 'phase'>,
 ): boolean {
-  return (
-    message.season === game.season &&
-    message.year === game.year &&
-    message.phase === game.phase
-  );
+  return sameTurn(message, game);
 }
 
 /** The orders of a draft that are finished and can be sent. */
@@ -128,7 +122,7 @@ export function useSuggestionBoard({
         unitIds.add(unit.id);
         if (power && unit.power === power) mine.push(order);
       } else {
-        orders[unit.id] = { ...holdOrder(unit), is_explicit: false };
+        orders[unit.id] = holdOrder(unit, false);
       }
     }
     if (phase === 'Adjustments' && builds) {
@@ -161,8 +155,8 @@ export function useSuggestionBoard({
             ? 'your anonymous public suggestion'
             : 'your public suggestion'
           : draft.anonymous
-            ? `your anonymous suggestion to ${draft.members.map(nameOf).join(', ')}`
-            : `your suggestion to ${draft.members.map(nameOf).join(', ')}`;
+            ? `your anonymous suggestion to ${formatPowerList(draft.members)}`
+            : `your suggestion to ${formatPowerList(draft.members)}`;
       return {
         mode: 'draft' as const,
         label,
@@ -192,7 +186,7 @@ export function useSuggestionBoard({
           ? 'anonymous suggestion'
           : sender === power
             ? 'your suggestion'
-            : `${nameOf(sender)}'s suggestion`,
+            : `${powerShortName(sender)}'s suggestion`,
       orders,
       map: { editablePowers: null, unitIds },
       count: unitIds.size,

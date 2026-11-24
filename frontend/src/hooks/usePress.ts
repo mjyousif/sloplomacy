@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { API_BASE } from '../lib/api';
+import { apiFetch, readErrorDetail } from '../lib/api';
 import { type PressState, pressStore } from '../lib/pressStore';
-import { authedFetch } from '../lib/supabase';
 import type {
   Power,
   PressFeed,
@@ -24,12 +23,14 @@ async function readPress(
   { gameId, power, passcode }: PressReader,
   after = 0,
 ): Promise<PressFeed> {
-  const params = new URLSearchParams({ game_id: gameId });
   // A spectator names no power: a seat named without holding it is refused.
-  if (power) params.set('power', power);
-  if (after > 0) params.set('after', String(after));
-  const res = await authedFetch(`${API_BASE}/press?${params.toString()}`, {
-    headers: !power && passcode ? { 'X-Passcode': passcode } : undefined,
+  const res = await apiFetch('/press', {
+    query: {
+      game_id: gameId,
+      power: power || undefined,
+      after: after > 0 ? after : undefined,
+    },
+    passcode: !power ? passcode : undefined,
   });
   if (!res.ok) throw new Error(`Press read failed: HTTP ${res.status}`);
   return res.json();
@@ -73,23 +74,15 @@ export async function sendPress(
   gameId: string,
   request: PressPostRequest,
 ): Promise<PressMessage> {
-  const res = await authedFetch(
-    `${API_BASE}/press?game_id=${encodeURIComponent(gameId)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    },
-  );
+  const res = await apiFetch('/press', {
+    method: 'POST',
+    query: { game_id: gameId },
+    json: request,
+  });
   if (!res.ok) {
-    let detail = 'The message could not be sent.';
-    try {
-      const data = await res.json();
-      if (typeof data?.detail === 'string') detail = data.detail;
-    } catch {
-      // Keep the generic reason.
-    }
-    throw new Error(detail);
+    throw new Error(
+      await readErrorDetail(res, 'The message could not be sent.'),
+    );
   }
   const message: PressMessage = await res.json();
   pressStore.addMessages(gameId, request.power, [message]);

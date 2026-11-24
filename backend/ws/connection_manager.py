@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from collections import defaultdict
+from collections.abc import Collection
 
 from domain.board import Power
 from domain.game_state import GameState, MultiplayerGameSummary
@@ -50,6 +51,43 @@ async def send_to_all(sends: list[tuple[WebSocket, dict]]) -> list[WebSocket]:
     """Send every (socket, payload) at once and return the sockets that failed."""
     results = await asyncio.gather(*(send_or_report(ws, payload) for ws, payload in sends))
     return [ws for (ws, _), ok in zip(sends, results, strict=True) if not ok]
+
+
+def build_game_update_payload(
+    game_id: str,
+    state: GameState,
+    summary: MultiplayerGameSummary | None,
+    power: Power | None,
+    viewer_ids: Collection[str] = (),
+    *,
+    summary_json: dict | None = None,
+    use_summary_json: bool = False,
+) -> dict:
+    """Build a per-viewer `game_update` WebSocket payload with sanitized state and summary."""
+    rendered_summary = (
+        summary_json
+        if use_summary_json
+        else (sanitize_summary_for_viewer(summary).model_dump(mode="json") if summary else None)
+    )
+    return {
+        "type": "game_update",
+        "game_id": game_id,
+        "state": sanitize_game_state_for_viewer(state, power, viewer_ids).model_dump(mode="json"),
+        "summary": rendered_summary,
+    }
+
+
+def build_lobby_update_payload() -> dict:
+    """Sync summaries and build the public `lobby_update` WebSocket payload."""
+    for gid in list(GAME_SUMMARIES.keys()):
+        sync_summary(gid)
+    return {
+        "type": "lobby_update",
+        # One payload goes to every socket, so it holds public matches only.
+        "games": [
+            sanitize_summary_for_viewer(s).model_dump(mode="json") for s in public_summaries()
+        ],
+    }
 
 
 class ConnectionManager:
@@ -118,14 +156,15 @@ class ConnectionManager:
         sends: list[tuple[WebSocket, dict]] = []
         for ws, ws_power in list(connections.items()):
             if ws_power not in payload_by_power:
-                payload_by_power[ws_power] = {
-                    "type": "game_update",
-                    "game_id": game_id,
-                    "state": sanitize_game_state_for_viewer(state, ws_power, ()).model_dump(
-                        mode="json"
-                    ),
-                    "summary": summary_json,
-                }
+                payload_by_power[ws_power] = build_game_update_payload(
+                    game_id,
+                    state,
+                    summary,
+                    ws_power,
+                    (),
+                    summary_json=summary_json,
+                    use_summary_json=True,
+                )
             payload = payload_by_power[ws_power]
             # Only the admin log differs between sockets of one power: it keeps the viewer's own
             # acknowledgement tokens. Players with an account are the only ones with any.
@@ -180,16 +219,7 @@ class ConnectionManager:
         if not self.lobby_connections:
             return
 
-        for gid in list(GAME_SUMMARIES.keys()):
-            sync_summary(gid)
-
-        payload = {
-            "type": "lobby_update",
-            # One payload goes to every socket, so it holds public matches only.
-            "games": [
-                sanitize_summary_for_viewer(s).model_dump(mode="json") for s in public_summaries()
-            ],
-        }
+        payload = build_lobby_update_payload()
         sends = [(ws, payload) for ws in list(self.lobby_connections)]
         for ws in await send_to_all(sends):
             self.disconnect_lobby(ws)

@@ -11,6 +11,7 @@ import {
 } from '../../../data/mapLayouts';
 import type { Power, ProvinceInfo, Unit } from '../../../types/diplomacy';
 import type { PieceStyle } from '../../../utils/displayPrefs';
+import { provinceName } from '../../../utils/turnFormat';
 import {
   getPieceArrowScale,
   getPieceFrame,
@@ -104,7 +105,7 @@ export function usePieceGeometry({
         };
       }
       const baseName =
-        SEA_SHORT_NAMES[province] ?? provinces[province]?.name ?? province;
+        SEA_SHORT_NAMES[province] ?? provinceName(provinces, province);
       const pill = makePiecePill(
         coast ? `${baseName} ${coast}` : baseName,
         entry?.name?.size ?? 12.5,

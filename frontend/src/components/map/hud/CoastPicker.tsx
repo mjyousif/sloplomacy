@@ -1,6 +1,7 @@
 import type React from 'react';
 import type { ProvinceInfo } from '../../../types/diplomacy';
 import { cx } from '../../../utils/cx';
+import { provinceName } from '../../../utils/turnFormat';
 import type { PendingCoastChoice } from '../hooks/useMapInteraction';
 import styles from './CoastPicker.module.css';
 import floatingStyles from './FloatingMenu.module.css';
@@ -33,11 +34,11 @@ export function CoastPicker({
       )}
       data-testid="coast-picker"
       data-docked={compact ? 'true' : undefined}
-      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
       <div className={styles.coastPickerTitle}>
-        Select Coast for {provinces[choice.target]?.name}:
+        Select Coast for {provinceName(provinces, choice.target)}:
       </div>
       <div className={styles.coastPickerButtons}>
         {choice.coasts.map((c) => (

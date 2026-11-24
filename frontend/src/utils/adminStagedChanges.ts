@@ -1,17 +1,18 @@
-import {
-  type GameState,
-  type Order,
-  POWER_METADATA,
-  type Power,
-  type ProvinceInfo,
-  type Unit,
-  type UnitType,
+import type {
+  GameState,
+  Order,
+  Power,
+  ProvinceInfo,
+  Unit,
+  UnitType,
 } from '../types/diplomacy';
 import {
   buildDefaultHoldOrder,
   mintStagedUnitId,
   resolveUnitPlacement,
 } from './adminHelpers';
+import { powerShortName } from './powerHelpers';
+import { provinceName, unitTypeName } from './turnFormat';
 
 export type StagedChangeKind =
   | 'destroy'
@@ -28,17 +29,6 @@ export interface StagedChangeEntry {
   unitId?: string;
   province?: string;
 }
-
-const formatPowerName = (power: Power): string =>
-  POWER_METADATA[power]?.shortName ?? power;
-
-const formatProvinceName = (
-  provinceId: string,
-  provinces?: Record<string, ProvinceInfo>,
-): string => provinces?.[provinceId]?.name ?? provinceId;
-
-const formatUnitTypeName = (unitType: UnitType): string =>
-  unitType === 'A' ? 'Army' : 'Fleet';
 
 export function ordersHaveSameParameters(a: Order, b: Order): boolean {
   return (
@@ -80,7 +70,7 @@ export function computeStagedChanges(
       entries.push({
         id: `destroy:${bu.id}`,
         kind: 'destroy',
-        label: `Destroyed ${formatPowerName(bu.power)} ${formatUnitTypeName(bu.unit_type)} in ${formatProvinceName(bu.province, provinces)}`,
+        label: `Destroyed ${powerShortName(bu.power)} ${unitTypeName(bu.unit_type)} in ${provinceName(provinces, bu.province)}`,
         unitId: bu.id,
         province: bu.province,
       });
@@ -93,7 +83,7 @@ export function computeStagedChanges(
       entries.push({
         id: `spawn:${u.id}`,
         kind: 'spawn',
-        label: `Spawned ${formatPowerName(u.power)} ${formatUnitTypeName(u.unit_type)} at ${formatProvinceName(u.province, provinces)}${u.coast ? ` (${u.coast})` : ''}`,
+        label: `Spawned ${powerShortName(u.power)} ${unitTypeName(u.unit_type)} at ${provinceName(provinces, u.province)}${u.coast ? ` (${u.coast})` : ''}`,
         unitId: u.id,
         province: u.province,
       });
@@ -101,7 +91,7 @@ export function computeStagedChanges(
       entries.push({
         id: `update:${u.id}`,
         kind: 'update',
-        label: `Changed ${formatPowerName(bu.power)} ${formatUnitTypeName(bu.unit_type)} in ${formatProvinceName(bu.province, provinces)} to ${formatPowerName(u.power)} ${formatUnitTypeName(u.unit_type)} in ${formatProvinceName(u.province, provinces)}`,
+        label: `Changed ${powerShortName(bu.power)} ${unitTypeName(bu.unit_type)} in ${provinceName(provinces, bu.province)} to ${powerShortName(u.power)} ${unitTypeName(u.unit_type)} in ${provinceName(provinces, u.province)}`,
         unitId: u.id,
         province: u.province,
       });
@@ -112,7 +102,7 @@ export function computeStagedChanges(
       entries.push({
         id: `relocate:${u.id}`,
         kind: 'relocate',
-        label: `Relocated ${formatPowerName(u.power)} ${formatUnitTypeName(u.unit_type)} from ${formatProvinceName(bu.province, provinces)} to ${formatProvinceName(u.province, provinces)}${u.coast ? ` (${u.coast})` : ''}`,
+        label: `Relocated ${powerShortName(u.power)} ${unitTypeName(u.unit_type)} from ${provinceName(provinces, bu.province)} to ${provinceName(provinces, u.province)}${u.coast ? ` (${u.coast})` : ''}`,
         unitId: u.id,
         province: u.province,
       });
@@ -130,12 +120,12 @@ export function computeStagedChanges(
     const prevOwner = baseState.ownership[prov] ?? null;
     const nextOwner = stagedOwnership[prov] ?? null;
     if (prevOwner !== nextOwner) {
-      const provName = formatProvinceName(prov, provinces);
+      const provName = provinceName(provinces, prov);
       entries.push({
         id: `ownership:${prov}`,
         kind: 'ownership',
         label: nextOwner
-          ? `Set ownership of ${provName} to ${formatPowerName(nextOwner)}`
+          ? `Set ownership of ${provName} to ${powerShortName(nextOwner)}`
           : `Reset ownership of ${provName} to Neutral`,
         province: prov,
       });
@@ -151,7 +141,7 @@ export function computeStagedChanges(
         entries.push({
           id: `order:${uid}`,
           kind: 'order',
-          label: `Updated order for ${formatPowerName(u.power)} ${formatUnitTypeName(u.unit_type)} in ${formatProvinceName(u.province, provinces)}`,
+          label: `Updated order for ${powerShortName(u.power)} ${unitTypeName(u.unit_type)} in ${provinceName(provinces, u.province)}`,
           unitId: uid,
           province: u.province,
         });

@@ -3,8 +3,6 @@
     max-width: 920px;
     max-height: calc(100dvh - 40px);
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
     background: var(--surface-card-alt);
     color: var(--text-soft);
     border: 1.5px solid var(--gold-primary);
@@ -14,19 +12,6 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-  }
-
-  .game-over-modal-card::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .game-over-modal-card::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .game-over-modal-card::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: var(--radius-pill);
   }
 
   .game-over-modal-card[data-victory="true"] {
@@ -57,24 +42,6 @@
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
-  }
-
-  .game-over-close-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-md);
-    border: 1px solid transparent;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .game-over-close-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-bright);
   }
 
   .game-over-hero {
@@ -128,41 +95,6 @@
     flex-wrap: wrap;
   }
 
-  .game-over-tabs {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-slate);
-    background: var(--surface-deep);
-    flex-wrap: wrap;
-  }
-
-  .game-over-tab-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border: none;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: var(--transition-fast);
-  }
-
-  .game-over-tab-btn:hover {
-    color: var(--text-soft);
-  }
-
-  .game-over-tab-btn[data-active="true"] {
-    background: var(--surface-raised);
-    color: var(--gold-text);
-  }
-
   .game-over-ledger-meta {
     font-size: 0.74rem;
     color: var(--text-muted);
@@ -178,8 +110,7 @@
     padding-top: 4px;
   }
 
-  .game-over-primary-btn,
-  .game-over-secondary-btn {
+  .game-over-primary-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -190,9 +121,6 @@
     font-weight: 700;
     cursor: pointer;
     transition: var(--transition-base);
-  }
-
-  .game-over-primary-btn {
     border: 1px solid #d4af37;
     background: linear-gradient(
       135deg,
@@ -209,17 +137,6 @@
       rgba(180, 130, 35, 0.32) 100%
     );
   }
-
-  .game-over-secondary-btn {
-    border: 1px solid #434e63;
-    background: #232a38;
-    color: var(--text-soft);
-  }
-
-  .game-over-secondary-btn:hover {
-    background: #2c3547;
-    border-color: var(--text-dim);
-  }
 }
 
 @layer compact {
@@ -228,21 +145,13 @@
     gap: 12px;
   }
 
-  :global([data-layout="compact"]) .game-over-close-btn {
-    width: 44px;
-    height: 44px;
-  }
-
   :global([data-layout="compact"]) .game-over-tabs {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
   }
 
-  :global([data-layout="compact"]) .game-over-tab-btn {
-    justify-content: center;
-    min-height: 38px;
-    padding: 6px 8px;
+  :global([data-layout="compact"]) .game-over-tabs button {
     font-size: 0.72rem;
     text-align: center;
   }
@@ -252,8 +161,7 @@
     align-items: stretch;
   }
 
-  :global([data-layout="compact"]) .game-over-primary-btn,
-  :global([data-layout="compact"]) .game-over-secondary-btn {
+  :global([data-layout="compact"]) .game-over-primary-btn {
     min-height: 44px;
   }
 }

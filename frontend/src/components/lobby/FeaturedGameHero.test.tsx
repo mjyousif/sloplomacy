@@ -101,13 +101,14 @@ describe('FeaturedGameHero', () => {
     expect(props.onEnterGame).not.toHaveBeenCalled();
   });
 
-  it('closes the ⋯ menu on Escape and on a press outside it', () => {
+  it('closes the ⋯ menu on Escape (restoring focus) and on a press outside it', () => {
     setup();
     const more = screen.getByTestId('game-actions-btn');
     fireEvent.click(more);
     expect(more).toHaveAttribute('aria-expanded', 'true');
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('menu')).toBeNull();
+    expect(more).toHaveFocus();
     fireEvent.click(more);
     fireEvent.pointerDown(screen.getByRole('menu'));
     expect(screen.getByRole('menu')).toBeInTheDocument();

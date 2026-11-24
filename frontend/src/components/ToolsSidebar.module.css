@@ -1,83 +1,12 @@
 @layer components {
-  /* Floats over the map's left edge, so opening or collapsing it never resizes the map. */
   .tools-sidebar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    height: 100%;
-    background: #171b22;
-    border-right: 1px solid #282f3d;
-    display: flex;
-    flex-direction: column;
-    z-index: var(--z-sidebar);
-    transition:
-      width 0.18s cubic-bezier(0.4, 0, 0.2, 1),
-      min-width 0.18s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
-    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.35);
-  }
-
-  .tools-sidebar.tools-sidebar-expanded {
-    width: var(--sidebar-width);
-    min-width: var(--sidebar-width);
-    max-width: var(--sidebar-width);
-  }
-
-  .tools-sidebar.tools-sidebar-collapsed {
-    width: var(--sidebar-rail-width);
-    min-width: var(--sidebar-rail-width);
-    max-width: var(--sidebar-rail-width);
-    align-items: center;
-    padding: 8px 0;
-    background: #13161c;
-  }
-
-  .tools-sidebar-header {
-    padding: 10px 14px;
-    background: #1f2530;
-    border-bottom: 1px solid #2d3646;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .tools-header-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .tools-header-icon {
-    color: #d4a349;
-    flex-shrink: 0;
-  }
-
-  .tools-header-title h3 {
-    font-family: var(--font-display);
-    font-size: 0.78rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    color: #f8eed9;
-    margin: 0;
-    line-height: 1.15;
   }
 
   .tools-sidebar-content {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-  }
-
-  .tools-sidebar-content::-webkit-scrollbar {
-    width: 5px;
-  }
-
-  .tools-sidebar-content::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: var(--radius-xs);
   }
 
   .rail-group {
@@ -100,7 +29,7 @@
   :global([data-layout="compact"]) .tools-drawer-layer {
     position: absolute;
     inset: 0;
-    z-index: 45;
+    z-index: var(--z-drawer);
     pointer-events: none;
     visibility: hidden;
     transition: visibility 0s linear 0.22s;
@@ -154,34 +83,17 @@
     }
   }
 
-  :global([data-layout="compact"]) .tools-drawer-close-btn {
-    width: 44px;
-    height: 44px;
-  }
-
   :global([data-layout="compact"]) .drawer-open-press-section {
     padding: 10px 14px;
     border-bottom: 1px solid #262d3a;
   }
 
-  :global([data-layout="compact"]) .drawer-open-press-btn {
-    width: 100%;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+  :global([data-layout="compact"]) button.drawer-open-press-btn {
     padding: 0 12px;
-    border-radius: var(--radius-md);
-    border: 1px solid #3a475c;
-    background: #212836;
-    color: var(--text-primary);
     font-size: 0.8rem;
-    font-weight: 700;
-    cursor: pointer;
   }
 
-  :global([data-layout="compact"]) .drawer-open-press-btn:active {
+  :global([data-layout="compact"]) button.drawer-open-press-btn:active {
     background: #2b3446;
   }
 }

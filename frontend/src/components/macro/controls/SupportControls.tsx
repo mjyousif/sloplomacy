@@ -1,15 +1,15 @@
 import type React from 'react';
-import {
-  type Order,
-  POWER_METADATA,
-  type ProvinceInfo,
-  type Unit,
-  type UnitMoveOptions,
+import type {
+  Order,
+  ProvinceInfo,
+  Unit,
+  UnitMoveOptions,
 } from '../../../types/diplomacy';
+import { provinceName } from '../../../utils/turnFormat';
 import {
   IconSelectDropdown,
   type IconSelectOption,
-} from '../../map/hud/IconSelectDropdown';
+} from '../../ui/IconSelectDropdown';
 import { PowerFlag } from '../../ui/PowerFlag';
 import styles from '../OrderParameterControls.module.css';
 import { orderParamDropdownClassNames } from './orderParamDropdown';
@@ -84,137 +84,65 @@ export const SupportControls: React.FC<SupportControlsProps> = ({
     });
   };
 
-  if (compact && !useNativeSelect) {
-    const unitOptionsList: IconSelectOption[] = supportableUnits.map((u2) => ({
-      value: u2.province,
-      label: `${u2.unit_type} ${provinces[u2.province]?.name ?? u2.province}`,
-      icon: <PowerFlag power={u2.power} width={14} height={10} />,
-    }));
-    const targetOptionsList: IconSelectOption[] = [
-      ...(order.aux_unit_origin && canHoldSupport
-        ? [
-            {
-              value: order.aux_unit_origin,
-              label: `Hold (${provinces[order.aux_unit_origin]?.name ?? order.aux_unit_origin})`,
-            },
-          ]
-        : []),
-      ...moveTargets.map((pid) => ({
-        value: pid,
-        label: provinces[pid]?.name ?? pid,
-      })),
-    ];
+  const unitOptionsList: IconSelectOption[] = supportableUnits.map((u2) => ({
+    value: u2.province,
+    label: `${u2.unit_type} ${provinceName(provinces, u2.province)}`,
+    icon: <PowerFlag power={u2.power} width={14} height={10} />,
+  }));
 
-    return (
-      <div className={styles.orderParamInline}>
-        <IconSelectDropdown
-          classNames={orderParamDropdownClassNames}
-          testId="select-support-unit"
-          value={order.aux_unit_origin || null}
-          options={unitOptionsList}
-          placeholder="Unit…"
-          onHoverOption={(val) => onHoverProvince?.(val)}
-          onChange={(val) => {
-            if (val) handleSupportUnitChange(val);
-          }}
-        />
-        <span className={styles.orderParamArrow} aria-hidden="true">
-          →
-        </span>
-        <IconSelectDropdown
-          classNames={orderParamDropdownClassNames}
-          testId="select-support-target"
-          value={order.target || null}
-          options={targetOptionsList}
-          placeholder="Into…"
-          onHoverOption={(val) => onHoverProvince?.(val)}
-          onChange={(val) => {
-            if (val) {
-              onUpdateOrder({
-                ...order,
-                target: val,
-                is_explicit: true,
-              });
-            }
-          }}
-        />
-      </div>
-    );
-  }
-
-  const unitSelect = (
-    <select
-      data-testid="select-support-unit"
-      value={order.aux_unit_origin || ''}
-      onChange={(e) => handleSupportUnitChange(e.target.value)}
-    >
-      {!order.aux_unit_origin && <option value="">Choose a unit…</option>}
-      {supportableUnits.map((u2) => (
-        <option key={u2.id} value={u2.province}>
-          {compact
-            ? `${u2.unit_type} ${provinces[u2.province]?.name ?? u2.province}`
-            : `[${POWER_METADATA[u2.power].shortName}] ${u2.unit_type} ${provinces[u2.province]?.name} (${u2.province})`}
-        </option>
-      ))}
-    </select>
-  );
-
-  const targetSelect = (
-    <select
-      data-testid="select-support-target"
-      value={order.target || ''}
-      onChange={(e) =>
-        onUpdateOrder({
-          ...order,
-          target: e.target.value,
-          is_explicit: true,
-        })
-      }
-    >
-      {!order.target && <option value="">Choose a destination…</option>}
-      {order.aux_unit_origin && canHoldSupport && (
-        <option value={order.aux_unit_origin}>
-          {compact
-            ? `Hold (${provinces[order.aux_unit_origin]?.name ?? order.aux_unit_origin})`
-            : `HOLD in ${provinces[order.aux_unit_origin]?.name} (${order.aux_unit_origin})`}
-        </option>
-      )}
-      {moveTargets.length > 0 && (
-        <optgroup label="Support Move Into:">
-          {moveTargets.map((pid) => (
-            <option key={pid} value={pid}>
-              {compact
-                ? (provinces[pid]?.name ?? pid)
-                : `→ ${provinces[pid]?.name ?? pid} (${pid})`}
-            </option>
-          ))}
-        </optgroup>
-      )}
-    </select>
-  );
-
-  if (compact) {
-    return (
-      <div className={styles.orderParamInline}>
-        {unitSelect}
-        <span className={styles.orderParamArrow} aria-hidden="true">
-          →
-        </span>
-        {targetSelect}
-      </div>
-    );
-  }
+  const targetOptionsList: IconSelectOption[] = [
+    ...(order.aux_unit_origin && canHoldSupport
+      ? [
+          {
+            value: order.aux_unit_origin,
+            label: `Hold (${provinceName(provinces, order.aux_unit_origin)})`,
+          },
+        ]
+      : []),
+    ...moveTargets.map((pid) => ({
+      value: pid,
+      label: provinceName(provinces, pid),
+      group: 'Support Move Into:',
+    })),
+  ];
 
   return (
-    <div className={styles.orderParamGrid}>
-      <div className={styles.orderParamRow}>
-        <label>Unit:</label>
-        {unitSelect}
-      </div>
-      <div className={styles.orderParamRow}>
-        <label>Into:</label>
-        {targetSelect}
-      </div>
+    <div className={styles.orderParamInline}>
+      <IconSelectDropdown
+        useNative={useNativeSelect}
+        compact={compact}
+        classNames={orderParamDropdownClassNames}
+        testId="select-support-unit"
+        value={order.aux_unit_origin || null}
+        options={unitOptionsList}
+        placeholder="Unit…"
+        onHoverOption={(val) => onHoverProvince?.(val)}
+        onChange={(val) => {
+          if (val) handleSupportUnitChange(val);
+        }}
+      />
+      <span className={styles.orderParamArrow} aria-hidden="true">
+        →
+      </span>
+      <IconSelectDropdown
+        useNative={useNativeSelect}
+        compact={compact}
+        classNames={orderParamDropdownClassNames}
+        testId="select-support-target"
+        value={order.target || null}
+        options={targetOptionsList}
+        placeholder="Into…"
+        onHoverOption={(val) => onHoverProvince?.(val)}
+        onChange={(val) => {
+          if (val) {
+            onUpdateOrder({
+              ...order,
+              target: val,
+              is_explicit: true,
+            });
+          }
+        }}
+      />
     </div>
   );
 };

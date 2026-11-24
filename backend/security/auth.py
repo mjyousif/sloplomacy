@@ -12,6 +12,7 @@ import jwt
 from domain.requests import AuthUser
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from storage.supabase import get_supabase_url
 
 logger = logging.getLogger("diplomacy.auth")
 
@@ -31,12 +32,6 @@ def get_jwt_secret() -> str | None:
 def get_jwt_public_key() -> str | None:
     """Retrieve the Supabase JWT public key (for ES256/asymmetric) from the environment."""
     return os.getenv("SUPABASE_JWT_PUBLIC_KEY") or JWT_PUBLIC_KEY
-
-
-def get_supabase_url() -> str:
-    """Retrieve the Supabase base URL."""
-    url = (os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL") or "").strip()
-    return url.rstrip("/")
 
 
 _DEV_AUTH_REFUSAL_LOGGED = False

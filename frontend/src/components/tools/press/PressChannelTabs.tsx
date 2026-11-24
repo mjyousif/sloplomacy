@@ -1,10 +1,12 @@
 import { Megaphone, VenetianMask } from 'lucide-react';
 import type React from 'react';
 import type { Power } from '../../../types/diplomacy';
+import { formatPowerList } from '../../../utils/powerHelpers';
 import type { PressChannel } from '../../../utils/pressHelpers';
+import { CountBadge } from '../../ui/CountBadge';
 import { PowerFlag } from '../../ui/PowerFlag';
 import styles from '../PressSection.module.css';
-import { channelLabel, listPowers } from './pressLabels';
+import { channelLabel } from './pressLabels';
 
 export interface PressChannelTabsProps {
   channels: PressChannel[];
@@ -26,7 +28,7 @@ export const PressChannelTabs: React.FC<PressChannelTabsProps> = ({
       const shown = channel.members.includes(viewer)
         ? channel.members.filter((p) => p !== viewer)
         : channel.members;
-      const title = channel.kind === 'thread' ? listPowers(shown) : label;
+      const title = channel.kind === 'thread' ? formatPowerList(shown) : label;
       return (
         <button
           key={channel.key}
@@ -65,11 +67,12 @@ export const PressChannelTabs: React.FC<PressChannelTabsProps> = ({
                 aria-hidden="true"
               />
             ))}
-          {channel.unread > 0 && (
-            <span className={styles.unreadBadge} data-testid="press-unread">
-              {channel.unread > 99 ? '99+' : channel.unread}
-            </span>
-          )}
+          <CountBadge
+            count={channel.unread}
+            max={99}
+            size="sm"
+            testId="press-unread"
+          />
         </button>
       );
     })}

@@ -9,9 +9,20 @@ import {
   AdminTurnClockSidebar,
 } from './AdminTurnClockSidebar';
 
-vi.mock('../../lib/supabase', () => ({
-  getAuthHeaders: async () => ({ Authorization: 'Bearer tok' }),
-}));
+vi.mock('../../lib/supabase', () => {
+  const getAuthHeaders = async () => ({ Authorization: 'Bearer tok' });
+  return {
+    getAuthHeaders,
+    authedFetch: async (url: string, init: RequestInit = {}) =>
+      fetch(url, {
+        ...init,
+        headers: {
+          ...(init.headers as Record<string, string> | undefined),
+          ...(await getAuthHeaders()),
+        },
+      }),
+  };
+});
 
 const STATE = {
   game_id: 'mp_1',
@@ -210,5 +221,16 @@ describe('AdminTurnClockSidebar', () => {
     );
     await user.click(expandBtn);
     expect(props.onToggleCollapse).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses native <select> controls when rendered in the mobile sheet', async () => {
+    setup({}, { variant: 'sheet' });
+    await waitFor(() => expect(calls).toHaveLength(1));
+
+    expect(screen.getByTestId('select-admin-rollback-snapshot').tagName).toBe(
+      'SELECT',
+    );
+    expect(screen.getByTestId('select-admin-season').tagName).toBe('SELECT');
+    expect(screen.getByTestId('select-admin-phase').tagName).toBe('SELECT');
   });
 });

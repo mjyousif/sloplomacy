@@ -3,8 +3,8 @@
 import asyncio
 import logging
 
-from api.turns import tick_timer
 from domain.board import Power
+from engine import turn_service
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials
@@ -13,13 +13,10 @@ from security.passcode import PasscodeRateLimited, check_passcode, client_addres
 from security.secrecy import (
     caller_holds_seat,
     caller_owns_saved_sandbox,
-    sanitize_game_state_for_viewer,
-    sanitize_summary_for_viewer,
     viewer_ack_ids,
     viewer_power_for,
 )
 from storage import supabase
-from storage.lobby import public_summaries
 from storage.store import (
     GAME_SUMMARIES,
     GAMES,
@@ -29,7 +26,11 @@ from storage.store import (
     sync_summary,
 )
 from storage.supabase import SupabaseUnavailable
-from ws.connection_manager import manager
+from ws.connection_manager import (
+    build_game_update_payload,
+    build_lobby_update_payload,
+    manager,
+)
 
 logger = logging.getLogger("diplomacy.ws")
 
@@ -125,18 +126,10 @@ async def ws_game_endpoint(
     sync_summary(game_id)
     game = GAMES[game_id]
     try:
-        await tick_timer(game)
+        await turn_service.tick_timer(game)
         summary = GAME_SUMMARIES.get(game_id)
-        sanitized = sanitize_game_state_for_viewer(game, power_enum, viewer_ids)
         await websocket.send_json(
-            {
-                "type": "game_update",
-                "game_id": game_id,
-                "state": sanitized.model_dump(mode="json"),
-                "summary": sanitize_summary_for_viewer(summary).model_dump(mode="json")
-                if summary
-                else None,
-            }
+            build_game_update_payload(game_id, game, summary, power_enum, viewer_ids)
         )
         while True:
             data = await websocket.receive_json()
@@ -148,17 +141,9 @@ async def ws_game_endpoint(
                     g = GAMES.get(game_id)
                     s = GAME_SUMMARIES.get(game_id)
                     if g:
-                        await tick_timer(g)
-                        g_sanitized = sanitize_game_state_for_viewer(g, power_enum, viewer_ids)
+                        await turn_service.tick_timer(g)
                         await websocket.send_json(
-                            {
-                                "type": "game_update",
-                                "game_id": game_id,
-                                "state": g_sanitized.model_dump(mode="json"),
-                                "summary": sanitize_summary_for_viewer(s).model_dump(mode="json")
-                                if s
-                                else None,
-                            }
+                            build_game_update_payload(game_id, g, s, power_enum, viewer_ids)
                         )
     except WebSocketDisconnect:
         manager.disconnect_game(game_id, websocket)
@@ -173,17 +158,7 @@ async def ws_game_endpoint(
 async def ws_lobby_endpoint(websocket: WebSocket):
     await manager.connect_lobby(websocket)
     try:
-        for gid in list(GAME_SUMMARIES.keys()):
-            sync_summary(gid)
-        await websocket.send_json(
-            {
-                "type": "lobby_update",
-                "games": [
-                    sanitize_summary_for_viewer(s).model_dump(mode="json")
-                    for s in public_summaries()
-                ],
-            }
-        )
+        await websocket.send_json(build_lobby_update_payload())
         while True:
             data = await websocket.receive_json()
             if isinstance(data, dict):
@@ -191,17 +166,7 @@ async def ws_lobby_endpoint(websocket: WebSocket):
                 if msg_type == "ping":
                     await websocket.send_json({"type": "pong"})
                 elif msg_type == "refresh":
-                    for gid in list(GAME_SUMMARIES.keys()):
-                        sync_summary(gid)
-                    await websocket.send_json(
-                        {
-                            "type": "lobby_update",
-                            "games": [
-                                sanitize_summary_for_viewer(s).model_dump(mode="json")
-                                for s in public_summaries()
-                            ],
-                        }
-                    )
+                    await websocket.send_json(build_lobby_update_payload())
     except WebSocketDisconnect:
         manager.disconnect_lobby(websocket)
     except Exception:

@@ -56,7 +56,11 @@ export const OrderParameterControls: React.FC<OrderParameterControlsProps> = ({
         order={order}
         provinces={provinces}
         validRetreats={validRetreats}
+        compact={compact}
+        useNativeSelect={useNativeSelect}
+        dropdownClassNames={orderParamDropdownClassNames}
         onUpdateOrder={onUpdateOrder}
+        onHoverProvince={onHoverProvince}
       />
     );
   }

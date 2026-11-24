@@ -37,11 +37,11 @@ describe('CoastPicker', () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
-  it('keeps its clicks from reaching the map under it', () => {
+  it('keeps its clicks and pointer presses from reaching the map under it', () => {
     const onMapClick = vi.fn();
-    const onMapMouseDown = vi.fn();
+    const onMapPointerDown = vi.fn();
     render(
-      <div onClick={onMapClick} onMouseDown={onMapMouseDown}>
+      <div onClick={onMapClick} onPointerDown={onMapPointerDown}>
         <CoastPicker
           compact={false}
           dockRef={null}
@@ -53,10 +53,10 @@ describe('CoastPicker', () => {
       </div>,
     );
     const title = screen.getByText('Select Coast for Spain:');
-    fireEvent.mouseDown(title);
+    fireEvent.pointerDown(title);
     fireEvent.click(title);
     expect(onMapClick).not.toHaveBeenCalled();
-    expect(onMapMouseDown).not.toHaveBeenCalled();
+    expect(onMapPointerDown).not.toHaveBeenCalled();
   });
 
   it('docks as the bottom bar on a phone', () => {

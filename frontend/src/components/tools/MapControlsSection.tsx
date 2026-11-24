@@ -1,8 +1,8 @@
 import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 import type React from 'react';
+import { Button } from '../ui/Button';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import styles from './MapControlsSection.module.css';
-import buttonStyles from './ToolsButton.module.css';
 import type { ToolsSidebarProps } from './toolsSidebarProps';
 
 export type MapControlsSectionProps = Pick<
@@ -27,33 +27,33 @@ export const MapControlsSection: React.FC<MapControlsSectionProps> = ({
       collapsible={false}
     >
       <div className={styles.toolsZoomToolbar} data-testid="tools-zoom-toolbar">
-        <button
-          type="button"
-          className={buttonStyles.toolsBtn}
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={onZoomOut}
           title="Zoom Out"
         >
           <ZoomOut size={13} />
           <span>Out</span>
-        </button>
-        <button
-          type="button"
-          className={buttonStyles.toolsBtn}
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={onZoomIn}
           title="Zoom In"
         >
           <ZoomIn size={13} />
           <span>In</span>
-        </button>
-        <button
-          type="button"
-          className={buttonStyles.toolsBtn}
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={onResetCamera}
           title="Reset Map to 100% Default View"
         >
           <Maximize2 size={13} />
           <span>Fit Map</span>
-        </button>
+        </Button>
       </div>
     </CollapsibleSection>
   );

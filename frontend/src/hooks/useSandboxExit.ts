@@ -1,6 +1,5 @@
 import { type Dispatch, type SetStateAction, useEffect } from 'react';
-import { API_BASE } from '../lib/api';
-import { authedFetch } from '../lib/supabase';
+import { apiFetch } from '../lib/api';
 import type { Power } from '../types/diplomacy';
 
 export interface SandboxExitOptions {
@@ -28,14 +27,11 @@ export function useSandboxExit({
   // Leaving the match board by any route closes its private sandbox.
   useEffect(() => {
     if (!sandboxGameId || viewMode === 'multiplayer') return;
-    authedFetch(
-      `${API_BASE}/sandbox/exit?game_id=${encodeURIComponent(sandboxGameId)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ power: playerPower }),
-      },
-    ).catch(() => {});
+    apiFetch('/sandbox/exit', {
+      method: 'POST',
+      query: { game_id: sandboxGameId },
+      json: { power: playerPower },
+    }).catch(() => {});
     setSandboxGameId(null);
     setSandboxMode(false);
     setShowSimulationOverlay(false);

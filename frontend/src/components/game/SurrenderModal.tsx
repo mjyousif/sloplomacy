@@ -7,7 +7,9 @@ import {
   type Power,
 } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
+import { turnMiddotLabel } from '../../utils/turnFormat';
 import { Modal, ModalCloseButton, ModalFooter } from '../modal/Modal';
+import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './SurrenderModal.module.css';
 
@@ -69,7 +71,8 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
   return (
     <Modal
       scrim="emphatic"
-      onBackdropClick={onClose}
+      onBackdropClick={loading ? undefined : onClose}
+      onEscape={loading ? undefined : onClose}
       cardClassName={styles.surrenderModalCard}
     >
       {/* Modal Header */}
@@ -104,11 +107,7 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
             </h2>
           </div>
         </div>
-        <ModalCloseButton
-          className={styles.surrenderCloseX}
-          onClick={onClose}
-          disabled={loading}
-        >
+        <ModalCloseButton onClick={onClose} disabled={loading}>
           <X size={18} />
         </ModalCloseButton>
       </div>
@@ -129,8 +128,7 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
             {meta.name} ({meta.shortName})
           </strong>
           <span className={styles.surrenderCampaignName}>
-            Campaign: <strong>{game.name}</strong> ({game.season} {game.year} ·{' '}
-            {game.phase})
+            Campaign: <strong>{game.name}</strong> ({turnMiddotLabel(game)})
           </span>
         </div>
       </div>
@@ -180,30 +178,19 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
 
       {/* Modal Actions */}
       <ModalFooter className={styles.surrenderModalFooter}>
-        <button
-          type="button"
-          className={styles.surrenderCancelBtn}
-          onClick={onClose}
-          disabled={loading}
-        >
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
           Cancel &amp; Keep Position
-        </button>
+        </Button>
 
         {isSandbox ? (
-          <button
-            type="button"
-            className={styles.surrenderDangerBtn}
-            onClick={handleLeaveOnly}
-            disabled={loading}
-          >
+          <Button variant="danger" onClick={handleLeaveOnly} disabled={loading}>
             <Trash2 size={15} />
             <span>{loading ? 'Deleting...' : 'Delete Saved Study'}</span>
-          </button>
+          </Button>
         ) : isActiveMatch ? (
           <div className={styles.surrenderBtnGroup}>
-            <button
-              type="button"
-              className={styles.surrenderSecondaryBtn}
+            <Button
+              variant="secondary"
               onClick={handleSurrenderSpectate}
               disabled={loading}
               title="Concede command to Civil Disorder, but remain in the room as an observer"
@@ -212,10 +199,9 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
               <span>
                 {loading ? 'Surrendering...' : 'Surrender (Spectate)'}
               </span>
-            </button>
-            <button
-              type="button"
-              className={styles.surrenderDangerBtn}
+            </Button>
+            <Button
+              variant="danger"
               onClick={handleSurrenderAndLeave}
               disabled={loading}
               title="Surrender command to Civil Disorder and return to the main lobby"
@@ -224,18 +210,13 @@ export const SurrenderModal: React.FC<SurrenderModalProps> = ({
               <span>
                 {loading ? 'Processing...' : 'Surrender & Leave Game'}
               </span>
-            </button>
+            </Button>
           </div>
         ) : (
-          <button
-            type="button"
-            className={styles.surrenderDangerBtn}
-            onClick={handleLeaveOnly}
-            disabled={loading}
-          >
+          <Button variant="danger" onClick={handleLeaveOnly} disabled={loading}>
             <LogOut size={15} />
             <span>{loading ? 'Leaving...' : 'Vacate & Leave Lobby'}</span>
-          </button>
+          </Button>
         )}
 
         {/* Touch screens can't show the buttons' tooltips, so the difference is spelled out. */}

@@ -7,11 +7,22 @@ import type {
   UnitMoveOptions,
 } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
+import { provinceName, unitTypeName } from '../../utils/turnFormat';
+import type { IconSelectDropdownClassNames } from '../ui/IconSelectDropdown';
 import { MoveControls } from './controls/MoveControls';
+import { orderParamDropdownClassNames } from './controls/orderParamDropdown';
 import { RetreatControls } from './controls/RetreatControls';
 import { OrderParameterControls } from './OrderParameterControls';
 import { OrderTypeTabs } from './OrderTypeTabs';
 import styles from './UnitMacroCard.module.css';
+
+const compactRowDropdownClassNames: IconSelectDropdownClassNames = {
+  root: cx(orderParamDropdownClassNames.root, styles.unitCompactDropdown),
+  trigger: orderParamDropdownClassNames.trigger,
+  value: orderParamDropdownClassNames.value,
+  menu: cx(orderParamDropdownClassNames.menu, styles.unitCompactMenu),
+  native: cx(orderParamDropdownClassNames.native, styles.unitCompactNative),
+};
 
 export interface UnitCardCompactRowProps {
   unit: Unit;
@@ -76,16 +87,16 @@ export function UnitCardCompactRow({
                 ? '#dc2626'
                 : powerColor,
           }}
-          title={`${unit.unit_type === 'A' ? 'Army' : 'Fleet'} in ${provinces[unit.province]?.name ?? unit.province}`}
+          title={`${unitTypeName(unit.unit_type)} in ${provinceName(provinces, unit.province)}`}
         >
           {unit.unit_type === 'A' ? <Swords size={10} /> : <Anchor size={10} />}
           {unit.unit_type}
         </span>
         <span
           className={styles.unitCompactProv}
-          title={`${provinces[unit.province]?.name ?? unit.province} (${unit.province}${unit.coast ? `/${unit.coast}` : ''})`}
+          title={`${provinceName(provinces, unit.province)} (${unit.province}${unit.coast ? `/${unit.coast}` : ''})`}
         >
-          {provinces[unit.province]?.name ?? unit.province}
+          {provinceName(provinces, unit.province)}
         </span>
         <div
           className={styles.unitCompactControls}
@@ -130,12 +141,15 @@ export function UnitCardCompactRow({
                 />
                 {order?.order_type === 'RETREAT' ? (
                   <RetreatControls
+                    dropdownClassNames={compactRowDropdownClassNames}
                     unit={unit}
                     order={order}
                     provinces={provinces}
                     validRetreats={validRetreats}
                     compact={true}
+                    useNativeSelect={useNativeSelect}
                     onUpdateOrder={onUpdateOrder}
+                    onHoverProvince={handleHoverOptionProvince}
                   />
                 ) : (
                   <span
@@ -168,12 +182,7 @@ export function UnitCardCompactRow({
               />
               {order?.order_type === 'MOVE' ? (
                 <MoveControls
-                  dropdownClassNames={{
-                    root: styles.unitCompactDropdown,
-                    trigger: styles.unitCompactTrigger,
-                    value: styles.unitCompactValue,
-                    menu: styles.unitCompactMenu,
-                  }}
+                  dropdownClassNames={compactRowDropdownClassNames}
                   unit={unit}
                   order={order}
                   provinces={provinces}

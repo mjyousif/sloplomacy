@@ -24,13 +24,14 @@ import {
   getAvailableCoasts,
 } from '../../../utils/adminHelpers';
 import { cx } from '../../../utils/cx';
-import styles from './AdminTileInspector.module.css';
-import floatingStyles from './FloatingMenu.module.css';
+import { Button } from '../../ui/Button';
 import {
   IconSelectDropdown,
   type IconSelectOption,
-} from './IconSelectDropdown';
-import { PowerFlagDropdown } from './PowerFlagDropdown';
+} from '../../ui/IconSelectDropdown';
+import { PowerFlagDropdown } from '../../ui/PowerFlagDropdown';
+import styles from './AdminTileInspector.module.css';
+import floatingStyles from './FloatingMenu.module.css';
 
 interface PendingSpawnChoice {
   unitType: UnitType;
@@ -229,6 +230,7 @@ export function AdminTileInspector({
                 value={owner}
                 includeNeutral
                 neutralLabel="Neutral (Unowned)"
+                useNative={compact}
                 onChange={(selectedPower) =>
                   onStageOwnership(provinceId, selectedPower)
                 }
@@ -277,8 +279,9 @@ export function AdminTileInspector({
                   <MoveRight size={12} />
                   {isRelocating ? 'Click Map Tile…' : 'Move Now'}
                 </button>
-                <button
-                  type="button"
+                <Button
+                  variant="danger-soft"
+                  size="sm"
                   className={styles.adminInspectorDestroyBtn}
                   data-testid="admin-inspector-destroy-btn"
                   onClick={() => {
@@ -288,7 +291,7 @@ export function AdminTileInspector({
                   title="Delete this unit"
                 >
                   <Trash2 size={12} /> Delete
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -341,6 +344,7 @@ export function AdminTileInspector({
                   id="admin-inspector-unit-power"
                   testId="admin-inspector-unit-power"
                   value={unit.power}
+                  useNative={compact}
                   onChange={(selectedPower) => {
                     if (selectedPower) {
                       onStageSpawnOrUpdateUnit(
@@ -368,6 +372,7 @@ export function AdminTileInspector({
                   testId="admin-inspector-order-type"
                   value={order?.order_type ?? 'HOLD'}
                   options={ADMIN_ORDER_OPTIONS}
+                  useNative={compact}
                   onChange={(nextType) => {
                     if (!nextType) return;
                     onStageUnitOrder({
@@ -389,6 +394,7 @@ export function AdminTileInspector({
                     id="admin-inspector-order-target"
                     testId="admin-inspector-order-target"
                     value={order.target ?? null}
+                    useNative={compact}
                     options={compatibleMoveProvinces.map((p) => ({
                       value: p.id,
                       label: `${p.name} (${p.id})`,
@@ -470,6 +476,7 @@ export function AdminTileInspector({
                   value={null}
                   disabled={!pendingSpawn}
                   placeholder="Select Owner…"
+                  useNative={compact}
                   onChange={(selectedPower) => {
                     if (selectedPower && pendingSpawn) {
                       onStageSpawnOrUpdateUnit(

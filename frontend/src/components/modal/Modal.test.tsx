@@ -92,6 +92,82 @@ describe('Modal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Inside' }));
     expect(behind).not.toHaveBeenCalled();
   });
+
+  it('calls onEscape in capture phase and stops propagation when provided', async () => {
+    const onEscape = vi.fn();
+    const docEscape = vi.fn();
+    document.addEventListener('keydown', docEscape);
+    try {
+      render(
+        <Modal onEscape={onEscape}>
+          <p>Inside</p>
+        </Modal>,
+      );
+      await userEvent.keyboard('{Enter}');
+      expect(onEscape).not.toHaveBeenCalled();
+      expect(docEscape).toHaveBeenCalledTimes(1);
+
+      await userEvent.keyboard('{Escape}');
+      expect(onEscape).toHaveBeenCalledTimes(1);
+      expect(docEscape).toHaveBeenCalledTimes(1);
+    } finally {
+      document.removeEventListener('keydown', docEscape);
+    }
+  });
+
+  it('does not intercept Escape when onEscape is omitted or cleared', async () => {
+    const onEscape = vi.fn();
+    const { rerender } = render(
+      <Modal>
+        <p>Non-dismissible</p>
+      </Modal>,
+    );
+    await userEvent.keyboard('{Escape}');
+    expect(onEscape).not.toHaveBeenCalled();
+
+    rerender(
+      <Modal onEscape={onEscape}>
+        <p>Now dismissible</p>
+      </Modal>,
+    );
+    await userEvent.keyboard('{Escape}');
+    expect(onEscape).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <Modal onEscape={undefined}>
+        <p>Temporarily locked</p>
+      </Modal>,
+    );
+    await userEvent.keyboard('{Escape}');
+    expect(onEscape).toHaveBeenCalledTimes(1);
+  });
+
+  it('dismisses only the topmost modal on Escape when stacked', async () => {
+    const baseEscape = vi.fn();
+    const topEscape = vi.fn();
+    const { rerender } = render(
+      <>
+        <Modal onEscape={baseEscape}>
+          <p>Base</p>
+        </Modal>
+        <Modal onEscape={topEscape}>
+          <p>Top</p>
+        </Modal>
+      </>,
+    );
+
+    await userEvent.keyboard('{Escape}');
+    expect(topEscape).toHaveBeenCalledTimes(1);
+    expect(baseEscape).not.toHaveBeenCalled();
+
+    rerender(
+      <Modal onEscape={baseEscape}>
+        <p>Base</p>
+      </Modal>,
+    );
+    await userEvent.keyboard('{Escape}');
+    expect(baseEscape).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('ModalCloseButton and ModalFooter', () => {

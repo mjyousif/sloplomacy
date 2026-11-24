@@ -16,6 +16,8 @@ import type { DirectEditMapHandlers } from '../EuropeMap';
 import macroStyles from '../MacroSidebar.module.css';
 import { AdminTileInspector } from '../map/hud/AdminTileInspector';
 import { BottomSheet } from '../ui/BottomSheet';
+import { Button } from '../ui/Button';
+import scrollbarStyles from '../ui/Scrollbars.module.css';
 import chromeStyles from '../ui/SidebarChrome.module.css';
 import styles from './AdminDirectEditSidebar.module.css';
 import adminSidebarStyles from './AdminSidebar.module.css';
@@ -136,8 +138,9 @@ export function AdminDirectEditSidebar({
       >
         {committing ? 'Applying…' : 'Apply'}
       </button>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="sm"
         className={styles.adminExitBtn}
         data-testid="btn-admin-clear-edits"
         title="Discard all staged (unapplied) board edits"
@@ -148,7 +151,7 @@ export function AdminDirectEditSidebar({
         disabled={committing || stagedChanges.length === 0}
       >
         Clear
-      </button>
+      </Button>
     </div>
   );
 
@@ -170,8 +173,9 @@ export function AdminDirectEditSidebar({
               <span className={styles.adminStagedDrawerLabel}>
                 {change.label}
               </span>
-              <button
-                type="button"
+              <Button
+                variant="danger-soft"
+                size="sm"
                 className={styles.adminStagedUndoBtn}
                 data-testid={`btn-admin-undo-change-${idx}`}
                 aria-label={`Undo ${change.label}`}
@@ -184,7 +188,7 @@ export function AdminDirectEditSidebar({
               >
                 <Undo2 size={12} />
                 <span>Undo</span>
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
@@ -300,7 +304,12 @@ export function AdminDirectEditSidebar({
       >
         <div className={macroStyles.macroSheetBody}>
           {stagedChangesDrawer}
-          <div className={macroStyles.macroUnitsScrollArea}>
+          <div
+            className={cx(
+              macroStyles.macroUnitsScrollArea,
+              scrollbarStyles.thin,
+            )}
+          >
             {inspectorContent}
           </div>
         </div>
@@ -311,7 +320,8 @@ export function AdminDirectEditSidebar({
   if (collapsed) {
     return (
       <aside
-        className={macroStyles.macroSidebar}
+        className={cx(chromeStyles.sidebarShell, macroStyles.macroSidebar)}
+        data-side="right"
         data-collapsed="true"
         aria-label="Edit Board Collapsed"
       >
@@ -328,7 +338,12 @@ export function AdminDirectEditSidebar({
 
   return (
     <aside
-      className={cx(macroStyles.macroSidebar, 'admin-direct-edit-sidebar')}
+      className={cx(
+        chromeStyles.sidebarShell,
+        macroStyles.macroSidebar,
+        'admin-direct-edit-sidebar',
+      )}
+      data-side="right"
       data-expanded="true"
       data-testid="macro-sidebar"
       aria-label="Edit Board"
@@ -371,7 +386,11 @@ export function AdminDirectEditSidebar({
         {stagedChangesDrawer}
       </div>
 
-      <div className={macroStyles.macroUnitsScrollArea}>{inspectorContent}</div>
+      <div
+        className={cx(macroStyles.macroUnitsScrollArea, scrollbarStyles.thin)}
+      >
+        {inspectorContent}
+      </div>
     </aside>
   );
 }

@@ -11,7 +11,7 @@ from security.passcode import client_address
 from security.secrecy import require_view_access
 from storage.press import press_of
 from storage.profiles import resolve_participant_name
-from storage.store import GAME_HISTORY, GAME_PRESS, GAME_SUMMARIES, PRIVATE_SANDBOXES, resolve_game
+from storage.store import GAME_HISTORY, GAME_PRESS, GAME_SUMMARIES, is_private_sandbox, resolve_game
 from storage.supabase import SupabaseUnavailable
 
 router = APIRouter(tags=["Turn History"])
@@ -29,7 +29,7 @@ async def _resolve_accessible_history(
     them and every order in them is public. A private sandbox is the exception: its snapshots hold
     its owner's live orders for the match's current turn, so no one is ever served them.
     """
-    if game_id and (game_id.startswith("sbx_") or game_id in PRIVATE_SANDBOXES):
+    if is_private_sandbox(game_id):
         raise HTTPException(status_code=404, detail="A private sandbox has no shared history.")
     game = await resolve_game(game_id)
     require_view_access(game.game_id, current_user, passcode, client=client)

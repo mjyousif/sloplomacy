@@ -1,6 +1,7 @@
 import { Compass, Crown, FlaskConical, LogIn, Sparkles } from 'lucide-react';
 import type React from 'react';
 import type { AuthUser } from '../../types/diplomacy';
+import { Button } from '../ui/Button';
 import styles from './LobbyHero.module.css';
 
 export interface LobbyHeroProps {
@@ -44,8 +45,8 @@ export const LobbyHero: React.FC<LobbyHeroProps> = ({
         </p>
 
         <div className={styles.lobbyHeroActions}>
-          <button
-            type="button"
+          <Button
+            variant="primary"
             data-testid="btn-enter-sandbox"
             className={styles.lobbyPrimaryCta}
             onClick={onEnterSandbox}
@@ -54,17 +55,17 @@ export const LobbyHero: React.FC<LobbyHeroProps> = ({
             <span>
               {user ? 'Launch Solo Sandbox' : 'Launch Solo Sandbox (Guest)'}
             </span>
-          </button>
+          </Button>
 
           {!user && (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               className={styles.lobbySecondaryCta}
               onClick={() => onOpenAuth(undefined, 'signin')}
             >
               <LogIn size={17} />
               <span>Sign In / Create Account for Multiplayer</span>
-            </button>
+            </Button>
           )}
         </div>
       </div>

@@ -1,6 +1,6 @@
-/* The Administrator menu: the Display settings menu's panel, group and option cards
-   (DisplaySettings.module.css) with the mode cards and the exit button on top. The type selector
-   on the card keeps it above `.display-option-card` whatever the order the two modules load in. */
+/* The Administrator subview: reuses the title, group and option cards from DisplaySettings.module.css
+   with the mode cards and exit button on top. The type selector on the card keeps it above
+   `.display-option-card` whatever the order the two modules load in. */
 @layer components {
   .display-admin-actions:last-child {
     margin-bottom: 0;
@@ -54,25 +54,12 @@
     color: var(--danger-text-soft);
   }
 
-  .admin-mode-exit-btn {
-    width: 100%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+  button.admin-mode-exit-btn {
     padding: 7px 12px;
-    border-radius: 7px;
-    border: 1px solid var(--border-slate-strong);
-    background: #232936;
-    color: var(--text-soft);
-    font-family: inherit;
     font-size: 0.76rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: var(--transition-base);
   }
 
-  .admin-mode-exit-btn:hover {
+  button.admin-mode-exit-btn:hover {
     border-color: var(--danger-light);
     background: rgba(185, 28, 28, 0.24);
     color: var(--color-white);
@@ -85,8 +72,7 @@
     padding: 10px;
   }
 
-  :global([data-layout="compact"]) .admin-mode-exit-btn {
-    min-height: 44px;
+  :global([data-layout="compact"]) button.admin-mode-exit-btn {
     font-size: 0.88rem;
   }
 }

@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useMemo } from 'react';
 import { POWER_METADATA } from '../types/diplomacy';
+import { cx } from '../utils/cx';
 import { getConsensusStatusInfo } from '../utils/orderHelpers';
 import {
   computeOrderProgress,
@@ -19,6 +20,8 @@ import { SpectatorBar } from './macro/SpectatorBar';
 import { UnitOrderList } from './macro/UnitOrderList';
 import { useCompactOrders } from './macro/useCompactOrders';
 import { usePanelCardScroll } from './macro/usePanelCardScroll';
+import scrollbarStyles from './ui/Scrollbars.module.css';
+import chromeStyles from './ui/SidebarChrome.module.css';
 
 export type { MacroSidebarProps } from './macro/macroSidebarProps';
 
@@ -284,7 +287,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   if (collapsed && variant !== 'sheet') {
     return (
       <aside
-        className={styles.macroSidebar}
+        className={cx(chromeStyles.sidebarShell, styles.macroSidebar)}
+        data-side="right"
         data-collapsed="true"
         data-testid="macro-sidebar-collapsed"
         aria-label="Tactical Orders Collapsed"
@@ -367,7 +371,8 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   // Expanded Core-Gameplay Sidebar
   return (
     <aside
-      className={styles.macroSidebar}
+      className={cx(chromeStyles.sidebarShell, styles.macroSidebar)}
+      data-side="right"
       data-expanded="true"
       data-testid="macro-sidebar"
       data-history-locked={locked ? 'true' : undefined}
@@ -402,7 +407,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
       {/* 2. UNIT ORDERS LIST (BUILDS + FIELD UNITS) */}
       <div
-        className={styles.macroUnitsScrollArea}
+        className={cx(styles.macroUnitsScrollArea, scrollbarStyles.thin)}
         data-testid="macro-units-scroll-area"
         ref={panelScrollRef}
         inert={locked || isSurrendered || undefined}

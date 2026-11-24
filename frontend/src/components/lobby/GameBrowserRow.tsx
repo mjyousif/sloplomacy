@@ -13,6 +13,8 @@ import {
   seatState,
   shortTurn,
 } from '../../utils/lobbyBrowse';
+import { turnMiddotLabel } from '../../utils/turnFormat';
+import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './GameBrowserRow.module.css';
 
@@ -70,10 +72,7 @@ export const GameBrowserRow: React.FC<GameBrowserRowProps> = ({
             by {row.host_name} · {relativeTime(row.last_moved_at, now)}
           </span>
         </div>
-        <span
-          className={styles.turn}
-          title={`${row.season} ${row.year} · ${row.phase}`}
-        >
+        <span className={styles.turn} title={turnMiddotLabel(row)}>
           {shortTurn(row.season, row.year, row.phase)}
         </span>
         <ul className={styles.seats} aria-label="Seats">
@@ -101,29 +100,29 @@ export const GameBrowserRow: React.FC<GameBrowserRowProps> = ({
         </ul>
         <span className={styles.action}>
           {myPower ? (
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="sm"
               className={styles.button}
-              data-variant="resume"
               onClick={() => onClaim(myPower)}
             >
               <Play size={12} />
               <span>Resume</span>
-            </button>
+            </Button>
           ) : (
             <>
               {onWatch && (
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className={styles.button}
-                  data-variant="watch"
                   data-testid="browser-row-watch"
                   onClick={onWatch}
                   title={`Watch "${row.name}" without a seat`}
                 >
                   <Eye size={12} />
                   <span>Watch</span>
-                </button>
+                </Button>
               )}
               <button
                 type="button"
