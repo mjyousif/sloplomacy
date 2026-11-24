@@ -13,6 +13,8 @@ import {
 import { SandboxToolsSection } from './tools/SandboxToolsSection';
 import { StandingsSection } from './tools/StandingsSection';
 import type { ToolsSidebarProps } from './tools/toolsSidebarProps';
+import { Button } from './ui/Button';
+import scrollbarStyles from './ui/Scrollbars.module.css';
 import chromeStyles from './ui/SidebarChrome.module.css';
 
 export type { ToolsSidebarProps };
@@ -123,7 +125,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
         )}
       </div>
 
-      <div className={styles.toolsSidebarContent}>
+      <div className={cx(styles.toolsSidebarContent, scrollbarStyles.thin)}>
         {/* 2. CAMERA & MAP CONTROLS */}
         {/* Phones zoom with the buttons on the map instead. */}
         {!isDrawer && (
@@ -161,8 +163,9 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
         {press &&
           (isDrawer && onOpenPress ? (
             <div className={styles.drawerOpenPressSection}>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                fullWidth
                 className={cx(styles.drawerOpenPressBtn, pressBadgeAnchor)}
                 data-testid="drawer-open-press-btn"
                 onClick={onOpenPress}
@@ -170,7 +173,7 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
                 <MessagesSquare size={15} aria-hidden="true" />
                 <span>Open Press &amp; Diplomacy</span>
                 <PressUnreadBadge />
-              </button>
+              </Button>
             </div>
           ) : (
             <PressSection {...press} visible={!isDrawer || open} />

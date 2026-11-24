@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useMemo } from 'react';
 import { POWER_METADATA } from '../types/diplomacy';
+import { cx } from '../utils/cx';
 import { getConsensusStatusInfo } from '../utils/orderHelpers';
 import {
   computeOrderProgress,
@@ -19,6 +20,7 @@ import { SpectatorBar } from './macro/SpectatorBar';
 import { UnitOrderList } from './macro/UnitOrderList';
 import { useCompactOrders } from './macro/useCompactOrders';
 import { usePanelCardScroll } from './macro/usePanelCardScroll';
+import scrollbarStyles from './ui/Scrollbars.module.css';
 
 export type { MacroSidebarProps } from './macro/macroSidebarProps';
 
@@ -402,7 +404,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
 
       {/* 2. UNIT ORDERS LIST (BUILDS + FIELD UNITS) */}
       <div
-        className={styles.macroUnitsScrollArea}
+        className={cx(styles.macroUnitsScrollArea, scrollbarStyles.thin)}
         data-testid="macro-units-scroll-area"
         ref={panelScrollRef}
         inert={locked || isSurrendered || undefined}

@@ -19,6 +19,8 @@ import {
 } from '../../lib/supabase';
 import type { AuthUser } from '../../types/diplomacy';
 import { Modal, ModalCloseButton } from '../modal/Modal';
+import { Button } from '../ui/Button';
+import fieldStyles from '../ui/FormField.module.css';
 import styles from './AuthModal.module.css';
 
 interface AuthModalProps {
@@ -148,7 +150,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <h2 id="auth-modal-title">Diplomatic Credentials</h2>
         </div>
         <ModalCloseButton
-          className={styles.authCloseBtn}
           onClick={onClose}
           aria-label="Close authentication modal"
         >
@@ -175,24 +176,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       {/* One-Click OAuth Providers */}
       <div className={styles.authOauthGrid}>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           className={styles.oauthBtn}
           onClick={() => handleOAuth('google')}
           disabled={submitting}
         >
           <span className={styles.oauthIcon}>G</span>
           Continue with Google
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="secondary"
           className={styles.oauthBtn}
           onClick={() => handleOAuth('discord')}
           disabled={submitting}
         >
           <span className={styles.oauthIcon}>◈</span>
           Continue with Discord
-        </button>
+        </Button>
       </div>
 
       <div className={styles.authDivider}>
@@ -247,7 +248,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       <form onSubmit={handleSubmit} className={styles.authForm}>
         {tab === 'signup' && (
-          <div className={styles.authField}>
+          <div className={fieldStyles.field}>
             <label htmlFor="auth-display-name">Public Username</label>
             <input
               id="auth-display-name"
@@ -264,7 +265,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
 
-        <div className={styles.authField}>
+        <div className={fieldStyles.field}>
           <label htmlFor="auth-email">
             <Mail size={13} /> Email Address
           </label>
@@ -281,7 +282,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
         {tab !== 'magic' && (
-          <div className={styles.authField}>
+          <div className={fieldStyles.field}>
             <label htmlFor="auth-password">
               <KeyRound size={13} /> Password
             </label>
@@ -301,11 +302,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
 
-        {error && <div className={styles.authErrorBox}>{error}</div>}
+        {error && (
+          <div className={fieldStyles.errorAlert} role="alert">
+            {error}
+          </div>
+        )}
         {infoMessage && <div className={styles.authInfoBox}>{infoMessage}</div>}
 
-        <button
+        <Button
           type="submit"
+          variant="primary"
           className={styles.authSubmitBtn}
           disabled={submitting}
         >
@@ -316,7 +322,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               : tab === 'signup'
                 ? 'Create Diplomatic Account'
                 : 'Send Passwordless Magic Link'}
-        </button>
+        </Button>
       </form>
 
       <div className={styles.authFooterNote}>

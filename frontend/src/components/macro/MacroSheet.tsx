@@ -12,6 +12,7 @@ import {
   pressBadgeAnchor,
 } from '../tools/press/PressUnreadBadge';
 import { BottomSheet } from '../ui/BottomSheet';
+import scrollbarStyles from '../ui/Scrollbars.module.css';
 import styles from './MacroSheet.module.css';
 import { MultiplayerConsensusCard, OrderFooter } from './OrderFooter';
 import { PowerHeader } from './PowerHeader';
@@ -208,7 +209,7 @@ export const MacroSheet: React.FC<MacroSheetProps> = ({
           </div>
         )}
         <div
-          className={macroStyles.macroUnitsScrollArea}
+          className={cx(macroStyles.macroUnitsScrollArea, scrollbarStyles.thin)}
           data-testid="macro-units-scroll-area"
         >
           {unitList}

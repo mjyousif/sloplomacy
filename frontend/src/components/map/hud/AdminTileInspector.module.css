@@ -67,27 +67,13 @@
   }
 
   .admin-inspector-unit-actions-row .admin-inspector-action-btn,
-  .admin-inspector-unit-actions-row .admin-inspector-destroy-btn {
+  .admin-inspector-unit-actions-row button.admin-inspector-destroy-btn {
     width: auto;
     flex: 0 0 auto;
     padding: 3px 8px;
     border-radius: 5px;
     font-size: 0.7rem;
     white-space: nowrap;
-  }
-
-  .admin-inspector-destroy-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 8px;
-    border-radius: 5px;
-    border: 1px solid var(--danger-primary);
-    background: rgba(239, 68, 68, 0.18);
-    color: var(--danger-text);
-    font-size: 0.7rem;
-    font-weight: 700;
-    cursor: pointer;
   }
 
   .admin-inspector-controls-grid {
@@ -146,7 +132,7 @@
     .admin-inspector-action-btn,
   :global([data-layout="compact"])
     .admin-inspector-unit-actions-row
-    .admin-inspector-destroy-btn {
+    button.admin-inspector-destroy-btn {
     min-height: 38px;
     padding: 0 10px;
     font-size: 0.78rem;

@@ -1,0 +1,99 @@
+@layer components {
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-base);
+  }
+
+  .button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .button[data-full-width="true"] {
+    width: 100%;
+  }
+
+  .button[data-size="sm"] {
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.74rem;
+    font-weight: 600;
+  }
+
+  .button[data-variant="primary"] {
+    background: var(--gold-gradient);
+    border-color: #e5b964;
+    color: var(--surface-page);
+    font-weight: 800;
+  }
+
+  .button[data-variant="primary"]:hover:not(:disabled) {
+    filter: brightness(1.08);
+    border-color: var(--gold-text);
+  }
+
+  .button[data-variant="secondary"] {
+    background: var(--surface-elevated);
+    border-color: #434e63;
+    color: var(--text-soft);
+  }
+
+  .button[data-variant="secondary"]:hover:not(:disabled) {
+    background: #2e3748;
+    border-color: var(--border-slate-strong);
+    color: var(--color-white);
+  }
+
+  .button[data-variant="danger"] {
+    background: linear-gradient(180deg, var(--danger-strong) 0%, #991b1b 100%);
+    border-color: var(--danger-primary);
+    color: var(--color-white);
+    font-weight: 800;
+  }
+
+  .button[data-variant="danger"]:hover:not(:disabled) {
+    background: linear-gradient(180deg, var(--danger-primary) 0%, #b91c1c 100%);
+    border-color: var(--danger-light);
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4);
+  }
+
+  .button[data-variant="danger-soft"] {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: var(--danger-text);
+  }
+
+  .button[data-variant="danger-soft"]:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.22);
+    border-color: rgba(248, 113, 113, 0.6);
+    color: var(--danger-text-soft);
+  }
+
+  .button[data-variant="ghost"] {
+    background: transparent;
+    border-color: var(--border-slate-strong);
+    color: var(--text-secondary);
+  }
+
+  .button[data-variant="ghost"]:hover:not(:disabled) {
+    border-color: var(--info-sky);
+    color: #e0f2fe;
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .button {
+    min-height: 44px;
+  }
+}

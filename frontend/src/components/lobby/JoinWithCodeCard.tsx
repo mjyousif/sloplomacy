@@ -5,6 +5,7 @@ import {
   POWER_METADATA,
   type Power,
 } from '../../types/diplomacy';
+import { Button } from '../ui/Button';
 import fieldStyles from '../ui/FormField.module.css';
 import styles from './LobbyFormCard.module.css';
 import { PowerPicker } from './PowerPicker';
@@ -54,7 +55,7 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
       </p>
 
       <form onSubmit={handleJoinCodeSubmit} className={styles.lobbyCreateForm}>
-        <div className={fieldStyles.lobbyField}>
+        <div className={fieldStyles.field}>
           <label htmlFor="join-code-id">Game ID</label>
           <input
             id="join-code-id"
@@ -66,7 +67,7 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
           />
         </div>
 
-        <div className={fieldStyles.lobbyField}>
+        <div className={fieldStyles.field}>
           <label htmlFor="join-code-passcode">Lobby Passcode</label>
           <input
             id="join-code-passcode"
@@ -77,16 +78,13 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
           />
         </div>
 
-        <div className={fieldStyles.lobbyField}>
+        <div className={fieldStyles.field}>
           <label>Nation to Claim</label>
           <PowerPicker selected={joinCodePower} onSelect={setJoinCodePower} />
         </div>
 
         {joinCodeError && (
-          <div
-            className={fieldStyles.lobbyErrorAlert}
-            data-testid="join-code-error"
-          >
+          <div className={fieldStyles.errorAlert} data-testid="join-code-error">
             <AlertTriangle size={14} />
             <span>{joinCodeError}</span>
           </div>
@@ -106,16 +104,15 @@ export const JoinWithCodeCard: React.FC<JoinWithCodeCardProps> = ({
                 : 'Sign In to Join Campaign'}
           </span>
         </button>
-        <button
-          type="button"
-          className={styles.lobbyWatchBtn}
+        <Button
+          variant="ghost"
           data-testid="join-code-watch"
           disabled={joinCodeLoading || !joinCodeGameId.trim()}
           onClick={handleWatchClick}
         >
           <Eye size={15} />
           <span>Watch without a seat</span>
-        </button>
+        </Button>
       </form>
     </div>
   );

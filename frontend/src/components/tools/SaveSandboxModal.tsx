@@ -3,6 +3,7 @@ import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Modal, ModalCloseButton, ModalFooter } from '../modal/Modal';
 import promptStyles from '../modal/PromptDialog.module.css';
+import { Button } from '../ui/Button';
 import fieldStyles from '../ui/FormField.module.css';
 
 export interface SaveSandboxModalProps {
@@ -58,7 +59,6 @@ export const SaveSandboxModal: React.FC<SaveSandboxModalProps> = ({
           <h3 id="save-sandbox-modal-title">Save Sandbox to Account</h3>
         </div>
         <ModalCloseButton
-          className={promptStyles.close}
           data-testid="btn-close-save-sandbox"
           onClick={onCancel}
           disabled={saving}
@@ -75,9 +75,9 @@ export const SaveSandboxModal: React.FC<SaveSandboxModalProps> = ({
       </p>
 
       <form onSubmit={handleSubmit} className={promptStyles.form}>
-        <div className={fieldStyles.lobbyField}>
+        <div className={fieldStyles.field}>
           <label htmlFor="save-sandbox-name-input">Sandbox Name</label>
-          <div className={fieldStyles.passcodeInputWrap}>
+          <div className={fieldStyles.inputWithIcon}>
             <BookmarkCheck size={15} className={fieldStyles.inputIcon} />
             <input
               id="save-sandbox-name-input"
@@ -96,24 +96,24 @@ export const SaveSandboxModal: React.FC<SaveSandboxModalProps> = ({
         </div>
 
         <ModalFooter className={promptStyles.actions}>
-          <button
+          <Button
             type="submit"
+            variant="primary"
             className={promptStyles.enterButton}
             data-testid="btn-confirm-save-sandbox"
             disabled={saving || !name.trim()}
           >
             <Save size={14} />
             <span>{saving ? 'Saving...' : 'Save Sandbox'}</span>
-          </button>
-          <button
-            type="button"
-            className={promptStyles.cancelButton}
+          </Button>
+          <Button
+            variant="secondary"
             data-testid="btn-cancel-save-sandbox"
             onClick={onCancel}
             disabled={saving}
           >
             Cancel
-          </button>
+          </Button>
         </ModalFooter>
       </form>
     </Modal>

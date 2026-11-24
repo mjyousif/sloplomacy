@@ -17,6 +17,7 @@ import { TurnControlTab } from '../admin/TurnControlTab';
 import macroStyles from '../MacroSidebar.module.css';
 import { useConfirm } from '../modal/ConfirmModal';
 import { BottomSheet } from '../ui/BottomSheet';
+import scrollbarStyles from '../ui/Scrollbars.module.css';
 import chromeStyles from '../ui/SidebarChrome.module.css';
 import adminSidebarStyles from './AdminSidebar.module.css';
 import styles from './AdminTurnClockSidebar.module.css';
@@ -242,7 +243,14 @@ export function AdminTurnClockSidebar({
         }
       >
         <div className={macroStyles.macroSheetBody}>
-          <div className={macroStyles.macroUnitsScrollArea}>{bodyContent}</div>
+          <div
+            className={cx(
+              macroStyles.macroUnitsScrollArea,
+              scrollbarStyles.thin,
+            )}
+          >
+            {bodyContent}
+          </div>
         </div>
       </BottomSheet>
     );
@@ -304,7 +312,11 @@ export function AdminTurnClockSidebar({
         </div>
       </div>
 
-      <div className={macroStyles.macroUnitsScrollArea}>{bodyContent}</div>
+      <div
+        className={cx(macroStyles.macroUnitsScrollArea, scrollbarStyles.thin)}
+      >
+        {bodyContent}
+      </div>
     </aside>
   );
 }

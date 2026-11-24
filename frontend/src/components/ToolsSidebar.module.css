@@ -67,17 +67,6 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-  }
-
-  .tools-sidebar-content::-webkit-scrollbar {
-    width: 5px;
-  }
-
-  .tools-sidebar-content::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: var(--radius-xs);
   }
 
   .rail-group {
@@ -100,7 +89,7 @@
   :global([data-layout="compact"]) .tools-drawer-layer {
     position: absolute;
     inset: 0;
-    z-index: 45;
+    z-index: var(--z-drawer);
     pointer-events: none;
     visibility: hidden;
     transition: visibility 0s linear 0.22s;
@@ -164,24 +153,12 @@
     border-bottom: 1px solid #262d3a;
   }
 
-  :global([data-layout="compact"]) .drawer-open-press-btn {
-    width: 100%;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+  :global([data-layout="compact"]) button.drawer-open-press-btn {
     padding: 0 12px;
-    border-radius: var(--radius-md);
-    border: 1px solid #3a475c;
-    background: #212836;
-    color: var(--text-primary);
     font-size: 0.8rem;
-    font-weight: 700;
-    cursor: pointer;
   }
 
-  :global([data-layout="compact"]) .drawer-open-press-btn:active {
+  :global([data-layout="compact"]) button.drawer-open-press-btn:active {
     background: #2b3446;
   }
 }

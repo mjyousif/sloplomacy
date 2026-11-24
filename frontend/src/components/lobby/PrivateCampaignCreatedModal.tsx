@@ -3,6 +3,7 @@ import type React from 'react';
 import { gameLink } from '../../utils/gameRoute';
 import { Modal, ModalCloseButton, ModalFooter } from '../modal/Modal';
 import promptStyles from '../modal/PromptDialog.module.css';
+import { Button } from '../ui/Button';
 import styles from './PrivateCampaignCreatedModal.module.css';
 
 export type CopyField = 'gid' | 'link' | 'pw';
@@ -43,7 +44,7 @@ export const PrivateCampaignCreatedModal: React.FC<
           <KeyRound size={22} />
           <h3>Private Campaign Created!</h3>
         </div>
-        <ModalCloseButton className={promptStyles.close} onClick={onClose}>
+        <ModalCloseButton onClick={onClose}>
           <X size={18} />
         </ModalCloseButton>
       </div>
@@ -140,13 +141,13 @@ export const PrivateCampaignCreatedModal: React.FC<
       </div>
 
       <ModalFooter className={promptStyles.actions}>
-        <button
-          type="button"
+        <Button
+          variant="primary"
           className={promptStyles.enterButton}
           onClick={onClose}
         >
           Enter Lobby Browser
-        </button>
+        </Button>
       </ModalFooter>
     </Modal>
   );

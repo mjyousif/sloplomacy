@@ -3,6 +3,7 @@ import type React from 'react';
 import type { ReactNode } from 'react';
 import { cx } from '../../utils/cx';
 import displayStyles from '../header/DisplaySettings.module.css';
+import { Button } from '../ui/Button';
 import styles from './AdminSettingsMenu.module.css';
 
 export interface AdminSettingsMenuProps {
@@ -130,8 +131,9 @@ export function AdminSettingsOptions({
       </div>
 
       {anyModeActive && onExitAdmin && (
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          fullWidth
           data-testid="btn-exit-admin-mode"
           className={styles.adminModeExitBtn}
           onClick={() => {
@@ -141,7 +143,7 @@ export function AdminSettingsOptions({
         >
           <LogOut size={14} />
           <span>Exit Admin Mode</span>
-        </button>
+        </Button>
       )}
     </>
   );

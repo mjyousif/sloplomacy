@@ -14,6 +14,7 @@ import {
   shortTurn,
 } from '../../utils/lobbyBrowse';
 import { turnMiddotLabel } from '../../utils/turnFormat';
+import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './GameBrowserRow.module.css';
 
@@ -99,29 +100,29 @@ export const GameBrowserRow: React.FC<GameBrowserRowProps> = ({
         </ul>
         <span className={styles.action}>
           {myPower ? (
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="sm"
               className={styles.button}
-              data-variant="resume"
               onClick={() => onClaim(myPower)}
             >
               <Play size={12} />
               <span>Resume</span>
-            </button>
+            </Button>
           ) : (
             <>
               {onWatch && (
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className={styles.button}
-                  data-variant="watch"
                   data-testid="browser-row-watch"
                   onClick={onWatch}
                   title={`Watch "${row.name}" without a seat`}
                 >
                   <Eye size={12} />
                   <span>Watch</span>
-                </button>
+                </Button>
               )}
               <button
                 type="button"

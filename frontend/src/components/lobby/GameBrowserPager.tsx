@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type React from 'react';
+import { Button } from '../ui/Button';
 import styles from './GameBrowserPager.module.css';
 
 export interface GameBrowserPagerProps {
@@ -15,26 +16,28 @@ export const GameBrowserPager: React.FC<GameBrowserPagerProps> = ({
   onPage,
 }) => (
   <nav className={styles.pager} aria-label="Game pages">
-    <button
-      type="button"
+    <Button
+      variant="secondary"
+      size="sm"
       className={styles.button}
       disabled={page <= 1}
       onClick={() => onPage(page - 1)}
     >
       <ChevronLeft size={14} />
       <span>Prev</span>
-    </button>
+    </Button>
     <span className={styles.label}>
       Page {page} of {pages}
     </span>
-    <button
-      type="button"
+    <Button
+      variant="secondary"
+      size="sm"
       className={styles.button}
       disabled={page >= pages}
       onClick={() => onPage(page + 1)}
     >
       <span>Next</span>
       <ChevronRight size={14} />
-    </button>
+    </Button>
   </nav>
 );

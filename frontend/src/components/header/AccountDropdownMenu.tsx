@@ -18,7 +18,9 @@ import type { AuthUser, MultiplayerGameSummary } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
 import type { DisplayPrefs } from '../../utils/displayPrefs';
 import { describeMyGame, myPowerIn } from '../../utils/heroGame';
+import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
+import scrollbarStyles from '../ui/Scrollbars.module.css';
 import styles from './AccountDropdownMenu.module.css';
 import { DisplaySettingsOptions } from './DisplaySettingsMenu';
 import popoverStyles from './HeaderPopover.module.css';
@@ -129,7 +131,7 @@ export function AccountDropdownMenu({
       {open && (
         <div
           id={panelId}
-          className={popoverStyles.panel}
+          className={cx(popoverStyles.panel, scrollbarStyles.thin)}
           data-testid="account-menu-panel"
           role="dialog"
           aria-label={authUser ? 'Account and settings' : 'Guest menu'}
@@ -272,7 +274,7 @@ export function AccountDropdownMenu({
 
                 {changeGameOpen && (
                   <div
-                    className={styles.changeGameList}
+                    className={cx(styles.changeGameList, scrollbarStyles.thin)}
                     data-testid="change-game-list"
                   >
                     <button
@@ -364,8 +366,9 @@ export function AccountDropdownMenu({
                   <span>Sign Out</span>
                 </button>
               ) : (
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
+                  fullWidth
                   data-testid="account-menu-signin"
                   className={styles.signinBtn}
                   onClick={() => {
@@ -375,7 +378,7 @@ export function AccountDropdownMenu({
                 >
                   <LogIn size={15} />
                   <span>Sign In / Register</span>
-                </button>
+                </Button>
               )}
             </div>
           )}

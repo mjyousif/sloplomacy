@@ -1,6 +1,8 @@
 import { Lightbulb, Send, VenetianMask } from 'lucide-react';
 import type React from 'react';
 import { useId } from 'react';
+import { cx } from '../../../utils/cx';
+import scrollbarStyles from '../../ui/Scrollbars.module.css';
 import styles from '../PressSection.module.css';
 import suggestStyles from './PressSuggestion.module.css';
 
@@ -81,7 +83,7 @@ export const PressComposer: React.FC<PressComposerProps> = ({
       {suggest?.active && suggest.attachment}
       <div className={styles.composerRow}>
         <textarea
-          className={styles.composerInput}
+          className={cx(styles.composerInput, scrollbarStyles.thin)}
           data-testid="press-input"
           aria-label="Message"
           aria-describedby={hintId}

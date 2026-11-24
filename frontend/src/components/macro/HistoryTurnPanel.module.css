@@ -6,21 +6,6 @@
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    scrollbar-width: thin;
-    scrollbar-color: #333d4e transparent;
-  }
-
-  .history-scroll-panel::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .history-scroll-panel::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .history-scroll-panel::-webkit-scrollbar-thumb {
-    background: #333d4e;
-    border-radius: 999px;
   }
 
   .history-orders-body {
@@ -305,21 +290,10 @@
     background: var(--owner-color, var(--text-dim));
   }
 
-  .history-filter-clear {
+  button.history-filter-clear {
     padding: 4px 10px;
     border-radius: var(--radius-xs);
-    border: 1px solid var(--border-slate);
-    background: #1c222d;
-    color: var(--text-secondary);
     font-size: 0.7rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition-fast);
-  }
-
-  .history-filter-clear:hover {
-    background: #293242;
-    color: var(--color-white);
   }
 
   .history-empty-state {

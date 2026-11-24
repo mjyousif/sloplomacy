@@ -24,6 +24,7 @@ import {
   getAvailableCoasts,
 } from '../../../utils/adminHelpers';
 import { cx } from '../../../utils/cx';
+import { Button } from '../../ui/Button';
 import styles from './AdminTileInspector.module.css';
 import floatingStyles from './FloatingMenu.module.css';
 import {
@@ -277,8 +278,9 @@ export function AdminTileInspector({
                   <MoveRight size={12} />
                   {isRelocating ? 'Click Map Tile…' : 'Move Now'}
                 </button>
-                <button
-                  type="button"
+                <Button
+                  variant="danger-soft"
+                  size="sm"
                   className={styles.adminInspectorDestroyBtn}
                   data-testid="admin-inspector-destroy-btn"
                   onClick={() => {
@@ -288,7 +290,7 @@ export function AdminTileInspector({
                   title="Delete this unit"
                 >
                   <Trash2 size={12} /> Delete
-                </button>
+                </Button>
               </div>
             </div>
 

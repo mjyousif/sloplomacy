@@ -12,6 +12,7 @@ import {
   finalizedLabel,
   supplyCenterCount,
 } from '../../utils/heroGame';
+import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
 import styles from './FeaturedGameHero.module.css';
 import { GameActionsMenu } from './GameActionsMenu';
@@ -106,15 +107,15 @@ export const FeaturedGameHero: React.FC<FeaturedGameHeroProps> = ({
         )}
 
         <div className={styles.actions}>
-          <button
-            type="button"
+          <Button
+            variant="primary"
             className={styles.enter}
             data-testid="hero-enter-btn"
             onClick={() => onEnterGame(game, copy.power)}
           >
             <Play size={15} />
             <span>{copy.enterLabel}</span>
-          </button>
+          </Button>
           <GameActionsMenu
             gameName={game.name}
             leaveLabel={copy.leaveLabel}
