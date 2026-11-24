@@ -102,6 +102,22 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await expect(supportArrow).toBeVisible();
       await recorder.recordStep(page, '05_move_and_support_vectors_rendered');
 
+      // 6b. Moving into a province held by one of the player's own units (#391): the fleet's token
+      // covers Brest's target ring, and clicking it orders A PAR - BRE instead of picking up the fleet.
+      await page.locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"]').click();
+      await expect(page.locator('[data-testid="reachable-reticle"][data-province-id="BRE"]')).toBeAttached();
+      await page.locator('[data-testid="unit-token"][data-unit-id="FRA_F_BRE"]').click();
+      const intoOwnUnit = page.locator(
+        '[data-testid="order-arrow"][data-order-unit="FRA_A_PAR"][data-order-type="MOVE"][data-order-target="BRE"]'
+      );
+      await expect(intoOwnUnit).toBeVisible();
+      await expect(page.locator('[data-testid="unit-floating-menu"]')).toHaveCount(0);
+      await recorder.recordStep(page, '05a_move_onto_own_unit');
+      // Put Paris back on Burgundy for the steps below.
+      await page.locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"]').click();
+      await page.locator('[data-testid="reachable-reticle"][data-province-id="BUR"]').click();
+      await expect(orderArrow).toBeVisible();
+
       // 7. Finalize the French orders
       // Clear All asks first: Cancel keeps the orders, then Yes clears them, and the
       // move is given again before finalizing.
