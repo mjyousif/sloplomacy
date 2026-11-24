@@ -95,41 +95,6 @@
     flex-wrap: wrap;
   }
 
-  .game-over-tabs {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-slate);
-    background: var(--surface-deep);
-    flex-wrap: wrap;
-  }
-
-  .game-over-tab-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border: none;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: var(--transition-fast);
-  }
-
-  .game-over-tab-btn:hover {
-    color: var(--text-soft);
-  }
-
-  .game-over-tab-btn[data-active="true"] {
-    background: var(--surface-raised);
-    color: var(--gold-text);
-  }
-
   .game-over-ledger-meta {
     font-size: 0.74rem;
     color: var(--text-muted);
@@ -186,10 +151,7 @@
     grid-template-columns: repeat(3, 1fr);
   }
 
-  :global([data-layout="compact"]) .game-over-tab-btn {
-    justify-content: center;
-    min-height: 38px;
-    padding: 6px 8px;
+  :global([data-layout="compact"]) .game-over-tabs button {
     font-size: 0.72rem;
     text-align: center;
   }

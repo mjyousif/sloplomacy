@@ -11,10 +11,11 @@ import { useMemo } from 'react';
 import { usePressState } from '../../hooks/usePress';
 import { pressStore } from '../../lib/pressStore';
 import { POWER_METADATA, type Power } from '../../types/diplomacy';
-import { cx } from '../../utils/cx';
 import { buildChannels, threadKey } from '../../utils/pressHelpers';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
+import { CountBadge } from '../ui/CountBadge';
 import { PowerFlag } from '../ui/PowerFlag';
+import { SegmentedControl } from '../ui/SegmentedControl';
 import styles from './StandingsSection.module.css';
 import type { ToolsSidebarProps } from './toolsSidebarProps';
 import { useStandingsSort } from './useStandingsSort';
@@ -90,33 +91,31 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
       defaultOpen={true}
     >
       {/* Standings sort toggle */}
-      <div
-        className={styles.powersSortSegmented}
-        role="group"
-        aria-label="Sort standings"
-      >
-        <button
-          type="button"
-          className={styles.powersSortPill}
-          data-testid="standings-sort-score"
-          data-active={sortMode === 'score' ? 'true' : undefined}
-          onClick={() => setSortMode('score')}
-          title="Sort by Victory Points (Supply Centers & Units)"
-        >
-          <ArrowUpDown size={10} />
-          <span>By Score</span>
-        </button>
-        <button
-          type="button"
-          className={styles.powersSortPill}
-          data-testid="standings-sort-default"
-          data-active={sortMode === 'default' ? 'true' : undefined}
-          onClick={() => setSortMode('default')}
-          title="Standard canonical power order"
-        >
-          <span>Default</span>
-        </button>
-      </div>
+      <SegmentedControl
+        value={sortMode}
+        onChange={setSortMode}
+        ariaLabel="Sort standings"
+        semantics="toggle"
+        tone="sky"
+        size="sm"
+        fullWidth
+        className={styles.powersSortTrack}
+        options={[
+          {
+            value: 'score',
+            label: 'By Score',
+            icon: <ArrowUpDown size={10} />,
+            title: 'Sort by Victory Points (Supply Centers & Units)',
+            testId: 'standings-sort-score',
+          },
+          {
+            value: 'default',
+            label: 'Default',
+            title: 'Standard canonical power order',
+            testId: 'standings-sort-default',
+          },
+        ]}
+      />
 
       {/* Sandbox / Hypothetical move visibility toggle */}
       {(!isMultiplayer || sandboxMode) &&
@@ -124,36 +123,31 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
         onChangeShowAllMoves && (
           <div className={styles.powersFilterRow}>
             <span className={styles.powersSortLabel}>Map Moves</span>
-            <div
-              className={cx(
-                styles.powersSortSegmented,
-                styles.powersFilterSegmented,
-              )}
-              role="group"
-              aria-label="Map move visibility"
-            >
-              <button
-                type="button"
-                className={styles.powersSortPill}
-                data-testid="standings-moves-all"
-                data-active={showAllMoves ? 'true' : undefined}
-                onClick={() => onChangeShowAllMoves(true)}
-                title="Show planned orders for all 7 powers on the map"
-              >
-                <Eye size={10} />
-                <span>All Moves</span>
-              </button>
-              <button
-                type="button"
-                className={styles.powersSortPill}
-                data-testid="standings-moves-selected"
-                data-active={!showAllMoves ? 'true' : undefined}
-                onClick={() => onChangeShowAllMoves(false)}
-                title="Show only the selected nation's orders on the map"
-              >
-                <span>Selected Nation</span>
-              </button>
-            </div>
+            <SegmentedControl
+              value={showAllMoves ? 'all' : 'selected'}
+              onChange={(val) => onChangeShowAllMoves(val === 'all')}
+              ariaLabel="Map move visibility"
+              semantics="toggle"
+              tone="sky"
+              size="sm"
+              fullWidth
+              className={styles.powersFilterSegmented}
+              options={[
+                {
+                  value: 'all',
+                  label: 'All Moves',
+                  icon: <Eye size={10} />,
+                  title: 'Show planned orders for all 7 powers on the map',
+                  testId: 'standings-moves-all',
+                },
+                {
+                  value: 'selected',
+                  label: 'Selected Nation',
+                  title: "Show only the selected nation's orders on the map",
+                  testId: 'standings-moves-selected',
+                },
+              ]}
+            />
           </div>
         )}
 
@@ -177,6 +171,9 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
             return (
               <div
                 key={pwr}
+                role={canSwitchPower ? 'button' : undefined}
+                tabIndex={canSwitchPower ? 0 : undefined}
+                aria-pressed={canSwitchPower ? isSelected : undefined}
                 data-testid="power-standing-card"
                 data-power={pwr}
                 data-selected={isSelected ? 'true' : undefined}
@@ -185,6 +182,17 @@ export const StandingsSection: React.FC<StandingsSectionProps> = ({
                 onClick={() => {
                   if (canSwitchPower) onSelectPower(pwr);
                 }}
+                onKeyDown={
+                  canSwitchPower
+                    ? (e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelectPower(pwr);
+                        }
+                      }
+                    : undefined
+                }
                 title={
                   viewingHistory
                     ? `${meta.name}${playerName ? ` (${playerName})` : ''}`
@@ -338,14 +346,13 @@ const PressPickButton: React.FC<{
       }}
     >
       <Mail size={13} aria-hidden="true" />
-      {unread > 0 && (
-        <span
-          className={styles.pressPickUnread}
-          data-testid="press-pick-unread"
-        >
-          {unread > 9 ? '9+' : unread}
-        </span>
-      )}
+      <CountBadge
+        count={unread}
+        max={9}
+        placement="floating"
+        size="xs"
+        testId="press-pick-unread"
+      />
     </button>
   );
 };

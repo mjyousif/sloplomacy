@@ -8,6 +8,7 @@ import type {
 import { deadlineLabel, describeMyGame } from '../../utils/heroGame';
 import { Button } from '../ui/Button';
 import { PowerFlag } from '../ui/PowerFlag';
+import { StatusBadge } from '../ui/StatusBadge';
 import { GameActionsMenu } from './GameActionsMenu';
 import { MiniMap } from './MiniMap';
 import styles from './OtherGamesStrip.module.css';
@@ -66,13 +67,13 @@ export const OtherGamesStrip: React.FC<OtherGamesStripProps> = ({
                 )}
               </div>
               <div className={styles.body}>
-                <span
-                  className={styles.status}
-                  data-status={copy.urgency}
-                  data-testid="my-game-status"
+                <StatusBadge
+                  status={copy.urgency}
+                  size="sm"
+                  testId="my-game-status"
                 >
                   {copy.status}
-                </span>
+                </StatusBadge>
                 <h3 className={styles.name} data-testid="my-game-name">
                   {game.name}
                 </h3>

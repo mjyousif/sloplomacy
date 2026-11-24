@@ -11,6 +11,7 @@ import {
   powerShortName,
 } from '../../../utils/powerHelpers';
 import { threadKey } from '../../../utils/pressHelpers';
+import { CountBadge } from '../../ui/CountBadge';
 import { PowerFlag } from '../../ui/PowerFlag';
 import styles from './PressRecipientBar.module.css';
 
@@ -92,14 +93,12 @@ export const PressRecipientBar: React.FC<PressRecipientBarProps> = ({
               aria-hidden="true"
             />
             <span>{powerCode(power)}</span>
-            {unread > 0 && (
-              <span
-                className={styles.chipUnread}
-                data-testid="press-pick-unread"
-              >
-                {unread > 9 ? '9+' : unread}
-              </span>
-            )}
+            <CountBadge
+              count={unread}
+              max={9}
+              size="md"
+              testId="press-pick-unread"
+            />
           </button>
         );
       })}

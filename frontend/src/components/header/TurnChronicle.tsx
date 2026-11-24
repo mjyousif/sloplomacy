@@ -6,7 +6,7 @@ import { turnLabel } from '../../utils/timerHelpers';
 import {
   IconSelectDropdown,
   type IconSelectOption,
-} from '../map/hud/IconSelectDropdown';
+} from '../ui/IconSelectDropdown';
 import styles from './TurnChronicle.module.css';
 
 const LIVE_VALUE = 'live';

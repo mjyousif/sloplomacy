@@ -8,11 +8,21 @@ import type {
 } from '../../types/diplomacy';
 import { cx } from '../../utils/cx';
 import { provinceName, unitTypeName } from '../../utils/turnFormat';
+import type { IconSelectDropdownClassNames } from '../ui/IconSelectDropdown';
 import { MoveControls } from './controls/MoveControls';
+import { orderParamDropdownClassNames } from './controls/orderParamDropdown';
 import { RetreatControls } from './controls/RetreatControls';
 import { OrderParameterControls } from './OrderParameterControls';
 import { OrderTypeTabs } from './OrderTypeTabs';
 import styles from './UnitMacroCard.module.css';
+
+const compactRowDropdownClassNames: IconSelectDropdownClassNames = {
+  root: cx(orderParamDropdownClassNames.root, styles.unitCompactDropdown),
+  trigger: orderParamDropdownClassNames.trigger,
+  value: orderParamDropdownClassNames.value,
+  menu: cx(orderParamDropdownClassNames.menu, styles.unitCompactMenu),
+  native: cx(orderParamDropdownClassNames.native, styles.unitCompactNative),
+};
 
 export interface UnitCardCompactRowProps {
   unit: Unit;
@@ -131,12 +141,15 @@ export function UnitCardCompactRow({
                 />
                 {order?.order_type === 'RETREAT' ? (
                   <RetreatControls
+                    dropdownClassNames={compactRowDropdownClassNames}
                     unit={unit}
                     order={order}
                     provinces={provinces}
                     validRetreats={validRetreats}
                     compact={true}
+                    useNativeSelect={useNativeSelect}
                     onUpdateOrder={onUpdateOrder}
+                    onHoverProvince={handleHoverOptionProvince}
                   />
                 ) : (
                   <span
@@ -169,12 +182,7 @@ export function UnitCardCompactRow({
               />
               {order?.order_type === 'MOVE' ? (
                 <MoveControls
-                  dropdownClassNames={{
-                    root: styles.unitCompactDropdown,
-                    trigger: styles.unitCompactTrigger,
-                    value: styles.unitCompactValue,
-                    menu: styles.unitCompactMenu,
-                  }}
+                  dropdownClassNames={compactRowDropdownClassNames}
                   unit={unit}
                   order={order}
                   provinces={provinces}

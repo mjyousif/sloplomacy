@@ -213,6 +213,7 @@ export function AdminTurnClockSidebar({
         selectedPhase={selectedPhase}
         setSelectedPhase={setSelectedPhase}
         handleSetTurn={handleSetTurn}
+        useNativeSelect={variant === 'sheet'}
       />
       {confirmModal}
     </div>
@@ -259,7 +260,8 @@ export function AdminTurnClockSidebar({
   if (collapsed) {
     return (
       <aside
-        className={macroStyles.macroSidebar}
+        className={cx(chromeStyles.sidebarShell, macroStyles.macroSidebar)}
+        data-side="right"
         data-collapsed="true"
         aria-label="Turn and Clock Settings Collapsed"
       >
@@ -276,10 +278,12 @@ export function AdminTurnClockSidebar({
   return (
     <aside
       className={cx(
+        chromeStyles.sidebarShell,
         macroStyles.macroSidebar,
         'admin-direct-edit-sidebar',
         'admin-turn-clock-sidebar',
       )}
+      data-side="right"
       data-expanded="true"
       data-testid="macro-sidebar"
       aria-label="Turn and Clock Settings"

@@ -179,7 +179,8 @@
 
   /* The dropdowns' triggers in the Turn & Clock sidebar. The element name outranks the trigger's
      own rule in IconSelectDropdown.module.css, so neither file's load order decides. */
-  button.admin-select-trigger {
+  button.admin-select-trigger,
+  select.admin-select-native {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
@@ -190,10 +191,6 @@
 }
 
 @layer compact {
-  :global([data-layout="compact"]) .admin-tab-panel {
-    padding-bottom: 120px;
-  }
-
   :global([data-layout="compact"]) .admin-form-grid-3 {
     grid-template-columns: 1fr;
   }
@@ -210,5 +207,12 @@
     min-height: 40px;
     padding: 8px 10px;
     font-size: 0.88rem;
+  }
+
+  :global([data-layout="compact"]) select.admin-select-native {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 16px;
+    border-radius: var(--radius-md);
   }
 }

@@ -51,19 +51,4 @@
     outline: 2px solid var(--info-sky);
     outline-offset: 1px;
   }
-
-  .chip-unread {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 4px;
-    border-radius: var(--radius-md);
-    background: var(--amber-hover);
-    color: var(--color-white);
-    font-size: 0.6rem;
-    font-weight: 700;
-    line-height: 1;
-  }
 }

@@ -64,7 +64,7 @@ describe('AuthModal', () => {
   it('goes back to initialTab after the player picked another tab and closed it', async () => {
     const user = userEvent.setup();
     const { rerender } = render(renderModal(true, 'signin'));
-    await user.click(screen.getByRole('button', { name: 'Magic Link' }));
+    await user.click(screen.getByRole('tab', { name: 'Magic Link' }));
     expect(activeTab()).toBe('Magic Link');
 
     rerender(renderModal(false, 'signin'));

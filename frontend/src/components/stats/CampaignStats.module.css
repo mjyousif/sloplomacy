@@ -287,32 +287,6 @@
     flex-shrink: 0;
   }
 
-  .mode-toggle {
-    display: inline-flex;
-    gap: 4px;
-    background: var(--surface-deep);
-    border: 1px solid var(--border-slate);
-    border-radius: var(--radius-md);
-    padding: 3px;
-  }
-
-  .mode-btn {
-    border: none;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 0.74rem;
-    font-weight: 700;
-    padding: 4px 10px;
-    cursor: pointer;
-    transition: var(--transition-fast);
-  }
-
-  .mode-btn[data-active="true"] {
-    background: var(--surface-raised);
-    color: var(--text-bright);
-  }
-
   .matrix-table {
     width: 100%;
     border-collapse: collapse;

@@ -1,10 +1,9 @@
+import { ALL_POWERS, POWER_METADATA, type Power } from '../../types/diplomacy';
 import {
-  ALL_POWERS,
-  POWER_METADATA,
-  type Power,
-} from '../../../types/diplomacy';
-import { PowerFlag } from '../../ui/PowerFlag';
-import { IconSelectDropdown } from './IconSelectDropdown';
+  IconSelectDropdown,
+  type IconSelectDropdownClassNames,
+} from './IconSelectDropdown';
+import { PowerFlag } from './PowerFlag';
 
 export interface PowerFlagDropdownProps {
   id?: string;
@@ -15,6 +14,8 @@ export interface PowerFlagDropdownProps {
   neutralLabel?: string;
   placeholder?: string;
   disabled?: boolean;
+  useNative?: boolean;
+  classNames?: IconSelectDropdownClassNames;
 }
 
 /** Country selector displaying historical PowerFlags alongside power names. */
@@ -27,6 +28,8 @@ export function PowerFlagDropdown({
   neutralLabel = 'Neutral (Unowned)',
   placeholder = 'Select Country…',
   disabled = false,
+  useNative = false,
+  classNames,
 }: PowerFlagDropdownProps) {
   return (
     <IconSelectDropdown<Power>
@@ -36,6 +39,8 @@ export function PowerFlagDropdown({
       onChange={onChange}
       placeholder={placeholder}
       disabled={disabled}
+      useNative={useNative}
+      classNames={classNames}
       emptyOption={
         includeNeutral
           ? {

@@ -26,7 +26,10 @@ export type CollapsedRailProps = Pick<
   | 'onToggleSandboxMode'
 >;
 
-/** The minimalist rail the desktop panel folds into. The drawer is never collapsed. */
+/**
+ * The contents of the minimalist desktop rail: the `<aside>` itself stays in `ToolsSidebar`
+ * so collapsing and expanding keep one element and width transitions still play.
+ */
 export const CollapsedRail: React.FC<CollapsedRailProps> = ({
   onToggleCollapse,
   zoomPercent,
@@ -38,11 +41,7 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
 }) => {
   const press = usePressBadge();
   return (
-    <aside
-      className={cx(styles.toolsSidebar, styles.toolsSidebarCollapsed)}
-      data-testid="tools-sidebar-collapsed"
-      aria-label="Tools Sidebar Collapsed"
-    >
+    <>
       <button
         type="button"
         data-testid="tools-sidebar-expand-btn"
@@ -129,6 +128,6 @@ export const CollapsedRail: React.FC<CollapsedRailProps> = ({
       >
         <ChevronRight size={16} />
       </button>
-    </aside>
+    </>
   );
 };

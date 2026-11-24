@@ -532,6 +532,31 @@ describe('UnitMacroCard compact mode in Adjustments and Retreats (#285)', () => 
     expect(screen.getByTestId('btn-order-disband')).toHaveTextContent('D');
     const sel = screen.getByTestId('select-retreat-target');
     expect(sel).toHaveAttribute('data-compact', 'true');
+    fireEvent.click(sel);
+    fireEvent.click(screen.getByRole('option', { name: 'Paris' }));
+    expect(onUpdateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ order_type: 'RETREAT', target: 'PAR' }),
+    );
+  });
+
+  it('uses native select for retreats when useNativeSelect is true', () => {
+    const dislodged = unitAt('FRANCE', 'A', 'BRE', { is_dislodged: true });
+    const { onUpdateOrder } = card({
+      unit: dislodged,
+      order: orderFor(dislodged, 'RETREAT', { target: 'PIC' }),
+      compact: true,
+      useNativeSelect: true,
+      isRetreatPhase: true,
+      validRetreats: [
+        { province: 'PIC', coasts: [] },
+        { province: 'PAR', coasts: [] },
+      ],
+    });
+    const sel = screen.getByTestId(
+      'select-retreat-target',
+    ) as HTMLSelectElement;
+    expect(sel.tagName).toBe('SELECT');
+    expect(sel).toHaveAttribute('data-compact', 'true');
     fireEvent.change(sel, { target: { value: 'PAR' } });
     expect(onUpdateOrder).toHaveBeenCalledWith(
       expect.objectContaining({ order_type: 'RETREAT', target: 'PAR' }),
