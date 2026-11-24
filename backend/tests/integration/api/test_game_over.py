@@ -2,9 +2,9 @@
 
 import asyncio
 
-from api.turns import execute_adjudication
 from domain.board import Power
 from domain.game_state import PhaseTimer, TimerStage
+from engine.turn_service import execute_adjudication
 from storage.store import GAME_SUMMARIES, GAMES
 from tests.integration.api.helpers import (
     _auth_headers,

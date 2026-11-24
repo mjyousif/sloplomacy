@@ -9,10 +9,10 @@ from unittest.mock import patch
 import httpx
 import pytest
 import uvicorn
-from api import orders as orders_api
 from domain.orders import OrderType
 from fastapi.testclient import TestClient
 from main import app
+from storage import store
 from storage.store import GAMES
 from tests.integration.api.helpers import (
     _auth_headers,
@@ -360,7 +360,7 @@ def test_order_returns_before_background_persist_and_does_not_stall_keepalive():
             time.sleep(0.02)
 
         with (
-            patch.object(orders_api, "persist_game", side_effect=slow_persist),
+            patch.object(store, "persist_game", side_effect=slow_persist),
             httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=5.0) as http,
         ):
             t0 = time.perf_counter()

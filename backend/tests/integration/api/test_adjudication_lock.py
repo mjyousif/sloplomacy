@@ -4,8 +4,9 @@ import asyncio
 from unittest.mock import patch
 
 import pytest
-from api.turns import execute_adjudication, turn_label
 from domain.board import Power
+from engine.order_utils import turn_label
+from engine.turn_service import execute_adjudication
 from storage.store import ADJUDICATION_LOCKS, GAME_HISTORY, GAMES
 from tests.integration.api.helpers import _dislodge_russia_in_silesia, _seated_game
 
@@ -16,7 +17,7 @@ def _slow_persist():
     async def persist(game_id):
         await asyncio.sleep(0.02)  # Resolving awaits here, which is where a second caller slips in.
 
-    return patch("api.turns.persist_game", persist)
+    return patch("storage.store.persist_game", persist)
 
 
 def test_two_resolvers_of_one_turn_resolve_it_once():

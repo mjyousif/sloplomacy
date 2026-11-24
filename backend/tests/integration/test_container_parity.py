@@ -228,3 +228,44 @@ def test_container_runtime_import_isolation_full_lifecycle():
     finally:
         sys.path = orig_path
         sys.modules.update(hidden_modules)
+
+
+def test_main_is_assembler_without_api_routes():
+    """`backend/main.py` stays a compact assembler (< 350 lines) with no `@app.<method>` API routes."""
+    main_path = Path(__file__).resolve().parents[2] / "main.py"
+    source = main_path.read_text(encoding="utf-8")
+    line_count = len(source.splitlines())
+    assert line_count < 350, f"backend/main.py grew to {line_count} lines (limit < 350)."
+
+    route_methods = {
+        "get",
+        "post",
+        "put",
+        "patch",
+        "delete",
+        "options",
+        "head",
+        "websocket",
+        "api_route",
+    }
+    tree = ast.parse(source, filename=str(main_path))
+    violations = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        for dec in node.decorator_list:
+            if (
+                isinstance(dec, ast.Call)
+                and isinstance(dec.func, ast.Attribute)
+                and isinstance(dec.func.value, ast.Name)
+                and dec.func.value.id == "app"
+                and dec.func.attr in route_methods
+            ):
+                if node.name == "serve_spa":
+                    continue
+                violations.append(f"main.py:{node.lineno}: @app.{dec.func.attr} on {node.name}")
+
+    assert not violations, (
+        "Route handlers must live in backend/api/* routers, not backend/main.py:\n"
+        + "\n".join(violations)
+    )

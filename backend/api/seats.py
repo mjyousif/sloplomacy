@@ -14,35 +14,38 @@ from domain.requests import (
 from engine.order_utils import (
     everyone_is_ready,
     put_into_civil_disorder,
-    refresh_diagnostics_and_simulation,
 )
 from engine.topology.provinces import PROVINCES
+from engine.turn_service import (
+    execute_adjudication,
+    publish_game_state,
+    refresh_timer,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from security.auth import AuthUser, get_current_user
 from security.creator import is_creator
 from security.passcode import client_address, require_passcode
 from security.secrecy import (
+    require_seat_holder,
     sanitize_game_state_for_viewer,
     sanitize_summary_for_viewer,
     viewer_power_for,
 )
-from storage import supabase
 from storage.profiles import (
     ensure_profile_loaded,
     resolve_display_name,
     resolve_participant_name,
 )
 from storage.store import (
-    GAME_SUMMARIES,
     SANDBOX_CHECKPOINTS,
-    evict_game,
+    delete_game_everywhere,
     persist_game,
     resolve_game,
+    resolve_game_with_summary,
     sync_summary,
 )
 from storage.supabase_codec import is_valid_uuid
 from ws.connection_manager import (
-    broadcast_game_update,
     broadcast_lobby_update,
 )
 
@@ -60,12 +63,7 @@ async def join_multiplayer_game(
     request: Request,
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    from api.turns import refresh_timer
-
-    game_state = await resolve_game(game_id)
-    summary = GAME_SUMMARIES.get(game_id)
-    if not summary:
-        raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
+    game_state, summary = await resolve_game_with_summary(game_id)
 
     effective_user_id = current_user.user_id if current_user else req.user_id
 
@@ -82,12 +80,13 @@ async def join_multiplayer_game(
             status_code=409,
             detail=f"{req.power.value} is already claimed by {resolve_participant_name(existing)}.",
         )
-    if existing and existing.user_id == effective_user_id:
-        if is_valid_uuid(existing.user_id) and not current_user:
-            raise HTTPException(
-                status_code=401,
-                detail="Authentication required to re-enter this claimed seat.",
-            )
+    require_seat_holder(
+        summary,
+        req.power,
+        current_user,
+        guest_user_id=req.user_id,
+        action="re-enter this claimed seat",
+    )
 
     for p_key, part in list(summary.participants.items()):
         if part.user_id == effective_user_id and p_key != req.power.value:
@@ -114,11 +113,7 @@ async def join_multiplayer_game(
 
     if summary.is_sandbox:
         game_state.active_power = req.power
-    refresh_diagnostics_and_simulation(game_state)
-    sync_summary(game_id)
-    await persist_game(game_id)
-    await broadcast_game_update(game_id, game_state, summary)
-    await broadcast_lobby_update()
+    await publish_game_state(game_state, lobby=True)
     return GameBootstrapResponse(
         state=sanitize_game_state_for_viewer(
             game_state.model_copy(update={"active_power": req.power}),
@@ -139,12 +134,7 @@ async def leave_game(
     req: LeaveGameRequest,
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    from api.turns import execute_adjudication, refresh_timer
-
-    game_state = await resolve_game(game_id)
-    summary = GAME_SUMMARIES.get(game_id)
-    if not summary:
-        raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
+    game_state, summary = await resolve_game_with_summary(game_id)
 
     effective_user_id = current_user.user_id if current_user else req.user_id
     if current_user and req.user_id and req.user_id != current_user.user_id:
@@ -156,17 +146,17 @@ async def leave_game(
 
     if req.power:
         p_val = req.power.value if hasattr(req.power, "value") else str(req.power)
-        part = summary.participants.get(p_val)
-        if part and part.user_id != effective_user_id:
-            raise HTTPException(
-                status_code=403, detail=f"You do not command {p_val} in this campaign."
-            )
+        require_seat_holder(
+            summary,
+            req.power,
+            current_user,
+            guest_user_id=req.user_id,
+            action=f"vacate {p_val}",
+        )
 
     if summary.is_sandbox:
         if is_creator(summary, effective_user_id):
-            evict_game(game_id)
-            if supabase.is_persistence_enabled():
-                await supabase.delete_game_from_db(game_id)
+            await delete_game_everywhere(game_id)
             await broadcast_lobby_update()
             return GameBootstrapResponse(
                 state=game_state,
@@ -206,9 +196,7 @@ async def leave_game(
         )
 
     if len(summary.participants) == 0:
-        evict_game(game_id)
-        if supabase.is_persistence_enabled():
-            await supabase.delete_game_from_db(game_id)
+        await delete_game_everywhere(game_id)
         await broadcast_lobby_update()
         return GameBootstrapResponse(
             state=game_state,
@@ -219,14 +207,8 @@ async def leave_game(
     if len(summary.participants) < 2 and summary.status == "active":
         summary.status = "waiting"
 
-    game_state.state_revision += 1
     refresh_timer(game_state)
-    game_state.state_revision += 1
-    refresh_diagnostics_and_simulation(game_state)
-    sync_summary(game_id)
-    await persist_game(game_id)
-    await broadcast_game_update(game_id, game_state, summary)
-    await broadcast_lobby_update()
+    await publish_game_state(game_state, lobby=True, bump_revision=True)
     if everyone_is_ready(game_state):
         await execute_adjudication(game_state)
     return GameBootstrapResponse(
@@ -246,32 +228,17 @@ async def surrender_power(
     req: SurrenderRequest,
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    from api.turns import execute_adjudication, refresh_timer
-
-    game_state = await resolve_game(game_id)
-    summary = GAME_SUMMARIES.get(game_id)
-    if not summary:
-        raise HTTPException(status_code=404, detail=f"Game lobby '{game_id}' not found.")
+    game_state, summary = await resolve_game_with_summary(game_id)
 
     p_val = req.power.value if hasattr(req.power, "value") else str(req.power)
     part = summary.participants.get(p_val)
-    if part:
-        if current_user:
-            if part.user_id != current_user.user_id:
-                raise HTTPException(
-                    status_code=403,
-                    detail=f"You do not command {p_val} in this campaign.",
-                )
-        elif is_valid_uuid(part.user_id):
-            raise HTTPException(
-                status_code=401,
-                detail=f"Authentication required to surrender command of {p_val}.",
-            )
-        elif part.user_id != req.user_id:
-            raise HTTPException(
-                status_code=403,
-                detail=f"You do not command {p_val} in this campaign.",
-            )
+    require_seat_holder(
+        summary,
+        req.power,
+        current_user,
+        guest_user_id=req.user_id,
+        action=f"surrender command of {p_val}",
+    )
 
     if req.power not in game_state.surrendered_powers:
         game_state.surrendered_powers.append(req.power)
@@ -297,12 +264,7 @@ async def surrender_power(
             part.surrendered_at = datetime.now(timezone.utc).isoformat()
 
     refresh_timer(game_state)
-    game_state.state_revision += 1
-    refresh_diagnostics_and_simulation(game_state)
-    sync_summary(game_id)
-    await persist_game(game_id)
-    await broadcast_game_update(game_id, game_state, summary)
-    await broadcast_lobby_update()
+    await publish_game_state(game_state, lobby=True, bump_revision=True)
     if everyone_is_ready(game_state):
         await execute_adjudication(game_state)
     return GameBootstrapResponse(
@@ -328,9 +290,7 @@ async def set_active_power(
     checkpoint = SANDBOX_CHECKPOINTS.get(gid)
     if checkpoint is not None:
         checkpoint.active_power = req.power
-    refresh_diagnostics_and_simulation(game)
-    await persist_game(gid)
-    await broadcast_game_update(gid, game)
+    await publish_game_state(game)
     return sanitize_game_state_for_viewer(game, viewer_power_for(gid, current_user, req.power))
 
 
@@ -343,11 +303,8 @@ async def acknowledge_game_over(
     game_id: str,
     current_user: AuthUser | None = Depends(get_current_user),
 ):
-    game = await resolve_game(game_id)
+    game, summary = await resolve_game_with_summary(game_id)
     gid = game.game_id
-    summary = GAME_SUMMARIES.get(gid)
-    if not summary:
-        raise HTTPException(status_code=404, detail=f"Game lobby '{gid}' not found.")
     if not game.winner and summary.status != "completed":
         raise HTTPException(status_code=409, detail="Game has not concluded yet.")
 

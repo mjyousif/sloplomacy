@@ -165,6 +165,40 @@ def viewer_power_for(
     return None
 
 
+def require_seat_holder(
+    summary: MultiplayerGameSummary | None,
+    power: Power,
+    current_user: AuthUser | None,
+    *,
+    guest_user_id: str | None = None,
+    action: str | None = None,
+) -> None:
+    """Refuse anyone who does not hold `power`'s seat when that seat is claimed."""
+    if not summary:
+        return
+    p_val = power.value if hasattr(power, "value") else str(power)
+    part = summary.participants.get(p_val)
+    if not part:
+        return
+    if current_user:
+        if part.user_id != current_user.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"You do not command {p_val} in this match.",
+            )
+    elif is_valid_uuid(part.user_id):
+        verb = action or f"act for {p_val}"
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Authentication required to {verb}.",
+        )
+    elif guest_user_id is not None and part.user_id != guest_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"You do not command {p_val} in this match.",
+        )
+
+
 def require_own_seat(game_id: str, power: Power, current_user: AuthUser | None) -> None:
     """Refuse anything that would show `power`'s hidden orders to someone not in that seat."""
     if is_multiplayer_match(game_id) and not caller_holds_seat(
@@ -174,11 +208,6 @@ def require_own_seat(game_id: str, power: Power, current_user: AuthUser | None) 
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"You do not hold {power.value}'s seat in this match.",
         )
-
-
-def public_host_name(summary: MultiplayerGameSummary) -> str:
-    """Return the host's public display name, never an email address."""
-    return resolve_host_name(summary)
 
 
 def sanitize_summary_for_viewer(

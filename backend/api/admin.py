@@ -9,7 +9,6 @@ from api.admin_utils import (
     record_admin_history_and_log,
     resolve_admin_actor,
 )
-from api.turns import timer_players
 from domain.game_state import (
     FIRST_YEAR,
     PHASES_BY_SEASON,
@@ -27,8 +26,10 @@ from domain.requests import (
 from engine.order_utils import (
     create_default_orders,
     refresh_diagnostics_and_simulation,
+    turn_label,
 )
 from engine.phase_timer import start_phase_clock
+from engine.turn_service import publish_game_state, timer_players
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from scenarios.presets import SCENARIO_IDS, build_scenario, build_scenario_history
 from security.auth import AuthUser, get_current_user, is_insecure_dev_auth_allowed
@@ -57,10 +58,6 @@ from storage.store import (
     persist_game,
     resolve_game,
     sync_summary,
-)
-from ws.connection_manager import (
-    broadcast_game_update,
-    broadcast_lobby_update,
 )
 
 router = APIRouter(tags=["Administrator & Creator Controls"])
@@ -115,7 +112,8 @@ async def seed_test_scenario(req: SeedScenarioRequest):
         new_game.state_revision = GAMES[gid].state_revision + 1
         new_game.board_revision = GAMES[gid].board_revision + 1
     GAMES[gid] = new_game
-    if gid != DEFAULT_GAME_ID and gid not in GAME_SUMMARIES:
+    newly_seeded_throwaway = gid != DEFAULT_GAME_ID and gid not in GAME_SUMMARIES
+    if newly_seeded_throwaway:
         # A seeded board is a throwaway sandbox. Without a summary it would count as a match with
         # no seats or owner, which nobody may enter. It is not persisted.
         GAME_SUMMARIES[gid] = MultiplayerGameSummary(
@@ -127,12 +125,12 @@ async def seed_test_scenario(req: SeedScenarioRequest):
             is_draft=True,
         )
         sync_summary(gid)
-    else:
-        sync_summary(gid)
-        if gid in GAME_SUMMARIES:
-            await persist_game(gid)
-    await broadcast_game_update(gid, GAMES[gid])
-    await broadcast_lobby_update()
+    await publish_game_state(
+        GAMES[gid],
+        refresh=False,
+        lobby=True,
+        persist=not newly_seeded_throwaway and gid in GAME_SUMMARIES,
+    )
     return GAMES[gid]
 
 
@@ -230,10 +228,7 @@ async def admin_rollback_turn(
         prev_state.timer = current.timer
         start_phase_clock(prev_state, timer_players(prev_state), time.time())
 
-    summary_line = (
-        f"[ADMIN OVERRIDE] Rolled back turn to {prev_state.season} {prev_state.year} "
-        f"{prev_state.phase} Phase."
-    )
+    summary_line = f"[ADMIN OVERRIDE] Rolled back turn to {turn_label(prev_state)} Phase."
     prev_state.turn_history.insert(0, summary_line)
 
     actor_id = resolve_admin_actor(gid, current_user)
@@ -259,11 +254,7 @@ async def admin_rollback_turn(
 
     clear_ephemeral_sandboxes_for(gid)
     GAMES[gid] = prev_state
-    refresh_diagnostics_and_simulation(prev_state)
-    sync_summary(gid)
-    await persist_game(gid)
-    await broadcast_game_update(gid, prev_state)
-    await broadcast_lobby_update()
+    await publish_game_state(prev_state, lobby=True)
     return with_sanitized_admin_log(prev_state, current_user)
 
 
@@ -306,9 +297,7 @@ async def admin_set_turn(
     clear_ephemeral_sandboxes_for(gid)
     if game.timer:
         start_phase_clock(game, timer_players(game), time.time())
-    summary_line = (
-        f"[ADMIN OVERRIDE] Adjusted game clock to {req.season} {req.year} {req.phase} Phase."
-    )
+    summary_line = f"[ADMIN OVERRIDE] Adjusted game clock to {turn_label(game)} Phase."
     game.turn_history.insert(0, summary_line)
     refresh_diagnostics_and_simulation(game)
 
