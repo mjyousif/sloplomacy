@@ -150,6 +150,11 @@ resource "google_cloud_run_v2_service" "diplomacy_service" {
         name  = "SUPABASE_JWT_SECRET"
         value = var.supabase_jwt_secret
       }
+
+      env {
+        name  = "FRONTEND_ORIGIN"
+        value = var.frontend_origin
+      }
     }
   }
 }
@@ -161,4 +166,21 @@ resource "google_cloud_run_v2_service_iam_member" "public_access" {
   name     = google_cloud_run_v2_service.diplomacy_service.name
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+# 5. Optional Custom Domain Mappings
+resource "google_cloud_run_domain_mapping" "custom_domains" {
+  for_each = toset(var.custom_domains)
+  location = var.region
+  name     = each.value
+
+  metadata {
+    namespace = var.project_id
+  }
+
+  spec {
+    route_name = google_cloud_run_v2_service.diplomacy_service.name
+  }
+
+  depends_on = [google_cloud_run_v2_service.diplomacy_service]
 }

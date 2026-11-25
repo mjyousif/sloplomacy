@@ -119,7 +119,7 @@ The repository features an automated GitHub Actions pipeline in [`.github/workfl
 5. **Cloud Run Deployment**: Deploys a new revision to Google Cloud Run with `--update-env-vars`, `--cpu-throttling`, and `--cpu-boost`.
 6. **Monitoring Sync**: Runs [`scripts/sync_gcp_monitoring.py`](../../scripts/sync_gcp_monitoring.py) to idempotently create/update the 5 Cloud Logging log-based metrics and 3 Cloud Monitoring dashboards, posting direct Console links into the GitHub Actions job summary.
 7. **Summary**: Posts the verified public live URL to the GitHub Actions job summary.
-   - **Production Endpoint**: [https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app](https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app)
+   - **Production Endpoint**: [https://traitoro.us](https://traitoro.us) (Cloud Run URL: `https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app`)
 
 ### One-Time CI/CD Setup:
 Run the setup helper script to create the dedicated service account and export credentials:
