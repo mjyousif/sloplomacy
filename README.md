@@ -1,7 +1,7 @@
 # Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)
 
 [![CI](https://github.com/mjyousif/sloplomacy/actions/workflows/ci.yml/badge.svg)](https://github.com/mjyousif/sloplomacy/actions/workflows/ci.yml)
-[![Live Demo](https://img.shields.io/badge/Demo-Cloud_Run-4285F4?logo=googlecloud&logoColor=white)](https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app)
+[![Live Demo](https://img.shields.io/badge/Demo-traitoro.us-4285F4?logo=googlecloud&logoColor=white)](https://traitoro.us)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3.0-blue.svg)](LICENSE)
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.162+-009688?logo=fastapi&logoColor=white)
@@ -12,7 +12,7 @@
 
 An interactive web-based tactical adjudicator, move-planner, and real-time multiplayer chancellery for standard 1901 Diplomacy.
 
-> 🌐 **Live Cloud Demo**: Play and test the engine online at **[https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app](https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app)** (hosted serverless on Google Cloud Run with scale-to-zero).
+> 🌐 **Live Cloud Demo**: Play and test the engine online at **[https://traitoro.us](https://traitoro.us)** (hosted serverless on Google Cloud Run with scale-to-zero).
 
 > **Disclaimer**: *Sloplomacy* is an independent, non-commercial open-source tactical tool. *Diplomacy* is a registered trademark of Hasbro, Inc. This project is not affiliated with, sponsored by, or endorsed by Hasbro, Inc. or Renegade Game Studios. See [ATTRIBUTION.md](ATTRIBUTION.md) for full notices.
 
@@ -68,8 +68,8 @@ An interactive web-based tactical adjudicator, move-planner, and real-time multi
 
 ## 🚀 Live Demo & Endpoints
 
-- **Live Cloud Deployment**: [https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app](https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app)
-- **Cloud Run Swagger Docs**: [https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app/docs](https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app/docs)
+- **Live Cloud Deployment**: [https://traitoro.us](https://traitoro.us)
+- **Cloud Run Swagger Docs**: [https://traitoro.us/docs](https://traitoro.us/docs)
 - **Local Frontend App**: [http://localhost:5173](http://localhost:5173)
 - **Local Backend API**: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 - **Local Interactive Swagger Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)

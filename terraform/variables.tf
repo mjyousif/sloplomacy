@@ -53,3 +53,15 @@ variable "supabase_jwt_secret" {
   default     = ""
   sensitive   = true
 }
+
+variable "frontend_origin" {
+  description = "Allowed CORS origin when ENVIRONMENT=production (e.g. https://traitoro.us)"
+  type        = string
+  default     = ""
+}
+
+variable "custom_domains" {
+  description = "Optional custom domains mapped to the Cloud Run service (requires prior Google domain verification)"
+  type        = list(string)
+  default     = []
+}
