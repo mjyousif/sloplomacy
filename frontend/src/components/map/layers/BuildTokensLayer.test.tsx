@@ -17,7 +17,11 @@ const POINTS: Record<string, Point> = {
 function draw(
   buildHomes: Record<string, Power>,
   orders: Record<string, Order>,
-  extra: { selectedUnitId?: string | null; dragMoved?: boolean } = {},
+  extra: {
+    selectedUnitId?: string | null;
+    hoveredUnitId?: string | null;
+    dragMoved?: boolean;
+  } = {},
 ) {
   const onSelectUnit = vi.fn();
   const onHoverUnit = vi.fn();
@@ -31,7 +35,7 @@ function draw(
         orders={orders}
         provinces={FRANCE_PROVINCES}
         selectedUnitId={extra.selectedUnitId ?? null}
-        hoveredUnitId={null}
+        hoveredUnitId={extra.hoveredUnitId ?? null}
         pieceStyle="classic"
         unitMark="letters"
         getProvincePoint={getProvincePoint}
@@ -123,5 +127,42 @@ describe('BuildTokensLayer', () => {
     expect(onHoverUnit).not.toHaveBeenCalled();
     fireEvent.pointerEnter(token('BUILD_FRANCE_PAR'), { pointerType: 'mouse' });
     expect(onHoverUnit).toHaveBeenCalledWith('BUILD_FRANCE_PAR');
+  });
+
+  it('lifts a chosen build when selected or hovered, and keeps a ring for a waived slot', () => {
+    const build = {
+      BUILD_FRANCE_PAR: buildOrder(
+        'BUILD_FRANCE_PAR',
+        'FRANCE',
+        'PAR',
+        'A',
+        null,
+      ),
+    };
+    const lift = (g: SVGGElement) =>
+      g.querySelector<SVGGElement>('[data-lift]')?.dataset.lift ?? null;
+    const selected = draw({ PAR: 'FRANCE' }, build, {
+      selectedUnitId: 'BUILD_FRANCE_PAR',
+    });
+    expect(lift(selected.token('BUILD_FRANCE_PAR'))).toBe('selected');
+    // The lifted piece replaces the green selection ring.
+    expect(
+      selected.token('BUILD_FRANCE_PAR').querySelector('[stroke="#22c55e"]'),
+    ).toBeNull();
+    const hovered = draw({ PAR: 'FRANCE' }, build, {
+      hoveredUnitId: 'BUILD_FRANCE_PAR',
+    });
+    expect(lift(hovered.token('BUILD_FRANCE_PAR'))).toBe('hovered');
+
+    // A waived slot has no piece to lift, so selecting it still rings it.
+    const waived = draw(
+      { PAR: 'FRANCE' },
+      { BUILD_FRANCE_PAR: waiveOrder('BUILD_FRANCE_PAR', 'FRANCE', 'PAR') },
+      { selectedUnitId: 'BUILD_FRANCE_PAR' },
+    );
+    expect(lift(waived.token('BUILD_FRANCE_PAR'))).toBeNull();
+    expect(
+      waived.token('BUILD_FRANCE_PAR').querySelector('[stroke="#22c55e"]'),
+    ).not.toBeNull();
   });
 });

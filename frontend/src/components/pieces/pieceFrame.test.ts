@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { measureMapName } from '../../data/mapTextMetrics';
 import { PIECE_STYLES } from '../../utils/displayPrefs';
-import { getPieceArrowScale, getPieceFrame, makePiecePill } from './pieceFrame';
+import {
+  getPieceArrowScale,
+  getPieceFrame,
+  makePiecePill,
+  pieceCarriesStar,
+} from './pieceFrame';
 
 describe('getPieceFrame', () => {
   it('keeps the classic values of the original map', () => {
@@ -9,6 +14,7 @@ describe('getPieceFrame', () => {
       center: { x: 0, y: 0 },
       ringScale: 1,
       pill: null,
+      box: null,
       hitRadius: 0,
       badgeLeft: { x: -17, y: -17 },
       badgeRight: { x: 16, y: -16 },
@@ -55,6 +61,20 @@ describe('getPieceFrame', () => {
       badgeRight: { x: 3, y: -32 },
     });
     expect(getPieceFrame('flags')).toEqual(getPieceFrame('flags', 1));
+    // Rings follow the whole flag, which flies to either side of its pole.
+    expect(getPieceFrame('flags', 1).box).toEqual({
+      x0: -7,
+      y0: -30,
+      x1: 30,
+      y1: 7,
+    });
+    expect(getPieceFrame('flags', -1).box).toEqual({
+      x0: -30,
+      y0: -30,
+      x1: 7,
+      y1: 7,
+    });
+    expect(getPieceFrame('seated').box).toBeNull();
   });
 
   it('frames a nameplate by its pill, turned by the pill angle', () => {
@@ -106,5 +126,16 @@ describe('getPieceArrowScale', () => {
     expect(PIECE_STYLES.map(getPieceArrowScale)).toEqual([
       1, 0.8, 0.7, 0.5, 0.8,
     ]);
+  });
+});
+
+describe('pieceCarriesStar', () => {
+  it('puts a supply centre star on the piece only in Star seat and Name as piece', () => {
+    expect(
+      PIECE_STYLES.filter((style) => pieceCarriesStar(style, true)),
+    ).toEqual(['seated', 'nameplate']);
+    expect(
+      PIECE_STYLES.filter((style) => pieceCarriesStar(style, false)),
+    ).toEqual([]);
   });
 });

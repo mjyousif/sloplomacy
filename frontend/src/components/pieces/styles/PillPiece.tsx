@@ -1,7 +1,7 @@
 import { MAP_NAME_FONT } from '../../../data/mapTextMetrics';
 import type { UnitMark } from '../../../utils/displayPrefs';
 import { SupplyStar, UnitMarkGlyph } from '../marks';
-import type { PiecePill, PieceUnitType } from '../pieceFrame';
+import { PILL_POINT, type PiecePill, type PieceUnitType } from '../pieceFrame';
 
 const PILL_MARK_SCALE = 0.56;
 const PILL_STAR_SCALE = 0.5;
@@ -23,7 +23,7 @@ export function PillPiece({
 }) {
   const halfWidth = pill.width / 2;
   const halfHeight = pill.height / 2;
-  const point = halfHeight * 0.7;
+  const point = halfHeight * PILL_POINT;
   return (
     <g transform={`rotate(${pill.angle})`}>
       {unitType === 'A' ? (

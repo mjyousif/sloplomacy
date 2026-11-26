@@ -19,6 +19,7 @@ import type { PieceStyle, UnitMark } from '../utils/displayPrefs';
 import type { HistoryActionType } from '../utils/historyHelpers';
 import { getActiveOrderButton } from '../utils/orderHelpers';
 import styles from './EuropeMap.module.css';
+import { PieceLiftFilter } from './MapPiece';
 import { useEuropeMap } from './map/hooks/useEuropeMap';
 import { BuildMenu } from './map/hud/BuildMenu';
 import { CoastPicker } from './map/hud/CoastPicker';
@@ -181,7 +182,6 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
       cameraGroupRef,
       isAdjustmentPhase,
       isRetreatPhase,
-      layout,
       getProvincePoint,
       describePiece,
       occupiedProvinces,
@@ -330,6 +330,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
             <StaticDefsLayer />
 
             <ArrowMarkerDefs />
+            <PieceLiftFilter />
 
             <TerritoryShiftPatternDefs patterns={territoryPatterns} />
           </defs>
@@ -347,7 +348,6 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
             <ProvincesLayer
               provinces={provinces}
               ownership={displayOwnership}
-              layout={layout}
               isAdjustmentPhase={isAdjustmentPhase}
               directEditActive={directEditActive}
               relocatingUnit={relocatingUnit}
@@ -449,7 +449,7 @@ export const EuropeMap = forwardRef<EuropeMapHandle, EuropeMapProps>(
                 />
               )}
 
-            {/* 7. UNITS LAYER (Armies & Fleets + Hold Halos + Warning Badges + Dislodged/Disband Tags) */}
+            {/* 7. UNITS LAYER (Armies & Fleets + Lift + Explicit-Hold Rings + Warning Badges + Dislodged/Disband Tags) */}
             <UnitsLayer units={units} ctx={unitLayerContext} />
 
             {/* 7B. ADMIN OWNERSHIP OVERRIDE BADGES (Turn History "Admin" Phase) */}

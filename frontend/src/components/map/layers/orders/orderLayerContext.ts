@@ -29,8 +29,6 @@ export interface OrderLayerContext {
   ) => { flagDirection: FlagDirection; frame: PieceFrame };
   pieceStyle: PieceStyle;
   unitMark: UnitMark;
-  /** How big rings around pieces are in the active style. */
-  pieceRingScale: number;
   /** How far the active style pushes arrows off a piece. */
   arrowScale: number;
   selectedUnitId: string | null;

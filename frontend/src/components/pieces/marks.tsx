@@ -2,6 +2,10 @@ import type { UnitMark } from '../../utils/displayPrefs';
 import type { PieceUnitType } from './pieceFrame';
 
 export const DEFAULT_RIM = '#fef3c7';
+/** The rim of your own pieces, and of the piece you have picked. */
+export const OWN_RIM = '#facc15';
+/** The rim of a piece under the pointer. */
+export const HOVER_RIM = '#fde68a';
 
 export function SupplyStar({
   ownerColor,

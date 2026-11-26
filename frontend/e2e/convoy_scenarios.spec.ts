@@ -61,7 +61,7 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
       ).toHaveAttribute('data-reachable-color', 'green');
       await recorder.recordStep(page, '02_fleet_at_sea_convoy_step1_pick_army');
 
-      // 3. Pick A PIC -> direct Channel coasts are green + reticles, chained North Sea coasts are ocean blue!
+      // 3. Pick A PIC -> direct Channel coasts are green, chained North Sea coasts are ocean blue!
       const armyPic = page.locator(
         '[data-testid="unit-token"][data-unit-id="FRA_A_PIC"]',
       );
@@ -91,7 +91,7 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
         '04_army_move_mode_potential_convoy_targets',
       );
 
-      // 5. Order F ENG C A PIC -> WAL: WAL turns solid green with a target reticle!
+      // 5. Order F ENG C A PIC -> WAL: WAL turns solid green, with no reticle drawn over it!
       await postOrder({
         unit_id: 'FRA_F_ENG',
         power: 'FRANCE',
@@ -112,16 +112,14 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
         page.locator('[data-testid="province-path"][data-province-id="WAL"]'),
       ).toHaveAttribute('data-reachable-color', 'green');
       await expect(
-        page.locator(
-          '[data-testid="reachable-reticle"][data-province-id="WAL"]',
-        ),
-      ).toBeVisible();
+        page.locator('[data-testid="reachable-reticle"]'),
+      ).toHaveCount(0);
       await recorder.recordStep(
         page,
         '05_army_move_mode_active_convoy_chain_to_wales',
       );
 
-      // 6. Multi-ship active convoy chain to Spain (F ENG + F MAO -> SPA is green + reticle)
+      // 6. Multi-ship active convoy chain to Spain (F ENG + F MAO -> SPA is green)
       //    AND dead-end check: for F MAO -> A PIC, LON/WAL are NOT reachable through MAO!
       await spawnUnit('FRANCE', 'F', 'MAO');
       await page.reload();
@@ -186,10 +184,8 @@ test.describe('Scenario: Convoy Reachability and Chain Scenarios', () => {
         page.locator('[data-testid="province-path"][data-province-id="SPA"]'),
       ).toHaveAttribute('data-reachable-color', 'green');
       await expect(
-        page.locator(
-          '[data-testid="reachable-reticle"][data-province-id="SPA"]',
-        ),
-      ).toBeVisible();
+        page.locator('[data-testid="reachable-reticle"]'),
+      ).toHaveCount(0);
       await recorder.recordStep(
         page,
         '06_multi_ship_active_convoy_chain_to_spain',

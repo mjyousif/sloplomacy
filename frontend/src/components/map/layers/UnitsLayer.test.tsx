@@ -10,7 +10,13 @@ import type {
   Unit,
   ValidationIssue,
 } from '../../../types/diplomacy';
-import { getPieceFrame } from '../../MapPiece';
+import {
+  DEFAULT_RIM,
+  getPieceFrame,
+  HOVER_RIM,
+  OWN_RIM,
+  PIECE_LIFT_FILTER_ID,
+} from '../../MapPiece';
 import { UnitsLayer } from './UnitsLayer';
 import type { UnitLayerContext } from './units/unitLayerContext';
 
@@ -202,5 +208,93 @@ describe('UnitsLayer', () => {
       selectedUnit: A_PAR,
     });
     expect(selected.token(A_PAR)).toHaveAttribute('opacity', '1');
+  });
+});
+
+describe('UnitsLayer highlights', () => {
+  // The body of a classic army: its rim colour shows ownership, selection and status.
+  const rimOf = (g: SVGGElement) =>
+    g.querySelector('circle[r="17"]')?.getAttribute('stroke');
+  const liftOf = (g: SVGGElement) =>
+    g.querySelector<SVGGElement>('[data-lift]')?.dataset.lift ?? null;
+
+  it('gives your own pieces a gold rim and draws no ring around them', () => {
+    const { token } = draw([A_PAR, A_BUR_GER]);
+    expect(rimOf(token(A_PAR))).toBe(OWN_RIM);
+    expect(rimOf(token(A_BUR_GER))).toBe(DEFAULT_RIM);
+    // No "yours" ring and no dashed ring for a unit that has no order yet.
+    expect(token(A_PAR).querySelector('[stroke="#fef08a"]')).toBeNull();
+    expect(token(A_PAR).querySelector('polygon')).toBeNull();
+    expect(token(A_PAR).querySelector('[stroke-dasharray]')).toBeNull();
+    // Nothing to ring means no empty ring group either.
+    const emptyGroups = Array.from(
+      token(A_PAR).querySelectorAll(':scope > g'),
+    ).filter((g) => g.children.length === 0);
+    expect(emptyGroups).toHaveLength(0);
+  });
+
+  it('rings a unit only for an explicit hold, never a default one', () => {
+    const implicit = draw([A_PAR], {
+      orders: { [A_PAR.id]: orderFor(A_PAR, 'HOLD', { is_explicit: false }) },
+    });
+    expect(implicit.token(A_PAR).querySelector('polygon')).toBeNull();
+    const explicit = draw([A_PAR], {
+      orders: { [A_PAR.id]: orderFor(A_PAR, 'HOLD', { is_explicit: true }) },
+    });
+    expect(explicit.token(A_PAR).querySelector('polygon')).toHaveAttribute(
+      'stroke',
+      '#eab308',
+    );
+  });
+
+  it('lifts the selected unit with a gold rim, draws it last and rings nothing', () => {
+    const { container, token } = draw([A_PAR, A_MAR], {
+      selectedUnit: A_PAR,
+    });
+    const lifted = token(A_PAR).querySelector('[data-lift]');
+    expect(lifted).toHaveAttribute('data-lift', 'selected');
+    expect(lifted).toHaveAttribute('transform', 'scale(1.25)');
+    expect(lifted).toHaveAttribute('filter', `url(#${PIECE_LIFT_FILTER_ID})`);
+    expect(rimOf(token(A_PAR))).toBe(OWN_RIM);
+    expect(token(A_PAR).querySelector('[stroke="#f59e0b"]')).toBeNull();
+    expect(liftOf(token(A_MAR))).toBeNull();
+    const order = Array.from(
+      container.querySelectorAll('[data-testid="unit-token"]'),
+    ).map((g) => g.getAttribute('data-unit-id'));
+    expect(order).toEqual([A_MAR.id, A_PAR.id]);
+  });
+
+  it('lifts a hovered unit a little, only if it can be ordered', () => {
+    const own = draw([A_PAR], { hoveredUnitId: A_PAR.id });
+    expect(liftOf(own.token(A_PAR))).toBe('hovered');
+    expect(own.token(A_PAR).querySelector('[data-lift]')).toHaveAttribute(
+      'transform',
+      'scale(1.1)',
+    );
+    expect(rimOf(own.token(A_PAR))).toBe(HOVER_RIM);
+    const foreign = draw([A_BUR_GER], { hoveredUnitId: A_BUR_GER.id });
+    expect(liftOf(foreign.token(A_BUR_GER))).toBeNull();
+  });
+
+  it('lifts a past turn unit focused from the order list like a selected one', () => {
+    const { token } = draw([A_BUR_GER], {
+      controlPower: null,
+      hoveredUnitId: A_BUR_GER.id,
+    });
+    expect(liftOf(token(A_BUR_GER))).toBe('selected');
+  });
+
+  it('keeps the dislodged and disband rims over every other rim', () => {
+    const out = unitAt('FRANCE', 'A', 'BUR', { is_dislodged: true });
+    const dislodged = draw([out], { selectedUnit: out });
+    expect(rimOf(dislodged.token(out))).toBe('#fdba74');
+    // A winter disband: the unit stands where it is, and is still your own.
+    const disbanding = draw([A_PAR], {
+      selectedUnit: A_PAR,
+      orders: {
+        [A_PAR.id]: orderFor(A_PAR, 'DISBAND', { is_explicit: true }),
+      },
+    });
+    expect(rimOf(disbanding.token(A_PAR))).toBe('#fca5a5');
   });
 });

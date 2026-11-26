@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { ALL_PROVINCE_GEOMETRIES } from '../../../data/europeMapGeometry';
-import type { MapLayout } from '../../../data/mapLayouts';
 import type {
   Power,
   ProvinceInfo,
@@ -17,7 +16,6 @@ import { getModeTargetHighlights } from './targetHighlight';
 interface ProvincesLayerProps {
   provinces: Record<string, ProvinceInfo>;
   ownership: Record<string, Power>;
-  layout: MapLayout;
   isAdjustmentPhase: boolean;
   directEditActive?: boolean;
   relocatingUnit?: Unit | null;
@@ -45,7 +43,6 @@ interface ProvincesLayerProps {
 export function ProvincesLayer({
   provinces,
   ownership,
-  layout,
   isAdjustmentPhase,
   directEditActive = false,
   relocatingUnit = null,
@@ -72,7 +69,6 @@ export function ProvincesLayer({
             green: new Set<string>(),
             blue: new Set<string>(),
             outline: new Set<string>(),
-            reticles: new Set<string>(),
           }
         : getModeTargetHighlights({
             interactionMode,
@@ -131,7 +127,6 @@ export function ProvincesLayer({
           : isBlue
             ? 'blue'
             : 'green';
-        const showMoveReticle = modeTargets.reticles.has(geom.id);
         const allowedCoastsStr = isDirectMove
           ? (reachableMap[geom.id] || []).join(',')
           : '';
@@ -172,8 +167,6 @@ export function ProvincesLayer({
             reachableColor={reachableColor}
             allowedCoastsStr={allowedCoastsStr}
             showFleetCoasts={showFleetCoasts}
-            showMoveReticle={showMoveReticle}
-            reticlePoint={layout[geom.id]?.unit ?? geom.unitPos}
             isHovered={isHovered && !suppressIncompatibleHover}
             isHighlighted={isHighlighted}
             hasWarning={hasWarning}

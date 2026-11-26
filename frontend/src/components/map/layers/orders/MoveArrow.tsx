@@ -187,6 +187,7 @@ export function MoveArrow({
         <g transform={`translate(${p2.x}, ${p2.y})`} opacity="0.88">
           <PieceOutline
             frame={ghostPiece.frame}
+            unitType={unit.unit_type}
             radius={22}
             fill="rgba(16, 185, 129, 0.22)"
             stroke="#10b981"

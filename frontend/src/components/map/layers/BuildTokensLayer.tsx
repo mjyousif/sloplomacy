@@ -10,6 +10,7 @@ import {
   MapPiece,
   type PieceFrame,
   PieceHitArea,
+  PieceLift,
   PieceOutline,
 } from '../../MapPiece';
 import type { PieceGeometry } from '../hooks/usePieceGeometry';
@@ -91,7 +92,8 @@ export function BuildTokensLayer({
               frame={buildPiece.frame}
               minRadius={touchHitRadius(bId, buildPiece.frame)}
             />
-            {(isSelected || isHovered) && (
+            {/* A waived slot has no piece to lift, so picking it still rings it */}
+            {isWaived && (isSelected || isHovered) && (
               <PieceOutline
                 frame={buildPiece.frame}
                 radius={28}
@@ -102,6 +104,7 @@ export function BuildTokensLayer({
             )}
             <PieceOutline
               frame={buildPiece.frame}
+              unitType={isWaived ? undefined : uType}
               radius={23}
               fill={
                 isWaived
@@ -114,17 +117,21 @@ export function BuildTokensLayer({
             />
             {!isWaived ? (
               <>
-                <MapPiece
-                  style={pieceStyle}
-                  mark={unitMark}
-                  unitType={uType}
-                  color={meta.color}
-                  variant="build"
-                  rim="#4ade80"
-                  frame={buildPiece.frame}
-                  flagDirection={buildPiece.flagDirection}
-                  hasStar={Boolean(provinces[homeProv]?.is_supply_center)}
-                />
+                <PieceLift
+                  lift={isSelected ? 'selected' : isHovered ? 'hovered' : null}
+                >
+                  <MapPiece
+                    style={pieceStyle}
+                    mark={unitMark}
+                    unitType={uType}
+                    color={meta.color}
+                    variant="build"
+                    rim="#4ade80"
+                    frame={buildPiece.frame}
+                    flagDirection={buildPiece.flagDirection}
+                    hasStar={Boolean(provinces[homeProv]?.is_supply_center)}
+                  />
+                </PieceLift>
                 <g transform={`translate(0, ${buildPiece.frame.bannerY})`}>
                   <rect
                     x="-34"

@@ -3,7 +3,11 @@
 // @alias admin_board_edit
 // @description Demonstrates both Issue #362 branches: (1) admin board-edit succeeds alongside concurrent player orders + finalization, resetting only impacted unit orders while preserving unimpacted orders and Fog of War; (2) turn advancing while admin has staged edits triggers 409 Conflict and Discard Draft & Reload; then force-resolves turn with AdminActionWarningModal.
 import { type Browser, expect, type Page, test } from '@playwright/test';
-import { DEFAULT_E2E_API_URL, ScenarioRecorder } from './helpers';
+import {
+  clickProvince,
+  DEFAULT_E2E_API_URL,
+  ScenarioRecorder,
+} from './helpers';
 
 interface Player {
   id: string;
@@ -123,9 +127,7 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       await alice
         .locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"]')
         .click();
-      await alice
-        .locator('[data-testid="reachable-reticle"][data-province-id="BUR"]')
-        .click();
+      await clickProvince(alice, 'BUR');
       await expect(
         alice.locator(
           '[data-testid="order-arrow"][data-order-unit="FRA_A_PAR"][data-order-type="MOVE"][data-order-target="BUR"]',
@@ -202,9 +204,7 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       await bob
         .locator('[data-testid="unit-token"][data-unit-id="ENG_F_LON"]')
         .click();
-      await bob
-        .locator('[data-testid="reachable-reticle"][data-province-id="NTH"]')
-        .click();
+      await clickProvince(bob, 'NTH');
       await expect(
         bob.locator(
           '[data-testid="order-arrow"][data-order-unit="ENG_F_LON"][data-order-type="MOVE"][data-order-target="NTH"]',
@@ -213,9 +213,7 @@ test.describe('Scenario: Admin Resolve Turn override', () => {
       await bob
         .locator('[data-testid="unit-token"][data-unit-id="ENG_F_EDI"]')
         .click();
-      await bob
-        .locator('[data-testid="reachable-reticle"][data-province-id="NWG"]')
-        .click();
+      await clickProvince(bob, 'NWG');
       await expect(
         bob.locator(
           '[data-testid="order-arrow"][data-order-unit="ENG_F_EDI"][data-order-type="MOVE"][data-order-target="NWG"]',

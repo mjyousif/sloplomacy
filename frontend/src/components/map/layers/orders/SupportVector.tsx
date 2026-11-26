@@ -1,6 +1,7 @@
 import type { Unit } from '../../../../types/diplomacy';
 import { computeQuadraticCurve } from '../../utils/curveGeometry';
 import type { OrderLayerContext } from './orderLayerContext';
+import { PieceRingAt } from './PieceRingAt';
 
 /** A support line to the supported unit, or to the middle of the move it supports, with CUT when a simulation cuts it. */
 export function SupportVector({
@@ -32,7 +33,6 @@ export function SupportVector({
     getUnitPoint,
     getProvincePoint,
     issuesByUnit,
-    pieceRingScale,
     arrowScale,
     moveMidpointsByOrigin,
     selectedUnitId,
@@ -159,16 +159,28 @@ export function SupportVector({
           </text>
         </g>
       ) : (
-        !projectedMove && (
-          <circle
-            cx={targetPoint.x}
-            cy={targetPoint.y}
-            r={isSupportHold ? 24 * pieceRingScale : 8}
-            fill={isSupportHold ? 'none' : strokeColor}
+        !projectedMove &&
+        (isSupportHold ? (
+          <PieceRingAt
+            ctx={ctx}
+            point={targetPoint}
+            province={target}
+            coast={supportedUnit?.coast}
+            unitType={supportedUnit?.unit_type}
+            radius={24}
             stroke={strokeColor}
             strokeWidth="2.8"
           />
-        )
+        ) : (
+          <circle
+            cx={targetPoint.x}
+            cy={targetPoint.y}
+            r={8}
+            fill={strokeColor}
+            stroke={strokeColor}
+            strokeWidth="2.8"
+          />
+        ))
       )}
       {simActive && simRes?.cut && (
         <g

@@ -68,7 +68,6 @@ function draw(
     }),
     pieceStyle: 'classic',
     unitMark: 'letters',
-    pieceRingScale: 1,
     arrowScale: 1,
     selectedUnitId: null,
     hoveredUnitId: null,
@@ -235,10 +234,11 @@ describe('OrderArrowsLayer', () => {
       }),
     });
     const ring = toHold.arrow(A_BUR).querySelector('circle')!;
-    expect([ring.getAttribute('cx'), ring.getAttribute('cy')]).toEqual([
-      '560',
-      '760',
-    ]);
+    // The ring stands on the supported piece, sized like the other rings around a piece.
+    expect(ring.parentElement).toHaveAttribute(
+      'transform',
+      'translate(560, 760)',
+    );
     expect(ring).toHaveAttribute('r', '24');
     expect(ring).toHaveAttribute('fill', 'none');
   });
@@ -325,6 +325,46 @@ describe('OrderArrowsLayer', () => {
       'M 420,720 L 430,600 L 560,680',
     );
     expect(arrow(F_ENG).querySelector('circle')).toHaveAttribute('r', '26');
+  });
+
+  it('fits the support-to-hold and convoy rings around a whole flag', () => {
+    const flags = {
+      pieceStyle: 'flags' as const,
+      describePiece: () => ({
+        flagDirection: 1 as const,
+        frame: getPieceFrame('flags', 1),
+      }),
+    };
+    const toHold = draw(
+      [A_BUR],
+      {
+        [A_BUR.id]: orderFor(A_BUR, 'SUPPORT', {
+          aux_unit_origin: 'PAR',
+          target: 'PAR',
+        }),
+      },
+      flags,
+    );
+    // A box around pole, cloth and foot, not a circle around the cloth.
+    expect(toHold.arrow(A_BUR).querySelector('circle')).toBeNull();
+    const box = toHold.arrow(A_BUR).querySelector('rect')!;
+    expect(Number(box.getAttribute('x'))).toBeLessThan(-7);
+    expect(Number(box.getAttribute('y'))).toBeLessThan(-30);
+
+    const convoy = draw(
+      [F_ENG],
+      {
+        [F_ENG.id]: orderFor(F_ENG, 'CONVOY', {
+          aux_unit_origin: 'BRE',
+          target: 'PIC',
+        }),
+      },
+      flags,
+    );
+    expect(convoy.arrow(F_ENG).querySelector('rect')).toHaveAttribute(
+      'stroke-dasharray',
+      '5 4',
+    );
   });
 
   it('highlights the focused order and dims others in historyView', () => {
