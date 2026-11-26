@@ -122,7 +122,7 @@ export function CompactTopBar({
             iconSize={18}
             className={styles.compactBrandEmblem}
           />
-          <span className={styles.compactBrandTitle}>Sloplomacy</span>
+          <span className={styles.compactBrandTitle}>Traitorous</span>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 # Turn Notifications & Sound Effects
 
-Sloplomacy alerts seated multiplayer commanders when their attention is required—either because a new phase needs orders or because a phase-clock vote has opened—using dynamic browser tab titles and synthesized Web Audio chimes when the tab is in the background.
+Traitorous alerts seated multiplayer commanders when their attention is required—either because a new phase needs orders or because a phase-clock vote has opened—using dynamic browser tab titles and synthesized Web Audio chimes when the tab is in the background.
 
 ## Contents
 
@@ -28,10 +28,10 @@ In the lobby, in solo sandboxes, or once a game has a `winner`, both flags are `
 
 `formatDocumentTitle()` updates `document.title` whenever the board phase or attention state changes (and restores the default title on unmount or in the lobby):
 
-- Needs move & vote: `● Your Move & Vote — <Turn> · Sloplomacy`
-- Needs move only: `● Your Move — <Turn> · Sloplomacy`
-- Needs vote only: `● Vote Needed — <Turn> · Sloplomacy`
-- Waiting / spectator: `<Turn> · Sloplomacy`
+- Needs move & vote: `● Your Move & Vote — <Turn> · Traitorous`
+- Needs move only: `● Your Move — <Turn> · Traitorous`
+- Needs vote only: `● Vote Needed — <Turn> · Traitorous`
+- Waiting / spectator: `<Turn> · Traitorous`
 
 ---
 

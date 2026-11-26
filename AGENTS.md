@@ -1,6 +1,6 @@
 # AGENTS.md — Agent & Contributor Operational Guide
 
-Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This document serves as the primary operational blueprint, architectural reference, and coding standard for AI coding agents and human contributors working within this repository.
+Welcome to **Traitorous (1901 Tactical Engine & Multiplayer Chancellery)**. This document serves as the primary operational blueprint, architectural reference, and coding standard for AI coding agents and human contributors working within this repository.
 
 ---
 

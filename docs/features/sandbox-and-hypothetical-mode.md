@@ -1,6 +1,6 @@
 # Sandbox & Hypothetical Mode
 
-Sloplomacy supports both **Solo Sandboxes** (freeform tactical boards, scenario presets, and board-state exports from live games) and **Multiplayer Hypothetical Mode** (an ephemeral private "what-if" copy of a live match where a player can test multi-power moves and step turns forward without affecting the real game).
+Traitorous supports both **Solo Sandboxes** (freeform tactical boards, scenario presets, and board-state exports from live games) and **Multiplayer Hypothetical Mode** (an ephemeral private "what-if" copy of a live match where a player can test multi-power moves and step turns forward without affecting the real game).
 
 ## Contents
 

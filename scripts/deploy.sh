@@ -5,7 +5,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
 cd "$REPO_ROOT"
 
 echo "=========================================================="
-echo "  Sloplomacy 1901 - Google Cloud Run Automated Deployer   "
+echo "  Traitorous 1901 - Google Cloud Run Automated Deployer   "
 echo "=========================================================="
 
 PROJECT_ID="${1:-$(gcloud config get-value project 2>/dev/null)}"
@@ -68,7 +68,7 @@ if ! gcloud artifacts repositories describe "$ARTIFACT_REPO" --location="$REGION
   gcloud artifacts repositories create "$ARTIFACT_REPO" \
     --repository-format=docker \
     --location="$REGION" \
-    --description="Docker repository for Sloplomacy 1901" \
+    --description="Docker repository for Traitorous 1901" \
     --project="$PROJECT_ID"
 fi
 

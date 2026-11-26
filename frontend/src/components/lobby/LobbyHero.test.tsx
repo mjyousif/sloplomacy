@@ -54,7 +54,7 @@ describe('LobbyHero', () => {
 
   it('names the era and the adjudicator', () => {
     setup();
-    expect(screen.getByText('STANDARD 1901 DIPLOMACY')).toBeInTheDocument();
+    expect(screen.getByText('STANDARD 1901 EUROPE')).toBeInTheDocument();
     expect(screen.getByText('DATC ADJUDICATOR')).toBeInTheDocument();
   });
 

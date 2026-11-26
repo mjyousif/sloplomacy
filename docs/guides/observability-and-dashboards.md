@@ -1,6 +1,6 @@
 # Observability, Cloud Monitoring Dashboards & Telemetry Maintenance Guide
 
-This guide documents **Sloplomacy 1901's** production observability stack on Google Cloud Run and serves as the operational playbook for both developers and AI coding agents diagnosing regressions, inspecting production logs, or modifying backend telemetry.
+This guide documents **Traitorous 1901's** production observability stack on Google Cloud Run and serves as the operational playbook for both developers and AI coding agents diagnosing regressions, inspecting production logs, or modifying backend telemetry.
 
 ## Contents
 

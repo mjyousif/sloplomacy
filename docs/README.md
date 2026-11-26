@@ -1,6 +1,6 @@
-# Sloplomacy — Technical Documentation
+# Traitorous — Technical Documentation
 
-Technical documentation for **Sloplomacy (Diplomacy 1901 Tactical Engine & Multiplayer Chancellery)**, a server-authoritative, real-time tactical adjudicator and multiplayer web application for standard 1901 Diplomacy.
+Technical documentation for **Traitorous (1901 Tactical Engine & Multiplayer Chancellery)**, a server-authoritative, real-time tactical adjudicator and multiplayer web application for standard 1901 Diplomacy.
 
 ## Contents
 

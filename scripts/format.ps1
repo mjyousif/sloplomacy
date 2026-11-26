@@ -15,9 +15,9 @@ $FrontendDir = Join-Path $RepoRoot "frontend"
 
 Write-Host "=================================================" -ForegroundColor Cyan
 if ($Check) {
-    Write-Host "  Sloplomacy - Code Formatting Verification       " -ForegroundColor Cyan
+    Write-Host "  Traitorous - Code Formatting Verification       " -ForegroundColor Cyan
 } else {
-    Write-Host "  Sloplomacy - Code Formatting Application        " -ForegroundColor Cyan
+    Write-Host "  Traitorous - Code Formatting Application        " -ForegroundColor Cyan
 }
 Write-Host "=================================================" -ForegroundColor Cyan
 

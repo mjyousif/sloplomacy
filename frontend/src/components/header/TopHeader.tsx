@@ -112,7 +112,7 @@ export function TopHeader({
           title="Return to Main Lobby"
         >
           <BrandEmblem />
-          <h1 className={styles.brandTitle}>SLOPLOMACY 1901</h1>
+          <h1 className={styles.brandTitle}>TRAITOROUS 1901</h1>
         </div>
       </div>
 

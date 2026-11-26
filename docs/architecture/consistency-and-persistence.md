@@ -1,6 +1,6 @@
 # Consistency & Persistence
 
-Sloplomacy combines a sub-millisecond in-memory L1 store with write-through JSONB persistence in Supabase PostgreSQL. This page explains what is persisted versus ephemeral, how optimistic concurrency (`state_revision`) prevents lost updates, and how the server reconciles memory with the database across restarts and rollbacks.
+Traitorous combines a sub-millisecond in-memory L1 store with write-through JSONB persistence in Supabase PostgreSQL. This page explains what is persisted versus ephemeral, how optimistic concurrency (`state_revision`) prevents lost updates, and how the server reconciles memory with the database across restarts and rollbacks.
 
 ## Contents
 

@@ -43,7 +43,7 @@ resource "google_artifact_registry_repository" "app_repo" {
   depends_on    = [google_project_service.artifact_registry]
   location      = var.region
   repository_id = var.artifact_repository_id
-  description   = "Docker repository for Sloplomacy 1901 serverless container"
+  description   = "Docker repository for Traitorous 1901 serverless container"
   format        = "DOCKER"
 
   cleanup_policy_dry_run = false

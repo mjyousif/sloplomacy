@@ -10,7 +10,7 @@ export interface PowerFlagProps extends React.SVGProps<SVGSVGElement> {
 }
 
 /**
- * Historical World War I (1901-1918) flags for the 7 Great Powers in Sloplomacy.
+ * Historical World War I (1901-1918) flags for the 7 Great Powers in Traitorous.
  * - Austria-Hungary: Austro-Hungarian dual civil ensign with Austrian & Hungarian arms
  * - England: British Union Flag (Union Jack)
  * - France: French Republic Tricolour

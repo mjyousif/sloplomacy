@@ -14,7 +14,7 @@ $BackendDir = Join-Path $RepoRoot "backend"
 $FrontendDir = Join-Path $RepoRoot "frontend"
 
 Write-Host "=================================================" -ForegroundColor Cyan
-Write-Host "  Sloplomacy - Full Test Suite & Quality Gates    " -ForegroundColor Cyan
+Write-Host "  Traitorous - Full Test Suite & Quality Gates    " -ForegroundColor Cyan
 Write-Host "=================================================" -ForegroundColor Cyan
 
 $VenvPython = Join-Path $BackendDir ".venv\Scripts\python.exe"

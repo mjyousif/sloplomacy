@@ -1,6 +1,6 @@
 # Game Over & Turn History
 
-Sloplomacy preserves a rolling log of resolved phases (`GAME_HISTORY`), lets players inspect any past turn's board, orders, and territory/ownership changes, and transitions cleanly into a read-only Game Over state with the War Ledger when a Great Power reaches 18 Supply Centers.
+Traitorous preserves a rolling log of resolved phases (`GAME_HISTORY`), lets players inspect any past turn's board, orders, and territory/ownership changes, and transitions cleanly into a read-only Game Over state with the War Ledger when a Great Power reaches 18 Supply Centers.
 
 ## Contents
 

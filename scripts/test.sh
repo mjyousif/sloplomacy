@@ -13,7 +13,7 @@ for arg in "$@"; do
 done
 
 echo "================================================="
-echo "  Sloplomacy - Full Test Suite & Quality Gates    "
+echo "  Traitorous - Full Test Suite & Quality Gates    "
 echo "================================================="
 
 # 1. Backend Pytest

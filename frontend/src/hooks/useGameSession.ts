@@ -271,7 +271,7 @@ export function useGameSession({
     } catch (err: any) {
       if (seq === boardRequestSeq.current) {
         setErrorMsg(
-          err.message || 'Failed to connect to Diplomacy backend server.',
+          err.message || 'Failed to connect to Traitorous backend server.',
         );
       }
     } finally {

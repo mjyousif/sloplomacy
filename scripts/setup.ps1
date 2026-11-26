@@ -8,7 +8,7 @@ $BackendDir = Join-Path $RepoRoot "backend"
 $FrontendDir = Join-Path $RepoRoot "frontend"
 
 Write-Host "=================================================" -ForegroundColor Cyan
-Write-Host "  Sloplomacy - Developer Environment Setup       " -ForegroundColor Cyan
+Write-Host "  Traitorous - Developer Environment Setup       " -ForegroundColor Cyan
 Write-Host "=================================================" -ForegroundColor Cyan
 
 # 1. Backend venv

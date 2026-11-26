@@ -1,6 +1,6 @@
 # Runtime & Infrastructure Model
 
-Sloplomacy runs as a single-container FastAPI + static React service on Google Cloud Run (`min_instance_count = 0`, `max_instance_count = 1`). Because active game state and WebSocket rooms live in process memory while durable state lives in Supabase PostgreSQL, the runtime model directly shapes how games load, how WebSockets stay alive, and how phase deadlines expire without a background scheduler.
+Traitorous runs as a single-container FastAPI + static React service on Google Cloud Run (`min_instance_count = 0`, `max_instance_count = 1`). Because active game state and WebSocket rooms live in process memory while durable state lives in Supabase PostgreSQL, the runtime model directly shapes how games load, how WebSockets stay alive, and how phase deadlines expire without a background scheduler.
 
 ## Contents
 

@@ -25,7 +25,7 @@ for arg in "$@"; do
 done
 
 echo "================================================="
-echo "  Sloplomacy - Code Quality & Linting Gates       "
+echo "  Traitorous - Code Quality & Linting Gates       "
 echo "================================================="
 
 # Locate Python

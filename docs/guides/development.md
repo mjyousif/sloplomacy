@@ -237,7 +237,7 @@ node scripts/compare_styles.mjs --main <main-dist-dir> --api-port 8000 --scenes 
 
 ## LLM-Driven E2E Interactive Testing
 
-Sloplomacy includes an interactive end-to-end (E2E) testing framework designed for AI coding agents and human developers. Unlike rigid visual regression tests that break when styling changes, this framework executes realistic user journeys, captures viewport screenshots at each step, logs runtime console/page telemetry, and allows visual and semantic inspection.
+Traitorous includes an interactive end-to-end (E2E) testing framework designed for AI coding agents and human developers. Unlike rigid visual regression tests that break when styling changes, this framework executes realistic user journeys, captures viewport screenshots at each step, logs runtime console/page telemetry, and allows visual and semantic inspection.
 
 ### Browser Prerequisites
 By default, `frontend/playwright.config.ts` uses system Google Chrome (`channel: 'chrome'`). If Google Chrome is not installed on your machine, you can override the browser channel with `PLAYWRIGHT_CHANNEL=none` (or `PLAYWRIGHT_CHANNEL=chromium`) after installing Playwright's Chromium binary (`npx playwright install chromium` in `frontend/`).

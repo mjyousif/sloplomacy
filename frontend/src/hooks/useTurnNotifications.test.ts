@@ -109,7 +109,7 @@ describe('computeTurnAttention & formatDocumentTitle', () => {
     });
     expect(attention).toEqual({ needsMove: true, needsVote: false });
     expect(formatDocumentTitle('multiplayer', gs, attention)).toBe(
-      '● Your Move — Spring 1901 Movement · Sloplomacy',
+      '● Your Move — Spring 1901 Movement · Traitorous',
     );
   });
 
@@ -154,7 +154,7 @@ describe('computeTurnAttention & formatDocumentTitle', () => {
     });
     expect(attention).toEqual({ needsMove: false, needsVote: true });
     expect(formatDocumentTitle('multiplayer', gs, attention)).toBe(
-      '● Vote Needed — Spring 1901 Movement · Sloplomacy',
+      '● Vote Needed — Spring 1901 Movement · Traitorous',
     );
   });
 });
@@ -195,7 +195,7 @@ describe('useTurnNotifications', () => {
 
     expect(chimeSpy).not.toHaveBeenCalled();
     expect(document.title).toBe(
-      '● Your Move — Spring 1901 Movement · Sloplomacy',
+      '● Your Move — Spring 1901 Movement · Traitorous',
     );
 
     const nextTurn = makeGameState({ season: 'Fall', finalized_powers: [] });
@@ -204,7 +204,7 @@ describe('useTurnNotifications', () => {
     expect(chimeSpy).toHaveBeenCalledTimes(1);
     expect(chimeSpy).toHaveBeenCalledWith('turn');
     expect(document.title).toBe(
-      '● Your Move — Fall 1901 Movement · Sloplomacy',
+      '● Your Move — Fall 1901 Movement · Traitorous',
     );
   });
 
@@ -237,7 +237,7 @@ describe('useTurnNotifications', () => {
     expect(chimeSpy).toHaveBeenCalledTimes(1);
     expect(chimeSpy).toHaveBeenCalledWith('vote');
     expect(document.title).toBe(
-      '● Vote Needed — Spring 1901 Movement · Sloplomacy',
+      '● Vote Needed — Spring 1901 Movement · Traitorous',
     );
   });
 

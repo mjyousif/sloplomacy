@@ -249,7 +249,7 @@ test.describe('Scenario 06: Phone game screen', () => {
       await page.locator('[data-testid="compact-back-lobby-btn"]').tap();
       const enterSandboxBtn = page.locator('[data-testid="btn-enter-sandbox"]');
       await expect(enterSandboxBtn).toBeVisible({ timeout: 15000 });
-      await expect(page.locator('[data-testid="compact-brand"]')).toContainText(/Sloplomacy/i);
+      await expect(page.locator('[data-testid="compact-brand"]')).toContainText(/Traitorous/i);
       const guestLayout = await page.evaluate(() => {
         const hero = document.querySelector('[data-testid="lobby-hero"]')!.getBoundingClientRect();
         const browser = document.querySelector('[data-testid="game-browser"]')!.getBoundingClientRect();

@@ -49,7 +49,7 @@ export function useHostGameForm({
     e.preventDefault();
     if (!user) {
       onOpenAuth(
-        'Sign in or create an account to host a new multiplayer Diplomacy campaign.',
+        'Sign in or create an account to host a new multiplayer campaign.',
         'signup',
       );
       onDone();

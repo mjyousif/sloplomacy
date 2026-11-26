@@ -29,9 +29,9 @@ done
 
 echo "================================================="
 if [ "$CHECK_MODE" = true ]; then
-    echo "  Sloplomacy - Code Formatting Verification       "
+    echo "  Traitorous - Code Formatting Verification       "
 else
-    echo "  Sloplomacy - Code Formatting Application        "
+    echo "  Traitorous - Code Formatting Application        "
 fi
 echo "================================================="
 
