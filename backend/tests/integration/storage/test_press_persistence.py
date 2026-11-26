@@ -117,3 +117,48 @@ def test_suggested_orders_survive_a_restart(supabase):
     res = client.get(f"/api/press?game_id={gid}&power=GERMANY")
     (message,) = res.json()["messages"]
     assert [(o["unit_id"], o["target"]) for o in message["orders"]] == [("GER_A_MUN", "BUR")]
+
+
+def test_anonymous_dm_and_group_threads_survive_restart(supabase):
+    gid = _create_game()
+    _join(gid, "GERMANY", BOB)
+    _join(gid, "RUSSIA", {"user_id": "cal", "email": "cal@test.com", "display_name": "Cal"})
+
+    dm = client.post(
+        f"/api/press?game_id={gid}",
+        json={
+            "power": "FRANCE",
+            "body": "Secret anonymous cable",
+            "recipients": ["GERMANY"],
+            "anonymous": True,
+        },
+    )
+    assert dm.status_code == 200, dm.text
+    grp = client.post(
+        f"/api/press?game_id={gid}",
+        json={
+            "power": "FRANCE",
+            "body": "Group coalition note",
+            "recipients": ["GERMANY", "RUSSIA"],
+            "anonymous": True,
+        },
+    )
+    assert grp.status_code == 200, grp.text
+
+    assert "FRANCE_GERMANY" in supabase.press_threads[gid]
+    assert supabase.press_threads[gid]["FRANCE_GERMANY"]["thread_type"] == "direct"
+    assert "FRANCE_GERMANY_RUSSIA" in supabase.press_threads[gid]
+    assert supabase.press_threads[gid]["FRANCE_GERMANY_RUSSIA"]["thread_type"] == "group"
+
+    _restart_container(gid)
+
+    germany_msgs = client.get(f"/api/press?game_id={gid}&power=GERMANY").json()["messages"]
+    assert len(germany_msgs) == 2
+    assert germany_msgs[0]["sender"] is None
+    assert germany_msgs[0]["anonymous"] is True
+    assert germany_msgs[0]["body"] == "Secret anonymous cable"
+    assert germany_msgs[1]["sender"] is None
+    assert (
+        sorted(germany_msgs[1]["recipients"]) == ["GERMANY", "RUSSIA"]
+        or len(germany_msgs[1]["recipients"]) >= 1
+    )

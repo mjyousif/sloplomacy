@@ -162,9 +162,15 @@ def test_engine_adjudicate_emits_telemetry(caplog: pytest.LogCaptureFixture):
 
 
 def test_supabase_and_press_queries_emit_telemetry(caplog: pytest.LogCaptureFixture):
+    from storage.press import clear_press_tracking
+    from storage.supabase import GAME_DB_IDS
+
     game = build_scenario("standard_1901", Power.FRANCE, "tele_game_1")
     env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
+    db_uuid = "11111111-1111-1111-1111-111111111111"
+    thread_uuid = "22222222-2222-2222-2222-222222222222"
     row = {
+        "id": db_uuid,
         "room_code": "tele_game_1",
         "name": "Telemetry Match",
         "status": "in_progress",
@@ -173,22 +179,46 @@ def test_supabase_and_press_queries_emit_telemetry(caplog: pytest.LogCaptureFixt
         "year": 1901,
         "game_state": {"state": game.model_dump(mode="json")},
     }
-    press_msg = PressMessage(
-        id="p1",
-        seq=1,
+    press_msg_2 = PressMessage(
+        id="p2",
+        seq=2,
         sender=Power.FRANCE,
         recipients=[],
-        body="Bonjour",
-        sent_at="2026-11-05T00:00:00Z",
+        body="Deux",
+        sent_at="2026-11-05T00:01:00Z",
         season="Spring",
         year=1901,
         phase="Movement",
     )
+    press_msg_3 = PressMessage(
+        id="p3",
+        seq=3,
+        sender=Power.FRANCE,
+        recipients=[],
+        body="Trois",
+        sent_at="2026-11-05T00:02:00Z",
+        season="Spring",
+        year=1901,
+        phase="Movement",
+    )
+    press_row_1 = {
+        "id": "33333333-3333-3333-3333-333333333333",
+        "seq": 1,
+        "sender_power": "FRANCE",
+        "is_anonymous": False,
+        "year": 1901,
+        "season": "Spring",
+        "phase": "Movement",
+        "body": "Bonjour",
+        "sent_at": "2026-11-05T00:00:00Z",
+        "meta": {},
+        "press_threads": {"thread_type": "public", "press_thread_members": []},
+    }
 
     async def run_checks():
         mock_client = AsyncMock(spec=httpx.AsyncClient)
 
-        mock_client.post.return_value = httpx.Response(status_code=201)
+        mock_client.post.return_value = httpx.Response(status_code=201, json=[{"id": db_uuid}])
         assert await save_game_to_db("tele_game_1", game, client=mock_client) is True
 
         mock_client.get.return_value = httpx.Response(status_code=200, json=[row])
@@ -201,25 +231,26 @@ def test_supabase_and_press_queries_emit_telemetry(caplog: pytest.LogCaptureFixt
         with pytest.raises(SupabaseUnavailable):
             await load_game_from_db("tele_game_1", client=mock_client)
 
-        mock_client.get.return_value = httpx.Response(
-            status_code=200, json=[{"press": [press_msg.model_dump(mode="json")]}]
-        )
+        mock_client.get.return_value = httpx.Response(status_code=200, json=[press_row_1])
         assert len(await load_press_from_db("tele_game_1", client=mock_client)) == 1
 
-        mock_client.patch.return_value = httpx.Response(
-            status_code=200, json=[{"room_code": "tele_game_1"}]
-        )
-        assert await save_press_to_db("tele_game_1", [press_msg], client=mock_client) is True
+        mock_client.post.side_effect = [
+            httpx.Response(status_code=201, json=[{"id": thread_uuid, "thread_key": "public"}]),
+            httpx.Response(status_code=201),
+            httpx.Response(status_code=500, text="err"),
+        ]
+        assert await save_press_to_db("tele_game_1", [press_msg_2], client=mock_client) is True
+        assert await save_press_to_db("tele_game_1", [press_msg_3], client=mock_client) is False
 
-        mock_client.patch.return_value = httpx.Response(status_code=200, json=[])
-        assert await save_press_to_db("tele_game_1", [press_msg], client=mock_client) is False
-
-        mock_client.patch.return_value = httpx.Response(status_code=500, text="err")
-        assert await save_press_to_db("tele_game_1", [press_msg], client=mock_client) is False
-
-    with patch.dict(os.environ, env):
-        with caplog.at_level(logging.INFO, logger="diplomacy.telemetry"):
-            asyncio.run(run_checks())
+    GAME_DB_IDS.pop("tele_game_1", None)
+    clear_press_tracking("tele_game_1")
+    try:
+        with patch.dict(os.environ, env):
+            with caplog.at_level(logging.INFO, logger="diplomacy.telemetry"):
+                asyncio.run(run_checks())
+    finally:
+        GAME_DB_IDS.pop("tele_game_1", None)
+        clear_press_tracking("tele_game_1")
 
     events = _telemetry_events(caplog, "supabase_query")
     observed = [(e["operation"], e["outcome"], e["status_code"]) for e in events]
@@ -229,13 +260,12 @@ def test_supabase_and_press_queries_emit_telemetry(caplog: pytest.LogCaptureFixt
         ("load_game", "not_found", 200),
         ("load_game", "error", 503),
         ("load_press", "ok", 200),
-        ("save_press", "ok", 200),
-        ("save_press", "not_found", 200),
+        ("save_press", "ok", 201),
         ("save_press", "error", 500),
     ]
     assert all(e["latency_ms"] >= 0 for e in events)
     assert events[3]["severity"] == "WARNING"
-    assert events[7]["severity"] == "WARNING"
+    assert events[6]["severity"] == "WARNING"
 
 
 def test_terraform_monitoring_and_dashboards_match_telemetry_schema():

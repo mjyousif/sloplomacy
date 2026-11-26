@@ -23,10 +23,9 @@ from engine.phase_timer import (
 )
 from fastapi import BackgroundTasks
 from storage import store
+from storage.phases import append_resolved_phase
 from storage.store import (
-    GAME_HISTORY,
     GAME_SUMMARIES,
-    HISTORY_UNSAVED,
     PRIVATE_SANDBOXES,
     SANDBOX_CHECKPOINTS,
     adjudication_lock,
@@ -132,14 +131,7 @@ async def _resolve_phase(game: GameState, admin_entry: AdminActionLogEntry | Non
 
     reject_if_game_over(game)
 
-    if gid not in GAME_HISTORY:
-        GAME_HISTORY[gid] = []
-    GAME_HISTORY[gid].append(
-        game.model_copy(deep=True, update={"preview": None, "issues": [], "timer": None})
-    )
-    if len(GAME_HISTORY[gid]) > 30:
-        GAME_HISTORY[gid].pop(0)
-    HISTORY_UNSAVED.add(gid)
+    append_resolved_phase(gid, game)
 
     result = adjudicate_turn(
         game.units,

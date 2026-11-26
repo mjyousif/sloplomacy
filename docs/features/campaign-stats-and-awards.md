@@ -17,7 +17,7 @@ The Campaign Statistics & War Ledger aggregates tactical, diplomatic, and logist
 
 Campaign stats are computed **on demand** by `compute_campaign_stats()` ([`backend/engine/stats.py`](../../backend/engine/stats.py)) when a client requests `GET /api/history/stats?game_id={id}` ([`backend/api/history.py`](../../backend/api/history.py)):
 
-1. The backend resolves the game and its `GAME_HISTORY` snapshots (up to the last 30 resolved phases), skipping `"Admin"` override snapshots when counting tactical orders.
+1. The backend resolves the game and lazy-loads its full campaign `GAME_HISTORY` from `public.game_phases` (skipping `"Admin"` override snapshots when counting tactical orders), caching the resulting `CampaignStatsResponse` in `STATS_CACHE` keyed by `(phase_count, board_revision, winner, player_names, surrendered_powers, press_count)`.
 2. Each resolved phase is replayed/inspected against its adjudication outcome to accumulate per-power counters and Supply Center timeline points.
 3. The resulting `CampaignStatsResponse` is returned to the frontend `useCampaignStats` hook, which feeds the Overview table, SC Timeline chart, Diplomatic Support Matrix, and Awards row inside `GameOverModal`.
 

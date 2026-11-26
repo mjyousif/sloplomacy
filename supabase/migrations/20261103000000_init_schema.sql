@@ -20,9 +20,11 @@ create policy "Public profiles are viewable by everyone"
   using (true);
 
 drop policy if exists "Users can update their own profile" on public.profiles;
-create policy "Users can update their own profile" 
-  on public.profiles for update 
-  using (auth.uid() = id);
+create policy "Users can update their own profile"
+  on public.profiles for update
+  to authenticated
+  using ((select auth.uid()) = id)
+  with check ((select auth.uid()) = id);
 
 -- Auto-create profile on auth signup trigger
 create or replace function public.handle_new_user()
@@ -83,17 +85,6 @@ create table if not exists public.game_participants (
 
 alter table public.game_participants enable row level security;
 
-drop policy if exists "Participants are viewable by everyone" on public.game_participants;
-create policy "Participants are viewable by everyone"
-  on public.game_participants for select
-  using (true);
-
-drop policy if exists "Authenticated users can join games" on public.game_participants;
-create policy "Authenticated users can join games"
-  on public.game_participants for insert
-  with check (auth.role() = 'authenticated');
-
-drop policy if exists "Users can update their own participant record" on public.game_participants;
-create policy "Users can update their own participant record"
-  on public.game_participants for update
-  using (auth.uid() = user_id);
+-- The policies for this table live in 20261125000000_normalize_games_phases_press.sql, which
+-- restrict access to service_role only. Every deploy re-runs all migrations, so this file must
+-- not recreate the original open policies, even for a moment.

@@ -22,9 +22,9 @@ Sloplomacy preserves a rolling log of resolved phases (`GAME_HISTORY`), lets pla
 
 ## Resolved Turn History (`GAME_HISTORY`)
 
-Just before each phase adjudicates (`execute_adjudication`), the backend appends a deep copy of the pre-resolution `GameState` (with `preview`, `issues`, and `timer` stripped) to `GAME_HISTORY[game_id]`, capped at the **last 30 snapshots**. Admin board overrides and turn edits also record a consolidated `"Admin"` snapshot with `admin_resolution` metadata and an `AdminActionLogEntry`.
+Just before each phase adjudicates (`execute_adjudication`), the backend appends a lean pre-resolution snapshot (with `preview`, `issues`, `timer`, `finalized_powers`, `turn_history`, `admin_log`, and `unit_options` stripped) to `public.game_phases` (no 30-phase cap). Admin board overrides and turn edits also record a consolidated `"Admin"` snapshot with `admin_resolution` metadata and an `AdminActionLogEntry`.
 
-History is stored in Supabase's `history` JSONB column on `multiplayer_games` and uploaded only when `HISTORY_UNSAVED` is marked dirty (adjudication, rollback, or admin edit).
+History rows are persisted incrementally by `backend/storage/phases.py` when `HISTORY_UNSAVED` is dirty (adjudication, rollback, or admin edit) and lazy-loaded on demand after cold start.
 
 ```mermaid
 sequenceDiagram
@@ -55,7 +55,7 @@ Players can switch between the live turn and any resolved turn via `TurnHistoryS
 ## Invariants
 
 - **Private sandboxes have no shared history**: `/api/history` and `/api/history/{index}` reject `sbx_*` private sandbox IDs with `404` so a player's live-turn private branch is never exposed through history endpoints.
-- **Press is independent of history**: Chat messages live in `GAME_PRESS` (`press` column), never inside `GAME_HISTORY` snapshots, so a rollback or history cap never erases diplomatic messages.
+- **Press is independent of history**: Chat messages live in normalized `press_*` tables (`GAME_PRESS`), never inside `game_phases` snapshots, so a rollback never erases diplomatic messages.
 
 ---
 

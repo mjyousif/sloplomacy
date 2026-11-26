@@ -43,8 +43,7 @@ This guide outlines how to deploy the **Diplomacy 1901 Tactical Engine & Multipl
      ```
      Or paste each file into the Supabase **SQL Editor**, oldest first.
    - Every file is safe to run again, and every run applies all of them. No file grants the anon key access to `multiplayer_games`, even partway through a run.
-   - They provision the `profiles` and `multiplayer_games` tables with JSONB state tracking and auxiliary columns. On `multiplayer_games`, select, insert, update and delete are all `TO service_role` only. The anon and authenticated keys read no rows, and the browser reads games through the backend.
-   - The `public.lobby_games` view lists public, non-sandbox games without passcodes or game state. It is owned by `postgres`, so it is not filtered by RLS, and the anon key can read it. The app does not use it.
+   - They provision `profiles`, `multiplayer_games`, `game_participants`, `game_phases`, `press_threads`, `press_thread_members`, and `press_messages`. On all game/participant/phase/press tables, select, insert, update and delete are all `TO service_role` only. The anon and authenticated keys read no rows, and the browser reads games through the backend.
 4. (Optional) In **Authentication → Providers**, enable **Google** or **Discord** OAuth for 1-click login.
 
 ---

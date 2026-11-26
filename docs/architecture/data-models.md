@@ -174,7 +174,7 @@ The turn selector's data, from `GET /api/history` and `GET /api/history/{index}`
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `index` | `number` | Position in the game's history, oldest first. A rollback or the 30-phase cap can move it, so the client finds a turn again by season, year and phase. |
+| `index` | `number` | Position in the game's history, oldest first. A rollback can remove trailing turns, so the client finds a turn again by season, year and phase. |
 | `season` | `string` | `'Spring'`, `'Fall'`, or `'Winter'`. |
 | `year` | `number` | Game year. |
 | `phase` | `string` | `'Movement'`, `'Retreats'`, or `'Adjustments'`. |

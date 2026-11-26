@@ -1,6 +1,9 @@
+"""Authoritative in-memory L1 store and Supabase persistence coordinator."""
+
 import asyncio
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 from domain.board import Power
 from domain.game_state import (
@@ -11,14 +14,37 @@ from domain.game_state import (
     TimerStage,
 )
 from domain.ids import DEFAULT_GAME_ID
-from domain.press import PressMessage
 from engine.adjudicator.territory import displayed_owners
 from engine.reachability import compute_unit_options
 from fastapi import HTTPException, status
+from storage import phases as phases_storage
 from storage import supabase
+from storage.phases import (
+    GAME_HISTORY as GAME_HISTORY,
+)
+from storage.phases import (
+    HISTORY_UNSAVED as HISTORY_UNSAVED,
+)
+from storage.phases import (
+    clear_phase_tracking,
+    current_phase_count,
+    flush_phase_mutations,
+    has_unsaved_phases,
+    set_loaded_phase_state,
+)
+from storage.press import (
+    GAME_PRESS as GAME_PRESS,
+)
+from storage.press import (
+    PRESS_UNSAVED as PRESS_UNSAVED,
+)
+from storage.press import (
+    clear_press_tracking,
+)
 from storage.profiles import PROFILE_NAMES as PROFILE_NAMES
 from storage.profiles import resolve_participant_name
-from storage.supabase import SupabaseUnavailable
+from storage.supabase import GAME_DB_IDS as GAME_DB_IDS
+from storage.supabase import LoadedGame, SupabaseUnavailable
 
 logger = logging.getLogger("diplomacy.server")
 
@@ -29,22 +55,41 @@ SANDBOX_CHECKPOINTS: dict[str, GameState | None] = {DEFAULT_GAME_ID: None}
 # The history a solo sandbox started from. Leaving the sandbox puts it back, so turns played
 # hypothetically never show up as real ones or become a rollback target.
 SANDBOX_HISTORY_CHECKPOINTS: dict[str, list[GameState]] = {}
-GAME_HISTORY: dict[str, list[GameState]] = {DEFAULT_GAME_ID: []}
 GAME_SUMMARIES: dict[str, MultiplayerGameSummary] = {}
 GAME_PASSCODES: dict[str, str] = {}
 UNSAVED_GAMES: set[str] = set()
 SAVES_RUNNING: dict[str, bool] = {}
-HISTORY_UNSAVED: set[str] = set()
 PRIVATE_SANDBOXES: dict[str, tuple[str, Power]] = {}
 PRIVATE_SANDBOX_TURNS: dict[str, tuple[str, int, str]] = {}
 # Preserves a solo/saved sandbox's hypothetical branch for the current real turn across exit/re-enter.
 SANDBOX_BRANCHES: dict[str, tuple[tuple[str, int, str], GameState, list[GameState]]] = {}
-# Press (chat) per game, oldest first. Kept outside GameState so it is never broadcast with the
-# board, copied into history snapshots or sandboxes, or undone by a rollback. See storage/press.py.
-GAME_PRESS: dict[str, list[PressMessage]] = {}
-PRESS_UNSAVED: set[str] = set()
 # One resolver per game at a time (see `adjudication_lock`), with the loop each lock was made on.
 ADJUDICATION_LOCKS: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Lock]] = {}
+# Tracks last persisted seat/finalization snapshot so order-only clicks skip seat RPC round-trips.
+_LAST_PARTICIPANTS_SIG: dict[str, tuple[Any, ...]] = {}
+
+
+def _participants_signature(
+    summary: MultiplayerGameSummary | None, state: GameState
+) -> tuple[Any, ...]:
+    if summary is None:
+        return ()
+    finalized = frozenset(p.value for p in state.finalized_powers)
+    surrendered = tuple(sorted(p.value for p in state.surrendered_powers))
+    seats = tuple(
+        (
+            pwr,
+            part.user_id,
+            part.display_name if not supabase.is_valid_uuid(part.user_id) else None,
+            part.joined_at,
+            bool(part.surrendered),
+            part.surrendered_at,
+            part.game_over_seen_at,
+            pwr in finalized,
+        )
+        for pwr, part in sorted(summary.participants.items())
+    )
+    return (seats, surrendered)
 
 
 def hydrate_summary_profiles(summary: MultiplayerGameSummary) -> MultiplayerGameSummary:
@@ -110,12 +155,8 @@ def adjudication_lock(game_id: str) -> asyncio.Lock:
 
 
 def has_unsaved_work(game_id: str) -> bool:
-    """True while memory holds a change to the game or its press that Supabase has not stored yet.
-
-    Evicting such a game would throw that change away, so every eviction that is a guess about
-    what Supabase holds (the lobby sync, the capacity sweep) leaves it alone.
-    """
-    return game_id in UNSAVED_GAMES or game_id in PRESS_UNSAVED
+    """True while memory holds a change to the game, phases, or press that Supabase has not stored yet."""
+    return game_id in UNSAVED_GAMES or game_id in PRESS_UNSAVED or has_unsaved_phases(game_id)
 
 
 def evict_game(game_id: str) -> None:
@@ -124,18 +165,18 @@ def evict_game(game_id: str) -> None:
         return
     GAMES.pop(game_id, None)
     GAME_SUMMARIES.pop(game_id, None)
-    GAME_HISTORY.pop(game_id, None)
     GAME_PASSCODES.pop(game_id, None)
+    GAME_DB_IDS.pop(game_id, None)
+    _LAST_PARTICIPANTS_SIG.pop(game_id, None)
     SANDBOX_CHECKPOINTS.pop(game_id, None)
     SANDBOX_HISTORY_CHECKPOINTS.pop(game_id, None)
     SANDBOX_BRANCHES.pop(game_id, None)
     UNSAVED_GAMES.discard(game_id)
-    HISTORY_UNSAVED.discard(game_id)
     PRIVATE_SANDBOXES.pop(game_id, None)
     PRIVATE_SANDBOX_TURNS.pop(game_id, None)
-    GAME_PRESS.pop(game_id, None)
-    PRESS_UNSAVED.discard(game_id)
     ADJUDICATION_LOCKS.pop(game_id, None)
+    clear_phase_tracking(game_id)
+    clear_press_tracking(game_id)
     for sandbox_id, (match_id, _) in list(PRIVATE_SANDBOXES.items()):
         if match_id == game_id:
             evict_game(sandbox_id)
@@ -185,7 +226,7 @@ def sync_summary(game_id: str) -> None:
 
 
 async def persist_game(game_id: str) -> None:
-    """Persist the specified game to Supabase PostgreSQL if configured."""
+    """Persist the game row, seat changes, and any incremental phase mutations to Supabase."""
     if not supabase.is_persistence_enabled():
         return
     if game_id == DEFAULT_GAME_ID or game_id in PRIVATE_SANDBOXES:
@@ -207,25 +248,32 @@ async def persist_game(game_id: str) -> None:
             if not state:
                 return
             sync_summary(game_id)
-            send_history = game_id in HISTORY_UNSAVED
-            HISTORY_UNSAVED.discard(game_id)
+            summary = GAME_SUMMARIES.get(game_id)
+            sig = _participants_signature(summary, state)
+            sync_seats = summary is not None and sig != _LAST_PARTICIPANTS_SIG.get(game_id)
+            phase_count = current_phase_count(game_id)
+
             saved = await supabase.save_game_to_db(
                 game_id=game_id,
                 state=state,
-                summary=GAME_SUMMARIES.get(game_id),
-                history=GAME_HISTORY.get(game_id, []) if send_history else None,
+                summary=summary,
                 passcode=GAME_PASSCODES.get(game_id),
+                current_phase_index=phase_count,
+                sync_participants=sync_seats,
             )
-            if send_history and not saved:
-                HISTORY_UNSAVED.add(game_id)
+            if saved and sync_seats:
+                _LAST_PARTICIPANTS_SIG[game_id] = sig
+            if saved and has_unsaved_phases(game_id):
+                phases_ok = await flush_phase_mutations(game_id)
+                saved = saved and phases_ok
             repeat = SAVES_RUNNING[game_id]
     finally:
         SAVES_RUNNING.pop(game_id, None)
-    if saved:
+    if saved and not has_unsaved_phases(game_id):
         UNSAVED_GAMES.discard(game_id)
 
 
-async def load_saved_game(game_id: str) -> tuple | None:
+async def load_saved_game(game_id: str) -> LoadedGame | tuple | None:
     """Read a game from Supabase, answering 503 rather than treating a failed read as no game."""
     try:
         return await supabase.load_game_from_db(game_id)
@@ -236,11 +284,22 @@ async def load_saved_game(game_id: str) -> tuple | None:
         ) from ex
 
 
-def cache_loaded_game(game_id: str, loaded: tuple) -> GameState:
+def cache_loaded_game(game_id: str, loaded: LoadedGame | tuple) -> GameState:
     """Hold a game read from Supabase in memory and return the copy every request must share."""
     if game_id in GAMES:
         return GAMES[game_id]
-    state, summary, history, passcode = loaded
+    if isinstance(loaded, LoadedGame):
+        state = loaded.state
+        summary = loaded.summary
+        history = loaded.history
+        passcode = loaded.passcode
+        phase_count = loaded.phase_count
+        if loaded.db_id:
+            GAME_DB_IDS[game_id] = loaded.db_id
+    else:
+        state, summary, history, passcode = loaded
+        phase_count = len(history) if history else 0
+
     # Options are never saved (see DERIVED_STATE_FIELDS), so rebuild them from the board.
     state.unit_options = compute_unit_options(
         state.units, state.orders, state.phase, retreats=state.retreats, winner=state.winner
@@ -249,8 +308,11 @@ def cache_loaded_game(game_id: str, loaded: tuple) -> GameState:
     if summary:
         hydrate_summary_profiles(summary)
         GAME_SUMMARIES[game_id] = summary
+        _LAST_PARTICIPANTS_SIG[game_id] = _participants_signature(summary, state)
+    set_loaded_phase_state(game_id, phase_count=phase_count, history=history)
     if history:
-        GAME_HISTORY[game_id] = history
+        # Legacy packed rows loaded with inline history will migrate into game_phases on next save.
+        phases_storage.PENDING_PHASE_UPSERTS[game_id] = {i: s for i, s in enumerate(history)}
         HISTORY_UNSAVED.add(game_id)
     if passcode:
         GAME_PASSCODES[game_id] = passcode

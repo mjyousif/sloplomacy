@@ -344,7 +344,7 @@ async def send_press(
     orders = _suggested_orders(game, seat, recipients, req)
     # No await between reading the next number and adding the message, so no two share one.
     message = PressMessage(
-        id=uuid.uuid4().hex,
+        id=str(uuid.uuid4()),
         seq=next_press_seq(gid),
         sender=seat,
         anonymous=req.anonymous,

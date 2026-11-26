@@ -1,5 +1,6 @@
 """The turn history endpoints."""
 
+import pytest
 from fastapi.testclient import TestClient
 from main import app
 from storage.store import GAMES
@@ -10,6 +11,8 @@ from tests.integration.api.helpers import (
     _order_payload,
     _seated_game,
 )
+
+pytestmark = pytest.mark.usefixtures("forget_games_made_by_test")
 
 client = TestClient(app)
 
@@ -177,3 +180,93 @@ def test_history_stats_counts_press_only_after_game_over():
     assert award is not None
     assert award["power"] == "GERMANY"
     assert award["count"] == 2
+
+
+def test_history_and_stats_keep_full_35_turn_campaign_without_30_phase_cap():
+    game_id = _seated_game()
+    # Turn 0: record an explicit bounce in BUR so we verify turn-0 stats are never dropped.
+    assert (
+        client.post(
+            f"/api/order?game_id={game_id}",
+            json={
+                "order": {
+                    "unit_id": "FRA_A_PAR",
+                    "power": "FRANCE",
+                    "unit_type": "A",
+                    "origin": "PAR",
+                    "order_type": "MOVE",
+                    "target": "BUR",
+                }
+            },
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            f"/api/order?game_id={game_id}",
+            json={
+                "order": {
+                    "unit_id": "GER_A_MUN",
+                    "power": "GERMANY",
+                    "unit_type": "A",
+                    "origin": "MUN",
+                    "order_type": "MOVE",
+                    "target": "BUR",
+                }
+            },
+        ).status_code
+        == 200
+    )
+
+    for _ in range(35):
+        _finalize(game_id, "FRANCE")
+        _finalize(game_id, "GERMANY")
+
+    entries = client.get(f"/api/history?game_id={game_id}").json()
+    assert len(entries) == 35
+    assert (entries[0]["index"], entries[0]["season"], entries[0]["year"]) == (0, "Spring", 1901)
+
+    turn0 = client.get(f"/api/history/0?game_id={game_id}").json()
+    assert turn0["season"] == "Spring"
+    assert turn0["year"] == 1901
+
+    stats = client.get(f"/api/history/stats?game_id={game_id}").json()
+    assert stats["turns_resolved"] == 35
+    assert len(stats["sc_timeline"]) == 36
+    assert stats["powers"]["FRANCE"]["moves_bounced"] == 1
+    assert stats["powers"]["GERMANY"]["moves_bounced"] == 1
+
+
+def test_history_stats_cache_hits_and_invalidates_on_turn_advance(monkeypatch):
+    from unittest.mock import MagicMock
+
+    import api.history as history_api
+    from domain.board import Power
+
+    game_id = _seated_game()
+    _finalize(game_id, "FRANCE")
+    _finalize(game_id, "GERMANY")
+
+    real_compute = history_api.compute_campaign_stats
+    spy = MagicMock(side_effect=real_compute)
+    monkeypatch.setattr(history_api, "compute_campaign_stats", spy)
+
+    first = client.get(f"/api/history/stats?game_id={game_id}")
+    second = client.get(f"/api/history/stats?game_id={game_id}")
+    assert first.status_code == 200 and second.status_code == 200
+    assert spy.call_count == 1
+    assert second.json()["turns_resolved"] == 1
+
+    # Advancing another turn invalidates the cache key.
+    _finalize(game_id, "FRANCE")
+    _finalize(game_id, "GERMANY")
+    third = client.get(f"/api/history/stats?game_id={game_id}")
+    assert third.status_code == 200
+    assert spy.call_count == 2
+    assert third.json()["turns_resolved"] == 2
+
+    # Game completion also invalidates so post-game press counts appear immediately.
+    GAMES[game_id].winner = Power.FRANCE
+    fourth = client.get(f"/api/history/stats?game_id={game_id}")
+    assert fourth.status_code == 200
+    assert spy.call_count == 3
