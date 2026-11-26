@@ -96,7 +96,7 @@ terraform apply -var="project_id=your-gcp-project-id"
 ```
 
 ### Terraform Manifests:
-- [`terraform/main.tf`](../../terraform/main.tf): Enables Cloud APIs (`run.googleapis.com`, `artifactregistry.googleapis.com`, `logging.googleapis.com`, `monitoring.googleapis.com`), provisions an Artifact Registry Docker repository with automated cleanup policies (keeping recent 5 versions and deleting untagged layers), and configures the Cloud Run v2 service with scale-to-zero, one instance, startup CPU boost, a 3600 s request timeout and persistence settings.
+- [`terraform/main.tf`](../../terraform/main.tf): Enables Cloud APIs (`run.googleapis.com`, `artifactregistry.googleapis.com`, `logging.googleapis.com`, `monitoring.googleapis.com`), provisions an Artifact Registry Docker repository with automated cleanup policies (keeping recent 5 versions and deleting untagged layers), and configures the Cloud Run v2 service with scale-to-zero, one instance, startup CPU boost, a 3600 s request timeout, `default_uri_disabled = true` (disabling the default `*.run.app` endpoint), and persistence settings.
   - The image defaults to `${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_repository_id}/${var.service_name}:latest`, matching the CI workflow and `scripts/deploy.*`. Set `container_image` if deploying a custom tag.
   - Terraform owns the service's whole environment list: a variable set by hand in the console is removed on the next `terraform apply`. `PORT` is not set, because Cloud Run reserves it. `SUPABASE_KEY` is the service role key only.
 - [`terraform/monitoring.tf`](../../terraform/monitoring.tf): Provisions 5 Google Cloud Log-Based Metrics (`google_logging_metric`) extracting structured JSON fields emitted by [`backend/telemetry.py`](../../backend/telemetry.py).
@@ -115,10 +115,10 @@ The repository features an automated GitHub Actions pipeline in [`.github/workfl
 2. **Conditional Deployment**: Only runs when commits hit `main` (not unmerged PRs) and both test suites succeed.
 3. **Migrations**: When `DATABASE_URL` (or `SUPABASE_DB_URL`) is set, runs every migration with `psql -v ON_ERROR_STOP=1 --single-transaction`. A failing migration rolls back the whole run and stops the deploy. Without the secret the step is skipped.
 4. **Direct Docker Build & Artifact Registry**: Builds the multi-stage container directly on GitHub Actions runners with Docker Buildx and GitHub Actions layer caching (`type=gha`), pushing directly to GCP Artifact Registry without consuming Google Cloud Build minutes or Cloud Storage staging quotas.
-5. **Cloud Run Deployment**: Deploys a new revision to Google Cloud Run with `--update-env-vars`, `--cpu-throttling`, and `--cpu-boost`.
+5. **Cloud Run Deployment**: Deploys a new revision to Google Cloud Run with `--no-default-url`, `--update-env-vars`, `--cpu-throttling`, and `--cpu-boost`.
 6. **Monitoring Sync**: Runs [`scripts/sync_gcp_monitoring.py`](../../scripts/sync_gcp_monitoring.py) to idempotently create/update the 5 Cloud Logging log-based metrics and 3 Cloud Monitoring dashboards, posting direct Console links into the GitHub Actions job summary.
 7. **Summary**: Posts the verified public live URL to the GitHub Actions job summary.
-   - **Production Endpoint**: [https://traitoro.us](https://traitoro.us) (Cloud Run URL: `https://diplomacy-1901-rrwl6tgtaa-uc.a.run.app`)
+   - **Production Endpoint**: [https://traitoro.us](https://traitoro.us)
 
 ### One-Time CI/CD Setup:
 Run the setup helper script to create the dedicated service account and export credentials:

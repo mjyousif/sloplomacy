@@ -12,7 +12,7 @@ variable "region" {
 variable "service_name" {
   description = "Cloud Run service name"
   type        = string
-  default     = "diplomacy-1901"
+  default     = "traitorous"
 }
 
 variable "artifact_repository_id" {

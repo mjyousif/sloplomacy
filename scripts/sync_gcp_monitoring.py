@@ -473,7 +473,7 @@ def main(argv: list[str] | None = None) -> int:
         description="Sync Cloud Logging metrics and Monitoring dashboards."
     )
     parser.add_argument("--project", required=True, help="GCP Project ID")
-    parser.add_argument("--service", default="diplomacy-1901", help="Cloud Run service name")
+    parser.add_argument("--service", default="traitorous", help="Cloud Run service name")
     parser.add_argument("--github-summary", default=None, help="Optional path for markdown links")
     parser.add_argument(
         "--dry-run", action="store_true", help="Print metric/dashboard summary only"

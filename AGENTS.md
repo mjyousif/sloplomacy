@@ -128,7 +128,7 @@ Welcome to **Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)**. This
   ```
 - **Inspect Live Endpoint Telemetry (`gcloud logging read`)**:
   ```bash
-  gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="diplomacy-1901" AND jsonPayload.event_type="api_request"' --project="<gcp-project-id>" --limit=20 --format="table(timestamp,jsonPayload.route_key,jsonPayload.status_code,jsonPayload.latency_ms)"
+  gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="traitorous" AND jsonPayload.event_type="api_request"' --project="<gcp-project-id>" --limit=20 --format="table(timestamp,jsonPayload.route_key,jsonPayload.status_code,jsonPayload.latency_ms)"
   ```
 
 ---

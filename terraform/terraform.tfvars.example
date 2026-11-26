@@ -1,7 +1,7 @@
 # Copy this to terraform.tfvars and fill in your values
 project_id             = "your-gcp-project-id"
 region                 = "us-central1"
-service_name           = "diplomacy-1901"
+service_name           = "traitorous"
 artifact_repository_id = "diplomacy-repo"
 
 # Supabase Credentials (from https://supabase.com/dashboard/project/<ref>/settings/api)
