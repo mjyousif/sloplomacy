@@ -18,6 +18,6 @@ substitutions:
   _SUPABASE_ANON_KEY: ''
   _SHORT_SHA: ''
   _REGION: 'us-central1'
-  _IMAGE_TAG: 'us-central1-docker.pkg.dev/$PROJECT_ID/diplomacy-repo/diplomacy-1901:latest'
+  _IMAGE_TAG: 'us-central1-docker.pkg.dev/$PROJECT_ID/diplomacy-repo/traitorous:latest'
 options:
   logging: CLOUD_LOGGING_ONLY

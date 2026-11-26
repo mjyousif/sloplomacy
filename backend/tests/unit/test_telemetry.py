@@ -125,7 +125,7 @@ def test_gcp_stdout_emission_controlled_by_env(
     emit_telemetry("INFO", "api_request", "local", route_key="GET /api/game", latency_ms=1.5)
     assert capsys.readouterr().out == ""
 
-    monkeypatch.setenv("K_SERVICE", "diplomacy-1901")
+    monkeypatch.setenv("K_SERVICE", "traitorous")
     emit_telemetry("INFO", "api_request", "cloud", route_key="GET /api/game", latency_ms=2.25)
     out_k = capsys.readouterr().out.strip()
     assert json.loads(out_k)["route_key"] == "GET /api/game"
@@ -315,17 +315,17 @@ def test_terraform_monitoring_and_dashboards_match_telemetry_schema():
 def test_sync_gcp_monitoring_script_matches_schema():
     from scripts.sync_gcp_monitoring import build_dashboards, build_log_metrics
 
-    metrics = build_log_metrics("diplomacy-1901")
+    metrics = build_log_metrics("traitorous")
     metric_names = {m["name"] for m in metrics}
     assert metric_names == {
-        "diplomacy-1901_api_request_count",
-        "diplomacy-1901_api_request_latency_ms",
-        "diplomacy-1901_engine_adjudicate_latency_ms",
-        "diplomacy-1901_supabase_query_count",
-        "diplomacy-1901_supabase_query_latency_ms",
+        "traitorous_api_request_count",
+        "traitorous_api_request_latency_ms",
+        "traitorous_engine_adjudicate_latency_ms",
+        "traitorous_supabase_query_count",
+        "traitorous_supabase_query_latency_ms",
     }
 
-    dashboards = build_dashboards("diplomacy-1901")
+    dashboards = build_dashboards("traitorous")
     assert len(dashboards) == 3
     assert [len(d["mosaicLayout"]["tiles"]) for d in dashboards] == [8, 8, 6]
     for dash in dashboards:

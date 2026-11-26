@@ -3,7 +3,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 5.0"
+      version = "~> 6.0"
     }
   }
 }
@@ -84,9 +84,10 @@ locals {
 }
 
 resource "google_cloud_run_v2_service" "diplomacy_service" {
-  name     = var.service_name
-  location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  name                 = var.service_name
+  location             = var.region
+  ingress              = "INGRESS_TRAFFIC_ALL"
+  default_uri_disabled = true
 
   depends_on = [google_project_service.cloud_run]
 

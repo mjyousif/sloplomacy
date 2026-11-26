@@ -19,9 +19,9 @@ All dashboards and log-based metrics are synchronized automatically on every pus
 
 | Dashboard | Production URL | Primary Purpose |
 | :--- | :--- | :--- |
-| **API Endpoint Performance** | [Open in GCP Console](https://console.cloud.google.com/monitoring/dashboards/builder/4ebf3e73-8567-428e-9c6e-55b36daccae0?project=diplomacy-1901-prod) | Per-endpoint p50/p95/p99 latency, RPS, HTTP method mix, and 4xx/5xx error rate grouped by normalized FastAPI `route_key`. |
-| **Cloud Run Infrastructure & Scale-to-Zero** | [Open in GCP Console](https://console.cloud.google.com/monitoring/dashboards/builder/6db49d5e-0062-46e2-93a4-0196681e6e8c?project=diplomacy-1901-prod) | Active vs. idle instance counts, cold-start latency, container CPU & memory utilization, max concurrent requests (HTTP + WebSockets), billable instance time, and network I/O. |
-| **Game Engine & Supabase Persistence** | [Open in GCP Console](https://console.cloud.google.com/monitoring/dashboards/builder/e48fe868-ae7d-4d3e-9f8f-cff991ac46f6?project=diplomacy-1901-prod) | Pure DATC adjudication latency & call rate by phase, plus Supabase PostgREST query p50/p95 latency, throughput by outcome, and error rate by operation. |
+| **API Endpoint Performance** | [Open in GCP Console](https://console.cloud.google.com/monitoring/dashboards/builder/611e8ded-9c13-4943-828f-63e0a2b69e16?project=diplomacy-1901-prod) | Per-endpoint p50/p95/p99 latency, RPS, HTTP method mix, and 4xx/5xx error rate grouped by normalized FastAPI `route_key`. |
+| **Cloud Run Infrastructure & Scale-to-Zero** | [Open in GCP Console](https://console.cloud.google.com/monitoring/dashboards/builder/e732a633-5cdc-494f-b0cc-b3bd50e68316?project=diplomacy-1901-prod) | Active vs. idle instance counts, cold-start latency, container CPU & memory utilization, max concurrent requests (HTTP + WebSockets), billable instance time, and network I/O. |
+| **Game Engine & Supabase Persistence** | [Open in GCP Console](https://console.cloud.google.com/monitoring/dashboards/builder/4468765b-cdbb-4a2d-b2fb-39a8cbb8f62d?project=diplomacy-1901-prod) | Pure DATC adjudication latency & call rate by phase, plus Supabase PostgREST query p50/p95 latency, throughput by outcome, and error rate by operation. |
 
 ### How to Read the Dashboards
 - **Zoom the time picker to match activity**: Because the app runs scale-to-zero, traffic comes in gameplay bursts. Use the top-right time selector (`15m` or `30m` for live playtesting, `6h` / `1d` / `7d` for multi-session trends) so bursty activity fills the chart instead of sitting at the right edge.
@@ -103,22 +103,22 @@ Developers and agents can inspect recent production telemetry directly from a sh
 ```bash
 # 1. Recent 4xx / 5xx API errors with route_key and latency
 gcloud logging read \
-  'resource.type="cloud_run_revision" AND resource.labels.service_name="diplomacy-1901" AND jsonPayload.event_type="api_request" AND jsonPayload.status_code>=400' \
+  'resource.type="cloud_run_revision" AND resource.labels.service_name="traitorous" AND jsonPayload.event_type="api_request" AND jsonPayload.status_code>=400' \
   --project=diplomacy-1901-prod --limit=30 --format="table(timestamp,jsonPayload.route_key,jsonPayload.status_code,jsonPayload.latency_ms)"
 
 # 2. Slow API requests (> 100 ms)
 gcloud logging read \
-  'resource.type="cloud_run_revision" AND resource.labels.service_name="diplomacy-1901" AND jsonPayload.event_type="api_request" AND jsonPayload.latency_ms>100' \
+  'resource.type="cloud_run_revision" AND resource.labels.service_name="traitorous" AND jsonPayload.event_type="api_request" AND jsonPayload.latency_ms>100' \
   --project=diplomacy-1901-prod --limit=30 --format="table(timestamp,jsonPayload.route_key,jsonPayload.status_code,jsonPayload.latency_ms)"
 
 # 3. Supabase persistence failures
 gcloud logging read \
-  'resource.type="cloud_run_revision" AND resource.labels.service_name="diplomacy-1901" AND jsonPayload.event_type="supabase_query" AND jsonPayload.outcome="error"' \
+  'resource.type="cloud_run_revision" AND resource.labels.service_name="traitorous" AND jsonPayload.event_type="supabase_query" AND jsonPayload.outcome="error"' \
   --project=diplomacy-1901-prod --limit=30 --format="table(timestamp,jsonPayload.operation,jsonPayload.status_code,jsonPayload.latency_ms,jsonPayload.message)"
 
 # 4. Recent DATC adjudication timings
 gcloud logging read \
-  'resource.type="cloud_run_revision" AND resource.labels.service_name="diplomacy-1901" AND jsonPayload.event_type="engine_adjudicate"' \
+  'resource.type="cloud_run_revision" AND resource.labels.service_name="traitorous" AND jsonPayload.event_type="engine_adjudicate"' \
   --project=diplomacy-1901-prod --limit=20 --format="table(timestamp,jsonPayload.phase,jsonPayload.unit_count,jsonPayload.order_count,jsonPayload.latency_ms)"
 ```
 

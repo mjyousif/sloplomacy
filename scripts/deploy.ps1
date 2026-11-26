@@ -10,7 +10,7 @@
 param(
     [string]$ProjectId = "",
     [string]$Region = "us-central1",
-    [string]$ServiceName = "diplomacy-1901",
+    [string]$ServiceName = "traitorous",
     [string]$ArtifactRepo = "diplomacy-repo",
     [string]$SupabaseUrl = "",
     [string]$SupabaseAnonKey = "",
@@ -165,12 +165,13 @@ $envVars = ($envPairs.GetEnumerator() | Where-Object { $_.Value } | ForEach-Obje
 # --cpu-throttling ensures compute charges apply only during active request processing.
 # --cpu-boost temporarily allocates extra CPU during cold-start boot.
 $deployArgs = @(
-    "run", "deploy", $ServiceName,
+    "beta", "run", "deploy", $ServiceName,
     "--image", $ImageTag,
     "--region", $Region,
     "--project", $ProjectId,
     "--platform", "managed",
     "--allow-unauthenticated",
+    "--no-default-url",
     "--min-instances", "0",
     "--max-instances", "1",
     "--cpu", "1",
@@ -195,16 +196,14 @@ Write-Host ""
 Write-Host "--> Syncing Cloud Logging metrics and Monitoring dashboards..." -ForegroundColor Cyan
 python (Join-Path $RepoRoot "scripts\sync_gcp_monitoring.py") --project $ProjectId --service $ServiceName
 
-# 7. Retrieve Service URL
-$ServiceUrl = (gcloud run services describe $ServiceName --region $Region --project $ProjectId --format "value(status.url)").Trim()
-
+# 7. Deployment Summary (default *.run.app URL is disabled)
 Write-Host ""
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "  DEPLOYMENT SUCCESSFUL!                                  " -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "Service URL: $ServiceUrl" -ForegroundColor Cyan
-Write-Host "Live App   : $ServiceUrl" -ForegroundColor Cyan
-Write-Host "API Docs   : $ServiceUrl/docs" -ForegroundColor Cyan
+Write-Host "Service    : $ServiceName (default *.run.app URL disabled)" -ForegroundColor Cyan
+Write-Host "Live App   : https://traitoro.us" -ForegroundColor Cyan
+Write-Host "API Docs   : https://traitoro.us/docs" -ForegroundColor Cyan
 Write-Host "Scale Mode : Scale-to-Zero (0 idle instances = $0 cost)   " -ForegroundColor DarkGray
 Write-Host "Persistence: Supabase PostgreSQL JSONB State Tracking    " -ForegroundColor DarkGray
 Write-Host "==========================================================" -ForegroundColor Green

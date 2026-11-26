@@ -10,7 +10,7 @@ echo "=========================================================="
 
 PROJECT_ID="${1:-$(gcloud config get-value project 2>/dev/null)}"
 REGION="${2:-us-central1}"
-SERVICE_NAME="${3:-diplomacy-1901}"
+SERVICE_NAME="${3:-traitorous}"
 ARTIFACT_REPO="${4:-diplomacy-repo}"
 IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${SERVICE_NAME}:latest"
 
@@ -81,12 +81,13 @@ gcloud builds submit --config=cloudbuild.yaml --substitutions="_SUPABASE_URL=${S
 # --cpu-throttling ensures compute charges apply only during active request processing.
 # --cpu-boost temporarily allocates extra CPU during cold-start boot.
 echo "--> Deploying to Google Cloud Run (Scale-to-zero with Supabase Persistence)..."
-gcloud run deploy "$SERVICE_NAME" \
+gcloud beta run deploy "$SERVICE_NAME" \
   --image "$IMAGE_TAG" \
   --region "$REGION" \
   --project "$PROJECT_ID" \
   --platform managed \
   --allow-unauthenticated \
+  --no-default-url \
   --min-instances 0 \
   --max-instances 1 \
   --cpu 1 \
@@ -100,9 +101,8 @@ gcloud run deploy "$SERVICE_NAME" \
 echo "--> Syncing Cloud Logging metrics and Monitoring dashboards..."
 python3 "$REPO_ROOT/scripts/sync_gcp_monitoring.py" --project "$PROJECT_ID" --service "$SERVICE_NAME"
 
-SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format "value(status.url)")
-
 echo "=========================================================="
 echo "  DEPLOYMENT COMPLETE!"
 echo "=========================================================="
-echo "Service URL: $SERVICE_URL"
+echo "Service : $SERVICE_NAME (default *.run.app URL disabled)"
+echo "Live App: https://traitoro.us"
