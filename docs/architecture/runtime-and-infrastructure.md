@@ -79,7 +79,7 @@ flowchart LR
 Cloud Run's request timeout is configured to `timeout = "3600s"` (60 minutes) in [`terraform/main.tf`](../../terraform/main.tf), allowing long-lived WebSocket sessions without premature proxy drops:
 
 - **25-second client heartbeat**: Every connected WebSocket client sends `{"type": "ping"}` every 25 seconds. This keeps intermediate proxies and Cloud Run's HTTP/2 or WebSocket connection alive, and keeps the single instance warm while commanders are actively in a match.
-- **Reconnection on 60-minute boundary**: If a socket hits Cloud Run's 3600-second maximum request lifetime or experiences a network drop, the client reconnects after a short fixed delay (`2s` on close, `3s` on instantiation error), re-authenticates via the first-message `auth` handshake, and receives the latest authoritative state (including any timer expiry checked on connect).
+- **Reconnection on 60-minute boundary**: If a socket hits Cloud Run's 3600-second maximum request lifetime or experiences a network drop, the client reconnects using exponential backoff with equal jitter (`1s` base, capped at `30s`, reset on `onopen`) to prevent synchronized reconnect bursts when the instance restarts, re-authenticates via the first-message `auth` handshake, and receives the latest authoritative state (including any timer expiry checked on connect).
 
 ---
 

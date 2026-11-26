@@ -69,6 +69,30 @@ export function shouldReconnect(closeCode: number): boolean {
   return closeCode !== 1000 && !PERMANENT_CLOSE_CODES.has(closeCode);
 }
 
+/** Base delay for exponential WebSocket reconnect backoff (ms). */
+export const RECONNECT_BASE_DELAY_MS = 1000;
+
+/** Ceiling for exponential WebSocket reconnect backoff (ms). */
+export const RECONNECT_MAX_DELAY_MS = 30_000;
+
+/**
+ * Computes an exponential backoff delay with equal jitter in [capped / 2, capped],
+ * capped at RECONNECT_MAX_DELAY_MS, to avoid synchronized reconnect storms.
+ */
+export function getReconnectDelayMs(
+  attempt: number,
+  random: () => number = Math.random,
+): number {
+  const safeAttempt = Math.max(0, Math.floor(attempt));
+  const capped = Math.min(
+    RECONNECT_MAX_DELAY_MS,
+    RECONNECT_BASE_DELAY_MS * 2 ** safeAttempt,
+  );
+  const half = capped / 2;
+  const r = Math.min(1, Math.max(0, random()));
+  return Math.round(half + r * half);
+}
+
 /**
  * Idle timeout while document is hidden before closing the WebSocket to allow Cloud Run to scale to zero.
  * 5 minutes of background inactivity stops keep-alive pings and frees serverless compute.
@@ -131,6 +155,7 @@ export function useDiplomacyWebSocket({
 
   useEffect(() => {
     let isCancelled = false;
+    let reconnectAttempt = 0;
 
     // Determine target WS endpoint based on current viewMode & activeGameId
     const targetPath = resolveWebSocketPath(viewMode, activeGameId, power);
@@ -148,6 +173,24 @@ export function useDiplomacyWebSocket({
         clearTimeout(idleTimerRef.current);
         idleTimerRef.current = null;
       }
+    };
+
+    const clearReconnectTimer = () => {
+      if (reconnectTimeoutRef.current !== null) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+    };
+
+    const scheduleReconnect = () => {
+      if (isCancelled) return;
+      clearReconnectTimer();
+      const delayMs = getReconnectDelayMs(reconnectAttempt);
+      reconnectAttempt += 1;
+      reconnectTimeoutRef.current = window.setTimeout(() => {
+        reconnectTimeoutRef.current = null;
+        connect();
+      }, delayMs);
     };
 
     const scheduleIdleDisconnect = () => {
@@ -181,6 +224,8 @@ export function useDiplomacyWebSocket({
             ws.close(1000);
             return;
           }
+          reconnectAttempt = 0;
+          clearReconnectTimer();
           wasBackgroundDisconnectedRef.current = false;
           wasIdleDisconnectedRef.current = false;
           setIsIdleDisconnected(false);
@@ -233,9 +278,7 @@ export function useDiplomacyWebSocket({
             !wasIdleDisconnectedRef.current &&
             shouldReconnect(event.code)
           ) {
-            reconnectTimeoutRef.current = window.setTimeout(() => {
-              connect();
-            }, 2000);
+            scheduleReconnect();
           }
         };
 
@@ -245,9 +288,7 @@ export function useDiplomacyWebSocket({
         };
       } catch (e) {
         console.error('WebSocket connection instantiation error:', e);
-        if (!isCancelled) {
-          reconnectTimeoutRef.current = window.setTimeout(connect, 3000);
-        }
+        scheduleReconnect();
       }
     };
 
@@ -284,6 +325,8 @@ export function useDiplomacyWebSocket({
           wasBackgroundDisconnectedRef.current = false;
           wasIdleDisconnectedRef.current = false;
           setIsIdleDisconnected(false);
+          reconnectAttempt = 0;
+          clearReconnectTimer();
           connect();
           scheduleIdleDisconnect();
         } else if (
@@ -301,6 +344,8 @@ export function useDiplomacyWebSocket({
       if (wasIdleDisconnectedRef.current) {
         wasIdleDisconnectedRef.current = false;
         setIsIdleDisconnected(false);
+        reconnectAttempt = 0;
+        clearReconnectTimer();
         connect();
         scheduleIdleDisconnect();
       } else if (wsRef.current) {
@@ -339,10 +384,7 @@ export function useDiplomacyWebSocket({
       clearIdleTimer();
       wasBackgroundDisconnectedRef.current = false;
       wasIdleDisconnectedRef.current = false;
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
+      clearReconnectTimer();
       if (wsRef.current) {
         const ws = wsRef.current;
         wsRef.current = null;
