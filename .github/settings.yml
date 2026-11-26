@@ -2,7 +2,7 @@
 # Compatible with Probot Settings (https://github.com/probot/settings)
 
 repository:
-  name: sloplomacy
+  name: traitorous
   description: "Diplomacy 1901 Tactical Engine & Multiplayer Chancellery"
   topics:
     - diplomacy

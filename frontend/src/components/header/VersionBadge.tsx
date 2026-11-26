@@ -22,7 +22,7 @@ export const VersionBadge: React.FC<VersionBadgeProps> = ({
       : 'dev';
   const isKnownCommit = commit !== 'dev' && commit.length >= 4;
   const commitUrl = isKnownCommit
-    ? `https://github.com/mjyousif/sloplomacy/commit/${commit}`
+    ? `https://github.com/mjyousif/traitorous/commit/${commit}`
     : undefined;
 
   const handleCopy = async (e: React.MouseEvent) => {

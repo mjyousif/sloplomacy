@@ -118,11 +118,15 @@ def test_container_runtime_import_isolation_full_lifecycle():
     for k in hidden_modules:
         del sys.modules[k]
 
+    repo_root = Path(__file__).resolve().parents[3]
     orig_path = list(sys.path)
     sys.path = [
         p
         for p in sys.path
-        if not p.endswith("restructure_codebase_files") and not p.endswith("sloplomacy")
+        if Path(p).resolve() != repo_root
+        and not p.endswith("restructure_codebase_files")
+        and not p.endswith("sloplomacy")
+        and not p.endswith("traitorous")
     ]
 
     client = TestClient(app)
