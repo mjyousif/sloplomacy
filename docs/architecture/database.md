@@ -90,7 +90,7 @@ erDiagram
         text phase
         int8 state_revision
         timestamptz resolved_at
-        jsonb payload "Lean per-phase snapshot (no turn_history/admin_log)"
+        jsonb snapshot "Lean per-phase snapshot (no turn_history/admin_log)"
     }
 
     PRESS_THREADS {
@@ -127,7 +127,7 @@ erDiagram
 
 - **UUID Foreign Keys & Soft-Leave Seat History**: All child tables reference `multiplayer_games.id` (`uuid`) with `ON DELETE CASCADE`. `public.game_participants` uses a surrogate `id` PK plus a partial unique index `idx_game_participants_active_seat` on `(game_id, power) WHERE left_at IS NULL`. Leaving or surrendering-and-leaving stamps `left_at` and `left_phase_index` rather than deleting the row, preserving former-player tenure while freeing the seat for a replacement player.
 - **Zero-Byte Virtual Computed Columns**: `public.has_passcode(g)` and `public.board_preview(g)` are `IMMUTABLE` SQL functions exposed as computed PostgREST columns (`?select=...,has_passcode,board_preview`) and restricted to `service_role`. Lobby refreshes never transfer plaintext passcodes, live orders, or redundant JSONB copies.
-- **Per-Phase History (`public.game_phases`)**: Resolved phases (including `"Admin"` snapshots) are stored as append-only rows keyed by `(game_id, phase_index)` with no 30-phase cap. `payload` strips `unit_options`, `preview`, `issues`, `timer`, `finalized_powers`, `turn_history`, and `admin_log` to eliminate $O(N^2)$ cumulative log bloat.
+- **Per-Phase History (`public.game_phases`)**: Resolved phases (including `"Admin"` snapshots) are stored as append-only rows keyed by `(game_id, phase_index)` with no 30-phase cap. `snapshot` strips `unit_options`, `preview`, `issues`, `timer`, `finalized_powers`, `turn_history`, and `admin_log` to eliminate $O(N^2)$ cumulative log bloat.
 - **Normalized Press (`press_threads`, `press_thread_members`, `press_messages`)**: Each message appends one row in $O(1)$ under a deterministic `(game_id, thread_key)` thread, with a composite FK `(thread_id, game_id) -> press_threads(id, game_id)` preventing cross-game thread links.
 - **Authoritative Profiles & No-PII Constraints**: SQL `CHECK` constraints forbid `@` tokens in `creator_guest_id`, `guest_id`, and `guest_display_name`, and forbid storing `guest_display_name` on registered UUID seats. Registered display names live exclusively in `public.profiles` (`handle_new_user()` defaults invalid/email metadata to `'Envoy'`, enforced by `profiles_display_name_valid`).
 - **Optimistic Concurrency (`state_revision` & `board_revision`)**: `state_revision` increments on every authoritative state mutation; `board_revision` (inside `game_state`) increments on board/turn changes and is checked by `POST /api/admin/board-edit`.

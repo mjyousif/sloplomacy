@@ -29,7 +29,7 @@ from storage.phases import (
     upsert_phases_to_db,
 )
 from storage.supabase import GAME_DB_IDS, SupabaseUnavailable
-from storage.supabase_codec import serialize_phase_payload
+from storage.supabase_codec import serialize_phase_snapshot
 
 ENV = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
 DB_UUID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
@@ -82,7 +82,7 @@ def test_load_phase_and_all_phases_from_db_roundtrip():
             "season": snap0.season,
             "phase": snap0.phase,
             "state_revision": snap0.state_revision,
-            "payload": serialize_phase_payload(snap0),
+            "snapshot": serialize_phase_snapshot(snap0),
         }
         row1 = {
             "phase_index": 1,
@@ -90,7 +90,7 @@ def test_load_phase_and_all_phases_from_db_roundtrip():
             "season": snap1.season,
             "phase": snap1.phase,
             "state_revision": snap1.state_revision,
-            "payload": serialize_phase_payload(snap1),
+            "snapshot": serialize_phase_snapshot(snap1),
         }
 
         single_client = _client("get", httpx.Response(200, json=[row1]))

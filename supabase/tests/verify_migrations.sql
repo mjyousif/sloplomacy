@@ -595,9 +595,9 @@ begin
   if cnt <> 35 then
     raise exception 'Expected 35 game_phases rows, got %', cnt;
   end if;
-  select payload into p_row from public.game_phases where game_id = g_full.id and phase_index = 5;
+  select snapshot into p_row from public.game_phases where game_id = g_full.id and phase_index = 5;
   if p_row ? 'turn_history' or p_row ? 'admin_log' or p_row ? 'unit_options' or p_row ? 'preview' or p_row ? 'finalized_powers' or not (p_row ? 'admin_resolution') then
-    raise exception 'Expected phase 5 payload to be stripped and migrate last_resolution -> admin_resolution, got %', p_row;
+    raise exception 'Expected phase 5 snapshot to be stripped and migrate last_resolution -> admin_resolution, got %', p_row;
   end if;
 
   -- Verify 3 participants backfilled cleanly (no guest_display_name on UUID seats)

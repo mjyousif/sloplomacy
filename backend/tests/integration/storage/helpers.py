@@ -7,7 +7,7 @@ from domain.game_state import GameState, MultiplayerGameSummary, TurnHistoryEntr
 from domain.press import PressMessage
 from fastapi.testclient import TestClient
 from main import app
-from storage.phases import deserialize_phase_row, serialize_phase_payload
+from storage.phases import deserialize_phase_row, serialize_phase_snapshot
 from storage.press import thread_identity
 from storage.store import evict_game
 from storage.supabase import SupabaseUnavailable
@@ -247,7 +247,7 @@ class FakeSupabase:
                 "season": snap.season,
                 "phase": snap.phase,
                 "state_revision": int(snap.state_revision),
-                "payload": serialize_phase_payload(snap),
+                "snapshot": serialize_phase_snapshot(snap),
             }
             batch.append(int(idx))
         self.saved_phase_batches.append(batch)

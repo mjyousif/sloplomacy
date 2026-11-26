@@ -382,7 +382,7 @@ create table if not exists public.game_phases (
   phase text not null check (phase ~ '^[A-Za-z][A-Za-z0-9_]{0,31}$'),
   state_revision bigint not null default 1,
   resolved_at timestamp with time zone not null default timezone('utc'::text, now()),
-  payload jsonb not null,
+  snapshot jsonb not null,
   primary key (game_id, phase_index)
 );
 
@@ -767,7 +767,7 @@ insert into public.game_phases (
   phase,
   state_revision,
   resolved_at,
-  payload
+  snapshot
 )
 select
   g.id as game_id,
@@ -786,7 +786,7 @@ select
       || jsonb_build_object('admin_resolution', arr.snap -> 'last_resolution')
     )
     else (arr.snap - 'admin_log' - 'turn_history' - 'unit_options' - 'preview' - 'issues' - 'timer' - 'finalized_powers' - 'last_resolution')
-  end as payload
+  end as snapshot
 from public.multiplayer_games g
 cross join lateral jsonb_array_elements(
   case

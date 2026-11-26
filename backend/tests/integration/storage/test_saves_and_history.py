@@ -268,7 +268,7 @@ def test_history_kept_inside_an_older_row_migrates_to_game_phases_on_next_save(s
     _resolve_turn(game_id)
     # Simulate an un-migrated legacy row whose single resolved phase lived inside legacy_history.
     supabase.rows[game_id]["legacy_history"] = [
-        supabase.phases[game_id][0]["payload"],
+        supabase.phases[game_id][0]["snapshot"],
     ]
     supabase.phases.pop(game_id, None)
     supabase.rows[game_id]["current_phase_index"] = 0

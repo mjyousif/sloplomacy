@@ -12,7 +12,7 @@ from domain.ids import DEFAULT_GAME_ID
 from domain.stats import CampaignStatsResponse
 from fastapi import HTTPException
 from storage import supabase
-from storage.supabase_codec import deserialize_phase_row, serialize_phase_payload
+from storage.supabase_codec import deserialize_phase_row, serialize_phase_snapshot
 from storage.supabase_http import (
     SupabaseUnavailable,
     _elapsed_ms,
@@ -31,7 +31,7 @@ logger = logging.getLogger("diplomacy.database")
 GAME_HISTORY: dict[str, list[GameState]] = {DEFAULT_GAME_ID: []}
 HISTORY_UNSAVED: set[str] = set()
 
-# Tracks total resolved phases even before full phase payloads are lazy-loaded after cold start.
+# Tracks total resolved phases even before full phase snapshots are lazy-loaded after cold start.
 GAME_PHASE_COUNTS: dict[str, int] = {}
 GAME_HISTORY_LOADED: set[str] = set()
 PENDING_PHASE_UPSERTS: dict[str, dict[int, GameState]] = {}
@@ -232,7 +232,7 @@ async def load_phase_from_db(
     url = (
         f"{get_supabase_url()}/rest/v1/game_phases"
         f"?game_id=eq.{quote(resolved_id, safe='')}&phase_index=eq.{int(phase_index)}"
-        f"&select=phase_index,year,season,phase,state_revision,payload"
+        f"&select=phase_index,year,season,phase,state_revision,snapshot"
     )
     start, status_code = time.perf_counter(), 0
     try:
@@ -267,7 +267,7 @@ async def load_all_phases_from_db(
     url = (
         f"{get_supabase_url()}/rest/v1/game_phases"
         f"?game_id=eq.{quote(resolved_id, safe='')}"
-        f"&select=phase_index,year,season,phase,state_revision,payload&order=phase_index.asc"
+        f"&select=phase_index,year,season,phase,state_revision,snapshot&order=phase_index.asc"
     )
     start, status_code = time.perf_counter(), 0
     try:
@@ -319,7 +319,7 @@ async def upsert_phases_to_db(
             "phase": snap.phase,
             "state_revision": int(snap.state_revision),
             "resolved_at": now_iso,
-            "payload": serialize_phase_payload(snap),
+            "snapshot": serialize_phase_snapshot(snap),
         }
         for idx, snap in sorted(phases_by_index.items())
     ]
@@ -398,7 +398,7 @@ async def ensure_history_loaded(game_id: str) -> list[GameState]:
 
 
 async def list_phase_entries(game_id: str) -> list[TurnHistoryEntry]:
-    """List turn metadata without downloading phase payloads when history is not yet in RAM."""
+    """List turn metadata without downloading phase snapshots when history is not yet in RAM."""
     if game_id in GAME_HISTORY_LOADED or not _uses_db_phases(game_id):
         return [
             TurnHistoryEntry(index=i, season=s.season, year=s.year, phase=s.phase)

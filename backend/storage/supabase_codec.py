@@ -402,23 +402,23 @@ def _serialize_state_for_db(state: GameState) -> dict[str, Any]:
     return _scrub_state_dict(data)
 
 
-def serialize_phase_payload(snapshot: GameState) -> dict[str, Any]:
-    """Serialize a lean per-phase snapshot for `public.game_phases.payload`."""
+def serialize_phase_snapshot(snapshot: GameState) -> dict[str, Any]:
+    """Serialize a lean per-phase snapshot for `public.game_phases.snapshot`."""
     data = snapshot.model_dump(mode="json", exclude=PHASE_EXCLUDED_FIELDS)
     return _scrub_state_dict(data)
 
 
 def deserialize_phase_row(row: dict[str, Any], room_code: str) -> GameState:
     """Reconstruct a historical GameState snapshot from a `public.game_phases` row."""
-    payload = row.get("payload")
-    if not isinstance(payload, dict):
-        raise ValueError("game_phases.payload must be a JSON object")
+    snapshot = row.get("snapshot")
+    if not isinstance(snapshot, dict):
+        raise ValueError("game_phases.snapshot must be a JSON object")
     merged = {
-        **payload,
+        **snapshot,
         "game_id": room_code,
         "year": int(row["year"]),
         "season": str(row["season"]),
         "phase": str(row["phase"]),
-        "state_revision": int(row.get("state_revision", payload.get("state_revision", 1))),
+        "state_revision": int(row.get("state_revision", snapshot.get("state_revision", 1))),
     }
     return GameState.model_validate(merged)
