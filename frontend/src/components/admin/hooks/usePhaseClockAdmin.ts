@@ -10,7 +10,8 @@ export type DeadlineChange =
   | { deadline: number };
 
 /**
- * The host's overrides of the phase clock (issue #393). Each call answers with the new board,
+ * The host's overrides of the phase clock (issue #393): `/api/admin/timer/*?game_id=`, plus
+ * the players' `/api/games/{id}/timer/start`. Each call answers with the new board,
  * handed to `onStateUpdated`; a refusal's message goes to `onError`.
  */
 export function usePhaseClockAdmin({
@@ -35,10 +36,20 @@ export function usePhaseClockAdmin({
       setBusy(true);
       onError(null);
       try {
-        const res = await apiFetch(
-          `/games/${encodeURIComponent(gameId)}/timer/${path}`,
-          { method: init.method ?? 'POST', json: init.json },
-        );
+        // Starting is the players' clock route; every other host action is an admin route.
+        const res =
+          path === 'start'
+            ? await apiFetch(
+                `/games/${encodeURIComponent(gameId)}/timer/start`,
+                {
+                  method: 'POST',
+                },
+              )
+            : await apiFetch(`/admin/timer/${path}`, {
+                method: init.method ?? 'POST',
+                query: { game_id: gameId },
+                json: init.json,
+              });
         if (!res.ok) {
           onError(
             await readErrorDetail(res, 'The clock could not be changed.'),

@@ -315,7 +315,7 @@ interface GameParticipant {
 - `TimerVoteRequest`: `{ power, choice: TimerChoice }`
 - `TimerToggleRequest`: `{ power, active?: boolean }`
 - `TimerDeadlineRequest`: exactly one of `{ seconds_left }`, `{ adjust_seconds }` or `{ deadline }` (host only)
-- `TimerSettings`: `{ vote_minutes, fixed_phase_minutes, vote_window_seconds }` (host only, `PUT /timer/settings`)
+- `TimerSettings`: `{ vote_minutes, fixed_phase_minutes, vote_window_seconds }` (host only, `PUT /api/admin/timer/settings?game_id=`)
 - `ScenarioRequest`: `{ scenario_id, active_power? }`
 - `SeedScenarioRequest`: `{ scenario_id, game_id?, active_power? }`
 

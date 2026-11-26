@@ -41,7 +41,7 @@ def host(client, gid: str, action: str, json=None, method="post"):
     kwargs = {"headers": host_headers()}
     if json is not None:
         kwargs["json"] = json
-    return call(f"/api/games/{gid}/timer/{action}", **kwargs)
+    return call(f"/api/admin/timer/{action}?game_id={gid}", **kwargs)
 
 
 def last_log_line(gid: str) -> str:
@@ -61,8 +61,10 @@ def test_only_the_host_may_override_the_clock(client):
     for action, body, method in routes:
         call = getattr(client, method)
         kwargs = {"json": body} if body is not None else {}
-        assert call(f"/api/games/{gid}/timer/{action}", **kwargs).status_code == 401
-        res = call(f"/api/games/{gid}/timer/{action}", headers=player_headers("ENGLAND"), **kwargs)
+        assert call(f"/api/admin/timer/{action}?game_id={gid}", **kwargs).status_code == 401
+        res = call(
+            f"/api/admin/timer/{action}?game_id={gid}", headers=player_headers("ENGLAND"), **kwargs
+        )
         assert res.status_code == 403, action
     assert GAMES[gid].timer.stage == "voting"
     assert GAMES[gid].admin_log == []
@@ -273,7 +275,9 @@ def test_every_override_reaches_the_admin_log_for_players_to_acknowledge(client)
 
 
 def test_the_default_board_has_no_clock_to_override(client):
-    assert client.post("/api/games/proto_1901/timer/pause").status_code == 409
+    assert client.post("/api/admin/timer/pause?game_id=proto_1901").status_code == 409
+    # No game_id means the default board, as on every admin route.
+    assert client.post("/api/admin/timer/pause").status_code == 409
 
 
 def test_long_lengths_are_logged_in_days_and_hours(client):

@@ -72,11 +72,11 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | `POST` | `/api/games/{game_id}/timer/vote` | Vote on length of Movement phase (one of the vote's `vote_minutes`, or pause) | `TimerVoteRequest` | `GameState` |
 | `POST` | `/api/games/{game_id}/timer/extend` | Request +5 minutes extension, or withdraw request | `TimerToggleRequest` | `GameState` |
 | `POST` | `/api/games/{game_id}/timer/ready` | Ready up in a paused game to open new duration vote | `TimerToggleRequest` | `GameState` |
-| `POST` | `/api/games/{game_id}/timer/pause` | Host: pause the clock until the host resumes it | *None* | `GameState` |
-| `POST` | `/api/games/{game_id}/timer/resume` | Host: lift a pause, opening a new vote (or the fixed clock) | *None* | `GameState` |
-| `POST` | `/api/games/{game_id}/timer/deadline` | Host: set the time left, nudge the deadline, or set an end time | `TimerDeadlineRequest` | `GameState` |
-| `POST` | `/api/games/{game_id}/timer/stop` | Host: turn the clock off (match becomes untimed) | *None* | `GameState` |
-| `PUT` | `/api/games/{game_id}/timer/settings` | Host: set the match's clock lengths | `TimerSettings` | `GameState` |
+| `POST` | `/api/admin/timer/pause?game_id=` | Host: pause the clock until the host resumes it | *None* | `GameState` |
+| `POST` | `/api/admin/timer/resume?game_id=` | Host: lift a pause, opening a new vote (or the fixed clock) | *None* | `GameState` |
+| `POST` | `/api/admin/timer/deadline?game_id=` | Host: set the time left, nudge the deadline, or set an end time | `TimerDeadlineRequest` | `GameState` |
+| `POST` | `/api/admin/timer/stop?game_id=` | Host: turn the clock off (match becomes untimed) | *None* | `GameState` |
+| `PUT` | `/api/admin/timer/settings?game_id=` | Host: set the match's clock lengths | `TimerSettings` | `GameState` |
 
 ### Administrator & Game Creator Controls
 | Method | Endpoint | Description | Request Body | Response Model |
@@ -357,7 +357,7 @@ The rules are in [the rulebook reference](../guides/rulebook-reference.md#9-turn
 
 Each answers `403` for a power that is not playing, and `409` if the clock is in a different stage.
 
-**Host overrides** ([`backend/api/admin_timer.py`](../../backend/api/admin_timer.py), issue #393). Creator only (`401` signed out, `403` for anyone else). `409` on the default board, a sandbox or a finished game, and (except `settings`) when the match has no clock. Each adds an `[ADMIN OVERRIDE]` line to `turn_history` and an `AdminActionLogEntry` for the players to acknowledge, then saves and broadcasts. See [Turn Clock: Host Overrides](../features/turn-clock.md#host-overrides).
+**Host overrides** (`/api/admin/timer/*?game_id=<id>`, [`backend/api/admin_timer.py`](../../backend/api/admin_timer.py), issue #393). Like the other admin routes (rollback, set-turn, board-edit) they live under `/api/admin/` and name the match with `?game_id=`; only `start` stays with the players' routes above. Creator only (`401` signed out, `403` for anyone else). `409` on the default board, a sandbox or a finished game, and (except `settings`) when the match has no clock. Each adds an `[ADMIN OVERRIDE]` line to `turn_history` and an `AdminActionLogEntry` for the players to acknowledge, then saves and broadcasts. See [Turn Clock: Host Overrides](../features/turn-clock.md#host-overrides).
 
 - **`pause`**: `stage = "paused"`, `host_paused = true`, clearing votes, ready-ups and extension requests. `409` if already host-paused.
 - **`resume`**: Only while `paused` (by the host or a vote). Starts the phase's clock afresh: a new vote in Movement, the fixed clock otherwise.

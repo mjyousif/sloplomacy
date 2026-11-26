@@ -96,14 +96,14 @@ describe('PhaseClockSection', () => {
     );
     await userEvent.click(screen.getByTestId('btn-admin-clock-paused'));
     expect(calls[0]).toMatchObject({
-      url: '/api/games/mp_1/timer/pause',
+      url: '/api/admin/timer/pause?game_id=mp_1',
       method: 'POST',
     });
     expect(onStateUpdated).toHaveBeenCalled();
 
     await userEvent.click(screen.getByTestId('btn-admin-clock-nudge-5'));
     expect(calls[1]).toMatchObject({
-      url: '/api/games/mp_1/timer/deadline',
+      url: '/api/admin/timer/deadline?game_id=mp_1',
       body: { adjust_seconds: 300 },
     });
     await userEvent.click(screen.getByTestId('btn-admin-clock-nudge--1'));
@@ -165,7 +165,7 @@ describe('PhaseClockSection', () => {
     );
     expect(screen.getByText(/Running opens a new vote/)).toBeInTheDocument();
     await userEvent.click(screen.getByTestId('btn-admin-clock-running'));
-    expect(calls[0].url).toBe('/api/games/mp_1/timer/resume');
+    expect(calls[0].url).toBe('/api/admin/timer/resume?game_id=mp_1');
   });
 
   it('asks before turning the clock off', async () => {
@@ -173,7 +173,7 @@ describe('PhaseClockSection', () => {
     await userEvent.click(screen.getByTestId('btn-admin-clock-off'));
     expect(calls).toHaveLength(0);
     await userEvent.click(screen.getByTestId('btn-confirm-modal-confirm'));
-    expect(calls[0].url).toBe('/api/games/mp_1/timer/stop');
+    expect(calls[0].url).toBe('/api/admin/timer/stop?game_id=mp_1');
   });
 
   it('saves the lengths, dropping empty vote options', async () => {
@@ -193,7 +193,7 @@ describe('PhaseClockSection', () => {
     await userEvent.type(fixed, '60');
     await userEvent.click(screen.getByTestId('btn-admin-clock-save-lengths'));
     expect(calls[0]).toMatchObject({
-      url: '/api/games/mp_1/timer/settings',
+      url: '/api/admin/timer/settings?game_id=mp_1',
       method: 'PUT',
       body: {
         vote_minutes: [20, 1440],

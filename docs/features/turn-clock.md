@@ -61,16 +61,16 @@ For the full infrastructure rationale (Cloud Run `min_instance_count = 0`, `cpu_
 
 ## Host Overrides
 
-The host runs these from **Wrench → Administrator → Turn and Clock Settings**, in its **Turn Clock** and **Clock Lengths** cards (`PhaseClockSection.tsx`). The routes are in [`backend/api/admin_timer.py`](../../backend/api/admin_timer.py), take only the host (`verify_admin_access`), refuse the default board, sandboxes and finished games (`409`), and each one adds an `[ADMIN OVERRIDE]` line to the turn history and an entry to the admin action log, which every other player acknowledges in the admin warning modal.
+The host runs these from **Wrench → Administrator → Turn and Clock Settings**, in its **Turn Clock** and **Clock Lengths** cards (`PhaseClockSection.tsx`). The override routes are admin routes under `/api/admin/timer/` (named by `?game_id=`, like rollback and set-turn) in [`backend/api/admin_timer.py`](../../backend/api/admin_timer.py); Start stays with the players' routes. They take only the host (`verify_admin_access`), refuse the default board, sandboxes and finished games (`409`), and each one adds an `[ADMIN OVERRIDE]` line to the turn history and an entry to the admin action log, which every other player acknowledges in the admin warning modal.
 
 | Action | Route | What it does |
 | :--- | :--- | :--- |
-| Start | `POST /timer/start` | As before: opens the first vote (or the fixed clock). |
-| Pause | `POST /timer/pause` | `paused` with `host_paused = true`, clearing votes, ready-ups and extension requests. Players cannot ready up out of it. |
-| Resume | `POST /timer/resume` | Lifts any pause (a host pause or a voted one) the way a phase starts: a new vote in Movement, the fixed clock otherwise. |
-| Set time | `POST /timer/deadline` | Exactly one of `seconds_left`, `adjust_seconds` (running clock only) or `deadline` (Unix seconds, from the host's own clock). The clock runs to it whatever its stage, which ends a vote with no winner or lifts a pause. It must leave 10 seconds to 30 days. |
-| Turn off | `POST /timer/stop` | `timer = None`: the match is untimed until the host starts the clock again. |
-| Lengths | `PUT /timer/settings` | Saves `TimerSettings`. They apply from the next vote or phase, never to the clock already counting, and survive a rollback. |
+| Start | `POST /api/games/{game_id}/timer/start` | As before: opens the first vote (or the fixed clock). |
+| Pause | `POST /api/admin/timer/pause?game_id=` | `paused` with `host_paused = true`, clearing votes, ready-ups and extension requests. Players cannot ready up out of it. |
+| Resume | `POST /api/admin/timer/resume?game_id=` | Lifts any pause (a host pause or a voted one) the way a phase starts: a new vote in Movement, the fixed clock otherwise. |
+| Set time | `POST /api/admin/timer/deadline?game_id=` | Exactly one of `seconds_left`, `adjust_seconds` (running clock only) or `deadline` (Unix seconds, from the host's own clock). The clock runs to it whatever its stage, which ends a vote with no winner or lifts a pause. It must leave 10 seconds to 30 days. |
+| Turn off | `POST /api/admin/timer/stop?game_id=` | `timer = None`: the match is untimed until the host starts the clock again. |
+| Lengths | `PUT /api/admin/timer/settings?game_id=` | Saves `TimerSettings`. They apply from the next vote or phase, never to the clock already counting, and survive a rollback. |
 
 The clock still never holds a phase back: a host-set deadline resolves like any other, and everyone finalizing still resolves at once. A new phase starts its own clock as usual, so a host pause lasts for the phase it was set in.
 

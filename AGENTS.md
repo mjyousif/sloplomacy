@@ -182,7 +182,7 @@ Rather than maintaining a brittle, exhaustive file list that rots as features ar
   - `sandbox.py`: Sandbox sessions, speculative simulation, and scenario loading.
   - `solo_sandbox_helpers.py`: Helpers for creating, exporting, resuming, and cleaning up personal draft Solo Sandboxes.
   - `admin.py`: Creator/admin turn controls (status, rollback, set-turn, acknowledge, test seeding).
-  - `admin_timer.py`: Creator/admin overrides of the phase clock (pause, resume, deadline, stop, clock lengths), each logged for players to acknowledge.
+  - `admin_timer.py`: Creator/admin overrides of the phase clock (`/api/admin/timer/*?game_id=`: pause, resume, deadline, stop, clock lengths), each logged for players to acknowledge.
   - `admin_units.py`: Creator/admin Direct-Edit board commit (`board-edit`: units, ownership and orders in one batch with optimistic concurrency).
   - `admin_utils.py`: Admin audit log recording (`AdminActionLogEntry`), consolidated `"Admin"` phase snapshots in `GAME_HISTORY`, and before/after diff order generation.
   - `history.py`: Read-only turn history for the turn selector (resolved phases and their records).

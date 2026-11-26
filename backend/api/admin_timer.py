@@ -4,7 +4,9 @@ FastAPI router for the host's overrides of the phase clock (GitHub issue #393).
 The host may pause the clock (a pause only they can lift), resume it, set when it runs out
 (time left, a nudge to the running deadline, or a wall-clock time, which also ends a vote),
 turn it off, and change the match's clock lengths. Every override is recorded in the admin
-action log, which the players acknowledge. Starting the clock stays in `turns.py`.
+action log, which the players acknowledge. Like the other admin routes (rollback, set-turn,
+board-edit) they live under `/api/admin/` and name the match with `?game_id=`. Starting the
+clock stays with the players' clock routes in `turns.py` (`/api/games/{game_id}/timer/start`).
 """
 
 import time
@@ -17,7 +19,7 @@ from domain.requests import TimerDeadlineRequest
 from engine.order_utils import reject_if_game_over
 from engine.phase_timer import host_pause, host_resume, host_set_deadline
 from engine.turn_service import publish_game_state, timer_players
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from security.auth import AuthUser, get_current_user
 from security.secrecy import (
     sanitize_game_state_for_viewer,
@@ -28,14 +30,14 @@ from security.secrecy import (
 from storage.profiles import ensure_profile_loaded
 from storage.store import GAME_SUMMARIES, resolve_game
 
-router = APIRouter(tags=["Phase Clock & Timers"])
+router = APIRouter(tags=["Administrator & Creator Controls"])
 
 # A deadline must leave the players some time, and no clock may be set further out than this.
 MIN_SECONDS_LEFT = 10
 MAX_SECONDS_LEFT = MAX_CLOCK_MINUTES * 60
 
 
-async def _host_match(game_id: str, current_user: AuthUser | None) -> GameState:
+async def _host_match(game_id: str | None, current_user: AuthUser | None) -> GameState:
     """The match, once the caller is shown to be its host. Only a multiplayer match has a clock."""
     game = await resolve_game(game_id)
     verify_admin_access(game.game_id, current_user)
@@ -87,11 +89,14 @@ def _describe_length(seconds: float) -> str:
 
 
 @router.post(
-    "/api/games/{game_id}/timer/pause",
+    "/api/admin/timer/pause",
     response_model=GameState,
     summary="Host: Pause Clock",
 )
-async def host_pause_timer(game_id: str, current_user: AuthUser | None = Depends(get_current_user)):
+async def host_pause_timer(
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+):
     game = await _host_match(game_id, current_user)
     _require_clock(game)
     if game.timer.stage == TimerStage.PAUSED and game.timer.host_paused:
@@ -101,12 +106,13 @@ async def host_pause_timer(game_id: str, current_user: AuthUser | None = Depends
 
 
 @router.post(
-    "/api/games/{game_id}/timer/resume",
+    "/api/admin/timer/resume",
     response_model=GameState,
     summary="Host: Resume Clock",
 )
 async def host_resume_timer(
-    game_id: str, current_user: AuthUser | None = Depends(get_current_user)
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await _host_match(game_id, current_user)
     _require_clock(game)
@@ -121,13 +127,13 @@ async def host_resume_timer(
 
 
 @router.post(
-    "/api/games/{game_id}/timer/deadline",
+    "/api/admin/timer/deadline",
     response_model=GameState,
     summary="Host: Set Clock Deadline",
 )
 async def host_set_timer_deadline(
-    game_id: str,
     req: TimerDeadlineRequest,
+    game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await _host_match(game_id, current_user)
@@ -173,11 +179,14 @@ async def host_set_timer_deadline(
 
 
 @router.post(
-    "/api/games/{game_id}/timer/stop",
+    "/api/admin/timer/stop",
     response_model=GameState,
     summary="Host: Turn Clock Off",
 )
-async def host_stop_timer(game_id: str, current_user: AuthUser | None = Depends(get_current_user)):
+async def host_stop_timer(
+    game_id: str | None = Query(default=None),
+    current_user: AuthUser | None = Depends(get_current_user),
+):
     game = await _host_match(game_id, current_user)
     _require_clock(game)
     game.timer = None
@@ -187,13 +196,13 @@ async def host_stop_timer(game_id: str, current_user: AuthUser | None = Depends(
 
 
 @router.put(
-    "/api/games/{game_id}/timer/settings",
+    "/api/admin/timer/settings",
     response_model=GameState,
     summary="Host: Set Clock Lengths",
 )
 async def host_set_timer_settings(
-    game_id: str,
     req: TimerSettings,
+    game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await _host_match(game_id, current_user)
