@@ -183,9 +183,15 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
       {/* FOOTER BAR */}
       <footer className={styles.lobbyFooterBar} data-testid="lobby-footer">
-        <span className={styles.lobbyFooterTagline}>
-          Sloplomacy &bull; 1901 Tactical Engine
-        </span>
+        <div className={styles.lobbyFooterCopy}>
+          <span className={styles.lobbyFooterTagline}>
+            Traitorous &bull; 1901 Tactical Engine
+          </span>
+          <span className={styles.lobbyFooterDisclaimer}>
+            Independent fan project. Not affiliated with Hasbro, Inc. or
+            Renegade Game Studios.
+          </span>
+        </div>
         <VersionBadge />
       </footer>
 

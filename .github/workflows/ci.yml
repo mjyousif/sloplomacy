@@ -230,7 +230,7 @@ jobs:
             gcloud artifacts repositories create "$REPO_NAME" \
               --repository-format=docker \
               --location="$REGION" \
-              --description="Docker repository for Sloplomacy 1901" \
+              --description="Docker repository for Traitorous 1901" \
               --project="$PROJECT_ID"
           fi
 

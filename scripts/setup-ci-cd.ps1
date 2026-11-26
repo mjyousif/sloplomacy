@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "  Sloplomacy 1901 - GitHub Actions CI/CD GCP Setup        " -ForegroundColor Cyan
+Write-Host "  Traitorous 1901 - GitHub Actions CI/CD GCP Setup        " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 # 1. Resolve Project ID
@@ -54,7 +54,7 @@ if ($LASTEXITCODE -ne 0) {
     & gcloud artifacts repositories create diplomacy-repo `
         --repository-format=docker `
         --location=us-central1 `
-        --description="Docker repository for Sloplomacy 1901" `
+        --description="Docker repository for Traitorous 1901" `
         --project=$ProjectId
 }
 

@@ -6,7 +6,7 @@ BACKEND_DIR="$REPO_ROOT/backend"
 FRONTEND_DIR="$REPO_ROOT/frontend"
 
 echo "================================================="
-echo "  Sloplomacy - Developer Environment Setup       "
+echo "  Traitorous - Developer Environment Setup       "
 echo "================================================="
 
 # 1. Backend venv

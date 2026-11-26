@@ -26,7 +26,7 @@ describe('LobbyView hosting', () => {
     );
     expect(hostDialog()).not.toBeInTheDocument();
     expect(props.onOpenAuth).toHaveBeenCalledWith(
-      'Sign in or create an account to host a new multiplayer Diplomacy campaign.',
+      'Sign in or create an account to host a new multiplayer campaign.',
       'signup',
     );
     expect(props.onCreateGame).not.toHaveBeenCalled();
@@ -330,5 +330,14 @@ describe('LobbyView joining with a code', () => {
     expect(
       screen.queryByText('Verifying & Joining...'),
     ).not.toBeInTheDocument();
+  });
+
+  it('renders the Traitorous brand tagline and non-affiliation disclaimer in the footer', () => {
+    setup();
+    const footer = screen.getByTestId('lobby-footer');
+    expect(footer).toHaveTextContent('Traitorous');
+    expect(footer).toHaveTextContent(
+      'Not affiliated with Hasbro, Inc. or Renegade Game Studios.',
+    );
   });
 });

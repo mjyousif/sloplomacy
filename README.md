@@ -1,4 +1,4 @@
-# Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)
+# Traitorous (1901 Tactical Engine & Multiplayer Chancellery)
 
 [![CI](https://github.com/mjyousif/traitorous/actions/workflows/ci.yml/badge.svg)](https://github.com/mjyousif/traitorous/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Demo-traitoro.us-4285F4?logo=googlecloud&logoColor=white)](https://traitoro.us)
@@ -14,7 +14,7 @@ An interactive web-based tactical adjudicator, move-planner, and real-time multi
 
 > 🌐 **Live Cloud Demo**: Play and test the engine online at **[https://traitoro.us](https://traitoro.us)** (hosted serverless on Google Cloud Run with scale-to-zero).
 
-> **Disclaimer**: *Sloplomacy* is an independent, non-commercial open-source tactical tool. *Diplomacy* is a registered trademark of Hasbro, Inc. This project is not affiliated with, sponsored by, or endorsed by Hasbro, Inc. or Renegade Game Studios. See [ATTRIBUTION.md](ATTRIBUTION.md) for full notices.
+> **Disclaimer**: *Traitorous* is an independent, non-commercial open-source tactical tool. *Diplomacy* is a registered trademark of Hasbro, Inc. This project is not affiliated with, sponsored by, or endorsed by Hasbro, Inc. or Renegade Game Studios. See [ATTRIBUTION.md](ATTRIBUTION.md) for full notices.
 
 ---
 

@@ -83,7 +83,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Sloplomacy Adjudication & Game Server",
+    title="Traitorous Adjudication & Game Server",
     description="Full DATC diplomacy adjudication engine, sandbox war room, and multiplayer game server.",
     version="1.0.0",
     lifespan=lifespan,

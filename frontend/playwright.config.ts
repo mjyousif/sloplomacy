@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright E2E configuration for Sloplomacy LLM-driven testing.
+ * Playwright E2E configuration for Traitorous LLM-driven testing.
  * Defaults to Google Chrome (`channel: 'chrome'`), with optional override via
  * `PLAYWRIGHT_CHANNEL` (set `PLAYWRIGHT_CHANNEL=none` or `chromium` to use bundled Chromium).
  */

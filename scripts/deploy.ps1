@@ -22,7 +22,7 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "  Sloplomacy 1901 - Google Cloud Run Automated Deployer   " -ForegroundColor Cyan
+Write-Host "  Traitorous 1901 - Google Cloud Run Automated Deployer   " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 # 1. Resolve GCP Project
@@ -111,7 +111,7 @@ if ($LASTEXITCODE -ne 0) {
     & gcloud artifacts repositories create $ArtifactRepo `
         --repository-format=docker `
         --location=$Region `
-        --description="Docker repository for Sloplomacy 1901" `
+        --description="Docker repository for Traitorous 1901" `
         --project=$ProjectId
 }
 

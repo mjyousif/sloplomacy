@@ -1,6 +1,6 @@
 # Secrecy and Authorization
 
-Sloplomacy is a simultaneous-move game, so the most important server guarantee is that a live match never leaks one power's orders (or anything derived from them) to another player. This document explains how that guarantee is built: how the server decides which seat a caller holds, the single sanitizer every outgoing game state passes through, how the WebSocket learns who is connecting, how press hides authors and private threads, and how each mutation is authorized per seat.
+Traitorous is a simultaneous-move game, so the most important server guarantee is that a live match never leaks one power's orders (or anything derived from them) to another player. This document explains how that guarantee is built: how the server decides which seat a caller holds, the single sanitizer every outgoing game state passes through, how the WebSocket learns who is connecting, how press hides authors and private threads, and how each mutation is authorized per seat.
 
 ## Contents
 

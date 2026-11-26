@@ -364,7 +364,7 @@ describe('useGameSession: fetchGame', () => {
     const { result } = renderSession();
     await act(() => result.current.fetchGame());
     expect(result.current.errorMsg).toBe(
-      'Failed to connect to Diplomacy backend server.',
+      'Failed to connect to Traitorous backend server.',
     );
   });
 

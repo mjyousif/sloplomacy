@@ -1,4 +1,4 @@
-"""Sloplomacy backend package."""
+"""Traitorous backend package."""
 
 import sys
 from pathlib import Path

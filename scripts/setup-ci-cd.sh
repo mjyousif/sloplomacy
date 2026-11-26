@@ -5,7 +5,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
 cd "$REPO_ROOT"
 
 echo "=========================================================="
-echo "  Sloplomacy 1901 - GitHub Actions CI/CD GCP Setup        "
+echo "  Traitorous 1901 - GitHub Actions CI/CD GCP Setup        "
 echo "=========================================================="
 
 # 1. Resolve GCP Project ID
@@ -29,7 +29,7 @@ if ! gcloud artifacts repositories describe diplomacy-repo --location="us-centra
   gcloud artifacts repositories create diplomacy-repo \
     --repository-format=docker \
     --location="us-central1" \
-    --description="Docker repository for Sloplomacy 1901" \
+    --description="Docker repository for Traitorous 1901" \
     --project="$PROJECT_ID"
 fi
 

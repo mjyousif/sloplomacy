@@ -10,7 +10,7 @@ import { playAttentionChime, setupAudioUnlock } from '../utils/soundEffects';
 import { turnLabel } from '../utils/timerHelpers';
 
 export const DEFAULT_DOCUMENT_TITLE =
-  'Sloplomacy 1901 — Tactical Command & Pre-Move Atlas';
+  'Traitorous 1901 — Tactical Command & Pre-Move Atlas';
 
 export interface TurnAttentionInput {
   viewMode: 'lobby' | 'sandbox' | 'multiplayer';
@@ -95,15 +95,15 @@ export function formatDocumentTitle(
 
   const label = turnLabel(gameState);
   if (attention.needsMove && attention.needsVote) {
-    return `● Your Move & Vote — ${label} · Sloplomacy`;
+    return `● Your Move & Vote — ${label} · Traitorous`;
   }
   if (attention.needsMove) {
-    return `● Your Move — ${label} · Sloplomacy`;
+    return `● Your Move — ${label} · Traitorous`;
   }
   if (attention.needsVote) {
-    return `● Vote Needed — ${label} · Sloplomacy`;
+    return `● Vote Needed — ${label} · Traitorous`;
   }
-  return `${label} · Sloplomacy`;
+  return `${label} · Traitorous`;
 }
 
 export interface UseTurnNotificationsOptions extends TurnAttentionInput {

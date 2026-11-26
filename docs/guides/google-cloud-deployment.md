@@ -1,6 +1,6 @@
 # Google Cloud Serverless Deployment Blueprint (Cloud Run + Supabase)
 
-This guide outlines how to deploy the **Diplomacy 1901 Tactical Engine & Multiplayer Chancellery** using **Google Cloud Platform (GCP)** with a true **scale-to-zero serverless architecture**, paired with **Supabase** for Authentication, cryptographically authorized host controls, and persistent PostgreSQL state tracking.
+This guide outlines how to deploy the **Traitorous (1901 Tactical Engine & Multiplayer Chancellery)** using **Google Cloud Platform (GCP)** with a true **scale-to-zero serverless architecture**, paired with **Supabase** for Authentication, cryptographically authorized host controls, and persistent PostgreSQL state tracking.
 
 ## Contents
 

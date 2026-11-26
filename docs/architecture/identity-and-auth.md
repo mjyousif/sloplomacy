@@ -1,6 +1,6 @@
 # Identity and Auth
 
-This document explains who a caller is to the Sloplomacy backend: how Supabase JWTs are verified, how guests, signed-in players and the local development sign-in differ, how profiles supply public names, how seats are tied to identities, who counts as a match creator, how private-match passcodes and their wrong-guess limit work, and how personal data is stripped before it leaves the server. What each identity is then *allowed to see or do* is described in [Secrecy and Authorization](secrecy-and-authorization.md).
+This document explains who a caller is to the Traitorous backend: how Supabase JWTs are verified, how guests, signed-in players and the local development sign-in differ, how profiles supply public names, how seats are tied to identities, who counts as a match creator, how private-match passcodes and their wrong-guess limit work, and how personal data is stripped before it leaves the server. What each identity is then *allowed to see or do* is described in [Secrecy and Authorization](secrecy-and-authorization.md).
 
 ## Contents
 

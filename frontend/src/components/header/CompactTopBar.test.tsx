@@ -55,7 +55,7 @@ function makeProps(
 describe('CompactTopBar', () => {
   it('shows the brand and AccountDropdownMenu in the lobby, without game navigation or GameSettingsMenu', () => {
     render(<CompactTopBar {...makeProps({ viewMode: 'lobby' })} />);
-    expect(screen.getByTestId('compact-brand')).toHaveTextContent('Sloplomacy');
+    expect(screen.getByTestId('compact-brand')).toHaveTextContent('Traitorous');
     expect(screen.getByTestId('account-menu-trigger')).toBeInTheDocument();
     expect(
       screen.queryByTestId('compact-back-lobby-btn'),

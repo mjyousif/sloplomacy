@@ -3,7 +3,7 @@
 ## 1. Game Design & Trademark Notices
 - **Original Game Concept**: The strategic game of *Diplomacy* was created by **Allan B. Calhamer** (1954, first published commercially in 1959).
 - **Trademark Notice**: *Diplomacy* is a registered trademark of **Hasbro, Inc.** All rights reserved.
-- **Non-Affiliation**: *Sloplomacy* is an independent, non-commercial fan project and open-source tactical sandbox. It is not affiliated with, authorized by, sponsored by, or endorsed by Hasbro, Inc., Avalon Hill, or Renegade Game Studios.
+- **Non-Affiliation**: *Traitorous* is an independent, non-commercial fan project and open-source tactical sandbox. It is not affiliated with, authorized by, sponsored by, or endorsed by Hasbro, Inc., Avalon Hill, or Renegade Game Studios.
 
 ---
 

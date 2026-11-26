@@ -1,9 +1,9 @@
 ---
 name: db-persistence
-description: Use when modifying Supabase persistence (backend/storage/supabase.py, backend/storage/phases.py, backend/storage/press.py), database migrations (supabase/migrations/), profile resolution, or lobby/game serialization in Sloplomacy. Enforces normalization, PII stripping, TTL caching, and migration safety.
+description: Use when modifying Supabase persistence (backend/storage/supabase.py, backend/storage/phases.py, backend/storage/press.py), database migrations (supabase/migrations/), profile resolution, or lobby/game serialization in Traitorous. Enforces normalization, PII stripping, TTL caching, and migration safety.
 ---
 
-# Sloplomacy Database & Persistence Guide
+# Traitorous Database & Persistence Guide
 
 Use this alongside `supabase-postgres-best-practices` whenever changing DB payloads, migrations, or `backend/storage/*`.
 

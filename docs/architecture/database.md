@@ -1,6 +1,6 @@
 # Database Setup & Row-Level Security
 
-This document describes how **Sloplomacy** stores data in Supabase PostgreSQL, how the normalized tables relate to each other, and how Row-Level Security (RLS) protects secret simultaneous orders.
+This document describes how **Traitorous** stores data in Supabase PostgreSQL, how the normalized tables relate to each other, and how Row-Level Security (RLS) protects secret simultaneous orders.
 
 For how the React frontend and FastAPI backend interact with these tables at runtime, see [Service Interactions](service-interactions.md).
 
@@ -13,7 +13,7 @@ For how the React frontend and FastAPI backend interact with these tables at run
 
 ## 1. Database Schema & Entity Relationships
 
-Supabase provides both **Authentication** (`auth.users`) and **PostgreSQL** (`public.*`). Sloplomacy normalizes the relational spine (matches, seats with soft-leave history, per-phase history snapshots, and press threads/messages) while keeping the live simultaneous turn state as a single atomic `game_state` JSONB column on `public.multiplayer_games` and variable press metadata (`orders`, per-reader `numbers`) in `press_messages.meta`.
+Supabase provides both **Authentication** (`auth.users`) and **PostgreSQL** (`public.*`). Traitorous normalizes the relational spine (matches, seats with soft-leave history, per-phase history snapshots, and press threads/messages) while keeping the live simultaneous turn state as a single atomic `game_state` JSONB column on `public.multiplayer_games` and variable press metadata (`orders`, per-reader `numbers`) in `press_messages.meta`.
 
 ```mermaid
 erDiagram

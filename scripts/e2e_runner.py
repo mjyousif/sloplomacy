@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Sloplomacy - LLM-Driven E2E Interactive & Visual Test Runner.
+Traitorous - LLM-Driven E2E Interactive & Visual Test Runner.
 
 Orchestrates headless/headed Playwright test scenarios, captures visual screenshots
 at each game step, collects runtime telemetry, and provides clean inspection artifacts
@@ -109,7 +109,7 @@ def wait_for_service(url: str, name: str, max_wait: float = 25.0) -> bool:
 
 
 def list_scenarios():
-    print_colored("\n=== Sloplomacy E2E Interactive Test Scenarios ===", Colors.CYAN + Colors.BOLD)
+    print_colored("\n=== Traitorous E2E Interactive Test Scenarios ===", Colors.CYAN + Colors.BOLD)
     print("Available scenarios for LLM agents & developers:\n")
     for sc in SCENARIOS:
         print_colored(f"  * {sc['name'].ljust(12)} -> {sc['description']}", Colors.GREEN)
@@ -292,7 +292,7 @@ def run_scenario(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sloplomacy LLM-Driven E2E Interactive Test Runner")
+    parser = argparse.ArgumentParser(description="Traitorous LLM-Driven E2E Interactive Test Runner")
     subparsers = parser.add_subparsers(dest="command")
 
     # List command

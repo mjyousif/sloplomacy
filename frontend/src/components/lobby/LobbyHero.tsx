@@ -21,7 +21,7 @@ export const LobbyHero: React.FC<LobbyHeroProps> = ({
       <div>
         <div className={styles.lobbyBadgeRow}>
           <span className={styles.lobbyEraPill}>
-            <Compass size={13} /> STANDARD 1901 DIPLOMACY
+            <Compass size={13} /> STANDARD 1901 EUROPE
           </span>
           <span className={styles.lobbyEraPill} data-variant="gold">
             <Sparkles size={13} /> DATC ADJUDICATOR
