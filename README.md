@@ -1,6 +1,6 @@
 # Sloplomacy (1901 Tactical Engine & Multiplayer Chancellery)
 
-[![CI](https://github.com/mjyousif/sloplomacy/actions/workflows/ci.yml/badge.svg)](https://github.com/mjyousif/sloplomacy/actions/workflows/ci.yml)
+[![CI](https://github.com/mjyousif/traitorous/actions/workflows/ci.yml/badge.svg)](https://github.com/mjyousif/traitorous/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Demo-traitoro.us-4285F4?logo=googlecloud&logoColor=white)](https://traitoro.us)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3.0-blue.svg)](LICENSE)
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)

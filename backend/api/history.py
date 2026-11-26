@@ -89,7 +89,7 @@ async def get_campaign_stats(
             press_messages = GAME_PRESS.get(game.game_id, [])
 
     # Cache computed campaign stats in memory to avoid re-adjudicating long campaigns on repeat
-    # requests (see https://github.com/mjyousif/sloplomacy/issues/401).
+    # requests (see https://github.com/mjyousif/traitorous/issues/401).
     cache_key = (
         current_phase_count(game.game_id),
         game.board_revision,
