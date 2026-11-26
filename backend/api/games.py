@@ -27,10 +27,10 @@ from security.secrecy import (
 )
 from storage import supabase
 from storage.lobby import public_summaries
+from storage.phases import set_loaded_phase_state
 from storage.profiles import PROFILE_NAMES, ensure_profile_loaded, resolve_display_name
 from storage.store import (
     DEFAULT_GAME_ID,
-    GAME_HISTORY,
     GAME_PASSCODES,
     GAME_SUMMARIES,
     GAMES,
@@ -46,7 +46,7 @@ from storage.store import (
     resolve_game,
     sync_summary,
 )
-from storage.supabase import SupabaseUnavailable
+from storage.supabase import LoadedGame, SupabaseUnavailable
 from ws.connection_manager import (
     broadcast_lobby_update,
     manager,
@@ -187,7 +187,7 @@ async def delete_game(
     if not summary and supabase.is_persistence_enabled():
         loaded = await load_saved_game(game_id)
         if loaded:
-            _, summary, _, _ = loaded
+            summary = loaded.summary if isinstance(loaded, LoadedGame) else loaded[1]
 
     if not summary and game_id not in GAMES:
         return {"status": "deleted", "game_id": game_id}
@@ -220,7 +220,7 @@ async def create_multiplayer_game(
     game_state = build_scenario("standard_1901", req.creator_power, gid)
     GAMES[gid] = game_state
     SANDBOX_CHECKPOINTS[gid] = None
-    GAME_HISTORY[gid] = []
+    set_loaded_phase_state(gid, phase_count=0, history=[])
 
     is_priv = bool(req.is_private)
     clean_passcode = req.passcode.strip() if req.passcode else None
@@ -311,12 +311,14 @@ async def save_sandbox_to_account(
         existing_summary.is_draft = False
         existing_summary.creator_id = effective_user_id
         existing_summary.created_by = ""
-        existing_summary.participants[source_game.active_power.value] = GameParticipant(
-            user_id=effective_user_id,
-            display_name=display_name,
-            power=source_game.active_power,
-            joined_at=now_iso,
-        )
+        existing_summary.participants = {
+            source_game.active_power.value: GameParticipant(
+                user_id=effective_user_id,
+                display_name=display_name,
+                power=source_game.active_power,
+                joined_at=now_iso,
+            )
+        }
         sync_summary(gid)
         await persist_game(gid)
         await broadcast_lobby_update()
@@ -331,7 +333,7 @@ async def save_sandbox_to_account(
     cloned_state.timer = None
     GAMES[new_gid] = cloned_state
     SANDBOX_CHECKPOINTS[new_gid] = None
-    GAME_HISTORY[new_gid] = []
+    set_loaded_phase_state(new_gid, phase_count=0, history=[])
 
     summary = MultiplayerGameSummary(
         game_id=new_gid,

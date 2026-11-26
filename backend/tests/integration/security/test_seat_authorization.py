@@ -8,6 +8,7 @@ from storage.store import GAME_SUMMARIES, GAMES
 from tests.integration.security.helpers import auth_headers, bob_headers, secret_plan_match
 
 client = TestClient(app)
+pytestmark = pytest.mark.usefixtures("forget_games_made_by_test")
 
 
 def test_seat_authorization_prevents_opponent_order_tampering():

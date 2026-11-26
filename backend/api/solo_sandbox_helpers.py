@@ -23,13 +23,12 @@ from security.secrecy import (
     with_sanitized_admin_log,
 )
 from storage import supabase
+from storage.phases import ensure_history_loaded, replace_all_phases
 from storage.profiles import ensure_profile_loaded, resolve_display_name
 from storage.store import (
     DEFAULT_GAME_ID,
-    GAME_HISTORY,
     GAME_SUMMARIES,
     GAMES,
-    HISTORY_UNSAVED,
     PRIVATE_SANDBOXES,
     SANDBOX_CHECKPOINTS,
     check_game_capacity,
@@ -152,7 +151,10 @@ async def export_game_to_solo_sandbox(
         visible = sanitize_game_state_for_viewer(source, viewer_power)
         export_power = viewer_power or source.active_power
 
-    export_history = [snap.model_copy(deep=True) for snap in GAME_HISTORY.get(source.game_id, [])]
+    source_history = (
+        [] if source.game_id in PRIVATE_SANDBOXES else await ensure_history_loaded(source.game_id)
+    )
+    export_history = [snap.model_copy(deep=True) for snap in source_history]
     await clear_caller_draft_sandboxes(resume_game_id, current_user, sync_lobby)
 
     gid = f"solo_{uuid.uuid4().hex[:8]}"
@@ -164,9 +166,7 @@ async def export_game_to_solo_sandbox(
     refresh_diagnostics_and_simulation(game_state)
     GAMES[gid] = game_state
     SANDBOX_CHECKPOINTS[gid] = None
-    GAME_HISTORY[gid] = export_history
-    if export_history:
-        HISTORY_UNSAVED.add(gid)
+    replace_all_phases(gid, export_history)
 
     await ensure_profile_loaded(current_user.user_id if current_user else None)
     summary = _build_solo_draft_summary(gid, game_state, export_power, current_user)
@@ -230,7 +230,7 @@ async def create_or_resume_solo_sandbox(
     game_state = build_scenario("standard_1901", Power.FRANCE, gid)
     GAMES[gid] = game_state
     SANDBOX_CHECKPOINTS[gid] = None
-    GAME_HISTORY[gid] = []
+    replace_all_phases(gid, [])
 
     await ensure_profile_loaded(current_user.user_id if current_user else None)
     summary = _build_solo_draft_summary(gid, game_state, Power.FRANCE, current_user)

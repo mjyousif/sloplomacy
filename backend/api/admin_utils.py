@@ -9,11 +9,14 @@ from domain.game_state import AdminActionLogEntry, GameState
 from domain.orders import Order, OrderType, SimulationResult
 from engine.turn_service import publish_game_state
 from security.auth import AuthUser
+from storage.phases import (
+    append_resolved_phase,
+    ensure_history_loaded,
+    upsert_phase_at,
+)
 from storage.profiles import participant_name_for_id, resolve_display_name
 from storage.store import (
-    GAME_HISTORY,
     GAME_SUMMARIES,
-    HISTORY_UNSAVED,
     clear_ephemeral_sandboxes_for,
 )
 from storage.supabase_codec import is_valid_uuid
@@ -268,8 +271,8 @@ async def record_admin_history_and_log(
     )
     after_state.admin_log.append(entry)
 
-    # 2. Consolidation in GAME_HISTORY
-    history = GAME_HISTORY.setdefault(game_id, [])
+    # 2. Consolidation in phase history (no 30-phase cap)
+    history = await ensure_history_loaded(game_id)
     is_consecutive_admin = (
         bool(history)
         and history[-1].phase == "Admin"
@@ -291,6 +294,7 @@ async def record_admin_history_and_log(
             trailing.admin_resolution.winner = after_state.winner
         # Recompute net orders between pre-admin baseline and new outcome
         trailing.orders = compute_admin_orders(trailing.units, after_state.units)
+        upsert_phase_at(game_id, len(history) - 1, trailing)
     else:
         admin_snap = before_state.model_copy(
             deep=True,
@@ -310,9 +314,7 @@ async def record_admin_history_and_log(
             retreats=copy.deepcopy(after_state.retreats),
             winner=after_state.winner,
         )
-        history.append(admin_snap)
-        if len(history) > 30:
-            history.pop(0)
+        append_resolved_phase(game_id, admin_snap)
 
     # 3. Persistence and broadcast
     if (
@@ -322,5 +324,4 @@ async def record_admin_history_and_log(
         != (after_state.season, after_state.year, after_state.phase)
     ):
         clear_ephemeral_sandboxes_for(game_id)
-    HISTORY_UNSAVED.add(game_id)
     await publish_game_state(after_state, refresh=False, lobby=True)

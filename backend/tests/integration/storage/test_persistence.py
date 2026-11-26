@@ -53,7 +53,7 @@ def test_seat_survives_a_restart(supabase):
     assert state["summary"]["status"] == "active"
 
 
-def test_surrender_and_leave_stays_gone_after_lobby_refresh(supabase):
+def test_surrender_and_leave_stays_gone_after_lobby_refresh_and_keeps_former_row(supabase):
     game_id = _create_game()
     _join(game_id, "GERMANY", BOB)
     _join(game_id, "RUSSIA", CAL)
@@ -66,6 +66,22 @@ def test_surrender_and_leave_stays_gone_after_lobby_refresh(supabase):
     listed = {g["game_id"]: g for g in client.get("/api/games").json()}
     assert sorted(listed[game_id]["participants"]) == ["FRANCE", "RUSSIA"]
     assert "GERMANY" not in supabase.rows[game_id]["summary"]["participants"]
+    # Soft-leave keeps Bob's former participant row with left_at populated.
+    assert "GERMANY" not in supabase.active_participants(game_id)
+    former = [
+        r
+        for r in supabase.participants[game_id]
+        if r["power"] == "GERMANY" and r["guest_id"] == BOB["user_id"]
+    ]
+    assert len(former) == 1
+    assert former[0]["left_at"] is not None
+    assert former[0]["surrendered"] is True
+
+    # A replacement player can claim the vacated GERMANY seat without removing Bob's historical row.
+    dan = {"user_id": "dan", "email": "dan@test.com", "display_name": "Dan"}
+    _join(game_id, "GERMANY", dan)
+    assert supabase.active_participants(game_id)["GERMANY"]["guest_id"] == "dan"
+    assert len([r for r in supabase.participants[game_id] if r["power"] == "GERMANY"]) == 2
 
 
 def test_drafted_order_survives_a_restart(supabase):
@@ -191,7 +207,7 @@ def test_overlapping_cold_start_reads_share_one_game_object(supabase):
     game_id = _create_game()
     first = supabase.rows[game_id]
     _restart_container(game_id)
-    state = GameState.model_validate(first["state"])
+    state = GameState.model_validate(first["game_state"])
     summary = MultiplayerGameSummary.model_validate(first["summary"])
 
     winner = cache_loaded_game(game_id, (state, summary, [], None))

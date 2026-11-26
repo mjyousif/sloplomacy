@@ -23,17 +23,23 @@ def test_save_without_history_leaves_the_column_out_of_the_write():
     async def run_test():
         game = build_scenario("standard_1901", Power.ENGLAND, "no_history")
         mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.post.return_value = httpx.Response(status_code=201)
+        mock_client.post.return_value = httpx.Response(status_code=201, json=[])
         env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
         with patch.dict(os.environ, env):
             await save_game_to_db("no_history", game, client=mock_client)
             without = mock_client.post.call_args.kwargs["json"]
-            await save_game_to_db("no_history", game, history=[game], client=mock_client)
-            with_history = mock_client.post.call_args.kwargs["json"]
+            await save_game_to_db(
+                "no_history", game, history=[game], current_phase_index=3, client=mock_client
+            )
+            with_phase_idx = mock_client.post.call_args.kwargs["json"]
 
+        # Normalized saves never inline history or summary blobs; phases save via storage.phases.
         assert "history" not in without
+        assert "summary" not in without
         assert "history" not in without["game_state"]
-        assert len(with_history["history"]) == 1
+        assert "current_phase_index" not in without
+        assert "history" not in with_phase_idx
+        assert with_phase_idx["current_phase_index"] == 3
 
     asyncio.run(run_test())
 
@@ -87,31 +93,33 @@ def test_load_reads_history_from_its_column_and_from_older_rows():
         base = {"room_code": "history_rows", "status": "lobby", "name": "x"}
         env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
 
-        async def history_count(row):
+        async def load_row(row):
             mock_client = AsyncMock(spec=httpx.AsyncClient)
             mock_client.get.return_value = httpx.Response(status_code=200, json=[row])
             with patch.dict(os.environ, env):
-                loaded = await load_game_from_db("history_rows", client=mock_client)
-            return len(loaded[2])
+                return await load_game_from_db("history_rows", client=mock_client)
 
-        assert await history_count({**base, "game_state": blob, "history": [snapshot]}) == 1
-        assert (
-            await history_count(
-                {**base, "game_state": {**blob, "history": [snapshot]}, "history": []}
-            )
-            == 1
+        loaded_col = await load_row({**base, "game_state": blob, "history": [snapshot]})
+        assert len(loaded_col.history) == 1
+
+        loaded_blob = await load_row(
+            {**base, "game_state": {**blob, "history": [snapshot]}, "history": []}
         )
-        # Once a row has been rewritten the column wins over anything older.
-        assert (
-            await history_count(
-                {
-                    **base,
-                    "game_state": {**blob, "history": [snapshot]},
-                    "history": [snapshot, snapshot],
-                }
-            )
-            == 2
+        assert len(loaded_blob.history) == 1
+
+        # Once migrated to normalized phases, current_phase_index > 0 keeps history lazy (None).
+        loaded_norm = await load_row(
+            {
+                **base,
+                "game_type": "PUBLIC",
+                "status": "active",
+                "current_phase_index": 12,
+                "game_participants": [],
+                "game_state": snapshot,
+            }
         )
+        assert loaded_norm.phase_count == 12
+        assert loaded_norm.history is None
 
     asyncio.run(run_test())
 
@@ -152,9 +160,13 @@ def test_lobby_outage_is_not_retried_as_a_refused_query():
 
 def test_save_game_to_db_strips_creator_email_uuid_names_and_admin_log_emails():
     from domain.game_state import AdminActionLogEntry
-    from storage.supabase import save_game_to_db
+    from storage.supabase import GAME_DB_IDS, save_game_to_db
+    from storage.supabase_codec import serialize_participant_for_rpc
 
     uid = "11111111-1111-1111-1111-111111111111"
+    db_uuid = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+    GAME_DB_IDS.pop("save_strip", None)
+
     state = build_scenario("standard_1901", Power.FRANCE, "save_strip")
     state.admin_log = [
         AdminActionLogEntry(
@@ -169,6 +181,18 @@ def test_save_game_to_db_strips_creator_email_uuid_names_and_admin_log_emails():
             acknowledged_by=[uid, "secret@example.com", "FRANCE"],
         )
     ]
+    france_part = GameParticipant(
+        user_id=uid,
+        display_name="Freetvs",
+        power=Power.FRANCE,
+        joined_at="2026-11-05T00:00:00Z",
+    )
+    guest_part = GameParticipant(
+        user_id="guest_1234",
+        display_name="Envoy Guest",
+        power=Power.ENGLAND,
+        joined_at="2026-11-05T00:00:00Z",
+    )
     summary = MultiplayerGameSummary(
         game_id="save_strip",
         name="Strip Test",
@@ -176,33 +200,40 @@ def test_save_game_to_db_strips_creator_email_uuid_names_and_admin_log_emails():
         created_by="secret@example.com",
         creator_id=uid,
         created_at="2026-11-05T00:00:00Z",
-        participants={
-            "FRANCE": GameParticipant(
-                user_id=uid,
-                display_name="Freetvs",
-                power=Power.FRANCE,
-                joined_at="2026-11-05T00:00:00Z",
-            )
-        },
+        participants={"FRANCE": france_part},
     )
 
     async def run_test():
         mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.post.return_value = httpx.Response(status_code=201, json=[])
+        mock_client.post.side_effect = [
+            httpx.Response(status_code=201, json=[{"id": db_uuid}]),
+            httpx.Response(status_code=200, json=[]),
+        ]
         env = {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"}
         with patch.dict(os.environ, env):
-            await save_game_to_db("save_strip", state, summary, history=[state], client=mock_client)
+            try:
+                await save_game_to_db(
+                    "save_strip", state, summary, history=[state], client=mock_client
+                )
+            finally:
+                GAME_DB_IDS.pop("save_strip", None)
 
-        payload = mock_client.post.call_args.kwargs["json"]
-        for saved_summary in (payload["summary"], payload["game_state"]["summary"]):
-            assert "created_by" not in saved_summary
-            assert "email" not in saved_summary["participants"]["FRANCE"]
-            assert "display_name" not in saved_summary["participants"]["FRANCE"]
-        for saved_state in (payload["game_state"]["state"], payload["history"][0]):
-            log_entry = saved_state["admin_log"][0]
-            assert "actor" not in log_entry
-            assert log_entry["actor_id"] == uid
-            assert log_entry["acknowledged_by"] == [uid, "FRANCE"]
+        payload = mock_client.post.call_args_list[0].kwargs["json"]
+        assert "created_by" not in payload
+        assert "summary" not in payload
+        assert payload["host_user_id"] == uid
+        assert payload["creator_guest_id"] is None
+        log_entry = payload["game_state"]["admin_log"][0]
+        assert "actor" not in log_entry
+        assert log_entry["actor_id"] == uid
+        assert log_entry["acknowledged_by"] == [uid, "FRANCE"]
+
+        rpc_seat = mock_client.post.call_args_list[1].kwargs["json"]["p_seats"][0]
+        assert rpc_seat["user_id"] == uid
+        assert rpc_seat["guest_display_name"] is None
+        guest_seat = serialize_participant_for_rpc(guest_part, is_finalized=False)
+        assert guest_seat["guest_id"] == "guest_1234"
+        assert guest_seat["guest_display_name"] == "Envoy Guest"
 
     asyncio.run(run_test())
 

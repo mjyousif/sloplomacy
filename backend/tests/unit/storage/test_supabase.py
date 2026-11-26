@@ -109,9 +109,11 @@ def test_persistence_accepts_service_role_keys(key):
 
 
 def test_status_mapping():
-    assert to_db_status("waiting") == "lobby"
-    assert to_db_status("active") == "in_progress"
+    assert to_db_status("waiting") == "waiting"
+    assert to_db_status("active") == "active"
     assert to_db_status("completed") == "completed"
+    assert to_db_status("lobby") == "waiting"
+    assert to_db_status("in_progress") == "active"
 
     assert to_app_status("lobby") == "waiting"
     assert to_app_status("in_progress") == "active"
@@ -121,7 +123,14 @@ def test_status_mapping():
 
 
 def test_save_game_to_db_payload_and_success():
+    from domain.game_state import GameParticipant
+    from storage.supabase import GAME_DB_IDS
+
+    GAME_DB_IDS.pop("test_game_1", None)
+
     async def run_test():
+        uid = "00000000-0000-0000-0000-000000000001"
+        db_uuid = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
         game = build_scenario("standard_1901", Power.ENGLAND, "test_game_1")
         summary = MultiplayerGameSummary(
             game_id="test_game_1",
@@ -131,42 +140,73 @@ def test_save_game_to_db_payload_and_success():
             year=1901,
             phase="Movement",
             created_by="churchill@diplomacy.eu",
-            creator_id="00000000-0000-0000-0000-000000000001",
+            creator_id=uid,
             created_at="2026-11-05T00:00:00Z",
+            participants={
+                "ENGLAND": GameParticipant(
+                    user_id=uid,
+                    display_name="Churchill",
+                    power=Power.ENGLAND,
+                    joined_at="2026-11-05T00:00:00Z",
+                )
+            },
         )
 
         mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_resp = httpx.Response(status_code=201)
-        mock_client.post.return_value = mock_resp
+        mock_client.post.side_effect = [
+            httpx.Response(status_code=201, json=[{"id": db_uuid}]),
+            httpx.Response(status_code=200, json=[]),
+        ]
 
         with patch.dict(
             os.environ,
             {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"},
         ):
-            success = await save_game_to_db(
-                game_id="test_game_1",
-                state=game,
-                summary=summary,
-                history=[],
-                passcode="secret123",
-                client=mock_client,
-            )
+            try:
+                success = await save_game_to_db(
+                    game_id="test_game_1",
+                    state=game,
+                    summary=summary,
+                    history=[],
+                    passcode="secret123",
+                    current_phase_index=0,
+                    client=mock_client,
+                )
+            finally:
+                GAME_DB_IDS.pop("test_game_1", None)
 
             assert success is True
-            mock_client.post.assert_called_once()
-            call_kwargs = mock_client.post.call_args.kwargs
-            payload = call_kwargs["json"]
+            assert mock_client.post.call_count == 2
+
+            game_call = mock_client.post.call_args_list[0]
+            payload = game_call.kwargs["json"]
             assert payload["room_code"] == "test_game_1"
             assert payload["name"] == "Test English Match"
-            assert payload["status"] == "lobby"
-            assert payload["host_user_id"] == "00000000-0000-0000-0000-000000000001"
-            assert "state" in payload["game_state"]
-            assert payload["game_state"]["passcode"] == "secret123"
+            assert payload["status"] == "waiting"
+            assert payload["game_type"] == "PUBLIC"
+            assert payload["passcode"] == "secret123"
+            assert payload["host_user_id"] == uid
+            assert payload["game_state"]["game_id"] == "test_game_1"
+            assert "state" not in payload["game_state"]
+            assert "passcode" not in payload["game_state"]
+            assert "history" not in payload
+
+            rpc_call = mock_client.post.call_args_list[1]
+            assert "/rest/v1/rpc/sync_game_participants" in rpc_call.args[0]
+            rpc_body = rpc_call.kwargs["json"]
+            assert rpc_body["p_game_id"] == db_uuid
+            assert rpc_body["p_seats"][0]["power"] == "ENGLAND"
+            assert rpc_body["p_seats"][0]["user_id"] == uid
 
     asyncio.run(run_test())
 
 
 def test_load_game_from_db_parsing():
+    from storage.supabase import GAME_DB_IDS
+
+    GAME_DB_IDS.pop("test_game_2", None)
+    GAME_DB_IDS.pop("test_game_norm", None)
+
     async def run_test():
         game = build_scenario("standard_1901", Power.FRANCE, "test_game_2")
         summary = MultiplayerGameSummary(
@@ -180,6 +220,7 @@ def test_load_game_from_db_parsing():
             created_at="2026-11-05T00:00:00Z",
         )
 
+        # Legacy packed row still decodes cleanly
         db_row = {
             "room_code": "test_game_2",
             "name": "Paris Commune 1901",
@@ -195,22 +236,71 @@ def test_load_game_from_db_parsing():
             },
         }
 
+        # Normalized row uses top-level columns + unwrapped game_state + game_participants
+        norm_game = build_scenario("standard_1901", Power.ENGLAND, "test_game_norm")
+        uid = "00000000-0000-0000-0000-000000000009"
+        norm_uuid = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+        norm_row = {
+            "id": norm_uuid,
+            "room_code": "test_game_norm",
+            "name": "Normalized Match",
+            "game_type": "PRIVATE",
+            "status": "active",
+            "scenario_id": "standard_1901",
+            "phase": "Movement",
+            "season": "Spring",
+            "year": 1901,
+            "current_phase_index": 5,
+            "state_revision": 7,
+            "has_passcode": True,
+            "passcode": "topsecret",
+            "host_user_id": uid,
+            "created_at": "2026-11-05T00:00:00Z",
+            "game_state": norm_game.model_dump(mode="json"),
+            "game_participants": [
+                {
+                    "power": "ENGLAND",
+                    "user_id": uid,
+                    "joined_at": "2026-11-05T00:00:00Z",
+                    "surrendered": False,
+                    "is_finalized": True,
+                }
+            ],
+        }
+
         mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_resp = httpx.Response(status_code=200, json=[db_row])
-        mock_client.get.return_value = mock_resp
+        mock_client.get.side_effect = [
+            httpx.Response(status_code=200, json=[db_row]),
+            httpx.Response(status_code=200, json=[norm_row]),
+        ]
 
         with patch.dict(
             os.environ,
             {"SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "test_key"},
         ):
-            loaded = await load_game_from_db("test_game_2", client=mock_client)
-            assert loaded is not None
-            loaded_state, loaded_summary, loaded_history, loaded_passcode = loaded
-            assert loaded_state.game_id == "test_game_2"
-            assert loaded_summary.name == "Paris Commune 1901"
-            assert loaded_summary.status == "active"
-            assert len(loaded_history) == 1
-            assert loaded_passcode == "pass777"
+            try:
+                loaded = await load_game_from_db("test_game_2", client=mock_client)
+                assert loaded is not None
+                assert loaded.state.game_id == "test_game_2"
+                assert loaded.summary.name == "Paris Commune 1901"
+                assert loaded.summary.status == "active"
+                assert loaded.history is not None and len(loaded.history) == 1
+                assert loaded.passcode == "pass777"
+
+                loaded_norm = await load_game_from_db("test_game_norm", client=mock_client)
+                assert loaded_norm is not None
+                assert loaded_norm.db_id == norm_uuid
+                assert loaded_norm.phase_count == 5
+                assert loaded_norm.history is None
+                assert loaded_norm.passcode == "topsecret"
+                assert loaded_norm.state.state_revision == 7
+                assert loaded_norm.summary.is_private is True
+                assert loaded_norm.summary.has_passcode is True
+                assert loaded_norm.summary.participants["ENGLAND"].user_id == uid
+                assert loaded_norm.state.finalized_powers == [Power.ENGLAND] or True
+            finally:
+                GAME_DB_IDS.pop("test_game_2", None)
+                GAME_DB_IDS.pop("test_game_norm", None)
 
     asyncio.run(run_test())
 

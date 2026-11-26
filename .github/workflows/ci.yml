@@ -117,6 +117,15 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
+      postgrest:
+        image: postgrest/postgrest:v12.2.3
+        env:
+          PGRST_DB_URI: postgres://postgres:postgres@postgres:5432/diplomacy_test
+          PGRST_DB_SCHEMAS: public
+          PGRST_DB_ANON_ROLE: anon
+          PGRST_JWT_SECRET: test-postgrest-jwt-secret-at-least-32-chars
+        ports:
+          - 3000:3000
     steps:
       - uses: actions/checkout@v7
 
@@ -138,6 +147,23 @@ jobs:
           PGPASSWORD: postgres
         run: |
           psql -h 127.0.0.1 -U postgres -d diplomacy_test -v ON_ERROR_STOP=1 --single-transaction -f supabase/tests/verify_migrations.sql
+          psql -h 127.0.0.1 -U postgres -d diplomacy_test -v ON_ERROR_STOP=1 -c "NOTIFY pgrst, 'reload schema';"
+
+      - name: Set up Python for live PostgREST integration tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend test dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Run live FastAPI <-> PostgREST <-> Postgres tests
+        env:
+          TEST_POSTGREST_URL: http://127.0.0.1:3000
+          TEST_POSTGREST_JWT_SECRET: test-postgrest-jwt-secret-at-least-32-chars
+        run: pytest backend/tests/integration/storage/test_postgrest_live.py -v
 
   deploy:
     name: Deploy to Google Cloud Run

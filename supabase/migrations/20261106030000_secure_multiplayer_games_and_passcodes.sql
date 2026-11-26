@@ -13,24 +13,6 @@ create policy "Only service role can select games"
   to service_role
   using (true);
 
--- 3. Create a public view for sanitized lobby discovery that strips secret passcodes and unadjudicated game_state
-create or replace view public.lobby_games as
-  select
-    id,
-    room_code,
-    name,
-    host_user_id,
-    status,
-    phase,
-    season,
-    year,
-    summary,
-    is_sandbox,
-    is_private,
-    (passcode is not null and passcode <> '') as has_passcode,
-    created_at,
-    updated_at
-  from public.multiplayer_games
-  where is_sandbox = false and is_private = false;
-
-comment on view public.lobby_games is 'Sanitized public view of active multiplayer games excluding secret orders and passcodes.';
+-- 3. Drop the unused public.lobby_games view (formerly a SECURITY DEFINER view).
+--    The lobby is served exclusively by the FastAPI backend via service_role.
+drop view if exists public.lobby_games;

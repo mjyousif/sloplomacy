@@ -21,11 +21,11 @@ Not everything in process memory is saved to Supabase:
 
 | Data | In-Memory Store (`storage/store.py`) | Persisted in Supabase? | Notes |
 | :--- | :--- | :--- | :--- |
-| **Live match & solo/saved sandbox state** | `GAMES[gid]` | Yes (`game_state` JSONB) | Derived `unit_options` and `preview` are stripped before saving and rebuilt on load. |
-| **Match metadata & board preview** | `GAME_SUMMARIES[gid]` | Yes (`multiplayer_games` columns + `game_state->summary`) | Loaded on startup for the lobby without loading full game state. |
-| **Resolved turn history** | `GAME_HISTORY[gid]` | Yes (`history` JSONB, capped at 30 turns) | Marked dirty in `HISTORY_UNSAVED` only when history changes (adjudication, rollback, admin edit). |
-| **Private match passcodes** | `GAME_PASSCODES[gid]` | Yes (inside `game_state->passcode`) | Never included in `MultiplayerGameSummary` or `GameState` responses (with legacy fallback to the top-level `passcode` column on load). |
-| **Press messages (chat)** | `GAME_PRESS[gid]` | Yes (`press` JSONB column) | Stored in its own column so board saves, history snapshots, and rollbacks never touch press. |
+| **Live match & solo/saved sandbox state** | `GAMES[gid]` | Yes (`multiplayer_games.game_state` JSONB) | Derived `unit_options` and `preview` are stripped before saving and rebuilt on load. |
+| **Match metadata, seats & board preview** | `GAME_SUMMARIES[gid]` | Yes (`multiplayer_games` columns, `game_participants`, virtual `board_preview(g)`) | Loaded on startup for the lobby via a single embedded join without downloading `game_state`, `game_phases`, or `press_messages`. |
+| **Resolved turn history** | `GAME_HISTORY[gid]` (lazy) | Yes (`public.game_phases`, full campaign — no 30-turn cap) | Appended incrementally ($O(1)$ per turn) via `PENDING_PHASE_UPSERTS`; lazy-loaded on demand after cold start. |
+| **Private match passcodes** | `GAME_PASSCODES[gid]` | Yes (`multiplayer_games.passcode`, virtual `has_passcode(g)`) | Never included in `MultiplayerGameSummary` or `GameState` responses. |
+| **Press messages (chat)** | `GAME_PRESS[gid]` | Yes (`press_threads`, `press_thread_members`, `press_messages`) | Stored in normalized tables and appended incrementally so board saves and rollbacks never touch press. |
 | **Profile display names** | `PROFILE_NAMES[uid]` | Yes (`public.profiles`) | Hydrated on startup and updated when users sign in or rename. |
 | **Default local game (`proto_1901`)** | `GAMES["proto_1901"]` | No | Ephemeral local/default sandbox; never written to Supabase. |
 | **Hypothetical branches (`sbx_*`, `SANDBOX_BRANCHES`)** | `PRIVATE_SANDBOXES`, `SANDBOX_CHECKPOINTS` | No | Ephemeral "what-if" branches; cleared when the real turn resolves or resets. |
@@ -36,10 +36,10 @@ Not everything in process memory is saved to Supabase:
 
 Every authoritative mutation (order updates, seat changes, adjudication, timer changes, admin edits) mutates the in-memory `GameState` first, then calls `persist_game(game_id)` ([`backend/storage/store.py`](../../backend/storage/store.py)):
 
-1. **Summary sync**: `sync_summary()` updates `GAME_SUMMARIES[gid]` (phase, finalized/surrendered powers, `BoardPreview`, timer deadline, winner/completed status).
+1. **Summary sync & seat diffing**: `sync_summary()` updates `GAME_SUMMARIES[gid]`, and `persist_game()` invokes `sync_game_participants` RPC only when active seats or finalization flags changed (keeping routine order clicks to a single PostgREST upsert).
 2. **Coalesced async writes (`SAVES_RUNNING` + `UNSAVED_GAMES`)**: If a Supabase save is already in flight for `game_id`, a second concurrent `persist_game()` call marks `SAVES_RUNNING[game_id] = True` and returns immediately. When the active save finishes, it loops and writes the latest snapshot, preventing overlapping out-of-order HTTP PostgREST upserts.
-3. **Selective history upload**: `history` is only serialized and sent to Supabase when `game_id` is in `HISTORY_UNSAVED`, keeping routine order submissions small and fast.
-4. **Separate press persistence**: Press writes use their own `PRESS_UNSAVED` and `save_press_to_db` path ([`backend/storage/press.py`](../../backend/storage/press.py)) so chat traffic never contends with board saves.
+3. **Incremental phase persistence**: Resolved phases and rollbacks are queued in `PENDING_PHASE_UPSERTS` / `PENDING_PHASE_TRUNCATE_FROM` (`backend/storage/phases.py`) and flushed incrementally to `public.game_phases` after the parent `multiplayer_games` row saves.
+4. **Separate incremental press persistence**: Press writes append only new messages (`seq > _PERSISTED_PRESS_SEQ`) via [`backend/storage/press.py`](../../backend/storage/press.py) so chat traffic never contends with board saves.
 
 ```mermaid
 flowchart TD

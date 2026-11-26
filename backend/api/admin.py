@@ -14,7 +14,6 @@ from domain.game_state import (
     PHASES_BY_SEASON,
     GameState,
     MultiplayerGameSummary,
-    TurnHistoryEntry,
 )
 from domain.requests import (
     AdminAcknowledgeRequest,
@@ -43,13 +42,17 @@ from security.secrecy import (
     with_sanitized_admin_log,
 )
 from storage import supabase
+from storage.phases import (
+    ensure_history_loaded,
+    list_phase_entries,
+    replace_all_phases,
+    truncate_phases_from,
+)
 from storage.profiles import ensure_profile_loaded
 from storage.store import (
     DEFAULT_GAME_ID,
-    GAME_HISTORY,
     GAME_SUMMARIES,
     GAMES,
-    HISTORY_UNSAVED,
     cache_loaded_game,
     check_game_capacity,
     clear_ephemeral_sandboxes_for,
@@ -105,8 +108,7 @@ async def seed_test_scenario(req: SeedScenarioRequest):
     if gid not in GAMES:
         check_game_capacity()
     clear_ephemeral_sandboxes_for(gid)
-    GAME_HISTORY[gid] = build_scenario_history(req.scenario_id, gid)
-    HISTORY_UNSAVED.add(gid)
+    replace_all_phases(gid, build_scenario_history(req.scenario_id, gid))
     new_game = build_scenario(req.scenario_id, req.active_power, gid)
     if gid in GAMES:
         new_game.state_revision = GAMES[gid].state_revision + 1
@@ -140,27 +142,29 @@ async def seed_test_scenario(req: SeedScenarioRequest):
     summary="Get Admin Status",
     description="Check creator/admin privileges and rollback history depth for the given game.",
 )
-def get_admin_status(
+async def get_admin_status(
     game_id: str | None = Query(default=None),
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     """Check creator/admin privileges and rollback history depth for the given game."""
     gid = game_id or DEFAULT_GAME_ID
     summary = GAME_SUMMARIES.get(gid)
-    history_stack = GAME_HISTORY.get(gid, [])
-
-    def _build_entries() -> list[TurnHistoryEntry]:
-        return [
-            TurnHistoryEntry(index=i, season=s.season, year=s.year, phase=s.phase)
-            for i, s in enumerate(history_stack)
-        ]
+    if gid not in GAMES and supabase.is_persistence_enabled():
+        try:
+            loaded = await load_saved_game(gid)
+            if loaded is not None:
+                cache_loaded_game(gid, loaded)
+                summary = GAME_SUMMARIES.get(gid)
+        except HTTPException:
+            pass
+    entries = await list_phase_entries(gid)
 
     if gid == DEFAULT_GAME_ID or not summary or summary.is_sandbox:
         return AdminStatusResponse(
             is_creator=True,
-            can_rollback=len(history_stack) > 0,
-            history_count=len(history_stack),
-            history_entries=_build_entries(),
+            can_rollback=len(entries) > 0,
+            history_count=len(entries),
+            history_entries=entries,
             creator_id=summary.creator_id if summary else "guest",
         )
 
@@ -171,9 +175,9 @@ def get_admin_status(
 
     return AdminStatusResponse(
         is_creator=caller_is_creator,
-        can_rollback=len(history_stack) > 0,
-        history_count=len(history_stack),
-        history_entries=_build_entries() if caller_is_creator else [],
+        can_rollback=len(entries) > 0,
+        history_count=len(entries),
+        history_entries=entries if caller_is_creator else [],
         creator_id=summary.creator_id,
     )
 
@@ -194,7 +198,7 @@ async def admin_rollback_turn(
     await resolve_game(gid)
     verify_admin_access(gid, current_user)
 
-    history_stack = GAME_HISTORY.get(gid, [])
+    history_stack = await ensure_history_loaded(gid)
     if not history_stack:
         raise HTTPException(
             status_code=400, detail="No previous turn snapshots in history to roll back to."
@@ -205,8 +209,7 @@ async def admin_rollback_turn(
         raise HTTPException(status_code=400, detail=f"Invalid rollback snapshot index {idx}.")
 
     prev_state = history_stack[idx].model_copy(deep=True)
-    del history_stack[idx:]
-    HISTORY_UNSAVED.add(gid)
+    truncate_phases_from(gid, idx)
     current = GAMES.get(gid)
 
     if prev_state.phase == "Admin":
@@ -228,6 +231,8 @@ async def admin_rollback_turn(
         prev_state.timer = current.timer
         start_phase_clock(prev_state, timer_players(prev_state), time.time())
 
+    if not prev_state.turn_history and current and current.turn_history:
+        prev_state.turn_history = list(current.turn_history)
     summary_line = f"[ADMIN OVERRIDE] Rolled back turn to {turn_label(prev_state)} Phase."
     prev_state.turn_history.insert(0, summary_line)
 

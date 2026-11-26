@@ -16,6 +16,7 @@ from .helpers import (
 
 NOPE = {"X-Passcode": "nope"}
 RIGHT = {"X-Passcode": "Secret1901"}
+pytestmark = pytest.mark.usefixtures("forget_games_made_by_test")
 
 
 def _from(address: str) -> dict:

@@ -398,11 +398,10 @@ def build_all_pieces_units() -> list[Unit]:
 async def seed_dev_games() -> None:
     """Ensure local dev starts with both 'one_turn_from_win' and 'all_pieces' in RAM/DB."""
     from scenarios.presets import build_scenario
+    from storage.phases import replace_all_phases, set_loaded_phase_state
     from storage.store import (
-        GAME_HISTORY,
         GAME_SUMMARIES,
         GAMES,
-        HISTORY_UNSAVED,
         SANDBOX_CHECKPOINTS,
         UNSAVED_GAMES,
         persist_game,
@@ -416,7 +415,7 @@ async def seed_dev_games() -> None:
         state.finalized_powers = [Power.TURKEY]
         GAMES[gid] = state
         SANDBOX_CHECKPOINTS[gid] = None
-        GAME_HISTORY[gid] = build_one_turn_from_win_history(gid)
+        replace_all_phases(gid, build_one_turn_from_win_history(gid))
         GAME_SUMMARIES[gid] = MultiplayerGameSummary(
             game_id=gid,
             name="Final Push to 18 SCs (1 Turn from Victory)",
@@ -439,7 +438,6 @@ async def seed_dev_games() -> None:
             is_sandbox=False,
         )
         UNSAVED_GAMES.add(gid)
-        HISTORY_UNSAVED.add(gid)
         await persist_game(gid)
 
     if "dev_all_pieces" not in GAME_SUMMARIES and "dev_all_pieces" not in GAMES:
@@ -452,7 +450,7 @@ async def seed_dev_games() -> None:
         refresh_diagnostics_and_simulation(state)
         GAMES[gid] = state
         SANDBOX_CHECKPOINTS[gid] = None
-        GAME_HISTORY[gid] = []
+        set_loaded_phase_state(gid, phase_count=0, history=[])
         GAME_SUMMARIES[gid] = MultiplayerGameSummary(
             game_id=gid,
             name="All 75 Units Stress Board",
@@ -475,5 +473,4 @@ async def seed_dev_games() -> None:
             is_sandbox=False,
         )
         UNSAVED_GAMES.add(gid)
-        HISTORY_UNSAVED.add(gid)
         await persist_game(gid)

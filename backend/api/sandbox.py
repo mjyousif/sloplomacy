@@ -24,11 +24,11 @@ from security.secrecy import (
     viewer_power_for,
     with_sanitized_admin_log,
 )
+from storage.phases import ensure_history_loaded, replace_all_phases, set_loaded_phase_state
 from storage.store import (
     GAME_HISTORY,
     GAME_SUMMARIES,
     GAMES,
-    HISTORY_UNSAVED,
     PRIVATE_SANDBOX_TURNS,
     PRIVATE_SANDBOXES,
     SANDBOX_BRANCHES,
@@ -67,7 +67,7 @@ def open_private_sandbox(
     sandbox.timer = None  # The match keeps the real clock, and a copy must never run out
     reset_foreign_orders(sandbox, power)
     GAMES[sandbox_id] = sandbox
-    GAME_HISTORY[sandbox_id] = []
+    set_loaded_phase_state(sandbox_id, phase_count=0, history=[])
     SANDBOX_CHECKPOINTS[sandbox_id] = None
     PRIVATE_SANDBOXES[sandbox_id] = (match.game_id, power)
     PRIVATE_SANDBOX_TURNS[sandbox_id] = match_turn
@@ -107,10 +107,9 @@ async def enter_sandbox_mode(
         return open_private_sandbox(game, req.power, current_user)
 
     origin_turn = (game.season, game.year, game.phase)
+    real_history = await ensure_history_loaded(gid)
     SANDBOX_CHECKPOINTS[gid] = game.model_copy(deep=True)
-    SANDBOX_HISTORY_CHECKPOINTS[gid] = [
-        snap.model_copy(deep=True) for snap in GAME_HISTORY.get(gid, [])
-    ]
+    SANDBOX_HISTORY_CHECKPOINTS[gid] = [snap.model_copy(deep=True) for snap in real_history]
     branch = SANDBOX_BRANCHES.get(gid)
     if branch is not None and branch[0] == origin_turn:
         branch_state = branch[1].model_copy(deep=True)
@@ -118,7 +117,7 @@ async def enter_sandbox_mode(
         branch_state.state_revision = max(branch_state.state_revision, game.state_revision) + 1
         branch_state.board_revision = max(branch_state.board_revision, game.board_revision) + 1
         GAMES[gid] = branch_state
-        GAME_HISTORY[gid] = [snap.model_copy(deep=True) for snap in branch[2]]
+        replace_all_phases(gid, [snap.model_copy(deep=True) for snap in branch[2]])
         game = branch_state
     else:
         SANDBOX_BRANCHES.pop(gid, None)
@@ -168,8 +167,7 @@ async def exit_sandbox_mode(
         game = restored
         SANDBOX_CHECKPOINTS[gid] = None
         # Turns stepped in the sandbox were hypothetical, so they leave the history with it.
-        GAME_HISTORY[gid] = SANDBOX_HISTORY_CHECKPOINTS.pop(gid, GAME_HISTORY.get(gid, []))
-        HISTORY_UNSAVED.add(gid)
+        replace_all_phases(gid, SANDBOX_HISTORY_CHECKPOINTS.pop(gid, GAME_HISTORY.get(gid, [])))
     else:
         reset_foreign_orders(game, req.power)
 
@@ -213,8 +211,7 @@ async def load_scenario(
     gid = current.game_id
     verify_admin_access(gid, current_user)
     clear_ephemeral_sandboxes_for(gid)
-    GAME_HISTORY[gid] = []
-    HISTORY_UNSAVED.add(gid)
+    replace_all_phases(gid, [])
     power = req.active_power or current.active_power
     new_game = build_scenario(req.scenario_id, power, gid)
     new_game.state_revision = current.state_revision + 1

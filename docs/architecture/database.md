@@ -1,6 +1,6 @@
 # Database Setup & Row-Level Security
 
-This document describes how **Sloplomacy** stores data in Supabase PostgreSQL, how the tables and views relate to each other, and how Row-Level Security (RLS) protects secret simultaneous orders.
+This document describes how **Sloplomacy** stores data in Supabase PostgreSQL, how the normalized tables relate to each other, and how Row-Level Security (RLS) protects secret simultaneous orders.
 
 For how the React frontend and FastAPI backend interact with these tables at runtime, see [Service Interactions](service-interactions.md).
 
@@ -13,15 +13,19 @@ For how the React frontend and FastAPI backend interact with these tables at run
 
 ## 1. Database Schema & Entity Relationships
 
-Supabase provides both **Authentication** (`auth.users`) and **PostgreSQL** (`public.*`). Rather than normalizing every unit, order, and turn snapshot into dozens of relational tables, Sloplomacy stores each match's authoritative board state, lobby summary, turn history, and press (chat) as structured JSONB columns on `public.multiplayer_games`, paired with relational metadata for indexing, filtering, and optimistic concurrency.
+Supabase provides both **Authentication** (`auth.users`) and **PostgreSQL** (`public.*`). Sloplomacy normalizes the relational spine (matches, seats with soft-leave history, per-phase history snapshots, and press threads/messages) while keeping the live simultaneous turn state as a single atomic `game_state` JSONB column on `public.multiplayer_games` and variable press metadata (`orders`, per-reader `numbers`) in `press_messages.meta`.
 
 ```mermaid
 erDiagram
     AUTH_USERS ||--o| PROFILES : "on_auth_user_created trigger"
     AUTH_USERS ||--o{ MULTIPLAYER_GAMES : "hosts (host_user_id)"
-    AUTH_USERS ||--o{ GAME_PARTICIPANTS : "joins (user_id)"
-    MULTIPLAYER_GAMES ||--o{ GAME_PARTICIPANTS : "has seats (game_id)"
-    MULTIPLAYER_GAMES ||..|| LOBBY_GAMES_VIEW : "sanitized public view"
+    AUTH_USERS ||--o{ GAME_PARTICIPANTS : "joins (user_id, nullable)"
+    MULTIPLAYER_GAMES ||--o{ GAME_PARTICIPANTS : "seats (game_id)"
+    MULTIPLAYER_GAMES ||--o{ GAME_PHASES : "resolved phases (game_id)"
+    MULTIPLAYER_GAMES ||--o{ PRESS_THREADS : "threads (game_id)"
+    MULTIPLAYER_GAMES ||--o{ PRESS_MESSAGES : "messages (game_id)"
+    PRESS_THREADS ||--o{ PRESS_THREAD_MEMBERS : "members (thread_id)"
+    PRESS_THREADS ||--o{ PRESS_MESSAGES : "contains (thread_id, game_id)"
 
     AUTH_USERS {
         uuid id PK
@@ -39,86 +43,109 @@ erDiagram
 
     MULTIPLAYER_GAMES {
         uuid id PK
-        text room_code UK "App game_id (e.g. proto_1901, solo_...)"
+        text room_code UK "App game_id (e.g. mp_..., solo_...)"
         text name
-        uuid host_user_id FK "references auth.users"
-        text status "waiting, active, completed, lobby, in_progress"
-        text phase "Movement, Retreats, Adjustments"
-        text season "Spring, Fall, Winter"
-        int4 year
-        jsonb game_state "Authoritative GameState (board, orders, admin_log)"
-        jsonb summary "MultiplayerGameSummary metadata"
-        jsonb history "Resolved turn snapshots (incl. Admin phase)"
-        jsonb press "In-game chat array (oldest first)"
-        text passcode "Optional room passcode"
-        bool is_sandbox
-        bool is_private
-        int8 state_revision "Optimistic concurrency counter"
+        text game_type "PUBLIC | PRIVATE | SANDBOX | DRAFT"
+        text status "waiting, active, completed"
+        text scenario_id
         text winner
-        timestamptz completed_at
+        uuid host_user_id FK "references auth.users"
+        text creator_guest_id "non-UUID guest creator when host_user_id is null"
+        text phase
+        text season
+        int2 year
+        text passcode "nullable"
+        int4 current_phase_index
+        int8 state_revision
+        timestamptz deadline
         timestamptz created_at
+        timestamptz completed_at
+        timestamptz last_moved_at
         timestamptz updated_at
+        jsonb game_state "Lean live GameState only"
     }
 
     GAME_PARTICIPANTS {
         uuid id PK
-        uuid game_id FK "references multiplayer_games"
-        uuid user_id FK "references auth.users"
+        uuid game_id FK "references multiplayer_games(id)"
         text power
-        bool is_ready
+        uuid user_id FK "nullable, references auth.users(id)"
+        text guest_id "non-UUID guest id when user_id is null"
+        text guest_display_name "non-UUID guest display label"
+        timestamptz joined_at
+        timestamptz left_at "NULL = active seat; non-NULL = former player"
+        int4 joined_phase_index
+        int4 left_phase_index
+        bool surrendered
+        timestamptz surrendered_at
+        timestamptz game_over_seen_at
+        bool is_finalized
+    }
+
+    GAME_PHASES {
+        uuid game_id PK, FK "references multiplayer_games(id)"
+        int4 phase_index PK
+        int2 year
+        text season
+        text phase
+        int8 state_revision
+        timestamptz resolved_at
+        jsonb payload "Lean per-phase snapshot (no turn_history/admin_log)"
+    }
+
+    PRESS_THREADS {
+        uuid id PK
+        uuid game_id FK "references multiplayer_games(id)"
+        text thread_key "UK(game_id, thread_key)"
+        text thread_type "public | direct | group"
+        timestamptz created_at
+    }
+
+    PRESS_THREAD_MEMBERS {
+        uuid thread_id PK, FK "references press_threads(id)"
+        text power PK
         timestamptz joined_at
     }
 
-    LOBBY_GAMES_VIEW {
-        uuid id
-        text room_code
-        text name
-        uuid host_user_id
-        text status
-        text phase
+    PRESS_MESSAGES {
+        uuid id PK
+        uuid game_id FK
+        uuid thread_id FK "FK(thread_id, game_id) -> press_threads(id, game_id)"
+        int4 seq "UK(game_id, seq)"
+        text sender_power
+        bool is_anonymous
+        int2 year
         text season
-        int4 year
-        jsonb summary
-        bool is_sandbox
-        bool is_private
-        bool has_passcode "Computed from passcode"
+        text phase
+        text body
+        timestamptz sent_at
+        jsonb meta "orders, numbers, public_number"
     }
 ```
 
 ### Key Schema Design Choices
 
-- **Separate `press` JSONB column**: `multiplayer_games.press` is stored in its own column (`backend/storage/press.py`) so saving chat messages never overwrites `game_state`, and saving a turn never clobbers press messages.
-- **Authoritative Profiles (`public.profiles`)**: When persisting to `multiplayer_games`, `backend/storage/supabase_codec.py` strips `created_by`, participant `email`, UUID participant `display_name`, UUID `admin_log.actor`, and any `@` tokens from `summary`, `game_state`, and `history`. On load and viewer sanitization, `backend/storage/profiles.py` resolves display names strictly from `public.profiles` (`PROFILE_NAMES[user_id]` cache, defaulting to `"Envoy"`). The `handle_new_user()` trigger rejects email-like metadata and defaults new profiles to `'Envoy'`, and `public.profiles.display_name` is enforced at the database layer via `profiles_display_name_valid` (`CHECK`: trimmed, 2–24 characters, no `@`), matching `PATCH /api/account/profile`.
-- **Optimistic Concurrency (`state_revision` & `board_revision`)**: `state_revision` is incremented on every authoritative state mutation, while `board_revision` (inside `game_state.state`) is incremented only on board/turn changes and checked by admin board-edit operations (`backend/api/admin_units.py`) to prevent stale overwrites without failing on concurrent player orders.
-- **Sanitized View (`public.lobby_games`)**: Excludes `game_state`, `history`, `press`, and plaintext `passcode` (exposing `has_passcode` boolean instead), and filters out sandboxes and private games.
-
-### JSONB Column Breakdown (`public.multiplayer_games`)
-
-For the full field-by-field schema of each model, see [Data Models & Contracts](data-models.md). In `public.multiplayer_games`, those models are persisted as:
-
-| Column | Stored JSON Shape | Persistence & Stripping Rules |
-| :--- | :--- | :--- |
-| `game_state` | `{ "state": GameState, "summary": MultiplayerGameSummary, "passcode": string \| null }` | `unit_options` (`DERIVED_STATE_FIELDS`) is excluded and rebuilt on load; `preview` is never saved (`null`, rebuilt per viewer). `state.admin_log` stores `actor_id` (UUID `actor` strings and `@` tokens are stripped on save and resolved from `public.profiles` on read). |
-| `summary` | `MultiplayerGameSummary` (metadata, `participants`, `finalized_powers`, `surrendered_powers`, `board` preview, `deadline`) | `created_by`, participant `email`, and UUID `participants[*].display_name` are stripped on save and resolved from `public.profiles` (`PROFILE_NAMES`) on read. |
-| `history` | `GameState[]` (resolved phase snapshots + `phase: "Admin"` snapshots with `admin_resolution`, oldest first) | `unit_options` is excluded and `admin_log` is sanitized identically to `game_state.state`. Saving with `history=None` leaves existing DB history untouched. |
-| `press` | `PressMessage[]` (in-game chat messages, oldest first: `id`, `seq`, `numbers`, `sender`, `anonymous`, `recipients`, `body`, `orders`, `sent_at`, `season`, `year`, `phase`) | Written independently by `backend/storage/press.py` so chat saves and turn saves never overwrite each other. |
+- **UUID Foreign Keys & Soft-Leave Seat History**: All child tables reference `multiplayer_games.id` (`uuid`) with `ON DELETE CASCADE`. `public.game_participants` uses a surrogate `id` PK plus a partial unique index `idx_game_participants_active_seat` on `(game_id, power) WHERE left_at IS NULL`. Leaving or surrendering-and-leaving stamps `left_at` and `left_phase_index` rather than deleting the row, preserving former-player tenure while freeing the seat for a replacement player.
+- **Zero-Byte Virtual Computed Columns**: `public.has_passcode(g)` and `public.board_preview(g)` are `IMMUTABLE` SQL functions exposed as computed PostgREST columns (`?select=...,has_passcode,board_preview`) and restricted to `service_role`. Lobby refreshes never transfer plaintext passcodes, live orders, or redundant JSONB copies.
+- **Per-Phase History (`public.game_phases`)**: Resolved phases (including `"Admin"` snapshots) are stored as append-only rows keyed by `(game_id, phase_index)` with no 30-phase cap. `payload` strips `unit_options`, `preview`, `issues`, `timer`, `finalized_powers`, `turn_history`, and `admin_log` to eliminate $O(N^2)$ cumulative log bloat.
+- **Normalized Press (`press_threads`, `press_thread_members`, `press_messages`)**: Each message appends one row in $O(1)$ under a deterministic `(game_id, thread_key)` thread, with a composite FK `(thread_id, game_id) -> press_threads(id, game_id)` preventing cross-game thread links.
+- **Authoritative Profiles & No-PII Constraints**: SQL `CHECK` constraints forbid `@` tokens in `creator_guest_id`, `guest_id`, and `guest_display_name`, and forbid storing `guest_display_name` on registered UUID seats. Registered display names live exclusively in `public.profiles` (`handle_new_user()` defaults invalid/email metadata to `'Envoy'`, enforced by `profiles_display_name_valid`).
+- **Optimistic Concurrency (`state_revision` & `board_revision`)**: `state_revision` increments on every authoritative state mutation; `board_revision` (inside `game_state`) increments on board/turn changes and is checked by `POST /api/admin/board-edit`.
+- **Two-Phase Migration Rollout**: Legacy columns `multiplayer_games.{summary, history, press, is_sandbox, is_private}` remain deprecated on disk during Phase 1 for zero-downtime Cloud Run deploys and are scheduled for removal in Phase 2.
 
 ---
 
 ## 2. Row-Level Security (RLS) & Trust Boundaries
 
-In Diplomacy, orders are **simultaneous and secret** until adjudication. If the browser could query `public.multiplayer_games` directly with the public Supabase `anon` key, any player could inspect `game_state` and read opponents' unrevealed orders, private press, or room passcodes.
-
-Therefore, **the frontend never queries game tables in Supabase directly**. All game reads and writes go through the FastAPI backend, which authenticates with Supabase using the privileged `service_role` key and sanitizes responses per viewer.
+In Diplomacy, orders are **simultaneous and secret** until adjudication. Therefore, **the frontend never queries game, participant, phase, or press tables in Supabase directly**. All game reads and writes go through the FastAPI backend using `service_role`, which sanitizes responses per viewer.
 
 ```mermaid
 flowchart LR
     Client["Browser Client (React)"]
     SupaAuth["Supabase Auth (anon key)"]
     FastAPI["FastAPI Backend (service_role key)"]
-    PG_Games["public.multiplayer_games (RLS: service_role only)"]
+    PG_Games["public.multiplayer_games / game_participants / game_phases / press_* (RLS: service_role only)"]
     PG_Profiles["public.profiles (RLS: public select, owner update)"]
-    PG_Part["public.game_participants (RLS: public select, auth insert/owner update)"]
 
     Client -->|"Sign in, OAuth, Session JWT"| SupaAuth
     Client -->|"REST /api/* and WS /ws/* (Bearer JWT)"| FastAPI
@@ -126,14 +153,14 @@ flowchart LR
     FastAPI -->|"PostgREST + service_role"| PG_Profiles
     Client -.->|"Blocked by RLS (no anon or auth access)"| PG_Games
     SupaAuth -->|"on_auth_user_created"| PG_Profiles
-    PG_Games --- PG_Part
 ```
 
 ### Policy Summary
 
 | Table | `anon` / `authenticated` (Browser) | `service_role` (FastAPI Backend) |
 | :--- | :--- | :--- |
-| `public.multiplayer_games` | **No access** (all SELECT/INSERT/UPDATE/DELETE blocked by RLS) | Full read/write access |
-| `public.lobby_games` (view) | Sanitized public columns only (no `game_state`, `press`, `history`, or `passcode`) | Full access |
-| `public.profiles` | `SELECT` everyone; `UPDATE` own row (`auth.uid() = id`) | Full read/write access |
-| `public.game_participants` | `SELECT` everyone; `INSERT` authenticated; `UPDATE` own row | Full access |
+| `public.multiplayer_games` | **No access** (RLS blocks all SELECT/INSERT/UPDATE/DELETE) | Full read/write access |
+| `public.game_participants` | **No access** (RLS blocks all SELECT/INSERT/UPDATE/DELETE) | Full read/write access |
+| `public.game_phases` | **No access** (RLS blocks all SELECT/INSERT/UPDATE/DELETE) | Full read/write access |
+| `public.press_threads`, `press_thread_members`, `press_messages` | **No access** (RLS blocks all SELECT/INSERT/UPDATE/DELETE) | Full read/write access |
+| `public.profiles` | `SELECT` everyone; `UPDATE` own row (`(select auth.uid()) = id`) | Full read/write access |

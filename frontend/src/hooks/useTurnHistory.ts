@@ -120,8 +120,8 @@ export function useTurnHistory({
         if (cancelled) return;
         cache.current.clear();
         setEntries(list);
-        // Keep looking at the same turn if it is still there (a rollback or the 30-phase cap
-        // can move or drop it), and go back to the live turn if it is gone.
+        // Keep looking at the same turn if it is still there (a rollback can move or drop it),
+        // and go back to the live turn if it is gone.
         const viewed = viewedRef.current;
         if (viewed) {
           const found = list.find((e) => sameTurn(e, viewed));

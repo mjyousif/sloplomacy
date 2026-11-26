@@ -51,7 +51,7 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 ### Turn History
 | Method | Endpoint | Description | Request Body | Response Model |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/history` | List the game's resolved phases, oldest first (up to the last 30) | *None* | `List[TurnHistoryEntry]` |
+| `GET` | `/api/history` | List all resolved phases of the game, oldest first | *None* | `List[TurnHistoryEntry]` |
 | `GET` | `/api/history/stats` | Per-power tactical, diplomatic, and logistics War Ledger derived strictly from resolved history | *None* | `CampaignStatsResponse` |
 | `GET` | `/api/press` | The press (chat) the caller's seat may read, oldest first (a spectator: the public box alone); `?after=<seq>` for newer messages only | *None* | `PressFeed` |
 | `POST` | `/api/press` | Send press from the caller's seat to the public box or a private thread, signed or anonymous | `PressPostRequest` | `PressMessageView` |
@@ -509,7 +509,7 @@ In a live match, a retreat or adjustment phase that no player is involved in the
 ---
 
 ### `GET /api/history`
-Lists the phases of a game that have resolved, oldest first, for the turn selector. They come from the snapshots `/api/adjudicate` takes just before each phase resolves (the same ones admin rollback uses), so at most the last 30 phases are kept and a rollback removes the phase it restores.
+Lists the phases of a game that have resolved, oldest first, for the turn selector. They come from the snapshots `/api/adjudicate` records in `public.game_phases` just before each phase resolves (the same ones admin rollback uses), and a rollback removes the phases from the restored turn onward.
 
 - **Query Parameters**: `game_id` *(optional)*. Header `X-Passcode` and `Authorization: Bearer <token>` work as for `GET /api/game`.
 - **Access**: the same as `GET /api/game`. A private match needs its passcode unless the caller is seated in it (`403`). A private sandbox id (`sbx_…`) answers `404` for everyone, because its snapshots hold its owner's live orders for the match's current turn.

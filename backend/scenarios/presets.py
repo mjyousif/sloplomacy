@@ -203,8 +203,8 @@ __all__ = [
 
 
 def seed_initial_multiplayer_lobbies() -> None:
+    from storage.phases import set_loaded_phase_state
     from storage.store import (
-        GAME_HISTORY,
         GAME_SUMMARIES,
         GAMES,
         SANDBOX_CHECKPOINTS,
@@ -245,7 +245,7 @@ def seed_initial_multiplayer_lobbies() -> None:
     refresh_diagnostics_and_simulation(g1_state)
     GAMES[g1_id] = g1_state
     SANDBOX_CHECKPOINTS[g1_id] = None
-    GAME_HISTORY[g1_id] = []
+    set_loaded_phase_state(g1_id, phase_count=0, history=[])
     GAME_SUMMARIES[g1_id] = MultiplayerGameSummary(
         game_id=g1_id,
         name="Concert of Europe — Match #104",
@@ -278,7 +278,7 @@ def seed_initial_multiplayer_lobbies() -> None:
     g2_state = build_scenario("standard_1901", Power.ENGLAND, g2_id)
     GAMES[g2_id] = g2_state
     SANDBOX_CHECKPOINTS[g2_id] = None
-    GAME_HISTORY[g2_id] = []
+    set_loaded_phase_state(g2_id, phase_count=0, history=[])
     GAME_SUMMARIES[g2_id] = MultiplayerGameSummary(
         game_id=g2_id,
         name="Mediterranean Crisis 1901",

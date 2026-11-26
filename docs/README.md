@@ -35,7 +35,7 @@ docs/
 │   ├── sandbox-and-hypothetical-mode.md   # Solo sandboxes, private sbx_* branches, checkpoints, AI & exports
 │   ├── admin-and-creator-controls.md      # Rollback, set-turn, atomic board-edit, audit log & authorization
 │   ├── spectating.md                      # Read-only match viewing, claim-seat transition & public press
-│   ├── game-over-and-history.md           # Victory, surrender, 30-turn history, past-turn view & ownership log
+│   ├── game-over-and-history.md           # Victory, surrender, full-campaign history, past-turn view & ownership log
 │   ├── campaign-stats-and-awards.md       # War Ledger metrics, SC timeline, diplomatic support matrix & awards
 │   └── notifications-and-sound.md         # Tab title attention indicators & background-tab Web Audio chimes
 ├── backend/
@@ -78,7 +78,7 @@ docs/
 - [Sandbox & Hypothetical Mode](features/sandbox-and-hypothetical-mode.md): Solo sandboxes, ephemeral `sbx_*` multiplayer branches, checkpoints, and board-state export.
 - [Admin & Creator Controls](features/admin-and-creator-controls.md): Turn rollback, set-turn, atomic `board-edit` batches, audit log, and player acknowledgements.
 - [Spectating](features/spectating.md): Read-only observation of public or passcode-unlocked matches, spectator bar, public press, and claiming an open seat.
-- [Game Over & Turn History](features/game-over-and-history.md): 18-SC victory, surrender, 30-turn `GAME_HISTORY` inspection, past-turn arrows, and ownership-change log.
+- [Game Over & Turn History](features/game-over-and-history.md): 18-SC victory, surrender, full-campaign `GAME_HISTORY` inspection, past-turn arrows, and ownership-change log.
 - [Campaign Statistics & War Ledger](features/campaign-stats-and-awards.md): On-demand War Ledger metrics, Supply Center timeline, diplomatic support matrix, and campaign awards.
 - [Turn Notifications & Sound Effects](features/notifications-and-sound.md): Dynamic browser tab title attention indicators and background-tab Web Audio chimes.
 
