@@ -1,5 +1,6 @@
 import type { Unit } from '../../../../types/diplomacy';
 import type { OrderLayerContext } from './orderLayerContext';
+import { PieceRingAt } from './PieceRingAt';
 
 /** A fleet's convoy: a dashed line from the army through the fleet to the shore, and a ring on the fleet. */
 export function ConvoyChain({
@@ -19,7 +20,6 @@ export function ConvoyChain({
     getUnitPoint,
     getProvincePoint,
     issuesByUnit,
-    pieceRingScale,
     selectedUnitId,
     hoveredUnitId,
     historyView = false,
@@ -62,11 +62,13 @@ export function ConvoyChain({
         strokeWidth={isFocused && historyView ? '5.2' : '4.2'}
         strokeDasharray="9 6"
       />
-      <circle
-        cx={fleetPt.x}
-        cy={fleetPt.y}
-        r={26 * pieceRingScale}
-        fill="none"
+      <PieceRingAt
+        ctx={ctx}
+        point={fleetPt}
+        province={unit.province}
+        coast={unit.coast}
+        unitType={unit.unit_type}
+        radius={26}
         stroke={
           isFocused && historyView
             ? '#fde047'

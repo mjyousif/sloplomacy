@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import type { Point, ProvinceGeometry } from '../../../data/europeMapGeometry';
+import type { ProvinceGeometry } from '../../../data/europeMapGeometry';
 import { POWER_METADATA, type Power } from '../../../types/diplomacy';
 import styles from './ProvincePolygon.module.css';
 
@@ -14,8 +14,6 @@ export interface ProvincePolygonProps {
   reachableColor?: 'green' | 'blue' | 'outline';
   allowedCoastsStr: string;
   showFleetCoasts: boolean;
-  showMoveReticle: boolean;
-  reticlePoint: Point;
   isHovered: boolean;
   isHighlighted: boolean;
   hasWarning: boolean;
@@ -36,8 +34,6 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
     reachableColor = 'green',
     allowedCoastsStr,
     showFleetCoasts,
-    showMoveReticle,
-    reticlePoint,
     isHovered,
     isHighlighted,
     hasWarning,
@@ -209,29 +205,6 @@ export const ProvincePolygon = memo<ProvincePolygonProps>(
               />
             );
           })}
-
-        {/* Reachable Target Reticle */}
-        {showMoveReticle && (
-          <g
-            className={styles.reachableTargetReticle}
-            data-testid="reachable-reticle"
-            data-province-id={geom.id}
-            onClick={(e) => {
-              e.stopPropagation();
-              onClickProvince(geom.id);
-            }}
-          >
-            <circle
-              cx={reticlePoint.x}
-              cy={reticlePoint.y}
-              r={24}
-              fill="rgba(22, 163, 74, 0.22)"
-              stroke="#15803d"
-              strokeWidth="2.8"
-              strokeDasharray="6 3"
-            />
-          </g>
-        )}
       </g>
     );
   },

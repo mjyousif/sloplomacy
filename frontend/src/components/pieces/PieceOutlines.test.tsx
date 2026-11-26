@@ -2,27 +2,73 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { PieceHitArea, PieceHoldOutline, PieceOutline } from './PieceOutlines';
-import { getPieceFrame, makePiecePill } from './pieceFrame';
+import { getPieceFrame, makePiecePill, PILL_POINT } from './pieceFrame';
 
 const draw = (node: React.ReactNode) =>
   render(<svg>{node}</svg>).container.querySelector('svg') as SVGSVGElement;
 
 describe('PieceOutline', () => {
-  it('draws a ring scaled to the style, around the frame centre', () => {
+  it('draws a ring scaled to the style, around a token', () => {
     const ring = draw(
       <PieceOutline
-        frame={getPieceFrame('flags', -1)}
+        frame={getPieceFrame('seated')}
         radius={20}
         fill="none"
         stroke="red"
         strokeWidth={2}
       />,
     ).querySelector('circle');
-    expect(ring).toHaveAttribute('cx', '-12');
-    expect(ring).toHaveAttribute('cy', '-14');
-    expect(Number(ring?.getAttribute('r'))).toBeCloseTo(20 * 0.82);
+    expect(ring).toHaveAttribute('cx', '0');
+    expect(ring).toHaveAttribute('cy', '0');
+    expect(Number(ring?.getAttribute('r'))).toBeCloseTo(20 * 0.8);
     expect(ring).toHaveAttribute('stroke', 'red');
     expect(ring).toHaveAttribute('stroke-width', '2');
+  });
+
+  it.each([1, -1] as const)(
+    'fits a flag, its pole and its foot in a rounded box (direction %i)',
+    (direction) => {
+      const rect = draw(
+        <PieceOutline
+          frame={getPieceFrame('flags', direction)}
+          radius={24}
+          fill="none"
+          stroke="red"
+          strokeWidth={2}
+        />,
+      ).querySelector('rect');
+      const x = Number(rect?.getAttribute('x'));
+      const y = Number(rect?.getAttribute('y'));
+      const right = x + Number(rect?.getAttribute('width'));
+      const bottom = y + Number(rect?.getAttribute('height'));
+      // The cloth reaches 30 units out from the pole, and the star at its foot about 7.
+      expect(Math.min(x, -right)).toBeLessThan(-7);
+      expect(direction === 1 ? right : -x).toBeGreaterThan(30);
+      expect(y).toBeLessThan(-30);
+      expect(bottom).toBeGreaterThan(7);
+    },
+  );
+
+  it("follows a fleet plate's points instead of cutting them off", () => {
+    const pill = makePiecePill('Rumania', 12, 20, true);
+    const outline = draw(
+      <PieceOutline
+        frame={getPieceFrame('nameplate', 1, pill)}
+        unitType="F"
+        radius={27}
+        fill="none"
+        stroke="red"
+        strokeWidth={2}
+      />,
+    ).querySelector('polygon');
+    expect(outline).toHaveAttribute('transform', 'rotate(20)');
+    const xs = (outline?.getAttribute('points') ?? '')
+      .split(' ')
+      .map((p) => Number(p.split(',')[0]));
+    const tip = pill.width / 2 + (PILL_POINT * pill.height) / 2;
+    const pad = (27 - 17) * 0.55;
+    expect(Math.max(...xs)).toBeGreaterThanOrEqual(tip + pad);
+    expect(Math.min(...xs)).toBeLessThanOrEqual(-(tip + pad));
   });
 
   it('draws a matching rounded plate around a pill', () => {
@@ -66,7 +112,7 @@ describe('PieceHoldOutline', () => {
     );
   });
 
-  it('scales and moves the ring with the frame', () => {
+  it('chamfers a box around a whole flag', () => {
     const polygon = draw(
       <PieceHoldOutline
         frame={getPieceFrame('flags', 1)}
@@ -75,10 +121,35 @@ describe('PieceHoldOutline', () => {
         strokeWidth={2}
       />,
     ).querySelector('polygon');
-    const [first] = (polygon?.getAttribute('points') ?? '').split(' ');
-    const [x, y] = first.split(',').map(Number);
-    expect(x).toBeCloseTo(12);
-    expect(y).toBeCloseTo(-22 * 0.82 - 14);
+    const points = (polygon?.getAttribute('points') ?? '')
+      .split(' ')
+      .map((p) => p.split(',').map(Number));
+    expect(points).toHaveLength(8);
+    const xs = points.map(([x]) => x);
+    const ys = points.map(([, y]) => y);
+    expect(Math.min(...xs)).toBeLessThan(-7);
+    expect(Math.max(...xs)).toBeGreaterThan(30);
+    expect(Math.min(...ys)).toBeLessThan(-30);
+    expect(Math.max(...ys)).toBeGreaterThan(7);
+  });
+
+  it("follows a fleet plate's points when it holds", () => {
+    const pill = makePiecePill('Rumania', 12, 0, true);
+    const svg = draw(
+      <PieceHoldOutline
+        frame={getPieceFrame('nameplate', 1, pill)}
+        unitType="F"
+        fill="none"
+        stroke="red"
+        strokeWidth={2}
+      />,
+    );
+    const xs = (svg.querySelector('polygon')?.getAttribute('points') ?? '')
+      .split(' ')
+      .map((p) => Number(p.split(',')[0]));
+    expect(Math.max(...xs)).toBeGreaterThan(
+      pill.width / 2 + (PILL_POINT * pill.height) / 2,
+    );
   });
 
   it('becomes the plate outline for a pill', () => {

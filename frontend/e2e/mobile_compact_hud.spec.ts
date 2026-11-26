@@ -2,7 +2,7 @@
 // @order 6
 // @description Phone (390x844, touch): full-width map, order sheet, ≡ tools drawer, unified top bar (TurnChronicle, GameSettingsMenu, AccountDropdownMenu), docked unit bar, card-to-map selection, a move by tap, a winter build, past-turn history from the top bar, the lobby's Host and Join dialogs, and back to the lobby.
 import { test, expect, Page } from '@playwright/test';
-import { ScenarioRecorder, playBurgundyBounce, seedScenario } from './helpers';
+import { clickProvince, ScenarioRecorder, playBurgundyBounce, seedScenario } from './helpers';
 
 /** The page never scrolls sideways, the most common way a phone layout breaks. */
 async function expectNoSidewaysScroll(page: Page) {
@@ -203,9 +203,9 @@ test.describe('Scenario 06: Phone game screen', () => {
       await recorder.recordStep(page, '06_paris_selected_from_card_docked_bar');
 
       // 6. Move Paris to Picardy by tapping the province, which also ends the bounce.
-      const picardy = page.locator('[data-testid="reachable-reticle"][data-province-id="PIC"]');
-      await expect(picardy).toHaveCount(1);
-      await picardy.tap();
+      const picardy = page.locator('[data-testid="province-path"][data-province-id="PIC"]');
+      await expect(picardy).toHaveAttribute('data-reachable-color', 'green');
+      await clickProvince(page, 'PIC', { tap: true });
       await expect(dockedBar).toHaveCount(0);
       // The order line, not the whole card: its Destination list always names Picardy.
       await expect(

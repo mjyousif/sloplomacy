@@ -11,12 +11,12 @@ export interface ModeTargetResult {
   blue: Set<string>;
   /** Convoy-only destinations that need another power's fleet: drawn as an outline, not filled. */
   outline: Set<string>;
-  reticles: Set<string>;
 }
 
 /**
  * Compute which province IDs highlight in solid green (direct / ready), ocean blue
- * (potential / multi-ship chain), and carry target reticles for `interactionMode`.
+ * (potential / multi-ship chain) for `interactionMode`. The lit province is the whole
+ * target: nothing is drawn on top of it.
  *
  * With a Hold chosen (`holdActive`), the unit is not going anywhere, so MOVE mode lights no
  * convoy destinations. A potential convoy outside `own_fleet_convoys` needs another power's
@@ -47,18 +47,15 @@ export function getModeTargetHighlights({
   const green = new Set<string>();
   const blue = new Set<string>();
   const outline = new Set<string>();
-  const reticles = new Set<string>();
-  if (!selectedUnit) return { green, blue, outline, reticles };
+  if (!selectedUnit) return { green, blue, outline };
 
   if (interactionMode === 'MOVE') {
     for (const pid of Object.keys(reachableMap)) {
       green.add(pid);
-      reticles.add(pid);
     }
     if (selectedUnitOptions && !holdActive) {
       for (const pid of selectedUnitOptions.active_convoys) {
         green.add(pid);
-        reticles.add(pid);
       }
       // Servers that predate `own_fleet_convoys` leave it out: fill every potential convoy.
       const own = selectedUnitOptions.own_fleet_convoys;
@@ -68,7 +65,7 @@ export function getModeTargetHighlights({
         else outline.add(pid);
       }
     }
-    return { green, blue, outline, reticles };
+    return { green, blue, outline };
   }
 
   if (interactionMode === 'CONVOY_PICK_ARMY') {
@@ -78,13 +75,13 @@ export function getModeTargetHighlights({
       for (const pid of reach?.chained ?? []) {
         if (!green.has(pid)) blue.add(pid);
       }
-      return { green, blue, outline, reticles };
+      return { green, blue, outline };
     }
     if (
       selectedUnit.unit_type !== 'F' ||
       provinces[selectedUnit.province]?.type !== 'SEA'
     ) {
-      return { green, blue, outline, reticles };
+      return { green, blue, outline };
     }
     for (const u of units) {
       if (
@@ -96,35 +93,33 @@ export function getModeTargetHighlights({
         green.add(u.province);
       }
     }
-    return { green, blue, outline, reticles };
+    return { green, blue, outline };
   }
 
   if (interactionMode === 'CONVOY_PICK_TARGET') {
-    if (!pendingAuxOrigin) return { green, blue, outline, reticles };
+    if (!pendingAuxOrigin) return { green, blue, outline };
     if (selectedUnitOptions) {
       const reach = selectedUnitOptions.convoy_targets[pendingAuxOrigin];
       for (const pid of reach?.direct ?? []) {
         green.add(pid);
-        reticles.add(pid);
       }
       for (const pid of reach?.chained ?? []) {
         if (!green.has(pid)) blue.add(pid);
       }
-      return { green, blue, outline, reticles };
+      return { green, blue, outline };
     }
     if (
       selectedUnit.unit_type !== 'F' ||
       provinces[selectedUnit.province]?.type !== 'SEA'
     ) {
-      return { green, blue, outline, reticles };
+      return { green, blue, outline };
     }
     for (const provId of Object.keys(reachableMap)) {
       if (provId !== pendingAuxOrigin && provinces[provId]?.type === 'COAST') {
         green.add(provId);
-        reticles.add(provId);
       }
     }
-    return { green, blue, outline, reticles };
+    return { green, blue, outline };
   }
 
   if (interactionMode === 'SUPPORT_PICK_UNIT') {
@@ -132,7 +127,7 @@ export function getModeTargetHighlights({
       for (const sup of selectedUnitOptions.valid_supports) {
         green.add(sup.province);
       }
-      return { green, blue, outline, reticles };
+      return { green, blue, outline };
     }
     for (const u of units) {
       if (u.is_dislodged || u.id === selectedUnit.id) continue;
@@ -145,11 +140,11 @@ export function getModeTargetHighlights({
         green.add(u.province);
       }
     }
-    return { green, blue, outline, reticles };
+    return { green, blue, outline };
   }
 
   if (interactionMode === 'SUPPORT_PICK_TARGET') {
-    if (!pendingAuxOrigin) return { green, blue, outline, reticles };
+    if (!pendingAuxOrigin) return { green, blue, outline };
     if (selectedUnitOptions) {
       const supOpt = selectedUnitOptions.valid_supports.find(
         (s) => s.province === pendingAuxOrigin,
@@ -157,30 +152,27 @@ export function getModeTargetHighlights({
       if (supOpt) {
         if (supOpt.hold) {
           green.add(pendingAuxOrigin);
-          reticles.add(pendingAuxOrigin);
         }
         for (const pid of supOpt.moves) {
           green.add(pid);
-          reticles.add(pid);
         }
       }
-      return { green, blue, outline, reticles };
+      return { green, blue, outline };
     }
     const auxUnit = units.find(
       (u) => !u.is_dislodged && u.province === pendingAuxOrigin,
     );
-    if (!auxUnit) return { green, blue, outline, reticles };
+    if (!auxUnit) return { green, blue, outline };
     const auxDirect = new Set(
       getReachableDestinations(auxUnit, provinces).map((d) => d.province),
     );
     for (const provId of Object.keys(reachableMap)) {
       if (provId === pendingAuxOrigin || auxDirect.has(provId)) {
         green.add(provId);
-        reticles.add(provId);
       }
     }
-    return { green, blue, outline, reticles };
+    return { green, blue, outline };
   }
 
-  return { green, blue, outline, reticles };
+  return { green, blue, outline };
 }

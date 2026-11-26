@@ -306,7 +306,8 @@ The game cycles through three standard phases per year:
 - **Invariant**: Display preferences change only what one player sees. They never enter `GameState` or reach the FastAPI backend.
 - **Invariant**: Everything read back from `localStorage` or `user_metadata` goes through `sanitizeDisplayPrefs`, because players can edit both.
 - **Invariant**: A failed account read must never be treated as "no saved value", because the upload that follows would overwrite the player's choice. Only a successful read that finds nothing means the account is empty.
-- **Invariant**: Classic with `letters` stays pixel-identical to the original map, including `CLY.unitPos` in the North Atlantic. Fix layout problems in the other styles' rows in `mapLayouts.ts`.
+- **Invariant**: Classic with `letters` keeps the original map's placements and piece shapes, including `CLY.unitPos` in the North Atlantic. Fix layout problems in the other styles' rows in `mapLayouts.ts`. The rims and highlights around pieces are shared by every style.
+- **Invariant**: Selecting or hovering a unit lifts its piece (`PieceLift`), and the player's own pieces wear `OWN_RIM`. Rings are only for state and orders (dislodged, disbanding, an explicit hold, a support to hold, a convoying fleet, build slots, ghosts), and `PieceOutline` / `PieceHoldOutline` fit them to the piece's real shape (a flag's `box`, a fleet plate's points), so no layer draws a ring of its own. A unit's possible targets are lit provinces, with nothing drawn on top of them.
 - All piece bodies are drawn by `MapPiece` (`components/MapPiece.tsx`, the dispatcher and the one import path; the frame, outlines, marks and bodies live in `components/pieces/`), and everything around them takes its size from `PieceFrame`. Don't hardcode ring radii or badge offsets in the map's layers (`components/map/layers/`).
 
 ### 9. Phone Layout

@@ -1,7 +1,11 @@
 // @scenario press
 // @description Press (chat) between three seated players: public box, a private thread a third player never receives, one-way anonymous DMs in the Backchannel inbox, anonymous messages in a group thread and the public box, province links lighting the map, unread badges, the phone drawer, and a move suggestion written on the map, shown to its recipient and taken into their orders.
 import { type Browser, expect, type Page, test } from '@playwright/test';
-import { DEFAULT_E2E_API_URL, ScenarioRecorder } from './helpers';
+import {
+  clickProvince,
+  DEFAULT_E2E_API_URL,
+  ScenarioRecorder,
+} from './helpers';
 
 interface Player {
   id: string;
@@ -268,11 +272,6 @@ test.describe('Scenario: Press between three players', () => {
     const matchName = `Press plan ${Date.now()}`;
     const unit = (page: Page, id: string) =>
       page.locator(`[data-testid="unit-token"][data-unit-id="${id}"]`);
-    // Where the selected unit can go, drawn over the province.
-    const province = (page: Page, id: string) =>
-      page.locator(
-        `[data-testid="reachable-reticle"][data-province-id="${id}"]`,
-      );
     const arrow = (page: Page, unitId: string, target: string) =>
       page.locator(
         `[data-testid="order-arrow"][data-order-unit="${unitId}"][data-order-target="${target}"]`,
@@ -322,10 +321,10 @@ test.describe('Scenario: Press between three players', () => {
       // 2. Alice orders a German unit and one of her own on the map. England is not in the
       // thread, so its units cannot be picked up.
       await unit(alice, 'GER_A_MUN').click();
-      await province(alice, 'BUR').click();
+      await clickProvince(alice, 'BUR');
       await expect(arrow(alice, 'GER_A_MUN', 'BUR')).toBeVisible();
       await unit(alice, 'FRA_A_PAR').click();
-      await province(alice, 'PIC').click();
+      await clickProvince(alice, 'PIC');
       await expect(arrow(alice, 'FRA_A_PAR', 'PIC')).toBeVisible();
       await unit(alice, 'ENG_F_LON').click();
       await expect(

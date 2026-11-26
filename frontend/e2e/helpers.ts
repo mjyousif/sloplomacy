@@ -229,3 +229,54 @@ export async function playBurgundyBounce(gameId: string = 'proto_1901') {
   );
   await resolvePhase(gameId);
 }
+
+/**
+ * Clicks (or, with `tap`, taps) a province on the map the way a player would: at a point
+ * inside its own shape that nothing else (a unit, a star, a name) covers. The middle of a
+ * province's box can fall in a neighbour, so a plain `click()` on its path is not safe.
+ */
+export async function clickProvince(
+  page: Page,
+  provinceId: string,
+  { tap = false }: { tap?: boolean } = {},
+) {
+  const shape = page.locator(
+    `[data-testid="province-path"][data-province-id="${provinceId}"]`,
+  );
+  await shape.waitFor({ state: 'visible' });
+  const point = await shape.evaluate((el) => {
+    const path = el as SVGPathElement;
+    const ctm = path.getScreenCTM();
+    if (!ctm) return null;
+    const toUser = ctm.inverse();
+    const box = path.getBoundingClientRect();
+    const midX = box.x + box.width / 2;
+    const midY = box.y + box.height / 2;
+    const steps = 24;
+    const candidates: [number, number][] = [];
+    for (let i = 1; i < steps; i++) {
+      for (let j = 1; j < steps; j++) {
+        candidates.push([
+          box.x + (box.width * i) / steps,
+          box.y + (box.height * j) / steps,
+        ]);
+      }
+    }
+    candidates.sort(
+      ([ax, ay], [bx, by]) =>
+        Math.hypot(ax - midX, ay - midY) - Math.hypot(bx - midX, by - midY),
+    );
+    for (const [x, y] of candidates) {
+      const user = new DOMPoint(x, y).matrixTransform(toUser);
+      if (!path.isPointInFill(user)) continue;
+      if (document.elementFromPoint(x, y) !== path) continue;
+      return { x, y };
+    }
+    return null;
+  });
+  if (!point) {
+    throw new Error(`No uncovered point inside ${provinceId} to click`);
+  }
+  if (tap) await page.touchscreen.tap(point.x, point.y);
+  else await page.mouse.click(point.x, point.y);
+}

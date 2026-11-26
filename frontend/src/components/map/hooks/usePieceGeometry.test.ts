@@ -6,7 +6,7 @@ import { getMapLayout } from '../../../data/mapLayouts';
 import { FRANCE_PROVINCES, unitAt } from '../../../test/mapFixtures';
 import type { ProvinceInfo, Unit } from '../../../types/diplomacy';
 import type { PieceStyle } from '../../../utils/displayPrefs';
-import { getPieceArrowScale, getPieceFrame } from '../../MapPiece';
+import { getPieceArrowScale } from '../../MapPiece';
 import { usePieceGeometry } from './usePieceGeometry';
 
 const PROVINCES: Record<string, ProvinceInfo> = {
@@ -55,7 +55,6 @@ describe('usePieceGeometry', () => {
         layout.PAR?.unit ?? EUROPE_PROVINCE_GEOMETRY.PAR.unitPos,
       );
       expect(g.arrowScale).toBe(getPieceArrowScale(style));
-      expect(g.pieceRingScale).toBe(getPieceFrame(style).ringScale);
     }
   });
 

@@ -2,7 +2,6 @@
 import { fireEvent, render } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { getMapLayout } from '../../../data/mapLayouts';
 import { FRANCE_PROVINCES, unitAt } from '../../../test/mapFixtures';
 import type { ProvinceInfo } from '../../../types/diplomacy';
 import { ProvincesLayer } from './ProvincesLayer';
@@ -27,7 +26,6 @@ function draw(
       <ProvincesLayer
         provinces={PROVINCES}
         ownership={{}}
-        layout={getMapLayout('classic')}
         isAdjustmentPhase={false}
         buildHomes={{}}
         selectedUnit={null}
@@ -49,7 +47,14 @@ function draw(
     )
       .map((el) => el.dataset.provinceId)
       .sort();
-  return { container, ids, onClickProvince, onHoverProvince };
+  /** Provinces lit in solid green as targets for the selected unit. */
+  const greens = () =>
+    Array.from(
+      container.querySelectorAll<SVGElement>('[data-reachable-color="green"]'),
+    )
+      .map((el) => el.dataset.provinceId)
+      .sort();
+  return { container, ids, greens, onClickProvince, onHoverProvince };
 }
 
 describe('ProvincesLayer', () => {
@@ -64,34 +69,30 @@ describe('ProvincesLayer', () => {
     expect(onClickProvince).toHaveBeenCalledWith('BUR');
   });
 
-  it('puts a reticle on each province the selected unit can move to', () => {
-    const { ids } = draw({
+  it('lights each province the selected unit can move to, with no circle drawn on it', () => {
+    const { container, greens } = draw({
       selectedUnit: unitAt('FRANCE', 'A', 'PAR'),
       reachableMap: { BUR: [], PIC: [] },
     });
-    expect(ids('reachable-reticle')).toEqual(['BUR', 'PIC']);
+    expect(greens()).toEqual(['BUR', 'PIC']);
+    // The green province is the whole target; no reticle sits on top of it.
+    expect(container.querySelector('circle')).toBeNull();
+    expect(
+      container.querySelector('[data-testid="reachable-reticle"]'),
+    ).toBeNull();
   });
 
-  it('picks a province from its reticle, once', () => {
+  it('picks a reachable province from its own shape, once', () => {
     const { container, onClickProvince } = draw({
       selectedUnit: unitAt('FRANCE', 'A', 'PAR'),
       reachableMap: { BUR: [], PIC: [] },
     });
     fireEvent.click(
       container.querySelector(
-        '[data-testid="reachable-reticle"][data-province-id="BUR"] circle',
+        '[data-testid="province-path"][data-province-id="BUR"]',
       )!,
     );
     expect(onClickProvince.mock.calls).toEqual([['BUR']]);
-  });
-
-  it('drops the reticles while a support or convoy is being picked', () => {
-    const { ids } = draw({
-      selectedUnit: unitAt('FRANCE', 'A', 'PAR'),
-      reachableMap: { BUR: [] },
-      interactionMode: 'SUPPORT_PICK_UNIT',
-    });
-    expect(ids('reachable-reticle')).toEqual([]);
   });
 
   it('offers a fleet a selector for each coast it can reach, and passes the pick on', () => {
@@ -342,7 +343,7 @@ describe('ProvincesLayer', () => {
     ).toBe(0);
   });
 
-  it('lights active convoys in solid green with reticles, potential/chained convoys in ocean blue, and support options in green', () => {
+  it('lights active convoys in solid green, potential/chained convoys in ocean blue, and support options in green', () => {
     const army = unitAt('FRANCE', 'A', 'BRE');
     const moveView = draw({
       selectedUnit: army,
@@ -357,9 +358,9 @@ describe('ProvincesLayer', () => {
       },
       interactionMode: 'MOVE',
     });
-    // Active convoy MAR gets solid green AND a move reticle; potential convoy GAS gets ocean blue;
+    // Active convoy MAR gets solid green; potential convoy GAS gets ocean blue;
     // PAR (both direct and potential) stays solid green!
-    expect(moveView.ids('reachable-reticle')).toEqual(['MAR', 'PAR']);
+    expect(moveView.greens()).toEqual(['MAR', 'PAR']);
     const marPath = moveView.container.querySelector(
       '[data-testid="province-path"][data-province-id="MAR"]',
     );
@@ -371,7 +372,7 @@ describe('ProvincesLayer', () => {
     expect(gasPath?.getAttribute('fill')).toBe('#38bdf8');
     expect(gasPath?.getAttribute('stroke')).toBe('#0284c7');
 
-    // SUPPORT_PICK_TARGET lights legal moves & hold in green with reticles
+    // SUPPORT_PICK_TARGET lights legal moves & hold in green
     const supView = draw({
       selectedUnit: army,
       reachableMap: { PAR: [], GAS: [] },
@@ -392,7 +393,8 @@ describe('ProvincesLayer', () => {
       interactionMode: 'SUPPORT_PICK_TARGET',
       pendingAuxOrigin: 'PAR',
     });
-    expect(supView.ids('reachable-reticle')).toEqual(['GAS', 'PAR']);
+    expect(supView.greens()).toEqual(['GAS', 'PAR']);
+    expect(supView.container.querySelector('circle')).toBeNull();
   });
 
   it('shades changed territories with their pattern URL while keeping highlighted territories solid yellow', () => {

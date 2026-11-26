@@ -277,7 +277,7 @@ Use the file name (without `.spec.ts`) as the `ScenarioRecorder` name, because t
 ### Scenario Catalog & Artifacts
 | Scenario | Focus Area | Step Screenshots Saved In |
 | :--- | :--- | :--- |
-| `movement` | Map reticle moves, Support vectors, Hold toggles, turn advance, Admin rollback | `artifacts/e2e/movement_and_orders/` |
+| `movement` | Map province moves, Support vectors, Hold toggles, turn advance, Admin rollback | `artifacts/e2e/movement_and_orders/` |
 | `sandbox` | Lobby launch, the sign-up prompt on hosting while signed out, Hypothetical Mode foreign pre-move isolation | `artifacts/e2e/sandbox_isolation/` |
 | `blunder` | Self-bounce detection, Sanity Check modal, override flow | `artifacts/e2e/blunder_sanity_modal/` |
 | `retreats` | Dislodged unit ring, valid retreat selection, Fall advance | `artifacts/e2e/retreats_dislodgement/` |
@@ -288,7 +288,7 @@ Use the file name (without `.spec.ts`) as the `ScenarioRecorder` name, because t
 | `press` | Press (chat) between three seated players in two browsers: public box, a private thread the third player is never served, anonymous messages in a group thread and the public box (never in a one-to-one thread), province links lighting the map, unread badges, and the phone drawer | `artifacts/e2e/press/`, `artifacts/e2e/press_phone/` |
 | `lobby_browser` | Lobby game browser with two players (desktop 1440x900 and a phone guest at 390x844): open, full, country and turn filters, a private campaign never listed, opening a row and claiming a seat, the guest's seat strip turning taken live, the guest's claim asking to sign in, and Resume on the player's own game | `artifacts/e2e/lobby_browser/` |
 | `spectate` | Watching without a seat: a signed-out visitor watches a public game from the browser (no hidden orders, nothing to order, public press only), a private game through Join with code, and on a phone; game links: `/game/<id>` watched signed out, reload keeps the game and Back returns to the lobby, Copy game link, a private link opening Join with code with the Game ID filled in, a seated player's link resuming their seat, and the link in the private-campaign dialog | `artifacts/e2e/spectate/` |
-| `convoy_scenarios` | Authoritative convoy reachability: ocean-blue potential/chained vs solid-green active highlights + reticles, dead-end path filtering, broken chains, 4-ship Trans-Med convoy, and bicoastal landings | `artifacts/e2e/convoy_scenarios/` |
+| `convoy_scenarios` | Authoritative convoy reachability: ocean-blue potential/chained vs solid-green active highlights, dead-end path filtering, broken chains, 4-ship Trans-Med convoy, and bicoastal landings | `artifacts/e2e/convoy_scenarios/` |
 | `admin_resolve_turn` | Admin Direct-Edit board changes (ownership, spawn, relocate, undo) with concurrent player orders and finalization, Fog-of-War & order preservation, force-resolve turn, and `AdminActionWarningModal` acknowledgement (aliases: `admin`, `admin_board_edit`) | `artifacts/e2e/admin_resolve_turn/` |
 
 Each scenario exports a `summary.json` containing the execution status (`PASSED`/`FAILED`), step-by-step screenshot paths, and any browser console or uncaught page runtime errors.

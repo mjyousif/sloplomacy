@@ -1,11 +1,11 @@
 // @scenario movement
 // @order 1
-// @description Map reticle Move, Support vector, Hold toggle, Sea-Fleet Convoy guard (#142), adjudication, and Admin Console turn rollback.
+// @description Map province Move, Support vector, Hold toggle, Sea-Fleet Convoy guard (#142), adjudication, and Admin Console turn rollback.
 import { test, expect } from '@playwright/test';
-import { ScenarioRecorder, seedScenario, spawnUnit } from './helpers';
+import { clickProvince, ScenarioRecorder, seedScenario, spawnUnit } from './helpers';
 
 test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollback', () => {
-  test('selects unit, orders move via map reticle, plots support vector, adjudicates, and rolls back turn via Admin Console', async ({ page }) => {
+  test('selects unit, orders move by clicking the province on the map, plots support vector, adjudicates, and rolls back turn via Admin Console', async ({ page }) => {
     const recorder = new ScenarioRecorder('movement_and_orders');
     recorder.attachListeners(page);
 
@@ -18,22 +18,24 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await page.waitForSelector('[data-testid="unit-token"]', { timeout: 15000 });
       await recorder.recordStep(page, '01_initial_board_loaded');
 
-      // 3. Select French Army in Paris on the map and click Burgundy's reachable reticle directly on the map
+      // 3. Select French Army in Paris on the map and click Burgundy, lit as a target, directly on the map
       const parisArmy = page.locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"]');
       await expect(parisArmy).toBeVisible();
       await parisArmy.click();
       await recorder.recordStep(page, '02_paris_army_selected');
 
-      const burReticle = page.locator('[data-testid="reachable-reticle"][data-province-id="BUR"]');
-      await expect(burReticle).toBeVisible();
-      await burReticle.click();
+      const burTarget = page.locator('[data-testid="province-path"][data-province-id="BUR"]');
+      await expect(burTarget).toHaveAttribute('data-reachable-color', 'green');
+      // The lit province is the whole target: no reticle is drawn on top of it.
+      await expect(page.locator('[data-testid="reachable-reticle"]')).toHaveCount(0);
+      await clickProvince(page, 'BUR');
 
       // 4. Verify SVG move arrow is rendered pointing to BUR
       const orderArrow = page.locator(
         '[data-testid="order-arrow"][data-order-unit="FRA_A_PAR"][data-order-type="MOVE"][data-order-target="BUR"]'
       );
       await expect(orderArrow).toBeVisible();
-      await recorder.recordStep(page, '03_move_arrow_rendered_from_map_reticle');
+      await recorder.recordStep(page, '03_move_arrow_rendered_from_map_province');
 
       // 5. In MacroSidebar, toggle FRA_A_PAR to HOLD and back to MOVE -> BUR
       const parisCard = page.locator('[data-testid="unit-macro-card"][data-unit-id="FRA_A_PAR"]');
@@ -77,7 +79,7 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await marCard.locator('[data-testid="unit-card-header"]').click();
       await expect(marCard).toHaveAttribute('data-selected', 'true');
       await expect(page.locator('[data-testid="unit-floating-menu"]')).toHaveCount(0);
-      await expect(page.locator('[data-testid="reachable-reticle"]').first()).toBeVisible();
+      await expect(page.locator('[data-reachable-color="green"]').first()).toBeVisible();
       await recorder.recordStep(page, '04d_sidebar_pick_has_no_map_menu');
       await page.locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"]').click();
       await expect(page.locator('[data-testid="unit-floating-menu"]')).toBeVisible();
@@ -103,9 +105,9 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await recorder.recordStep(page, '05_move_and_support_vectors_rendered');
 
       // 6b. Moving into a province held by one of the player's own units (#391): the fleet's token
-      // covers Brest's target ring, and clicking it orders A PAR - BRE instead of picking up the fleet.
+      // stands in Brest, lit as a target, and clicking it orders A PAR - BRE instead of picking up the fleet.
       await page.locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"]').click();
-      await expect(page.locator('[data-testid="reachable-reticle"][data-province-id="BRE"]')).toBeAttached();
+      await expect(page.locator('[data-testid="province-path"][data-province-id="BRE"]')).toHaveAttribute('data-reachable-color', 'green');
       await page.locator('[data-testid="unit-token"][data-unit-id="FRA_F_BRE"]').click();
       const intoOwnUnit = page.locator(
         '[data-testid="order-arrow"][data-order-unit="FRA_A_PAR"][data-order-type="MOVE"][data-order-target="BRE"]'
@@ -115,7 +117,7 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       await recorder.recordStep(page, '05a_move_onto_own_unit');
       // Put Paris back on Burgundy for the steps below.
       await page.locator('[data-testid="unit-token"][data-unit-id="FRA_A_PAR"]').click();
-      await page.locator('[data-testid="reachable-reticle"][data-province-id="BUR"]').click();
+      await clickProvince(page, 'BUR');
       await expect(orderArrow).toBeVisible();
 
       // 7. Finalize the French orders
@@ -236,12 +238,11 @@ test.describe('Scenario 01: Tactical Movement, Map Clicks, Support & Admin Rollb
       ).toHaveCount(0);
 
       // Re-pick Convoy -> A PIC -> coastal WAL and verify valid CONVOY vector renders.
-      // Since #193 a convoy target carries a reticle, which covers the middle of Wales, so the
-      // pick goes through the reticle as a player's click would.
+      // Wales is picked by clicking inside its own shape, as a player would.
       await fleetEng.click();
       await page.locator('[data-testid="unit-floating-menu"]').getByRole('button', { name: 'Convoy' }).click();
       await armyPic.click();
-      await page.locator('[data-testid="reachable-reticle"][data-province-id="WAL"]').click();
+      await clickProvince(page, 'WAL');
       await expect(
         page.locator(
           '[data-testid="order-arrow"][data-order-unit="FRA_F_ENG"][data-order-type="CONVOY"][data-order-target="WAL"]'

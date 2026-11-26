@@ -6,8 +6,4 @@
   .province-interactive-path[data-move="compatible"] {
     cursor: pointer;
   }
-
-  .reachable-target-reticle {
-    cursor: pointer;
-  }
 }

@@ -83,7 +83,8 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   │
   ├── 3. Dynamic Province Fill Layer (layers/ProvincesLayer.tsx, targetHighlight.ts, ProvincePolygon.tsx):
   │      - Semi-transparent fills colored by owning Great Power
-  │      - Solid green fill + target reticle for direct moves, active convoy chains, and legal support targets
+  │      - Solid green fill for direct moves, active convoy chains, and legal support targets. The lit
+  │        province is the whole target: nothing is drawn on top of it, and clicking anywhere in it picks it
   │      - Dashed ocean-blue fill/stroke for potential convoy destinations and multi-ship convoy chains
   │      - Convoys that need another power's fleet (not in `own_fleet_convoys`): dashed outline only, no fill
   │      - No convoy destinations are lit while a Hold is the unit's chosen order
@@ -108,7 +109,8 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   │      - MoveArrow: a curved arrow in the power's colour (convoyed moves dashed), retreats orange
   │        and dashed, thicker and badged +N for each valid support, red or amber for issues
   │      - Arrowheads in the SVG defs (layers/ArrowMarkerDefs.tsx)
-  │      - Holds have no arrow: the units layer rings a holding unit
+  │      - Holds have no arrow: the units layer rings a unit whose player chose Hold. A unit with
+  │        no order yet (a default hold) is not marked; the order list shows what is left to order
   │
   ├── 7. Simulation outcomes, drawn by the same arrows while the preview is on:
   │      - Green arrows and a ghost piece where a move lands
@@ -123,7 +125,11 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   │        ✕ DISBAND only once the player picks Disband (`isChosenDisband`); the server's default
   │        disband for an unordered unit is not shown as a choice, except on a past turn
   │      - Winter build slots: the piece being built with a BUILD tag, or "+ BUILD HERE" while waived
-  │      - Selection, hover and own-power rings, hold rings, +N supports to hold, and issue badges
+  │      - The player's own pieces wear a gold rim (`OWN_RIM`) in place of the cream one, with no ring
+  │      - Selection and hover lift the piece instead of ringing it (`pieces/PieceLift.tsx`): a
+  │        selected piece grows 1.25× with a drop shadow and a gold rim and is drawn last, a hovered
+  │        one grows 1.1× with a pale gold rim. Rings that hug a piece grow with it
+  │      - Explicit-hold rings, +N supports to hold, and issue badges
   │      - On a phone, tap targets grown to a finger's width (hooks/useTouchHitRadius.ts)
   │
   └── 9. Menus over the map (map/hud/):
@@ -163,17 +169,17 @@ Marks show whether a piece is an army or a fleet: `icons` (crossed swords and a 
 
 **Layouts (`data/mapLayouts.ts`)** hold each non-classic style's placements, recording only what differs from the province geometry (a province with no `unit` keeps its `unitPos`, one with no `star` keeps its `scPos`). Tight provinces such as Liverpool can't hold a token and a name at full size, so their tokens move and their names shrink, with a floor of 12 units (11 for Edinburgh, Denmark and Liverpool). A test checks every placement against the province outlines, so values can be edited by hand and the test reports any province that stops fitting. Text widths come from measured Libre Baskerville Bold metrics, which also size the pills at render time.
 
-**Drawing.** `MapPiece` is the only place piece bodies are drawn: units, simulation ghosts, winter builds and the previews in the settings menu all use it, so every style looks the same everywhere. Each style supplies a frame that sets ring sizes, badge offsets, banner positions, the step-aside offset for a dislodged unit, and an invisible hit area that keeps small pieces as easy to click as the original token. The point lookups read the active layout, so arrows, support lines, convoy paths, reticles and the floating unit menu all follow the pieces.
+**Drawing.** `MapPiece` is the only place piece bodies are drawn: units, simulation ghosts, winter builds and the previews in the settings menu all use it, so every style looks the same everywhere. Each style supplies a frame that sets ring sizes, badge offsets, banner positions, the step-aside offset for a dislodged unit, and an invisible hit area that keeps small pieces as easy to click as the original token. Rings follow each piece's real shape: a circle around a token, a rounded box around a whole flag (pole, cloth and the star at its foot, the frame's `box`), and the plate's own outline around a name plate, pointed at both ends for a fleet (`PieceOutline` takes the unit type for that). The point lookups read the active layout, so arrows, support lines, convoy paths and the floating unit menu all follow the pieces.
 
 ![Classic beside Star seat with every province occupied](images/display-settings-before-after.jpg)
 
-**Classic must stay pixel-identical to the original map.** With `letters`, its frame values and disc shapes are the original numbers. One known oddity is kept for this reason: `EUROPE_PROVINCE_GEOMETRY.CLY.unitPos` lies in the North Atlantic, so a Clyde unit draws on water in Classic. The other styles move it ashore.
+**Classic must stay pixel-identical to the original map.** With `letters`, its placements, frame values and disc shapes are the original numbers. The rims and highlights drawn around pieces are shared by every style and are not part of this. One known oddity is kept for this reason: `EUROPE_PROVINCE_GEOMETRY.CLY.unitPos` lies in the North Atlantic, so a Clyde unit draws on water in Classic. The other styles move it ashore.
 
 ---
 
 ## Hover
 
-Hovering a province brightens a reachable one, and hovering a unit rings it and highlights its sidebar card. These use `onPointerEnter`/`onPointerLeave` and ignore `pointerType === 'touch'`, because a tap would otherwise leave the hover on until the next tap. On touch, selecting a unit shows the same information.
+Hovering a province brightens a reachable one, and hovering a unit lifts it and highlights its sidebar card. These use `onPointerEnter`/`onPointerLeave` and ignore `pointerType === 'touch'`, because a tap would otherwise leave the hover on until the next tap. On touch, selecting a unit shows the same information.
 
 ---
 
@@ -221,9 +227,9 @@ A player can only control their own units, and other powers' units are marked `d
 The map supports direct board-level order entry across all phases:
 
 ### 1. Movement Phase
-1. **Select Unit**: Clicking an army or fleet sets `selectedUnitId` and displays valid move destinations as highlighted pulses.
+1. **Select Unit**: Clicking an army or fleet sets `selectedUnitId` and lights its valid move destinations in green.
 2. **Click Destination (Move)**: Clicking any valid adjacent province immediately dispatches a `MOVE` order. If the destination has split coasts (e.g. `STP`), a coast-selection popup appears.
-   - **A unit standing in a target**: its token covers the target's ring, so clicking the token counts as clicking that province.
+   - **A unit standing in a target**: its token sits on the lit province, so clicking the token counts as clicking that province.
      - **A foreign unit:** the click attacks it.
      - **One of the player's own units in a lit target** (in direct reach or by convoy): the click moves there too, as in `A BER - KIE` with the fleet still in Kiel.
      - **To select that unit instead,** let go of the selected one first (click it again, Escape or ×) or use its card.

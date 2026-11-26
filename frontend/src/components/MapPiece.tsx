@@ -1,7 +1,7 @@
 import type { Point } from '../data/europeMapGeometry';
 import type { FlagDirection } from '../data/mapLayouts';
 import type { PieceStyle, UnitMark } from '../utils/displayPrefs';
-import { DEFAULT_RIM, SupplyStar } from './pieces/marks';
+import { DEFAULT_RIM, HOVER_RIM, OWN_RIM, SupplyStar } from './pieces/marks';
 import type {
   PieceFrame,
   PieceUnitType,
@@ -11,6 +11,14 @@ import { DiscPiece } from './pieces/styles/DiscPiece';
 import { FlagPiece } from './pieces/styles/FlagPiece';
 import { PillPiece } from './pieces/styles/PillPiece';
 
+export {
+  liftTransform,
+  PIECE_LIFT_FILTER_ID,
+  PieceLift,
+  PieceLiftFilter,
+  type PieceLiftState,
+  pieceRim,
+} from './pieces/PieceLift';
 // Everything a piece is made of lives in `pieces/`. This is the one entry point the map, the
 // order arrows and the display settings import from.
 export {
@@ -26,8 +34,9 @@ export {
   type PiecePill,
   type PieceUnitType,
   type PieceVariant,
+  pieceCarriesStar,
 } from './pieces/pieceFrame';
-export { SupplyStar };
+export { DEFAULT_RIM, HOVER_RIM, OWN_RIM, SupplyStar };
 
 const DISC_SCALE: Partial<Record<PieceStyle, number>> = {
   classic: 1,

@@ -9,6 +9,8 @@ export type PieceUnitType = 'A' | 'F';
 export type PieceVariant = 'unit' | 'ghost' | 'build';
 
 const PILL_MARK_ROOM = 18;
+/** A fleet's name plate tapers to a point at each end, this fraction of half its height. */
+export const PILL_POINT = 0.7;
 const PILL_STAR_ROOM = 13;
 const PILL_END_ROOM = 8;
 
@@ -42,6 +44,25 @@ export function makePiecePill(
 }
 
 /**
+ * Whether a piece in a supply centre carries the centre's star itself, which in Name as
+ * piece also makes its plate wider. Elsewhere the star stays on the map beside it.
+ */
+export function pieceCarriesStar(
+  style: PieceStyle,
+  isSupplyCenter: boolean,
+): boolean {
+  return isSupplyCenter && (style === 'seated' || style === 'nameplate');
+}
+
+/** A rectangle in the piece's own coordinates, its unit point at the origin. */
+export interface PieceBox {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+/**
  * Everything drawn around a piece takes its size and position from this, so rings,
  * badges and banners suit each style. The classic values are the map's original ones.
  */
@@ -49,6 +70,11 @@ export interface PieceFrame {
   center: Point;
   ringScale: number;
   pill: PiecePill | null;
+  /**
+   * The whole piece, for a style whose outline is not a circle around `center`: a flag
+   * with its pole and the star or dot at its foot. Rings around it follow this box.
+   */
+  box: PieceBox | null;
   /** An invisible click target for pieces smaller than the original token. Zero if unneeded. */
   hitRadius: number;
   badgeLeft: Point;
@@ -61,6 +87,21 @@ export interface PieceFrame {
 }
 
 const ORIGIN: Point = { x: 0, y: 0 };
+
+// A flag's cloth reaches 30 out from its pole (a fleet's pennant, the wider of the two), the
+// pole rises 29 with the cloth's rim above it, and the supply star at its foot is about 7 across.
+const FLAG_REACH = 30;
+const FLAG_TOP = -30;
+const FLAG_FOOT = 7;
+
+function flagBox(direction: FlagDirection): PieceBox {
+  return {
+    x0: Math.min(-FLAG_FOOT, FLAG_REACH * direction),
+    y0: FLAG_TOP,
+    x1: Math.max(FLAG_FOOT, FLAG_REACH * direction),
+    y1: FLAG_FOOT,
+  };
+}
 
 const ARROW_SCALE: Record<PieceStyle, number> = {
   classic: 1,
@@ -90,6 +131,7 @@ export function getPieceFrame(
       center: ORIGIN,
       ringScale: 1,
       pill,
+      box: null,
       hitRadius: 0,
       badgeLeft: across(-pill.width / 2, -pill.height / 2),
       badgeRight: across(pill.width / 2, -pill.height / 2),
@@ -105,6 +147,7 @@ export function getPieceFrame(
         center: ORIGIN,
         ringScale: 0.8,
         pill: null,
+        box: null,
         hitRadius: 18,
         badgeLeft: { x: -14, y: -14 },
         badgeRight: { x: 13, y: -13 },
@@ -117,6 +160,7 @@ export function getPieceFrame(
         center: ORIGIN,
         ringScale: 0.68,
         pill: null,
+        box: null,
         hitRadius: 17,
         badgeLeft: { x: -12, y: -12 },
         badgeRight: { x: 11, y: -11 },
@@ -129,6 +173,7 @@ export function getPieceFrame(
         center: { x: 12 * flagDirection, y: -14 },
         ringScale: 0.82,
         pill: null,
+        box: flagBox(flagDirection),
         hitRadius: 21,
         badgeLeft: { x: 12 * flagDirection - 15, y: -32 },
         badgeRight: { x: 12 * flagDirection + 15, y: -32 },
@@ -141,6 +186,7 @@ export function getPieceFrame(
         center: ORIGIN,
         ringScale: 1,
         pill: null,
+        box: null,
         hitRadius: 0,
         badgeLeft: { x: -17, y: -17 },
         badgeRight: { x: 16, y: -16 },

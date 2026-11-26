@@ -34,8 +34,6 @@ export interface PieceGeometry {
   layout: MapLayout;
   /** How far the active style pushes arrows off a piece. */
   arrowScale: number;
-  /** How big rings around pieces are in the active style. */
-  pieceRingScale: number;
   getProvincePoint: (provCode: string, coast?: string | null) => Point;
   /** How a piece standing in this province is drawn in the active style. */
   describePiece: (
@@ -79,7 +77,6 @@ export function usePieceGeometry({
 
   const layout = getMapLayout(pieceStyle);
   const arrowScale = getPieceArrowScale(pieceStyle);
-  const pieceRingScale = getPieceFrame(pieceStyle).ringScale;
 
   const getProvincePoint = useCallback(
     (provCode: string, coast?: string | null): Point => {
@@ -164,7 +161,6 @@ export function usePieceGeometry({
     unitsById,
     layout,
     arrowScale,
-    pieceRingScale,
     getProvincePoint,
     describePiece,
     getUnitPoint,

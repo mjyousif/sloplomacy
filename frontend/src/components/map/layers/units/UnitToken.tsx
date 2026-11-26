@@ -8,18 +8,24 @@ import {
   isOrderIncomplete,
 } from '../../../../utils/orderHelpers';
 import {
+  liftTransform,
   MapPiece,
   PieceHitArea,
   PieceHoldOutline,
+  PieceLift,
+  type PieceLiftState,
   PieceOutline,
+  pieceCarriesStar,
+  pieceRim,
 } from '../../../MapPiece';
 import styles from './UnitToken.module.css';
 import type { UnitLayerContext } from './unitLayerContext';
 
 /**
- * One unit on the board: its piece in the player's style with rings for selection, hover, the
- * player's own units, holding, dislodgement and disbanding, plus badges for supports to hold
- * and issues, and DISLODGED! or DISBAND banners.
+ * One unit on the board: its piece in the player's style, with a gold rim if it is the
+ * player's own. Selecting or hovering it lifts the piece rather than ringing it. Rings
+ * mark only an explicit hold, dislodgement and disbanding, and badges show supports to
+ * hold and issues, with DISLODGED! or DISBAND banners.
  */
 export function UnitToken({
   unit,
@@ -91,6 +97,9 @@ export function UnitToken({
       ? 'warning'
       : null;
 
+  // A past turn's unit focused from the order list rises as far as a selected one.
+  const lift: PieceLiftState =
+    isSelected || isHistoryFocused ? 'selected' : isHovered ? 'hovered' : null;
   const isHold = !order || order.order_type === 'HOLD';
   // On the turn being played, a dislodged unit's default DISBAND is not a choice yet, so it
   // keeps its DISLODGED! banner. A past turn (no control power) shows what happened.
@@ -117,17 +126,19 @@ export function UnitToken({
       simRes?.succeeded,
   );
 
+  const steppedAside = Boolean(unit.is_dislodged && unitsByProv[unit.province]);
   // A dislodged unit stepped aside, so the star stays with the unit holding the province
   const carriesStar =
-    (pieceStyle === 'seated' || pieceStyle === 'nameplate') &&
-    Boolean(provinces[unit.province]?.is_supply_center) &&
-    !(unit.is_dislodged && unitsByProv[unit.province]);
+    pieceCarriesStar(
+      pieceStyle,
+      Boolean(provinces[unit.province]?.is_supply_center),
+    ) && !steppedAside;
   const { frame, flagDirection } = describePiece(
     unit.province,
     unit.coast,
     carriesStar,
   );
-  const steppedAside = Boolean(unit.is_dislodged && unitsByProv[unit.province]);
+  const holdRing = isExplicitHold && !unit.is_dislodged;
   const bannerY = steppedAside ? frame.steppedAsideBannerY : frame.bannerY;
 
   return (
@@ -154,82 +165,68 @@ export function UnitToken({
     >
       <PieceHitArea frame={frame} minRadius={touchHitRadius(unit.id, frame)} />
 
-      {(isSelected || isHovered) && (
-        <PieceOutline
-          frame={frame}
-          radius={isHistoryFocused ? 29 : 27}
-          fill={
-            isHistoryFocused
-              ? 'rgba(250, 204, 21, 0.34)'
-              : 'rgba(245, 158, 11, 0.22)'
-          }
-          stroke={isHistoryFocused ? '#fde047' : '#f59e0b'}
-          strokeWidth={isHistoryFocused ? '4' : '3.5'}
-          strokeDasharray={isSelected || isHistoryFocused ? undefined : '5 3'}
-        />
-      )}
+      {/* Rings that hug the piece grow with it, so a lifted piece never outgrows them */}
+      {(unit.is_dislodged || isDisbanding || holdRing) && (
+        <g transform={liftTransform(lift)}>
+          {unit.is_dislodged && (
+            <g data-testid="dislodged-unit-indicator" data-unit-id={unit.id}>
+              <PieceOutline
+                frame={frame}
+                unitType={unit.unit_type}
+                radius={24}
+                fill="rgba(234, 88, 12, 0.28)"
+                stroke="#ea580c"
+                strokeWidth="3"
+                strokeDasharray="5 3"
+              />
+            </g>
+          )}
 
-      {unit.is_dislodged && (
-        <g data-testid="dislodged-unit-indicator" data-unit-id={unit.id}>
-          <PieceOutline
-            frame={frame}
-            radius={24}
-            fill="rgba(234, 88, 12, 0.28)"
-            stroke="#ea580c"
-            strokeWidth="3"
-            strokeDasharray="5 3"
-          />
+          {isDisbanding && (
+            <PieceOutline
+              frame={frame}
+              unitType={unit.unit_type}
+              radius={24}
+              fill="rgba(220, 38, 38, 0.28)"
+              stroke="#dc2626"
+              strokeWidth="3"
+              strokeDasharray="4 3"
+            />
+          )}
+
+          {/* Only a hold the player chose is ringed; an unordered unit shows nothing */}
+          {holdRing && (
+            <PieceHoldOutline
+              frame={frame}
+              unitType={unit.unit_type}
+              fill="none"
+              stroke="#eab308"
+              strokeWidth="2.8"
+              opacity={0.95}
+            />
+          )}
         </g>
       )}
 
-      {isDisbanding && (
-        <PieceOutline
+      <PieceLift lift={lift}>
+        <MapPiece
+          style={pieceStyle}
+          mark={unitMark}
+          unitType={unit.unit_type}
+          color={meta.color}
+          rim={pieceRim({
+            dislodged: Boolean(unit.is_dislodged),
+            disbanding: isDisbanding,
+            lift,
+            own: unit.power === activePower,
+          })}
           frame={frame}
-          radius={24}
-          fill="rgba(220, 38, 38, 0.28)"
-          stroke="#dc2626"
-          strokeWidth="3"
-          strokeDasharray="4 3"
+          flagDirection={flagDirection}
+          hasStar={Boolean(provinces[unit.province]?.is_supply_center)}
+          showStar={carriesStar}
+          starOwnerColor={getStarOwnerColor(unit.province)}
         />
-      )}
-
-      {/* Active Power Subtle Ring so your own units stand out clearly */}
-      {unit.power === activePower && !isSelected && !unit.is_dislodged && (
-        <PieceOutline
-          frame={frame}
-          radius={21}
-          fill="none"
-          stroke="#fef08a"
-          strokeWidth="2"
-          opacity="0.75"
-        />
-      )}
-
-      {isHold && !unit.is_dislodged && isUnitOrderVisible(unit) && (
-        <PieceHoldOutline
-          frame={frame}
-          fill="none"
-          stroke={isExplicitHold ? '#eab308' : '#1e293b'}
-          strokeWidth={isExplicitHold ? '2.8' : '1.6'}
-          strokeDasharray={isExplicitHold ? undefined : '4 3'}
-          opacity={isExplicitHold ? 0.95 : 0.65}
-        />
-      )}
-
-      <MapPiece
-        style={pieceStyle}
-        mark={unitMark}
-        unitType={unit.unit_type}
-        color={meta.color}
-        rim={
-          unit.is_dislodged ? '#fdba74' : isDisbanding ? '#fca5a5' : '#fef3c7'
-        }
-        frame={frame}
-        flagDirection={flagDirection}
-        hasStar={Boolean(provinces[unit.province]?.is_supply_center)}
-        showStar={carriesStar}
-        starOwnerColor={getStarOwnerColor(unit.province)}
-      />
+      </PieceLift>
 
       {holdSupCount > 0 && (
         <g transform={`translate(${frame.badgeLeft.x}, ${frame.badgeLeft.y})`}>
