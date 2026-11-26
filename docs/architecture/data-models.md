@@ -149,6 +149,7 @@ Complete server snapshot of a game session.
 | `builds` | `Record<string, Any>?`| Build quotas and available home SCs during Winter Adjustments. |
 | `retreats` | `Record<string, Any>?`| Valid retreat provinces per dislodged unit during Retreats. |
 | `timer` | `PhaseTimer?` | The match clock. `null` until the host starts it, in sandboxes, and once a power has won. |
+| `timer_settings` | `TimerSettings` | The match's clock lengths, set by the host: `vote_minutes` (1 to 3 distinct, default `[15, 20, 30]`), `fixed_phase_minutes` (Retreats/Adjustments, default 5) and `vote_window_seconds` (default 60). They apply from the next vote or phase and survive a rollback. |
 | `winner` | `Power?` | Set once a power has won. The clock stays on the deciding phase and no further turns resolve. |
 | `unit_options` | `Record<string, UnitMoveOptions>` | Server-computed move, convoy and support options per unit ID (`direct_moves`, `active_convoys`, `potential_convoys`, `own_fleet_convoys`, `convoyable_armies`, `convoy_targets`, `valid_supports`). Rebuilt on every refresh, on load, and from masked orders in `sanitize_game_state_for_viewer`; excluded from Supabase persistence (`DERIVED_STATE_FIELDS`). |
 
@@ -161,7 +162,9 @@ The clock of a live multiplayer match. Times are absolute, so it survives a rest
 | `deadline` | `number?` | Unix time the vote or phase ends. `null` while paused. Clients count down from `remaining_seconds` instead. |
 | `minutes` | `number?` | Length the running phase was given. |
 | `players` | `Power[]` | Who votes, readies up and extends: seated, not surrendered, still in the game. |
-| `votes` | `Record<Power, TimerChoice>` | Votes cast, where `TimerChoice` is `'15'`, `'20'`, `'30'`, or `'pause'`. |
+| `votes` | `Record<Power, TimerChoice>` | Votes cast, where `TimerChoice` is one of `vote_minutes` as a string (`'15'`) or `'pause'`. |
+| `vote_minutes` | `number[]` | The lengths this vote offers, copied from `timer_settings` when it opened. |
+| `host_paused` | `boolean` | Paused by the host: players cannot ready up out of it, only the host resumes. |
 | `extend_requests` | `Power[]` | Who has asked for more time since it was last added. |
 | `ready_powers` | `Power[]` | Who has readied up in a paused game. |
 | `remaining_seconds` | `number?` | Computed when sent: time left, so that a wrong device clock cannot matter. |
@@ -311,6 +314,8 @@ interface GameParticipant {
 - `FinalizeRequest`: `{ power, force?, turn? }`
 - `TimerVoteRequest`: `{ power, choice: TimerChoice }`
 - `TimerToggleRequest`: `{ power, active?: boolean }`
+- `TimerDeadlineRequest`: exactly one of `{ seconds_left }`, `{ adjust_seconds }` or `{ deadline }` (host only)
+- `TimerSettings`: `{ vote_minutes, fixed_phase_minutes, vote_window_seconds }` (host only, `PUT /api/admin/timer/settings?game_id=`)
 - `ScenarioRequest`: `{ scenario_id, active_power? }`
 - `SeedScenarioRequest`: `{ scenario_id, game_id?, active_power? }`
 

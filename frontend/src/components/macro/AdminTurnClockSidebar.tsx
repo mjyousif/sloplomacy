@@ -13,6 +13,7 @@ import { cx } from '../../utils/cx';
 import type { OrderProgress } from '../../utils/orderProgress';
 import type { SheetSnap } from '../../utils/sheetHelpers';
 import { turnLabel } from '../../utils/turnFormat';
+import { PhaseClockSection } from '../admin/PhaseClockSection';
 import { TurnControlTab } from '../admin/TurnControlTab';
 import macroStyles from '../MacroSidebar.module.css';
 import { useConfirm } from '../modal/ConfirmModal';
@@ -31,6 +32,8 @@ export interface AdminTurnClockSettings {
   user: AuthUser | null;
   onStateUpdated: (newState: GameState) => void;
   onToast: (msg: string) => void;
+  /** A multiplayer match, which has a turn clock the host can override. */
+  hasTurnClock?: boolean;
 }
 
 export interface AdminTurnClockSidebarProps {
@@ -58,7 +61,8 @@ export function AdminTurnClockSidebar({
   progress,
   settings,
 }: AdminTurnClockSidebarProps) {
-  const { isOpen, gameId, gameState, onStateUpdated, onToast } = settings;
+  const { isOpen, gameId, gameState, onStateUpdated, onToast, hasTurnClock } =
+    settings;
 
   const [historyEntries, setHistoryEntries] = useState<TurnHistoryEntry[]>([]);
   const [selectedSnapshotIndex, setSelectedSnapshotIndex] = useState<
@@ -215,6 +219,15 @@ export function AdminTurnClockSidebar({
         handleSetTurn={handleSetTurn}
         useNativeSelect={variant === 'sheet'}
       />
+      {hasTurnClock && (
+        <PhaseClockSection
+          gameId={gameId}
+          gameState={gameState}
+          onStateUpdated={onStateUpdated}
+          onToast={onToast}
+          onError={setActionError}
+        />
+      )}
       {confirmModal}
     </div>
   );

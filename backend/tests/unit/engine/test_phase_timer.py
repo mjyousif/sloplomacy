@@ -2,7 +2,7 @@
 
 import pytest
 from domain.board import Power
-from domain.game_state import PhaseTimer, TimerChoice, TimerStage
+from domain.game_state import PhaseTimer, TimerStage
 from engine.phase_timer import (
     tally_votes,
 )
@@ -13,25 +13,25 @@ ALL_POWERS = ["FRANCE", "ENGLAND", "GERMANY", "ITALY", "AUSTRIA", "RUSSIA", "TUR
 @pytest.mark.parametrize(
     "votes, expected",
     [
-        ({}, TimerChoice.PAUSE),
-        ({Power.FRANCE: TimerChoice.MIN_15}, TimerChoice.MIN_15),
+        ({}, "pause"),
+        ({Power.FRANCE: "15"}, "15"),
         # Most votes wins without needing more than half of them.
         (
             {
-                Power.FRANCE: TimerChoice.MIN_15,
-                Power.ENGLAND: TimerChoice.MIN_15,
-                Power.GERMANY: TimerChoice.MIN_15,
-                Power.ITALY: TimerChoice.MIN_20,
-                Power.AUSTRIA: TimerChoice.MIN_20,
-                Power.RUSSIA: TimerChoice.MIN_30,
-                Power.TURKEY: TimerChoice.MIN_30,
+                Power.FRANCE: "15",
+                Power.ENGLAND: "15",
+                Power.GERMANY: "15",
+                Power.ITALY: "20",
+                Power.AUSTRIA: "20",
+                Power.RUSSIA: "30",
+                Power.TURKEY: "30",
             },
-            TimerChoice.MIN_15,
+            "15",
         ),
         # Ties go to the longer option.
-        ({Power.FRANCE: TimerChoice.MIN_15, Power.ENGLAND: TimerChoice.MIN_20}, TimerChoice.MIN_20),
-        ({Power.FRANCE: TimerChoice.MIN_20, Power.ENGLAND: TimerChoice.MIN_30}, TimerChoice.MIN_30),
-        ({Power.FRANCE: TimerChoice.MIN_30, Power.ENGLAND: TimerChoice.PAUSE}, TimerChoice.PAUSE),
+        ({Power.FRANCE: "15", Power.ENGLAND: "20"}, "20"),
+        ({Power.FRANCE: "20", Power.ENGLAND: "30"}, "30"),
+        ({Power.FRANCE: "30", Power.ENGLAND: "pause"}, "pause"),
     ],
 )
 def test_tally_votes(votes, expected):

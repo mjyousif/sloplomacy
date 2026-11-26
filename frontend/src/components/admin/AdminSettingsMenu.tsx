@@ -65,7 +65,7 @@ export function AdminSettingsOptions({
       id: 'turn-clock',
       testId: 'btn-open-admin-console',
       name: 'Turn and Clock Settings',
-      description: 'Revert a turn or set the season.',
+      description: 'Revert a turn, set the season, or run the turn clock.',
       icon: <Clock size={18} />,
       active: turnClockOpen,
       onSelect: onOpenAdminTools,

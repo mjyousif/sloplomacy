@@ -129,6 +129,7 @@ export function useAdminActions({
           user: authUser,
           onStateUpdated: handleAdminUpdateState,
           onToast: triggerToast,
+          hasTurnClock: viewMode === 'multiplayer',
         }
       : undefined;
 

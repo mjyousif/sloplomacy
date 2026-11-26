@@ -17,6 +17,8 @@ const voting: PhaseTimer = {
   ready_powers: [],
   remaining_seconds: 42,
   extensions_needed: 3,
+  vote_minutes: [15, 20, 30],
+  host_paused: false,
 };
 const running: PhaseTimer = {
   ...voting,
@@ -136,5 +138,38 @@ describe('PhaseTimerWidget', () => {
     expect(render({ timer: running })).not.toContain(
       'real clock is still running',
     );
+  });
+});
+
+describe('PhaseTimerWidget when the host takes over', () => {
+  it('offers the lengths this vote opened with', () => {
+    const html = render({ timer: { ...voting, vote_minutes: [10, 60] } });
+    expect(html).toContain('10 min');
+    expect(html).toContain('1 h');
+    expect(html).not.toContain('20 min');
+  });
+
+  it('gives no ready-up during a host pause', () => {
+    const html = render({ timer: { ...paused, host_paused: true } });
+    expect(html).toContain('Paused by the Host');
+    expect(html).not.toContain('data-testid="btn-timer-ready"');
+    expect(render({ timer: paused })).toContain(
+      'data-testid="btn-timer-ready"',
+    );
+  });
+
+  it('says when a clock over a day out ends, instead of ticking', () => {
+    const html = render({
+      timer: { ...running, remaining_seconds: 8 * 86400 + 13 * 3600 + 51 * 60 },
+    });
+    expect(html).toMatch(/Ends \w{3} /);
+    expect(html).toContain('8 d 13 h left');
+    expect(html).not.toContain('Time Left');
+  });
+
+  it('ticks in the last day', () => {
+    const html = render({ timer: { ...running, remaining_seconds: 3 * 3600 } });
+    expect(html).toContain('Time Left');
+    expect(html).toContain('3:00:00');
   });
 });

@@ -6,6 +6,7 @@ import type {
   MultiplayerGameSummary,
   PhaseTimer,
   Power,
+  TimerChoice,
 } from '../types/diplomacy';
 import * as soundEffects from '../utils/soundEffects';
 import {
@@ -71,7 +72,7 @@ function makeSummary(
 }
 
 function makeVotingTimer(
-  votes: Partial<Record<Power, '15' | '20' | '30' | 'pause'>> = {},
+  votes: Partial<Record<Power, TimerChoice>> = {},
 ): PhaseTimer {
   return {
     stage: 'voting',
@@ -83,6 +84,8 @@ function makeVotingTimer(
     ready_powers: [],
     remaining_seconds: 45,
     extensions_needed: 1,
+    vote_minutes: [15, 20, 30],
+    host_paused: false,
   };
 }
 

@@ -92,14 +92,14 @@ Empty seats and surrendered powers follow the same rules, so they never build an
 ### 9. Turn Clock
 This is a house rule for live multiplayer matches. Nothing is timed until the host starts the clock, which opens the first vote.
 
-- **Movement phases** open with a 60-second vote: 15, 20 or 30 minutes, or pause. Orders stay open during it. The vote ends when everyone has voted or the 60 seconds are up. Most votes wins and a tie goes to the longer option, with pause counting as the longest.
-- **Retreats and Adjustments** get a fixed 5 minutes with no vote.
+- **Movement phases** open with a 60-second vote: 15, 20 or 30 minutes, or pause (the host can change these lengths). Orders stay open during it. The vote ends when everyone has voted or the 60 seconds are up. Most votes wins and a tie goes to the longer option, with pause counting as the longest.
+- **Retreats and Adjustments** get a fixed 5 minutes with no vote (also changeable by the host).
 - **Pausing** happens if the vote chooses it or nobody votes. Every player then has to ready up, which opens a new vote.
 - **Extending:** 5 of 7 players can add 5 minutes to a running clock, as often as they agree to. With fewer players it scales: 6 need 5, 5 need 4, 4 need 3, 3 need 3, and 2 need 2.
 - **Time running out** resolves the phase with whatever players have entered. Anything else follows [Missed Orders](#8-missed-orders).
 - **Finishing early** still works: the phase resolves as soon as everyone has finalized, even during a vote or a pause.
 
-Surrendered and eliminated players do not count. The host can still resolve a phase by force, which is also the way out of a pause if someone has gone missing.
+Surrendered and eliminated players do not count. The host can still resolve a phase by force. The host can also take over the clock: pause it (players cannot ready up out of a host pause), resume any pause, set how long is left or when it runs out (which ends a vote), add or take off minutes, or turn it off. Every such change is shown to the players.
 
 ### 10. Orders Become Public Once Resolved
 Orders are secret until their phase resolves, then everyone sees them, as when the orders are read out at a table. The turn selector at the foot of the tools pane shows every resolved phase from the start of the campaign with every nation's orders and how each resolved. The phase being played is never in it.

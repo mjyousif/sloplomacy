@@ -28,6 +28,7 @@ From the Admin Turn & Clock sidebar (`AdminTurnClockSidebar.tsx`) and settings m
 - **Rollback (`POST /api/admin/rollback`)**: Reverts the board to a selected snapshot index in `GAME_HISTORY`, pops newer snapshots, clears `winner`, resets `timer`, and records a rollback entry.
 - **Set Turn (`POST /api/admin/set-turn`)**: Jumps the game's `season`, `year`, and `phase` (useful for testing or correcting phase state), clears ephemeral sandboxes, restarts the timer if active, and refreshes diagnostics and simulation preview.
 - **Force Adjudicate (`POST /api/adjudicate`)**: Resolves the current phase immediately without waiting for remaining players or the phase clock.
+- **Turn Clock overrides ([`backend/api/admin_timer.py`](../../backend/api/admin_timer.py), the sidebar's Turn Clock and Clock Lengths cards)**: In a multiplayer match the host can start, pause (a pause only they can lift), resume, set the time left or the end time (which also ends a vote), nudge a running clock, turn the clock off, and change the match's clock lengths. Each one is logged for the players to acknowledge. The rules are in [Turn Clock: Host Overrides](turn-clock.md#host-overrides).
 
 ---
 

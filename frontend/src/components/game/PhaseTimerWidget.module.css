@@ -41,6 +41,11 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* "8 d 13 h left": words, so a smaller size than the ticking clock. */
+  .phase-timer-clock[data-long="true"] {
+    font-size: 1.35rem;
+  }
+
   .phase-timer-clock[data-low="true"] {
     color: var(--danger-light);
   }

@@ -7,9 +7,12 @@ import {
   clockPillLabel,
   countVotes,
   formatClock,
+  formatDeadline,
+  formatMinutes,
+  LONG_CLOCK_SECONDS,
   powersNotReady,
   powersYetToVote,
-  TIMER_OPTIONS,
+  timerOptions,
 } from '../../utils/timerHelpers';
 import styles from './PhaseTimerWidget.module.css';
 
@@ -134,7 +137,7 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
           </div>
           {renderClock()}
           <div className={styles.phaseTimerOptions}>
-            {TIMER_OPTIONS.map(({ choice, label }) => (
+            {timerOptions(timer).map(({ choice, label }) => (
               <button
                 key={choice}
                 type="button"
@@ -150,6 +153,20 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
           </div>
           <p className={styles.phaseTimerNote}>
             <strong>Yet to vote:</strong> {formatPowerList(pending)}
+          </p>
+        </>
+      );
+    }
+
+    if (timer.stage === 'paused' && timer.host_paused) {
+      return (
+        <>
+          <div className={styles.phaseTimerTitle}>
+            <Pause size={14} /> Paused by the Host
+          </div>
+          <p className={styles.phaseTimerNote}>
+            Only the host can resume the clock. You can still write and finalize
+            orders.
           </p>
         </>
       );
@@ -187,12 +204,32 @@ export const PhaseTimerWidget: React.FC<PhaseTimerWidgetProps> = ({
 
     const askedForMore =
       !!seatPower && timer.extend_requests.includes(seatPower);
+    // Over a day out, say when it ends; a ticking clock only matters in the last day.
+    const farOff = seconds !== null && seconds > LONG_CLOCK_SECONDS;
     return (
       <>
-        <div className={styles.phaseTimerTitle}>
-          <Clock size={14} /> Time Left
-        </div>
-        {renderClock()}
+        {farOff ? (
+          <>
+            <div className={styles.phaseTimerTitle}>
+              <Clock size={14} />{' '}
+              {`Ends ${formatDeadline(new Date(Date.now() + seconds * 1000))}`}
+            </div>
+            <div
+              className={styles.phaseTimerClock}
+              data-long="true"
+              role="timer"
+            >
+              {`${formatMinutes(Math.max(1, Math.round(seconds / 60)))} left`}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={styles.phaseTimerTitle}>
+              <Clock size={14} /> Time Left
+            </div>
+            {renderClock()}
+          </>
+        )}
         {isPlayer && (
           <button
             type="button"

@@ -3,7 +3,7 @@
 import time
 
 from domain.board import Power
-from domain.game_state import TimerChoice, TimerStage
+from domain.game_state import TimerStage
 from engine.phase_timer import (
     VOTE_WINDOW_SECONDS,
 )
@@ -66,7 +66,7 @@ def test_a_player_can_change_their_vote_until_it_closes(client):
     start_clock(client, gid)
     vote(client, gid, "FRANCE", "15")
     vote(client, gid, "FRANCE", "30")
-    assert GAMES[gid].timer.votes == {Power.FRANCE: TimerChoice.MIN_30}
+    assert GAMES[gid].timer.votes == {Power.FRANCE: "30"}
 
 
 def test_vote_window_running_out_counts_the_votes_cast(client):
@@ -199,4 +199,5 @@ def test_timer_actions_check_the_stage_and_the_player(client):
     assert extend(client, gid, "FRANCE").status_code == 409  # Still voting
     assert ready(client, gid, "FRANCE").status_code == 409
     assert vote(client, gid, "TURKEY", "15").status_code == 403  # Not seated
-    assert vote(client, gid, "FRANCE", "45").status_code == 422  # Not an option
+    assert vote(client, gid, "FRANCE", "45").status_code == 400  # Not an option in this vote
+    assert vote(client, gid, "FRANCE", "soon").status_code == 422  # Not a length at all

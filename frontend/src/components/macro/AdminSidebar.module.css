@@ -11,7 +11,7 @@
   .admin-sidebar-header-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start; /* The title sits beside the collapse button, at the left. */
     gap: 8px;
     width: 100%;
   }

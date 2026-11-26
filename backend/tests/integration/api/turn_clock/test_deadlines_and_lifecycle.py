@@ -7,7 +7,7 @@ import engine.turn_service as turn_service
 import pytest
 import storage.store as store
 from domain.board import Power
-from domain.game_state import GameState, TimerChoice, TimerStage
+from domain.game_state import GameState, TimerStage
 from engine.phase_timer import (
     FIXED_PHASE_MINUTES,
     start_phase_clock,
@@ -305,7 +305,7 @@ def test_clock_survives_being_saved_and_loaded(client):
     restored = GameState.model_validate(game.model_dump(mode="json"))
     assert restored.timer.stage == TimerStage.VOTING
     assert restored.timer.deadline == game.timer.deadline
-    assert restored.timer.votes == {Power.FRANCE: TimerChoice.MIN_20}
+    assert restored.timer.votes == {Power.FRANCE: "20"}
 
 
 def test_deadline_still_fires_on_a_game_reloaded_after_a_restart(client):

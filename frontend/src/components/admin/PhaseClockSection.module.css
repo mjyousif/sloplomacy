@@ -1,0 +1,53 @@
+@layer components {
+  .time-left-group {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .end-at-group {
+    margin: 12px 0 0;
+    padding: 0;
+    border: none;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .end-at-legend {
+    padding: 0;
+    margin-bottom: 5px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .end-at-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  /* The native pickers' own icons are dark by default; the sidebar is dark too. */
+  .end-at-row input {
+    color-scheme: dark;
+  }
+
+  .nudge-row {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  /* One picker per row: each holds a full set of chips. */
+  .lengths-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+}
