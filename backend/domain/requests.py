@@ -4,7 +4,7 @@ from domain.board import Power, ProvinceInfo, Unit
 from domain.game_state import GameState, MultiplayerGameSummary, TimerChoice, TurnHistoryEntry
 from domain.issues import ValidationIssue
 from domain.orders import Order
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class OrderSubmissionRequest(BaseModel):
@@ -33,7 +33,27 @@ class FinalizeRequest(BaseModel):
 
 class TimerVoteRequest(BaseModel):
     power: Power
-    choice: TimerChoice
+    choice: TimerChoice = Field(pattern=r"^(pause|[1-9][0-9]{0,5})$")
+
+
+class TimerDeadlineRequest(BaseModel):
+    """
+    The host sets when the clock runs out (issue #393). Give exactly one: how long is left from
+    now, a change to the running deadline, or a wall-clock Unix time.
+    """
+
+    seconds_left: float | None = None
+    adjust_seconds: float | None = None
+    deadline: float | None = None
+
+    @model_validator(mode="after")
+    def _exactly_one(self) -> "TimerDeadlineRequest":
+        given = [
+            v for v in (self.seconds_left, self.adjust_seconds, self.deadline) if v is not None
+        ]
+        if len(given) != 1:
+            raise ValueError("Give exactly one of seconds_left, adjust_seconds or deadline.")
+        return self
 
 
 class TimerToggleRequest(BaseModel):

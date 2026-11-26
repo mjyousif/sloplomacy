@@ -110,7 +110,15 @@ export interface SimulationResult {
 
 export type TimerStage = 'voting' | 'running' | 'paused';
 
-export type TimerChoice = '15' | '20' | '30' | 'pause';
+/** A vote on a phase's length: a number of minutes the vote offers ('15'), or 'pause'. */
+export type TimerChoice = `${number}` | 'pause';
+
+/** A match's clock lengths, set by the host. They apply from the next vote or phase. */
+export interface TimerSettings {
+  vote_minutes: number[]; // 1 to 3 distinct lengths, shortest first
+  fixed_phase_minutes: number; // Retreats and Adjustments
+  vote_window_seconds: number;
+}
 
 export interface PhaseTimer {
   stage: TimerStage;
@@ -118,6 +126,10 @@ export interface PhaseTimer {
   minutes: number | null;
   players: Power[];
   votes: Partial<Record<Power, TimerChoice>>;
+  /** The lengths this vote offers, copied from the match's settings when it opened. */
+  vote_minutes: number[];
+  /** Paused by the host: players cannot ready up out of it, only the host resumes. */
+  host_paused: boolean;
   extend_requests: Power[];
   ready_powers: Power[];
   remaining_seconds: number | null;
@@ -180,6 +192,7 @@ export interface GameState {
   retreats?: Record<Power, Record<string, string[]>> | null;
   winner?: Power | null;
   timer?: PhaseTimer | null;
+  timer_settings?: TimerSettings;
   admin_log?: AdminActionLogEntry[];
   state_revision?: number;
   board_revision?: number;

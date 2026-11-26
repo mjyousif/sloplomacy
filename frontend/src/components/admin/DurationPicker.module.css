@@ -1,0 +1,56 @@
+@layer components {
+  .picker {
+    margin: 0;
+    padding: 0;
+    border: none;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .legend {
+    padding: 0;
+    margin-bottom: 5px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .amount,
+  .unit {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    border-radius: var(--radius-md);
+    background: #12151d;
+    border: 1px solid #323b4b;
+    color: var(--text-bright);
+    font-family: inherit;
+    font-size: 0.78rem;
+    outline: none;
+    color-scheme: dark;
+  }
+
+  .amount:focus,
+  .unit:focus {
+    border-color: var(--danger-light);
+  }
+}
+
+@layer compact {
+  :global([data-layout="compact"]) .amount,
+  :global([data-layout="compact"]) .unit {
+    min-height: 40px;
+    font-size: 16px;
+  }
+}

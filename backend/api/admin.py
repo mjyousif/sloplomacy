@@ -227,6 +227,9 @@ async def admin_rollback_turn(
         prev_state.admin_resolution = None
 
     prev_state.finalized_powers = []
+    if current:
+        # The host's clock lengths are match settings, not part of the turn being rolled back.
+        prev_state.timer_settings = current.timer_settings.model_copy(deep=True)
     if current and current.timer:
         prev_state.timer = current.timer
         start_phase_clock(prev_state, timer_players(prev_state), time.time())

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 from domain.board import Power, ProvinceType, UnitType
-from domain.game_state import TimerChoice, TimerStage
+from domain.game_state import TimerStage
 from domain.issues import IssueCode, IssueSeverity
 from domain.orders import OrderType
 
@@ -53,7 +53,6 @@ def _extract_ts_union_literals(ts_source: str, type_name: str) -> set[str]:
         (IssueSeverity, "IssueSeverity"),
         (IssueCode, "IssueCode"),
         (TimerStage, "TimerStage"),
-        (TimerChoice, "TimerChoice"),
     ],
 )
 def test_backend_frontend_enum_contracts(py_enum: type[Enum], ts_name: str):

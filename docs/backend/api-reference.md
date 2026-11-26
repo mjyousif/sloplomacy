@@ -69,9 +69,14 @@ All operational endpoints accept an optional query parameter `?game_id=<id>`. Wh
 | Method | Endpoint | Description | Request Body | Response Model |
 | :--- | :--- | :--- | :--- | :--- |
 | `POST` | `/api/games/{game_id}/timer/start` | Start match clock, opening Movement duration vote (host only) | *None* | `GameState` |
-| `POST` | `/api/games/{game_id}/timer/vote` | Vote on length of Movement phase (15, 20, 30m, or pause) | `TimerVoteRequest` | `GameState` |
+| `POST` | `/api/games/{game_id}/timer/vote` | Vote on length of Movement phase (one of the vote's `vote_minutes`, or pause) | `TimerVoteRequest` | `GameState` |
 | `POST` | `/api/games/{game_id}/timer/extend` | Request +5 minutes extension, or withdraw request | `TimerToggleRequest` | `GameState` |
 | `POST` | `/api/games/{game_id}/timer/ready` | Ready up in a paused game to open new duration vote | `TimerToggleRequest` | `GameState` |
+| `POST` | `/api/games/{game_id}/timer/pause` | Host: pause the clock until the host resumes it | *None* | `GameState` |
+| `POST` | `/api/games/{game_id}/timer/resume` | Host: lift a pause, opening a new vote (or the fixed clock) | *None* | `GameState` |
+| `POST` | `/api/games/{game_id}/timer/deadline` | Host: set the time left, nudge the deadline, or set an end time | `TimerDeadlineRequest` | `GameState` |
+| `POST` | `/api/games/{game_id}/timer/stop` | Host: turn the clock off (match becomes untimed) | *None* | `GameState` |
+| `PUT` | `/api/games/{game_id}/timer/settings` | Host: set the match's clock lengths | `TimerSettings` | `GameState` |
 
 ### Administrator & Game Creator Controls
 | Method | Endpoint | Description | Request Body | Response Model |
@@ -346,11 +351,19 @@ Updates the signed-in caller's public `display_name` (2–24 characters, `@` rej
 The rules are in [the rulebook reference](../guides/rulebook-reference.md#9-turn-clock). The state is `GameState.timer`, which stays `null` until the host starts the clock, so matches without one are untimed.
 
 - **`start`**: Creator only, like `/api/adjudicate`. `409` if the clock is already running, or the match is not active.
-- **`vote`**: Body `{ "power": "FRANCE", "choice": "15" }`, where `choice` is `"15"`, `"20"`, `"30"` or `"pause"`. A player can change their vote until it closes. The vote closes once every player has voted.
+- **`vote`**: Body `{ "power": "FRANCE", "choice": "15" }`, where `choice` is one of the open vote's `vote_minutes` (as a string) or `"pause"`. Any other length is `400`, and a `choice` that is not a length at all is `422`. A player can change their vote until it closes. The vote closes once every player has voted.
 - **`extend`**: Body `{ "power": "FRANCE", "active": true }`. Set `active` to `false` to take the request back. The time is added once enough players have asked, and the requests then reset.
-- **`ready`**: Same body as `extend`. Once every player is ready a new vote opens.
+- **`ready`**: Same body as `extend`. Once every player is ready a new vote opens. `409` during a host pause.
 
 Each answers `403` for a power that is not playing, and `409` if the clock is in a different stage.
+
+**Host overrides** ([`backend/api/admin_timer.py`](../../backend/api/admin_timer.py), issue #393). Creator only (`401` signed out, `403` for anyone else). `409` on the default board, a sandbox or a finished game, and (except `settings`) when the match has no clock. Each adds an `[ADMIN OVERRIDE]` line to `turn_history` and an `AdminActionLogEntry` for the players to acknowledge, then saves and broadcasts. See [Turn Clock: Host Overrides](../features/turn-clock.md#host-overrides).
+
+- **`pause`**: `stage = "paused"`, `host_paused = true`, clearing votes, ready-ups and extension requests. `409` if already host-paused.
+- **`resume`**: Only while `paused` (by the host or a vote). Starts the phase's clock afresh: a new vote in Movement, the fixed clock otherwise.
+- **`deadline`**: Body `TimerDeadlineRequest`, exactly one of `{ "seconds_left": 600 }`, `{ "adjust_seconds": -60 }` (running clock only, else `409`) or `{ "deadline": 1795000000 }` (Unix seconds). The clock runs to it from any stage, ending a vote or lifting a pause. It must leave at least 10 seconds and at most 30 days (`400`). None or several fields is `422`.
+- **`stop`**: `timer = null`. The host can `start` it again.
+- **`settings`** (`PUT`): Body `TimerSettings` `{ "vote_minutes": [10, 45], "fixed_phase_minutes": 5, "vote_window_seconds": 60 }`. `vote_minutes` holds 1 to 3 distinct lengths of 1 minute to 30 days (sorted on save), `fixed_phase_minutes` 1 minute to 30 days, `vote_window_seconds` 15 to 3600 (`422` otherwise). `409` if nothing changes. Applies from the next vote or phase.
 
 Nothing runs in the background. The game WebSocket and `GET /api/game` check the deadline (with clients sending a WebSocket `refresh` on countdown expiry, or the fallback HTTP poll when there is no socket), so a deadline is acted on within seconds while anyone is connected. A game nobody is connected to does not advance until someone returns.
 

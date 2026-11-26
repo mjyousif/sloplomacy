@@ -17,11 +17,34 @@ class TimerStage(str, Enum):
     PAUSED = "paused"  # No clock: players ready up to open a new vote
 
 
-class TimerChoice(str, Enum):
-    MIN_15 = "15"
-    MIN_20 = "20"
-    MIN_30 = "30"
-    PAUSE = "pause"
+# A vote on a phase's length: a number of minutes the vote offers ("15"), or "pause".
+TimerChoice = str
+PAUSE_CHOICE = "pause"
+DEFAULT_VOTE_MINUTES = [15, 20, 30]
+MAX_CLOCK_MINUTES = 30 * 24 * 60  # Thirty days: the longest a host may set any clock
+
+
+class TimerSettings(BaseModel):
+    """
+    A match's clock lengths, which the host may change (issue #393).
+
+    They apply from the next vote or phase, never to the clock already counting.
+    """
+
+    vote_minutes: list[int] = Field(
+        default_factory=lambda: list(DEFAULT_VOTE_MINUTES), min_length=1, max_length=3
+    )
+    fixed_phase_minutes: int = Field(default=5, ge=1, le=MAX_CLOCK_MINUTES)  # Retreats, Adjustments
+    vote_window_seconds: int = Field(default=60, ge=15, le=3600)
+
+    @model_validator(mode="after")
+    def _check_vote_minutes(self) -> "TimerSettings":
+        if any(m < 1 or m > MAX_CLOCK_MINUTES for m in self.vote_minutes):
+            raise ValueError(f"Each vote option must be 1 to {MAX_CLOCK_MINUTES} minutes.")
+        if len(set(self.vote_minutes)) != len(self.vote_minutes):
+            raise ValueError("Vote options must all be different.")
+        self.vote_minutes = sorted(self.vote_minutes)
+        return self
 
 
 class PhaseTimer(BaseModel):
@@ -36,6 +59,10 @@ class PhaseTimer(BaseModel):
     minutes: int | None = None  # Length the running phase was given
     players: list[Power] = Field(default_factory=list)  # Who votes, readies up and extends
     votes: dict[Power, TimerChoice] = Field(default_factory=dict)
+    # The lengths this vote offers, copied from the match's settings when it opened.
+    vote_minutes: list[int] = Field(default_factory=lambda: list(DEFAULT_VOTE_MINUTES))
+    # Paused by the host: players cannot ready up out of it, only the host resumes.
+    host_paused: bool = False
     extend_requests: list[Power] = Field(default_factory=list)
     ready_powers: list[Power] = Field(default_factory=list)
 
@@ -126,6 +153,7 @@ class GameState(BaseModel):
     retreats: dict[str, Any] | None = None
     winner: Power | None = None  # Set once the game has been won; no further turns resolve
     timer: PhaseTimer | None = None  # None until the host starts the clock
+    timer_settings: TimerSettings = Field(default_factory=TimerSettings)
     admin_log: list[AdminActionLogEntry] = Field(default_factory=list)
     state_revision: int = 1
     board_revision: int = 1

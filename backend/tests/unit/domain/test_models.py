@@ -5,7 +5,7 @@ import time
 
 import pytest
 from domain.board import Power, Unit, UnitType
-from domain.game_state import GameState, PhaseTimer, TimerChoice, TimerStage
+from domain.game_state import GameState, PhaseTimer, TimerStage
 from domain.issues import IssueCode, IssueSeverity, ValidationIssue
 from domain.orders import Order, OrderType
 from engine.adjudicator.resolver import adjudicate_turn
@@ -43,7 +43,7 @@ def full_game() -> GameState:
         timer=PhaseTimer(
             stage=TimerStage.VOTING,
             players=[Power.FRANCE, Power.ENGLAND],
-            votes={Power.FRANCE: TimerChoice.MIN_15},
+            votes={Power.FRANCE: "15"},
             deadline=time.time() + 60,
         ),
     )

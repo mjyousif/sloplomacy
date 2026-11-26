@@ -25,6 +25,7 @@ from engine.order_utils import (
 from engine.phase_timer import (
     settle_timer,
     start_phase_clock,
+    vote_choices,
 )
 from engine.turn_service import (
     execute_adjudication,
@@ -241,6 +242,8 @@ async def vote_on_timer(
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await require_timer_player(game_id, req.power, TimerStage.VOTING, current_user)
+    if req.choice not in vote_choices(game.timer):
+        raise HTTPException(status_code=400, detail="This vote does not offer that length.")
     game.timer.votes[req.power] = req.choice
     settle_timer(game, timer_players(game), time.time())
     await publish_game_state(game, refresh=False)
@@ -281,6 +284,10 @@ async def ready_up_timer(
     current_user: AuthUser | None = Depends(get_current_user),
 ):
     game = await require_timer_player(game_id, req.power, TimerStage.PAUSED, current_user)
+    if game.timer.host_paused:
+        raise HTTPException(
+            status_code=409, detail="The host paused the clock. Only they can resume it."
+        )
     ready = game.timer.ready_powers
     if req.active and req.power not in ready:
         ready.append(req.power)

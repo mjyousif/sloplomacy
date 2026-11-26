@@ -18,6 +18,7 @@ for _p in (str(_BACKEND_DIR), str(_REPO_ROOT)):
 from api import (
     account,
     admin,
+    admin_timer,
     admin_units,
     games,
     history,
@@ -161,6 +162,7 @@ for http_router in (
     turns,
     sandbox,
     admin,
+    admin_timer,
     admin_units,
     history,
     press,
