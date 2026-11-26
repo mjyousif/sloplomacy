@@ -14,6 +14,8 @@ vi.mock('../lib/supabase', () => ({
 class FakeSocket {
   static OPEN = 1;
   static instances: FakeSocket[] = [];
+  static autoOpen = true;
+  static throwOnConstruct = false;
   readyState = 0;
   sent: unknown[] = [];
   closedWith: number | null = null;
@@ -23,11 +25,20 @@ class FakeSocket {
   onerror: ((err: unknown) => void) | null = null;
 
   constructor(public url: string) {
+    if (FakeSocket.throwOnConstruct) {
+      throw new Error('WS construct failed');
+    }
     FakeSocket.instances.push(this);
-    queueMicrotask(() => {
-      this.readyState = FakeSocket.OPEN;
-      this.onopen?.();
-    });
+    if (FakeSocket.autoOpen) {
+      queueMicrotask(() => {
+        this.open();
+      });
+    }
+  }
+
+  open() {
+    this.readyState = FakeSocket.OPEN;
+    this.onopen?.();
   }
 
   send(data: string) {
@@ -52,12 +63,15 @@ const options = {
 
 beforeEach(() => {
   FakeSocket.instances = [];
+  FakeSocket.autoOpen = true;
+  FakeSocket.throwOnConstruct = false;
   auth.token = null;
   vi.stubGlobal('WebSocket', FakeSocket);
 });
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -173,5 +187,193 @@ describe('useDiplomacyWebSocket connection', () => {
     expect(FakeSocket.instances).toHaveLength(2);
     expect(result.current.isConnected).toBe(true);
     expect(result.current.isIdleDisconnected).toBe(false);
+  });
+
+  it('uses exponential backoff capped at 30s on repeated unexpected closes', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(1);
+    FakeSocket.autoOpen = false;
+
+    renderHook(() =>
+      useDiplomacyWebSocket({ ...options, authKey: 'user-alice' }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(FakeSocket.instances).toHaveLength(1);
+
+    const expectedDelays = [1000, 2000, 4000, 8000, 16000, 30000, 30000];
+    for (let i = 0; i < expectedDelays.length; i++) {
+      const currentSocket = FakeSocket.instances[i];
+      await act(async () => {
+        currentSocket.close(1006);
+        await vi.advanceTimersByTimeAsync(expectedDelays[i] - 1);
+      });
+      expect(FakeSocket.instances).toHaveLength(i + 1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+      expect(FakeSocket.instances).toHaveLength(i + 2);
+    }
+  });
+
+  it('applies jitter to spread reconnect delays', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    FakeSocket.autoOpen = false;
+
+    renderHook(() =>
+      useDiplomacyWebSocket({ ...options, authKey: 'user-alice' }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    await act(async () => {
+      FakeSocket.instances[0].close(1006);
+      await vi.advanceTimersByTimeAsync(499);
+    });
+    expect(FakeSocket.instances).toHaveLength(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(FakeSocket.instances).toHaveLength(2);
+
+    await act(async () => {
+      FakeSocket.instances[1].close(1006);
+      await vi.advanceTimersByTimeAsync(999);
+    });
+    expect(FakeSocket.instances).toHaveLength(2);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(FakeSocket.instances).toHaveLength(3);
+  });
+
+  it('resets the backoff attempt counter on successful onopen', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(1);
+    FakeSocket.autoOpen = false;
+
+    const { result } = renderHook(() =>
+      useDiplomacyWebSocket({ ...options, authKey: 'user-alice' }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Two failed attempts push backoff to 1000ms -> 2000ms.
+    await act(async () => {
+      FakeSocket.instances[0].close(1006);
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    await act(async () => {
+      FakeSocket.instances[1].close(1006);
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(FakeSocket.instances).toHaveLength(3);
+
+    // The third attempt connects successfully, resetting backoff to attempt 0.
+    await act(async () => {
+      FakeSocket.instances[2].open();
+    });
+    expect(result.current.isConnected).toBe(true);
+
+    await act(async () => {
+      FakeSocket.instances[2].close(1006);
+      await vi.advanceTimersByTimeAsync(999);
+    });
+    expect(FakeSocket.instances).toHaveLength(3);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(FakeSocket.instances).toHaveLength(4);
+  });
+
+  it('applies exponential backoff when WebSocket construction throws and resets on open', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(1);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    FakeSocket.throwOnConstruct = true;
+
+    renderHook(() =>
+      useDiplomacyWebSocket({ ...options, authKey: 'user-alice' }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(FakeSocket.instances).toHaveLength(0);
+
+    // Attempt 0 fails -> waits 1000ms before retrying.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(999);
+    });
+    expect(FakeSocket.instances).toHaveLength(0);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(FakeSocket.instances).toHaveLength(0);
+
+    // Attempt 1 fails -> waits 2000ms; allow the next construction to succeed.
+    FakeSocket.throwOnConstruct = false;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1999);
+    });
+    expect(FakeSocket.instances).toHaveLength(0);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(FakeSocket.instances).toHaveLength(1);
+
+    // Opened successfully, so a subsequent drop starts back at 1000ms.
+    await act(async () => {
+      FakeSocket.instances[0].close(1006);
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    expect(FakeSocket.instances).toHaveLength(2);
+  });
+
+  it('does not reconnect on permanent close codes and cancels pending backoff on unmount', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(1);
+
+    const { unmount } = renderHook(() =>
+      useDiplomacyWebSocket({ ...options, authKey: 'user-alice' }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(FakeSocket.instances).toHaveLength(1);
+
+    // Unexpected close schedules a retry, then unmount cancels it.
+    await act(async () => {
+      FakeSocket.instances[0].close(1006);
+    });
+    unmount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+    expect(FakeSocket.instances).toHaveLength(1);
+
+    // Permanent close code never schedules a retry.
+    const second = renderHook(() =>
+      useDiplomacyWebSocket({ ...options, authKey: 'user-alice' }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(FakeSocket.instances).toHaveLength(2);
+    await act(async () => {
+      FakeSocket.instances[1].close(4004);
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+    expect(FakeSocket.instances).toHaveLength(2);
+    second.unmount();
   });
 });

@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   BACKGROUND_DISCONNECT_MS,
   buildAuthMessage,
+  getReconnectDelayMs,
   getWebSocketUrl,
+  RECONNECT_BASE_DELAY_MS,
+  RECONNECT_MAX_DELAY_MS,
   resolveWebSocketPath,
   shouldReconnect,
 } from './useDiplomacyWebSocket';
@@ -87,6 +90,40 @@ describe('useDiplomacyWebSocket helpers', () => {
       expect(shouldReconnect(1000)).toBe(false);
       expect(shouldReconnect(4004)).toBe(false);
       expect(shouldReconnect(4403)).toBe(false);
+    });
+  });
+
+  describe('getReconnectDelayMs', () => {
+    it('exports expected base and max backoff constants', () => {
+      expect(RECONNECT_BASE_DELAY_MS).toBe(1000);
+      expect(RECONNECT_MAX_DELAY_MS).toBe(30_000);
+    });
+
+    it('grows exponentially with equal jitter bounds across attempts', () => {
+      expect(
+        [0, 1, 2, 3, 4].map((a) => getReconnectDelayMs(a, () => 0)),
+      ).toEqual([500, 1000, 2000, 4000, 8000]);
+      expect(
+        [0, 1, 2, 3, 4].map((a) => getReconnectDelayMs(a, () => 1)),
+      ).toEqual([1000, 2000, 4000, 8000, 16000]);
+      expect([0, 1, 2].map((a) => getReconnectDelayMs(a, () => 0.5))).toEqual([
+        750, 1500, 3000,
+      ]);
+    });
+
+    it('caps delay at RECONNECT_MAX_DELAY_MS for high attempt counts', () => {
+      expect(getReconnectDelayMs(5, () => 0)).toBe(15_000);
+      expect(getReconnectDelayMs(5, () => 1)).toBe(30_000);
+      expect(getReconnectDelayMs(10, () => 0)).toBe(15_000);
+      expect(getReconnectDelayMs(10, () => 1)).toBe(30_000);
+      expect(getReconnectDelayMs(1000, () => 1)).toBe(30_000);
+    });
+
+    it('clamps negative/fractional attempts and out-of-range random values', () => {
+      expect(getReconnectDelayMs(-3, () => 0)).toBe(500);
+      expect(getReconnectDelayMs(1.9, () => 1)).toBe(2000);
+      expect(getReconnectDelayMs(0, () => -0.5)).toBe(500);
+      expect(getReconnectDelayMs(0, () => 1.5)).toBe(1000);
     });
   });
 });
