@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { ALL_PROVINCE_GEOMETRIES } from '../../../data/europeMapGeometry';
-import { getMapLayout, SHARED_MAP_NAMES_SVG } from '../../../data/mapLayouts';
+import { getMapLayout, getSharedMapNamesSvg } from '../../../data/mapLayouts';
 import { MAP_NAME_FONT, measureMapName } from '../../../data/mapTextMetrics';
 import {
   POWER_METADATA,
@@ -34,7 +34,9 @@ export const MapNamesLayer = memo<{
 
   return (
     <g className="authentic-names-layer" pointerEvents="none">
-      <g dangerouslySetInnerHTML={{ __html: SHARED_MAP_NAMES_SVG }} />
+      <g
+        dangerouslySetInnerHTML={{ __html: getSharedMapNamesSvg(pieceStyle) }}
+      />
       {ALL_PROVINCE_GEOMETRIES.map((geom) => {
         const placement = layout[geom.id]?.name;
         const pInfo = provinces[geom.id];

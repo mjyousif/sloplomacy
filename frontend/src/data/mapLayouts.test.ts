@@ -4,6 +4,7 @@ import { PIECE_STYLES, type PieceStyle } from '../utils/displayPrefs';
 import { EUROPE_PROVINCE_GEOMETRY, type Point } from './europeMapGeometry';
 import {
   getMapLayout,
+  getSharedMapNamesSvg,
   SEA_SHORT_NAMES,
   SHARED_MAP_NAMES_SVG,
 } from './mapLayouts';
@@ -266,6 +267,36 @@ describe('map layouts', () => {
     ).toHaveLength(6);
     expect(texts).not.toContain('Liverpool');
     expect(texts).not.toContain('LVP');
+  });
+
+  it('applies compact-only offsets to selected shared sea names and Bulgaria coast tags', () => {
+    for (const style of ['seated', 'flags', 'nameplate'] as const) {
+      expect(getSharedMapNamesSvg(style)).toBe(SHARED_MAP_NAMES_SVG);
+    }
+    const compactSvg = getSharedMapNamesSvg('compact');
+    expect(compactSvg).not.toBe(SHARED_MAP_NAMES_SVG);
+
+    const openTagById = (svg: string, id: string) =>
+      svg.match(new RegExp(`<text\\b[^>]*\\bid="${id}"[^>]*>`))?.[0] ?? '';
+
+    expect(openTagById(compactSvg, 'Helgoland-Bight')).toContain(
+      'translate(0 5)',
+    );
+    expect(openTagById(compactSvg, 'Tyrhennian-Sea')).toContain(
+      'translate(10 -5)',
+    );
+    expect(openTagById(compactSvg, 'ADRIATIC-SEA')).toContain(
+      'translate(-10 -15)',
+    );
+    expect(openTagById(compactSvg, 'SC')).toContain('translate(-0.5 -2.5)');
+    expect(openTagById(compactSvg, 'EC')).toContain('translate(-2.5 -1)');
+    // STP SC (text128) and SPA SC (text135) must remain untouched
+    expect(openTagById(compactSvg, 'text128')).toBe(
+      openTagById(SHARED_MAP_NAMES_SVG, 'text128'),
+    );
+    expect(openTagById(compactSvg, 'text135')).toBe(
+      openTagById(SHARED_MAP_NAMES_SVG, 'text135'),
+    );
   });
 
   describe.each(FITTED_STYLES)('%s', (style) => {
