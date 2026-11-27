@@ -111,64 +111,76 @@ const SEATED_ROWS: Record<string, LayoutRow> = {
 };
 
 const COMPACT_ROWS: Record<string, LayoutRow> = {
+  ADR: { unit: [830.6, 1124.1] },
+  AEG: { unit: [1028, 1268] },
   ALB: { name: [884, 1121.5, 60, 13], unit: [871, 1139] },
   ANK: { name: [1259.6, 1085.4, -14, 16] },
   APU: { name: [776, 1132, 25, 16], unit: [740, 1110] },
   ARM: { name: [1437, 1111, 0, 16] },
   BEL: { name: [511, 774.5, 35, 16], unit: [538, 768], star: [516, 760] },
   BER: { name: [700.5, 723.5, 5, 16] },
+  BLA: { unit: [1224.2, 1018.6] },
   BOH: { name: [754.1, 831, 0, 16] },
-  BRE: { name: [350, 835, 0, 16] },
-  BUD: { name: [915.9, 930.6, 0, 16] },
+  BRE: { name: [350, 835, 0, 16], unit: [350.1, 866.1] },
+  BUD: { name: [915.9, 920.6, 0, 16] },
   BUL: { name: [1007.5, 1056.6, -1, 16] },
   BUR: { name: [488, 917, -20, 16] },
-  CLY: { name: [383, 480, -35, 15], unit: [361, 543] },
-  CON: { name: [1128.5, 1160.5, -20, 14] },
-  DEN: { name: [636, 590, -55, 11], unit: [648, 615], star: [652, 589] },
-  EDI: { name: [403, 524, -43, 11.5], unit: [401, 576], star: [396, 505] },
-  FIN: { name: [935, 314, 0, 16] },
-  GAL: { name: [915, 823, 0, 16], unit: [960.9, 830.1] },
+  CLY: { name: [383, 480, -35, 15], unit: [359, 518] },
+  CON: { name: [1120, 1159, -20, 14], unit: [1069, 1143] },
+  DEN: { name: [636, 590, -55, 11], unit: [681, 614], star: [652, 589] },
+  EDI: { name: [403, 524, -43, 11.5], unit: [397, 563], star: [396, 505] },
+  FIN: { name: [935, 314, 0, 16], unit: [939.1, 345.3] },
+  GAL: { name: [915, 823, 0, 16], unit: [965.9, 835.1] },
   GAS: { name: [375.5, 966.5, 0, 16] },
   GRE: { name: [926.9, 1173.6, 33, 16] },
-  HEL: { unit: [577, 623] },
-  HOL: { name: [539.5, 720, -20, 15], unit: [544, 740], star: [560, 728] },
+  HEL: { unit: [550, 623] },
+  HOL: { name: [538, 733, -15, 13], unit: [558, 701], star: [527, 713] },
   KIE: { name: [623.5, 744.5, 0, 16] },
   LON: { name: [406.5, 717.5, -20, 16], unit: [420, 735], star: [400, 737] },
   LVN: { name: [963.4, 567.4, 0, 16] },
-  LVP: { name: [387, 637, -65, 12], unit: [381, 604], star: [393, 654] },
+  LVP: { name: [387, 637, -65, 12], unit: [380, 611], star: [393, 654] },
   MAR: { name: [477, 990, 0, 16] },
   MOS: { name: [1296.3, 493.4, -3, 16] },
   MUN: { name: [645.3, 861.2, 0, 16] },
   NAF: { name: [300, 1318, 0, 16], unit: [208.1, 1314.3] },
   NAP: { name: [749.5, 1142.5, 30, 16] },
   NWY: { name: [663, 411, 0, 16] },
-  PAR: { name: [429.5, 859.5, 0, 16] },
+  PAR: { name: [429.5, 859.5, 0, 16], unit: [411.9, 890.2], star: [445, 874] },
   PIC: { name: [459.5, 803.5, 0, 16] },
   PIE: { name: [586, 986, 0, 16] },
-  POR: { name: [140, 1039, -30, 16] },
-  PRU: { name: [829.8, 686.6, -23, 16] },
+  POR: {
+    name: [140, 1039, -30, 16],
+    unit: [118.3, 1085.1],
+    star: [97.4, 1110],
+  },
+  PRU: { name: [833, 675, -23, 16], unit: [783.3, 686] },
   ROM: { name: [692, 1100.5, 30, 16], unit: [695, 1078], star: [683, 1112] },
   RUH: { name: [579, 806, 0, 16] },
-  RUM: { name: [1016.7, 982.9, -4, 16] },
+  RUM: { name: [1016.7, 978.9, -4, 16], unit: [1014.4, 1008.8] },
   SER: { name: [901.5, 1023.5, 0, 16] },
   SEV: { name: [1410.9, 781.6, -1, 16] },
-  SIL: { name: [740, 769, 0, 16] },
-  SKA: { unit: [653, 528] },
+  SIL: { name: [740, 769, 0, 16], unit: [794, 769] },
+  SKA: { unit: [671, 510] },
   SMY: { name: [1238.3, 1198.1, -11, 16] },
   SPA: { name: [243, 1087, 0, 16] },
   STP: { name: [1150, 300, 0, 16] },
   SWE: { name: [757.2, 463.6, 0, 16] },
-  SYR: { name: [1435, 1276, 0, 16] },
-  TRI: { name: [800, 1005, 0, 16] },
-  TUN: { name: [582, 1337.5, 0, 16] },
+  SYR: { name: [1435, 1276, 0, 16], unit: [1428, 1246] },
+  TRI: { name: [800, 1005, 0, 16], unit: [802, 1040] },
+  TUN: {
+    name: [582, 1337.5, 0, 16],
+    unit: [594.1, 1304.9],
+    star: [576.9, 1291.5],
+  },
   TUS: { name: [646.5, 1034.5, 40, 16], unit: [640, 1056] },
   TYR: { name: [681.5, 919.5, 0, 16] },
+  TYS: { unit: [683.9, 1204.4] },
   UKR: { name: [1137.1, 777.5, -19, 16] },
   VEN: { name: [682, 1035.5, 40, 14] },
-  VIE: { name: [810, 871.5, 0, 16] },
+  VIE: { name: [803, 884, 0, 16], unit: [805.6, 936.5] },
   WAL: { name: [339, 727.5, 5, 15] },
-  WAR: { name: [928, 700, 0, 16] },
-  WES: { unit: [424, 1192] },
+  WAR: { name: [928, 725, 0, 16], unit: [897.1, 746.7], star: [927.3, 741.6] },
+  WES: { unit: [419, 1183] },
   YOR: { name: [409.5, 658.5, -60, 14], unit: [421, 680] },
 };
 
@@ -366,6 +378,51 @@ export const SHARED_MAP_NAMES_SVG = [
     );
   })
   .join('');
+
+/**
+ * Compact-only map-coordinate offsets `[dx, dy]` for selected shared sea names
+ * and coast tags (keyed by `<text id="...">` in `SHARED_MAP_NAMES_SVG`).
+ */
+const COMPACT_SHARED_NAME_OFFSETS: Record<string, [number, number]> = {
+  'Helgoland-Bight': [0, 5],
+  'Tyrhennian-Sea': [10, -5],
+  'ADRIATIC-SEA': [-10, -15],
+  SC: [-0.5, -2.5],
+  EC: [-2.5, -1],
+};
+
+function applySharedNameOffsets(
+  svg: string,
+  offsets: Record<string, [number, number]>,
+): string {
+  return svg.replace(/<text\b[^>]*>/g, (openTag) => {
+    const idMatch = openTag.match(/\bid="([^"]+)"/);
+    if (!idMatch) return openTag;
+    const delta = offsets[idMatch[1]];
+    if (!delta) return openTag;
+    const [dx, dy] = delta;
+    const shift = `translate(${dx} ${dy})`;
+    if (/\btransform="/.test(openTag)) {
+      return openTag.replace(
+        /\btransform="([^"]*)"/,
+        `transform="${shift} $1"`,
+      );
+    }
+    return openTag.replace(/>$/, ` transform="${shift}">`);
+  });
+}
+
+const COMPACT_SHARED_MAP_NAMES_SVG = applySharedNameOffsets(
+  SHARED_MAP_NAMES_SVG,
+  COMPACT_SHARED_NAME_OFFSETS,
+);
+
+/** Returns the shared sea/coast SVG labels for the active piece style. */
+export function getSharedMapNamesSvg(style: PieceStyle): string {
+  return style === 'compact'
+    ? COMPACT_SHARED_MAP_NAMES_SVG
+    : SHARED_MAP_NAMES_SVG;
+}
 
 /** Sea names short enough to fit on a pill in the Name as piece style. */
 export const SEA_SHORT_NAMES: Record<string, string> = {

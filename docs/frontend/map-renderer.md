@@ -92,8 +92,9 @@ The map is rendered as a layered SVG pipeline decomposed into memoized subcompon
   │
   ├── 4. Province Names Layer (MapNamesLayer.tsx: MapNamesLayer):
   │      - Classic: the original typesetting from StaticNamesLayer (AUTHENTIC_NAMES_SVG)
-  │      - Other styles: shared sea names and coast tags, plus land names
-  │        placed by the active layout, with a parchment halo
+  │      - Other styles: shared sea names and coast tags (`getSharedMapNamesSvg`,
+  │        allowing `compact` to nudge specific sea names and Bulgaria coast tags),
+  │        plus land names placed by the active layout, with a parchment halo
   │
   ├── 5. Supply Center Layer (SupplyCentersLayer.tsx: SupplyCentersLayer):
   │      - Circular markers with gold star / power crest
@@ -167,7 +168,7 @@ Marks show whether a piece is an army or a fleet: `icons` (crossed swords and a 
 
 ![The four army and fleet marks on Star seat pieces](images/display-settings-unit-marks.jpg)
 
-**Layouts (`data/mapLayouts.ts`)** hold each non-classic style's placements, recording only what differs from the province geometry (a province with no `unit` keeps its `unitPos`, one with no `star` keeps its `scPos`). Tight provinces such as Liverpool can't hold a token and a name at full size, so their tokens move and their names shrink, with a floor of 12 units (11 for Edinburgh, Denmark and Liverpool). A test checks every placement against the province outlines, so values can be edited by hand and the test reports any province that stops fitting. Text widths come from measured Libre Baskerville Bold metrics, which also size the pills at render time.
+**Layouts (`data/mapLayouts.ts`)** hold each non-classic style's placements, recording only what differs from the province geometry (a province with no `unit` keeps its `unitPos`, one with no `star` keeps its `scPos`). `getSharedMapNamesSvg` also lets `compact` apply small map-coordinate offsets to specific sea names and Bulgaria's `SC`/`EC` coast tags without affecting `classic` or the other styles. Tight provinces such as Liverpool can't hold a token and a name at full size, so their tokens move and their names shrink, with a floor of 12 units (11 for Edinburgh, Denmark and Liverpool). A test checks every placement against the province outlines, so values can be edited by hand and the test reports any province that stops fitting. Text widths come from measured Libre Baskerville Bold metrics, which also size the pills at render time.
 
 **Drawing.** `MapPiece` is the only place piece bodies are drawn: units, simulation ghosts, winter builds and the previews in the settings menu all use it, so every style looks the same everywhere. Each style supplies a frame that sets ring sizes, badge offsets, banner positions, the step-aside offset for a dislodged unit, and an invisible hit area that keeps small pieces as easy to click as the original token. Rings follow each piece's real shape: a circle around a token, a rounded box around a whole flag (pole, cloth and the star at its foot, the frame's `box`), and the plate's own outline around a name plate, pointed at both ends for a fleet (`PieceOutline` takes the unit type for that). The point lookups read the active layout, so arrows, support lines, convoy paths and the floating unit menu all follow the pieces.
 
