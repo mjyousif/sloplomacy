@@ -2,6 +2,7 @@ import { VenetianMask } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef } from 'react';
 import {
+  type GameParticipant,
   POWER_METADATA,
   type Power,
   type PressMessage,
@@ -24,6 +25,8 @@ export interface PressMessageListProps {
   /** The reader's seat; null for a spectator, who wrote none of them and is sent no suggestion. */
   viewer: Power | null;
   provinces: Record<string, ProvinceInfo>;
+  /** The match's seats, which name the player behind each signed message. */
+  participants?: Record<string, GameParticipant>;
   /** Shown when the channel has no messages. */
   emptyText: string;
   onHighlightProvinces: (ids: string[]) => void;
@@ -92,6 +95,7 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
   messages,
   viewer,
   provinces,
+  participants,
   emptyText,
   onHighlightProvinces,
   onProvincePicked,
@@ -127,6 +131,11 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
         const color = message.sender
           ? POWER_METADATA[message.sender]?.fillColor
           : undefined;
+        // Only a signed message is named: a hidden author has no seat to look up.
+        const playerName =
+          message.sender && !mine
+            ? participants?.[message.sender]?.display_name
+            : undefined;
         return (
           <div key={message.id} className={styles.messageWrap}>
             {(!previous || !sameTurn(previous, message)) && (
@@ -160,6 +169,15 @@ export const PressMessageList: React.FC<PressMessageListProps> = ({
                         ? 'You'
                         : powerShortName(message.sender as Power)}
                   </span>
+                  {playerName && (
+                    <span
+                      className={styles.playerName}
+                      data-testid="press-player-name"
+                      title={playerName}
+                    >
+                      · {playerName}
+                    </span>
+                  )}
                   {message.anonymous && !hidden && (
                     <span
                       className={styles.anonymousTag}

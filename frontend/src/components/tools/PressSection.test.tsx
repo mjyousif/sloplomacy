@@ -104,6 +104,33 @@ describe('PressSection', () => {
     expect(destination()).toBe('To everyone, in the public box.');
   });
 
+  it('names the player on signed messages in public and private, never on anonymous ones', async () => {
+    const participants = Object.fromEntries(
+      [
+        ['FRANCE', 'Alice'],
+        ['GERMANY', 'Bob'],
+      ].map(([power, display_name]) => [power, { power, display_name }]),
+    ) as unknown as PressSectionProps['participants'];
+    const names = () =>
+      screen
+        .queryAllByTestId('press-message')
+        .map(
+          (m) =>
+            within(m).queryByTestId('press-player-name')?.textContent ?? null,
+        );
+    render(<PressSection {...base({ participants })} />);
+    fill([
+      msg(1, 'GERMANY', 'Peace in the west'),
+      msg(2, null, 'Somebody lies'),
+      msg(3, 'FRANCE', 'Agreed'),
+      msg(4, 'ENGLAND', 'An empty seat'),
+      msg(5, 'GERMANY', 'For your eyes', ['FRANCE']),
+    ]);
+    expect(names()).toEqual(['· Bob', null, null, null]);
+    await tick('GERMANY');
+    expect(names()).toEqual(['· Bob']);
+  });
+
   it('posts to the public box, signed, when nothing is ticked', async () => {
     render(<PressSection {...base()} />);
     fill([]);
