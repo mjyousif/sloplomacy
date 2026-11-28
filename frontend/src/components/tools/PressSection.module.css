@@ -139,6 +139,15 @@
     font-weight: 700;
   }
 
+  .player-name {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-subtle);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .anonymous-tag {
     display: inline-flex;
     align-items: center;

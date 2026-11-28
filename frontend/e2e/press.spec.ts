@@ -150,6 +150,9 @@ test.describe('Scenario: Press between three players', () => {
       await expect(messages(bob).first().locator('[data-testid="press-author"]')).toHaveText(
         'France',
       );
+      await expect(
+        messages(bob).first().locator('[data-testid="press-player-name"]'),
+      ).toHaveText(`· ${ALICE.name}`);
 
       // 3. Bob lights France's letter button: a private thread. Alice gets an unread badge on
       // its chip and on Germany's letter button.

@@ -20,6 +20,7 @@ export const SpectatorPress: React.FC<PressSectionProps> = ({
   gameId,
   provinces,
   units,
+  participants,
   turn,
   suggestTurn,
   onHighlightProvinces,
@@ -82,6 +83,7 @@ export const SpectatorPress: React.FC<PressSectionProps> = ({
         messages={messages}
         viewer={null}
         provinces={provinces}
+        participants={participants}
         emptyText={
           press.status === 'loading'
             ? 'Reading the dispatches…'

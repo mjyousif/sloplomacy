@@ -287,6 +287,7 @@ const PlayerPressSection: React.FC<PressSectionProps & { power: Power }> = ({
         messages={active.messages}
         viewer={power}
         provinces={provinces}
+        participants={participants}
         emptyText={
           press.status === 'loading'
             ? 'Reading the dispatches…'
