@@ -88,3 +88,23 @@ def test_validator_convoy_validation_and_chain():
     }
     issues3 = validate_orders(units, orders_convoy_non_moving)
     assert any(i.code == IssueCode.BROKEN_CONVOY for i in issues3)
+
+
+def test_convoy_move_to_a_coast_no_sea_chain_reaches_is_illegal():
+    """The Black Sea borders no other sea, so no convoy runs from Belgium to Armenia."""
+    army = Unit(id="ENG_A_BEL", power=Power.ENGLAND, unit_type=UnitType.ARMY, province="BEL")
+    orders = {
+        army.id: Order(
+            unit_id=army.id,
+            power=Power.ENGLAND,
+            unit_type=UnitType.ARMY,
+            origin="BEL",
+            order_type=OrderType.MOVE,
+            target="ARM",
+            is_explicit=True,
+        )
+    }
+
+    codes = {i.code for i in validate_orders([army], orders)}
+    assert IssueCode.ILLEGAL_MOVE in codes
+    assert IssueCode.BROKEN_CONVOY not in codes

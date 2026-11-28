@@ -86,11 +86,29 @@ def can_unit_support_province(
 
 
 def can_army_be_convoyed_theoretically(origin: str, target: str) -> bool:
-    """Check if both origin and target are coastal provinces connected by at least one sea zone."""
+    """Check if both origin and target are coastal provinces linked by a chain of sea zones."""
     if origin not in PROVINCES or target not in PROVINCES or origin == target:
         return False
     orig_p = PROVINCES[origin]
     targ_p = PROVINCES[target]
     if orig_p.type != ProvinceType.COAST or targ_p.type != ProvinceType.COAST:
         return False
-    return True
+
+    def touching(province: str) -> list[str]:
+        return [split_province_code(a)[0] for a in PROVINCES[province].fleet_adj.get("", [])]
+
+    to_visit = [
+        code
+        for code, prov in PROVINCES.items()
+        if prov.type == ProvinceType.SEA and origin in touching(code)
+    ]
+    seen = set(to_visit)
+    while to_visit:
+        neighbours = touching(to_visit.pop())
+        if target in neighbours:
+            return True
+        for code in neighbours:
+            if code not in seen and PROVINCES[code].type == ProvinceType.SEA:
+                seen.add(code)
+                to_visit.append(code)
+    return False

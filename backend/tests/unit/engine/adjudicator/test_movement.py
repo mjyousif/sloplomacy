@@ -4,6 +4,7 @@ from domain.board import Power, Unit, UnitType
 from domain.orders import Order, OrderType
 from engine.adjudicator.resolver import adjudicate_turn
 from engine.topology.provinces import get_initial_1901_units, get_initial_ownership
+from tests.unit.engine.adjudicator.helpers import _order, _unit
 
 
 def test_adjudicator_support_cut_by_attack():
@@ -344,3 +345,96 @@ def test_adjudicator_self_bounce_and_supported_advance():
     assert res2.resolutions["FRA_A_PAR"].succeeded is True
     assert res2.resolutions["FRA_A_PAR"].attack_strength == 2
     assert res2.resolutions["GER_A_MUN"].bounced is True
+
+
+def test_void_support_for_a_move_says_the_unit_did_not_move():
+    mun = _unit("GER_A_MUN", Power.GERMANY, UnitType.ARMY, "MUN")
+    bel = _unit("GER_A_BEL", Power.GERMANY, UnitType.ARMY, "BEL")
+    orders = {
+        mun.id: _order(mun, OrderType.SUPPORT, target="RUH", aux="BEL"),
+        bel.id: _order(bel),
+    }
+
+    res = adjudicate_turn([mun, bel], orders, {}).resolutions[mun.id]
+    assert res.succeeded is False
+    assert res.reason == "Support void: Belgium did not move to Ruhr."
+
+
+def test_void_support_to_hold_says_the_unit_did_not_hold():
+    mun = _unit("GER_A_MUN", Power.GERMANY, UnitType.ARMY, "MUN")
+    ruh = _unit("GER_A_RUH", Power.GERMANY, UnitType.ARMY, "RUH")
+    orders = {
+        mun.id: _order(mun, OrderType.SUPPORT, target="RUH", aux="RUH"),
+        ruh.id: _order(ruh, OrderType.MOVE, target="BUR"),
+    }
+
+    res = adjudicate_turn([mun, ruh], orders, {}).resolutions[mun.id]
+    assert res.succeeded is False
+    assert res.reason == "Support void: Ruhr did not hold."
+
+
+def test_void_convoy_says_the_army_did_not_move():
+    nth = _unit("ENG_F_NTH", Power.ENGLAND, UnitType.FLEET, "NTH")
+    yor = _unit("ENG_A_YOR", Power.ENGLAND, UnitType.ARMY, "YOR")
+    orders = {
+        nth.id: _order(nth, OrderType.CONVOY, target="BEL", aux="YOR"),
+        yor.id: _order(yor),
+    }
+
+    res = adjudicate_turn([nth, yor], orders, {}).resolutions[nth.id]
+    assert res.succeeded is False
+    assert res.reason == "Convoy void: the army in Yorkshire did not move to Belgium."
+
+
+def test_void_and_dislodged_supporter_reports_both():
+    mun = _unit("GER_A_MUN", Power.GERMANY, UnitType.ARMY, "MUN")
+    bur = _unit("FRA_A_BUR", Power.FRANCE, UnitType.ARMY, "BUR")
+    tyr = _unit("FRA_A_TYR", Power.FRANCE, UnitType.ARMY, "TYR")
+    orders = {
+        mun.id: _order(mun, OrderType.SUPPORT, target="RUH", aux="BEL"),
+        bur.id: _order(bur, OrderType.MOVE, target="MUN"),
+        tyr.id: _order(tyr, OrderType.SUPPORT, target="MUN", aux="BUR"),
+    }
+    bel = _unit("GER_A_BEL", Power.GERMANY, UnitType.ARMY, "BEL")
+
+    res = adjudicate_turn([mun, bel, bur, tyr], orders, {}).resolutions[mun.id]
+    assert res.dislodged is True
+    assert res.reason.startswith(
+        "Support void: Belgium did not move to Ruhr. Dislodged by the attack from Burgundy."
+    )
+
+
+def test_dislodged_supporter_is_reported_as_dislodged_not_cut():
+    eng = _unit("FRA_F_ENG", Power.FRANCE, UnitType.FLEET, "ENG")
+    bel = _unit("FRA_A_BEL", Power.FRANCE, UnitType.ARMY, "BEL")
+    nth = _unit("ENG_F_NTH", Power.ENGLAND, UnitType.FLEET, "NTH")
+    lon = _unit("ENG_F_LON", Power.ENGLAND, UnitType.FLEET, "LON")
+    orders = {
+        eng.id: _order(eng, OrderType.SUPPORT, target="BEL", aux="BEL"),
+        bel.id: _order(bel),
+        nth.id: _order(nth, OrderType.MOVE, target="ENG"),
+        lon.id: _order(lon, OrderType.SUPPORT, target="ENG", aux="NTH"),
+    }
+
+    result = adjudicate_turn([eng, bel, nth, lon], orders, {})
+    res = result.resolutions[eng.id]
+    assert res.cut is True and res.dislodged is True
+    assert res.dislodged_by == "NTH"
+    assert res.reason.startswith("Dislodged by the attack from North Sea! Support broken.")
+
+
+def test_bounced_and_dislodged_mover_reports_both():
+    rum = _unit("RUS_A_RUM", Power.RUSSIA, UnitType.ARMY, "RUM")
+    bul = _unit("TUR_A_BUL", Power.TURKEY, UnitType.ARMY, "BUL")
+    ser = _unit("TUR_A_SER", Power.TURKEY, UnitType.ARMY, "SER")
+    orders = {
+        rum.id: _order(rum, OrderType.MOVE, target="BUL"),
+        bul.id: _order(bul, OrderType.MOVE, target="RUM"),
+        ser.id: _order(ser, OrderType.SUPPORT, target="RUM", aux="BUL"),
+    }
+
+    res = adjudicate_turn([rum, bul, ser], orders, {}).resolutions[rum.id]
+    assert res.bounced is True and res.dislodged is True
+    assert res.reason.startswith(
+        "Bounced attempting to move to Bulgaria (strength 1). Dislodged by the attack from Bulgaria!"
+    )
