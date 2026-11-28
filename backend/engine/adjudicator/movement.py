@@ -30,9 +30,58 @@ def build_movement_orders(
     return power_orders
 
 
+# The engine's result codes for an order that failed, by code and by name.
+_FAILURES = {
+    10001: "no convoy",
+    10002: "bounce",
+    10003: "void",
+    10004: "cut",
+    10005: "dislodged",
+    10006: "disrupted",
+}
+
+
+def _failures(ctx: ResolutionContext, u: Unit) -> set[str]:
+    u_loc = f"{u.province}/{u.coast}" if u.coast else u.province
+    res_list = ctx.results_for_phase.get(f"{u.unit_type.value} {u_loc}", [])
+    return {
+        name
+        for code, name in _FAILURES.items()
+        if any(r.code == code or name in str(r).lower() for r in res_list)
+    }
+
+
+def _arrivals(ctx: ResolutionContext) -> dict[str, str]:
+    """Target to origin of every move that succeeds. The one into a dislodged unit's province
+    is its attacker, and a retreat may never go back there."""
+    arrivals: dict[str, str] = {}
+    for u in ctx.units:
+        ord_obj = ctx.orders.get(u.id)
+        if (
+            not u.is_dislodged
+            and ord_obj
+            and ord_obj.order_type == OrderType.MOVE
+            and ord_obj.target
+            and ctx.engine_kept_order(u)
+            and not _failures(ctx, u)
+        ):
+            arrivals[ord_obj.target] = u.province
+    return arrivals
+
+
+def _void_reason(ctx: ResolutionContext, order: Order) -> str:
+    """Why a support or convoy matched nothing: the other unit did something else."""
+    other = ctx.province_name(order.aux_unit_origin)
+    destination = ctx.province_name(order.target)
+    if order.order_type == OrderType.CONVOY:
+        return f"Convoy void: the army in {other} did not move to {destination}."
+    if order.aux_unit_origin == order.target:
+        return f"Support void: {other} did not hold."
+    return f"Support void: {other} did not move to {destination}."
+
+
 def resolve_movement(ctx: ResolutionContext) -> None:
     units, orders = ctx.units, ctx.orders
-    results_for_phase = ctx.results_for_phase
     engine_regular_by_pwr = ctx.engine_regular_by_pwr
     engine_dislodged_by_pwr = ctx.engine_dislodged_by_pwr
     resolutions, summary = ctx.resolutions, ctx.summary
@@ -55,32 +104,28 @@ def resolve_movement(ctx: ResolutionContext) -> None:
             and ord_obj.target
             and engine_kept_order(u)
         ):
-            u_loc = f"{u.province}/{u.coast}" if u.coast else u.province
-            u_key = f"{u.unit_type.value} {u_loc}"
-            u_res = results_for_phase.get(u_key, [])
-            was_cut = any(r.code == 10004 or "cut" in str(r).lower() for r in u_res)
-            was_dislodged = any(r.code == 10005 or "dislodged" in str(r).lower() for r in u_res)
-            was_void = any(r.code == 10003 or "void" in str(r).lower() for r in u_res)
-            if not was_cut and not was_dislodged and not was_void:
+            if not _failures(ctx, u) & {"cut", "dislodged", "void"}:
                 if ord_obj.aux_unit_origin == ord_obj.target:
                     uncut_supports_for_hold[ord_obj.target] += 1
                 else:
                     uncut_supports_for_move[(ord_obj.aux_unit_origin, ord_obj.target)] += 1
 
+    arrivals = _arrivals(ctx)
+
     for u in units:
         if u.is_dislodged:
             continue
         ord_obj = orders.get(u.id)
-        u_loc = f"{u.province}/{u.coast}" if u.coast else u.province
-        u_key = f"{u.unit_type.value} {u_loc}"
-        res_list = results_for_phase.get(u_key, [])
+        failures = _failures(ctx, u)
 
-        no_convoy = any(r.code == 10001 or "no convoy" in str(r).lower() for r in res_list)
-        bounced = any(r.code == 10002 or "bounce" in str(r).lower() for r in res_list)
-        cut = any(r.code == 10004 or "cut" in str(r).lower() for r in res_list)
-        dislodged = any(r.code == 10005 or "dislodged" in str(r).lower() for r in res_list)
-        voided = any(r.code == 10003 or "void" in str(r).lower() for r in res_list)
-        disrupted = any(r.code == 10006 or "disrupted" in str(r).lower() for r in res_list)
+        no_convoy = "no convoy" in failures
+        bounced = "bounce" in failures
+        cut = "cut" in failures
+        dislodged = "dislodged" in failures
+        voided = "void" in failures
+        disrupted = "disrupted" in failures
+        dislodged_by = arrivals.get(u.province) if dislodged else None
+        attacked_from = f" by the attack from {p_name_fn(dislodged_by)}" if dislodged_by else ""
 
         attack_strength = 1
         defense_strength = 1
@@ -89,9 +134,7 @@ def resolve_movement(ctx: ResolutionContext) -> None:
         target = ord_obj.target if ord_obj else None
 
         rejected = otype != OrderType.HOLD and not engine_kept_order(u)
-        succeeded = not (
-            no_convoy or bounced or cut or dislodged or voided or disrupted or rejected
-        )
+        succeeded = not (failures or rejected)
 
         if rejected:
             defense_strength = 1 + uncut_supports_for_hold.get(u.province, 0)
@@ -116,6 +159,11 @@ def resolve_movement(ctx: ResolutionContext) -> None:
                 summary.append(
                     f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} bounced moving to {p_name_fn(target)}."
                 )
+                if dislodged:
+                    reason += f" Dislodged{attacked_from}!"
+                    summary.append(
+                        f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} was dislodged!"
+                    )
             elif dislodged:
                 reason = f"Dislodged while attempting to move to {p_name_fn(target)}!"
                 summary.append(
@@ -127,20 +175,32 @@ def resolve_movement(ctx: ResolutionContext) -> None:
                     f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} -> {p_name_fn(target)} succeeded."
                 )
         elif otype == OrderType.SUPPORT:
-            if cut:
+            if voided:
+                reason = _void_reason(ctx, ord_obj)
+                if dislodged:
+                    reason += f" Dislodged{attacked_from}."
+                    summary.append(
+                        f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} dislodged."
+                    )
+            elif dislodged:
+                reason = f"Dislodged{attacked_from}! Support broken."
+                summary.append(
+                    f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} dislodged."
+                )
+            elif cut:
                 reason = "Support cut by enemy attack!"
                 summary.append(
                     f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} support cut."
                 )
-            elif dislodged:
-                reason = "Dislodged! Support broken."
-                summary.append(
-                    f"[{u.power.value}] {u.unit_type.value} {p_name_fn(u.province)} dislodged."
-                )
             else:
                 reason = "Support held unbroken."
         elif otype == OrderType.CONVOY:
-            if disrupted or dislodged:
+            if voided:
+                reason = _void_reason(ctx, ord_obj)
+                if dislodged:
+                    reason += f" Dislodged{attacked_from}."
+                    summary.append(f"[{u.power.value}] Fleet {p_name_fn(u.province)} dislodged.")
+            elif disrupted or dislodged:
                 reason = "Convoy disrupted by fleet dislodgement."
                 summary.append(f"[{u.power.value}] Fleet {p_name_fn(u.province)} convoy disrupted.")
             else:
@@ -169,6 +229,7 @@ def resolve_movement(ctx: ResolutionContext) -> None:
             attack_strength=attack_strength,
             defense_strength=defense_strength,
             reason=reason,
+            dislodged_by=dislodged_by,
         )
 
         if dislodged:
@@ -232,18 +293,3 @@ def resolve_movement(ctx: ResolutionContext) -> None:
                 )
             )
             used_unit_ids.add(u.id)
-
-    _record_dislodgers(resolutions)
-
-
-def _record_dislodgers(resolutions: dict[str, OrderResolution]) -> None:
-    """Name the origin of the move that dislodged each dislodged unit: the one move into its
-    province that succeeded. A retreat may never go back there."""
-    arrivals = {
-        r.target: r.origin
-        for r in resolutions.values()
-        if r.order_type == OrderType.MOVE and r.succeeded and r.target
-    }
-    for r in resolutions.values():
-        if r.dislodged:
-            r.dislodged_by = arrivals.get(r.origin)

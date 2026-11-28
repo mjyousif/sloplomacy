@@ -142,6 +142,7 @@ The internal Pydantic `Order` model is serialized into standard DATC order notat
    - Evaluates all orders and extracts tactical outcomes without advancing the live match state.
    - Returns a `SimulationResult` containing:
      - `resolutions`: Per-unit outcomes (`succeeded`, `bounced`, `cut`, `dislodged`, `dislodged_by`, `attack_strength`, `defense_strength`, `reason`).
+       - In a movement phase, `reason` follows the engine's result codes. A void support or convoy says what the other unit did not do, a dislodgement is never hidden behind a cut, bounce or void, and a dislodged supporter, bounced mover or void order names the province the attack came from.
      - `dislodged_units`: Units needing retreat orders.
      - `clash_provinces`, `bounce_provinces`, `cut_provinces`.
      - `next_phase`: Preview of what phase will follow.
