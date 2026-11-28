@@ -53,11 +53,46 @@ describe('suggestionStore', () => {
     expect(suggestionStore.getState()).toEqual({
       draft: null,
       viewing: message,
+      opening: null,
     });
     suggestionStore.startDraft(['GERMANY'], TURN);
     expect(suggestionStore.getState().viewing).toBeNull();
     suggestionStore.clear();
-    expect(suggestionStore.getState()).toEqual({ draft: null, viewing: null });
+    expect(suggestionStore.getState()).toEqual({
+      draft: null,
+      viewing: null,
+      opening: null,
+    });
+  });
+
+  it('holds one opening preview at a time, in place of any suggestion', () => {
+    const opening = {
+      id: 'ita-lepanto',
+      name: 'Lepanto Opening',
+      power: 'ITALY' as const,
+      turn: TURN,
+      orders: [],
+    };
+    suggestionStore.startDraft(['GERMANY'], TURN);
+    suggestionStore.previewOpening(opening);
+    expect(suggestionStore.getState()).toEqual({
+      draft: null,
+      viewing: null,
+      opening,
+    });
+    suggestionStore.view({ id: 'm1', orders: [] } as unknown as PressMessage);
+    expect(suggestionStore.getState().opening).toBeNull();
+  });
+
+  it('sends an opening through the registered applier only', async () => {
+    expect(await suggestionStore.applyOpening('ITALY', [])).toMatch(/cannot/);
+    const calls: string[] = [];
+    suggestionStore.setOpeningApplier(async (power) => {
+      calls.push(power);
+      return null;
+    });
+    expect(await suggestionStore.applyOpening('ITALY', [])).toBeNull();
+    expect(calls).toEqual(['ITALY']);
   });
 
   it('tells its listeners, and takes orders through whoever holds the board', async () => {

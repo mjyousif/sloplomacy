@@ -64,7 +64,8 @@ export const SuggestionPill: React.FC<SuggestionPillProps> = ({
           </span>
         )}
       </span>
-      {!draft && suggestion.mine.length > 0 && (
+      {/* An opening is used from the order panel, where it was picked. */}
+      {suggestion.mode === 'view' && suggestion.mine.length > 0 && (
         <button
           type="button"
           className={styles.takeBtn}
@@ -81,7 +82,13 @@ export const SuggestionPill: React.FC<SuggestionPillProps> = ({
         className={styles.closeBtn}
         data-testid="suggestion-close"
         onClick={onClose}
-        aria-label={draft ? 'Discard the suggestion' : 'Close the suggestion'}
+        aria-label={
+          draft
+            ? 'Discard the suggestion'
+            : suggestion.mode === 'opening'
+              ? 'Close the opening preview'
+              : 'Close the suggestion'
+        }
         title={draft ? 'Discard the suggestion' : 'Back to your orders'}
       >
         <X size={15} />

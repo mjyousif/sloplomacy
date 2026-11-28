@@ -5,7 +5,12 @@ import { describe, expect, it } from 'vitest';
 
 const srcDir = dirname(fileURLToPath(import.meta.url));
 const MAX_LINES = 500;
-const ALLOWLIST = new Set(['data/europeMapGeometry.ts', 'types/diplomacy.ts']);
+// Static data with no logic (AGENTS.md section 5.2).
+const ALLOWLIST = new Set([
+  'data/europeMapGeometry.ts',
+  'data/openings.ts',
+  'types/diplomacy.ts',
+]);
 
 function isTestFile(relPath: string): boolean {
   return relPath.startsWith('test/') || /\.(test|testkit)\.tsx?$/.test(relPath);

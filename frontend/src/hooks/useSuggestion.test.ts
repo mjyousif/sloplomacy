@@ -301,3 +301,44 @@ describe('finishedOrders', () => {
     expect(finishedOrders({ a: done, b: open })).toEqual([done]);
   });
 });
+
+describe('useSuggestionBoard: openings', () => {
+  beforeEach(() => suggestionStore.reset());
+  const preview = (turn = TURN) =>
+    act(() =>
+      suggestionStore.previewOpening({
+        id: 'fra-picardy',
+        name: 'Picardy Opening',
+        power: 'FRANCE',
+        turn,
+        orders: [move(UNITS[0], 'PIC')],
+      }),
+    );
+
+  it('shows an opening read-only, in a sandbox too, with its orders as the player’s', () => {
+    const { result } = board({ power: null, sandboxMode: true });
+    preview();
+    expect(result.current).toMatchObject({
+      mode: 'opening',
+      label: 'Picardy Opening',
+      count: 1,
+      map: { editablePowers: null },
+    });
+    expect(result.current?.mine.map((o) => o.target)).toEqual(['PIC']);
+    // Everyone else holds on the map.
+    expect(result.current?.orders.GER_A_MUN.order_type).toBe('HOLD');
+  });
+
+  it('is cleared on a past turn or Direct-Edit, and once the turn has moved on', () => {
+    const blocked = board({ blocked: true });
+    preview();
+    expect(blocked.result.current).toBeNull();
+    expect(suggestionStore.getState().opening).toBeNull();
+    blocked.unmount();
+
+    const stale = board();
+    preview('Fall 1901 Movement');
+    expect(stale.result.current).toBeNull();
+    expect(suggestionStore.getState().opening).toBeNull();
+  });
+});

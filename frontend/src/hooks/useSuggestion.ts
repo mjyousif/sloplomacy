@@ -36,7 +36,8 @@ export function finishedOrders(orders: Record<string, Order>): Order[] {
 
 /** The suggestion on the map, as the game screen draws it. */
 export interface SuggestionBoard {
-  mode: 'draft' | 'view';
+  /** `opening`: a Spring 1901 opening from the order panel, looked at like a received one. */
+  mode: 'draft' | 'view' | 'opening';
   /** Said after "Viewing", e.g. "your suggestion to Germany". */
   label: string;
   /** Every unit's order as the map should hold it: the suggestion's, and a plain hold otherwise. */
@@ -54,8 +55,10 @@ export interface SuggestionBoardOptions {
   gameState: GameState;
   /** The player's seat, or null where there is no press (a sandbox, a spectator). */
   power: Power | null;
-  /** The board is showing something else: Hypothetical Mode, Direct-Edit or a past turn. */
+  /** The board is showing something else: Direct-Edit or a past turn. */
   blocked: boolean;
+  /** A sandbox, Hypothetical Mode included: no press there, but an opening can still be shown. */
+  sandboxMode?: boolean;
 }
 
 /**
@@ -68,23 +71,30 @@ export function useSuggestionBoard({
   gameState,
   power,
   blocked,
+  sandboxMode = false,
 }: SuggestionBoardOptions): SuggestionBoard | null {
-  const { draft, viewing } = useSuggestionState();
+  const { draft, viewing, opening } = useSuggestionState();
   const turn = turnLabel(gameState);
   const usable =
-    (power !== null || viewing !== null) && !blocked && !gameState.winner;
+    (power !== null || viewing !== null) &&
+    !blocked &&
+    !sandboxMode &&
+    !gameState.winner;
   const stale =
     (draft !== null && draft.turn !== turn) ||
     (viewing !== null && !isSuggestionCurrent(viewing, gameState));
+  const openingActive =
+    opening !== null && !blocked && !gameState.winner && opening.turn === turn;
   const active =
-    (draft !== null || viewing !== null) &&
-    usable &&
-    !stale &&
-    !(draft !== null && power === null);
+    openingActive ||
+    ((draft !== null || viewing !== null) &&
+      usable &&
+      !stale &&
+      !(draft !== null && power === null));
 
   useEffect(() => {
-    if ((draft || viewing) && !active) suggestionStore.clear();
-  }, [draft, viewing, active]);
+    if ((draft || viewing || opening) && !active) suggestionStore.clear();
+  }, [draft, viewing, opening, active]);
   // Leaving the game screen ends it too.
   useEffect(() => () => suggestionStore.clear(), []);
 
@@ -94,7 +104,11 @@ export function useSuggestionBoard({
   return useMemo(() => {
     if (!active) return null;
     if (draft && power === null) return null;
-    const suggested = draft ? Object.values(draft.orders) : viewing?.orders;
+    const suggested = opening
+      ? opening.orders
+      : draft
+        ? Object.values(draft.orders)
+        : viewing?.orders;
     if (!suggested) return null;
     const members = draft
       ? draft.members.length === 0
@@ -120,7 +134,10 @@ export function useSuggestionBoard({
       if (order && order.origin === unit.province && validForPhase) {
         orders[unit.id] = order;
         unitIds.add(unit.id);
-        if (power && unit.power === power) mine.push(order);
+        if (
+          opening ? unit.power === opening.power : power && unit.power === power
+        )
+          mine.push(order);
       } else {
         orders[unit.id] = holdOrder(unit, false);
       }
@@ -178,6 +195,17 @@ export function useSuggestionBoard({
         },
       };
     }
+    if (opening) {
+      return {
+        mode: 'opening' as const,
+        label: opening.name,
+        orders,
+        map: { editablePowers: null, unitIds },
+        count: unitIds.size,
+        mine,
+        stage: () => {},
+      };
+    }
     const sender = viewing?.sender ?? null;
     return {
       mode: 'view' as const,
@@ -193,5 +221,5 @@ export function useSuggestionBoard({
       mine,
       stage: () => {},
     };
-  }, [active, power, draft, viewing, units, phase, builds]);
+  }, [active, power, draft, viewing, opening, units, phase, builds]);
 }

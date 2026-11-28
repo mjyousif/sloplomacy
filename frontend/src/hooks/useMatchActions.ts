@@ -159,6 +159,41 @@ export function useMatchActions({
     return () => suggestionStore.setAdopter(null);
   }, []);
 
+  // Using a Spring 1901 opening from the order panel: its orders replace those units' orders in
+  // one batch, on the board being played (a sandbox's own copy included). Nothing is finalized.
+  const applyOpening = async (
+    power: Power,
+    orders: Order[],
+  ): Promise<string | null> => {
+    if (!gameState || orders.length === 0) return 'There are no orders here.';
+    try {
+      const res = await apiFetch('/orders/batch', {
+        method: 'POST',
+        query: { game_id: draftGameId },
+        json: { power, orders, turn: turnLabel(gameState) },
+      });
+      if (!res.ok) {
+        return readErrorDetail(res, 'Those orders were not accepted.');
+      }
+      clearPendingOrders?.();
+      applyServerState(await res.json());
+      setSelectedUnitId(null);
+      triggerToast('Opening orders filled in. Review them, then finalize.');
+      return null;
+    } catch (e) {
+      console.error(e);
+      return 'Those orders could not be sent.';
+    }
+  };
+  const applyOpeningRef = useRef(applyOpening);
+  applyOpeningRef.current = applyOpening;
+  useEffect(() => {
+    suggestionStore.setOpeningApplier((power, orders) =>
+      applyOpeningRef.current(power, orders),
+    );
+    return () => suggestionStore.setOpeningApplier(null);
+  }, []);
+
   const handleClearAllOrders = async () => {
     if (!gameState) return;
     try {

@@ -24,15 +24,37 @@ export interface SuggestionDraft {
 export interface SuggestionState {
   draft: SuggestionDraft | null;
   viewing: PressMessage | null;
+  /** A Spring 1901 opening being looked at from the order panel. */
+  opening: OpeningPreview | null;
+}
+
+/**
+ * A book opening previewed on the map. It is only a picture until the player uses it, and then
+ * its orders go to the player's own units like any others.
+ */
+export interface OpeningPreview {
+  id: string;
+  name: string;
+  power: Power;
+  /** The turn it was shown in. It ends when the turn does. */
+  turn: string;
+  orders: Order[];
 }
 
 /** Puts the player's own part of a suggestion into their real orders. Resolves to an error text, or null. */
 export type SuggestionAdopter = (orders: Order[]) => Promise<string | null>;
 
-const EMPTY: SuggestionState = { draft: null, viewing: null };
+/** Gives a power the orders of an opening. Resolves to an error text, or null. */
+export type OpeningApplier = (
+  power: Power,
+  orders: Order[],
+) => Promise<string | null>;
+
+const EMPTY: SuggestionState = { draft: null, viewing: null, opening: null };
 
 let state: SuggestionState = EMPTY;
 let adopter: SuggestionAdopter | null = null;
+let openingApplier: OpeningApplier | null = null;
 const listeners = new Set<() => void>();
 
 function set(next: SuggestionState): void {
@@ -61,6 +83,7 @@ export const suggestionStore = {
         ...(anonymous ? { anonymous: true } : {}),
       },
       viewing: null,
+      opening: null,
     });
   },
   /** Adds an order to the draft, or replaces the one its unit had. */
@@ -86,12 +109,17 @@ export const suggestionStore = {
 
   /** Shows a received (or sent) suggestion on the map. */
   view(message: PressMessage): void {
-    set({ draft: null, viewing: message });
+    set({ draft: null, viewing: message, opening: null });
+  },
+
+  /** Shows an opening on the map in place of whatever suggestion was there. */
+  previewOpening(opening: OpeningPreview): void {
+    set({ draft: null, viewing: null, opening });
   },
 
   /** Ends whatever is on the map: the draft is thrown away. */
   clear(): void {
-    if (state.draft || state.viewing) set(EMPTY);
+    if (state.draft || state.viewing || state.opening) set(EMPTY);
   },
 
   /** `useMatchActions` registers how orders are taken, since it holds the board. */
@@ -103,9 +131,19 @@ export const suggestionStore = {
     return adopter(orders);
   },
 
+  /** `useMatchActions` registers how an opening's orders are sent, too. */
+  setOpeningApplier(next: OpeningApplier | null): void {
+    openingApplier = next;
+  },
+  async applyOpening(power: Power, orders: Order[]): Promise<string | null> {
+    if (!openingApplier) return 'These orders cannot be used right now.';
+    return openingApplier(power, orders);
+  },
+
   /** For tests. */
   reset(): void {
     adopter = null;
+    openingApplier = null;
     set(EMPTY);
   },
 };

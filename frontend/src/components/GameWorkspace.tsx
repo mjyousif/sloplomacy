@@ -229,9 +229,11 @@ export function GameWorkspace({
   const suggestion = useSuggestionBoard({
     gameState,
     power: pressGameId ? lockedPower : null,
-    blocked: sandboxMode || directEditActive || viewingHistory,
+    blocked: directEditActive || viewingHistory,
+    sandboxMode,
   });
-  const suggestionView = suggestion?.mode === 'view';
+  const suggestionView =
+    suggestion?.mode !== undefined && suggestion.mode !== 'draft';
   const readOnly = viewingHistory || suggestionView || Boolean(spectator);
   const boardOwnership =
     historyTurn?.phase === 'Admin' && historyTurn.resolution?.new_ownership
@@ -434,7 +436,11 @@ export function GameWorkspace({
           )
         }
         historyLabel={
-          viewedEntry ? turnLabel(viewedEntry) : (suggestion?.label ?? null)
+          viewedEntry
+            ? turnLabel(viewedEntry)
+            : suggestion?.mode === 'opening'
+              ? null
+              : (suggestion?.label ?? null)
         }
         historyIsAdmin={viewedEntry?.phase === 'Admin'}
         onReturnToLive={
@@ -455,6 +461,7 @@ export function GameWorkspace({
         showSimulationOverlay={showSimulationOverlay}
         phase={gameState.phase}
         season={gameState.season}
+        year={gameState.year}
         builds={gameState.builds}
         retreats={gameState.retreats}
         unitOptions={gameState.unit_options}

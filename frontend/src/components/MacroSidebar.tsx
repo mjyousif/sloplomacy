@@ -2,11 +2,13 @@ import type React from 'react';
 import { useMemo } from 'react';
 import { POWER_METADATA } from '../types/diplomacy';
 import { cx } from '../utils/cx';
+import { isOpeningTurn } from '../utils/openings';
 import { getConsensusStatusInfo } from '../utils/orderHelpers';
 import {
   computeOrderProgress,
   getRequiredPowers,
 } from '../utils/orderProgress';
+import { turnLabel } from '../utils/turnFormat';
 import styles from './MacroSidebar.module.css';
 import { AdminDirectEditSidebar } from './macro/AdminDirectEditSidebar';
 import { AdminTurnClockSidebar } from './macro/AdminTurnClockSidebar';
@@ -14,11 +16,13 @@ import { CollapsedRail } from './macro/CollapsedRail';
 import { HistoryTurnPanel } from './macro/HistoryTurnPanel';
 import { MacroSheet } from './macro/MacroSheet';
 import type { MacroSidebarProps } from './macro/macroSidebarProps';
+import { OpeningsButton, OpeningsList } from './macro/OpeningsList';
 import { ClearAllButton, OrderFooter } from './macro/OrderFooter';
 import { HistoryLockBar, PhaseContext, PowerHeader } from './macro/PowerHeader';
 import { SpectatorBar } from './macro/SpectatorBar';
 import { UnitOrderList } from './macro/UnitOrderList';
 import { useCompactOrders } from './macro/useCompactOrders';
+import { useOpeningsPanel } from './macro/useOpeningsPanel';
 import { usePanelCardScroll } from './macro/usePanelCardScroll';
 import scrollbarStyles from './ui/Scrollbars.module.css';
 import chromeStyles from './ui/SidebarChrome.module.css';
@@ -41,6 +45,7 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
   showSimulationOverlay,
   phase = 'Movement',
   season = 'Spring',
+  year = 0,
   builds = null,
   retreats = null,
   unitOptions = null,
@@ -162,14 +167,34 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     activePower,
   });
 
+  // Book openings on the first turn, for a power the player orders (a past turn or a press
+  // suggestion on the board hides them, since the cards are locked then, and so does a host
+  // panel that replaces the order panel).
+  const openings = useOpeningsPanel({
+    available:
+      isOpeningTurn({ season, year, phase }) &&
+      !spectator &&
+      !isSurrendered &&
+      !gameOver &&
+      historyLabel === null &&
+      !directEditActive &&
+      !turnClockSettings?.isOpen,
+    power: activePower,
+    units,
+    turn: turnLabel({ season, year, phase }),
+  });
+
   // The pieces of the expanded panel. The desktop panel and the phone sheet arrange the same
   // pieces differently, so neither copies the other.
   const clearAllButton =
     isSurrendered || spectator ? null : (
-      <ClearAllButton
-        key={season + phase}
-        onClearAllOrders={onClearAllOrders}
-      />
+      <>
+        <ClearAllButton
+          key={season + phase}
+          onClearAllOrders={onClearAllOrders}
+        />
+        {openings.available && <OpeningsButton panel={openings} />}
+      </>
     );
 
   const phaseContext = (
@@ -181,8 +206,10 @@ export const MacroSidebar: React.FC<MacroSidebarProps> = ({
     />
   );
 
-  // Everything inside the scrolling list of builds and unit cards.
-  const unitList = (
+  // Everything inside the scrolling list of builds and unit cards, or the openings in its place.
+  const unitList = openings.open ? (
+    <OpeningsList panel={openings} power={activePower} />
+  ) : (
     <UnitOrderList
       activePower={activePower}
       powerMeta={powerMeta}

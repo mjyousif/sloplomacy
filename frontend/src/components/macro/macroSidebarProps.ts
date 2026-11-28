@@ -33,6 +33,8 @@ export interface MacroSidebarProps {
   showSimulationOverlay: boolean;
   phase?: string;
   season?: string;
+  /** With the season and phase, says whether this is the first turn, which offers openings. */
+  year?: number;
   builds?: Record<Power, { count: number; homes: string[] }> | null;
   retreats?: Record<Power, Record<string, string[]>> | null;
   unitOptions?: Record<string, UnitMoveOptions> | null;
