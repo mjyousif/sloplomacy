@@ -37,6 +37,7 @@ In a fresh worktree run `npm ci` in `frontend/` (and `pip install -r backend/req
 - convoy reachability, fleet chains, green/blue convoy highlights → `convoy_scenarios`
 - Game Over modal, victory conclusion, winner pill → `game_over`
 - press (chat), its section in the tools sidebar, `/api/press` → `press`
+- Spring 1901 openings (`data/openings.ts`, `macro/OpeningsList.tsx`, the opening preview in `suggestionStore`) → `openings`
 - homepage for a player with games: map hero, mini map, other-games strip, `board` on `/api/games/mine` → `lobby_home`
 - the lobby's public game browser, its filters, rows and seat claims, `/api/games/browse` → `lobby_browser`
 - unified top-bar dropdown, profile header, Display Settings, Administrator, Change Game, Sign Out → `top_bar_menu`
