@@ -31,7 +31,7 @@ Orders are written the adjudicator's way (`A VEN - TYR`, `F STP/SC - BOT`, `A MA
 
 The data takes facts and ideas from the sources, never their text:
 
-- **What is taken:** opening names (short hobby labels such as "Lepanto" or "Maginot"), the Spring 1901 orders (game moves), and the published popularity figures. These are facts about the game and how it has been played.
+- **What is taken:** opening names (short hobby labels such as "Lepanto" or "Maginot"), the Spring 1901 orders (game moves), and the published popularity figures. These are facts about the game and how it has been played: a set of moves can't be copyrighted, any more than a chess opening can.
 - **What is written here:** every strength, weakness and autumn note is a short summary written for this app. Some carry an author's idea, such as Burgundy being the way into France or the Jutland Gambit hiding its target, but never the author's wording. A check against the scraped text of both sources found no run of six or more words in common, except stock game phrases ("for the rest of the game") and order notation.
 - **Credit:** each opening links the articles or Library pages it draws on, with the author's name, as the UK archive asks for material it hosts.
 - **Not copied:** no article, table or excerpt is stored, quoted or served by the app. The scraped pages were working material and are not in the repo.
